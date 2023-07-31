@@ -25,3 +25,15 @@ check:
 .PHONY: clean
 clean:
 	@cargo clean
+	rm -f result
+
+.PHONY: fmt-nix
+fmt-nix:
+	@alejandra ./
+
+.PHONY: fmt-rust
+fmt-rust:
+	@cargo fmt
+
+.PHONY: fmt
+fmt: fmt-nix fmt-rust
