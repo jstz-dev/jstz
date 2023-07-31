@@ -1,0 +1,12 @@
+[workspace]
+members = ["jstz_core", "jstz_kernel"]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+authors = ["TriliTech <concat@trili.tech>"]
+repository = "https://github.com/trilitech/jstz"
+
+[workspace.dependencies]
+jstz_core = { path = "jstz_core" }
+jstz_kernel = { path = "jstz_kernel" }

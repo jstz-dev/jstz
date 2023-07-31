@@ -1,0 +1,13 @@
+[package]
+name = "jstz_kernel"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+jstz_core.workspace = true
+tezos-smart-rollup = "0.2.0"

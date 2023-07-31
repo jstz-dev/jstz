@@ -1,0 +1,10 @@
+[package]
+name = "jstz_core"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+boa_engine = "0.17.0"
+getrandom = { version = "0.2.10", features = ["custom"] }

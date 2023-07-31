@@ -1,2 +1,2 @@
-# jstz
-The JavaScript runtime that powers Tezos 2.0
+# 👨‍⚖️ jstz
+`jstz` (pronouced: "justice") is a JavaScript server runtime that powers Tezos 2.0
