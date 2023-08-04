@@ -20,17 +20,17 @@ fn read_message(rt: &mut impl Runtime) -> Option<String> {
     Some(String::from_utf8_lossy(payload).to_string())
 }
 
-fn handle_message(rt: &mut impl Runtime, msg: &str) {
+fn handle_message(rt: &mut (impl Runtime + 'static), msg: &str) {
     debug_msg!(rt, "Evaluating: {msg:?}\n");
-    let res = jstz_core::evaluate_from_bytes(msg);
+    let res = jstz_core::evaluate_from_bytes(rt, msg);
     debug_msg!(rt, "Result: {res:?}\n");
 }
 
 // kernel entry
-pub fn entry(rt: &mut impl Runtime) {
+pub fn entry(rt: &mut (impl Runtime + 'static)) {
     debug_msg!(rt, "Hello, kernel!\n");
 
-    if let Some(msg) = read_message(rt) {
+    while let Some(msg) = read_message(rt) {
         handle_message(rt, &msg)
     }
 }
