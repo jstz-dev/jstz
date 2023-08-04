@@ -8,19 +8,12 @@ use boa_engine::{
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use tezos_smart_rollup_host::runtime::Runtime;
 
-
-
-
 pub(super) fn make_console<Host: Runtime + 'static>(
     context: &mut Context<'_>,
     host: &HostRef<Host>,
 ) -> JsObject {
     Console::new(host.clone()).build(context)
 }
-
-
-
-
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Clone, Copy)]
 enum ConsolePrefix {
