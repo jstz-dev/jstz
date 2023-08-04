@@ -18,7 +18,7 @@ fn main() {
         args.pop().filter(|arg| arg != "_")
     };
 
-    let json = if args.is_empty() {
+    let json = (if args.is_empty() {
         into_inbox_array(Some(InboxMessage::RunJs {
             code: stdin()
                 .lines()
@@ -29,7 +29,8 @@ fn main() {
         into_inbox_array(args.iter().map(|filename| InboxMessage::RunJs {
             code: read_to_string(filename).expect("can't open {filename}"),
         }))
-    };
+    })
+    .expect("can't decode json");
 
     match target {
         Some(filename) => {

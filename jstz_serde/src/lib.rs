@@ -65,12 +65,34 @@ impl OutboxMessage {
     }
 }
 
-pub fn into_inbox_array<I: IntoIterator<Item = InboxMessage>>(iter: I) -> String {
+pub type Address = String;
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Serialize)]
+pub struct BasicConsoleMessage<'a> {
+    pub address: &'a Address,
+    pub messages: &'a Vec<String>,
+    pub group: &'a Vec<String>,
+}
+
+#[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Serialize)]
+pub enum ConsoleMessage<'a> {
+    Log(BasicConsoleMessage<'a>),
+    Error(BasicConsoleMessage<'a>),
+    Warning(BasicConsoleMessage<'a>),
+    Debug(BasicConsoleMessage<'a>),
+    Info(BasicConsoleMessage<'a>),
+}
+pub fn create_log_message<'a>(msg: &ConsoleMessage<'a>) -> Option<String> {
+    let mut msg = serde_json::to_string(msg).ok()?;
+    msg.push('\n');
+    Some(msg)
+}
+
+pub fn into_inbox_array<I: IntoIterator<Item = InboxMessage>>(iter: I) -> Option<String> {
     let v: Vec<_> = iter
         .into_iter()
         .map(|msg| InboxRepresentation {
             external: msg.to_bytestr(),
         })
         .collect();
-    serde_json::to_string(&vec![v]).unwrap()
+    serde_json::to_string(&vec![v]).ok()
 }

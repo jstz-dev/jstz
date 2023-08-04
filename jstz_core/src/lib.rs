@@ -22,9 +22,11 @@ register_custom_getrandom!(always_fail);
 pub fn make_context<Host: Runtime + 'static>(
     host: &HostRef<Host>,
 ) -> Result<Context, JsError> {
+    let address = "JsTz42BadA55".to_string();
     let mut context = Context::default();
-    let console_property = console::make_console(&mut context, host);
-    let jstz_property = jstz_object::make_jstz(&mut context, host, &"my_contract");
+
+    let console_property = console::make_console(&mut context, host, &address);
+    let jstz_property = jstz_object::make_jstz(&mut context, host, &address);
     context.register_global_property(
         "console",
         console_property,
