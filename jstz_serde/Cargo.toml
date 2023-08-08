@@ -1,0 +1,29 @@
+[package]
+name = "jstz_serde"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "jstz_serde"
+path = "src/lib.rs"
+
+[[bin]]
+name = "create_inbox"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "1.0.*", features = ["derive"]}
+serde_json = "1.0.0"
+postcard = { version = "1.0.0", features = ["use-std"]}
+itertools = "0.11.0"
+keccak-hash = "0.10.0"
+
+[features]
+default = ["basic"] # ["call_contract", "create_contract"]
+basic = ["run_js"]
+run_js = []
+call_contract = []
+create_contract = []
