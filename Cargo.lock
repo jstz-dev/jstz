@@ -767,17 +767,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "jstz_api"
+version = "0.1.0"
+dependencies = [
+ "boa_engine",
+ "boa_gc",
+ "jstz_core",
+ "tezos-smart-rollup-host",
+]
+
+[[package]]
 name = "jstz_core"
 version = "0.1.0"
 dependencies = [
  "boa_engine",
+ "boa_gc",
  "getrandom",
+ "tezos-smart-rollup-host",
 ]
 
 [[package]]
 name = "jstz_kernel"
 version = "0.1.0"
 dependencies = [
+ "jstz_api",
  "jstz_core",
  "tezos-smart-rollup",
 ]

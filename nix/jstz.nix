@@ -31,6 +31,12 @@ in {
       cargoBuildFlags = "-p jstz_core";
     });
 
+  jstz_api = pkgs.rustPlatform.buildRustPackage (common
+    // {
+      pname = "jstz_api";
+      cargoBuildFlags = "-p jstz_api";
+    });
+
   jstz_kernel = rustPlatformWasm.buildRustPackage (common
     // {
       pname = "jstz_kernel";

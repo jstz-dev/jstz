@@ -1,3 +1,4 @@
+use jstz_core::{host::Host, JstzRuntime};
 use std::str;
 use tezos_smart_rollup::{
     inbox::InboxMessage,
@@ -20,14 +21,23 @@ fn read_message(rt: &mut impl Runtime) -> Option<String> {
     Some(String::from_utf8_lossy(payload).to_string())
 }
 
-fn handle_message(rt: &mut impl Runtime, msg: &str) {
+fn handle_message<H: Runtime + 'static>(rt: &mut H, msg: &str) {
     debug_msg!(rt, "Evaluating: {msg:?}\n");
-    let res = jstz_core::evaluate_from_bytes(msg);
+
+    // Initialize host
+    let host = unsafe { Host::new(rt) };
+
+    // Initialize runtime
+    let mut jstz_runtime = JstzRuntime::new(host);
+    jstz_runtime.register_global_api::<jstz_api::ConsoleApi>();
+
+    // Eval
+    let res = jstz_runtime.eval(msg);
     debug_msg!(rt, "Result: {res:?}\n");
 }
 
 // kernel entry
-pub fn entry(rt: &mut impl Runtime) {
+pub fn entry<H: Runtime + 'static>(rt: &mut H) {
     debug_msg!(rt, "Hello, kernel!\n");
 
     if let Some(msg) = read_message(rt) {
