@@ -1,10 +1,10 @@
-use crate::host_ref::HostRef;
+use crate::host::HostRef;
 use boa_engine::{
     object::{Object, ObjectInitializer},
     Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
-use jstz_serde::{Address, BasicConsoleMessage, ConsoleMessage};
+use jstz_serde::{Address, ConsoleMessage, ConsolePrefix};
 use tezos_smart_rollup_host::runtime::Runtime;
 
 pub(super) fn make_console<Host: Runtime + 'static>(
@@ -13,27 +13,6 @@ pub(super) fn make_console<Host: Runtime + 'static>(
     address: &Address,
 ) -> JsObject {
     Console::new(host.clone(), address.clone()).build(context)
-}
-
-#[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Clone, Copy)]
-enum ConsolePrefix {
-    Log,
-    Error,
-    Warning,
-    Debug,
-    Info,
-}
-fn create_console_message(
-    prefix: ConsolePrefix,
-    msg: BasicConsoleMessage,
-) -> ConsoleMessage {
-    match prefix {
-        ConsolePrefix::Log => ConsoleMessage::Log(msg),
-        ConsolePrefix::Error => ConsoleMessage::Error(msg),
-        ConsolePrefix::Warning => ConsoleMessage::Warning(msg),
-        ConsolePrefix::Debug => ConsoleMessage::Debug(msg),
-        ConsolePrefix::Info => ConsoleMessage::Info(msg),
-    }
 }
 
 struct Console<Host> {
@@ -52,14 +31,16 @@ impl<Host: Runtime + 'static> Console<Host> {
         let msg = jstz_serde::create_log_message(msg)?;
         Some(self.host.write_debug(&msg))
     }
-    fn create_basic_message<'a, 'b>(
+    fn create_console_message<'a, 'b>(
         &'a self,
+        message_type: ConsolePrefix,
         messages: &'b Vec<String>,
-    ) -> BasicConsoleMessage<'b>
+    ) -> ConsoleMessage<'b>
     where
         'a: 'b,
     {
-        BasicConsoleMessage {
+        ConsoleMessage {
+            message_type,
             messages,
             address: &self.address,
             group: &self.group,
@@ -98,7 +79,7 @@ impl<Host: Runtime + 'static> Console<Host> {
             .map(|arg| format!("{}", arg.display()))
             .collect();
 
-        let msg = create_console_message(prefix, this.create_basic_message(&messages));
+        let msg = this.create_console_message(prefix, &messages);
         this.log_message(&msg).ok_or_else(err)?;
 
         Ok(JsValue::default())
@@ -122,6 +103,23 @@ impl<Host: Runtime + 'static> Console<Host> {
 
     fn info(this: &JsValue, args: &[JsValue], _: &mut Context) -> JsResult<JsValue> {
         Self::log_with_prefix(this, ConsolePrefix::Info, args)
+    }
+    fn assert(this: &JsValue, args: &[JsValue], _: &mut Context) -> JsResult<JsValue> {
+        let failed: JsValue = "assertion failed:".into();
+        let console_assert: Option<JsValue> = if args.len() < 2 {
+            Some("consle.assert".into())
+        } else {
+            None
+        };
+        let condition = args.get_or_undefined(0).to_boolean();
+        if condition {
+            Ok(JsValue::default())
+        } else {
+            let messages = std::iter::once(&failed)
+                .chain(console_assert.iter())
+                .chain((if args.len() < 2 { &[] } else { &args[1..] }).iter());
+            Self::log_with_prefix(this, ConsolePrefix::Error, messages)
+        }
     }
     fn group(this: &JsValue, args: &[JsValue], _: &mut Context) -> JsResult<JsValue> {
         fn type_err() -> JsError {
@@ -155,11 +153,12 @@ impl<Host: Runtime + 'static> Console<Host> {
             .function(NativeFunction::from_fn_ptr(Self::debug), "debug", 0)
             .function(NativeFunction::from_fn_ptr(Self::warn), "warn", 0)
             .function(NativeFunction::from_fn_ptr(Self::info), "info", 0)
-            .function(NativeFunction::from_fn_ptr(Self::group), "group", 0)
+            .function(NativeFunction::from_fn_ptr(Self::assert), "assert", 0)
+            .function(NativeFunction::from_fn_ptr(Self::group), "group", 1)
             .function(
                 NativeFunction::from_fn_ptr(Self::group),
                 "groupCollapsed",
-                0,
+                1,
             )
             .function(NativeFunction::from_fn_ptr(Self::end_group), "groupEnd", 0)
             .build()

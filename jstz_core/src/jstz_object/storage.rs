@@ -1,11 +1,13 @@
-use crate::host_ref::HostRef;
+use crate::host::storage::Storage;
+use crate::host::HostRef;
 use boa_engine::object::Object;
 use boa_engine::{object::ObjectInitializer, Context, JsObject, JsValue};
 use boa_engine::{JsArgs, JsError, JsNativeError, JsResult, JsString, NativeFunction};
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
+use jstz_serde::Address;
+use tezos_smart_rollup_host::path::OwnedPath;
 use tezos_smart_rollup_host::path::PathError;
-use tezos_smart_rollup_host::runtime::RuntimeError;
-use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
+use tezos_smart_rollup_host::runtime::{Runtime, RuntimeError};
 
 fn key_error(js_path: &String) -> JsError {
     let msg = format!("Invalid Key: {js_path}");
@@ -16,7 +18,13 @@ fn runtime_error(err: RuntimeError) -> JsError {
     let native = JsNativeError::error().with_message(format!("{err}"));
     JsError::from_native(native)
 }
-
+fn error_or_undefined(val: Result<JsValue, RuntimeError>) -> JsResult<JsValue> {
+    match val {
+        Ok(val) => Ok(val),
+        Err(RuntimeError::PathNotFound) => Ok(JsValue::default()),
+        Err(err) => Err(runtime_error(err)),
+    }
+}
 fn to_byte_repr(str: &JsString) -> Vec<u8> {
     str.as_slice()
         .iter()
@@ -39,33 +47,20 @@ fn extract_string(str: &JsValue) -> JsResult<String> {
         .map_err(|_| key_error(&str.to_std_string_escaped()))?;
     Ok(result)
 }
-struct Storage<Host> {
-    host: HostRef<Host>,
-    prefix: String,
+struct JsStorage<Host> {
+    data: Storage<Host>,
 }
-impl<Host: Runtime + 'static> Storage<Host> {
-    fn new(host: HostRef<Host>, prefix: String) -> Self {
-        Self { host, prefix }
-    }
-    fn create_path(&self, js_path: &String) -> JsResult<OwnedPath> {
-        let prefix = &self.prefix;
-        let path = format!("/{prefix}/{js_path}").to_string();
 
-        path.try_into().map_err(|_| key_error(js_path))
+impl<Host: Runtime + 'static> JsStorage<Host> {
+    fn new(host: HostRef<Host>, prefix: String) -> Self {
+        let data = Storage::new(host, prefix);
+        Self { data }
     }
+
     fn extract<'a>(obj: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
         obj.as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
             .ok_or_else(|| JsError::from_native(JsNativeError::typ()))
-    }
-    fn write_value_inner(&mut self, js_path: &String, value: &JsString) -> JsResult<()> {
-        let path = self.create_path(js_path)?;
-        let value = to_byte_repr(value);
-        let result = self
-            .host
-            .store_write_all(&path, value.as_slice())
-            .map_err(runtime_error)?;
-        Ok(result)
     }
     fn write_value(
         this: &JsValue,
@@ -73,28 +68,22 @@ impl<Host: Runtime + 'static> Storage<Host> {
         context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut this = Self::extract(this)?;
-        let js_path = extract_string(args.get_or_undefined(0))?;
-        let value = args.get_or_undefined(1).to_string(context)?;
-        let () = this.write_value_inner(&js_path, &value)?;
+        let key = extract_string(args.get_or_undefined(0))?;
+        let value = to_byte_repr(&args.get_or_undefined(1).to_string(context)?);
+        this.data.write_value(&key, &value).map_err(runtime_error)?;
         Ok(JsValue::default())
-    }
-    fn read_value_inner(&mut self, js_path: &String) -> JsResult<JsValue> {
-        let path = self.create_path(js_path)?;
-        let bytes = self.host.store_read_all(&path).map_err(runtime_error)?;
-        Ok(JsValue::String(from_byte_repr(bytes.as_slice())))
     }
     fn read_value(
         this: &JsValue,
         args: &[JsValue],
         _context: &mut Context,
     ) -> JsResult<JsValue> {
-        let mut this = Self::extract(this)?;
+        let this = Self::extract(this)?;
         let js_path = extract_string(args.get_or_undefined(0))?;
-        this.read_value_inner(&js_path)
-    }
-    fn remove_value_inner(&mut self, js_path: &String) -> JsResult<()> {
-        let path = self.create_path(js_path)?;
-        self.host.store_delete(&path).map_err(runtime_error)
+        fn bytes_to_string(bytes: Vec<u8>) -> JsValue {
+            JsValue::String(from_byte_repr(bytes.as_slice()))
+        }
+        error_or_undefined(this.data.read_value(&js_path).map(bytes_to_string))
     }
     fn remove_value(
         this: &JsValue,
@@ -103,18 +92,7 @@ impl<Host: Runtime + 'static> Storage<Host> {
     ) -> JsResult<JsValue> {
         let mut this = Self::extract(this)?;
         let js_path = extract_string(args.get_or_undefined(0))?;
-        let () = this.remove_value_inner(&js_path)?;
-        Ok(JsValue::default())
-    }
-    fn sub_storage_inner(
-        &self,
-        prefix: String,
-        context: &mut Context,
-    ) -> JsResult<JsObject> {
-        let err = |_: PathError| key_error(&prefix);
-        let prefix = format!("{}/{}", &self.prefix, &prefix);
-        let _: OwnedPath = prefix.clone().try_into().map_err(err)?;
-        Ok(Self::new(self.host.clone(), prefix).build(context))
+        error_or_undefined(this.data.remove_value(&js_path).map(|_| JsValue::default()))
     }
     fn sub_storage(
         this: &JsValue,
@@ -123,7 +101,10 @@ impl<Host: Runtime + 'static> Storage<Host> {
     ) -> JsResult<JsValue> {
         let this = Self::extract(this)?;
         let prefix = extract_string(args.get_or_undefined(0))?;
-        let result = this.sub_storage_inner(prefix, context)?;
+        let err = |_: PathError| key_error(&prefix);
+        let prefix = format!("{}/{}", &this.data.prefix(), &prefix);
+        let _: OwnedPath = prefix.clone().try_into().map_err(err)?;
+        let result = Self::new(this.data.host().clone(), prefix).build(context);
         Ok(result.into())
     }
     fn build(self, context: &mut Context) -> JsObject {
@@ -140,15 +121,15 @@ impl<Host: Runtime + 'static> Storage<Host> {
     }
 }
 
-impl<Host> Finalize for Storage<Host> {}
-unsafe impl<Host> Trace for Storage<Host> {
+impl<Host> Finalize for JsStorage<Host> {}
+unsafe impl<Host> Trace for JsStorage<Host> {
     empty_trace!();
 }
 
 pub(super) fn make_storage<Host: Runtime + 'static>(
     context: &mut Context<'_>,
     host: &HostRef<Host>,
-    prefix: String,
+    prefix: &Address,
 ) -> JsObject {
-    Storage::new(host.clone(), prefix).build(context)
+    JsStorage::new(host.clone(), prefix.to_string()).build(context)
 }

@@ -1,98 +1,19 @@
-use postcard::{from_bytes, to_stdvec};
 use serde::{Deserialize, Serialize};
-/*
-Notes:
 
-Here when we create a contract we just pass in the creating address, but this is insecure
-We will need some sort of signing mechanism to ensure that contracts
+pub mod address;
+pub use address::Address;
 
-* Externally created contracts are uploaded through the reveal channel, The address is then a signed
+pub mod contract;
+pub use contract::Contract;
 
+pub mod byte_rep;
+pub use byte_rep::ByteRep;
 
+pub mod logging;
+pub use logging::{create_log_message, ConsoleMessage, ConsolePrefix};
 
-*/
+pub mod messages;
+pub use messages::{into_inbox_array, InboxMessage, OutboxMessage};
 
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
-pub enum InboxMessage {
-    #[cfg(feature = "create_contract")]
-    CreateContract {
-        from_address: String,
-        code: String,
-        amount: u64,
-    },
-    #[cfg(feature = "call_contract")]
-    CallContract {
-        from_address: String,
-        parameter: String,
-        amount: u64,
-    },
-    #[cfg(feature = "run_js")]
-    RunJs { code: String },
-}
-
-#[derive(Serialize, Deserialize, Debug, Eq, PartialEq)]
-pub struct OutboxMessage {
-    pub destination: String,
-    pub parameters: String,
-    pub entrypoint: Option<String>,
-    pub amount: u64,
-}
-
-#[derive(Serialize)]
-struct InboxRepresentation {
-    external: String,
-}
-
-impl InboxMessage {
-    pub fn to_bytestr(&self) -> String {
-        let mut result = "".to_string();
-        for byte in to_stdvec(self).unwrap().into_iter() {
-            result.push_str(&format!("{:02x}", byte))
-        }
-
-        result
-    }
-}
-impl TryFrom<&[u8]> for InboxMessage {
-    type Error = postcard::Error;
-    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
-        from_bytes(bytes)
-    }
-}
-impl OutboxMessage {
-    pub fn to_bytes(&self) -> Vec<u8> {
-        panic!()
-    }
-}
-
-pub type Address = String;
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Serialize)]
-pub struct BasicConsoleMessage<'a> {
-    pub address: &'a Address,
-    pub messages: &'a Vec<String>,
-    pub group: &'a Vec<String>,
-}
-
-#[derive(Eq, PartialEq, Ord, PartialOrd, Debug, Serialize)]
-pub enum ConsoleMessage<'a> {
-    Log(BasicConsoleMessage<'a>),
-    Error(BasicConsoleMessage<'a>),
-    Warning(BasicConsoleMessage<'a>),
-    Debug(BasicConsoleMessage<'a>),
-    Info(BasicConsoleMessage<'a>),
-}
-pub fn create_log_message<'a>(msg: &ConsoleMessage<'a>) -> Option<String> {
-    let mut msg = serde_json::to_string(msg).ok()?;
-    msg.push('\n');
-    Some(msg)
-}
-
-pub fn into_inbox_array<I: IntoIterator<Item = InboxMessage>>(iter: I) -> Option<String> {
-    let v: Vec<_> = iter
-        .into_iter()
-        .map(|msg| InboxRepresentation {
-            external: msg.to_bytestr(),
-        })
-        .collect();
-    serde_json::to_string(&vec![v]).ok()
-}
+pub trait Byteable: Serialize + for<'a> Deserialize<'a> {}
+impl<T: Serialize + for<'a> Deserialize<'a>> Byteable for T {}

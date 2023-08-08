@@ -1,4 +1,4 @@
-use crate::host_ref::HostRef;
+use crate::host::HostRef;
 use boa_engine::{object::ObjectInitializer, property::Attribute, Context, JsObject};
 use jstz_serde::Address;
 mod storage;
@@ -9,7 +9,7 @@ pub(super) fn make_jstz<Host: Runtime + 'static>(
     host: &HostRef<Host>,
     contract: &Address,
 ) -> JsObject {
-    let storage_property = storage::make_storage(context, host, contract.clone());
+    let storage_property = storage::make_storage(context, host, contract);
     ObjectInitializer::new(context)
         .property("durableStorage", storage_property, Attribute::PERMANENT)
         .build()
