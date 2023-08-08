@@ -1,8 +1,8 @@
 use boa_engine::{Context, Source};
 use getrandom::{register_custom_getrandom, Error};
 use std::num::NonZeroU32;
-mod host;
 pub mod console;
+mod host;
 
 // custom getrandom
 const GETRANDOM_ERROR_CODE: u32 = Error::CUSTOM_START + 42;

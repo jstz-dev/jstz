@@ -4,35 +4,35 @@ use boa_gc::{empty_trace, Finalize, Trace};
 use tezos_smart_rollup_host::runtime::{Runtime, ValueType};
 
 #[derive(PartialEq, Eq, Debug)]
-pub struct HostRef<Host>(Rc<Host>);
+pub struct Host<H>(Rc<H>);
 
-impl<Host> HostRef<Host> {
-    fn get_ref<'b>(&'b self) -> &'b Host {
-        let HostRef(rc) = self;
+impl<H> Host<H> {
+    fn get_ref<'b>(&'b self) -> &'b H {
+        let Host(rc) = self;
         rc
     }
-    fn get_mut<'b>(&'b mut self) -> &'b mut Host {
-        let rc: &mut Rc<Host> = &mut self.0;
+    fn get_mut<'b>(&'b mut self) -> &'b mut H {
+        let rc: &mut Rc<H> = &mut self.0;
         Rc::get_mut(rc).unwrap()
     }
-    pub unsafe fn new(host: &mut Host) -> Self {
-        let ptr: *mut Host = host;
+    pub unsafe fn new(host: &mut H) -> Self {
+        let ptr: *mut H = host;
         let inner = unsafe { Rc::from_raw(ptr) };
         Self(inner)
     }
 }
-impl<'a, Host> Finalize for HostRef<Host> {
+impl<'a, H> Finalize for Host<H> {
     fn finalize(&self) {}
 }
-unsafe impl<Host> Trace for HostRef<Host> {
+unsafe impl<H> Trace for Host<H> {
     empty_trace!();
 }
-impl<Host> Clone for HostRef<Host> {
+impl<H> Clone for Host<H> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
-impl<Host: Runtime> Runtime for HostRef<Host> {
+impl<H: Runtime> Runtime for Host<H> {
     fn write_debug(&self, msg: &str) {
         self.get_ref().write_debug(msg);
     }

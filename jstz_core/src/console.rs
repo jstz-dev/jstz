@@ -1,4 +1,4 @@
-use crate::host::HostRef;
+use crate::host::Host;
 use boa_engine::{
     object::{Object, ObjectInitializer},
     Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsValue, NativeFunction,
@@ -7,21 +7,21 @@ use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_serde::{Address, ConsoleMessage, ConsolePrefix};
 use tezos_smart_rollup_host::runtime::Runtime;
 
-pub fn make_console<Host: Runtime + 'static>(
+pub fn make_console<H: Runtime + 'static>(
     context: &mut Context<'_>,
-    host: &HostRef<Host>,
+    host: &Host<H>,
     address: &Address,
 ) -> JsObject {
     Console::new(host.clone(), address.clone()).build(context)
 }
 
-struct Console<Host> {
-    host: HostRef<Host>,
+struct Console<H> {
+    host: Host<H>,
     group: Vec<String>,
     address: Address,
 }
 
-impl<Host: Runtime + 'static> Console<Host> {
+impl<H: Runtime + 'static> Console<H> {
     fn extract<'a>(this: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
         this.as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -47,7 +47,7 @@ impl<Host: Runtime + 'static> Console<Host> {
         }
     }
 
-    fn new(host: HostRef<Host>, address: Address) -> Self {
+    fn new(host: Host<H>, address: Address) -> Self {
         Self {
             host,
             address,
@@ -63,7 +63,7 @@ impl<Host: Runtime + 'static> Console<Host> {
     }
 }
 
-impl<Host: Runtime + 'static> Console<Host> {
+impl<H: Runtime + 'static> Console<H> {
     fn log_with_prefix<'a>(
         this: &JsValue,
         prefix: ConsolePrefix,
@@ -165,7 +165,7 @@ impl<Host: Runtime + 'static> Console<Host> {
     }
 }
 
-impl<Host> Finalize for Console<Host> {}
-unsafe impl<Host> Trace for Console<Host> {
+impl<H> Finalize for Console<H> {}
+unsafe impl<H> Trace for Console<H> {
     empty_trace!();
 }
