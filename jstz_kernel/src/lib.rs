@@ -24,11 +24,8 @@ fn read_message(rt: &mut impl Runtime) -> Option<String> {
 fn handle_message<H: Runtime + 'static>(rt: &mut H, msg: &str) {
     debug_msg!(rt, "Evaluating: {msg:?}\n");
 
-    // Initialize host
-    let host = unsafe { Host::new(rt) };
-
     // Initialize runtime
-    let mut jstz_runtime = JstzRuntime::new(host);
+    let mut jstz_runtime = JstzRuntime::new(rt);
     jstz_runtime.register_global_api::<jstz_api::ConsoleApi>();
 
     // Eval

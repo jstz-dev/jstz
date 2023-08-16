@@ -13,6 +13,8 @@
 //!
 //! The implementation is heavily inspired by https://github.com/boa-dev/boa/blob/main/boa_runtime/src/console/mod.rs
 
+use std::ops::Deref;
+
 use boa_engine::{
     object::{Object, ObjectInitializer},
     property::Attribute,
@@ -20,7 +22,10 @@ use boa_engine::{
     Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
-use jstz_core::host::Host;
+use jstz_core::{
+    host::{self, Host},
+    host_defined,
+};
 use tezos_smart_rollup_host::runtime::Runtime;
 
 /// This represents the different types of log messages.
@@ -33,22 +38,14 @@ enum LogMessage {
 }
 
 impl LogMessage {
-    fn log<H: Runtime>(self, console: &Console<H>) {
+    fn log(self, rt: &impl Runtime, console: &Console) {
         let indent = 2 * console.groups.len();
 
         match self {
-            LogMessage::Error(msg) => {
-                console.host.write_debug(&format!("[🔴]{msg:>indent$}\n"))
-            }
-            LogMessage::Warn(msg) => {
-                console.host.write_debug(&format!("[🟠]{msg:>indent$}\n"))
-            }
-            LogMessage::Info(msg) => {
-                console.host.write_debug(&format!("[🟢]{msg:>indent$}\n"))
-            }
-            LogMessage::Log(msg) => {
-                console.host.write_debug(&format!("{msg:>indent$}\n"))
-            }
+            LogMessage::Error(msg) => rt.write_debug(&format!("[🔴]{msg:>indent$}\n")),
+            LogMessage::Warn(msg) => rt.write_debug(&format!("[🟠]{msg:>indent$}\n")),
+            LogMessage::Info(msg) => rt.write_debug(&format!("[🟢]{msg:>indent$}\n")),
+            LogMessage::Log(msg) => rt.write_debug(&format!("{msg:>indent$}\n")),
         }
     }
 }
@@ -132,15 +129,13 @@ fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
 }
 
 #[derive(Trace, Finalize)]
-struct Console<H: Runtime + 'static> {
-    host: Host<H>,
+struct Console {
     groups: Vec<String>,
 }
 
-impl<H: Runtime + 'static> Console<H> {
-    fn new(host: Host<H>) -> Self {
+impl Console {
+    fn new() -> Self {
         Self {
-            host,
             groups: Vec::default(),
         }
     }
@@ -174,6 +169,7 @@ impl<H: Runtime + 'static> Console<H> {
         &self,
         assertion: bool,
         data: &[JsValue],
+        rt: &impl Runtime,
         context: &mut Context<'_>,
     ) -> JsResult<()> {
         if !assertion {
@@ -188,7 +184,7 @@ impl<H: Runtime + 'static> Console<H> {
                 args[0] = JsValue::new(concat);
             }
 
-            LogMessage::Error(formatter(&args, context)?).log(self)
+            LogMessage::Error(formatter(&args, context)?).log(rt, self)
         }
 
         Ok(())
@@ -204,8 +200,13 @@ impl<H: Runtime + 'static> Console<H> {
     ///
     /// [spec]: https://console.spec.whatwg.org/#debug
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/debug
-    fn debug(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        LogMessage::Log(formatter(data, context)?).log(self);
+    fn debug(
+        &self,
+        data: &[JsValue],
+        rt: &impl Runtime,
+        context: &mut Context<'_>,
+    ) -> JsResult<()> {
+        LogMessage::Log(formatter(data, context)?).log(rt, self);
         Ok(())
     }
 
@@ -219,8 +220,13 @@ impl<H: Runtime + 'static> Console<H> {
     ///
     /// [spec]: https://console.spec.whatwg.org/#warn
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/warn
-    fn warn(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        LogMessage::Warn(formatter(data, context)?).log(self);
+    fn warn(
+        &self,
+        data: &[JsValue],
+        rt: &impl Runtime,
+        context: &mut Context<'_>,
+    ) -> JsResult<()> {
+        LogMessage::Warn(formatter(data, context)?).log(rt, self);
         Ok(())
     }
 
@@ -234,8 +240,13 @@ impl<H: Runtime + 'static> Console<H> {
     ///
     /// [spec]: https://console.spec.whatwg.org/#error
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/error
-    fn error(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        LogMessage::Error(formatter(data, context)?).log(self);
+    fn error(
+        &self,
+        data: &[JsValue],
+        rt: &impl Runtime,
+        context: &mut Context<'_>,
+    ) -> JsResult<()> {
+        LogMessage::Error(formatter(data, context)?).log(rt, self);
         Ok(())
     }
 
@@ -249,8 +260,13 @@ impl<H: Runtime + 'static> Console<H> {
     ///
     /// [spec]: https://console.spec.whatwg.org/#info
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/info
-    fn info(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        LogMessage::Info(formatter(data, context)?).log(self);
+    fn info(
+        &self,
+        data: &[JsValue],
+        rt: &impl Runtime,
+        context: &mut Context<'_>,
+    ) -> JsResult<()> {
+        LogMessage::Info(formatter(data, context)?).log(rt, self);
         Ok(())
     }
 
@@ -264,8 +280,13 @@ impl<H: Runtime + 'static> Console<H> {
     ///
     /// [spec]: https://console.spec.whatwg.org/#log
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/log
-    fn log(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        LogMessage::Log(formatter(data, context)?).log(self);
+    fn log(
+        &self,
+        data: &[JsValue],
+        rt: &impl Runtime,
+        context: &mut Context<'_>,
+    ) -> JsResult<()> {
+        LogMessage::Log(formatter(data, context)?).log(rt, self);
         Ok(())
     }
 
@@ -279,9 +300,14 @@ impl<H: Runtime + 'static> Console<H> {
     ///
     /// [spec]: https://console.spec.whatwg.org/#group
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/group
-    fn group(&mut self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
+    fn group(
+        &mut self,
+        data: &[JsValue],
+        rt: &impl Runtime,
+        context: &mut Context<'_>,
+    ) -> JsResult<()> {
         let group_label = formatter(data, context)?;
-        LogMessage::Log(format!("group: {group_label}")).log(self);
+        LogMessage::Log(format!("group: {group_label}")).log(rt, self);
         self.groups.push(group_label);
         Ok(())
     }
@@ -305,12 +331,16 @@ impl<H: Runtime + 'static> Console<H> {
 /// as a `jstz` runtime API.  
 pub struct ConsoleApi;
 
-impl<H: Runtime> Console<H> {
+impl Console {
     fn from_js_value<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
-            .ok_or_else(|| JsNativeError::typ().with_message("").into())
+            .ok_or_else(|| {
+                JsNativeError::typ()
+                    .with_message("Failed to convert js value into rust type `Console`")
+                    .into()
+            })
     }
 }
 
@@ -321,8 +351,10 @@ macro_rules! vardic_console_function {
             args: &[JsValue],
             context: &mut Context<'_>,
         ) -> JsResult<JsValue> {
-            let console = Console::<H>::from_js_value(this)?;
-            console.$name(args, context)?;
+            let console = Console::from_js_value(this)?;
+            host_defined!(context, host_defined);
+            let rt = host_defined.get::<Host<H>>().unwrap();
+            console.$name(args, rt.deref(), context)?;
             Ok(JsValue::undefined())
         }
     };
@@ -342,11 +374,13 @@ impl ConsoleApi {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        let console = Console::<H>::from_js_value(this)?;
+        let console = Console::from_js_value(this)?;
+        host_defined!(context, host_defined);
+        let rt = host_defined.get::<Host<H>>().unwrap();
 
         let assertion = args.get_or_undefined(0).to_boolean();
         let data = if args.len() >= 1 { &args[1..] } else { &[] };
-        console.assert(assertion, data, context)?;
+        console.assert(assertion, data, rt.deref(), context)?;
 
         Ok(JsValue::undefined())
     }
@@ -356,8 +390,11 @@ impl ConsoleApi {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        let mut console = Console::<H>::from_js_value(this)?;
-        console.group(args, context)?;
+        let mut console = Console::from_js_value(this)?;
+        host_defined!(context, host_defined);
+        let rt = host_defined.get::<Host<H>>().unwrap();
+
+        console.group(args, rt.deref(), context)?;
         Ok(JsValue::undefined())
     }
 
@@ -366,7 +403,8 @@ impl ConsoleApi {
         _args: &[JsValue],
         _context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        let mut console = Console::<H>::from_js_value(this)?;
+        let mut console = Console::from_js_value(this)?;
+
         console.group_end();
         Ok(JsValue::undefined())
     }
@@ -376,15 +414,15 @@ impl ConsoleApi {
         _args: &[JsValue],
         _context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        let mut console = Console::<H>::from_js_value(this)?;
+        let mut console = Console::from_js_value(this)?;
         console.clear();
         Ok(JsValue::undefined())
     }
 }
 
 impl jstz_core::host::Api for ConsoleApi {
-    fn init<H: Runtime>(context: &mut Context<'_>, host: Host<H>) {
-        let console = ObjectInitializer::with_native(Console::new(host), context)
+    fn init<H: Runtime + 'static>(context: &mut Context<'_>) {
+        let console = ObjectInitializer::with_native(Console::new(), context)
             .function(NativeFunction::from_fn_ptr(Self::log::<H>), "log", 0)
             .function(NativeFunction::from_fn_ptr(Self::error::<H>), "error", 0)
             .function(NativeFunction::from_fn_ptr(Self::debug::<H>), "debug", 0)
