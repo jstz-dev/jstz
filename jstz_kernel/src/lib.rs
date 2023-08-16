@@ -1,4 +1,4 @@
-use jstz_core::{host::Host, JstzRuntime};
+use jstz_core::JstzRuntime;
 use std::str;
 use tezos_smart_rollup::{
     inbox::InboxMessage,
@@ -27,6 +27,7 @@ fn handle_message<H: Runtime + 'static>(rt: &mut H, msg: &str) {
     // Initialize runtime
     let mut jstz_runtime = JstzRuntime::new(rt);
     jstz_runtime.register_global_api::<jstz_api::ConsoleApi>();
+    jstz_runtime.register_global_api::<jstz_api::LedgerApi>();
 
     // Eval
     let res = jstz_runtime.eval(msg);

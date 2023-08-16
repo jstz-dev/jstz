@@ -24,32 +24,38 @@
       lockFile = ../Cargo.lock;
     };
   };
+
+  crate = pname:
+    pkgs.rustPlatform.buildRustPackage (common
+      // {
+        pname = pname;
+        cargoBuildFlags = "-p ${pname}";
+      });
+
+  kernel = pname:
+    rustPlatformWasm.buildRustPackage (common
+      // {
+        pname = pname;
+
+        NIX_CFLAGS_COMPILE = "-mcpu=generic";
+
+        buildPhase = ''
+          cargo build --release -p ${pname} --target=wasm32-unknown-unknown
+        '';
+
+        installPhase = ''
+          mkdir -p $out/lib
+          cp target/wasm32-unknown-unknown/release/*.wasm $out/lib/
+        '';
+      });
 in {
-  jstz_core = pkgs.rustPlatform.buildRustPackage (common
-    // {
-      pname = "jstz_core";
-      cargoBuildFlags = "-p jstz_core";
-    });
+  jstz_core = crate "jstz_crypto";
 
-  jstz_api = pkgs.rustPlatform.buildRustPackage (common
-    // {
-      pname = "jstz_api";
-      cargoBuildFlags = "-p jstz_api";
-    });
+  jstz_api = crate "jstz_api";
 
-  jstz_kernel = rustPlatformWasm.buildRustPackage (common
-    // {
-      pname = "jstz_kernel";
+  jstz_crypto = crate "jstz_crypto";
 
-      NIX_CFLAGS_COMPILE = "-mcpu=generic";
+  jstz_ledger = crate "jstz_ledger";
 
-      buildPhase = ''
-        cargo build --release -p jstz_kernel --target=wasm32-unknown-unknown
-      '';
-
-      installPhase = ''
-        mkdir -p $out/lib
-        cp target/wasm32-unknown-unknown/release/*.wasm $out/lib/
-      '';
-    });
+  jstz_kernel = kernel "jstz_kernel";
 }
