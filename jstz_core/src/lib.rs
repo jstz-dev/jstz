@@ -3,7 +3,11 @@ use getrandom::{register_custom_getrandom, Error};
 use std::num::NonZeroU32;
 use tezos_smart_rollup_host::runtime::Runtime;
 
+mod error;
+
+pub use error::{Error, Result};
 pub mod host;
+pub mod kv;
 
 // custom getrandom
 const GETRANDOM_ERROR_CODE: u32 = Error::CUSTOM_START + 42;
