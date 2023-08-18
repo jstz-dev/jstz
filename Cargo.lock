@@ -77,6 +77,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "bincode"
+version = "1.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1f45e9417d87227c7a56d22e471c6206462cba514c7590c09aff4cf6d1ddcad"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "bit-vec"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -90,9 +99,9 @@ checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
 name = "bitflags"
-version = "2.3.3"
+version = "2.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "630be753d4e58660abd17930c71b647fe46c27ea6b63cc59e1e3851406972e42"
+checksum = "b4682ae6287fcf752ecaabbfcc7b6f9b72aa33933dc23a554d853aea8eea8635"
 
 [[package]]
 name = "bitvec"
@@ -143,7 +152,7 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7c261398db3b2f9ba05f76872721d6a8a142d10ae6c0a58d3ddc5c2853cc02d"
 dependencies = [
- "bitflags 2.3.3",
+ "bitflags 2.4.0",
  "boa_interner",
  "boa_macros",
  "indexmap",
@@ -157,7 +166,7 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f31e7a37b855625f1615a07414fb341361475950e57bb9396afe1389bbc2ccdc"
 dependencies = [
- "bitflags 2.3.3",
+ "bitflags 2.4.0",
  "boa_ast",
  "boa_gc",
  "boa_icu_provider",
@@ -249,7 +258,7 @@ version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2ff1108bda6d573049191b6452490844c5ba4b12f7bdcc512a33e5c3f5037196"
 dependencies = [
- "bitflags 2.3.3",
+ "bitflags 2.4.0",
  "boa_ast",
  "boa_icu_provider",
  "boa_interner",
@@ -305,6 +314,12 @@ dependencies = [
  "num-traits",
  "winapi",
 ]
+
+[[package]]
+name = "convert_case"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6245d59a3e82a7fc217c5828a6692dbc6dfb63a0c8c90495621f7b9d79704a0e"
 
 [[package]]
 name = "core-foundation-sys"
@@ -418,6 +433,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79b71cca7d95d7681a4b3b9cdf63c8dbc3730d0584c2c74e31416d64a90493f4"
 
 [[package]]
+name = "derive_more"
+version = "0.99.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fb810d30a7c1953f91334de7244731fc3f3c10d7fe163338a35b9f640960321"
+dependencies = [
+ "convert_case",
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+ "syn 1.0.109",
+]
+
+[[package]]
 name = "digest"
 version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -514,6 +542,15 @@ name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5443807d6dff69373d433ab9ef5378ad8df50ca6298caf15de6e52e24aaf54d5"
+
+[[package]]
+name = "erased-serde"
+version = "0.3.28"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da96524cc884f6558f1769b6c46686af2fe8e8b4cd253bd5a3cdba8181b8e070"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "fast-float"
@@ -772,7 +809,10 @@ version = "0.1.0"
 dependencies = [
  "boa_engine",
  "boa_gc",
+ "derive_more",
  "jstz_core",
+ "jstz_crypto",
+ "jstz_ledger",
  "tezos-smart-rollup-host",
 ]
 
@@ -780,10 +820,22 @@ dependencies = [
 name = "jstz_core"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "boa_engine",
  "boa_gc",
+ "derive_more",
+ "erased-serde",
  "getrandom",
+ "serde",
  "tezos-smart-rollup-host",
+]
+
+[[package]]
+name = "jstz_crypto"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "tezos_crypto_rs",
 ]
 
 [[package]]
@@ -793,6 +845,18 @@ dependencies = [
  "jstz_api",
  "jstz_core",
  "tezos-smart-rollup",
+]
+
+[[package]]
+name = "jstz_ledger"
+version = "0.1.0"
+dependencies = [
+ "derive_more",
+ "jstz_core",
+ "jstz_crypto",
+ "serde",
+ "tezos-smart-rollup-host",
+ "tezos-smart-rollup-mock",
 ]
 
 [[package]]
@@ -1290,18 +1354,18 @@ checksum = "b0293b4b29daaf487284529cc2f5675b8e57c61f70167ba415a463651fd6a918"
 
 [[package]]
 name = "serde"
-version = "1.0.179"
+version = "1.0.183"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0a5bf42b8d227d4abf38a1ddb08602e229108a517cd4e5bb28f9c7eaafdce5c0"
+checksum = "32ac8da02677876d532745a130fc9d8e6edfa81a269b107c5b00829b91d8eb3c"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.179"
+version = "1.0.183"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "741e124f5485c7e60c03b043f79f320bff3527f4bbf12cf3831750dc46a0ec2c"
+checksum = "aafe972d60b0b9bee71a91b92fee2d4fb3c9d7e8f6b179aa99f27203d99a4816"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1468,8 +1532,6 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "tezos-smart-rollup"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fbc0d1ca723e4be76ae7f292068cc835e3cb2b74c0ec6e02c34f0474f7b65d4f"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
@@ -1484,14 +1546,10 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-core"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6982a67c936c315d8327c9d4bb0a29f53faa7fe24f02d5fb9d8d93f98553cbb1"
 
 [[package]]
 name = "tezos-smart-rollup-debug"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e84d8e72a764c57ed1fc8dccc7090cd76b1da187e19b588f3da3515bef0314b2"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-host",
@@ -1500,8 +1558,6 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-encoding"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cae9ceec0ecf07b635420874723ddc4c578a29d2cd3bb50e7f14171f2f0906a2"
 dependencies = [
  "hex",
  "nom",
@@ -1519,8 +1575,6 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-entrypoint"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "30022841b361845e0f7b9eabfdd065cf628b21f22214de3229675017fe25439a"
 dependencies = [
  "dlmalloc",
  "tezos-smart-rollup-core",
@@ -1532,8 +1586,6 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-host"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8b7f04c22d0b0015563b53a0e67581a162cd358a55ba6d7c7da447ad0a6c2da5"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos_crypto_rs",
@@ -1542,10 +1594,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "tezos-smart-rollup-mock"
+version = "0.2.1"
+dependencies = [
+ "hex",
+ "tezos-smart-rollup-core",
+ "tezos-smart-rollup-encoding",
+ "tezos-smart-rollup-host",
+ "tezos_crypto_rs",
+ "tezos_data_encoding",
+]
+
+[[package]]
 name = "tezos-smart-rollup-panic-hook"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ed704d934d0295cc4f38b867c03641b4adcc218df007a9c237dad989e5eb4aa"
 dependencies = [
  "tezos-smart-rollup-core",
 ]
@@ -1553,8 +1615,6 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-storage"
 version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eeb101aa1167477304ed6cdecd3b357af627fdc8ba757caa0d64e4f182b9a1d7"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
@@ -1629,18 +1689,18 @@ checksum = "aac81b6fd6beb5884b0cf3321b8117e6e5d47ecb6fc89f414cfdcca8b2fe2dd8"
 
 [[package]]
 name = "thiserror"
-version = "1.0.44"
+version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "611040a08a0439f8248d1990b111c95baa9c704c805fa1f62104b39655fd7f90"
+checksum = "d9207952ae1a003f42d3d5e892dac3c6ba42aa6ac0c79a6a91a2b5cb4253e75c"
 dependencies = [
  "thiserror-impl",
 ]
 
 [[package]]
 name = "thiserror-impl"
-version = "1.0.44"
+version = "1.0.46"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "090198534930841fab3a5d1bb637cde49e339654e606195f8d9c76eeb081dc96"
+checksum = "f1728216d3244de4f14f14f8c15c79be1a7c67867d28d69b719690e2a19fb445"
 dependencies = [
  "proc-macro2",
  "quote",

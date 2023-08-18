@@ -11,4 +11,4 @@ crate-type = ["cdylib", "lib"]
 [dependencies]
 jstz_core.workspace = true
 jstz_api.workspace = true
-tezos-smart-rollup = "0.2.0"
+tezos-smart-rollup = { path = "../../tezos/src/kernel_sdk/sdk" }
