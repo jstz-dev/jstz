@@ -15,3 +15,8 @@ result
 
 # Used for manual testing
 octez-smart-rollup-wasm-debugger
+
+# Used for running the sandbox
+octez-client
+octez-node
+octez-smart-rollup-node
