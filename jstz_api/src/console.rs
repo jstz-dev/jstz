@@ -421,7 +421,7 @@ impl ConsoleApi {
 }
 
 impl jstz_core::host::Api for ConsoleApi {
-    fn init<H: Runtime + 'static>(context: &mut Context<'_>) {
+    fn init<H: Runtime + 'static>(self, context: &mut Context<'_>) {
         let console = ObjectInitializer::with_native(Console::new(), context)
             .function(NativeFunction::from_fn_ptr(Self::log::<H>), "log", 0)
             .function(NativeFunction::from_fn_ptr(Self::error::<H>), "error", 0)

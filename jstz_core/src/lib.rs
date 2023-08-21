@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use boa_engine::{context::ContextBuilder, Context, Source};
-use host::{Host, HostDefined};
+use host::{Api, Host, HostDefined};
 use kv::{Kv, Transaction};
 use tezos_smart_rollup_host::runtime::Runtime;
 
@@ -10,8 +10,6 @@ mod error;
 pub use error::{Error, Result};
 pub mod host;
 pub mod kv;
-
-
 
 pub struct JstzRuntime<'host, H: Runtime + 'static> {
     context: Context<'host>,
@@ -39,7 +37,7 @@ where
         host_defined.insert(kv);
         host_defined.insert(tx);
 
-        host_defined.init(&mut context);
+        host_defined.init::<H>(&mut context);
 
         Self {
             context,
@@ -47,11 +45,11 @@ where
         }
     }
 
-    pub fn register_global_api<T>(&mut self)
+    pub fn register_global_api<T>(&mut self, api: T)
     where
         T: host::Api,
     {
-        T::init::<H>(&mut self.context)
+        api.init::<H>(&mut self.context)
     }
 
     pub fn eval(mut self, src: impl AsRef<[u8]>) -> String {
