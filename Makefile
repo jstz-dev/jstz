@@ -8,6 +8,11 @@ build-installer: build
 		--output target/kernel/jstz_kernel_installer.hex \
 		--preimages-dir target/kernel/preimages/
 
+.PHONY: build-bridge
+build-bridge:
+	@ligo compile contract jstz_bridge/jstz_bridge.mligo \
+		--module "Jstz_bridge" > jstz_bridge/jstz_bridge.tz
+
 .PHONY: build
 build:
 	@cargo build --target wasm32-unknown-unknown --release

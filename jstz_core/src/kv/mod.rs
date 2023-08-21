@@ -48,7 +48,7 @@ pub struct Storage;
 
 impl Storage {
     /// Retrieve a value from the persistent store if it exists
-    fn get<V>(rt: &impl Runtime, key: &impl Path) -> Result<Option<V>>
+    pub fn get<V>(rt: &impl Runtime, key: &impl Path) -> Result<Option<V>>
     where
         V: Value + DeserializeOwned,
     {
@@ -64,7 +64,7 @@ impl Storage {
 
     /// Returns `true` if the persistent store contains a key-value pair for the
     /// specified key.
-    fn contains_key(rt: &impl Runtime, key: &impl Path) -> Result<bool> {
+    pub fn contains_key(rt: &impl Runtime, key: &impl Path) -> Result<bool> {
         match rt.store_has(key)? {
             Some(ValueType::Value | ValueType::ValueWithSubtree) => Ok(true),
             _ => Ok(false),
@@ -72,7 +72,7 @@ impl Storage {
     }
 
     /// Insert a key-value pair into the persistent store
-    fn insert<V>(rt: &mut impl Runtime, key: &impl Path, value: &V) -> Result<()>
+    pub fn insert<V>(rt: &mut impl Runtime, key: &impl Path, value: &V) -> Result<()>
     where
         V: Value + ?Sized,
     {
@@ -81,7 +81,7 @@ impl Storage {
     }
 
     /// Remove a key-value pair from the persistent store
-    fn remove(rt: &mut impl Runtime, key: &impl Path) -> Result<()> {
+    pub fn remove(rt: &mut impl Runtime, key: &impl Path) -> Result<()> {
         if Self::contains_key(rt, key)? {
             rt.store_delete(key)?;
         }

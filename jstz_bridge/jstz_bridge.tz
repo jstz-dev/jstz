@@ -1,0 +1,46 @@
+{ parameter
+    (or (pair %deposit (nat %amount) (bytes %tz4_address)) (address %set_rollup)) ;
+  storage (pair (address %ctez_contract) (option %rollup address)) ;
+  code { UNPAIR ;
+         IF_LEFT
+           { SENDER ;
+             SELF_ADDRESS ;
+             DUP 4 ;
+             CAR ;
+             CONTRACT %transfer (pair (address %from) (address %to) (nat %value)) ;
+             IF_NONE { PUSH string "option is None" ; FAILWITH } {} ;
+             DUP 5 ;
+             CDR ;
+             IF_NONE
+               { PUSH string "jstz rollup address was not set" ; FAILWITH }
+               { CONTRACT (pair bytes (ticket unit)) ;
+                 IF_NONE { PUSH string "option is None" ; FAILWITH } {} } ;
+             DUP 5 ;
+             CAR ;
+             UNIT ;
+             TICKET ;
+             IF_NONE { PUSH string "Amount must be > 0" ; FAILWITH } {} ;
+             SWAP ;
+             PUSH mutez 0 ;
+             DIG 2 ;
+             DUP 7 ;
+             CDR ;
+             PAIR ;
+             TRANSFER_TOKENS ;
+             SWAP ;
+             PUSH mutez 0 ;
+             DIG 5 ;
+             CAR ;
+             DIG 4 ;
+             DIG 5 ;
+             PAIR 3 ;
+             TRANSFER_TOKENS ;
+             DIG 2 ;
+             NIL operation ;
+             DIG 3 ;
+             CONS ;
+             DIG 2 ;
+             CONS }
+           { SOME ; UPDATE 2 ; NIL operation } ;
+         PAIR } }
+

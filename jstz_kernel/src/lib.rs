@@ -1,45 +1,46 @@
-use jstz_core::JstzRuntime;
-use std::str;
+use inbox::{ExternalMessage, InternalMessage, Message};
+use jstz_core::kv::Storage;
+use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
-    inbox::InboxMessage,
     kernel_entry,
-    michelson::MichelsonUnit,
     prelude::{debug_msg, Runtime},
+    storage::path::RefPath,
 };
 
-fn read_message(rt: &mut impl Runtime) -> Option<String> {
-    let input = rt.read_input().ok()??;
-    let _ = rt.mark_for_reboot();
+mod apply;
+mod inbox;
 
-    let (_, message) = InboxMessage::<MichelsonUnit>::parse(input.as_ref()).ok()?;
-    debug_msg!(rt, "{message:?}\n");
+use crate::apply::{apply_deposit, apply_transaction};
+use crate::inbox::read_message;
 
-    let InboxMessage::External(payload) = message else {
-        return None
-    };
+const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
 
-    Some(String::from_utf8_lossy(payload).to_string())
+fn store_ticketer(rt: &mut impl Runtime, kt1: &ContractKt1Hash) {
+    Storage::insert(rt, &TICKETER, kt1).expect("Failed to write ticketer to storage");
 }
 
-fn handle_message<H: Runtime + 'static>(rt: &mut H, msg: &str) {
-    debug_msg!(rt, "Evaluating: {msg:?}\n");
+fn read_ticketer(rt: &impl Runtime) -> Option<ContractKt1Hash> {
+    Some(Storage::get(rt, &TICKETER).ok()??)
+}
 
-    // Initialize runtime
-    let mut jstz_runtime = JstzRuntime::new(rt);
-    jstz_runtime.register_global_api::<jstz_api::ConsoleApi>();
-    jstz_runtime.register_global_api::<jstz_api::LedgerApi>();
-
-    // Eval
-    let res = jstz_runtime.eval(msg);
-    debug_msg!(rt, "Result: {res:?}\n");
+fn handle_message(rt: &mut (impl Runtime + 'static), message: Message) {
+    match message {
+        Message::Internal(InternalMessage::Deposit(deposit)) => {
+            apply_deposit(rt, deposit)
+        }
+        Message::External(ExternalMessage::Transaction(tx)) => apply_transaction(rt, tx),
+        Message::External(ExternalMessage::SetTicketer(kt1)) => store_ticketer(rt, &kt1),
+    }
 }
 
 // kernel entry
-pub fn entry<H: Runtime + 'static>(rt: &mut H) {
-    debug_msg!(rt, "Hello, kernel!\n");
+pub fn entry(rt: &mut (impl Runtime + 'static)) {
+    let ticketer = read_ticketer(rt);
 
-    if let Some(msg) = read_message(rt) {
-        handle_message(rt, &msg)
+    if let Some(message) = read_message(rt, ticketer.as_ref()) {
+        handle_message(rt, message)
+    } else {
+        debug_msg!(rt, "Failed to read message. Dropping...")
     }
 }
 

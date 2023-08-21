@@ -8,3 +8,4 @@ repository.workspace = true
 [dependencies]
 tezos_crypto_rs = { version = "0.5.0", default-features = false }
 derive_more = "0.99.17"
+serde = "1.0.185"

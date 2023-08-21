@@ -32,6 +32,8 @@ pub(crate) fn deserialize<T: DeserializeOwned>(bytes: &[u8]) -> T {
 /// coerced (using `Any`) and serialized.
 pub trait Value: Any + Debug + erased_serde::Serialize {}
 
+impl<T> Value for T where T: Any + Debug + erased_serde::Serialize {}
+
 // Since trait downcasting isn't permitted, we implement all methods
 // from `dyn Any`.
 impl dyn Value {
