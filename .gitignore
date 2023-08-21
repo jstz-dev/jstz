@@ -20,3 +20,6 @@ octez-smart-rollup-wasm-debugger
 octez-client
 octez-node
 octez-smart-rollup-node
+
+# Logs from sandbox
+logs/

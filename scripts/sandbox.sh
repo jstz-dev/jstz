@@ -25,6 +25,7 @@ export TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER=Y
 client="${root_dir}/octez-client -base-dir $client_dir -endpoint http://127.0.0.1:$rpc"
 rollup_node="${root_dir}/octez-smart-rollup-node -base-dir $client_dir -endpoint http://127.0.0.1:$rpc"
 node="${root_dir}/octez-node"
+jstz="${root_dir}/scripts/jstz.sh"
 
 # Build artefacts produced by `make build-installer`
 kernel="${root_dir}/target/kernel/jstz_kernel_installer.hex"
@@ -121,7 +122,7 @@ originate_rollup() {
     $client originate smart rollup "jstz_rollup" \
         from "bootstrap1" \
         of kind wasm_2_0_0 \
-        of type bytes \
+        of type "(pair bytes (ticket unit))" \
         with kernel "file:$kernel" \
         --burn-cap 999
 
@@ -165,7 +166,8 @@ export OCTEZ_CLIENT_DIR="$client_dir" ;
 export OCTEZ_NODE_DIR="$node_dir" ;
 export OCTEZ_ROLLUP_DIR="$rollup_node_dir" ;
 alias octez-client="$client" ;
-alias octez-reset="kill ${pids[@]}; rm -rf \"$node_dir\"; rm -rf \"$client_dir\"; rm -rf \"$rollup_node_dir\"; unalias octez-client octez-reset" ;
+alias jstz="$jstz" ;
+alias octez-reset="kill ${pids[@]}; rm -rf \"$node_dir\"; rm -rf \"$client_dir\"; rm -rf \"$rollup_node_dir\"; unalias octez-client octez-reset jstz" ;
 EOF
 
     cat 1>&2 <<EOF
@@ -181,6 +183,10 @@ For instance:
     tail -f logs/kernel.log
 
 To stop the node, baker and rollup node you may run \`octez-reset\`. 
+
+Additionally, you may now use \`jstz\` to run jstz-specific commands. For instance:
+
+    jstz deploy-bridge sr1..
 
 Warning: All aliases will be removed when you close this shell. 
 
