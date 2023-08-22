@@ -6,11 +6,11 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
-tezos-smart-rollup-host = { path = "../../tezos/src/kernel_sdk/host" }
+tezos-smart-rollup-host = "0.2.1"
 derive_more = "0.99.17"
 serde = "1.0.183"
 jstz_core.workspace = true
 jstz_crypto.workspace = true
 
 [dev-dependencies]
-tezos-smart-rollup-mock = { path = "../../tezos/src/kernel_sdk/mock" }
+tezos-smart-rollup-mock = "0.2.1"
