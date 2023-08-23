@@ -10,6 +10,7 @@ boa_engine = "0.17.0"
 boa_gc = "0.17.0"
 tezos-smart-rollup-host = { path = "../../tezos/src/kernel_sdk/host" }
 derive_more = "0.99.17"
+bytemuck = "1.5.0"
 jstz_core.workspace = true
 jstz_crypto.workspace = true
 jstz_ledger.workspace = true
