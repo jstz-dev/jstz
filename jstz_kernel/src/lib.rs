@@ -1,11 +1,7 @@
 use inbox::{ExternalMessage, InternalMessage, Message};
 use jstz_core::kv::Storage;
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup::{
-    kernel_entry,
-    prelude::{debug_msg, Runtime},
-    storage::path::RefPath,
-};
+use tezos_smart_rollup::{kernel_entry, prelude::Runtime, storage::path::RefPath};
 
 mod apply;
 mod inbox;
@@ -39,8 +35,6 @@ pub fn entry(rt: &mut (impl Runtime + 'static)) {
 
     if let Some(message) = read_message(rt, ticketer.as_ref()) {
         handle_message(rt, message)
-    } else {
-        debug_msg!(rt, "Failed to read message. Dropping...")
     }
 }
 

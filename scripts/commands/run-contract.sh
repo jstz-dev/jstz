@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -xuo pipefail
+set -euo pipefail
 
 # shellcheck source=./abstract.sh
 commands_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
