@@ -6,3 +6,4 @@ pub(crate) mod storage;
 
 pub use console::ConsoleApi;
 pub use ledger::LedgerApi;
+pub use storage::StorageApi;
