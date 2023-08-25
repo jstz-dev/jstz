@@ -28,6 +28,7 @@ fn handle_message<H: Runtime + 'static>(rt: &mut H, msg: &str) {
     let mut jstz_runtime = JstzRuntime::new(rt);
     jstz_runtime.register_global_api::<jstz_api::ConsoleApi>();
     jstz_runtime.register_global_api::<jstz_api::LedgerApi>();
+    jstz_runtime.register_global_api::<jstz_api::StorageApi>();
 
     // Eval
     let res = jstz_runtime.eval(msg);
