@@ -217,6 +217,11 @@ fn always_fail(_: &mut [u8]) -> std::result::Result<(), RandomError> {
 
 register_custom_getrandom!(always_fail);
 
+pub trait Api {
+    /// Initialize a JSTZ runtime API
+    fn init<H: Runtime + 'static>(self, context: &mut Context<'_>);
+}
+
 /// A newtype over [`TypeId`] that is traced
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Deref, DerefMut)]
 pub struct TracedTypeId(pub TypeId);
@@ -313,19 +318,6 @@ impl HostDefined {
     pub fn clear(&mut self) {
         self.env.clear();
     }
-
-    pub const NAME: &'static str = "__JSTZ__HOSTDEFINED";
-
-    pub fn init(self, context: &mut Context<'_>) {
-        let host_defined = ObjectInitializer::with_native(self, context).build();
-
-        context
-            .register_global_property(Self::NAME, host_defined, Attribute::all())
-            .expect(&format!(
-                "{:?} object should only be defined once",
-                Self::NAME
-            ))
-    }
 }
 
 #[macro_export]
@@ -359,7 +351,22 @@ macro_rules! host_defined {
     };
 }
 
-pub trait Api {
-    /// Initialize a JSTZ runtime API
-    fn init<H: Runtime + 'static>(context: &mut Context<'_>);
+// HostDefined is internally an API
+// TODO: HostDefined should be added to `Realm` as a patch to boa_engine
+
+impl HostDefined {
+    pub const NAME: &'static str = "__JSTZ__HOSTDEFINED";
+}
+
+impl Api for HostDefined {
+    fn init<H: Runtime + 'static>(self, context: &mut Context<'_>) {
+        let host_defined = ObjectInitializer::with_native(self, context).build();
+
+        context
+            .register_global_property(Self::NAME, host_defined, Attribute::all())
+            .expect(&format!(
+                "{:?} object should only be defined once",
+                Self::NAME
+            ))
+    }
 }

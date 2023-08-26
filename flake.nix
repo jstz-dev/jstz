@@ -38,6 +38,8 @@
 
               rust-analyzer
               wabt
+
+              python311Packages.base58
             ];
           };
         }

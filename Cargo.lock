@@ -835,6 +835,7 @@ name = "jstz_crypto"
 version = "0.1.0"
 dependencies = [
  "derive_more",
+ "serde",
  "tezos_crypto_rs",
 ]
 
@@ -844,7 +845,13 @@ version = "0.1.0"
 dependencies = [
  "jstz_api",
  "jstz_core",
+ "jstz_crypto",
+ "jstz_ledger",
+ "num-traits",
+ "serde",
+ "serde_json",
  "tezos-smart-rollup",
+ "tezos_crypto_rs",
 ]
 
 [[package]]
@@ -1354,18 +1361,18 @@ checksum = "b0293b4b29daaf487284529cc2f5675b8e57c61f70167ba415a463651fd6a918"
 
 [[package]]
 name = "serde"
-version = "1.0.183"
+version = "1.0.185"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "32ac8da02677876d532745a130fc9d8e6edfa81a269b107c5b00829b91d8eb3c"
+checksum = "be9b6f69f1dfd54c3b568ffa45c310d6973a5e5148fd40cf515acaf38cf5bc31"
 dependencies = [
  "serde_derive",
 ]
 
 [[package]]
 name = "serde_derive"
-version = "1.0.183"
+version = "1.0.185"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aafe972d60b0b9bee71a91b92fee2d4fb3c9d7e8f6b179aa99f27203d99a4816"
+checksum = "dc59dfdcbad1437773485e0367fea4b090a2e0a16d9ffc46af47764536a298ec"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1374,9 +1381,9 @@ dependencies = [
 
 [[package]]
 name = "serde_json"
-version = "1.0.104"
+version = "1.0.105"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "076066c5f1078eac5b722a31827a8832fe108bed65dfa75e233c89f8206e976c"
+checksum = "693151e1ac27563d6dbcec9dee9fbd5da8539b20fa14ad3752b2e6d363ace360"
 dependencies = [
  "itoa",
  "ryu",
@@ -1532,6 +1539,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 [[package]]
 name = "tezos-smart-rollup"
 version = "0.2.1"
+source = "git+https://gitlab.com/tezos/tezos.git?branch=ajob410@sdk-ord-paths#c413b572082c8bd947de0c783598f4fcb7b53fe6"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
@@ -1546,10 +1554,12 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-core"
 version = "0.2.1"
+source = "git+https://gitlab.com/tezos/tezos.git?branch=ajob410@sdk-ord-paths#c413b572082c8bd947de0c783598f4fcb7b53fe6"
 
 [[package]]
 name = "tezos-smart-rollup-debug"
 version = "0.2.1"
+source = "git+https://gitlab.com/tezos/tezos.git?branch=ajob410@sdk-ord-paths#c413b572082c8bd947de0c783598f4fcb7b53fe6"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-host",
@@ -1558,6 +1568,7 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-encoding"
 version = "0.2.1"
+source = "git+https://gitlab.com/tezos/tezos.git?branch=ajob410@sdk-ord-paths#c413b572082c8bd947de0c783598f4fcb7b53fe6"
 dependencies = [
  "hex",
  "nom",
@@ -1575,6 +1586,7 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-entrypoint"
 version = "0.2.1"
+source = "git+https://gitlab.com/tezos/tezos.git?branch=ajob410@sdk-ord-paths#c413b572082c8bd947de0c783598f4fcb7b53fe6"
 dependencies = [
  "dlmalloc",
  "tezos-smart-rollup-core",
@@ -1586,6 +1598,7 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-host"
 version = "0.2.1"
+source = "git+https://gitlab.com/tezos/tezos.git?branch=ajob410@sdk-ord-paths#c413b572082c8bd947de0c783598f4fcb7b53fe6"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos_crypto_rs",
@@ -1596,6 +1609,8 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-mock"
 version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c0a78d331bf3b80970c7e2b81472283f197aab77912e079e759c2e672d451cc"
 dependencies = [
  "hex",
  "tezos-smart-rollup-core",
@@ -1608,6 +1623,7 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-panic-hook"
 version = "0.2.1"
+source = "git+https://gitlab.com/tezos/tezos.git?branch=ajob410@sdk-ord-paths#c413b572082c8bd947de0c783598f4fcb7b53fe6"
 dependencies = [
  "tezos-smart-rollup-core",
 ]
@@ -1615,6 +1631,7 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-storage"
 version = "0.2.1"
+source = "git+https://gitlab.com/tezos/tezos.git?branch=ajob410@sdk-ord-paths#c413b572082c8bd947de0c783598f4fcb7b53fe6"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",

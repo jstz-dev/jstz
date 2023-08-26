@@ -1,6 +1,7 @@
 use std::fmt;
-use tezos_crypto_rs::hash::ContractTz4Hash;
 
+use serde::{Deserialize, Serialize};
+use tezos_crypto_rs::hash::{ContractTz4Hash, HashTrait};
 use tezos_crypto_rs::PublicKeyWithHash;
 
 use crate::{
@@ -8,7 +9,7 @@ use crate::{
     public_key::PublicKey,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum PublicKeyHash {
     Tz4(ContractTz4Hash),
 }
@@ -22,6 +23,16 @@ impl PublicKeyHash {
     pub fn from_base58(data: &str) -> Result<Self> {
         let tz4 = ContractTz4Hash::from_base58_check(data)?;
         Ok(PublicKeyHash::Tz4(tz4))
+    }
+
+    pub fn from_slice(bytes: &[u8]) -> Result<Self> {
+        let tz4 = ContractTz4Hash::try_from_bytes(bytes)?;
+        Ok(PublicKeyHash::Tz4(tz4))
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        let PublicKeyHash::Tz4(tz4) = self;
+        &tz4.0
     }
 }
 

@@ -2,7 +2,7 @@ use crate::{
     error::{Error, Result},
     nonce::Nonce,
 };
-use jstz_core::kv::{self, Transaction};
+use jstz_core::kv::Transaction;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 
 use serde::{Deserialize, Serialize};
@@ -28,12 +28,10 @@ impl Default for Account {
     }
 }
 
-impl kv::Value for Account {}
-
 const ACCOUNTS_PATH: RefPath = RefPath::assert_from(b"/jstz_account");
 
 impl Account {
-    pub fn path(pkh: PublicKeyHash) -> Result<OwnedPath> {
+    pub fn path(pkh: &PublicKeyHash) -> Result<OwnedPath> {
         let account_path = OwnedPath::try_from(format!("/{}", pkh))?;
 
         Ok(path::concat(&ACCOUNTS_PATH, &account_path)?)
@@ -42,7 +40,7 @@ impl Account {
     fn get_mut<'a, 'b>(
         rt: &impl Runtime,
         tx: &'a mut Transaction,
-        pkh: PublicKeyHash,
+        pkh: &PublicKeyHash,
     ) -> Result<&'b mut Account>
     where
         'a: 'b,
@@ -55,7 +53,7 @@ impl Account {
     pub fn nonce<'a>(
         rt: &impl Runtime,
         tx: &'a mut Transaction,
-        pkh: PublicKeyHash,
+        pkh: &PublicKeyHash,
     ) -> Result<&'a Nonce> {
         let account = Self::get_mut(rt, tx, pkh)?;
 
@@ -65,18 +63,30 @@ impl Account {
     pub fn balance(
         rt: &impl Runtime,
         tx: &mut Transaction,
-        pkh: PublicKeyHash,
+        pkh: &PublicKeyHash,
     ) -> Result<Amount> {
         let account = Self::get_mut(rt, tx, pkh)?;
 
         Ok(account.amount)
     }
 
+    pub fn deposit(
+        rt: &impl Runtime,
+        tx: &mut Transaction,
+        pkh: &PublicKeyHash,
+        amount: Amount,
+    ) -> Result<()> {
+        let mut account = Self::get_mut(rt, tx, pkh)?;
+
+        account.amount += amount;
+        Ok(())
+    }
+
     pub fn transfer(
         rt: &impl Runtime,
         tx: &mut Transaction,
-        src: PublicKeyHash,
-        dst: PublicKeyHash,
+        src: &PublicKeyHash,
+        dst: &PublicKeyHash,
         amt: Amount,
     ) -> Result<()> {
         let src = Self::get_mut(rt, tx, src)?;
@@ -112,7 +122,8 @@ mod test {
             .expect("Could not parse pkh");
 
         // Act
-        let amt = Account::balance(&mut rt, &mut tx, pkh).expect("Could not get balance");
+        let amt =
+            Account::balance(&mut rt, &mut tx, &pkh).expect("Could not get balance");
 
         kv.commit_transaction(&mut rt, tx)
             .expect("Could not commit tx");
