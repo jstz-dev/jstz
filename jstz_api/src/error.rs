@@ -1,4 +1,5 @@
-use boa_engine::{JsError, JsNativeError};
+use crate::conversion::ToJsError;
+use boa_engine::{Context, JsError, JsNativeError};
 use derive_more::{Display, Error, From};
 
 #[derive(Display, Debug, Error, From)]
@@ -23,6 +24,11 @@ impl From<Error> for JsError {
                 .with_message(source.to_string())
                 .into(),
         }
+    }
+}
+impl ToJsError for Error {
+    fn to_js_error(self, _context: &mut Context) -> JsError {
+        self.into()
     }
 }
 
