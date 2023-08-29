@@ -7,7 +7,11 @@ use boa_engine::{
 use boa_gc::{Finalize, Trace};
 use tezos_smart_rollup_host::runtime::Runtime;
 
-use jstz_core::{host::{self, Host}, host_defined, kv::Transaction};
+use jstz_core::{
+    host::{self, Host},
+    host_defined,
+    kv::Transaction,
+};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_ledger::account::{Account, Amount};
 

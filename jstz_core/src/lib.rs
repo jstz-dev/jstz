@@ -11,8 +11,6 @@ pub use error::{Error, Result};
 pub mod host;
 pub mod kv;
 
-
-
 pub struct JstzRuntime<'host, H: Runtime + 'static> {
     context: Context<'host>,
     _host: PhantomData<H>,

@@ -222,7 +222,7 @@ impl Transaction {
     where
         V: Value,
     {
-        self.snapshot.insert(key, SnapshotEntry::persistent(value));
+        self.snapshot.insert(key, SnapshotEntry::emphemeral(value));
         Ok(())
     }
 
