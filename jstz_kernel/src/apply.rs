@@ -27,7 +27,7 @@ pub fn apply_transaction(rt: &mut (impl Runtime + 'static), tx: Transaction) {
     // Initialize runtime
     let mut jstz_runtime = JstzRuntime::new(rt);
     jstz_runtime.register_global_api(jstz_api::ConsoleApi);
-    jstz_runtime.register_global_api(jstz_api::LedgerApi { contract_address });
+    jstz_runtime.register_global_api(jstz_api::LedgerApi { contract_address: contract_address.clone() });
     jstz_runtime.register_global_api(jstz_api::StorageApi { contract_address });
 
     // Eval
