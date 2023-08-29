@@ -3,9 +3,12 @@ use std::ops::DerefMut;
 use boa_engine::object::ObjectInitializer;
 use boa_engine::{property::Attribute, Context, JsResult, JsValue, NativeFunction};
 use boa_gc::{empty_trace, Finalize, Trace};
-use jstz_core::host::{self, Host};
-use jstz_core::host_defined;
-use jstz_core::kv::Transaction;
+use jstz_core::{
+    host::{self, Host},
+    host_defined,
+    kv::Transaction,
+};
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup_host::path::OwnedPath;
 use tezos_smart_rollup_host::runtime::{Runtime, RuntimeError};
@@ -17,6 +20,11 @@ unsafe impl Trace for StoredPrefix {
     empty_trace!();
 }
 impl Finalize for StoredPrefix {}
+impl From<PublicKeyHash> for StoredPrefix {
+    fn from(source: PublicKeyHash) -> Self {
+        Self(source.to_string())
+    }
+}
 
 macro_rules! setup_call {
     (this: $this:ident, context: $context:ident $(, host: $rt:ident)? $(, transaction: $tx:ident)?) => {
@@ -31,7 +39,6 @@ macro_rules! setup_call {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsStoreValue(Vec<u16>);
-impl jstz_core::kv::Value for JsStoreValue {}
 impl FromJs for JsStoreValue {
     fn from_js(this: &JsValue, context: &mut Context) -> JsResult<Self> {
         let string = this.to_string(context)?;
@@ -90,10 +97,12 @@ impl StoredPrefix {
     }
 }
 
-pub struct StorageApi;
+pub struct StorageApi {
+    pub contract_address: PublicKeyHash,
+}
 
 impl jstz_core::host::Api for StorageApi {
-    fn init<H: Runtime + 'static>(context: &mut boa_engine::Context<'_>) {
+    fn init<H: Runtime + 'static>(self, context: &mut boa_engine::Context<'_>) {
         fn write_value<H: Runtime + 'static>(
             this: &JsValue,
             args: &[JsValue],
@@ -144,17 +153,17 @@ impl jstz_core::host::Api for StorageApi {
                 .map_err(|err| err.into());
             result.to_js(context)
         }
-        let storage =
-            ObjectInitializer::with_native(StoredPrefix("jstz42BADA55".into()), context)
-                .function(NativeFunction::from_fn_ptr(write_value::<H>), "setItem", 2)
-                .function(NativeFunction::from_fn_ptr(read_value::<H>), "getItem", 1)
-                .function(
-                    NativeFunction::from_fn_ptr(remove_value::<H>),
-                    "removeItem",
-                    1,
-                )
-                .function(NativeFunction::from_fn_ptr(has_value::<H>), "hasItem", 1)
-                .build();
+        let prefix: StoredPrefix = self.contract_address.into();
+        let storage = ObjectInitializer::with_native(prefix, context)
+            .function(NativeFunction::from_fn_ptr(write_value::<H>), "setItem", 2)
+            .function(NativeFunction::from_fn_ptr(read_value::<H>), "getItem", 1)
+            .function(
+                NativeFunction::from_fn_ptr(remove_value::<H>),
+                "removeItem",
+                1,
+            )
+            .function(NativeFunction::from_fn_ptr(has_value::<H>), "hasItem", 1)
+            .build();
         context
             .register_global_property("storage", storage, Attribute::all())
             .expect("The storage object shouldn't exist yet");

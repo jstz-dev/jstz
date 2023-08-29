@@ -1,6 +1,6 @@
 use jstz_core::{kv::Kv, JstzRuntime};
 use jstz_ledger::account::Account;
-use tezos_smart_rollup::prelude::{Runtime, debug_msg};
+use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
 use crate::inbox::{Deposit, Transaction};
 
@@ -28,6 +28,7 @@ pub fn apply_transaction(rt: &mut (impl Runtime + 'static), tx: Transaction) {
     let mut jstz_runtime = JstzRuntime::new(rt);
     jstz_runtime.register_global_api(jstz_api::ConsoleApi);
     jstz_runtime.register_global_api(jstz_api::LedgerApi { contract_address });
+    jstz_runtime.register_global_api(jstz_api::StorageApi { contract_address });
 
     // Eval
     let res = jstz_runtime.eval(contract_code);
