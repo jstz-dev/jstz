@@ -25,7 +25,6 @@ impl From<PublicKeyHash> for StoredPrefix {
         Self(source.to_string())
     }
 }
-
 macro_rules! setup_call {
     (this: $this:ident, context: $context:ident $(, host: $rt:ident)? $(, transaction: $tx:ident)?) => {
       host_defined!($context, host_defined);
