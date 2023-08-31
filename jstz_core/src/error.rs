@@ -1,3 +1,4 @@
+use boa_engine::JsError;
 use derive_more::{Display, Error, From};
 
 #[derive(Display, Debug, Error, From)]
@@ -7,6 +8,9 @@ pub enum Error {
     },
     PathError {
         source: tezos_smart_rollup_host::path::PathError,
+    },
+    JsError {
+        source: JsError,
     },
 }
 

@@ -1,15 +1,11 @@
-use std::ops::DerefMut;
+use std::ops::Deref;
 
 use boa_engine::{
     object::ObjectInitializer, property::Attribute, Context, JsArgs, JsError,
     JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, Trace};
-use jstz_core::{
-    host::{self, Host},
-    host_defined,
-    kv::Transaction,
-};
+use jstz_core::{host_defined, kv::Transaction, runtime};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup_host::path::{self, OwnedPath, RefPath};
@@ -66,48 +62,39 @@ impl Storage {
 
     fn get<'a>(
         &self,
-        rt: &mut impl Runtime,
+        rt: &impl Runtime,
         tx: &'a mut Transaction,
         key: &str,
     ) -> Result<Option<&'a StorageValue>> {
         Ok(tx.get::<StorageValue>(rt, self.key_path(key)?)?)
     }
 
-    fn delete(
-        &self,
-        rt: &mut impl Runtime,
-        tx: &mut Transaction,
-        key: &str,
-    ) -> Result<()> {
+    fn delete(&self, rt: &impl Runtime, tx: &mut Transaction, key: &str) -> Result<()> {
         Ok(tx.remove(rt, &self.key_path(key)?)?)
     }
 
-    fn has(
-        &self,
-        rt: &mut impl Runtime,
-        tx: &mut Transaction,
-        key: &str,
-    ) -> Result<bool> {
+    fn has(&self, rt: &impl Runtime, tx: &mut Transaction, key: &str) -> Result<bool> {
         Ok(tx.contains_key(rt, &self.key_path(key)?)?)
     }
 }
 
 macro_rules! preamble {
-    ($this:ident, $args:ident, $context:ident, $key:ident $(, rt: $rt:ident)? $(, tx: $tx:ident)? ) => {
+    ($this:ident, $args:ident, $context:ident, $key:ident, $tx:ident) => {
         host_defined!($context, host_defined);
-        $(let mut $rt = host_defined.get_mut::<Host<H>>().expect("");)?
-        $(let mut $tx = host_defined.get_mut::<Transaction>().expect("");)?
+        let mut $tx = host_defined.get_mut::<Transaction>().expect("");
 
-        let $this = $this.as_object()
-            .and_then(|obj| obj.downcast_mut::<Storage>())
-            .ok_or_else(|| {
-                JsError::from_native(
-                    JsNativeError::typ()
-                        .with_message("Failed to convert js value into rust type `Storage`")
-                )
-            })?;
+        let $this =
+            $this
+                .as_object()
+                .and_then(|obj| obj.downcast_mut::<Storage>())
+                .ok_or_else(|| {
+                    JsError::from_native(JsNativeError::typ().with_message(
+                        "Failed to convert js value into rust type `Storage`",
+                    ))
+                })?;
 
-        let $key = $args.get_or_undefined(0)
+        let $key = $args
+            .get_or_undefined(0)
             .as_string()
             .ok_or_else(|| {
                 JsNativeError::typ()
@@ -124,12 +111,8 @@ pub struct StorageApi {
 impl StorageApi {
     const NAME: &'static str = "Storage";
 
-    fn set<H: Runtime + 'static>(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
-        preamble!(this, args, context, key, tx: tx);
+    fn set(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+        preamble!(this, args, context, key, tx);
 
         let value = StorageValue(args.get_or_undefined(1).to_json(context)?);
 
@@ -138,53 +121,45 @@ impl StorageApi {
         Ok(JsValue::undefined())
     }
 
-    fn get<H: Runtime + 'static>(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
-        preamble!(this, args, context, key, rt: rt, tx: tx);
+    fn get(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+        preamble!(this, args, context, key, tx);
 
-        let result = this.get(rt.deref_mut(), &mut tx, &key)?;
+        let result = runtime::with_global_host(|rt| this.get(rt.deref(), &mut tx, &key))?;
 
         result.to_js(context)
     }
 
-    fn delete<H: Runtime + 'static>(
+    fn delete(
         this: &JsValue,
         args: &[JsValue],
         context: &mut Context,
     ) -> JsResult<JsValue> {
-        preamble!(this, args, context, key, rt: rt, tx: tx);
+        preamble!(this, args, context, key, tx);
 
-        this.delete(rt.deref_mut(), &mut tx, &key)?;
+        runtime::with_global_host(|rt| this.delete(rt.deref(), &mut tx, &key))?;
 
         Ok(JsValue::undefined())
     }
 
-    fn has<H: Runtime + 'static>(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
-        preamble!(this, args, context, key, rt: rt, tx: tx);
+    fn has(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
+        preamble!(this, args, context, key, tx);
 
-        let result = this.has(rt.deref_mut(), &mut tx, &key)?;
+        let result = runtime::with_global_host(|rt| this.has(rt.deref(), &mut tx, &key))?;
 
         Ok(result.into())
     }
 }
 
-impl jstz_core::host::Api for StorageApi {
-    fn init<H: Runtime + 'static>(self, context: &mut boa_engine::Context<'_>) {
+impl jstz_core::realm::Api for StorageApi {
+    fn init(self, context: &mut boa_engine::Context<'_>) {
         let storage = ObjectInitializer::with_native(
             Storage::new(self.contract_address.to_string()),
             context,
         )
-        .function(NativeFunction::from_fn_ptr(Self::set::<H>), "set", 2)
-        .function(NativeFunction::from_fn_ptr(Self::get::<H>), "get", 1)
-        .function(NativeFunction::from_fn_ptr(Self::delete::<H>), "delete", 1)
-        .function(NativeFunction::from_fn_ptr(Self::has::<H>), "has", 1)
+        .function(NativeFunction::from_fn_ptr(Self::set), "set", 2)
+        .function(NativeFunction::from_fn_ptr(Self::get), "get", 1)
+        .function(NativeFunction::from_fn_ptr(Self::delete), "delete", 1)
+        .function(NativeFunction::from_fn_ptr(Self::has), "has", 1)
         .build();
 
         context

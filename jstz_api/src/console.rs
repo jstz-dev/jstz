@@ -22,10 +22,7 @@ use boa_engine::{
     Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
-use jstz_core::{
-    host::{self, Host},
-    host_defined,
-};
+use jstz_core::runtime;
 use tezos_smart_rollup_host::runtime::Runtime;
 
 /// This represents the different types of log messages.
@@ -346,16 +343,17 @@ impl Console {
 
 macro_rules! vardic_console_function {
     ($name:ident) => {
-        fn $name<H: Runtime + 'static>(
+        fn $name(
             this: &JsValue,
             args: &[JsValue],
             context: &mut Context<'_>,
         ) -> JsResult<JsValue> {
             let console = Console::from_js_value(this)?;
-            host_defined!(context, host_defined);
-            let rt = host_defined.get::<Host<H>>().unwrap();
-            console.$name(args, rt.deref(), context)?;
-            Ok(JsValue::undefined())
+
+            runtime::with_global_host(|rt| {
+                console.$name(args, rt.deref(), context)?;
+                Ok(JsValue::undefined())
+            })
         }
     };
 }
@@ -369,36 +367,34 @@ impl ConsoleApi {
     vardic_console_function!(warn);
     vardic_console_function!(info);
 
-    fn assert<H: Runtime + 'static>(
+    fn assert(
         this: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         let console = Console::from_js_value(this)?;
-        host_defined!(context, host_defined);
-        let rt = host_defined.get::<Host<H>>().unwrap();
+        runtime::with_global_host(|rt| {
+            let assertion = args.get_or_undefined(0).to_boolean();
+            let data = if args.len() >= 1 { &args[1..] } else { &[] };
+            console.assert(assertion, data, rt.deref(), context)?;
 
-        let assertion = args.get_or_undefined(0).to_boolean();
-        let data = if args.len() >= 1 { &args[1..] } else { &[] };
-        console.assert(assertion, data, rt.deref(), context)?;
-
-        Ok(JsValue::undefined())
+            Ok(JsValue::undefined())
+        })
     }
 
-    fn group<H: Runtime + 'static>(
+    fn group(
         this: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         let mut console = Console::from_js_value(this)?;
-        host_defined!(context, host_defined);
-        let rt = host_defined.get::<Host<H>>().unwrap();
-
-        console.group(args, rt.deref(), context)?;
-        Ok(JsValue::undefined())
+        runtime::with_global_host(|rt| {
+            console.group(args, rt, context)?;
+            Ok(JsValue::undefined())
+        })
     }
 
-    fn group_end<H: Runtime + 'static>(
+    fn group_end(
         this: &JsValue,
         _args: &[JsValue],
         _context: &mut Context<'_>,
@@ -409,7 +405,7 @@ impl ConsoleApi {
         Ok(JsValue::undefined())
     }
 
-    fn clear<H: Runtime + 'static>(
+    fn clear(
         this: &JsValue,
         _args: &[JsValue],
         _context: &mut Context<'_>,
@@ -420,27 +416,23 @@ impl ConsoleApi {
     }
 }
 
-impl jstz_core::host::Api for ConsoleApi {
-    fn init<H: Runtime + 'static>(self, context: &mut Context<'_>) {
+impl jstz_core::realm::Api for ConsoleApi {
+    fn init(self, context: &mut Context<'_>) {
         let console = ObjectInitializer::with_native(Console::new(), context)
-            .function(NativeFunction::from_fn_ptr(Self::log::<H>), "log", 0)
-            .function(NativeFunction::from_fn_ptr(Self::error::<H>), "error", 0)
-            .function(NativeFunction::from_fn_ptr(Self::debug::<H>), "debug", 0)
-            .function(NativeFunction::from_fn_ptr(Self::warn::<H>), "warn", 0)
-            .function(NativeFunction::from_fn_ptr(Self::info::<H>), "info", 0)
-            .function(NativeFunction::from_fn_ptr(Self::assert::<H>), "assert", 0)
-            .function(NativeFunction::from_fn_ptr(Self::group::<H>), "group", 0)
+            .function(NativeFunction::from_fn_ptr(Self::log), "log", 0)
+            .function(NativeFunction::from_fn_ptr(Self::error), "error", 0)
+            .function(NativeFunction::from_fn_ptr(Self::debug), "debug", 0)
+            .function(NativeFunction::from_fn_ptr(Self::warn), "warn", 0)
+            .function(NativeFunction::from_fn_ptr(Self::info), "info", 0)
+            .function(NativeFunction::from_fn_ptr(Self::assert), "assert", 0)
+            .function(NativeFunction::from_fn_ptr(Self::group), "group", 0)
             .function(
-                NativeFunction::from_fn_ptr(Self::group::<H>),
+                NativeFunction::from_fn_ptr(Self::group),
                 "groupCollapsed",
                 0,
             )
-            .function(
-                NativeFunction::from_fn_ptr(Self::group_end::<H>),
-                "groupEnd",
-                0,
-            )
-            .function(NativeFunction::from_fn_ptr(Self::clear::<H>), "clear", 0)
+            .function(NativeFunction::from_fn_ptr(Self::group_end), "groupEnd", 0)
+            .function(NativeFunction::from_fn_ptr(Self::clear), "clear", 0)
             .build();
 
         context

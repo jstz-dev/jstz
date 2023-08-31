@@ -1,4 +1,10 @@
-use jstz_core::{kv::Kv, JstzRuntime};
+use boa_engine::{JsResult, JsValue, Source};
+use jstz_core::{
+    executor::Executor,
+    kv::Kv,
+    realm::Module,
+    runtime::{with_host_runtime, Runtime as JstzRuntime},
+};
 use jstz_ledger::account::Account;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
@@ -16,6 +22,22 @@ pub fn apply_deposit(rt: &mut impl Runtime, deposit: Deposit) {
         .expect("Failed to commit transaction for deposit");
 }
 
+async fn execute(
+    module: &Module,
+    jstz_runtime: &mut JstzRuntime<'_>,
+) -> JsResult<JsValue> {
+    let promise = module.realm().eval_module(&module, jstz_runtime)?;
+
+    jstz_runtime
+        .resolve_value(&promise.into())
+        .await
+        .expect("Failed to evaluate top-level script");
+
+    let result = Executor::handle_request(&module, jstz_runtime)?;
+
+    jstz_runtime.resolve_value(&result).await
+}
+
 pub fn apply_transaction(rt: &mut (impl Runtime + 'static), tx: Transaction) {
     let Transaction {
         contract_address,
@@ -24,15 +46,38 @@ pub fn apply_transaction(rt: &mut (impl Runtime + 'static), tx: Transaction) {
 
     debug_msg!(rt, "Evaluating: {contract_code:?}\n");
 
-    // Initialize runtime
-    let mut jstz_runtime = JstzRuntime::new(rt);
-    jstz_runtime.register_global_api(jstz_api::ConsoleApi);
-    jstz_runtime.register_global_api(jstz_api::LedgerApi {
-        contract_address: contract_address.clone(),
-    });
-    jstz_runtime.register_global_api(jstz_api::StorageApi { contract_address });
+    // 1. Initialize runtime
+    let mut jstz_runtime = JstzRuntime::new();
 
-    // Eval
-    let res = jstz_runtime.eval(contract_code);
-    debug_msg!(rt, "Result: {res:?}\n");
+    let result: JsResult<JsValue> = with_host_runtime(rt, || {
+        // 2. Initialize script
+        let module =
+            Module::parse(Source::from_bytes(&contract_code), None, &mut jstz_runtime)
+                .expect("Failed to parse contract code");
+
+        // 3. Initialize Apis
+        module
+            .realm()
+            .register_api(jstz_api::ConsoleApi, &mut jstz_runtime);
+        module.realm().register_api(
+            jstz_api::LedgerApi {
+                contract_address: contract_address.clone(),
+            },
+            &mut jstz_runtime,
+        );
+        module.realm().register_api(
+            jstz_api::StorageApi {
+                contract_address: contract_address,
+            },
+            &mut jstz_runtime,
+        );
+        module
+            .realm()
+            .register_api(jstz_api::ContractApi, &mut jstz_runtime);
+
+        // 4. Execute
+        jstz_core::future::block_on(execute(&module, &mut jstz_runtime))
+    });
+
+    debug_msg!(rt, "Result: {result:?}\n");
 }
