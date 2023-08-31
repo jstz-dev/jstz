@@ -1,7 +1,5 @@
-mod conversion;
 mod console;
 mod contract;
-mod error;
 mod ledger;
 mod storage;
 

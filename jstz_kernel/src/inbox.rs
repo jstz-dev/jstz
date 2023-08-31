@@ -1,5 +1,5 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_ledger::account::Amount;
+use jstz_proto::context::account::Amount;
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::ContractKt1Hash;

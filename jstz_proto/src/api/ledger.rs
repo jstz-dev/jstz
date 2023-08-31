@@ -6,13 +6,14 @@ use boa_engine::{
     Context, JsArgs, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
-use tezos_smart_rollup_host::runtime::Runtime;
 
-use jstz_core::{host_defined, kv::Transaction};
+use jstz_core::{host::HostRuntime, host_defined, kv::Transaction, runtime};
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_ledger::account::{Account, Amount};
 
-use crate::error::Result;
+use crate::{
+    context::account::{Account, Amount},
+    error::Result,
+};
 
 // Ledger.selfAddress()
 // Ledger.balance(pkh)
@@ -34,7 +35,7 @@ impl Ledger {
     }
 
     fn balance(
-        rt: &impl Runtime,
+        rt: &impl HostRuntime,
         tx: &mut Transaction,
         public_key_hash: &PublicKeyHash,
     ) -> Result<u64> {
@@ -45,7 +46,7 @@ impl Ledger {
 
     fn transfer(
         &self,
-        rt: &impl Runtime,
+        rt: &impl HostRuntime,
         tx: &mut Transaction,
         dst: &PublicKeyHash,
         amount: Amount,
@@ -103,7 +104,7 @@ impl LedgerApi {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        jstz_core::runtime::with_global_host(|rt| {
+        runtime::with_global_host(|rt| {
             host_defined!(context, host_defined);
 
             let mut tx = host_defined.get_mut::<Transaction>().unwrap();
@@ -121,7 +122,7 @@ impl LedgerApi {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        jstz_core::runtime::with_global_host(|rt| {
+        runtime::with_global_host(|rt| {
             host_defined!(context, host_defined);
             let mut tx = host_defined.get_mut::<Transaction>().unwrap();
 

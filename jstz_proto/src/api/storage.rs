@@ -5,13 +5,12 @@ use boa_engine::{
     JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, Trace};
-use jstz_core::{host_defined, kv::Transaction, runtime};
+use jstz_core::{host::HostRuntime, host_defined, kv::Transaction, runtime};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
-use tezos_smart_rollup_host::path::{self, OwnedPath, RefPath};
-use tezos_smart_rollup_host::runtime::Runtime;
+use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 
-use crate::{conversion::ToJs, error::Result};
+use crate::error::Result;
 
 #[derive(Debug, Trace, Finalize)]
 struct Storage {
@@ -39,12 +38,6 @@ impl TryFrom<String> for StorageValue {
     }
 }
 
-impl ToJs for &StorageValue {
-    fn to_js(self, context: &mut Context) -> JsResult<JsValue> {
-        JsValue::from_json(&self.0, context)
-    }
-}
-
 impl Storage {
     pub fn new(prefix: String) -> Self {
         Self { prefix }
@@ -62,19 +55,29 @@ impl Storage {
 
     fn get<'a>(
         &self,
-        rt: &impl Runtime,
+        hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         key: &str,
     ) -> Result<Option<&'a StorageValue>> {
-        Ok(tx.get::<StorageValue>(rt, self.key_path(key)?)?)
+        Ok(tx.get::<StorageValue>(hrt, self.key_path(key)?)?)
     }
 
-    fn delete(&self, rt: &impl Runtime, tx: &mut Transaction, key: &str) -> Result<()> {
-        Ok(tx.remove(rt, &self.key_path(key)?)?)
+    fn delete(
+        &self,
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        key: &str,
+    ) -> Result<()> {
+        Ok(tx.remove(hrt, &self.key_path(key)?)?)
     }
 
-    fn has(&self, rt: &impl Runtime, tx: &mut Transaction, key: &str) -> Result<bool> {
-        Ok(tx.contains_key(rt, &self.key_path(key)?)?)
+    fn has(
+        &self,
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        key: &str,
+    ) -> Result<bool> {
+        Ok(tx.contains_key(hrt, &self.key_path(key)?)?)
     }
 }
 
@@ -126,7 +129,10 @@ impl StorageApi {
 
         let result = runtime::with_global_host(|rt| this.get(rt.deref(), &mut tx, &key))?;
 
-        result.to_js(context)
+        match result {
+            Some(value) => JsValue::from_json(&value.0, context),
+            None => Ok(JsValue::null()),
+        }
     }
 
     fn delete(
@@ -136,7 +142,7 @@ impl StorageApi {
     ) -> JsResult<JsValue> {
         preamble!(this, args, context, key, tx);
 
-        runtime::with_global_host(|rt| this.delete(rt.deref(), &mut tx, &key))?;
+        runtime::with_global_host(|hrt| this.delete(hrt.deref(), &mut tx, &key))?;
 
         Ok(JsValue::undefined())
     }
@@ -144,13 +150,14 @@ impl StorageApi {
     fn has(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         preamble!(this, args, context, key, tx);
 
-        let result = runtime::with_global_host(|rt| this.has(rt.deref(), &mut tx, &key))?;
+        let result =
+            runtime::with_global_host(|hrt| this.has(hrt.deref(), &mut tx, &key))?;
 
         Ok(result.into())
     }
 }
 
-impl jstz_core::realm::Api for StorageApi {
+impl jstz_core::Api for StorageApi {
     fn init(self, context: &mut boa_engine::Context<'_>) {
         let storage = ObjectInitializer::with_native(
             Storage::new(self.contract_address.to_string()),
