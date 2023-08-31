@@ -83,7 +83,13 @@ impl Script {
     }
 
     fn register_apis(&self, contract_address: PublicKeyHash, context: &mut Context<'_>) {
-        self.realm().register_api(api::ConsoleApi, context);
+        self.realm().register_api(jstz_api::ConsoleApi, context);
+        self.realm().register_api(
+            jstz_api::KvApi {
+                contract_address: contract_address.clone(),
+            },
+            context,
+        );
         self.realm()
             .register_api(api::LedgerApi { contract_address }, context);
         self.realm().register_api(api::ContractApi, context);
