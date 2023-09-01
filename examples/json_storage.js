@@ -6,7 +6,7 @@ const ACCOUNT = "ajob410";
 
 const handler = () => {
     const key = `${NAMESPACE}/${ACCOUNT}`;
-    let account = Storage.get(key);
+    let account = Kv.get(key);
     console.log(`Fetching account: ${JSON.stringify(account)}`);
     if (account === null) {
         account = { firstName: "Alistair", lastName: "O'Brien", nonce: 0 };
@@ -14,7 +14,7 @@ const handler = () => {
         // increment nonce
         account.nonce++;
     }
-    Storage.set(key, account);
+    Kv.set(key, account);
 }
 
-handler();
+export default handler;
