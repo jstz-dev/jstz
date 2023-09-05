@@ -1,7 +1,9 @@
-use crate::error::{Error, Result};
-use crate::public_key::PublicKey;
+use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::BlsSignature;
 
+use crate::{public_key::PublicKey, Error, Result};
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Signature {
     Bls(BlsSignature),
 }

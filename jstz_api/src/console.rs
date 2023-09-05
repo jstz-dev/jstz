@@ -22,8 +22,7 @@ use boa_engine::{
     Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
-use jstz_core::runtime;
-use tezos_smart_rollup_host::runtime::Runtime;
+use jstz_core::{host::HostRuntime, runtime};
 
 /// This represents the different types of log messages.
 #[derive(Debug)]
@@ -35,7 +34,7 @@ enum LogMessage {
 }
 
 impl LogMessage {
-    fn log(self, rt: &impl Runtime, console: &Console) {
+    fn log(self, rt: &impl HostRuntime, console: &Console) {
         let indent = 2 * console.groups.len();
 
         match self {
@@ -166,7 +165,7 @@ impl Console {
         &self,
         assertion: bool,
         data: &[JsValue],
-        rt: &impl Runtime,
+        rt: &impl HostRuntime,
         context: &mut Context<'_>,
     ) -> JsResult<()> {
         if !assertion {
@@ -200,7 +199,7 @@ impl Console {
     fn debug(
         &self,
         data: &[JsValue],
-        rt: &impl Runtime,
+        rt: &impl HostRuntime,
         context: &mut Context<'_>,
     ) -> JsResult<()> {
         LogMessage::Log(formatter(data, context)?).log(rt, self);
@@ -220,7 +219,7 @@ impl Console {
     fn warn(
         &self,
         data: &[JsValue],
-        rt: &impl Runtime,
+        rt: &impl HostRuntime,
         context: &mut Context<'_>,
     ) -> JsResult<()> {
         LogMessage::Warn(formatter(data, context)?).log(rt, self);
@@ -240,7 +239,7 @@ impl Console {
     fn error(
         &self,
         data: &[JsValue],
-        rt: &impl Runtime,
+        rt: &impl HostRuntime,
         context: &mut Context<'_>,
     ) -> JsResult<()> {
         LogMessage::Error(formatter(data, context)?).log(rt, self);
@@ -260,7 +259,7 @@ impl Console {
     fn info(
         &self,
         data: &[JsValue],
-        rt: &impl Runtime,
+        rt: &impl HostRuntime,
         context: &mut Context<'_>,
     ) -> JsResult<()> {
         LogMessage::Info(formatter(data, context)?).log(rt, self);
@@ -280,7 +279,7 @@ impl Console {
     fn log(
         &self,
         data: &[JsValue],
-        rt: &impl Runtime,
+        rt: &impl HostRuntime,
         context: &mut Context<'_>,
     ) -> JsResult<()> {
         LogMessage::Log(formatter(data, context)?).log(rt, self);
@@ -300,7 +299,7 @@ impl Console {
     fn group(
         &mut self,
         data: &[JsValue],
-        rt: &impl Runtime,
+        rt: &impl HostRuntime,
         context: &mut Context<'_>,
     ) -> JsResult<()> {
         let group_label = formatter(data, context)?;
@@ -416,7 +415,7 @@ impl ConsoleApi {
     }
 }
 
-impl jstz_core::realm::Api for ConsoleApi {
+impl jstz_core::Api for ConsoleApi {
     fn init(self, context: &mut Context<'_>) {
         let console = ObjectInitializer::with_native(Console::new(), context)
             .function(NativeFunction::from_fn_ptr(Self::log), "log", 0)

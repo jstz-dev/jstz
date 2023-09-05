@@ -813,13 +813,11 @@ dependencies = [
  "boa_engine",
  "boa_gc",
  "derive_more",
- "erased-serde",
  "jstz_core",
  "jstz_crypto",
- "jstz_ledger",
  "serde",
  "serde_json",
- "tezos-smart-rollup-host",
+ "tezos-smart-rollup",
 ]
 
 [[package]]
@@ -850,10 +848,9 @@ name = "jstz_kernel"
 version = "0.1.0"
 dependencies = [
  "boa_engine",
- "jstz_api",
  "jstz_core",
  "jstz_crypto",
- "jstz_ledger",
+ "jstz_proto",
  "num-traits",
  "serde",
  "serde_json",
@@ -862,14 +859,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "jstz_ledger"
+name = "jstz_proto"
 version = "0.1.0"
 dependencies = [
+ "boa_engine",
+ "boa_gc",
  "derive_more",
+ "erased-serde",
+ "jstz_api",
  "jstz_core",
  "jstz_crypto",
  "serde",
- "tezos-smart-rollup-host",
+ "serde_json",
+ "tezos-smart-rollup",
  "tezos-smart-rollup-mock",
 ]
 

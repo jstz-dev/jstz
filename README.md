@@ -67,6 +67,8 @@ This will initially run `octez-node` and initialize `octez-client`. Once the cli
 
 ## `jstz` Crates
 - [**`jstz_core`**](/jstz_core) - `jstz`'s core functionality: host functions, transactional storage, and execution.
-- [**`jstz_api`**](/jstz_api) - `jstz`'s JavaScript runtime APIs.
+- [**`jstz_api`**](/jstz_api) - `jstz`'s JavaScript web standard runtime apis.
 - [**`jstz_kernel`**](/jstz_kernel) - `jstz`'s smart rollup kernel, compiled to WASM.
+- [**`jstz_crypto`**](/jstz_crypto) - `jstz`'s crypto library. Primarily a wrapper around `tezos_crypto_rs`.
+- [**`jstz_proto`**](/jstz_proto) - `jstz`'s protocol: `jstz` specific runtime apis, storage context, execution of operations.
 

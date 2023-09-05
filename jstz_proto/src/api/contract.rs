@@ -4,13 +4,9 @@ use boa_engine::{
     Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
 };
 use boa_gc::{Finalize, Trace};
-use jstz_core::{
-    executor::Executor,
-    realm::{Module, Realm},
-};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 
-use crate::{ledger::js_value_to_pkh, ConsoleApi, LedgerApi};
+use crate::{api::ledger::js_value_to_pkh, executor::contract::Script};
 
 // Contract.call(contract_address, code)
 
@@ -23,30 +19,18 @@ impl Contract {
         contract_code: String,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        // 1. Create a new realm for the contract
-        let realm = Realm::new(context);
-
-        // 2. Parse the contract
-        let module =
-            Module::parse(Source::from_bytes(&contract_code), Some(realm), context)?;
-
-        // 3. Initialize apis
-        module.realm().register_api(ConsoleApi, context);
-        module
-            .realm()
-            .register_api(LedgerApi { contract_address }, context);
-        module.realm().register_api(ContractApi, context);
+        let script = Script::parse(Source::from_bytes(&contract_code), context)?;
 
         // 4. Evaluate the contract's module
-        let promise = module.realm().eval_module(&module, context)?;
+        let script_promise = script.init(contract_address, context)?;
 
         // 5. Once evaluated, call the module's handler
-        let result = promise.then(
+        let result = script_promise.then(
             Some(
                 FunctionObjectBuilder::new(context, unsafe {
                     NativeFunction::from_closure_with_captures(
-                        |_, _, module, context| Executor::handle_request(module, context),
-                        module,
+                        |_, _, script, context| script.run(context),
+                        script,
                     )
                 })
                 .build(),
@@ -85,7 +69,7 @@ impl ContractApi {
     }
 }
 
-impl jstz_core::realm::Api for ContractApi {
+impl jstz_core::Api for ContractApi {
     fn init(self, context: &mut Context<'_>) {
         let contract = ObjectInitializer::with_native(Contract, context)
             .function(NativeFunction::from_fn_ptr(Self::call), "call", 1)

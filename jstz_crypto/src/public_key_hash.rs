@@ -1,8 +1,10 @@
 use std::fmt;
 
 use serde::{Deserialize, Serialize};
-use tezos_crypto_rs::hash::{ContractTz4Hash, HashTrait};
-use tezos_crypto_rs::PublicKeyWithHash;
+use tezos_crypto_rs::{
+    hash::{ContractTz4Hash, HashTrait},
+    PublicKeyWithHash,
+};
 
 use crate::{
     error::{Error, Result},

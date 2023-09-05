@@ -5,33 +5,30 @@ use boa_engine::{
     JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, Trace};
-use jstz_core::{host_defined, kv::Transaction, runtime};
+use jstz_core::{host::HostRuntime, host_defined, kv::Transaction, runtime, Result};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
-use tezos_smart_rollup_host::path::{self, OwnedPath, RefPath};
-use tezos_smart_rollup_host::runtime::Runtime;
-
-use crate::{conversion::ToJs, error::Result};
+use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 
 #[derive(Debug, Trace, Finalize)]
-struct Storage {
+struct Kv {
     prefix: String,
 }
 
-const STORAGE_PATH: RefPath = RefPath::assert_from(b"/jstz_storage");
+const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
 
 // TODO: Figure out a more effective way of serializing values using json
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
-pub struct StorageValue(serde_json::Value);
+pub struct KvValue(serde_json::Value);
 
-impl Into<String> for StorageValue {
+impl Into<String> for KvValue {
     fn into(self) -> String {
         self.0.to_string()
     }
 }
 
-impl TryFrom<String> for StorageValue {
+impl TryFrom<String> for KvValue {
     type Error = serde_json::Error;
 
     fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
@@ -39,13 +36,7 @@ impl TryFrom<String> for StorageValue {
     }
 }
 
-impl ToJs for &StorageValue {
-    fn to_js(self, context: &mut Context) -> JsResult<JsValue> {
-        JsValue::from_json(&self.0, context)
-    }
-}
-
-impl Storage {
+impl Kv {
     pub fn new(prefix: String) -> Self {
         Self { prefix }
     }
@@ -53,28 +44,38 @@ impl Storage {
     fn key_path(&self, key: &str) -> jstz_core::Result<OwnedPath> {
         let key_path = OwnedPath::try_from(format!("/{}/{}", self.prefix, key))?;
 
-        Ok(path::concat(&STORAGE_PATH, &key_path)?)
+        Ok(path::concat(&KV_PATH, &key_path)?)
     }
 
-    fn set(&self, tx: &mut Transaction, key: &str, value: StorageValue) -> Result<()> {
-        Ok(tx.insert(self.key_path(key)?, value)?)
+    fn set(&self, tx: &mut Transaction, key: &str, value: KvValue) -> Result<()> {
+        tx.insert(self.key_path(key)?, value)
     }
 
     fn get<'a>(
         &self,
-        rt: &impl Runtime,
+        hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         key: &str,
-    ) -> Result<Option<&'a StorageValue>> {
-        Ok(tx.get::<StorageValue>(rt, self.key_path(key)?)?)
+    ) -> Result<Option<&'a KvValue>> {
+        tx.get::<KvValue>(hrt, self.key_path(key)?)
     }
 
-    fn delete(&self, rt: &impl Runtime, tx: &mut Transaction, key: &str) -> Result<()> {
-        Ok(tx.remove(rt, &self.key_path(key)?)?)
+    fn delete(
+        &self,
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        key: &str,
+    ) -> Result<()> {
+        tx.remove(hrt, &self.key_path(key)?)
     }
 
-    fn has(&self, rt: &impl Runtime, tx: &mut Transaction, key: &str) -> Result<bool> {
-        Ok(tx.contains_key(rt, &self.key_path(key)?)?)
+    fn has(
+        &self,
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        key: &str,
+    ) -> Result<bool> {
+        tx.contains_key(hrt, &self.key_path(key)?)
     }
 }
 
@@ -86,10 +87,10 @@ macro_rules! preamble {
         let $this =
             $this
                 .as_object()
-                .and_then(|obj| obj.downcast_mut::<Storage>())
+                .and_then(|obj| obj.downcast_mut::<Kv>())
                 .ok_or_else(|| {
                     JsError::from_native(JsNativeError::typ().with_message(
-                        "Failed to convert js value into rust type `Storage`",
+                        "Failed to convert js value into rust type `Kv`",
                     ))
                 })?;
 
@@ -104,17 +105,17 @@ macro_rules! preamble {
     };
 }
 
-pub struct StorageApi {
+pub struct KvApi {
     pub contract_address: PublicKeyHash,
 }
 
-impl StorageApi {
-    const NAME: &'static str = "Storage";
+impl KvApi {
+    const NAME: &'static str = "Kv";
 
     fn set(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         preamble!(this, args, context, key, tx);
 
-        let value = StorageValue(args.get_or_undefined(1).to_json(context)?);
+        let value = KvValue(args.get_or_undefined(1).to_json(context)?);
 
         this.set(&mut tx, &key, value)?;
 
@@ -126,7 +127,10 @@ impl StorageApi {
 
         let result = runtime::with_global_host(|rt| this.get(rt.deref(), &mut tx, &key))?;
 
-        result.to_js(context)
+        match result {
+            Some(value) => JsValue::from_json(&value.0, context),
+            None => Ok(JsValue::null()),
+        }
     }
 
     fn delete(
@@ -136,7 +140,7 @@ impl StorageApi {
     ) -> JsResult<JsValue> {
         preamble!(this, args, context, key, tx);
 
-        runtime::with_global_host(|rt| this.delete(rt.deref(), &mut tx, &key))?;
+        runtime::with_global_host(|hrt| this.delete(hrt.deref(), &mut tx, &key))?;
 
         Ok(JsValue::undefined())
     }
@@ -144,16 +148,17 @@ impl StorageApi {
     fn has(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         preamble!(this, args, context, key, tx);
 
-        let result = runtime::with_global_host(|rt| this.has(rt.deref(), &mut tx, &key))?;
+        let result =
+            runtime::with_global_host(|hrt| this.has(hrt.deref(), &mut tx, &key))?;
 
         Ok(result.into())
     }
 }
 
-impl jstz_core::realm::Api for StorageApi {
+impl jstz_core::Api for KvApi {
     fn init(self, context: &mut boa_engine::Context<'_>) {
         let storage = ObjectInitializer::with_native(
-            Storage::new(self.contract_address.to_string()),
+            Kv::new(self.contract_address.to_string()),
             context,
         )
         .function(NativeFunction::from_fn_ptr(Self::set), "set", 2)

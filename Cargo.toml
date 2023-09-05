@@ -1,5 +1,5 @@
 [workspace]
-members = ["jstz_core", "jstz_api", "jstz_ledger", "jstz_crypto", "jstz_kernel"]
+members = ["jstz_core", "jstz_api", "jstz_proto", "jstz_crypto", "jstz_kernel"]
 
 [workspace.package]
 edition = "2021"
@@ -11,7 +11,7 @@ repository = "https://github.com/trilitech/jstz"
 jstz_core = { path = "jstz_core" }
 jstz_api = { path = "jstz_api" }
 jstz_kernel = { path = "jstz_kernel" }
-jstz_ledger = { path = "jstz_ledger" }
+jstz_proto = { path = "jstz_proto" }
 jstz_crypto = { path = "jstz_crypto" }
 
 [patch.crates-io]

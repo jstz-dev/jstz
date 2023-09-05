@@ -1,6 +1,9 @@
-use crate::error::Result;
+use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::PublicKeyBls;
 
+use crate::error::Result;
+
+#[derive(Serialize, Deserialize)]
 pub enum PublicKey {
     Bls(PublicKeyBls),
 }
