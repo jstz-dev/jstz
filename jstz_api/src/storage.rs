@@ -1,8 +1,10 @@
 use std::ops::DerefMut;
 
-use boa_engine::object::ObjectInitializer;
-use boa_engine::{property::Attribute, Context, JsResult, JsValue, NativeFunction};
-use boa_gc::{empty_trace, Finalize, Trace};
+use boa_engine::{
+    object::ObjectInitializer, property::Attribute, Context, JsArgs, JsError,
+    JsNativeError, JsResult, JsString, JsValue, NativeFunction,
+};
+use boa_gc::{Finalize, Trace};
 use jstz_core::{
     host::{self, Host},
     host_defined,
@@ -10,161 +12,183 @@ use jstz_core::{
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
-use tezos_smart_rollup_host::path::OwnedPath;
-use tezos_smart_rollup_host::runtime::{Runtime, RuntimeError};
+use tezos_smart_rollup_host::path::{self, OwnedPath, RefPath};
+use tezos_smart_rollup_host::runtime::Runtime;
 
-use crate::conversion::{ExpectString, FromJs, ToJs};
+use crate::{conversion::ToJs, error::Result};
 
-struct StoredPrefix(String);
-unsafe impl Trace for StoredPrefix {
-    empty_trace!();
-}
-impl Finalize for StoredPrefix {}
-impl From<PublicKeyHash> for StoredPrefix {
-    fn from(source: PublicKeyHash) -> Self {
-        Self(source.to_string())
-    }
-}
-macro_rules! setup_call {
-    (this: $this:ident, context: $context:ident $(, host: $rt:ident)? $(, transaction: $tx:ident)?) => {
-      host_defined!($context, host_defined);
-      $(let mut $rt = host_defined.get_mut::<Host<H>>().expect("");)?
-      $(let mut $tx = host_defined.get_mut::<Transaction>().expect("");)?
-      let $this = $this.as_object()
-            .and_then(|obj| obj.downcast_mut::<StoredPrefix>()).unwrap();
-
-    };
+#[derive(Debug, Trace, Finalize)]
+struct Storage {
+    prefix: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct JsStoreValue(Vec<u16>);
-impl FromJs for JsStoreValue {
-    fn from_js(this: &JsValue, context: &mut Context) -> JsResult<Self> {
-        let string = this.to_string(context)?;
-        let words = string.iter().map(|x| *x).collect();
-        Ok(Self(words))
-    }
-}
-impl ToJs for &JsStoreValue {
-    fn to_js(self, _context: &mut Context) -> JsResult<JsValue> {
-        Ok(JsValue::String(self.0.clone().into()))
+const STORAGE_PATH: RefPath = RefPath::assert_from(b"/jstz_storage");
+
+// TODO: Figure out a more effective way of serializing values using json
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(try_from = "String", into = "String")]
+pub struct StorageValue(serde_json::Value);
+
+impl Into<String> for StorageValue {
+    fn into(self) -> String {
+        self.0.to_string()
     }
 }
 
-impl StoredPrefix {
-    fn create_path(&self, name: &str) -> Result<OwnedPath, RuntimeError> {
-        let prefix = &self.0;
-        let path = format!("/{prefix}/{name}").to_string();
-        path.try_into().map_err(|_| RuntimeError::PathNotFound)
+impl TryFrom<String> for StorageValue {
+    type Error = serde_json::Error;
+
+    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+        Ok(Self(serde_json::from_str(&value)?))
+    }
+}
+
+impl ToJs for &StorageValue {
+    fn to_js(self, context: &mut Context) -> JsResult<JsValue> {
+        JsValue::from_json(&self.0, context)
+    }
+}
+
+impl Storage {
+    pub fn new(prefix: String) -> Self {
+        Self { prefix }
     }
 
-    fn write_value(
-        &self,
-        tx: &mut Transaction,
-        name: &str,
-        payload: JsStoreValue,
-    ) -> Result<(), jstz_core::Error> {
-        let path = self.create_path(name)?;
-        tx.insert(path, payload)
+    fn key_path(&self, key: &str) -> jstz_core::Result<OwnedPath> {
+        let key_path = OwnedPath::try_from(format!("/{}/{}", self.prefix, key))?;
+
+        Ok(path::concat(&STORAGE_PATH, &key_path)?)
     }
-    fn read_value<'a>(
+
+    fn set(&self, tx: &mut Transaction, key: &str, value: StorageValue) -> Result<()> {
+        Ok(tx.insert(self.key_path(key)?, value)?)
+    }
+
+    fn get<'a>(
         &self,
         rt: &mut impl Runtime,
         tx: &'a mut Transaction,
-        name: &str,
-    ) -> Result<Option<&'a JsStoreValue>, jstz_core::Error> {
-        let path = self.create_path(name)?;
-        tx.get::<JsStoreValue>(rt, path)
+        key: &str,
+    ) -> Result<Option<&'a StorageValue>> {
+        Ok(tx.get::<StorageValue>(rt, self.key_path(key)?)?)
     }
-    fn remove_value(
+
+    fn delete(
         &self,
         rt: &mut impl Runtime,
         tx: &mut Transaction,
-        name: &str,
-    ) -> Result<(), jstz_core::Error> {
-        let path = self.create_path(name)?;
-        tx.remove(rt, &path)
+        key: &str,
+    ) -> Result<()> {
+        Ok(tx.remove(rt, &self.key_path(key)?)?)
     }
-    fn has_value(
+
+    fn has(
         &self,
         rt: &mut impl Runtime,
         tx: &mut Transaction,
-        name: &str,
-    ) -> Result<bool, jstz_core::Error> {
-        let path = self.create_path(name)?;
-        tx.contains_key(rt, &path)
+        key: &str,
+    ) -> Result<bool> {
+        Ok(tx.contains_key(rt, &self.key_path(key)?)?)
     }
+}
+
+macro_rules! preamble {
+    ($this:ident, $args:ident, $context:ident, $key:ident $(, rt: $rt:ident)? $(, tx: $tx:ident)? ) => {
+        host_defined!($context, host_defined);
+        $(let mut $rt = host_defined.get_mut::<Host<H>>().expect("");)?
+        $(let mut $tx = host_defined.get_mut::<Transaction>().expect("");)?
+
+        let $this = $this.as_object()
+            .and_then(|obj| obj.downcast_mut::<Storage>())
+            .ok_or_else(|| {
+                JsError::from_native(
+                    JsNativeError::typ()
+                        .with_message("Failed to convert js value into rust type `Storage`")
+                )
+            })?;
+
+        let $key = $args.get_or_undefined(0)
+            .as_string()
+            .ok_or_else(|| {
+                JsNativeError::typ()
+                    .with_message("Failed to convert js value into rust type `String`")
+            })
+            .map(JsString::to_std_string_escaped)?;
+    };
 }
 
 pub struct StorageApi {
     pub contract_address: PublicKeyHash,
 }
 
+impl StorageApi {
+    const NAME: &'static str = "Storage";
+
+    fn set<H: Runtime + 'static>(
+        this: &JsValue,
+        args: &[JsValue],
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        preamble!(this, args, context, key, tx: tx);
+
+        let value = StorageValue(args.get_or_undefined(1).to_json(context)?);
+
+        this.set(&mut tx, &key, value)?;
+
+        Ok(JsValue::undefined())
+    }
+
+    fn get<H: Runtime + 'static>(
+        this: &JsValue,
+        args: &[JsValue],
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        preamble!(this, args, context, key, rt: rt, tx: tx);
+
+        let result = this.get(rt.deref_mut(), &mut tx, &key)?;
+
+        result.to_js(context)
+    }
+
+    fn delete<H: Runtime + 'static>(
+        this: &JsValue,
+        args: &[JsValue],
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        preamble!(this, args, context, key, rt: rt, tx: tx);
+
+        this.delete(rt.deref_mut(), &mut tx, &key)?;
+
+        Ok(JsValue::undefined())
+    }
+
+    fn has<H: Runtime + 'static>(
+        this: &JsValue,
+        args: &[JsValue],
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        preamble!(this, args, context, key, rt: rt, tx: tx);
+
+        let result = this.has(rt.deref_mut(), &mut tx, &key)?;
+
+        Ok(result.into())
+    }
+}
+
 impl jstz_core::host::Api for StorageApi {
     fn init<H: Runtime + 'static>(self, context: &mut boa_engine::Context<'_>) {
-        fn write_value<H: Runtime + 'static>(
-            this: &JsValue,
-            args: &[JsValue],
-            context: &mut Context,
-        ) -> JsResult<JsValue> {
-            setup_call!(this: this, context: context, transaction: tx);
-            let ExpectString(key) = FromJs::from_js_args(&args, 0, context)?;
-            let value = JsStoreValue::from_js_args(&args, 1, context)?;
+        let storage = ObjectInitializer::with_native(
+            Storage::new(self.contract_address.to_string()),
+            context,
+        )
+        .function(NativeFunction::from_fn_ptr(Self::set::<H>), "set", 2)
+        .function(NativeFunction::from_fn_ptr(Self::get::<H>), "get", 1)
+        .function(NativeFunction::from_fn_ptr(Self::delete::<H>), "delete", 1)
+        .function(NativeFunction::from_fn_ptr(Self::has::<H>), "has", 1)
+        .build();
 
-            let result: Result<(), crate::error::Error> = this
-                .write_value(&mut tx, &key, value)
-                .map_err(|err| err.into());
-            result.to_js(context)
-        }
-        fn read_value<H: Runtime + 'static>(
-            this: &JsValue,
-            args: &[JsValue],
-            context: &mut Context,
-        ) -> JsResult<JsValue> {
-            setup_call!(this: this, context: context, host: rt, transaction: tx);
-            let ExpectString(key) = FromJs::from_js_args(&args, 0, context)?;
-            let result: Result<_, crate::error::Error> = this
-                .read_value(rt.deref_mut(), &mut tx, &key)
-                .map_err(|err| err.into());
-            result.to_js(context)
-        }
-        fn remove_value<H: Runtime + 'static>(
-            this: &JsValue,
-            args: &[JsValue],
-            context: &mut Context,
-        ) -> JsResult<JsValue> {
-            setup_call!(this: this, context: context, host: rt, transaction: tx);
-            let ExpectString(key) = FromJs::from_js_args(&args, 0, context)?;
-            let result: Result<(), crate::error::Error> = this
-                .remove_value(rt.deref_mut(), &mut tx, &key)
-                .map_err(|err| err.into());
-            result.to_js(context)
-        }
-        fn has_value<H: Runtime + 'static>(
-            this: &JsValue,
-            args: &[JsValue],
-            context: &mut Context,
-        ) -> JsResult<JsValue> {
-            setup_call!(this: this, context: context, host: rt, transaction: tx);
-            let ExpectString(key) = FromJs::from_js_args(&args, 0, context)?;
-            let result: Result<bool, crate::error::Error> = this
-                .has_value(rt.deref_mut(), &mut tx, &key)
-                .map_err(|err| err.into());
-            result.to_js(context)
-        }
-        let prefix: StoredPrefix = self.contract_address.into();
-        let storage = ObjectInitializer::with_native(prefix, context)
-            .function(NativeFunction::from_fn_ptr(write_value::<H>), "setItem", 2)
-            .function(NativeFunction::from_fn_ptr(read_value::<H>), "getItem", 1)
-            .function(
-                NativeFunction::from_fn_ptr(remove_value::<H>),
-                "removeItem",
-                1,
-            )
-            .function(NativeFunction::from_fn_ptr(has_value::<H>), "hasItem", 1)
-            .build();
         context
-            .register_global_property("storage", storage, Attribute::all())
+            .register_global_property(Self::NAME, storage, Attribute::all())
             .expect("The storage object shouldn't exist yet");
     }
 }

@@ -57,7 +57,7 @@ impl<T: ToJs> ToJs for Option<T> {
     fn to_js(self, context: &mut Context) -> JsResult<JsValue> {
         match self {
             Some(value) => value.to_js(context),
-            None => Ok(JsValue::default()),
+            None => Ok(JsValue::null()),
         }
     }
 }
