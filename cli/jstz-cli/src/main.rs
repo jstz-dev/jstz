@@ -1,10 +1,6 @@
 extern crate clap;
-use clap::{Arg, App, SubCommand};
-use std::str::FromStr;
+use clap::{Arg, App};
 use serde::{Serialize, Deserialize};
-use std::fs::File;
-use std::io::Write;
-use serde_json::json;
 use std::collections::HashMap;
 use std::path::Path;
 use std::fs;
@@ -39,9 +35,9 @@ fn main() {
             .help("Specifies an output file to create the messages in JSON format when the program exits"))
         .get_matches();
 
-    let mut self_address = matches.value_of("self-address").map(|s| s.to_string());;
+    let mut self_address = matches.value_of("self-address").map(|s| s.to_string());
     let addresses_file = matches.value_of("addresses");
-    let mut out_file = matches.value_of("out").map(|s| s.to_string());;
+    let mut out_file = matches.value_of("out").map(|s| s.to_string());
     let script_file = matches.value_of("script");
 
     // Load addresses from file
@@ -82,20 +78,39 @@ fn run_command(command: &str, addresses: &mut HashMap<String, String>, self_addr
             match subcommand {
                 "run" => {
                     if args.len() < 2 {
-                        println!("Usage: run contract <addr> <code>");
+                        println!("Usage: run contract <addr> <code> OR run contract <code> (if self-address is set)");
                         return;
                     }
-                    let addr = args[1];
-                    let code = args[2];
-                    run_contract(addr, code, messages);
+                    else if args.len() == 2 {
+                        if self_address.is_none() {
+                            println!("Plese use 'set self address <addr>' to set the self address first.");
+                            return;
+                        }
+                        else {
+                            let code = args[1];
+                            run_contract(self_address.as_deref().unwrap(), code, messages);
+                        }
+                    }
+                    else{
+                        let addr = args[1];
+                        let code = args[2];
+                        run_contract(addr, code, messages);
+                    }
                 }
                 "deploy" => {
-                    if args.len() < 2 {
-                        println!("Usage: deploy bridge <addr>");
-                        return;
+                    if args.len() <= 1 {
+                        if self_address.is_none() {
+                            println!("Plese use 'set self address <addr>' to set the self address first.");
+                            return;
+                        }
+                        else {
+                            deploy_bridge(self_address.as_deref().unwrap(), messages);
+                        }
                     }
-                    let addr = args[1];
-                    deploy_bridge(addr, messages);
+                    else {
+                        let addr = args[1];
+                        deploy_bridge(addr, messages);
+                    }
                 }
                 "deposit" => {
                     if args.len() < 6 {

@@ -1,7 +1,6 @@
-
 {
-  sam_address : "jszt1234",
-  alan_address : "jszt2345",
-  alistair_address : "jszt3456",
-  asutosh_address: "jstz4567"
+  "sam_address": "jszt1234",
+  "alan_address": "jszt2345",
+  "alistair_address": "jszt3456",
+  "asutosh_address": "jstz4567"
 }
