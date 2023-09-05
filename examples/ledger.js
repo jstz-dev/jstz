@@ -19,4 +19,5 @@ const doDemo = () => {
 }
 
 console.log("Hello JS 👋");
-doDemo();
+
+export default doDemo;

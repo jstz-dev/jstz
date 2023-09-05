@@ -849,6 +849,7 @@ dependencies = [
 name = "jstz_kernel"
 version = "0.1.0"
 dependencies = [
+ "boa_engine",
  "jstz_api",
  "jstz_core",
  "jstz_crypto",

@@ -8,16 +8,13 @@ use boa_engine::{
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use tezos_smart_rollup_host::runtime::Runtime;
 
-use jstz_core::{
-    host::{self, Host},
-    host_defined,
-    kv::Transaction,
-};
+use jstz_core::{host_defined, kv::Transaction};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_ledger::account::{Account, Amount};
 
 use crate::error::Result;
 
+// Ledger.selfAddress()
 // Ledger.balance(pkh)
 // Ledger.transfer(dst, amount)
 
@@ -32,6 +29,10 @@ unsafe impl Trace for Ledger {
 }
 
 impl Ledger {
+    fn self_address(&self) -> String {
+        self.contract_address.to_string()
+    }
+
     fn balance(
         rt: &impl Runtime,
         tx: &mut Transaction,
@@ -59,7 +60,7 @@ pub struct LedgerApi {
     pub contract_address: PublicKeyHash,
 }
 
-fn js_value_to_pkh(value: &JsValue) -> Result<PublicKeyHash> {
+pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<PublicKeyHash> {
     let pkh_string = value
         .as_string()
         .ok_or_else(|| {
@@ -87,46 +88,59 @@ impl Ledger {
 impl LedgerApi {
     const NAME: &'static str = "Ledger";
 
-    fn balance<H: Runtime + 'static>(
+    fn self_address(
+        this: &JsValue,
+        _args: &[JsValue],
+        _context: &mut Context<'_>,
+    ) -> JsResult<JsValue> {
+        let ledger = Ledger::from_js_value(this)?;
+
+        Ok(ledger.self_address().into())
+    }
+
+    fn balance(
         _this: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        host_defined!(context, host_defined);
-        let rt = host_defined.get::<Host<H>>().unwrap();
-        let mut tx = host_defined.get_mut::<Transaction>().unwrap();
+        jstz_core::runtime::with_global_host(|rt| {
+            host_defined!(context, host_defined);
 
-        let pkh = js_value_to_pkh(args.get_or_undefined(0))?;
+            let mut tx = host_defined.get_mut::<Transaction>().unwrap();
 
-        let balance = Ledger::balance(rt.deref(), tx.deref_mut(), &pkh)?;
+            let pkh = js_value_to_pkh(args.get_or_undefined(0))?;
 
-        Ok(balance.into())
+            let balance = Ledger::balance(rt.deref(), tx.deref_mut(), &pkh)?;
+
+            Ok(balance.into())
+        })
     }
 
-    fn transfer<H: Runtime + 'static>(
+    fn transfer(
         this: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        host_defined!(context, host_defined);
-        let rt = host_defined.get::<Host<H>>().unwrap();
-        let mut tx = host_defined.get_mut::<Transaction>().unwrap();
+        jstz_core::runtime::with_global_host(|rt| {
+            host_defined!(context, host_defined);
+            let mut tx = host_defined.get_mut::<Transaction>().unwrap();
 
-        let ledger = Ledger::from_js_value(this)?;
-        let dst = js_value_to_pkh(args.get_or_undefined(0))?;
-        let amount = args
-            .get_or_undefined(1)
-            .as_number()
-            .ok_or_else(|| JsNativeError::typ())?;
+            let ledger = Ledger::from_js_value(this)?;
+            let dst = js_value_to_pkh(args.get_or_undefined(0))?;
+            let amount = args
+                .get_or_undefined(1)
+                .as_number()
+                .ok_or_else(|| JsNativeError::typ())?;
 
-        ledger.transfer(rt.deref(), tx.deref_mut(), &dst, amount as Amount)?;
+            ledger.transfer(rt.deref(), tx.deref_mut(), &dst, amount as Amount)?;
 
-        Ok(JsValue::undefined())
+            Ok(JsValue::undefined())
+        })
     }
 }
 
-impl jstz_core::host::Api for LedgerApi {
-    fn init<H: Runtime + 'static>(self, context: &mut boa_engine::Context<'_>) {
+impl jstz_core::realm::Api for LedgerApi {
+    fn init(self, context: &mut boa_engine::Context<'_>) {
         let ledger = ObjectInitializer::with_native(
             Ledger {
                 contract_address: self.contract_address,
@@ -134,15 +148,12 @@ impl jstz_core::host::Api for LedgerApi {
             context,
         )
         .function(
-            NativeFunction::from_fn_ptr(Self::balance::<H>),
-            "balance",
-            1,
+            NativeFunction::from_fn_ptr(Self::self_address),
+            "selfAddress",
+            0,
         )
-        .function(
-            NativeFunction::from_fn_ptr(Self::transfer::<H>),
-            "transfer",
-            3,
-        )
+        .function(NativeFunction::from_fn_ptr(Self::balance), "balance", 1)
+        .function(NativeFunction::from_fn_ptr(Self::transfer), "transfer", 3)
         .build();
 
         context

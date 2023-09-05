@@ -40,6 +40,7 @@
               wabt
 
               python311Packages.base58
+              jq
             ];
           };
         }
