@@ -52,13 +52,13 @@
         '';
       });
 in {
-  jstz_core = crate "jstz_crypto";
+  jstz_core = crate "jstz_core";
 
   jstz_api = crate "jstz_api";
 
   jstz_crypto = crate "jstz_crypto";
 
-  jstz_ledger = crate "jstz_ledger";
+  jstz_proto = crate "jstz_proto";
 
   jstz_kernel = kernel "jstz_kernel";
 }
