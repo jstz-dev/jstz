@@ -23,7 +23,7 @@
     cargoLock = {
       lockFile = ../Cargo.lock;
       outputHashes = {
-        "tezos-smart-rollup-0.2.1" = "sha256-EfVEEDTRgjFr0zAXNijlCQhWuwrDDtQLp2/1oG2D0ow=";
+        "tezos-smart-rollup-0.2.1" = "sha256-ETMYanG7BINBhuKdALCShHhtLYSOCmG+Ak/G5QK88ks=";
       };
     };
   };
