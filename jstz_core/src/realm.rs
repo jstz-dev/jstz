@@ -14,7 +14,10 @@ use boa_engine::{
 use boa_gc::{empty_trace, Finalize, GcRef, GcRefCell, GcRefMut, Trace};
 use derive_more::{Deref, DerefMut, From};
 
-use crate::host;
+use crate::{
+    host,
+    Api,
+};
 
 /// A newtype wrapper over `Module` tha maintains a reference
 /// to the module's realm
