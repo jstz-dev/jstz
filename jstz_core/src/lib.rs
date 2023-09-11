@@ -9,6 +9,8 @@ pub mod kv;
 pub mod native;
 pub mod realm;
 pub mod runtime;
+pub mod value;
+
 /// A generic runtime API
 pub trait Api {
     /// Initialize a runtime API
