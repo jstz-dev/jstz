@@ -84,15 +84,15 @@ macro_rules! preamble {
         host_defined!($context, host_defined);
         let mut $tx = host_defined.get_mut::<Transaction>().expect("");
 
-        let $this =
-            $this
-                .as_object()
-                .and_then(|obj| obj.downcast_mut::<Kv>())
-                .ok_or_else(|| {
-                    JsError::from_native(JsNativeError::typ().with_message(
-                        "Failed to convert js value into rust type `Kv`",
-                    ))
-                })?;
+        let $this = $this
+            .as_object()
+            .and_then(|obj| obj.downcast_mut::<Kv>())
+            .ok_or_else(|| {
+                JsError::from_native(
+                    JsNativeError::typ()
+                        .with_message("Failed to convert js value into rust type `Kv`"),
+                )
+            })?;
 
         let $key = $args
             .get_or_undefined(0)
