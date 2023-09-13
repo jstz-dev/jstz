@@ -15,7 +15,7 @@ pub fn execute(
         contract_code,
         initial_balance,
     } = contract;
-    let nonce = Account::nonce(hrt, tx, &originating_address);
+    let nonce = Account::nonce(hrt, tx, &originating_address)?;
     let contract_address = PublicKeyHash::digest(
         format!(
             "{}{}{}",
