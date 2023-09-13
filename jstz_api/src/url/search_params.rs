@@ -6,7 +6,7 @@ use boa_engine::{
     Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue,
     NativeFunction,
 };
-use boa_gc::{Finalize, GcRefMut, Trace};
+use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{
     accessor,
     native::{
@@ -23,10 +23,19 @@ pub type Value = String;
 /// the query string of a `Url`.
 ///
 /// [spec] https://url.spec.whatwg.org/#urlsearchparams
-#[derive(Default, Trace, Finalize)]
+#[derive(Default)]
 pub struct UrlSearchParams {
     values: Vec<(Name, Value)>,
     pub(crate) url: Option<JsNativeObject<Url>>,
+}
+
+impl Finalize for UrlSearchParams {}
+
+unsafe impl Trace for UrlSearchParams {
+    // Do not trace the `url` since this is only set if
+    // there exists a parent `url` object (whose lifetime bounds the 
+    // search params object)
+    empty_trace!();
 }
 
 impl UrlSearchParams {
