@@ -1,6 +1,8 @@
 use jstz_core::kv::Kv;
-use jstz_proto::operation::{external, ExternalOperation, RunContract};
-use jstz_proto::Result;
+use jstz_proto::{
+    operation::{external, ExternalOperation, RunContract},
+    receipt, Result,
+};
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
 use crate::inbox::{ContractOrigination, Deposit, Transaction};
@@ -47,17 +49,19 @@ pub fn apply_transaction(
     debug_msg!(rt, "Result: {result:?}\n");
     Ok(())
 }
-pub fn apply_origination(
+pub fn apply_deploy_contract(
     rt: &mut (impl Runtime + 'static),
     origination: ContractOrigination,
 ) {
     let mut kv = Kv::new();
     let mut tx = kv.begin_transaction();
 
-    let result = jstz_proto::executor::deploy_contract(rt, &mut tx, origination);
-
+    let Ok(receipt::Content::DeployContract(receipt::DeployContract {
+        contract_address
+    })) = jstz_proto::executor::deploy_contract(rt, &mut tx, origination)
+        else {return ()};
     kv.commit_transaction(rt, tx)
         .expect("Failed to commit transaction");
 
-    debug_msg!(rt, "Result: {result:?}\n");
+    debug_msg!(rt, "Contract created: {contract_address}\n");
 }

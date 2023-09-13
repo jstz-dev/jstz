@@ -19,6 +19,10 @@ while [[ $# -gt 0 ]]; do
             contract="$2"
             shift 2
             ;;
+        --balance)
+            balance="$2"
+            shift 2
+            ;;
         *)
             cat <<EOF
 Unknown option: $1
@@ -42,8 +46,8 @@ jmsg=$(
     jq --null-input \
         --arg originating_address "$self_address" \
         --arg contract_code "$contract" \
-        --arg initial_balance "$balance"
-        '{ "Transaction": { "contract_address": { "Tz4": $originating_address }, "contract_code": $contract_code, "initial_balance": $balance  } }'
+        --argjson initial_balance "$balance" \
+        '{ "DeployContract": { "originating_address": { "Tz4": $originating_address }, "contract_code": $contract_code, "initial_balance": $initial_balance  } }'
 )
 
 # Convert to external hex message

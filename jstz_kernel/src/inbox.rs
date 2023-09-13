@@ -33,7 +33,7 @@ pub enum InternalMessage {
 pub enum ExternalMessage {
     SetTicketer(ContractKt1Hash),
     Transaction(Transaction),
-    Originate(ContractOrigination),
+    DeployContract(ContractOrigination),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
