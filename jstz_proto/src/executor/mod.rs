@@ -1,13 +1,17 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
 
 use crate::{
-    operation::{self, ExternalOperation, SignedOperation},
+    operation::{
+        self, external::ContractOrigination, ExternalOperation, Operation,
+        SignedOperation,
+    },
     receipt::{self, Receipt},
     Result,
 };
 
 pub mod contract;
 pub mod deposit;
+pub mod origination;
 
 pub fn run_contract(
     hrt: &mut (impl HostRuntime + 'static),
@@ -21,6 +25,16 @@ pub fn run_contract(
     }))
 }
 
+pub fn deploy_contract(
+    hrt: &mut (impl HostRuntime + 'static),
+    tx: &mut Transaction,
+    contract: ContractOrigination,
+) -> Result<receipt::Content> {
+    let result = origination::execute(hrt, tx, contract)?;
+    Ok(receipt::Content::DeployContract(receipt::DeployContract {
+        contract_address: result,
+    }))
+}
 fn execute_operation_inner(
     hrt: &mut (impl HostRuntime + 'static),
     tx: &mut Transaction,
@@ -29,12 +43,30 @@ fn execute_operation_inner(
     let operation = signed_operation.verify()?;
 
     operation.verify_nonce(hrt, tx)?;
+    match operation {
+        Operation {
+            source,
+            content: operation::Content::DeployContract(deployment),
+            ..
+        } => deploy_contract(
+            hrt,
+            tx,
+            ContractOrigination {
+                originating_address: source,
+                initial_balance: deployment.contract_credit,
+                contract_code: deployment.contract_code,
+            },
+        ),
 
-    match operation.content {
-        operation::Content::DeployContract(_) => todo!(),
-        operation::Content::CallContract(_) => todo!(),
-        operation::Content::RunContract(run) => {
-            let result = contract::run::execute(hrt, run)?;
+        Operation {
+            content: operation::Content::CallContract(_),
+            ..
+        } => todo!(),
+        Operation {
+            content: operation::Content::RunContract(run),
+            ..
+        } => {
+            let result = contract::run::execute(hrt, run.clone())?;
 
             Ok(receipt::Content::RunContract(receipt::RunContract {
                 result,
@@ -50,6 +82,9 @@ pub fn execute_external_operation(
 ) -> Result<()> {
     match external_operation {
         ExternalOperation::Deposit(deposit) => deposit::execute(hrt, tx, deposit),
+        ExternalOperation::ContractOrigination(contract) => {
+            origination::execute(hrt, tx, contract).map(|_| ())
+        }
     }
 }
 

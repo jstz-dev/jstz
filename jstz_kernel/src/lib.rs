@@ -1,3 +1,4 @@
+use apply::apply_origination;
 use inbox::{ExternalMessage, InternalMessage, Message};
 use jstz_core::kv::Storage;
 use jstz_proto::Result;
@@ -28,6 +29,9 @@ fn handle_message(rt: &mut (impl Runtime + 'static), message: Message) -> Result
         }
         Message::External(ExternalMessage::Transaction(tx)) => apply_transaction(rt, tx),
         Message::External(ExternalMessage::SetTicketer(kt1)) => store_ticketer(rt, &kt1),
+        Message::External(ExternalMessage::Originate(origination)) => {
+            apply_origination(rt, origination)
+        }
     }
 }
 

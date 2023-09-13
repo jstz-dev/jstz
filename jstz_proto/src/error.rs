@@ -8,6 +8,7 @@ pub enum Error {
     CryptoError { source: jstz_crypto::Error },
     BalanceOverflow,
     InvalidNonce,
+    InvalidAddress,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -32,6 +33,9 @@ impl From<Error> for JsError {
             }
             Error::InvalidNonce => {
                 JsNativeError::eval().with_message("InvalidNonce").into()
+            }
+            Error::InvalidAddress => {
+                JsNativeError::eval().with_message("InvalidAddress").into()
             }
         }
     }

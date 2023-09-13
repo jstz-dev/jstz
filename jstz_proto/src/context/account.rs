@@ -1,5 +1,8 @@
 use crate::error::{Error, Result};
-use jstz_core::{host::HostRuntime, kv::Transaction};
+use jstz_core::{
+    host::HostRuntime,
+    kv::{Entry, Transaction},
+};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 
 use serde::{Deserialize, Serialize};
@@ -57,6 +60,20 @@ impl Account {
         Ok(account_entry.or_insert_default())
     }
 
+    fn try_insert(
+        self,
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        addr: &Address,
+    ) -> Result<()> {
+        match tx.entry(hrt, Self::path(addr)?)? {
+            Entry::Occupied(_) => Err(Error::InvalidAddress),
+            Entry::Vacant(entry) => {
+                entry.insert(self);
+                Ok(())
+            }
+        }
+    }
     pub fn nonce<'a>(
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
@@ -97,6 +114,21 @@ impl Account {
 
         account.amount += amount;
         Ok(())
+    }
+
+    pub fn create(
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        addr: &Address,
+        amount: Amount,
+        contract_code: Option<String>,
+    ) -> Result<()> {
+        Self {
+            nonce: Nonce::default(),
+            amount,
+            contract_code,
+        }
+        .try_insert(hrt, tx, addr)
     }
 
     pub fn transfer(

@@ -9,8 +9,8 @@ use crate::{
 
 #[derive(Serialize, Deserialize)]
 pub struct Operation {
-    source: Address,
-    nonce: Nonce,
+    pub source: Address,
+    pub nonce: Nonce,
     pub content: Content,
 }
 
@@ -91,18 +91,18 @@ impl Operation {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct DeployContract {
     pub contract_code: String,
     pub contract_credit: Amount,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct CallContract {
     pub contract_address: Address,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct RunContract {
     pub contract_address: Address,
     pub contract_code: String,
@@ -138,12 +138,22 @@ impl SignedOperation {
 pub mod external {
     use super::*;
 
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
     pub struct Deposit {
         pub amount: Amount,
         pub reciever: Address,
     }
+
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+    pub struct ContractOrigination {
+        pub originating_address: Address,
+        pub initial_balance: Amount,
+        pub contract_code: String,
+    }
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExternalOperation {
     Deposit(external::Deposit),
+    ContractOrigination(external::ContractOrigination),
 }

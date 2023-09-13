@@ -22,6 +22,8 @@ pub struct Transaction {
     pub contract_code: String,
 }
 
+pub use jstz_proto::operation::external::ContractOrigination;
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum InternalMessage {
     Deposit(Deposit),
@@ -31,6 +33,7 @@ pub enum InternalMessage {
 pub enum ExternalMessage {
     SetTicketer(ContractKt1Hash),
     Transaction(Transaction),
+    Originate(ContractOrigination),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
