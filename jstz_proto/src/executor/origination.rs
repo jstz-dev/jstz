@@ -21,7 +21,7 @@ pub fn execute(
             "{}{}{}",
             originating_address.to_string(),
             contract_code.to_string(),
-            nonce?.to_string(),
+            nonce.to_string(),
         )
         .as_bytes(),
     )?;
