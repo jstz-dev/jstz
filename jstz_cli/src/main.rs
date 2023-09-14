@@ -4,12 +4,16 @@ mod deposit;
 mod deploy;
 mod run_contract;
 //mod sandbox;
+//mod repl;
+mod config; 
 
 use crate::deposit::deposit;
 use crate::deploy::deploy;
 use crate::run_contract::run_contract;
 //use crate::sandbox::sandbox_start;
 //use crate::sandbox::sandbox_stop;
+//use crate::sandbox::repl;
+use config::Config;
 
 
 #[derive(Parser)]
@@ -56,10 +60,10 @@ enum JstzCommands {
         #[arg(value_name = "URL")]
         url: String,
         /// The HTTP method used in the request.
-        #[arg(name="X", short, long, default_value = "GET")]
+        #[arg(name="request", short, long, default_value = "GET")]
         http_method: String,
         /// The JSON data in the request body.
-        #[arg(name="d", short, long, default_value = "{}")]
+        #[arg(name="data", short, long, default_value = "{}")]
         json_data: String,
     },
     /// Start a REPL session.
@@ -81,6 +85,18 @@ enum SandboxCommands {
 
 fn main() {
     let cli = JstzCli::parse();
+    let mut cfg = match Config::load_from_file() {
+        Ok(config) => config,
+        Err(e) => {
+            eprintln!("Error loading config: {}", e);
+            std::process::exit(1);
+        }
+    };
+
+    let client_path = cfg.get_octez_client_path().expect("Failed to get octez client path");
+    let client_args = cfg.get_octez_client_setup_args().expect("Failed to get octez client args");
+    let root_dir = cfg.get_root_dir().expect("Failed to get root dir address");
+
 
     match cli.command {
         JstzCommands::Sandbox(cmd) => match cmd {
@@ -93,23 +109,42 @@ fn main() {
                 //sandbox_stop();
             }
         },
-        JstzCommands::BridgeDeposit { from, to, amount } => {
+        JstzCommands::BridgeDeposit { mut from, mut to, amount } => {
             println!("Depositing {} Tez from {} to {}", amount, from, to);
-            deposit(from, to, amount);
+            if let Ok(Some(alias)) = cfg.get_tz4_alias(&from) {
+                println!("Using alias for {}: {}", from, alias);
+                from = alias;
+            }
+            if let Ok(Some(alias)) = cfg.get_tz4_alias(&to) {
+                println!("Using alias for {}: {}", to, alias);
+                to = alias;
+            }
+
+            deposit(from, to, amount, client_path, client_args);
         },
-        JstzCommands::Deploy { script, name } => {
+        JstzCommands::Deploy { mut script, name } => {
             println!("Deploying script {} with alias {}", script, name);
-            deploy(script, name);
+            if let Ok(Some(alias)) = cfg.get_name_alias(&name) {
+                println!("Using alias for {} instead of script: {}", name, alias);
+                script = alias;
+            }
+            deploy(script, root_dir ,client_path, client_args);
         },
-        JstzCommands::Run { url, http_method, json_data } => {
+        JstzCommands::Run { mut url, http_method, json_data } => {
             println!("Running {} with method {} and data {}", url, http_method, json_data);
-            run_contract(url, http_method, json_data);
+            if let Ok(Some(alias)) = cfg.get_url_alias(&url) {
+                println!("Using alias for {}: {}", url, alias);
+                url = alias;
+            }
+            run_contract(url, http_method, json_data, client_path, client_args);
         },
         JstzCommands::Repl { self_address } => {
             if let Some(address) = self_address {
                 println!("Starting REPL with self address: {}", address);
+                //repl(address)
             } else {
                 println!("Starting REPL without a self address");
+                //repl()
             }
         },
     }
