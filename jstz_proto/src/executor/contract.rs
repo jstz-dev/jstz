@@ -94,6 +94,7 @@ impl Script {
             .register_api(api::LedgerApi { contract_address }, context);
         self.realm().register_api(api::ContractApi, context);
         self.realm().register_api(jstz_api::url::UrlApi, context);
+        self.realm().register_api(jstz_api::http::HttpApi, context);
     }
 
     /// Initialize the script, registering all associated runtime APIs
