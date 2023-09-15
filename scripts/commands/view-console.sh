@@ -52,6 +52,7 @@ Options:
     --info: view console.info
     --warn: view console.warn
     --error: view console.error
+    --custom <arg>: add a custom search string
 EOF
             exit 1
             ;;
