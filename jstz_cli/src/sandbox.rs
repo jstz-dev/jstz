@@ -9,7 +9,9 @@ use std::time::Duration;
 use std::path::Path;
 use std::thread;
 use serde::{Serialize, Deserialize};
-use config::Config;
+use crate::config::Config;
+use nix::sys::signal::{kill, Signal};
+use nix::unistd::Pid;
 
 pub fn sandbox_start(mut cfg: Config) {
     // Check if sandbox is already running
@@ -46,15 +48,6 @@ pub fn sandbox_start(mut cfg: Config) {
 
     let mut children: Vec<Child> = Vec::new();
 
-    /*let child = start_sandboxed_node(&node, &node_dir.path().to_path_buf(), port, rpc, &script_dir.to_path_buf()).unwrap();
-    children.push(child);
-
-    let child = init_sandboxed_client(&client, &script_dir.to_path_buf(), &node_dir.path().to_path_buf());
-    //children.push(child);
-
-    let child = start_rollup_node(&client, &kernel, &preimages, &rollup_node, &rollup_node_dir.path().to_path_buf(), &log_dir);
-    children.push(child);*/
-
     // Get the path to the current executable
     let current_exe = env::current_exe().expect("Failed to get current executable path");
 
@@ -88,12 +81,12 @@ pub fn sandbox_start(mut cfg: Config) {
         cfg.add_pid(*pid).unwrap();
     }
 
-    println!("export TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER=Y ;");
-    println!("export OCTEZ_CLIENT_DIR={} ;", client_dir.path().to_str().unwrap());
-    println!("export OCTEZ_NODE_DIR={} ;", node_dir.path().to_str().unwrap());
-    println!("export OCTEZ_ROLLUP_DIR={} ;", rollup_node_dir.path().to_str().unwrap());
-    println!("alias octez-client=\"{}\" ;", client);
-    println!("alias jstz=\"{}\" ;", jstz);
+    //println!("export TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER=Y ;");
+    //println!("export OCTEZ_CLIENT_DIR={} ;", client_dir.path().to_str().unwrap());
+    //println!("export OCTEZ_NODE_DIR={} ;", node_dir.path().to_str().unwrap());
+    //println!("export OCTEZ_ROLLUP_DIR={} ;", rollup_node_dir.path().to_str().unwrap());
+    //println!("alias octez-client=\"{}\" ;", client);
+    //println!("alias jstz=\"{}\" ;", jstz);
     // TODO: The octez-reset alias is more complex and might need a separate script or function
 
     println!("The node, baker, and rollup node are now initialized. In the rest of this shell session, you may now run `octez-client` to communicate with the launched node. For instance:");
@@ -119,11 +112,10 @@ pub fn sandbox_stop(mut cfg: Config) {
     // Kill the processes using their PIDs
     let pids = cfg.get_active_pids().unwrap();
     for pid in pids {
-        if let Ok(mut child) = std::process::Child::try_wait(pid) {
-            child.kill().unwrap();
-            child.wait().unwrap();
-        }
-        cfg.remove_pid(pid).unwrap();
+        let pid = Pid::from_raw(pid as i32);
+        // Send a termination signal to the process
+        let _ = kill(pid, Signal::SIGTERM);
+        cfg.remove_pid(pid.as_raw() as u32).unwrap();
     }
 
     // Update the is_sandbox_running property

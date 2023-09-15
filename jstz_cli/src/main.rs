@@ -13,7 +13,7 @@ use crate::run_contract::run_contract;
 use crate::sandbox::sandbox_start;
 use crate::sandbox::sandbox_stop;
 //use crate::sandbox::repl;
-use config::Config;
+use crate::config::Config;
 
 
 #[derive(Parser)]

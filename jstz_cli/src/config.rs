@@ -4,7 +4,7 @@ use serde::{Serialize, Deserialize};
 use std::io::{Error, ErrorKind};
 use std::collections::HashMap;
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Config {
     root_dir: String,
     octez_client_dir: String,
@@ -16,12 +16,12 @@ pub struct Config {
     active_pids: Vec<u32>,
 }
 
-impl Default for Config {
+impl Config {
     fn default() -> Self {
         Config {
-            root_dir: "".to_string(),
-            octez_client_dir: "".to_string(),
-            rpc: 0,
+            root_dir: "..".to_string(),
+            octez_client_dir: "octez_client".to_string(),
+            rpc: 18730,
             url_aliases: HashMap::new(),
             name_aliases: HashMap::new(),
             tz4_aliases: HashMap::new(),
@@ -29,9 +29,7 @@ impl Default for Config {
             active_pids: Vec::new(),
         }
     }
-}
 
-impl Config {
     // Path to the configuration file
     fn config_path() -> PathBuf {
         let mut path = dirs::home_dir().expect("Failed to get home directory");
