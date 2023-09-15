@@ -14,7 +14,11 @@ use boa_engine::{
 use boa_gc::{empty_trace, Finalize, GcRef, GcRefCell, GcRefMut, Trace};
 use derive_more::{Deref, DerefMut, From};
 
-use crate::host;
+use crate::{
+    host,
+    native::{register_global_class, NativeClass},
+    Api,
+};
 
 /// A newtype wrapper over `Module` tha maintains a reference
 /// to the module's realm
@@ -84,12 +88,6 @@ impl<'host, 's> Drop for ContextHandle<'host, 's> {
     }
 }
 
-/// A generic runtime API
-pub trait Api {
-    /// Initialize a runtime API
-    fn init(self, context: &mut Context<'_>);
-}
-
 #[derive(Debug, PartialEq, Eq, Clone, Trace, Finalize, Deref, DerefMut, From)]
 pub struct Realm {
     pub inner: realm::Realm,
@@ -110,6 +108,14 @@ impl Realm {
 
     pub fn global_object(&self, context: &mut Context<'_>) -> JsObject {
         self.context_handle(context).global_object()
+    }
+
+    pub fn register_global_class<T: NativeClass>(
+        &self,
+        context: &mut Context<'_>,
+    ) -> JsResult<()> {
+        let context = &mut self.context_handle(context);
+        register_global_class::<T>(context)
     }
 
     pub fn register_api<T: Api>(&self, api: T, context: &mut Context<'_>) {

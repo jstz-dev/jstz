@@ -140,7 +140,7 @@ impl LedgerApi {
     }
 }
 
-impl jstz_core::realm::Api for LedgerApi {
+impl jstz_core::Api for LedgerApi {
     fn init(self, context: &mut boa_engine::Context<'_>) {
         let ledger = ObjectInitializer::with_native(
             Ledger {
