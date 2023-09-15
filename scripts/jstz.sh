@@ -20,6 +20,10 @@ main() {
             # shellcheck source=./commands/deposit.sh
             "${script_dir}/commands/deposit.sh" "$@"
             ;;
+        view-console)
+            # shellcheck source=./commands/deposit.sh
+            "${script_dir}/commands/view-console.sh" "$@"
+            ;;
         *)
             cat <<EOF
 Usage: $0 <COMMAND>
