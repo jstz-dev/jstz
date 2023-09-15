@@ -3,15 +3,15 @@ use clap::{Parser, Subcommand};
 mod deposit;
 mod deploy;
 mod run_contract;
-//mod sandbox;
+mod sandbox;
 //mod repl;
 mod config; 
 
 use crate::deposit::deposit;
 use crate::deploy::deploy;
 use crate::run_contract::run_contract;
-//use crate::sandbox::sandbox_start;
-//use crate::sandbox::sandbox_stop;
+use crate::sandbox::sandbox_start;
+use crate::sandbox::sandbox_stop;
 //use crate::sandbox::repl;
 use config::Config;
 
@@ -102,11 +102,11 @@ fn main() {
         JstzCommands::Sandbox(cmd) => match cmd {
             SandboxCommands::Start => {
                 println!("Starting the jstz sandbox...");
-                //sandbox_start();
+                sandbox_start(cfg.clone());
             }
             SandboxCommands::Stop => {
                 println!("Stopping the jstz sandbox...");
-                //sandbox_stop();
+                sandbox_stop(cfg.clone());
             }
         },
         JstzCommands::BridgeDeposit { mut from, mut to, amount } => {

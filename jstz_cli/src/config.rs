@@ -12,6 +12,23 @@ pub struct Config {
     url_aliases: HashMap<String, String>,
     name_aliases: HashMap<String, String>,
     tz4_aliases: HashMap<String, String>,
+    is_sandbox_running: bool,
+    active_pids: Vec<u32>,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Config {
+            root_dir: "".to_string(),
+            octez_client_dir: "".to_string(),
+            rpc: 0,
+            url_aliases: HashMap::new(),
+            name_aliases: HashMap::new(),
+            tz4_aliases: HashMap::new(),
+            is_sandbox_running: false,
+            active_pids: Vec::new(),
+        }
+    }
 }
 
 impl Config {
@@ -145,6 +162,33 @@ impl Config {
 
     pub fn remove_tz4_alias(&mut self, alias: &str) -> Result<(), std::io::Error> {
         self.tz4_aliases.remove(alias);
+        self.save_to_file()
+    }
+
+    // Getter and setter for is_sandbox_running
+    pub fn get_is_sandbox_running(&self) -> Result<bool, std::io::Error> {
+        let config = Self::load_from_file()?;
+        Ok(config.is_sandbox_running)
+    }
+
+    pub fn set_is_sandbox_running(&mut self, value: bool) -> Result<(), std::io::Error> {
+        self.is_sandbox_running = value;
+        self.save_to_file()
+    }
+
+    // Methods for active_pids
+    pub fn get_active_pids(&self) -> Result<Vec<u32>, std::io::Error> {
+        let config = Self::load_from_file()?;
+        Ok(config.active_pids.clone())
+    }
+
+    pub fn add_pid(&mut self, pid: u32) -> Result<(), std::io::Error> {
+        self.active_pids.push(pid);
+        self.save_to_file()
+    }
+
+    pub fn remove_pid(&mut self, pid: u32) -> Result<(), std::io::Error> {
+        self.active_pids.retain(|&x| x != pid);
         self.save_to_file()
     }
 }
