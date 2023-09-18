@@ -36,7 +36,8 @@ pub fn entry(rt: &mut (impl Runtime + 'static)) {
     let ticketer = read_ticketer(rt);
 
     if let Some(message) = read_message(rt, ticketer.as_ref()) {
-        handle_message(rt, message).unwrap()
+        handle_message(rt, message).unwrap_or_else(|err|
+            rt.write_debug(&format!("[🔴] {err:?}\n")));
     }
 }
 
