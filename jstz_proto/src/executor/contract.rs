@@ -18,7 +18,6 @@ use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{api, Result};
 
-
 fn on_success(
     value: JsValue,
     f: fn(&mut Context<'_>),
@@ -28,15 +27,16 @@ fn on_success(
         Some(promise) => {
             let promise = JsPromise::from_object(promise.clone()).unwrap();
             promise
-                .then(Some(
-
-                    FunctionObjectBuilder::new(context, unsafe {
-                        NativeFunction::from_closure(move |_, _, context| {
-                            f(context);
-                            Ok(JsValue::undefined())
+                .then(
+                    Some(
+                        FunctionObjectBuilder::new(context, unsafe {
+                            NativeFunction::from_closure(move |_, _, context| {
+                                f(context);
+                                Ok(JsValue::undefined())
+                            })
                         })
-                    })
-                    .build()),
+                        .build(),
+                    ),
                     None,
                     context,
                 )
