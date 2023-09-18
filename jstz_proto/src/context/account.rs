@@ -67,7 +67,11 @@ impl Account {
         addr: &Address,
     ) -> Result<()> {
         match tx.entry(hrt, Self::path(addr)?)? {
-            Entry::Occupied(_) => Err(Error::InvalidAddress),
+            Entry::Occupied(ntry) => {
+                let acc: &Self = ntry.get();
+                hrt.write_debug(&format!("📜 already exists: {:?}\n", acc.contract_code));
+                Err(Error::InvalidAddress)
+            }
             Entry::Vacant(entry) => {
                 entry.insert(self);
                 Ok(())
@@ -110,7 +114,7 @@ impl Account {
         addr: &Address,
         amount: Amount,
     ) -> Result<()> {
-        let mut account = Self::get_mut(hrt, tx, addr)?;
+        let account = Self::get_mut(hrt, tx, addr)?;
 
         account.amount += amount;
         Ok(())

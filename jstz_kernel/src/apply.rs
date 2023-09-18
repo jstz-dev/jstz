@@ -1,7 +1,7 @@
 use jstz_core::kv::Kv;
 use jstz_proto::{
     operation::{external, ExternalOperation, RunContract},
-    receipt, Result,
+    Result,
 };
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
@@ -55,13 +55,7 @@ pub fn apply_deploy_contract(
 ) {
     let mut kv = Kv::new();
     let mut tx = kv.begin_transaction();
-
-    let Ok(receipt::Content::DeployContract(receipt::DeployContract {
-        contract_address
-    })) = jstz_proto::executor::deploy_contract(rt, &mut tx, origination)
-        else {return ()};
+    let _ = jstz_proto::executor::deploy_contract(rt, &mut tx, origination);
     kv.commit_transaction(rt, tx)
         .expect("Failed to commit transaction");
-
-    debug_msg!(rt, "Contract created: {contract_address}\n");
 }

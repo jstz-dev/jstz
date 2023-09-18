@@ -13,6 +13,8 @@ use jstz_crypto::public_key_hash::PublicKeyHash;
 use crate::{
     context::account::{Account, Amount},
     error::Result,
+    operation::external::ContractOrigination,
+    Error,
 };
 
 // Ledger.selfAddress()
@@ -54,6 +56,25 @@ impl Ledger {
         Account::transfer(rt, tx, &self.contract_address, dst, amount)?;
 
         Ok(())
+    }
+    fn create_contract(
+        &self,
+        rt: &impl HostRuntime,
+        tx: &mut Transaction,
+        contract_code: String,
+        initial_balance: Amount,
+    ) -> JsResult<String> {
+        if Self::balance(rt, tx, &self.contract_address)? < initial_balance {
+            return Err(Error::BalanceOverflow.into());
+        }
+        let contract = ContractOrigination {
+            contract_code,
+            originating_address: self.contract_address.clone(),
+            initial_balance,
+        };
+        let address = crate::executor::origination::execute(rt, tx, contract)?;
+        self.transfer(rt, tx, &address, initial_balance)?;
+        Ok(address.to_string())
     }
 }
 
@@ -138,6 +159,44 @@ impl LedgerApi {
             Ok(JsValue::undefined())
         })
     }
+    fn create_contract(
+        this: &JsValue,
+        args: &[JsValue],
+        context: &mut Context<'_>,
+    ) -> JsResult<JsValue> {
+        runtime::with_global_host(|rt| {
+            host_defined!(context, host_defined);
+            let mut tx = host_defined.get_mut::<Transaction>().unwrap();
+
+            let ledger = Ledger::from_js_value(this)?;
+            let contract_code = args
+                .get(0)
+                .ok_or_else(|| {
+                    JsNativeError::typ()
+                        .with_message("Expected at least 1 argument but 0 provided")
+                })?
+                .to_string(context)?
+                .to_std_string_escaped();
+            let initial_balance = args.get_or_undefined(1);
+            let initial_balance = if initial_balance.is_undefined() {
+                0
+            } else {
+                initial_balance
+                    .to_big_uint64(context)?
+                    .iter_u64_digits()
+                    .next()
+                    .unwrap_or_default()
+            };
+
+            let address = ledger.create_contract(
+                rt,
+                &mut tx,
+                contract_code,
+                initial_balance as Amount,
+            )?;
+            Ok(address.into())
+        })
+    }
 }
 
 impl jstz_core::Api for LedgerApi {
@@ -155,6 +214,11 @@ impl jstz_core::Api for LedgerApi {
         )
         .function(NativeFunction::from_fn_ptr(Self::balance), "balance", 1)
         .function(NativeFunction::from_fn_ptr(Self::transfer), "transfer", 3)
+        .function(
+            NativeFunction::from_fn_ptr(Self::create_contract),
+            "createContract",
+            1,
+        )
         .build();
 
         context

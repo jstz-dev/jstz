@@ -8,6 +8,7 @@ ERROR=🔴
 WARN=🟠
 INFO=🟢
 LOG=🪵
+CONTRACT=📜
 
 grep_for=""
 function addSymbol () {
@@ -39,6 +40,10 @@ while [[ $# -gt 0 ]]; do
             addSymbol "$ERROR"
             shift 1
             ;;
+        --contract)
+            addSymbol "$CONTRACT"
+            shift 1
+            ;;
         --custom)
             addSymbol "$2"
             shift 2
@@ -52,6 +57,7 @@ Options:
     --info: view console.info
     --warn: view console.warn
     --error: view console.error
+    --contract: view contract creations
     --custom <arg>: add a custom search string
 EOF
             exit 1
@@ -60,7 +66,7 @@ EOF
 done
 if [ -z "$grep_for" ]
 then
-    grep_for="$LOG"'\|'"$INFO"'\|'"$WARN"'\|'"$ERROR"
+    grep_for="$LOG"'\|'"$INFO"'\|'"$WARN"'\|'"$ERROR"'\|'$CONTRACT
 fi
 
 tail -f ${logs_dir}/kernel.log | grep "$grep_for"
