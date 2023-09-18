@@ -61,7 +61,7 @@ struct SnapshotEntry {
 type Snapshot = BTreeMap<OwnedPath, SnapshotEntry>;
 
 impl SnapshotEntry {
-    fn emphemeral<V>(value: V) -> Self
+    fn ephemeral<V>(value: V) -> Self
     where
         V: Value,
     {
@@ -92,6 +92,7 @@ impl SnapshotEntry {
     where
         V: Value,
     {
+        self.dirty = true;
         self.value.downcast_mut().unwrap()
     }
 
@@ -222,7 +223,7 @@ impl Transaction {
     where
         V: Value,
     {
-        self.snapshot.insert(key, SnapshotEntry::emphemeral(value));
+        self.snapshot.insert(key, SnapshotEntry::ephemeral(value));
         Ok(())
     }
 
@@ -311,7 +312,7 @@ impl<'a, V: 'a> VacantEntry<'a, V> {
         V: Value,
     {
         self.inner
-            .insert(SnapshotEntry::emphemeral::<V>(value))
+            .insert(SnapshotEntry::ephemeral::<V>(value))
             .as_mut()
     }
 }
