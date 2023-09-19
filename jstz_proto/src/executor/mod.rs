@@ -1,6 +1,7 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
 
 use crate::{
+    context::account::Account,
     operation::{
         self, external::ContractOrigination, ExternalOperation, Operation,
         SignedOperation,
@@ -26,14 +27,25 @@ pub fn run_contract(
 }
 
 pub fn deploy_contract(
-    hrt: &mut (impl HostRuntime + 'static),
+    hrt: &impl HostRuntime,
     tx: &mut Transaction,
     contract: ContractOrigination,
-) -> Result<receipt::Content> {
-    let result = origination::execute(hrt, tx, contract)?;
-    Ok(receipt::Content::DeployContract(receipt::DeployContract {
-        contract_address: result,
-    }))
+) -> Result<receipt::DeployContract> {
+    let nonce = Account::nonce(hrt, tx, &contract.originating_address)?;
+    nonce.increment();
+    deploy_contract_inner(hrt, tx, contract)
+}
+// this function does not increment the nonce.
+// For an externally deployed contract the nonce used for address creation should
+// match the signed nonce of the operation.
+fn deploy_contract_inner(
+    hrt: &impl HostRuntime,
+    tx: &mut Transaction,
+    contract: ContractOrigination,
+) -> Result<receipt::DeployContract> {
+    Ok(receipt::DeployContract {
+        contract_address: origination::execute(hrt, tx, contract)?,
+    })
 }
 fn execute_operation_inner(
     hrt: &mut (impl HostRuntime + 'static),
@@ -48,7 +60,7 @@ fn execute_operation_inner(
             source,
             content: operation::Content::DeployContract(deployment),
             ..
-        } => deploy_contract(
+        } => deploy_contract_inner(
             hrt,
             tx,
             ContractOrigination {
@@ -56,7 +68,8 @@ fn execute_operation_inner(
                 initial_balance: deployment.contract_credit,
                 contract_code: deployment.contract_code,
             },
-        ),
+        )
+        .map(receipt::Content::DeployContract),
 
         Operation {
             content: operation::Content::CallContract(_),

@@ -14,7 +14,7 @@ use crate::{
     context::account::{Account, Amount},
     error::Result,
     operation::external::ContractOrigination,
-    Error,
+    receipt, Error,
 };
 
 // Ledger.selfAddress()
@@ -72,9 +72,10 @@ impl Ledger {
             originating_address: self.contract_address.clone(),
             initial_balance,
         };
-        let address = crate::executor::origination::execute(rt, tx, contract)?;
-        self.transfer(rt, tx, &address, initial_balance)?;
-        Ok(address.to_string())
+        let receipt::DeployContract { contract_address } =
+            crate::executor::deploy_contract(rt, tx, contract)?;
+        self.transfer(rt, tx, &contract_address, initial_balance)?;
+        Ok(contract_address.to_string())
     }
 }
 
