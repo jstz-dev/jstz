@@ -17,6 +17,7 @@ impl Contract {
     fn call(
         contract_address: PublicKeyHash,
         contract_code: String,
+        request: &JsValue,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         let script = Script::parse(Source::from_bytes(&contract_code), context)?;
@@ -29,8 +30,8 @@ impl Contract {
             Some(
                 FunctionObjectBuilder::new(context, unsafe {
                     NativeFunction::from_closure_with_captures(
-                        |_, _, script, context| script.run(context),
-                        script,
+                        |_, _, (script, request), context| script.run(request, context),
+                        (script, request.clone()),
                     )
                 })
                 .build(),
@@ -65,7 +66,9 @@ impl ContractApi {
                 })?
                 .to_std_string_escaped();
 
-        Contract::call(contract_address, contract_code, context)
+        let request = args.get_or_undefined(2);
+
+        Contract::call(contract_address, contract_code, request, context)
     }
 }
 

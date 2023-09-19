@@ -16,9 +16,7 @@ pub fn run_contract(
 ) -> Result<receipt::Content> {
     let result = contract::run::execute(hrt, run)?;
 
-    Ok(receipt::Content::RunContract(receipt::RunContract {
-        result,
-    }))
+    Ok(receipt::Content::RunContract(result))
 }
 
 fn execute_operation_inner(
@@ -36,9 +34,7 @@ fn execute_operation_inner(
         operation::Content::RunContract(run) => {
             let result = contract::run::execute(hrt, run)?;
 
-            Ok(receipt::Content::RunContract(receipt::RunContract {
-                result,
-            }))
+            Ok(receipt::Content::RunContract(result))
         }
     }
 }

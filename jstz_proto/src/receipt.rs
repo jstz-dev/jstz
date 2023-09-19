@@ -1,3 +1,5 @@
+use http::{HeaderMap, StatusCode};
+use jstz_api::http::body::HttpBody;
 use serde::Serialize;
 
 use crate::{context::account::Address, operation::OperationHash, Result};
@@ -36,7 +38,11 @@ pub struct CallContract {
 
 #[derive(Debug, Serialize)]
 pub struct RunContract {
-    pub result: String,
+    pub body: HttpBody,
+    #[serde(with = "http_serde::status_code")]
+    pub status_code: StatusCode,
+    #[serde(with = "http_serde::header_map")]
+    pub headers: HeaderMap,
 }
 
 #[derive(Debug, Serialize)]
