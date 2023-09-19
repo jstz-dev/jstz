@@ -52,10 +52,10 @@ pub fn apply_transaction(
 pub fn apply_deploy_contract(
     rt: &mut (impl Runtime + 'static),
     origination: ContractOrigination,
-) {
+) -> Result<()> {
     let mut kv = Kv::new();
     let mut tx = kv.begin_transaction();
-    let _ = jstz_proto::executor::deploy_contract(rt, &mut tx, origination);
-    kv.commit_transaction(rt, tx)
-        .expect("Failed to commit transaction");
+    jstz_proto::executor::deploy_contract(rt, &mut tx, origination)?;
+    kv.commit_transaction(rt, tx)?;
+    Ok(())
 }
