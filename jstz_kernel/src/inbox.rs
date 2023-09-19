@@ -10,6 +10,8 @@ use tezos_smart_rollup::{
     types::Contract,
 };
 
+pub use jstz_proto::operation::external::ContractOrigination;
+
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum InternalMessage {
     Deposit(Deposit),
@@ -19,6 +21,7 @@ pub enum InternalMessage {
 pub enum ExternalMessage {
     SetTicketer(ContractKt1Hash),
     RunContract(RunContract),
+    DeployContract(ContractOrigination),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -122,8 +125,12 @@ pub fn read_message(
         InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
             read_transfer(rt, transfer, ticketer)
         }
-        InboxMessage::External(bytes) => {
-            read_external_message(rt, bytes).map(Message::External)
-        }
+        InboxMessage::External(bytes) => match read_external_message(rt, bytes) {
+            Some(msg) => Some(Message::External(msg)),
+            None => {
+                debug_msg!(rt, "Failed to parse external message\n");
+                None
+            }
+        },
     }
 }

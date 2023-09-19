@@ -113,7 +113,7 @@ impl<'host> DerefMut for Runtime<'host> {
 }
 
 impl<'host> Runtime<'host> {
-    pub fn new() -> Self {
+    pub fn new() -> JsResult<Self> {
         // 1. Initialize job queue
         let job_queue = Rc::new(JobQueue::new());
 
@@ -125,15 +125,15 @@ impl<'host> Runtime<'host> {
             .unwrap();
 
         // 3. Initialize specialized realm
-        let realm = Realm::new(&mut context);
+        let realm = Realm::new(&mut context)?;
 
         context.enter_realm(realm.inner.clone());
 
-        Self {
+        Ok(Self {
             context,
             realm,
             job_queue,
-        }
+        })
     }
 
     /// Parses, loads, links and evaluates a module.

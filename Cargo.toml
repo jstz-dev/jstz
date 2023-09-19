@@ -22,3 +22,10 @@ tezos-smart-rollup-encoding = { git = "https://gitlab.com/tezos/tezos.git", bran
 tezos-smart-rollup-entrypoint = { git = "https://gitlab.com/tezos/tezos.git", branch = "ajob410@sdk-ord-paths" }
 tezos-smart-rollup-host = { git = "https://gitlab.com/tezos/tezos.git", branch = "ajob410@sdk-ord-paths" }
 tezos-smart-rollup-storage = { git = "https://gitlab.com/tezos/tezos.git", branch = "ajob410@sdk-ord-paths" }
+boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }
+boa_engine = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }
+boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }
+boa_icu_provider = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }
+boa_interner = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }
+boa_macros = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }
+boa_profiler = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }

@@ -11,8 +11,8 @@ use crate::{
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Operation {
-    source: Address,
-    nonce: Nonce,
+    pub source: Address,
+    pub nonce: Nonce,
     pub content: Content,
 }
 
@@ -99,18 +99,18 @@ impl Operation {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct DeployContract {
     pub contract_code: String,
     pub contract_credit: Amount,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CallContract {
     pub contract_address: Address,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct RunContract {
     pub contract_code: String,
     #[serde(with = "http_serde::uri")]
@@ -122,7 +122,7 @@ pub struct RunContract {
     pub body: HttpBody,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum Content {
     DeployContract(DeployContract),
     CallContract(CallContract),
@@ -157,9 +157,17 @@ pub mod external {
         pub amount: Amount,
         pub reciever: Address,
     }
+
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+    pub struct ContractOrigination {
+        pub originating_address: Address,
+        pub initial_balance: Amount,
+        pub contract_code: String,
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExternalOperation {
     Deposit(external::Deposit),
+    ContractOrigination(external::ContractOrigination),
 }

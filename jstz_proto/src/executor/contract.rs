@@ -18,7 +18,39 @@ use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{api, Result};
 
-fn finally(
+fn on_success(
+    value: JsValue,
+    f: fn(&mut Context<'_>),
+    context: &mut Context<'_>,
+) -> JsValue {
+    match value.as_promise() {
+        Some(promise) => {
+            let promise = JsPromise::from_object(promise.clone()).unwrap();
+            promise
+                .then(
+                    Some(
+                        FunctionObjectBuilder::new(context, unsafe {
+                            NativeFunction::from_closure(move |_, _, context| {
+                                f(context);
+                                Ok(JsValue::undefined())
+                            })
+                        })
+                        .build(),
+                    ),
+                    None,
+                    context,
+                )
+                .unwrap()
+                .into()
+        }
+        None => {
+            f(context);
+            value
+        }
+    }
+}
+
+fn _finally(
     value: JsValue,
     on_finally: fn(&mut Context<'_>),
     context: &mut Context<'_>,
@@ -77,7 +109,7 @@ impl Script {
         src: Source<'_, R>,
         context: &mut Context<'_>,
     ) -> JsResult<Self> {
-        let module = Module::parse(src, Some(Realm::new(context)), context)?;
+        let module = Module::parse(src, Some(Realm::new(context)?), context)?;
 
         Ok(Self(module))
     }
@@ -130,7 +162,7 @@ impl Script {
             self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)?;
 
         // 3. Ensure that the transaction is commit
-        let result = finally(
+        let result = on_success(
             result,
             |context| {
                 host_defined!(context, mut host_defined);
@@ -195,7 +227,7 @@ pub mod run {
         debug_msg!(hrt, "Evaluating: {contract_code:?}\n");
 
         // 1. Initialize runtime
-        let rt = &mut jstz_core::Runtime::new();
+        let rt = &mut jstz_core::Runtime::new()?;
 
         let contract_address =
             PublicKeyHash::from_base58(&uri.host().expect("Expected host"))?;
