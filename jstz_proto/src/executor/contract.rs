@@ -77,7 +77,7 @@ impl Script {
         src: Source<'_, R>,
         context: &mut Context<'_>,
     ) -> JsResult<Self> {
-        let module = Module::parse(src, Some(Realm::new(context)), context)?;
+        let module = Module::parse(src, Some(Realm::new(context)?), context)?;
 
         Ok(Self(module))
     }
@@ -171,7 +171,7 @@ pub mod run {
         debug_msg!(hrt, "Evaluating: {contract_code:?}\n");
 
         // 1. Initialize runtime
-        let rt = &mut jstz_core::Runtime::new();
+        let rt = &mut jstz_core::Runtime::new()?;
 
         let result: JsValue = runtime::with_host_runtime(hrt, || {
             // 2. Initialize script
