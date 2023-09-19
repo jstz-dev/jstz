@@ -32,7 +32,7 @@
 
             buildInputs = with pkgs; [
               alejandra
-              (rust-bin.stable."1.66.0".default.override {
+              (rust-bin.stable."1.70.0".default.override {
                 targets = ["wasm32-unknown-unknown"];
               })
 

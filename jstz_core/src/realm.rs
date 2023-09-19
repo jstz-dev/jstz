@@ -301,10 +301,14 @@ impl HostDefined {
 }
 
 impl Realm {
-    pub fn new(context: &mut Context<'_>) -> Self {
+    pub fn new(context: &mut Context<'_>) -> JsResult<Self> {
         // 1. Create `boa_engine` realm with defined host hooks
         let realm = Self {
-            inner: realm::Realm::create(host::HOOKS, &RootShape::default()),
+            inner: realm::Realm::create_with_default_global_bindings(
+                host::HOOKS,
+                &RootShape::default(),
+                context,
+            )?,
         };
 
         // 2. Initialize `HostDefined`
@@ -313,6 +317,6 @@ impl Realm {
             HostDefined::new().init(&mut context);
         }
 
-        realm
+        Ok(realm)
     }
 }

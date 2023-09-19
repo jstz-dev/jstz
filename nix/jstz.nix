@@ -2,7 +2,7 @@
   pkgs,
   makeRustPlatform,
 }: let
-  rustVersion = "1.66.1";
+  rustVersion = "1.70.0";
 
   wasmTarget = "wasm32-unknown-unknown";
 
@@ -24,6 +24,7 @@
       lockFile = ../Cargo.lock;
       outputHashes = {
         "tezos-smart-rollup-0.2.1" = "sha256-ETMYanG7BINBhuKdALCShHhtLYSOCmG+Ak/G5QK88ks=";
+        "boa_engine-0.17.0" = "sha256-Gnt3rfF/XrwyR6kTiy3UO53vuez99ZCx31HLqJyXjB8=";
       };
     };
   };
