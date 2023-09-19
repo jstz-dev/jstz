@@ -9,6 +9,7 @@ pub enum Error {
     BalanceOverflow,
     InvalidNonce,
 }
+pub type Result<T> = std::result::Result<T, Error>;
 
 impl Serialize for Error {
     fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
@@ -59,5 +60,3 @@ impl From<tezos_smart_rollup::storage::path::PathError> for Error {
         }
     }
 }
-
-pub type Result<T> = std::result::Result<T, Error>;

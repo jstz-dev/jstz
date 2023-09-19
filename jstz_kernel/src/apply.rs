@@ -1,10 +1,11 @@
 use jstz_core::kv::Kv;
 use jstz_proto::operation::{external, ExternalOperation, RunContract};
+use jstz_proto::Result;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
 use crate::inbox::{Deposit, Transaction};
 
-pub fn apply_deposit(rt: &mut impl Runtime, deposit: Deposit) {
+pub fn apply_deposit(rt: &mut impl Runtime, deposit: Deposit) -> Result<()> {
     let Deposit { amount, reciever } = deposit;
 
     let mut kv = Kv::new();
@@ -14,14 +15,16 @@ pub fn apply_deposit(rt: &mut impl Runtime, deposit: Deposit) {
         rt,
         &mut tx,
         ExternalOperation::Deposit(external::Deposit { amount, reciever }),
-    )
-    .expect("Failed to execute deposit");
+    )?;
 
-    kv.commit_transaction(rt, tx)
-        .expect("Failed to commit transaction for deposit");
+    kv.commit_transaction(rt, tx)?;
+    Ok(())
 }
 
-pub fn apply_transaction(rt: &mut (impl Runtime + 'static), tx: Transaction) {
+pub fn apply_transaction(
+    rt: &mut (impl Runtime + 'static),
+    tx: Transaction,
+) -> Result<()> {
     let Transaction {
         contract_address,
         contract_code,
@@ -37,10 +40,10 @@ pub fn apply_transaction(rt: &mut (impl Runtime + 'static), tx: Transaction) {
             contract_address,
             contract_code,
         },
-    );
+    )?;
 
-    kv.commit_transaction(rt, tx)
-        .expect("Failed to commit transaction");
+    kv.commit_transaction(rt, tx)?;
 
     debug_msg!(rt, "Result: {result:?}\n");
+    Ok(())
 }
