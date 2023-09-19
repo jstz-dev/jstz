@@ -2,6 +2,7 @@ use std::fmt;
 
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::{
+    blake2b::digest,
     hash::{ContractTz4Hash, HashTrait},
     PublicKeyWithHash,
 };
@@ -15,7 +16,6 @@ use crate::{
 pub enum PublicKeyHash {
     Tz4(ContractTz4Hash),
 }
-
 impl PublicKeyHash {
     pub fn to_base58(&self) -> String {
         let PublicKeyHash::Tz4(tz4) = self;
@@ -35,6 +35,11 @@ impl PublicKeyHash {
     pub fn as_bytes(&self) -> &[u8] {
         let PublicKeyHash::Tz4(tz4) = self;
         &tz4.0
+    }
+    pub fn digest(data: &[u8]) -> Result<Self> {
+        let out_len = ContractTz4Hash::hash_size();
+        let bytes = digest(data, out_len).expect("failed to create hash");
+        Self::from_slice(&bytes)
     }
 }
 

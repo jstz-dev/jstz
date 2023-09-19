@@ -1,9 +1,11 @@
 use jstz_core::kv::Kv;
-use jstz_proto::operation::{external, ExternalOperation, RunContract};
-use jstz_proto::Result;
+use jstz_proto::{
+    operation::{external, ExternalOperation, RunContract},
+    Result,
+};
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
-use crate::inbox::{Deposit, Transaction};
+use crate::inbox::{ContractOrigination, Deposit, Transaction};
 
 pub fn apply_deposit(rt: &mut impl Runtime, deposit: Deposit) -> Result<()> {
     let Deposit { amount, reciever } = deposit;
@@ -45,5 +47,15 @@ pub fn apply_transaction(
     kv.commit_transaction(rt, tx)?;
 
     debug_msg!(rt, "Result: {result:?}\n");
+    Ok(())
+}
+pub fn apply_deploy_contract(
+    rt: &mut (impl Runtime + 'static),
+    origination: ContractOrigination,
+) -> Result<()> {
+    let mut kv = Kv::new();
+    let mut tx = kv.begin_transaction();
+    jstz_proto::executor::deploy_contract(rt, &mut tx, origination)?;
+    kv.commit_transaction(rt, tx)?;
     Ok(())
 }

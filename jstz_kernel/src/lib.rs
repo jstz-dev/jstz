@@ -7,7 +7,7 @@ use tezos_smart_rollup::{kernel_entry, prelude::Runtime, storage::path::RefPath}
 mod apply;
 mod inbox;
 
-use crate::apply::{apply_deposit, apply_transaction};
+use crate::apply::{apply_deploy_contract, apply_deposit, apply_transaction};
 use crate::inbox::read_message;
 
 const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
@@ -28,6 +28,9 @@ fn handle_message(rt: &mut (impl Runtime + 'static), message: Message) -> Result
         }
         Message::External(ExternalMessage::Transaction(tx)) => apply_transaction(rt, tx),
         Message::External(ExternalMessage::SetTicketer(kt1)) => store_ticketer(rt, &kt1),
+        Message::External(ExternalMessage::DeployContract(contract)) => {
+            apply_deploy_contract(rt, contract)
+        }
     }
 }
 

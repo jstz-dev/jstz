@@ -17,7 +17,7 @@ use crate::error::Result;
 mod transaction;
 mod value;
 
-pub use transaction::Transaction;
+pub use transaction::{Entry, Transaction};
 pub use value::Value;
 
 const MAX_TX_COUNT: usize = 16;

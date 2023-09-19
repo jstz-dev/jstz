@@ -16,6 +16,10 @@ main() {
             # shellcheck source=./commands/run-contract.sh
             "${script_dir}/commands/run-contract.sh" "$@"
             ;;
+        deploy-contract)
+            # shellcheck source=./commands/deploy-contract.sh
+            "${script_dir}/commands/deploy-contract.sh" "$@"
+            ;;
         deposit)
             # shellcheck source=./commands/deposit.sh
             "${script_dir}/commands/deposit.sh" "$@"
