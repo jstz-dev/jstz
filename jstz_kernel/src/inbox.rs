@@ -1,5 +1,5 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_proto::context::account::Amount;
+use jstz_proto::operation::{external::Deposit, RunContract};
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -11,18 +11,6 @@ use tezos_smart_rollup::{
 };
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Deposit {
-    pub amount: Amount,
-    pub reciever: PublicKeyHash,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Transaction {
-    pub contract_address: PublicKeyHash,
-    pub contract_code: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum InternalMessage {
     Deposit(Deposit),
 }
@@ -30,7 +18,7 @@ pub enum InternalMessage {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExternalMessage {
     SetTicketer(ContractKt1Hash),
-    Transaction(Transaction),
+    RunContract(RunContract),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
