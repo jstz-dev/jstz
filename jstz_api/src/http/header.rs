@@ -28,10 +28,22 @@ use jstz_core::{
     native::{register_global_class, ClassBuilder, JsNativeObject, NativeClass},
     value::IntoJs,
 };
-
 #[derive(Default, Clone, Deref, DerefMut)]
 pub struct Headers {
     headers: HeaderMap,
+}
+
+impl Headers {
+    pub fn from_http_headers(
+        headers: http::HeaderMap,
+        _context: &mut Context<'_>,
+    ) -> JsResult<Self> {
+        Ok(Self { headers })
+    }
+
+    pub fn to_http_headers(&self) -> http::HeaderMap {
+        self.headers.clone()
+    }
 }
 
 impl Finalize for Headers {}

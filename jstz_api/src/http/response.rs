@@ -26,7 +26,7 @@ use jstz_core::{
 use url::Url;
 
 use super::{
-    body::{Body, BodyWithType},
+    body::{Body, BodyWithType, HttpBody},
     header::{Headers, HeadersClass},
 };
 
@@ -65,6 +65,23 @@ impl Default for ResponseOptions {
 }
 
 impl Response {
+    pub fn to_http_response(&self) -> http::Response<HttpBody> {
+        let mut builder = http::Response::builder()
+            .status(self.response.status())
+            .version(self.response.version())
+            .extension(self.url.clone());
+
+        let headers = self.headers.deref().to_http_headers();
+
+        *builder.headers_mut().unwrap() = headers;
+
+        let body = self.response.body().to_http_body();
+
+        builder
+            .body(body)
+            .expect("Expected valid http response from a valid response")
+    }
+
     /// Creates a new Response object.
     ///
     /// More information:
@@ -323,7 +340,7 @@ impl ResponseBuilder {
 pub struct ResponseClass;
 
 impl Response {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    pub fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
