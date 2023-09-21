@@ -2,7 +2,7 @@ use std::io::Read;
 
 use boa_engine::{
     object::{builtins::JsPromise, FunctionObjectBuilder},
-    Context, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
+    Context, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source, JsArgs,
 };
 
 use boa_gc::{Finalize, Trace};
@@ -30,9 +30,9 @@ fn on_success(
                 .then(
                     Some(
                         FunctionObjectBuilder::new(context, unsafe {
-                            NativeFunction::from_closure(move |_, _, context| {
+                            NativeFunction::from_closure(move |_, args, context| {
                                 f(context);
-                                Ok(JsValue::undefined())
+                                Ok(args.get_or_undefined(0).clone())
                             })
                         })
                         .build(),
@@ -161,7 +161,7 @@ impl Script {
         let result =
             self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)?;
 
-        // 3. Ensure that the transaction is commit
+        // 3. Ensure that the transaction is committed
         let result = on_success(
             result,
             |context| {
@@ -197,7 +197,7 @@ pub mod run {
     use jstz_core::native::JsNativeObject;
 
     use super::*;
-    use crate::{operation, receipt};
+    use crate::{operation, receipt, context::account::Account, Error};
 
     fn create_http_request(
         uri: http::Uri,
@@ -214,23 +214,26 @@ pub mod run {
 
     pub fn execute(
         hrt: &mut (impl HostRuntime + 'static),
+        tx: &mut Transaction,
         run: operation::RunContract,
     ) -> Result<receipt::RunContract> {
         let operation::RunContract {
-            contract_code,
             uri,
             method,
             headers,
             body,
+            ..
         } = run;
 
-        debug_msg!(hrt, "Evaluating: {contract_code:?}\n");
 
         // 1. Initialize runtime
         let rt = &mut jstz_core::Runtime::new()?;
-
         let contract_address =
             PublicKeyHash::from_base58(&uri.host().expect("Expected host"))?;
+        let contract_code = Account::contract_code(hrt, tx, &contract_address)?
+            .ok_or(Error::InvalidAddress)?;
+
+        debug_msg!(hrt, "Evaluating: {contract_code:?}\n");
 
         let result: JsValue = runtime::with_host_runtime(hrt, || {
             // 2. Initialize script
@@ -238,6 +241,7 @@ pub mod run {
                 .expect("Failed to parse script");
 
             let script_promise = script.init(contract_address, rt)?;
+
 
             let http_request = create_http_request(uri, method, headers, body);
 
@@ -247,10 +251,13 @@ pub mod run {
                     .await
                     .expect("Failed to resolve script promise");
 
-                let request = JsNativeObject::new::<RequestClass>(
-                    Request::from_http_request(http_request, rt)?,
-                    rt,
-                )?;
+                let request = {
+                    let context = &mut script.realm().context_handle(rt);
+                    JsNativeObject::new::<RequestClass>(
+                    Request::from_http_request(http_request, context)?,
+                    context,
+                )
+                }?;
 
                 let result = script.run(request.inner(), rt)?;
 

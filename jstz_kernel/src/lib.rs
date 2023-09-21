@@ -32,6 +32,10 @@ fn handle_message(rt: &mut (impl Runtime + 'static), message: Message) -> Result
         Message::External(ExternalMessage::DeployContract(contract)) => {
             apply_deploy_contract(rt, contract)
         }
+        // TODO ⚰️ Deprecate will not be part of the CLI
+        Message::External(ExternalMessage::Transaction(tx)) => {
+            crate::apply::apply_transaction(rt, tx)
+        }
     }
 }
 

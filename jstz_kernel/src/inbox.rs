@@ -22,12 +22,21 @@ pub enum ExternalMessage {
     SetTicketer(ContractKt1Hash),
     RunContract(RunContract),
     DeployContract(ContractOrigination),
+    // TODO ⚰️ Deprecate will not be part of the CLI
+    Transaction(Transaction),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),
+}
+
+// TODO ⚰️ Deprecate will not be part of the CLI
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Transaction {
+    pub contract_address: PublicKeyHash,
+    pub contract_code: String,
 }
 
 // reciever, ticket

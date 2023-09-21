@@ -1,14 +1,17 @@
+use std::ops::DerefMut;
+
 use boa_engine::{
     object::{FunctionObjectBuilder, ObjectInitializer},
     property::Attribute,
-    Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
+    Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction, Source,
 };
 use boa_gc::{Finalize, Trace};
+use jstz_core::{host_defined, kv::Transaction, runtime};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 
-use crate::{api::ledger::js_value_to_pkh, executor::contract::Script};
-
-// Contract.call(contract_address, code)
+use crate::{
+    api::ledger::js_value_to_pkh, context::account::Account, executor::contract::Script,
+};
 
 #[derive(Finalize, Trace)]
 struct Contract;
@@ -16,11 +19,11 @@ struct Contract;
 impl Contract {
     fn call(
         contract_address: PublicKeyHash,
-        contract_code: String,
+        contract_code: &String,
         request: &JsValue,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        let script = Script::parse(Source::from_bytes(&contract_code), context)?;
+        let script = Script::parse(Source::from_bytes(contract_code), context)?;
 
         // 4. Evaluate the contract's module
         let script_promise = script.init(contract_address, context)?;
@@ -54,19 +57,21 @@ impl ContractApi {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        host_defined!(context, host_defined);
+        let mut tx = host_defined
+            .get_mut::<Transaction>()
+            .expect("Curent transaction undefined");
         let contract_address = js_value_to_pkh(args.get_or_undefined(0))?;
 
-        let contract_code =
-            args.get_or_undefined(1)
-                .as_string()
-                .ok_or_else(|| {
-                    JsError::from_native(JsNativeError::typ().with_message(
-                        "Failed to convert js value into rust type `String`",
-                    ))
-                })?
-                .to_std_string_escaped();
-
-        let request = args.get_or_undefined(2);
+        let contract_code = runtime::with_global_host(|rt| {
+            Account::contract_code(rt, tx.deref_mut(), &contract_address)
+        })?
+        .ok_or_else(|| {
+            JsNativeError::eval().with_message(format!(
+                "No code associated with address: {contract_address}"
+            ))
+        })?;
+        let request = args.get_or_undefined(1);
 
         Contract::call(contract_address, contract_code, request, context)
     }
@@ -75,7 +80,7 @@ impl ContractApi {
 impl jstz_core::Api for ContractApi {
     fn init(self, context: &mut Context<'_>) {
         let contract = ObjectInitializer::with_native(Contract, context)
-            .function(NativeFunction::from_fn_ptr(Self::call), "call", 1)
+            .function(NativeFunction::from_fn_ptr(Self::call), "call", 2)
             .build();
 
         context

@@ -21,7 +21,7 @@ use jstz_core::{
     accessor,
     native::{
         register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
-    },
+    }
 };
 use url::Url;
 
