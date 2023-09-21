@@ -35,8 +35,8 @@ pub enum Message {
 // TODO ⚰️ Deprecate will not be part of the CLI
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Transaction {
-    pub contract_address: PublicKeyHash,
-    pub contract_code: String,
+    pub referer: PublicKeyHash,
+    pub url: String,
 }
 
 // reciever, ticket

@@ -18,10 +18,8 @@ pub fn run_contract(
     hrt: &mut (impl HostRuntime + 'static),
     tx: &mut Transaction,
     run: operation::RunContract,
-) -> Result<receipt::Content> {
-    let result = contract::run::execute(hrt, tx, run)?;
-
-    Ok(receipt::Content::RunContract(result))
+) -> Result<receipt::RunContract> {
+    contract::run::execute(hrt, tx, run)
 }
 
 pub fn deploy_contract(

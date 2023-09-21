@@ -6,43 +6,24 @@ commands_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${commands_dir}/abstract.sh"
 
 # Parse arguments
-contract=""
 while [[ $# -gt 0 ]]; do
     key="$1"
-
-    case $key in
-        --self-address)
-            self_address="$2"
-            shift 2
-            ;;
-        --contract)
-            contract="$2"
-            shift 2
-            ;;
-        *)
-            cat <<EOF
-Unknown option: $1
-
-Options:
-    --self-address <tz4>: contract address when executing \`contract\` 
-    --contract <string>: contract code
-EOF
-            exit 1
-            ;;
-    esac
+    if [[ "$key" == --referer ]]
+    then
+        referer="$2"
+        shift 2
+    else
+        url="$1"
+        shift 1
+    fi
 done
-
-# Read from stdin if not provided
-if [ -z "$contract" ]; then 
-    contract=$(cat)
-fi
 
 # Create json message
 jmsg=$(
     jq --null-input \
-        --arg contract_address "$self_address" \
-        --arg contract_code "$contract" \
-        '{ "Transaction": { "contract_address": { "Tz4": $contract_address }, "contract_code": $contract_code } }'
+        --arg referer "$referer" \
+        --arg url "$url" \
+        '{ "Transaction": { "referer": { "Tz4": $referer }, "url": $url } }'
 )
 
 # Convert to external hex message

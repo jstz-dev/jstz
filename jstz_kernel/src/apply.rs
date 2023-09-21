@@ -1,7 +1,7 @@
 use jstz_core::kv::Kv;
 use jstz_proto::{
     operation::{external::Deposit, ExternalOperation, RunContract},
-    Result,
+    Error, Result,
 };
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
@@ -44,26 +44,21 @@ pub fn apply_transaction(
     use http::{HeaderMap, Method};
     use jstz_api::http::body::HttpBody;
 
-    let crate::inbox::Transaction {
-        contract_address,
-        contract_code,
-    } = tx;
+    let crate::inbox::Transaction { referer, url } = tx;
 
     let mut kv = Kv::new();
     let mut tx = kv.begin_transaction();
-    let uri = format!("jstz://{}", contract_address.to_base58())
-        .parse()
-        .expect("");
+    let uri = url.parse().map_err(|_| Error::InvalidAddress)?;
 
     let result = jstz_proto::executor::run_contract(
         rt,
         &mut tx,
         RunContract {
-            contract_code,
             headers: HeaderMap::default(),
             method: Method::default(),
             body: HttpBody::default(),
             uri,
+            referer,
         },
     )?;
 

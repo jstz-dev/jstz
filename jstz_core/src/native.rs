@@ -12,7 +12,6 @@ use boa_gc::{Finalize, GcRef, GcRefMut, Trace};
 
 pub use boa_engine::{object::NativeObject, NativeFunction};
 
-
 /// This struct permits Rust types to be passed around as JavaScript objects.
 #[derive(Trace, Finalize)]
 pub struct JsNativeObject<T: NativeObject> {

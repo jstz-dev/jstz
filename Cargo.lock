@@ -962,6 +962,7 @@ dependencies = [
  "boa_engine",
  "boa_gc",
  "derive_more",
+ "either",
  "erased-serde",
  "http",
  "http-serde",

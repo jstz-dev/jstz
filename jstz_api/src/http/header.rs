@@ -28,6 +28,7 @@ use jstz_core::{
     native::{register_global_class, ClassBuilder, JsNativeObject, NativeClass},
     value::IntoJs,
 };
+use jstz_crypto::public_key_hash::PublicKeyHash;
 #[derive(Default, Clone, Deref, DerefMut)]
 pub struct Headers {
     headers: HeaderMap,
@@ -160,6 +161,15 @@ impl Headers {
                     .with_message("Failed to convert js value into rust type `Console`")
                     .into()
             })
+    }
+    pub fn set_referer(this: &JsValue, referer: &PublicKeyHash) -> JsResult<()> {
+        let mut headers = Headers::try_from_js(this)?;
+        if headers.contains("Referer")? {
+            return Err(JsNativeError::eval()
+                .with_message("Referer header should not be set")
+                .into());
+        }
+        headers.set("Referer", &referer.to_base58())
     }
 }
 

@@ -1,7 +1,10 @@
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::{hash::Blake2b, public_key::PublicKey, signature::Signature};
+use jstz_crypto::{
+    hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
+    signature::Signature,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -77,17 +80,16 @@ impl Operation {
                 .as_bytes(),
             ),
             Content::RunContract(RunContract {
-                contract_code,
                 uri,
                 method,
                 headers,
                 body,
+                ..
             }) => Blake2b::from(
                 format!(
-                    "{}{}{}{}{}{:?}{:?}",
+                    "{}{}{}{}{:?}{:?}",
                     source.to_string(),
                     nonce.to_string(),
-                    contract_code,
                     uri,
                     method,
                     headers,
@@ -112,7 +114,6 @@ pub struct CallContract {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct RunContract {
-    pub contract_code: String,
     #[serde(with = "http_serde::uri")]
     pub uri: Uri,
     #[serde(with = "http_serde::method")]
@@ -120,6 +121,7 @@ pub struct RunContract {
     #[serde(with = "http_serde::header_map")]
     pub headers: HeaderMap,
     pub body: HttpBody,
+    pub referer: PublicKeyHash,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
