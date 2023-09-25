@@ -9,6 +9,7 @@ pub enum Error {
     BalanceOverflow,
     InvalidNonce,
     InvalidAddress,
+    RefererShouldNotBeSet,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -37,6 +38,9 @@ impl From<Error> for JsError {
             Error::InvalidAddress => {
                 JsNativeError::eval().with_message("InvalidAddress").into()
             }
+            Error::RefererShouldNotBeSet => JsNativeError::eval()
+                .with_message("RefererShouldNotBeSet")
+                .into(),
         }
     }
 }

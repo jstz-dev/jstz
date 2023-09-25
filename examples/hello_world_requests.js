@@ -21,13 +21,13 @@ const handler = async () => {
     try {
         const newContract = Ledger.createContract(contractCode);
         console.log("created new contract with address", newContract);
-        const url = `tezos://sam.tez/myEndPoint`
+        const url = `tezos://${newContract}/myEndPoint`
         const request = new Request(url, {
             method: "POST",
             body: "Hello from Subcontract 👋"
         });
 
-        const response = await Contract.call(newContract, request);
+        const response = await Contract.call(request);
         console.log(await response.text());
 
     } catch(error) {

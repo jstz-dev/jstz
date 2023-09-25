@@ -23,10 +23,11 @@ use jstz_core::{
         register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
     },
 };
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use url::Url;
 
 use super::{
-    body::{Body, BodyWithType},
+    body::{Body, BodyWithType, HttpBody},
     header::{Headers, HeadersClass},
 };
 
@@ -46,6 +47,32 @@ pub struct Request {
     request: InnerRequest<Body>,
     headers: JsNativeObject<Headers>,
     url: Url,
+}
+
+impl Request {
+    pub fn from_http_request(
+        request: http::Request<HttpBody>,
+        context: &mut Context<'_>,
+    ) -> JsResult<Self> {
+        let url = Url::from_str(&request.uri().to_string()).expect("Expected valid URL");
+        let headers = JsNativeObject::new::<HeadersClass>(
+            Headers::from_http_headers(request.headers().clone(), context)?,
+            context,
+        )?;
+
+        let request = request.map(|body| {
+            Body::from_http_body(body, context).expect("Expected valid body")
+        });
+
+        Ok(Self {
+            request,
+            headers,
+            url,
+        })
+    }
+    pub fn set_referrer(&mut self, referer: &PublicKeyHash) -> JsResult<()> {
+        Headers::set_referer(self.headers.inner(), referer)
+    }
 }
 
 fn clone_inner_request<T: Clone>(request: &InnerRequest<T>) -> InnerRequest<T> {
@@ -211,7 +238,10 @@ impl Request {
         // 35. If either `init["body"]` exists and is non-null or `input_body` is non-null, and
         //     request's method is `GET` or `HEAD`, then throw a TypeError
         let body_with_type = options.body;
-        Request::check_method_with_body(request.method(), !body_with_type.body.is_null())?;
+        Request::check_method_with_body(
+            request.method(),
+            !body_with_type.body.is_null(),
+        )?;
 
         // 37. If `init["body"]` exists and is non-null, then:
         // 1. Let `body_with_type` be the result of extracting `init["body"]`, with keepalive
@@ -268,7 +298,7 @@ impl Request {
     }
 }
 
-struct RequestClass;
+pub struct RequestClass;
 
 impl Request {
     fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {

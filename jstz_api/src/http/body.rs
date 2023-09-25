@@ -20,6 +20,8 @@ use boa_engine::{
 };
 use boa_gc::{Finalize, Trace};
 
+pub type HttpBody = Option<Vec<u8>>;
+
 #[derive(Trace, Finalize, Clone)]
 enum Inner {
     Text(JsString),
@@ -67,6 +69,21 @@ impl Inner {
 #[derive(Trace, Finalize, Clone)]
 pub struct Body {
     inner: Option<Inner>,
+}
+
+impl Body {
+    pub fn from_http_body(body: HttpBody, _context: &mut Context<'_>) -> JsResult<Self> {
+        let inner = body.map(Inner::Bytes);
+
+        Ok(Self { inner })
+    }
+
+    pub fn to_http_body(&self) -> HttpBody {
+        self.inner.as_ref().map(|inner| match inner {
+            Inner::Text(string) => string.to_std_string_escaped().into_bytes(),
+            Inner::Bytes(bytes) => bytes.clone(),
+        })
+    }
 }
 
 impl Body {

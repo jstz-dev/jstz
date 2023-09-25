@@ -2,11 +2,12 @@ use std::io::Read;
 
 use boa_engine::{
     object::{builtins::JsPromise, FunctionObjectBuilder},
-    Context, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
+    Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
 };
 
 use boa_gc::{Finalize, Trace};
 use derive_more::{Deref, DerefMut};
+use either::Either;
 use jstz_core::{
     host::HostRuntime,
     host_defined,
@@ -30,9 +31,9 @@ fn on_success(
                 .then(
                     Some(
                         FunctionObjectBuilder::new(context, unsafe {
-                            NativeFunction::from_closure(move |_, _, context| {
+                            NativeFunction::from_closure(move |_, args, context| {
                                 f(context);
-                                Ok(JsValue::undefined())
+                                Ok(args.get_or_undefined(0).clone())
                             })
                         })
                         .build(),
@@ -122,9 +123,14 @@ impl Script {
             },
             context,
         );
+        self.realm().register_api(
+            api::LedgerApi {
+                contract_address: contract_address.clone(),
+            },
+            context,
+        );
         self.realm()
-            .register_api(api::LedgerApi { contract_address }, context);
-        self.realm().register_api(api::ContractApi, context);
+            .register_api(api::ContractApi { contract_address }, context);
         self.realm().register_api(jstz_api::url::UrlApi, context);
         self.realm().register_api(jstz_api::http::HttpApi, context);
     }
@@ -142,7 +148,7 @@ impl Script {
     }
 
     /// Runs the script
-    pub fn run(&self, context: &mut Context<'_>) -> JsResult<JsValue> {
+    pub fn run(&self, request: &JsValue, context: &mut Context<'_>) -> JsResult<JsValue> {
         let context = &mut self.realm().context_handle(context);
 
         // 1. Register `Kv` and `Transaction` objects in `HostDefined`
@@ -158,9 +164,10 @@ impl Script {
         }
 
         // 2. Invoke the script's handler
-        let result = self.invoke_handler(&JsValue::undefined(), &[], context)?;
+        let result =
+            self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)?;
 
-        // 3. Ensure that the transaction is commit
+        // 3. Ensure that the transaction is committed
         let result = on_success(
             result,
             |context| {
@@ -188,22 +195,115 @@ impl Script {
 
 pub mod run {
 
-    use super::*;
-    use crate::operation::RunContract;
+    use jstz_api::http::{
+        body::HttpBody,
+        request::{Request, RequestClass},
+        response::Response,
+    };
+    use jstz_core::{
+        native::JsNativeObject,
+        runtime::{with_global_host, with_host_runtime},
+    };
 
+    use super::*;
+    use crate::{context::account::Account, operation, receipt, Error};
+
+    fn create_http_request(
+        uri: http::Uri,
+        method: http::Method,
+        headers: http::HeaderMap,
+        body: HttpBody,
+    ) -> http::Request<HttpBody> {
+        let mut builder = http::Request::builder().uri(uri).method(method);
+
+        *builder.headers_mut().unwrap() = headers;
+
+        builder.body(body).expect("Expected valid http request")
+    }
+
+    pub fn execute_js(
+        tx: &mut Transaction,
+        contract_address: PublicKeyHash,
+        request: Either<http::Request<HttpBody>, Request>,
+        referer: &PublicKeyHash,
+    ) -> JsResult<JsValue> {
+        // 1. Load contract code
+        let contract_code = with_global_host(|hrt| -> Result<_> {
+            let contract_code = Account::contract_code(hrt, tx, &contract_address)?
+                .ok_or(Error::InvalidAddress)?;
+            debug_msg!(hrt, "Evaluating: {contract_code:?}\n");
+            Ok(contract_code)
+        })?;
+
+        // 2. Initialize runtime
+        let rt = &mut jstz_core::Runtime::new()?;
+
+        // 3. Initialize script
+        let script = Script::parse(Source::from_bytes(&contract_code), rt)
+            .expect("Failed to parse script");
+        let script_promise = script.init(contract_address, rt)?;
+
+        // 3. Execute
+        jstz_core::future::block_on(async move {
+            rt.resolve_value(&script_promise.into())
+                .await
+                .expect("Failed to resolve script promise");
+            let js_request = {
+                let context = &mut script.realm().context_handle(rt);
+                let mut request = match request {
+                    Either::Left(http_request) => {
+                        Request::from_http_request(http_request, context)?
+                    }
+                    Either::Right(request) => request,
+                };
+                request.set_referrer(referer)?;
+                JsNativeObject::new::<RequestClass>(request, context)
+            }?;
+
+            let result = script.run(js_request.inner(), rt)?;
+
+            rt.resolve_value(&result).await
+        })
+    }
     pub fn execute(
         hrt: &mut (impl HostRuntime + 'static),
-        run: RunContract,
-    ) -> Result<String> {
-        let RunContract {
-            contract_address,
-            contract_code,
+        tx: &mut Transaction,
+        run: operation::RunContract,
+    ) -> Result<receipt::RunContract> {
+        let operation::RunContract {
+            uri,
+            method,
+            headers,
+            body,
+            referer,
         } = run;
 
-        debug_msg!(hrt, "Evaluating: {contract_code:?}\n");
+        if headers.contains_key("Referer") {
+            return Err(Error::RefererShouldNotBeSet);
+        }
 
-        // 1. Initialize runtime
-        let rt = &mut jstz_core::Runtime::new()?;
+        let contract_address =
+            PublicKeyHash::from_base58(&uri.host().expect("Expected host"))?;
+        let http_request = create_http_request(uri, method, headers, body);
+
+        let result = with_host_runtime(hrt, || {
+            execute_js(tx, contract_address, Either::Left(http_request), &referer)
+        })?;
+
+        let response = Response::try_from_js(&result)?;
+
+        let (http_parts, body) = Response::to_http_response(&response).into_parts();
+
+        Ok(receipt::RunContract {
+            body,
+            status_code: http_parts.status,
+            headers: http_parts.headers,
+        })
+        /*
+        let contract_code = Account::contract_code(hrt, tx, &contract_address)?
+            .ok_or(Error::InvalidAddress)?;
+
+        debug_msg!(hrt, "Evaluating: {contract_code:?}\n");
 
         let result: JsValue = runtime::with_host_runtime(hrt, || {
             // 2. Initialize script
@@ -211,19 +311,27 @@ pub mod run {
                 .expect("Failed to parse script");
 
             let script_promise = script.init(contract_address, rt)?;
+            let http_request = create_http_request(uri, method, headers, body);
 
-            // 3. Execute
             jstz_core::future::block_on(async move {
                 rt.resolve_value(&script_promise.into())
                     .await
                     .expect("Failed to resolve script promise");
 
-                let result = script.run(rt)?;
+                let request = {
+                    let context = &mut script.realm().context_handle(rt);
+                    JsNativeObject::new::<RequestClass>(
+                    Request::from_http_request(http_request, context)?,
+                    context,
+                )
+                }?;
+
+                let result = script.run(request.inner(), rt)?;
 
                 rt.resolve_value(&result).await
             })
         })?;
 
-        Ok(result.display().to_string())
+        todo!()*/
     }
 }
