@@ -6,6 +6,7 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
+base64 = "0.21.4"
 boa_engine = "0.17.0"
 boa_gc = "0.17.0"
 bytes = "1.4.0"
