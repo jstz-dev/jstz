@@ -1,5 +1,10 @@
+use http::{HeaderMap, Method, Uri};
+use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::{hash::Blake2b, public_key::PublicKey, signature::Signature};
+use jstz_crypto::{
+    hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
+    signature::Signature,
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -7,7 +12,7 @@ use crate::{
     Error, Result,
 };
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Operation {
     pub source: Address,
     pub nonce: Nonce,
@@ -75,15 +80,20 @@ impl Operation {
                 .as_bytes(),
             ),
             Content::RunContract(RunContract {
-                contract_address,
-                contract_code,
+                uri,
+                method,
+                headers,
+                body,
+                ..
             }) => Blake2b::from(
                 format!(
-                    "{}{}{}{}",
+                    "{}{}{}{}{:?}{:?}",
                     source.to_string(),
                     nonce.to_string(),
-                    contract_address,
-                    contract_code
+                    uri,
+                    method,
+                    headers,
+                    body
                 )
                 .as_bytes(),
             ),
@@ -91,31 +101,37 @@ impl Operation {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct DeployContract {
     pub contract_code: String,
     pub contract_credit: Amount,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct CallContract {
     pub contract_address: Address,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct RunContract {
-    pub contract_address: Address,
-    pub contract_code: String,
+    #[serde(with = "http_serde::uri")]
+    pub uri: Uri,
+    #[serde(with = "http_serde::method")]
+    pub method: Method,
+    #[serde(with = "http_serde::header_map")]
+    pub headers: HeaderMap,
+    pub body: HttpBody,
+    pub referer: PublicKeyHash,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum Content {
     DeployContract(DeployContract),
     CallContract(CallContract),
     RunContract(RunContract),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SignedOperation {
     public_key: PublicKey,
     signature: Signature,

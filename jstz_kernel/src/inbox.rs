@@ -1,5 +1,5 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_proto::context::account::Amount;
+use jstz_proto::operation::{external::Deposit, RunContract};
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -9,18 +9,6 @@ use tezos_smart_rollup::{
     prelude::{debug_msg, Runtime},
     types::Contract,
 };
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Deposit {
-    pub amount: Amount,
-    pub reciever: PublicKeyHash,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Transaction {
-    pub contract_address: PublicKeyHash,
-    pub contract_code: String,
-}
 
 pub use jstz_proto::operation::external::ContractOrigination;
 
@@ -32,14 +20,23 @@ pub enum InternalMessage {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExternalMessage {
     SetTicketer(ContractKt1Hash),
-    Transaction(Transaction),
+    RunContract(RunContract),
     DeployContract(ContractOrigination),
+    // TODO ⚰️ Deprecate will not be part of the CLI
+    Transaction(Transaction),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),
+}
+
+// TODO ⚰️ Deprecate will not be part of the CLI
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Transaction {
+    pub referer: PublicKeyHash,
+    pub url: String,
 }
 
 // reciever, ticket

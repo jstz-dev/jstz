@@ -3,7 +3,7 @@ use tezos_crypto_rs::hash::PublicKeyBls;
 
 use crate::error::Result;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum PublicKey {
     Bls(PublicKeyBls),
 }

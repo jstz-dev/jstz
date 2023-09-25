@@ -4,6 +4,7 @@ set -euo pipefail
 # shellcheck source=./abstract.sh
 commands_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${commands_dir}/abstract.sh"
+balance=0
 
 # Parse arguments
 contract=""

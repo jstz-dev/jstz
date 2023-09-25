@@ -16,14 +16,10 @@ pub mod origination;
 
 pub fn run_contract(
     hrt: &mut (impl HostRuntime + 'static),
-    _tx: &mut Transaction,
+    tx: &mut Transaction,
     run: operation::RunContract,
-) -> Result<receipt::Content> {
-    let result = contract::run::execute(hrt, run)?;
-
-    Ok(receipt::Content::RunContract(receipt::RunContract {
-        result,
-    }))
+) -> Result<receipt::RunContract> {
+    contract::run::execute(hrt, tx, run)
 }
 
 pub fn deploy_contract(
@@ -79,11 +75,9 @@ fn execute_operation_inner(
             content: operation::Content::RunContract(run),
             ..
         } => {
-            let result = contract::run::execute(hrt, run.clone())?;
+            let result = contract::run::execute(hrt, tx, run.clone())?;
 
-            Ok(receipt::Content::RunContract(receipt::RunContract {
-                result,
-            }))
+            Ok(receipt::Content::RunContract(result))
         }
     }
 }

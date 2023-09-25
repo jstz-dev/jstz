@@ -82,7 +82,9 @@ impl Kv {
 macro_rules! preamble {
     ($this:ident, $args:ident, $context:ident, $key:ident, $tx:ident) => {
         host_defined!($context, host_defined);
-        let mut $tx = host_defined.get_mut::<Transaction>().expect("");
+        let mut $tx = host_defined
+            .get_mut::<Transaction>()
+            .expect("Curent transaction undefined");
 
         let $this = $this
             .as_object()

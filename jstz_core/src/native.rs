@@ -386,7 +386,7 @@ pub trait NativeClass {
     /// The amount of arguments the class `constructor` takes, default is `0`.
     const LENGTH: usize = 0usize;
 
-    /// The attributes the class will be binded with, default is `writable`, `enumerable`, `configurable`.
+    /// The attributes the class will be bound with, default is `writable`, `enumerable`, `configurable`.
     const ATTRIBUTES: Attribute = Attribute::all();
 
     /// The constructor of the class.

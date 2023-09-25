@@ -33,7 +33,7 @@ impl Finalize for UrlSearchParams {}
 
 unsafe impl Trace for UrlSearchParams {
     // Do not trace the `url` since this is only set if
-    // there exists a parent `url` object (whose lifetime bounds the 
+    // there exists a parent `url` object (whose lifetime bounds the
     // search params object)
     empty_trace!();
 }
