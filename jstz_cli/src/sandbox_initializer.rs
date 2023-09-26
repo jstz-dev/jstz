@@ -11,6 +11,7 @@ use std::io::Write;
 
 use crate::config::Config;
 use crate::utils::handle_output;
+use fs_extra::dir::{self, CopyOptions};
 
 fn run_command(command: &str, args: &[&str]) -> Result<String, String> {
     let mut cfg = Config::default();
@@ -139,6 +140,36 @@ pub fn init_sandboxed_client(client: &str, script_dir: &PathBuf, node_dir: &Path
     }
 }
 
+fn copy_directory_contents(src: &Path, dest: &Path) -> std::io::Result<()> {
+    // Check if the source is a directory
+    if !src.is_dir() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "Source is not a directory",
+        ));
+    }
+
+    // Get the list of entries in the source directory
+    let entries = std::fs::read_dir(src)?;
+
+    let mut options = CopyOptions::new();
+    options.overwrite = true; // Overwrite if destination exists
+
+    // Iterate over each entry and copy to the destination
+    for entry in entries {
+        let entry = entry?;
+        let dest_path = dest.join(entry.file_name());
+        if entry.path().is_dir() {
+            dir::copy(&entry.path(), &dest_path, &options)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+        } else {
+            std::fs::copy(&entry.path(), &dest_path)?;
+        }
+    }
+
+    Ok(())
+}
+
 fn originate_rollup(client: &str, kernel: &str, rollup_node_dir: &PathBuf, preimages: &PathBuf, rx: Receiver<&str>) {
     println!("Waiting for node to activate...");
     let message = rx.recv().unwrap();
@@ -158,7 +189,8 @@ fn originate_rollup(client: &str, kernel: &str, rollup_node_dir: &PathBuf, preim
     // Copy kernel installer preimages to rollup node directory
     let dest_dir = rollup_node_dir.join("wasm_2_0_0");
     fs::create_dir_all(&dest_dir).expect("Failed to create directory");
-    fs::copy(preimages, dest_dir).expect("Failed to copy preimages");
+
+    copy_directory_contents(&preimages, &dest_dir);
 }
 
 pub fn start_rollup_node(client: &str, kernel: &str, preimages: &str, rollup_node: &str, rollup_node_dir: &PathBuf, log_dir: &PathBuf, rx: Receiver<&str>) {

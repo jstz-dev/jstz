@@ -20,5 +20,6 @@ ctrlc = "3.1"
 tempfile = "3.2"
 dirs = "3.0"
 nix = "0.20"
+fs_extra = "1.2" 
 
 [workspace]

@@ -46,6 +46,7 @@ pub fn sandbox_start(cfg: &mut Config) {
     let root_dir = env::current_dir().expect("Failed to get root directory");
     let log_dir = root_dir.join("logs");
     let script_dir = root_dir.clone();
+    let target_dir = root_dir.parent().unwrap().join("target");
 
     let port = 19730;
     let rpc = 18730;
@@ -70,8 +71,8 @@ pub fn sandbox_start(cfg: &mut Config) {
     let node = format!("{}/octez-node", root_dir.to_str().unwrap());
     let jstz = format!("{}/scripts/jstz.sh", root_dir.to_str().unwrap());
 
-    let kernel = format!("{}/target/kernel/jstz_kernel_installer.hex", root_dir.to_str().unwrap());
-    let preimages = format!("{}/target/kernel/preimages", root_dir.to_str().unwrap());
+    let kernel = format!("{}/kernel/jstz_kernel_installer.hex", target_dir.to_str().unwrap());
+    let preimages = format!("{}/kernel/preimages", target_dir.to_str().unwrap());
 
     fs::create_dir_all(&log_dir).expect("Failed to create log directory");
 
