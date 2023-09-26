@@ -45,7 +45,7 @@ pub fn sandbox_start(cfg: &mut Config) {
     
     let root_dir = env::current_dir().expect("Failed to get root directory");
     let log_dir = root_dir.join("logs");
-    let script_dir = root_dir.parent().expect("Failed to get parent directory").to_path_buf();
+    let script_dir = root_dir.clone();
 
     let port = 19730;
     let rpc = 18730;
