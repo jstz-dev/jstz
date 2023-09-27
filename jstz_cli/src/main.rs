@@ -17,6 +17,8 @@ use crate::sandbox::sandbox_stop;
 //use crate::sandbox::repl;
 use config::Config;
 
+use tokio::io::{BufReader, AsyncBufReadExt};
+
 
 #[derive(Parser)]
 #[command(author, version)]
@@ -54,7 +56,7 @@ enum JstzCommand {
         script: String,
         /// Alias for the address of the deployed contract.
         #[arg(short, long)]
-        name: String,
+        name: String,//Option<String>,
     },
     /// Run a contract using a specified URL.
     Run {
@@ -89,8 +91,8 @@ enum SandboxCommand {
     Stop,
 }
 
-
-fn main() {
+#[tokio::main]
+async fn main() {
     let cli = JstzCli::parse();
 
     let mut cfg = Config::default();

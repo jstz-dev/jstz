@@ -1,5 +1,4 @@
 use std::path::PathBuf;
-use std::process::Command;
 use std::fs;
 use std::time::Duration;
 use std::process::Child;
@@ -7,7 +6,14 @@ use std::thread::sleep;
 use std::fs::File;
 use std::path::Path;
 use std::sync::mpsc::{self, Sender, Receiver};
-use std::io::Write;
+//use std::io::Write;
+//use std::io::BufRead;
+//use std::io::Seek;
+//use std::io::SeekFrom;
+use tokio::io::{BufReader, AsyncBufReadExt};
+use tokio::process::{Command};
+use std::process::Stdio;
+
 
 use crate::config::Config;
 use crate::utils::handle_output;
@@ -193,11 +199,46 @@ fn originate_rollup(client: &str, kernel: &str, rollup_node_dir: &PathBuf, preim
     copy_directory_contents(&preimages, &dest_dir);
 }
 
-pub fn start_rollup_node(client: &str, kernel: &str, preimages: &str, rollup_node: &str, rollup_node_dir: &PathBuf, log_dir: &PathBuf, rx: Receiver<&str>) {
+/// Pipe streams are blocking, we need separate threads to monitor them without blocking the primary thread.
+/*fn child_stream_to_vec<R>(mut stream: R) -> Arc<Mutex<Vec<u8>>>
+where
+    R: Read + Send + 'static,
+{
+    let out = Arc::new(Mutex::new(Vec::new()));
+    let vec = out.clone();
+    thread::Builder::new()
+        .name("child_stream_to_vec".into())
+        .spawn(move || loop {
+            let mut buf = [0];
+            match stream.read(&mut buf) {
+                Err(err) => {
+                    println!("{}] Error reading from stream: {}", line!(), err);
+                    break;
+                }
+                Ok(got) => {
+                    if got == 0 {
+                        break;
+                    } else if got == 1 {
+                        vec.lock().expect("!lock").push(buf[0])
+                    } else {
+                        println!("{}] Unexpected number of bytes: {}", line!(), got);
+                        break;
+                    }
+                }
+            }
+        })
+        .expect("!thread");
+    out
+}*/
+
+
+pub async fn start_rollup_node(client: &str, kernel: &str, preimages: &str, rollup_node: &str, rollup_node_dir: &PathBuf, log_dir: &PathBuf, rx: Receiver<&str>) {
     originate_rollup(client, kernel, rollup_node_dir, &PathBuf::from(preimages), rx);
 
     let mut cfg = Config::default();
     cfg.load_from_file();
+
+    println!("rollup node run operator WOOHOO");
 
     let child = cfg.octez_rollup_node_command()
         .args(&[
@@ -207,6 +248,85 @@ pub fn start_rollup_node(client: &str, kernel: &str, preimages: &str, rollup_nod
             "--log-kernel-debug",
             "--log-kernel-debug-file", &format!("{}/kernel.log", log_dir.to_str().unwrap())
         ])
+        .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to start rollup node");
+
+    let stdout = child.stdout.take().expect("Failed to open stdout");
+    let mut reader = BufReader::new(stdout);
+    
+    let mut lines = reader.lines();
+    
+    tokio::spawn(async move {
+        let status = child.wait().await
+            .expect("child process encountered an error");
+
+        println!("child status was: {}", status);
+    });
+
+    while let Some(line) = lines.next_line().await.expect("Failed to read line") {
+        println!("Found the line: {}", line);
+        // Do something with the line
+    }
+
+    /*let output_file_path = "/child_output.txt";
+
+    let mut child = cfg.octez_rollup_node_command()
+        .args(&[
+            "run", "operator", "for", "jstz_rollup",
+            "with", "operators", "bootstrap2",
+            "--data-dir", rollup_node_dir.to_str().unwrap(),
+            "--log-kernel-debug",
+            "--log-kernel-debug-file", &format!("{}/kernel.log", log_dir.to_str().unwrap())
+        ])
+        .stdout(File::create(&output_file_path).expect("Failed to open output file")) // Capture stdout
+        .spawn()
+        .expect("Failed to start rollup node");
+
+    /*let stdout = child.stdout().take().expect("no stdout");
+
+    let result: Vec<_> = BufReader::new(stdout)
+        .lines()
+        .inspect(|s| println!("> {:?}", s))
+        .collect();
+
+    println!("All the lines: {:?}", result);*/
+
+    /*let reader = BufReader::new(child.stdout.take().expect("Failed to take child stdout"));
+
+    for line in reader.lines() {
+        let line = line.expect("Failed to read line");
+        println!("LINE LINE LINE: {}", line);
+        if line.contains("of kind wasm_2_0_0") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() > 1 {
+                let address = parts[parts.len() - 2]; // The address is the second last word in the line
+                println!("Extracted address WOOOHOOO WOOOOOOHOOOOOOOO WOOOOOOHOOOOO: {}", address);
+                break; // Exit the loop if you only want to capture the address once
+            }
+        }
+    }*/
+    let mut last_read_position = 0;
+
+loop {
+    let mut file = File::open(&output_file_path).expect("Failed to open output file for reading");
+    file.seek(SeekFrom::Start(last_read_position)).expect("Failed to seek in file");
+
+    let reader = BufReader::new(&file);
+    for line in reader.lines() {
+        let line = line.expect("Failed to read line");
+        if line.contains("of kind wasm_2_0_0") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() > 1 {
+                let address = parts[parts.len() - 2];
+                println!("Extracted address: {}", address);
+                return; // Exit the loop and function once the address is found
+            }
+        }
+    }
+
+    last_read_position = file.seek(SeekFrom::Current(0)).expect("Failed to get current file position");
+
+    sleep(Duration::from_secs(1)); // Sleep for a second before checking again
+}*/
 }
