@@ -1,11 +1,9 @@
-[[bin]]
-name = "main_app"
-path = "src/main.rs"
-
 [package]
-name = "jstz-cli"
-version = "0.1.0"
-edition = "2021"
+name = "jstz_cli"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -21,4 +19,6 @@ tempfile = "3.2"
 dirs = "3.0"
 nix = "0.20"
 
-[workspace]
+[[bin]]
+name = "jstz"
+path = "src/main.rs"
