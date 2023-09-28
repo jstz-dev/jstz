@@ -5,7 +5,8 @@
   "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
   "version": "0.0.0",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/fa2"
   ],
   "scripts": {
     "check:format": "prettier . --check --ignore-unknown",
@@ -16,7 +17,8 @@
   },
   "dependencies": {
     "@tezos/jstz": "^0.0.0",
-    "@tezos/jstz-types": "^0.0.0"
+    "@tezos/jstz-types": "^0.0.0",
+    "esbuild": "^0.19.4"
   },
   "devDependencies": {
     "prettier": "^3.0.3",
