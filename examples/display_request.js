@@ -1,7 +1,7 @@
 function handler(request) {
   try {
     console.log(`Hello from ${Ledger.selfAddress()} 👋`)
-    console.log("Method: ",request.method)
+    console.log("Method: ", request.method)
     console.log("Referer:", request.headers.get("Referer"))
     console.log("Url:", request.url)
     let url = new URL(request.url);
@@ -17,7 +17,7 @@ function handler(request) {
     console.log("Url protocol:", url.protocol);
     console.log("Url search:", url.search);
     console.log("Url username:", url.username);
-    return new Response("Success")
+    return new Response()
   } catch (error) {
     console.error(error)
     return Response.error(error)

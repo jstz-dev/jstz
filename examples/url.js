@@ -22,6 +22,8 @@ const handler = () => {
         let page = addr.searchParams.get("page");
         console.log(`User: ${user}, Page: ${page}`);
     }
+
+    return new Response();
 }
 
 export default handler;
