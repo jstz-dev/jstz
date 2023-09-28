@@ -20,5 +20,5 @@ export default () => {
     console.error(`error decoding ${test_string}: ${error}`);
     throw error;
   }
-  return new Response("Success!")
+  return new Response()
 }

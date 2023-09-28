@@ -9,6 +9,7 @@ const handler = () => {
         counter++;
     }
     Kv.set(KEY, counter);
+    return new Response();
 }
 
 export default handler;

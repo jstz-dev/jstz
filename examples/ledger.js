@@ -16,6 +16,7 @@ const doDemo = () => {
     doTransfer(10);
     logBalance(SELF);
     logBalance(OTHER);
+    return new Response();
 }
 
 console.log("Hello JS 👋");

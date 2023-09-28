@@ -67,6 +67,8 @@ const handler = () => {
         myHeaders.set("Content-Type", "text/html");
         console.log(`Actual: ${myHeaders.get("Content-Type")}, Expected: text/html`)
     }
+
+    return new Response();
 }
 
 export default handler;

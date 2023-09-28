@@ -31,6 +31,8 @@ const handler = async () => {
         const resJson = await jsonResponse.json();
         console.log(`Actual: ${resJson.my}, Expected: "data"`);
     }
+
+    return new Response();
 };
 
 export default handler;

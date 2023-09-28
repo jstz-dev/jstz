@@ -83,6 +83,7 @@ const handler = async () => {
 } catch (e) {
     console.error(e)
 }
+    return new Response();
 }
 
 export default handler;

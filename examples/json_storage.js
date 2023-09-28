@@ -15,6 +15,7 @@ const handler = () => {
         account.nonce++;
     }
     Kv.set(key, account);
+    return new Response()
 }
 
 export default handler;
