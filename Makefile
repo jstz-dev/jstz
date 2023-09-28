@@ -50,5 +50,9 @@ fmt-nix:
 fmt-rust:
 	@cargo fmt
 
+.PHONY: fmt-js
+fmt-js:
+	npm run format
+
 .PHONY: fmt
-fmt: fmt-nix fmt-rust
+fmt: fmt-nix fmt-rust fmt-js
