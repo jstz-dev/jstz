@@ -1,14 +1,14 @@
 {
-    "name": "@tezos/jstz",
-    "description": "TypeScript SDK for jstz 👨‍⚖️",
-    "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
-    "version": "0.0.0",
-    "main": "index.ts",
-    "scripts": {
-        "check:types": "tsc --noEmit",
-        "build": "tsc"
-    },
-    "dependencies": {
-        "@tezos/jstz-types": "^0.0.0"
-    }
+  "name": "@tezos/jstz",
+  "description": "TypeScript SDK for jstz 👨‍⚖️",
+  "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
+  "version": "0.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "check:types": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@tezos/jstz-types": "^0.0.0"
+  }
 }

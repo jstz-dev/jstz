@@ -1,5 +1,4 @@
-
-function handler () {
+function handler() {
   try {
     console.log("Hello from handler 👋");
     console.info("About to call Sam's amazing new function.");

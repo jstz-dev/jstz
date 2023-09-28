@@ -1,8 +1,6 @@
 {
-    "extends": "../../tsconfig.json",
-    "compilerOptions": {
-        "types": [
-            "@tezos/jstz-types"
-        ]
-    }
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "types": ["@tezos/jstz-types"]
+  }
 }
