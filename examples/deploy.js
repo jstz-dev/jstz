@@ -10,12 +10,17 @@ export default (request) => {
     console.log(code);
     const subcontractAddress = Ledger.createContract(code);
     console.log("created", contract);
+    let response = await Contract.call(contract, "Hello World");
 
-    await Contract.call(new Request(`tezos://${subcontractAddress}/`, { 
-      method: "POST", 
-      body: "Hello World" 
-    }));
+    await Contract.call(
+      new Request(`tezos://${subcontractAddress}/`, {
+        method: "POST",
+        body: "Hello World",
+      }),
+    );
 
     return new Response();
-  } catch (error) { console.error(error) }
-}
+  } catch (error) {
+    console.error(error);
+  }
+};
