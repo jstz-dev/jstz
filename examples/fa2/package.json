@@ -1,0 +1,13 @@
+{
+    "name": "@tezos/fa2",
+    "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
+    "private": true,
+    "version": "0.0.0",
+    "main": "fa2.ts",
+    "dependencies": {
+        "@tezos/jstz": "^0.0.0"
+    },
+    "scripts": {
+        "build": "esbuild fa2.ts --bundle --format=esm --target=esnext --minify --outfile=fa2.js"
+    }
+}

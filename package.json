@@ -5,13 +5,15 @@
   "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
   "version": "0.0.0",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/fa2"
   ],
   "scripts": {
     "check:format": "prettier . --check --ignore-unknown",
     "format": "prettier . --write --ignore-unknown"
   },
   "dependencies": {
+    "esbuild": "^0.19.4",
     "typescript": "^5.2.2"
   },
   "devDependencies": {
