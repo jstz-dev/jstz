@@ -18,6 +18,9 @@ ctrlc = "3.1"
 tempfile = "3.2"
 dirs = "3.0"
 nix = "0.20"
+jstz_kernel.workspace = true
+jstz_crypto.workspace = true
+http = "0.2.9"
 
 [[bin]]
 name = "jstz"

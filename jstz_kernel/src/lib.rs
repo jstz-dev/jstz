@@ -11,7 +11,7 @@ use crate::{
 };
 
 mod apply;
-mod inbox;
+pub mod inbox;
 
 const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
 
