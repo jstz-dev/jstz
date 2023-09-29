@@ -1,8 +1,8 @@
-use std::fs;
-use std::path::PathBuf;
-use serde::{Serialize, Deserialize};
-use std::io::{Error, ErrorKind};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fs;
+use std::io::{Error, ErrorKind};
+use std::path::PathBuf;
 use std::process::Command;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
@@ -25,7 +25,7 @@ impl Config {
     }
 
     // Load the configuration from the file and update self with the loaded values
-    pub fn load_from_file(&mut self) -> Result<(), std::io::Error> {
+    pub fn load_from_file() -> Result<Self, std::io::Error> {
         let path = Self::config_path();
 
         let new_config = if !path.exists() {
@@ -35,12 +35,12 @@ impl Config {
             default_config
         } else {
             let json = fs::read_to_string(&path)?;
-            serde_json::from_str(&json).map_err(|e| Error::new(ErrorKind::InvalidData, e))?
+            serde_json::from_str(&json)
+                .map_err(|e| Error::new(ErrorKind::InvalidData, e))?
         };
 
         // Replace the current instance with the new_config
-        std::mem::replace(self, new_config);
-        Ok(())
+        Ok(new_config)
     }
 
     // Save the configuration to the file
@@ -60,27 +60,27 @@ impl Config {
         &self.root_dir
     }
 
-    pub fn set_root_dir(&mut self, value: String) {
-        self.root_dir = value;
-    }
+    // pub fn set_root_dir(&mut self, value: String) {
+    //     self.root_dir = value;
+    // }
 
-    // Getter and setter for octez_client_dir
-    pub fn get_octez_client_dir(&self) -> &String {
-        &self.octez_client_dir
-    }
+    // // Getter and setter for octez_client_dir
+    // pub fn get_octez_client_dir(&self) -> &String {
+    //     &self.octez_client_dir
+    // }
 
-    pub fn set_octez_client_dir(&mut self, value: String) {
-        self.octez_client_dir = value;
-    }
+    // pub fn set_octez_client_dir(&mut self, value: String) {
+    //     self.octez_client_dir = value;
+    // }
 
-    // Getter and setter for rpc
-    pub fn get_rpc(&self) -> u16 {
-        self.rpc
-    }
+    // // Getter and setter for rpc
+    // pub fn get_rpc(&self) -> u16 {
+    //     self.rpc
+    // }
 
-    pub fn set_rpc(&mut self, value: u16) {
-        self.rpc = value;
-    }
+    // pub fn set_rpc(&mut self, value: u16) {
+    //     self.rpc = value;
+    // }
 
     pub fn get_octez_client_path(&self) -> String {
         let octez_client_path = format!("{}/octez-client", self.root_dir);
@@ -104,42 +104,41 @@ impl Config {
     }
 
     // Methods for url_aliases
-    pub fn get_url_alias(&self, alias: &str) -> Option<String> {
-        self.url_aliases.get(alias).cloned()
-    }
+    // pub fn get_url_alias(&self, alias: &str) -> Option<String> {
+    //     self.url_aliases.get(alias).cloned()
+    // }
 
-    pub fn set_url_alias(&mut self, alias: String, value: String) {
-        self.url_aliases.insert(alias, value);
-    }
+    // pub fn set_url_alias(&mut self, alias: String, value: String) {
+    //     self.url_aliases.insert(alias, value);
+    // }
 
-    pub fn remove_url_alias(&mut self, alias: &str) {
-        self.url_aliases.remove(alias);
-    }
+    // pub fn remove_url_alias(&mut self, alias: &str) {
+    //     self.url_aliases.remove(alias);
+    // }
 
     // Methods for name_aliases
     pub fn get_name_alias(&self, alias: &str) -> Option<String> {
         self.name_aliases.get(alias).cloned()
     }
 
-    pub fn set_name_alias(&mut self, alias: String, value: String) {
-        self.name_aliases.insert(alias, value);
-    }
+    // pub fn set_name_alias(&mut self, alias: String, value: String) {
+    //     self.name_aliases.insert(alias, value);
+    // }
 
-    pub fn remove_name_alias(&mut self, alias: &str) {
-        self.name_aliases.remove(alias);
-    }
+    // pub fn remove_name_alias(&mut self, alias: &str) {
+    //     self.name_aliases.remove(alias);
+    // }
 
-    // Methods for tz4_aliases
+    // // Methods for tz4_aliases
     pub fn get_tz4_alias(&self, alias: &str) -> Option<String> {
         self.tz4_aliases.get(alias).cloned()
     }
 
-    pub fn set_tz4_alias(&mut self, alias: String, value: String) {
-        self.tz4_aliases.insert(alias, value);
-    }
+    // pub fn set_tz4_alias(&mut self, alias: String, value: String) {
+    //     self.tz4_aliases.insert(alias, value);
+    // }
 
-    pub fn remove_tz4_alias(&mut self, alias: &str) {
-        self.tz4_aliases.remove(alias);
-    }
+    // pub fn remove_tz4_alias(&mut self, alias: &str) {
+    //     self.tz4_aliases.remove(alias);
+    // }
 }
-

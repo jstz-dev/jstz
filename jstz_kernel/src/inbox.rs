@@ -1,3 +1,4 @@
+use http::Method;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::operation::{external::Deposit, RunContract};
 use num_traits::ToPrimitive;
@@ -35,7 +36,10 @@ pub enum Message {
 // TODO ⚰️ Deprecate will not be part of the CLI
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Transaction {
-    pub referer: PublicKeyHash,
+    #[serde(with = "http_serde::method")]
+    pub method: Method,
+    pub body: Option<String>,
+    pub referrer: PublicKeyHash,
     pub url: String,
 }
 

@@ -44,10 +44,14 @@ pub fn apply_transaction(
     rt: &mut (impl Runtime + 'static),
     tx: Transaction,
 ) -> Result<()> {
-    use http::{HeaderMap, Method};
-    use jstz_api::http::body::HttpBody;
+    use http::HeaderMap;
 
-    let Transaction { referer, url } = tx;
+    let Transaction {
+        referrer,
+        url,
+        method,
+        body,
+    } = tx;
 
     let mut kv = Kv::new();
     let mut tx = kv.begin_transaction();
@@ -56,11 +60,11 @@ pub fn apply_transaction(
     let result = jstz_proto::executor::run_contract(
         rt,
         &mut tx,
-        &referer,
+        &referrer,
         RunContract {
             headers: HeaderMap::default(),
-            method: Method::default(),
-            body: HttpBody::default(),
+            method,
+            body: body.map(String::into_bytes),
             uri,
         },
     )?;

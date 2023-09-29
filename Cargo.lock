@@ -1073,6 +1073,9 @@ dependencies = [
  "ctrlc",
  "dirs",
  "hex",
+ "http",
+ "jstz_crypto",
+ "jstz_kernel",
  "nix 0.20.2",
  "nom",
  "serde",
@@ -1109,6 +1112,7 @@ version = "0.1.0"
 dependencies = [
  "boa_engine",
  "http",
+ "http-serde",
  "jstz_api",
  "jstz_core",
  "jstz_crypto",

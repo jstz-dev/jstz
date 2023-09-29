@@ -1,21 +1,20 @@
 use clap::{Parser, Subcommand};
 
-mod deposit;
 mod deploy;
+mod deposit;
 mod run_contract;
 mod utils;
 //mod sandbox;
 //mod repl;
-mod config; 
+mod config;
 
-use crate::deposit::deposit;
 use crate::deploy::deploy;
+use crate::deposit::deposit;
 use crate::run_contract::run_contract;
 //use crate::sandbox::sandbox_start;
 //use crate::sandbox::sandbox_stop;
 //use crate::sandbox::repl;
 use config::Config;
-
 
 #[derive(Parser)]
 #[command(author, version)]
@@ -61,16 +60,14 @@ enum JstzCommand {
         #[arg(value_name = "URL")]
         url: String,
         /// The code of the contract.
-        #[arg(value_name = "CONTRACT_CODE")]
-        contract_code: String,
-        /*
+        #[arg(value_name = "referrer")]
+        referrer: String,
         /// The HTTP method used in the request.
-        #[arg(name="request", short, long, default_value = "GET")]
-        http_method: Option<String>,
+        #[arg(name = "request", short, long, default_value = "GET")]
+        http_method: String,
         /// The JSON data in the request body.
-        #[arg(name="data", short, long, default_value = "{}")]
+        #[arg(name = "data", short, long, default_value = None)]
         json_data: Option<String>,
-        */
     },
     /// Start a REPL session.
     Repl {
@@ -88,16 +85,16 @@ enum SandboxCommand {
     Stop,
 }
 
-
 fn main() {
     let cli = JstzCli::parse();
 
-    let mut cfg = Config::default();
-    if let Err(e) = cfg.load_from_file() {
-        // Handle the error from loading the configuration
-        eprintln!("Failed to load the config file: {}", e);
-        return;
-    }
+    let cfg = match Config::load_from_file() {
+        Ok(cfg) => cfg,
+        Err(e) => {
+            eprintln!("Failed to load the config file: {}", e);
+            return;
+        }
+    };
 
     match cli.command {
         JstzCommand::Sandbox(cmd) => match cmd {
@@ -110,7 +107,11 @@ fn main() {
                 //sandbox_stop();
             }
         },
-        JstzCommand::BridgeDeposit { mut from, mut to, amount } => {
+        JstzCommand::BridgeDeposit {
+            mut from,
+            mut to,
+            amount,
+        } => {
             println!("Depositing {} Tez from {} to {}", amount, from, to);
             if let Some(alias) = cfg.get_tz4_alias(&from) {
                 println!("Using alias for {}: {}", from, alias);
@@ -122,7 +123,7 @@ fn main() {
             }
 
             deposit(from, to, amount, &cfg);
-        },
+        }
         JstzCommand::Deploy { mut script, name } => {
             println!("Deploying script {} with alias {}", script, name);
             if let Some(alias) = cfg.get_name_alias(&name) {
@@ -130,15 +131,20 @@ fn main() {
                 script = alias;
             }
             deploy(script, &cfg);
-        },
-        JstzCommand::Run { mut url, contract_code } => {
-            println!("Running {} with code {}", url, contract_code);
-            if let Some(alias) = cfg.get_url_alias(&url) {
-                println!("Using alias for {}: {}", url, alias);
-                url = alias;
-            }
-            run_contract(url, contract_code, &cfg);
-        },
+        }
+        JstzCommand::Run {
+            url,
+            referrer,
+            http_method,
+            json_data,
+        } => {
+            // println!("Running {} with code {}", url, contract_code);
+            // if let Some(alias) = cfg.get_url_alias(&url) {
+            //     println!("Using alias for {}: {}", url, alias);
+            //     url = alias;
+            // }
+            run_contract(referrer, url, http_method, json_data, &cfg);
+        }
         JstzCommand::Repl { self_address } => {
             if let Some(address) = self_address {
                 println!("Starting REPL with self address: {}", address);
@@ -147,8 +153,10 @@ fn main() {
                 println!("Starting REPL without a self address");
                 //repl()
             }
-        },
+        }
     }
 
-    cfg.save_to_file();
+    if let Err(e) = cfg.save_to_file() {
+        eprintln!("Failed to save the config file: {}", e);
+    }
 }
