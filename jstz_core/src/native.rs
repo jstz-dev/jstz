@@ -29,6 +29,10 @@ impl<T: NativeObject> Clone for JsNativeObject<T> {
 }
 
 impl<T: NativeObject> JsNativeObject<T> {
+    pub fn is(value: &JsValue) -> bool {
+        value.as_object().map_or(false, JsObject::is::<T>)
+    }
+
     fn from_value_unchecked(value: JsValue) -> Self {
         Self {
             inner: value,
@@ -89,6 +93,10 @@ impl<T: NativeObject> JsNativeObject<T> {
         &self.inner
     }
 
+    pub fn to_inner(&self) -> JsValue {
+        self.inner.clone()
+    }
+
     pub fn object(&self) -> &JsObject {
         self.inner.as_object().expect("Expected `JsObject`")
     }
@@ -114,12 +122,10 @@ impl<T: NativeObject> TryFrom<JsValue> for JsNativeObject<T> {
     type Error = JsError;
 
     fn try_from(value: JsValue) -> Result<Self, Self::Error> {
-        if let Some(obj) = value.as_object() {
-            if !obj.is::<T>() {
-                return Err(JsNativeError::typ()
-                    .with_message("Type mismatch in `JsNativeObject`")
-                    .into());
-            }
+        if !Self::is(&value) {
+            return Err(JsNativeError::typ()
+                .with_message("Type mismatch in `JsNativeObject`")
+                .into());
         }
 
         Ok(Self {

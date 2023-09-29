@@ -5,7 +5,7 @@ use jstz_proto::{
 };
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
-use crate::inbox::ContractOrigination;
+use crate::inbox::{ContractOrigination, Transaction};
 
 pub fn apply_deposit(rt: &mut impl Runtime, deposit: Deposit) -> Result<()> {
     let mut kv = Kv::new();
@@ -22,29 +22,32 @@ pub fn apply_deposit(rt: &mut impl Runtime, deposit: Deposit) -> Result<()> {
     Ok(())
 }
 
+// TODO: Reintroduce once apply_transaction is deprecated
 pub fn apply_run_contract(
-    rt: &mut (impl Runtime + 'static),
-    run: RunContract,
+    _rt: &mut (impl Runtime + 'static),
+    _run: RunContract,
 ) -> Result<()> {
-    let mut kv = Kv::new();
-    let mut tx = kv.begin_transaction();
+    // let mut kv = Kv::new();
+    // let mut tx = kv.begin_transaction();
 
-    let result = jstz_proto::executor::run_contract(rt, &mut tx, run);
+    // let result = jstz_proto::executor::run_contract(rt, &mut tx, run);
 
-    kv.commit_transaction(rt, tx)?;
+    // kv.commit_transaction(rt, tx)?;
 
-    debug_msg!(rt, "Result: {result:?}\n");
-    Ok(())
+    // debug_msg!(rt, "Result: {result:?}\n");
+    // Ok(())
+    todo!("Reintroduce once apply_transaction is deprecated")
 }
-// TODO ⚰️ Deprecate will not be part of the CLI
+
+// TODO: Deprecate will not be part of the CLI
 pub fn apply_transaction(
     rt: &mut (impl Runtime + 'static),
-    tx: crate::inbox::Transaction,
+    tx: Transaction,
 ) -> Result<()> {
     use http::{HeaderMap, Method};
     use jstz_api::http::body::HttpBody;
 
-    let crate::inbox::Transaction { referer, url } = tx;
+    let Transaction { referer, url } = tx;
 
     let mut kv = Kv::new();
     let mut tx = kv.begin_transaction();
@@ -53,12 +56,12 @@ pub fn apply_transaction(
     let result = jstz_proto::executor::run_contract(
         rt,
         &mut tx,
+        &referer,
         RunContract {
             headers: HeaderMap::default(),
             method: Method::default(),
             body: HttpBody::default(),
             uri,
-            referer,
         },
     )?;
 
@@ -67,6 +70,7 @@ pub fn apply_transaction(
     debug_msg!(rt, "Result: {result:?}\n");
     Ok(())
 }
+
 pub fn apply_deploy_contract(
     rt: &mut (impl Runtime + 'static),
     origination: ContractOrigination,

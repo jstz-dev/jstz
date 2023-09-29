@@ -1,7 +1,7 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
 
 use crate::{
-    context::account::Account,
+    context::account::{Account, Address},
     operation::{
         self, external::ContractOrigination, ExternalOperation, Operation,
         SignedOperation,
@@ -17,9 +17,10 @@ pub mod origination;
 pub fn run_contract(
     hrt: &mut (impl HostRuntime + 'static),
     tx: &mut Transaction,
+    source: &Address,
     run: operation::RunContract,
 ) -> Result<receipt::RunContract> {
-    contract::run::execute(hrt, tx, run)
+    contract::run::execute(hrt, tx, source, run)
 }
 
 pub fn deploy_contract(
@@ -73,9 +74,10 @@ fn execute_operation_inner(
         } => todo!(),
         Operation {
             content: operation::Content::RunContract(run),
+            source,
             ..
         } => {
-            let result = contract::run::execute(hrt, tx, run.clone())?;
+            let result = contract::run::execute(hrt, tx, &source, run.clone())?;
 
             Ok(receipt::Content::RunContract(result))
         }
