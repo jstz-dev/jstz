@@ -7,13 +7,15 @@ use boa_engine::{
 };
 use jstz_api::http::request::Request;
 use jstz_core::{host_defined, kv::Transaction, native::JsNativeObject};
-use jstz_crypto::public_key_hash::PublicKeyHash;
 
-use crate::executor::contract::{headers, Script};
+use crate::{
+    context::account::Address,
+    executor::contract::{headers, Script},
+};
 
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 struct Contract {
-    contract_address: PublicKeyHash,
+    contract_address: Address,
 }
 impl Finalize for Contract {}
 
@@ -44,7 +46,7 @@ impl Contract {
             .deref()
             .url()
             .domain()
-            .and_then(|domain| PublicKeyHash::from_base58(domain).ok())
+            .and_then(|domain| Address::from_base58(domain).ok())
             .ok_or_else(|| {
                 JsError::from_native(JsNativeError::error().with_message("Invalid host"))
             })?;
@@ -58,7 +60,7 @@ impl Contract {
 }
 
 pub struct ContractApi {
-    pub contract_address: PublicKeyHash,
+    pub contract_address: Address,
 }
 
 impl ContractApi {

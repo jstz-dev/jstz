@@ -1,16 +1,17 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
-    context::account::Account, operation::external::ContractOrigination, Result,
+    context::account::{Account, Address},
+    operation::external::ContractOrigination,
+    Result,
 };
 
 pub fn execute(
     hrt: &impl HostRuntime,
     tx: &mut Transaction,
     contract: ContractOrigination,
-) -> Result<PublicKeyHash> {
+) -> Result<Address> {
     let ContractOrigination {
         originating_address,
         contract_code,
@@ -18,7 +19,7 @@ pub fn execute(
     } = contract;
     let nonce = Account::nonce(hrt, tx, &originating_address)?;
     nonce.increment();
-    let contract_address = PublicKeyHash::digest(
+    let contract_address = Address::digest(
         format!(
             "{}{}{}",
             originating_address.to_string(),

@@ -8,10 +8,9 @@ use boa_engine::{
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
 use jstz_core::{host::HostRuntime, host_defined, kv::Transaction, runtime};
-use jstz_crypto::public_key_hash::PublicKeyHash;
 
 use crate::{
-    context::account::{Account, Amount},
+    context::account::{Account, Address, Amount},
     error::Result,
     operation::external::ContractOrigination,
     receipt, Error,
@@ -22,7 +21,7 @@ use crate::{
 // Ledger.transfer(dst, amount)
 
 struct Ledger {
-    contract_address: PublicKeyHash,
+    contract_address: Address,
 }
 
 impl Finalize for Ledger {}
@@ -39,9 +38,9 @@ impl Ledger {
     fn balance(
         rt: &impl HostRuntime,
         tx: &mut Transaction,
-        public_key_hash: &PublicKeyHash,
+        addr: &Address,
     ) -> Result<u64> {
-        let balance = Account::balance(rt, tx, public_key_hash)?;
+        let balance = Account::balance(rt, tx, addr)?;
 
         Ok(balance)
     }
@@ -50,7 +49,7 @@ impl Ledger {
         &self,
         rt: &impl HostRuntime,
         tx: &mut Transaction,
-        dst: &PublicKeyHash,
+        dst: &Address,
         amount: Amount,
     ) -> Result<()> {
         Account::transfer(rt, tx, &self.contract_address, dst, amount)?;
@@ -80,10 +79,10 @@ impl Ledger {
 }
 
 pub struct LedgerApi {
-    pub contract_address: PublicKeyHash,
+    pub contract_address: Address,
 }
 
-pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<PublicKeyHash> {
+pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<Address> {
     let pkh_string = value
         .as_string()
         .ok_or_else(|| {
@@ -92,7 +91,7 @@ pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<PublicKeyHash> {
         })
         .map(JsString::to_std_string_escaped)?;
 
-    Ok(PublicKeyHash::from_base58(&pkh_string)?)
+    Ok(Address::from_base58(&pkh_string)?)
 }
 
 impl Ledger {
