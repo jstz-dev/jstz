@@ -1,89 +1,40 @@
 # 👨‍⚖️ jstz
 
-`jstz` (pronouced: "justice") is a JavaScript server runtime that powers Tezos 2.0.
+`jstz` (pronouced: "justice") is a JavaScript server runtime that powers Tezos 2.0 that uses [Boa](https://boajs.dev/) and is built in [Rust](https://www.rust-lang.org/). 
 
-## Development
+## Install
 
-### Building from Source
-
-Install the [Rust](https://rustup.rs/) toolchain:
-
-```sh
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-Once `rustup` is installed, the build dependencies can be installed with:
-
+Build from source using Rust:
 ```sh
 make build-deps
-```
-
-Alternatively, `jstz` is packaged with Nix. See the [Nix docs](https://nixos.org/download.html) for instructions for your system.
-Additionally, ensure [Nix flakes are enabled](https://nixos.wiki/wiki/Flakes#Enable_flakes).
-
-Once Nix is installed, the dev environment can be built with:
-
-```sh
-nix develop
-```
-
-### Tests
-
-Unit and integration tests can be run using:
-
-```sh
-make test
-```
-
-To run `jstz_kernel` is debug mode, `octez-smart-rollup-wasm-debugger` (built from [6c062176](https://gitlab.com/tezos/tezos/-/tree/6c0621760ddce94afeff3484d9e8a650d8535f25)) should be used.
-
-```sh
 make build
-./octez-smart-rollup-wasm-debugger \
-    --kernel ./target/wasm32-unknown-unknown/release/jstz_kernel.wasm \
-    --inputs ./inputs.json
 ```
 
-Once the REPL loads, to populate the rollup inbox, run:
+See [installing Octez](/CONTRIBUTING.md#installing-octez-🐙) for installing the necessary dependencies for running `jstz`.
+
+## Quick Start
 
 ```sh
-> load inputs
-```
-
-To run the kernel with the inputs:
-
-```sh
-> step inbox
-```
-
-### Running the Sandbox Network
-
-Our sandbox network uses a custom distribution of Octez found at [commit 6c062176](https://gitlab.com/tezos/tezos/-/tree/6c0621760ddce94afeff3484d9e8a650d8535f25). See the [Octez docs](https://tezos.gitlab.io/introduction/howtoget.html?highlight=building#compiling-with-make) for instructions on building Octez from source.
-
-Once Octez has been built, copy the following binaries to `jstz`:
-
-- `octez-client`
-- `octez-node`
-- `octez-smart-rollup-node`
-
-Then build the `jstz` kernel installer using the following command:
-
-```sh
+# Make a javascript file
+echo "export default (() => new Response('hello world'))" > index.js
+# Start the sandbox
 make build-installer
+cargo run -- sandbox start
+# Deploy smart function
+cargo run -- deploy index.js --name example
+# Send request to smart function
+cargo run -- run tezos://example/
 ```
 
-You can now start the sandbox with:
+## Documentation
+<!-- TODO: Host documentation using github pages -->
+For the latest `jstz` documentation, [click here]().
 
-```sh
-eval `./scripts/sandbox.sh`
-```
+## Contributing
 
-This will initially run `octez-node` and initialize `octez-client`. Once the client is initialized, the `jstz_kernel` is originated and a smart-rollup node is spun up.
+Please, check the [CONTRIBUTING.md](/CONTRIBUTING.md) file to know how to effectively contribute 
+to the project.
 
-## `jstz` Crates
+## License
 
-- [**`jstz_core`**](/jstz_core) - `jstz`'s core functionality: host functions, transactional storage, and execution.
-- [**`jstz_api`**](/jstz_api) - `jstz`'s JavaScript web standard runtime apis.
-- [**`jstz_kernel`**](/jstz_kernel) - `jstz`'s smart rollup kernel, compiled to WASM.
-- [**`jstz_crypto`**](/jstz_crypto) - `jstz`'s crypto library. Primarily a wrapper around `tezos_crypto_rs`.
-- [**`jstz_proto`**](/jstz_proto) - `jstz`'s protocol: `jstz` specific runtime apis, storage context, execution of operations.
+This project is licensed under the MIT license.
