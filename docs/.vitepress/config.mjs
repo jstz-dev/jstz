@@ -21,9 +21,14 @@ export default defineConfig({
     },
 
     sidebar: [
+      { text: "Overview", link: "/" },
+
       {
         text: "Getting Started",
-        items: [{ text: "👨‍⚖️ jstz", link: "/" }],
+        items: [
+          { text: "Installation", link: "/installation" },
+          { text: "First Steps", link: "/first_steps" },
+        ],
       },
     ],
 
