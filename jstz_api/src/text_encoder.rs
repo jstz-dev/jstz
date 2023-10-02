@@ -13,9 +13,7 @@ struct TextEncoder;
 impl TextEncoder {
     fn atob(data: &JsString) -> JsResult<JsString> {
         fn on_err(err: impl Error) -> JsError {
-            JsNativeError::eval()
-                .with_message(err.to_string())
-                .into()
+            JsNativeError::eval().with_message(err.to_string()).into()
         }
         let str = data.to_std_string_escaped();
         let encoded = DEFAULT_ENGINE.decode(&str).map_err(on_err)?;

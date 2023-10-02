@@ -1,12 +1,13 @@
 const doPromise = async () => {
-    console.log('Hello JS from Promise');
-}
+  console.log("Hello JS from Promise");
+};
 
-const handler = () => {
-    doPromise().then(res => {
-        console.log('Hello from then!');
-        return 42;
-    });
-}
+const handler = async () => {
+  await doPromise().then((res) => {
+    console.log("Hello from then!");
+    return 42;
+  });
+  return new Response();
+};
 
 export default handler;

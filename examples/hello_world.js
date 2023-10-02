@@ -1,5 +1,3 @@
-
-
 let contractCode = `
 const handler = async (request) => {
     try {
@@ -12,33 +10,32 @@ const handler = async (request) => {
                       return Response.error(error)
                     }
 }
-export default handler`
+export default handler`;
 
 const handler = async () => {
-    console.log("Hello JS 👋")
-    console.log(`My address is ${Ledger.selfAddress()}`);
+  console.log("Hello JS 👋");
+  console.log(`My address is ${Ledger.selfAddress()}`);
 
-    try {
-        const newContract = Ledger.createContract(contractCode);
-        console.log("created new contract with address", newContract);
-        const url = `tezos://sam.tez/myEndPoint`
-        const request = new Request(url, {
-            method: "POST",
-            body: "Hello from Subcontract 👋"
-        });
+  try {
+    const newContract = Ledger.createContract(contractCode);
+    console.log("created new contract with address", newContract);
+    const url = `tezos://sam.tez/myEndPoint`;
+    const request = new Request(url, {
+      method: "POST",
+      body: "Hello from Subcontract 👋",
+    });
 
-        const response = await Contract.call(newContract, request);
-        console.log(await response.text());
+    const response = await Contract.call(newContract, request);
+    console.log(await response.text());
+  } catch (error) {
+    console.error(error);
+    return Response.error("😿");
+  }
 
-    } catch(error) {
-        console.error(error);
-        return Response.error("😿");
-    }
-
-    console.log("The root contract has control again!");
-    console.log(`And to confirm, my address is ${Ledger.selfAddress()}`);
-    const response = new Response("😸");
-    return response;
-}
+  console.log("The root contract has control again!");
+  console.log(`And to confirm, my address is ${Ledger.selfAddress()}`);
+  const response = new Response("😸");
+  return response;
+};
 
 export default handler;

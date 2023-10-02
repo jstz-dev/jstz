@@ -1,10 +1,14 @@
-use crate::apply::{apply_deploy_contract, apply_deposit, apply_run_contract};
-use crate::inbox::read_message;
-use inbox::{ExternalMessage, InternalMessage, Message};
 use jstz_core::kv::Storage;
 use jstz_proto::Result;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{kernel_entry, prelude::Runtime, storage::path::RefPath};
+
+use crate::{
+    apply::{
+        apply_deploy_contract, apply_deposit, apply_run_contract, apply_transaction,
+    },
+    inbox::{read_message, ExternalMessage, InternalMessage, Message},
+};
 
 mod apply;
 mod inbox;
@@ -33,9 +37,7 @@ fn handle_message(rt: &mut (impl Runtime + 'static), message: Message) -> Result
             apply_deploy_contract(rt, contract)
         }
         // TODO ⚰️ Deprecate will not be part of the CLI
-        Message::External(ExternalMessage::Transaction(tx)) => {
-            crate::apply::apply_transaction(rt, tx)
-        }
+        Message::External(ExternalMessage::Transaction(tx)) => apply_transaction(rt, tx),
     }
 }
 

@@ -23,7 +23,6 @@ use jstz_core::{
         register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
     },
 };
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use url::Url;
 
 use super::{
@@ -69,9 +68,6 @@ impl Request {
             headers,
             url,
         })
-    }
-    pub fn set_referrer(&mut self, referer: &PublicKeyHash) -> JsResult<()> {
-        Headers::set_referer(self.headers.inner(), referer)
     }
 }
 

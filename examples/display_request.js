@@ -1,11 +1,11 @@
 function handler(request) {
   try {
-    console.log(`Hello from ${Ledger.selfAddress()} 👋`)
-    console.log("Method: ",request.method)
-    console.log("Referer:", request.headers.get("Referer"))
-    console.log("Url:", request.url)
+    console.log(`Hello from ${Ledger.selfAddress()} 👋`);
+    console.log("Method: ", request.method);
+    console.log("Referer:", request.headers.get("Referer"));
+    console.log("Url:", request.url);
     let url = new URL(request.url);
-    console.log("Url path:", url.pathname)
+    console.log("Url path:", url.pathname);
     console.log("Url hash:", url.hash);
     console.log("Url host:", url.host);
     console.log("Url hostname:", url.hostname);
@@ -17,10 +17,10 @@ function handler(request) {
     console.log("Url protocol:", url.protocol);
     console.log("Url search:", url.search);
     console.log("Url username:", url.username);
-    return new Response("Success")
+    return new Response();
   } catch (error) {
-    console.error(error)
-    return Response.error(error)
+    console.error(error);
+    return Response.error(error);
   }
 }
 export default handler;

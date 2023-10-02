@@ -16,7 +16,7 @@ build-bridge:
 
 .PHONY: build
 build:
-	@cargo build --target wasm32-unknown-unknown --release
+	@cargo build --package jstz_kernel --target wasm32-unknown-unknown --release
 
 .PHONY: build-deps
 build-deps:
@@ -50,5 +50,9 @@ fmt-nix:
 fmt-rust:
 	@cargo fmt
 
+.PHONY: fmt-js
+fmt-js:
+	npm run format
+
 .PHONY: fmt
-fmt: fmt-nix fmt-rust
+fmt: fmt-nix fmt-rust fmt-js

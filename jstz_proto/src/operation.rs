@@ -1,10 +1,7 @@
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::{
-    hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
-    signature::Signature,
-};
+use jstz_crypto::{hash::Blake2b, public_key::PublicKey, signature::Signature};
 use serde::{Deserialize, Serialize};
 
 use crate::{
@@ -121,7 +118,6 @@ pub struct RunContract {
     #[serde(with = "http_serde::header_map")]
     pub headers: HeaderMap,
     pub body: HttpBody,
-    pub referer: PublicKeyHash,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
@@ -133,7 +129,7 @@ pub enum Content {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SignedOperation {
-    public_key: PublicKey,
+    pub public_key: PublicKey,
     signature: Signature,
     inner: Operation,
 }
