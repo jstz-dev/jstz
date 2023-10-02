@@ -1,9 +1,15 @@
+[[bin]]
+name = "main_app"
+path = "src/main.rs"
+
+[[bin]]
+name = "sandbox_process"
+path = "src/sandbox_process.rs"
+
 [package]
-name = "jstz_cli"
-authors.workspace = true
-version.workspace = true
-edition.workspace = true
-repository.workspace = true
+name = "jstz-cli"
+version = "0.1.0"
+edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -21,7 +27,11 @@ nix = "0.20"
 jstz_kernel.workspace = true
 jstz_crypto.workspace = true
 http = "0.2.9"
+fs_extra = "1.2" 
+tokio = { version = "1", features = ["full"] }
+jstz_proto.workspace = true
 
 [[bin]]
 name = "jstz"
 path = "src/main.rs"
+

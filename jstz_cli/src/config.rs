@@ -4,6 +4,8 @@ use std::fs;
 use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 use std::process::Command;
+use std::env;
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Config {
@@ -13,9 +15,24 @@ pub struct Config {
     url_aliases: HashMap<String, String>,
     name_aliases: HashMap<String, String>,
     tz4_aliases: HashMap<String, String>,
+    is_sandbox_running: bool,
+    active_pids: Vec<u32>,
 }
 
 impl Config {
+    fn default() -> Self {
+        Config {
+            root_dir: "..".to_string(),
+            octez_client_dir: "octez_client".to_string(),
+            rpc: 18730,
+            url_aliases: HashMap::new(),
+            name_aliases: HashMap::new(),
+            tz4_aliases: HashMap::new(),
+            is_sandbox_running: false,
+            active_pids: Vec::new(),
+        }
+    }
+
     // Path to the configuration file
     fn config_path() -> PathBuf {
         let mut path = dirs::home_dir().expect("Failed to get home directory");
@@ -99,6 +116,17 @@ impl Config {
 
     pub fn octez_client_command(&self) -> Command {
         let mut cmd = Command::new(self.get_octez_client_path());
+        cmd.args(self.get_octez_client_setup_args());
+        cmd
+    }
+
+    pub fn octez_node_command(&self) -> Command {
+        let mut cmd = Command::new("../octez-node");
+        cmd
+    }
+
+    pub fn octez_rollup_node_command(&self) -> Command {
+        let mut cmd = Command::new("../octez-smart-rollup-node");
         cmd.args(self.get_octez_client_setup_args());
         cmd
     }
