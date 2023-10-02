@@ -2,6 +2,10 @@
 name = "main_app"
 path = "src/main.rs"
 
+[[bin]]
+name = "sandbox_process"
+path = "src/sandbox_process.rs"
+
 [package]
 name = "jstz-cli"
 version = "0.1.0"
@@ -22,5 +26,4 @@ dirs = "3.0"
 nix = "0.20"
 fs_extra = "1.2" 
 tokio = { version = "1", features = ["full"] }
-
-[workspace]
+jstz_proto.workspace = true
