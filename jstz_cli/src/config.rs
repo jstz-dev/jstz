@@ -1,51 +1,97 @@
-use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-use std::fs;
-use std::io::{Error, ErrorKind};
-use std::path::PathBuf;
-use std::process::Command;
+use std::{
+    fs,
+    io::{Error, ErrorKind},
+    path::PathBuf,
+    str::FromStr,
+};
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+use anyhow::{anyhow, Result};
+use serde::{Deserialize, Serialize};
+
+fn home() -> PathBuf {
+    dirs::home_dir()
+        .expect("Failed to get home directory")
+        .join(".jstz")
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Config {
-    root_dir: String,
-    octez_client_dir: String,
-    rpc: u16,
-    url_aliases: HashMap<String, String>,
-    name_aliases: HashMap<String, String>,
-    tz4_aliases: HashMap<String, String>,
+    /// Path to `jstz` directory
+    pub jstz_path: PathBuf,
+    /// Path to octez installation
+    pub octez_path: PathBuf,
+    /// The port of the octez node
+    pub octez_node_port: u16,
+    /// The port of the octez RPC node
+    pub octez_node_rpc_port: u16,
+    /// Sandbox config (None if sandbox is not running)
+    pub sandbox: Option<SandboxConfig>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct SandboxConfig {
+    /// Directory of the octez client (initialized when sandbox is running)
+    pub octez_client_dir: PathBuf,
+    /// Directory of the octez node
+    pub octez_node_dir: PathBuf,
+    /// Directory of the octez rollup node
+    pub octez_rollup_node_dir: PathBuf,
+    /// Pid of the pid
+    pub pid: u32,
+    private: (),
+}
+
+impl SandboxConfig {
+    pub fn new(
+        pid: u32,
+        octez_client_dir: PathBuf,
+        octez_node_dir: PathBuf,
+        octez_rollup_node_dir: PathBuf,
+    ) -> Self {
+        Self {
+            octez_client_dir,
+            octez_node_dir,
+            octez_rollup_node_dir,
+            pid,
+            private: (),
+        }
+    }
 }
 
 impl Config {
-    // Path to the configuration file
-    fn config_path() -> PathBuf {
-        let mut path = dirs::home_dir().expect("Failed to get home directory");
-        path.push(".jstz");
-        path.push("sandbox.json");
-        path
+    fn default() -> Self {
+        Config {
+            jstz_path: PathBuf::from_str(".").unwrap(),
+            octez_path: PathBuf::from_str(".").unwrap(),
+            octez_node_port: 18731,
+            octez_node_rpc_port: 18730,
+            sandbox: None,
+        }
     }
 
-    // Load the configuration from the file and update self with the loaded values
-    pub fn load_from_file() -> Result<Self, std::io::Error> {
-        let path = Self::config_path();
+    /// Path to the configuration file
+    pub fn path() -> PathBuf {
+        home().join("config.json")
+    }
 
-        let new_config = if !path.exists() {
-            // If the file doesn't exist, create a default one
-            let default_config = Config::default();
-            default_config.save_to_file()?;
-            default_config
-        } else {
+    /// Load the configuration from the file
+    pub fn load() -> std::io::Result<Self> {
+        let path = Self::path();
+
+        let config = if path.exists() {
             let json = fs::read_to_string(&path)?;
             serde_json::from_str(&json)
                 .map_err(|e| Error::new(ErrorKind::InvalidData, e))?
+        } else {
+            Config::default()
         };
 
-        // Replace the current instance with the new_config
-        Ok(new_config)
+        Ok(config)
     }
 
-    // Save the configuration to the file
-    pub fn save_to_file(&self) -> Result<(), std::io::Error> {
-        let path = Self::config_path();
+    /// Save the configuration to the file
+    pub fn save(&self) -> std::io::Result<()> {
+        let path = Self::path();
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
         }
@@ -55,90 +101,9 @@ impl Config {
         Ok(())
     }
 
-    // Getter and setter for root_dir
-    pub fn get_root_dir(&self) -> &String {
-        &self.root_dir
+    pub fn sandbox(&self) -> Result<&SandboxConfig> {
+        self.sandbox
+            .as_ref()
+            .ok_or(anyhow!("Sandbox is not running"))
     }
-
-    // pub fn set_root_dir(&mut self, value: String) {
-    //     self.root_dir = value;
-    // }
-
-    // // Getter and setter for octez_client_dir
-    // pub fn get_octez_client_dir(&self) -> &String {
-    //     &self.octez_client_dir
-    // }
-
-    // pub fn set_octez_client_dir(&mut self, value: String) {
-    //     self.octez_client_dir = value;
-    // }
-
-    // // Getter and setter for rpc
-    // pub fn get_rpc(&self) -> u16 {
-    //     self.rpc
-    // }
-
-    // pub fn set_rpc(&mut self, value: u16) {
-    //     self.rpc = value;
-    // }
-
-    pub fn get_octez_client_path(&self) -> String {
-        let octez_client_path = format!("{}/octez-client", self.root_dir);
-        octez_client_path
-    }
-
-    pub fn get_octez_client_setup_args(&self) -> Vec<String> {
-        let args = vec![
-            "-base-dir".to_string(),
-            self.octez_client_dir.clone(),
-            "-endpoint".to_string(),
-            format!("http://127.0.0.1:{}", self.rpc),
-        ];
-        args
-    }
-
-    pub fn octez_client_command(&self) -> Command {
-        let mut cmd = Command::new(self.get_octez_client_path());
-        cmd.args(self.get_octez_client_setup_args());
-        cmd
-    }
-
-    // Methods for url_aliases
-    // pub fn get_url_alias(&self, alias: &str) -> Option<String> {
-    //     self.url_aliases.get(alias).cloned()
-    // }
-
-    // pub fn set_url_alias(&mut self, alias: String, value: String) {
-    //     self.url_aliases.insert(alias, value);
-    // }
-
-    // pub fn remove_url_alias(&mut self, alias: &str) {
-    //     self.url_aliases.remove(alias);
-    // }
-
-    // Methods for name_aliases
-    pub fn get_name_alias(&self, alias: &str) -> Option<String> {
-        self.name_aliases.get(alias).cloned()
-    }
-
-    // pub fn set_name_alias(&mut self, alias: String, value: String) {
-    //     self.name_aliases.insert(alias, value);
-    // }
-
-    // pub fn remove_name_alias(&mut self, alias: &str) {
-    //     self.name_aliases.remove(alias);
-    // }
-
-    // // Methods for tz4_aliases
-    pub fn get_tz4_alias(&self, alias: &str) -> Option<String> {
-        self.tz4_aliases.get(alias).cloned()
-    }
-
-    // pub fn set_tz4_alias(&mut self, alias: String, value: String) {
-    //     self.tz4_aliases.insert(alias, value);
-    // }
-
-    // pub fn remove_tz4_alias(&mut self, alias: &str) {
-    //     self.tz4_aliases.remove(alias);
-    // }
 }
