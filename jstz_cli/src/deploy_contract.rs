@@ -2,22 +2,25 @@ use serde_json::json;
 use crate::config::Config;
 use crate::utils::handle_output;
 
-pub fn run_contract(referer: String, url: String, /*http_method: String, json_data: String,*/ cfg: &Config) {
+pub fn deploy_contract(self_address: String, contract_code: String, balance: u64, cfg: &Config) {
     // Create JSON message
     let jmsg = json!({
-        "Transaction": {
-            "referer": {
-                "Tz4": referer
+        "DeployContract": {
+            "originating_address": {
+                "Tz4": self_address
             },
-            "url": url
+            "contract_code": contract_code,
+            "initial_balance": balance
         }
     });
 
-    // Convert to external hex message
-    let emsg = hex::encode(jmsg.to_string());
+    // Convert JSON to string
+    let jmsg_str = jmsg.to_string();
+
+    // Convert string to hexadecimal
+    let emsg = hex::encode(jmsg_str);
     let hex_string = format!("hex:[ \"{}\" ]", emsg);
 
-    // Send message
     let output = cfg.octez_client_command()
         .args(
             [

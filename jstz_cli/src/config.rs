@@ -4,6 +4,8 @@ use serde::{Serialize, Deserialize};
 use std::io::{Error, ErrorKind};
 use std::collections::HashMap;
 use std::process::Command;
+use std::env;
+use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Config {
@@ -13,9 +15,24 @@ pub struct Config {
     url_aliases: HashMap<String, String>,
     name_aliases: HashMap<String, String>,
     tz4_aliases: HashMap<String, String>,
+    is_sandbox_running: bool,
+    active_pids: Vec<u32>,
 }
 
 impl Config {
+    fn default() -> Self {
+        Config {
+            root_dir: "..".to_string(),
+            octez_client_dir: "octez_client".to_string(),
+            rpc: 18730,
+            url_aliases: HashMap::new(),
+            name_aliases: HashMap::new(),
+            tz4_aliases: HashMap::new(),
+            is_sandbox_running: false,
+            active_pids: Vec::new(),
+        }
+    }
+
     // Path to the configuration file
     fn config_path() -> PathBuf {
         let mut path = dirs::home_dir().expect("Failed to get home directory");
@@ -103,6 +120,17 @@ impl Config {
         cmd
     }
 
+    pub fn octez_node_command(&self) -> Command {
+        let mut cmd = Command::new("../octez-node");
+        cmd
+    }
+
+    pub fn octez_rollup_node_command(&self) -> Command {
+        let mut cmd = Command::new("../octez-smart-rollup-node");
+        cmd.args(self.get_octez_client_setup_args());
+        cmd
+    }
+
     // Methods for url_aliases
     pub fn get_url_alias(&self, alias: &str) -> Option<String> {
         self.url_aliases.get(alias).cloned()
@@ -141,5 +169,26 @@ impl Config {
     pub fn remove_tz4_alias(&mut self, alias: &str) {
         self.tz4_aliases.remove(alias);
     }
-}
 
+    // Getter and setter for is_sandbox_running
+    pub fn get_is_sandbox_running(&self) -> bool {
+        self.is_sandbox_running
+    }
+
+    pub fn set_is_sandbox_running(&mut self, value: bool) {
+        self.is_sandbox_running = value;
+    }
+
+    // Methods for active_pids
+    pub fn get_active_pids(&self) -> Vec<u32> {
+        self.active_pids.clone()
+    }
+
+    pub fn add_pid(&mut self, pid: u32) {
+        self.active_pids.push(pid);
+    }
+
+    pub fn remove_pid(&mut self, pid: u32) {
+        self.active_pids.retain(|&x| x != pid);
+    }
+}

@@ -14,7 +14,7 @@ fn extract_address(output: &[u8]) -> String {
         .to_string()
 }
 
-pub fn deploy(script_address: String, cfg: &Config) {
+pub fn deploy_bridge(script_address: String, cfg: &Config) {
     // Contract source
     let root_dir = cfg.get_root_dir();
     let src = format!("{}/jstz_bridge/jstz_bridge.tz", root_dir);
@@ -23,7 +23,6 @@ pub fn deploy(script_address: String, cfg: &Config) {
     // Originate ctez contract
     let bootstrap3_address = "tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU";
     let init_ctez_storage = format!("(Pair \"{}\" {{ Elt \"{}\" 10000000000 }} )", bootstrap3_address, bootstrap3_address);
-
     
     let output = cfg.octez_client_command()
         .args(
