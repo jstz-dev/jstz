@@ -9,10 +9,14 @@
   ],
   "scripts": {
     "check:format": "prettier . --check --ignore-unknown",
-    "format": "prettier . --write --ignore-unknown"
+    "format": "prettier . --write --ignore-unknown",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "vitepress": "^1.0.0-rc.20"
   },
   "devDependencies": {
     "prettier": "^3.0.3"
