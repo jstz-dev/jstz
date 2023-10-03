@@ -24,4 +24,4 @@ running on Tezos's smart optimistic rollups, some APIs are not available (e.g. `
 
 - [`Kv`](./kv.md)
 - `Contract`
-- `Ledger`
+- [`Ledger`](./ledger.md)
