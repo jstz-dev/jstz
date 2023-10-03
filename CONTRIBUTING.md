@@ -136,8 +136,15 @@ To make sure your pull request is easy to review:
   If you branch history is dirty (containing fixup commits, etc) then we will squash-merge\*. However, this is undesirable as we lose the information that individual commits provide.
 
 - **Follow the Rust style guide**. Please see the [Rust style guide](https://doc.rust-lang.org/nightly/style-guide/). Additionally ensure your code is formatted using
+
   ```sh
   make fmt
+  ```
+
+  Consider installing our pre-commit hook using
+
+  ```sh
+  ./scripts/install-pre-commit-hook.sh
   ```
 
 - **Document your code**. Write documentation for your changes, either as comments or as a markdown file in `/docs`.
