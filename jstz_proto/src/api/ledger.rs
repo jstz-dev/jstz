@@ -7,16 +7,16 @@ use boa_engine::{
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
-use jstz_core::{host::HostRuntime, host_defined, kv::Transaction, runtime};
+use jstz_core::{
+    accessor, host::HostRuntime, host_defined, kv::Transaction, native::Accessor, runtime,
+};
 
 use crate::{
     context::account::{Account, Address, Amount},
     error::Result,
-    operation::external::ContractOrigination,
-    receipt, Error,
 };
 
-// Ledger.selfAddress()
+// Ledger.selfAddress
 // Ledger.balance(pkh)
 // Ledger.transfer(dst, amount)
 
@@ -56,26 +56,6 @@ impl Ledger {
 
         Ok(())
     }
-    fn create_contract(
-        &self,
-        rt: &impl HostRuntime,
-        tx: &mut Transaction,
-        contract_code: String,
-        initial_balance: Amount,
-    ) -> JsResult<String> {
-        if Self::balance(rt, tx, &self.contract_address)? < initial_balance {
-            return Err(Error::BalanceOverflow.into());
-        }
-        let contract = ContractOrigination {
-            contract_code,
-            originating_address: self.contract_address.clone(),
-            initial_balance,
-        };
-        let receipt::DeployContract { contract_address } =
-            crate::executor::deploy_contract(rt, tx, contract)?;
-        self.transfer(rt, tx, &contract_address, initial_balance)?;
-        Ok(contract_address.to_string())
-    }
 }
 
 pub struct LedgerApi {
@@ -95,7 +75,7 @@ pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<Address> {
 }
 
 impl Ledger {
-    fn from_js_value<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -110,14 +90,13 @@ impl Ledger {
 impl LedgerApi {
     const NAME: &'static str = "Ledger";
 
-    fn self_address(
-        this: &JsValue,
-        _args: &[JsValue],
-        _context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
-        let ledger = Ledger::from_js_value(this)?;
-
-        Ok(ledger.self_address().into())
+    fn self_address(context: &mut Context<'_>) -> Accessor {
+        accessor!(
+            context,
+            Ledger,
+            "selfAddress",
+            get:((ledger, _context) => Ok(ledger.self_address().into()))
+        )
     }
 
     fn balance(
@@ -147,7 +126,7 @@ impl LedgerApi {
             host_defined!(context, host_defined);
             let mut tx = host_defined.get_mut::<Transaction>().unwrap();
 
-            let ledger = Ledger::from_js_value(this)?;
+            let ledger = Ledger::try_from_js(this)?;
             let dst = js_value_to_pkh(args.get_or_undefined(0))?;
             let amount = args
                 .get_or_undefined(1)
@@ -159,66 +138,26 @@ impl LedgerApi {
             Ok(JsValue::undefined())
         })
     }
-    fn create_contract(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
-        runtime::with_global_host(|rt| {
-            host_defined!(context, host_defined);
-            let mut tx = host_defined.get_mut::<Transaction>().unwrap();
-
-            let ledger = Ledger::from_js_value(this)?;
-            let contract_code = args
-                .get(0)
-                .ok_or_else(|| {
-                    JsNativeError::typ()
-                        .with_message("Expected at least 1 argument but 0 provided")
-                })?
-                .to_string(context)?
-                .to_std_string_escaped();
-            let initial_balance = args.get_or_undefined(1);
-            let initial_balance = if initial_balance.is_undefined() {
-                0
-            } else {
-                initial_balance
-                    .to_big_uint64(context)?
-                    .iter_u64_digits()
-                    .next()
-                    .unwrap_or_default()
-            };
-
-            let address = ledger.create_contract(
-                rt,
-                &mut tx,
-                contract_code,
-                initial_balance as Amount,
-            )?;
-            Ok(address.into())
-        })
-    }
 }
 
 impl jstz_core::Api for LedgerApi {
     fn init(self, context: &mut boa_engine::Context<'_>) {
+        let self_address = LedgerApi::self_address(context);
+
         let ledger = ObjectInitializer::with_native(
             Ledger {
                 contract_address: self.contract_address,
             },
             context,
         )
-        .function(
-            NativeFunction::from_fn_ptr(Self::self_address),
-            "selfAddress",
-            0,
+        .accessor(
+            self_address.name,
+            self_address.get,
+            self_address.set,
+            Attribute::all(),
         )
         .function(NativeFunction::from_fn_ptr(Self::balance), "balance", 1)
         .function(NativeFunction::from_fn_ptr(Self::transfer), "transfer", 3)
-        .function(
-            NativeFunction::from_fn_ptr(Self::create_contract),
-            "createContract",
-            1,
-        )
         .build();
 
         context

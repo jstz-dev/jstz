@@ -136,9 +136,9 @@ impl<T: NativeObject> TryFrom<JsValue> for JsNativeObject<T> {
 }
 
 pub struct Accessor {
-    name: &'static str,
-    get: Option<JsFunction>,
-    set: Option<JsFunction>,
+    pub name: &'static str,
+    pub get: Option<JsFunction>,
+    pub set: Option<JsFunction>,
 }
 
 impl Accessor {
