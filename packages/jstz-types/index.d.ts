@@ -12,7 +12,7 @@ declare interface URLSearchParams {
 
 declare var URLSearchParams: {
   readonly prototype: URLSearchParams;
-  new (
+  new(
     init?: [string, string][] | Record<string, string> | string,
   ): URLSearchParams;
 };
@@ -36,7 +36,7 @@ declare interface URL {
 
 declare var URL: {
   readonly prototype: URL;
-  new (url: string, base?: string): URL;
+  new(url: string, base?: string): URL;
   canParse(url: string, base?: string): boolean;
 };
 
@@ -66,7 +66,7 @@ declare interface Headers {
 
 declare var Headers: {
   readonly prototype: Headers;
-  new (init?: HeadersInit): Headers;
+  new(init?: HeadersInit): Headers;
 };
 
 declare type RequestInfo = Request | string;
@@ -85,7 +85,7 @@ declare interface Request extends Body {
 
 declare var Request: {
   readonly prototype: Request;
-  new (input: RequestInfo, init?: RequestInit): Request;
+  new(input: RequestInfo, init?: RequestInit): Request;
 };
 
 declare interface ResponseInit {
@@ -103,7 +103,7 @@ declare interface Response extends Body {
 
 declare var Response: {
   readonly prototype: Response;
-  new (body?: BodyInit | null, init?: ResponseInit): Response;
+  new(body?: BodyInit | null, init?: ResponseInit): Response;
   json(data: unknown): Response;
   error(): Response;
 };
@@ -141,14 +141,18 @@ declare interface Kv {
 
 declare var Kv: Kv;
 
+export type Mutez = number;
+
 declare interface Ledger {
-  selfAddress(): Address;
-  createContract(code: String): Promise<Address>;
+  readonly selfAddress: Address;
+  balance(address: Address): Mutez;
+  transfer(address: Address, amount: Mutez): void;
 }
 
 declare var Ledger: Ledger;
 
 declare interface Contract {
+  create(code: String): Promise<Address>;
   call(request: Request): Promise<Response>;
 }
 
