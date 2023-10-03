@@ -21,13 +21,19 @@ export default defineConfig({
     },
 
     sidebar: [
-      { text: "Overview", link: "/" },
-
       {
         text: "Getting Started",
         items: [
           { text: "Installation", link: "/installation" },
           { text: "First Steps", link: "/first_steps" },
+        ],
+      },
+
+      {
+        text: "API Reference",
+        items: [
+          { text: "Overview", link: "/api/" },
+          { text: "KV", link: "/api/kv" },
         ],
       },
     ],
