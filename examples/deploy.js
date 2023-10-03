@@ -8,7 +8,7 @@ export default (request) => {
 }
 ```;
     console.log(code);
-    const subcontractAddress = Ledger.createContract(code);
+    const subcontractAddress = await Contract.create(code);
     console.log("created", contract);
     let response = await Contract.call(contract, "Hello World");
 

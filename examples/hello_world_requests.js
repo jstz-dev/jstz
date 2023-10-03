@@ -17,7 +17,7 @@ const handler = async () => {
   console.log(`My address is ${Ledger.selfAddress()}`);
 
   try {
-    const newContract = Ledger.createContract(contractCode);
+    const newContract = await Contract.create(contractCode);
     console.log("created new contract with address", newContract);
     const url = `tezos://${newContract}/myEndPoint`;
     const request = new Request(url, {
