@@ -56,9 +56,9 @@ pub fn sandbox_start(cfg: &mut Config) {
     let rollup_node_dir = "../octez_smart_rollup_node";
     let client_dir = "../octez_client";
 
-    ensure_empty_directory(node_dir);
-    ensure_empty_directory(rollup_node_dir);
-    ensure_empty_directory(client_dir);
+    ensure_empty_directory(node_dir).expect("Could not ensure empty directory.");
+    ensure_empty_directory(rollup_node_dir).expect("Could not ensure empty directory.");
+    ensure_empty_directory(client_dir).expect("Could not ensure empty directory.");
 
     cfg.set_octez_client_dir(client_dir.to_string());
 

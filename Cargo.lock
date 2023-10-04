@@ -1097,6 +1097,9 @@ dependencies = [
  "dirs",
  "fs_extra",
  "hex",
+ "http",
+ "jstz_crypto",
+ "jstz_kernel",
  "jstz_proto",
  "nix 0.20.2",
  "nom",
@@ -1123,25 +1126,6 @@ dependencies = [
  "serde_json",
  "tezos-smart-rollup",
  "url",
-]
-
-[[package]]
-name = "jstz_cli"
-version = "0.1.0"
-dependencies = [
- "bs58",
- "clap",
- "ctrlc",
- "dirs",
- "hex",
- "http",
- "jstz_crypto",
- "jstz_kernel",
- "nix 0.20.2",
- "nom",
- "serde",
- "serde_json",
- "tempfile",
 ]
 
 [[package]]
