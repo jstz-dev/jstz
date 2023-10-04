@@ -3,21 +3,17 @@ use std::fs;
 use std::time::Duration;
 use std::process::Child;
 use std::thread::sleep;
-use std::fs::File;
 use std::path::Path;
-use std::sync::mpsc::{self, Sender, Receiver};
-use std::process::{Command, Stdio};
-use std::io::{self, BufRead, BufReader};
+use std::sync::mpsc::{ Sender, Receiver};
 use crate::deploy_bridge::deploy_bridge;
 use std::thread;
-
 
 use crate::config::Config;
 use crate::utils::handle_output;
 use fs_extra::dir::{self, CopyOptions};
 
 fn run_command(command: &str, args: &[&str]) -> Result<String, String> {
-    let mut cfg = Config::load_from_file().expect("Failed to load the config.");
+    let cfg = Config::load_from_file().expect("Failed to load the config.");
     let mut cli_command = if command=="node" {cfg.octez_node_command()} else {cfg.octez_client_command()};
 
     let output = cli_command
@@ -32,7 +28,7 @@ fn run_command(command: &str, args: &[&str]) -> Result<String, String> {
     }
 }
 
-pub fn start_sandboxed_node(node: &str, node_dir: &PathBuf, port: u16, rpc: u16, script_dir: &PathBuf) -> Result<Child, String> {
+pub fn start_sandboxed_node(node_dir: &PathBuf, port: u16, rpc: u16, script_dir: &PathBuf) -> Result<Child, String> {
     // Initialize node config
     run_command("node", &[
         "config", "init",
@@ -49,7 +45,7 @@ pub fn start_sandboxed_node(node: &str, node_dir: &PathBuf, port: u16, rpc: u16,
         "--data-dir", &node_dir.to_str().unwrap()
     ])?;
 
-    let mut cfg = Config::load_from_file().expect("Failed to load the config.");
+    let cfg = Config::load_from_file().expect("Failed to load the config.");
 
     // Start newly configured node in the background
     let child = cfg.octez_node_command()
@@ -66,8 +62,8 @@ pub fn start_sandboxed_node(node: &str, node_dir: &PathBuf, port: u16, rpc: u16,
     Ok(child)
 }
 
-fn run_command_silently(command: &str, args: &[&str]) -> bool {
-    let mut cfg = Config::load_from_file().expect("Failed to load the config.");
+fn run_command_silently(args: &[&str]) -> bool {
+    let cfg = Config::load_from_file().expect("Failed to load the config.");
 
     let output = cfg.octez_client_command()
         .args(args)
@@ -86,19 +82,19 @@ fn run_command_silently(command: &str, args: &[&str]) -> bool {
     }
 }
 
-fn wait_for_node_to_initialize(client: &str) {
-    if run_command_silently(client, &["rpc", "get", "/chains/main/blocks/head/hash"]) {
+fn wait_for_node_to_initialize() {
+    if run_command_silently(&["rpc", "get", "/chains/main/blocks/head/hash"]) {
         return;
     }
 
     print!("Waiting for node to initialize...");
-    while !run_command_silently(client, &["rpc", "get", "/chains/main/blocks/head/hash"]) {
+    while !run_command_silently(&["rpc", "get", "/chains/main/blocks/head/hash"]) {
         sleep(Duration::from_secs(1));
     }
 }
 
-pub fn init_sandboxed_client(client: &str, script_dir: &PathBuf, node_dir: &PathBuf, tx: Sender<&str>) {
-    wait_for_node_to_initialize(client);
+pub fn init_sandboxed_client(client: &str, script_dir: &PathBuf, tx: Sender<&str>) {
+    wait_for_node_to_initialize();
 
     run_command(client, &["bootstrapped"]).expect("Failed to bootstrap client");
 
@@ -133,7 +129,7 @@ pub fn init_sandboxed_client(client: &str, script_dir: &PathBuf, node_dir: &Path
 
     // Continuously bake
     loop {
-        if !run_command_silently(client, &["bake", "for", "--minimal-timestamp"]) {
+        if !run_command_silently(&["bake", "for", "--minimal-timestamp"]) {
             break;
         }
         sleep(Duration::from_secs(1));
@@ -170,15 +166,15 @@ fn copy_directory_contents(src: &Path, dest: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-fn originate_rollup(client: &str, kernel: &str, rollup_node_dir: &PathBuf, preimages: &PathBuf, rx: Receiver<&str>) -> Result<String, String> {
+fn originate_rollup(kernel: &str, rollup_node_dir: &PathBuf, preimages: &PathBuf, rx: Receiver<&str>) -> Result<String, String> {
     println!("Waiting for node to activate...");
-    let message = rx.recv().unwrap();
+    rx.recv().expect("Failed to received the message.");
     println!("Node activated.");
 
     sleep(Duration::from_secs(1));
 
     // Originate rollup
-    let mut cfg = Config::load_from_file().expect("Failed to load the config.");
+    let cfg = Config::load_from_file().expect("Failed to load the config.");
 
     let output = cfg.octez_client_command()
         .args(&[
@@ -208,14 +204,14 @@ fn originate_rollup(client: &str, kernel: &str, rollup_node_dir: &PathBuf, preim
     output_result
 }
 
-pub fn start_rollup_node(client: &str, kernel: &str, preimages: &str, rollup_node: &str, rollup_node_dir: &PathBuf, log_dir: &PathBuf, rx: Receiver<&str>) {
-    let output = originate_rollup(client, kernel, rollup_node_dir, &PathBuf::from(preimages), rx);
+pub fn start_rollup_node(kernel: &str, preimages: &str, rollup_node_dir: &PathBuf, log_dir: &PathBuf, rx: Receiver<&str>) {
+    let output = originate_rollup(kernel, rollup_node_dir, &PathBuf::from(preimages), rx);
 
     let cfg = Config::load_from_file().expect("Failed to load the config.");
 
     println!("Originating rollup");
 
-    let mut address: String = Default::default();;
+    let mut address: String = Default::default();
     for line in output.unwrap().lines() {
         if line.contains("Address:") {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -229,13 +225,13 @@ pub fn start_rollup_node(client: &str, kernel: &str, preimages: &str, rollup_nod
     let handle = thread::spawn({
             move || {
                 thread::sleep(Duration::from_secs(1));
-                let mut cfg = Config::load_from_file().expect("Failed to load the config.");
+                let cfg = Config::load_from_file().expect("Failed to load the config.");
                 println!("Deploying bridge:");
                 deploy_bridge(address, &cfg);
             }
     });
 
-    let mut output = cfg.octez_rollup_node_command()
+    cfg.octez_rollup_node_command()
         .args(&[
             "run", "operator", "for", "jstz_rollup",
             "with", "operators", "bootstrap2",

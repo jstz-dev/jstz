@@ -1,7 +1,7 @@
 mod sandbox;
 mod config;
-use crate::sandbox::sandbox_start;
-use crate::config::Config;
+use sandbox::sandbox_start;
+use config::Config;
 
 mod deposit;
 mod deploy_bridge;

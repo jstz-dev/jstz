@@ -10,20 +10,16 @@ mod config;
 mod sandbox_initializer;
 mod utils;
 
-use crate::deposit::deposit;
-use crate::deploy_bridge::deploy_bridge;
-use crate::deploy_contract::deploy_contract;
-use crate::run_contract::run_contract;
-use crate::sandbox::sandbox_start;
-use crate::sandbox::sandbox_stop;
-use crate::utils::handle_output;
+use deposit::deposit;
+//use crate::deploy_bridge::deploy_bridge;
+use deploy_contract::deploy_contract;
+use run_contract::run_contract;
+use sandbox::sandbox_stop;
 use std::env;
 //use crate::sandbox::repl;
 use config::Config;
 
-use tokio::io::{BufReader, AsyncBufReadExt};
-
-use std::process::{Command, Child, Stdio};
+use std::process::Command;
 use std::fs::File;
 
 #[derive(Parser)]
@@ -129,8 +125,8 @@ fn main() {
         JstzCommand::Sandbox(cmd) => match cmd {
             SandboxCommand::Start => {
                 println!("Starting the jstz sandbox...");
-                let mut output_file = File::create("sandbox_config.json").unwrap();
-                let child = Command::new("../target/debug/sandbox_process")
+                File::create("sandbox_config.json").expect("Failed to create a file.");
+                Command::new("../target/debug/sandbox_process")
                     .spawn().expect("Failed to start the sandbox.");
             }
             SandboxCommand::Stop => {

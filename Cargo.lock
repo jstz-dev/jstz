@@ -1088,7 +1088,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "jstz-cli"
+name = "jstz_api"
+version = "0.1.0"
+dependencies = [
+ "base64 0.21.4",
+ "boa_engine",
+ "boa_gc",
+ "bytes",
+ "derive_more",
+ "form_urlencoded",
+ "http",
+ "jstz_core",
+ "jstz_crypto",
+ "serde",
+ "serde_json",
+ "tezos-smart-rollup",
+ "url",
+]
+
+[[package]]
+name = "jstz_cli"
 version = "0.1.0"
 dependencies = [
  "bs58",
@@ -1107,25 +1126,6 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
-]
-
-[[package]]
-name = "jstz_api"
-version = "0.1.0"
-dependencies = [
- "base64 0.21.4",
- "boa_engine",
- "boa_gc",
- "bytes",
- "derive_more",
- "form_urlencoded",
- "http",
- "jstz_core",
- "jstz_crypto",
- "serde",
- "serde_json",
- "tezos-smart-rollup",
- "url",
 ]
 
 [[package]]

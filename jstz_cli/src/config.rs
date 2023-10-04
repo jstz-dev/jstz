@@ -4,8 +4,6 @@ use std::fs;
 use std::io::{Error, ErrorKind};
 use std::path::PathBuf;
 use std::process::Command;
-use std::env;
-use std::path::Path;
 
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Config {
