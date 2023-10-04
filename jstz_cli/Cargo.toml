@@ -7,9 +7,11 @@ name = "sandbox_process"
 path = "src/sandbox_process.rs"
 
 [package]
-name = "jstz-cli"
-version = "0.1.0"
-edition = "2021"
+name = "jstz_cli"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
