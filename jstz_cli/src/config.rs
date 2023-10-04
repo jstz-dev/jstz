@@ -82,13 +82,13 @@ impl Config {
     // }
 
     // // Getter and setter for octez_client_dir
-    // pub fn get_octez_client_dir(&self) -> &String {
-    //     &self.octez_client_dir
-    // }
+    pub fn get_octez_client_dir(&self) -> &String {
+         &self.octez_client_dir
+    }
 
-    // pub fn set_octez_client_dir(&mut self, value: String) {
-    //     self.octez_client_dir = value;
-    // }
+    pub fn set_octez_client_dir(&mut self, value: String) {
+         self.octez_client_dir = value;
+    }
 
     // // Getter and setter for rpc
     // pub fn get_rpc(&self) -> u16 {
@@ -121,7 +121,7 @@ impl Config {
     }
 
     pub fn octez_node_command(&self) -> Command {
-        let mut cmd = Command::new("../octez-node");
+        let cmd = Command::new("../octez-node");
         cmd
     }
 
@@ -169,4 +169,26 @@ impl Config {
     // pub fn remove_tz4_alias(&mut self, alias: &str) {
     //     self.tz4_aliases.remove(alias);
     // }
+
+    // Getter and setter for is_sandbox_running
+    pub fn get_is_sandbox_running(&self) -> bool {
+        self.is_sandbox_running
+    }
+
+    pub fn set_is_sandbox_running(&mut self, value: bool) {
+        self.is_sandbox_running = value;
+    }
+
+    // Methods for active_pids
+    pub fn get_active_pids(&self) -> Vec<u32> {
+        self.active_pids.clone()
+    }
+
+    pub fn add_pid(&mut self, pid: u32) {
+        self.active_pids.push(pid);
+    }
+
+    pub fn remove_pid(&mut self, pid: u32) {
+        self.active_pids.retain(|&x| x != pid);
+    }
 }

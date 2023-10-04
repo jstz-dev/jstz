@@ -17,8 +17,7 @@ use crate::utils::handle_output;
 use fs_extra::dir::{self, CopyOptions};
 
 fn run_command(command: &str, args: &[&str]) -> Result<String, String> {
-    let mut cfg = Config::default();
-    cfg.load_from_file();
+    let mut cfg = Config::load_from_file().expect("Failed to load the config.");
     let mut cli_command = if command=="node" {cfg.octez_node_command()} else {cfg.octez_client_command()};
 
     let output = cli_command
@@ -50,8 +49,7 @@ pub fn start_sandboxed_node(node: &str, node_dir: &PathBuf, port: u16, rpc: u16,
         "--data-dir", &node_dir.to_str().unwrap()
     ])?;
 
-    let mut cfg = Config::default();
-    cfg.load_from_file();
+    let mut cfg = Config::load_from_file().expect("Failed to load the config.");
 
     // Start newly configured node in the background
     let child = cfg.octez_node_command()
@@ -69,8 +67,7 @@ pub fn start_sandboxed_node(node: &str, node_dir: &PathBuf, port: u16, rpc: u16,
 }
 
 fn run_command_silently(command: &str, args: &[&str]) -> bool {
-    let mut cfg = Config::default();
-    cfg.load_from_file();
+    let mut cfg = Config::load_from_file().expect("Failed to load the config.");
 
     let output = cfg.octez_client_command()
         .args(args)
@@ -181,8 +178,7 @@ fn originate_rollup(client: &str, kernel: &str, rollup_node_dir: &PathBuf, preim
     sleep(Duration::from_secs(1));
 
     // Originate rollup
-    let mut cfg = Config::default();
-    cfg.load_from_file();
+    let mut cfg = Config::load_from_file().expect("Failed to load the config.");
 
     let output = cfg.octez_client_command()
         .args(&[
@@ -206,7 +202,7 @@ fn originate_rollup(client: &str, kernel: &str, rollup_node_dir: &PathBuf, preim
     let dest_dir = rollup_node_dir.join("wasm_2_0_0");
     fs::create_dir_all(&dest_dir).expect("Failed to create directory");
 
-    copy_directory_contents(&preimages, &dest_dir);
+    copy_directory_contents(&preimages, &dest_dir).expect("Failed to copy directory contents.");
 
     // Return address
     output_result
@@ -215,8 +211,7 @@ fn originate_rollup(client: &str, kernel: &str, rollup_node_dir: &PathBuf, preim
 pub fn start_rollup_node(client: &str, kernel: &str, preimages: &str, rollup_node: &str, rollup_node_dir: &PathBuf, log_dir: &PathBuf, rx: Receiver<&str>) {
     let output = originate_rollup(client, kernel, rollup_node_dir, &PathBuf::from(preimages), rx);
 
-    let mut cfg = Config::default();
-    cfg.load_from_file();
+    let cfg = Config::load_from_file().expect("Failed to load the config.");
 
     println!("Originating rollup");
 
@@ -234,8 +229,7 @@ pub fn start_rollup_node(client: &str, kernel: &str, preimages: &str, rollup_nod
     let handle = thread::spawn({
             move || {
                 thread::sleep(Duration::from_secs(1));
-                let mut cfg = Config::default();
-                cfg.load_from_file();
+                let mut cfg = Config::load_from_file().expect("Failed to load the config.");
                 println!("Deploying bridge:");
                 deploy_bridge(address, &cfg);
             }

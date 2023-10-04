@@ -11,7 +11,6 @@ mod utils;
 mod sandbox_initializer;
 
 pub fn main(){
-    let mut cfg = Config::default();
-    cfg.load_from_file();
+    let mut cfg = Config::load_from_file().expect("Failed to load the config.");
     sandbox_start(&mut cfg);
 }

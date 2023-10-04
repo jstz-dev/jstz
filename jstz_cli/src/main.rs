@@ -23,11 +23,6 @@ use config::Config;
 
 use tokio::io::{BufReader, AsyncBufReadExt};
 
-use jstz_proto::operation::RunContract;
-use jstz_proto::operation::DeployContract;
-use jstz_proto::operation::CallContract;
-use jstz_proto::operation::external::Deposit;
-
 use std::process::{Command, Child, Stdio};
 use std::fs::File;
 
@@ -84,9 +79,6 @@ enum JstzCommand {
     },
     /// Run a contract using a specified URL.
     Run {
-        /// Referer
-        #[arg(value_name = "REFERER")]
-        referer: String,
         /// The URL containing the contract's address or alias.
         #[arg(value_name = "URL")]
         url: String,
@@ -125,7 +117,7 @@ fn main() {
 
     let cli = JstzCli::parse();
 
-    let cfg = match Config::load_from_file() {
+    let mut cfg = match Config::load_from_file() {
         Ok(cfg) => cfg,
         Err(e) => {
             eprintln!("Failed to load the config file: {}", e);
