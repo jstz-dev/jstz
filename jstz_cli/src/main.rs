@@ -1,12 +1,12 @@
 use clap::{Parser, Subcommand};
 
-mod deposit;
 mod deploy_bridge;
 mod deploy_contract;
+mod deposit;
 mod run_contract;
 mod sandbox;
 //mod repl;
-mod config; 
+mod config;
 mod sandbox_initializer;
 mod utils;
 
@@ -19,8 +19,8 @@ use std::env;
 //use crate::sandbox::repl;
 use config::Config;
 
-use std::process::Command;
 use std::fs::File;
+use std::process::Command;
 
 #[derive(Parser)]
 #[command(author, version)]
@@ -65,13 +65,13 @@ enum JstzCommand {
     DeployContract {
         /// Contract address when executing the contract.
         #[arg(short, long)]
-        self_address: String, 
+        self_address: String,
         /// Contract code.
         #[arg(short, long)]
-        contract_code: String, 
+        contract_code: String,
         /// Initial balance
         #[arg(short, long)]
-        balance: u64
+        balance: u64,
     },
     /// Run a contract using a specified URL.
     Run {
@@ -127,7 +127,8 @@ fn main() {
                 println!("Starting the jstz sandbox...");
                 File::create("sandbox_config.json").expect("Failed to create a file.");
                 Command::new("../target/debug/sandbox_process")
-                    .spawn().expect("Failed to start the sandbox.");
+                    .spawn()
+                    .expect("Failed to start the sandbox.");
             }
             SandboxCommand::Stop => {
                 println!("Stopping the jstz sandbox...");
@@ -151,7 +152,7 @@ fn main() {
             }
 
             deposit(from, to, amount, &cfg);
-        },
+        }
         /*JstzCommand::DeployBridge { mut script, name } => {
             println!("Deploying script {} with alias {}", script, name);
 
@@ -161,13 +162,20 @@ fn main() {
             }
             deploy_bridge(script, &cfg);
         },*/
-        JstzCommand::DeployContract { mut self_address, contract_code, balance} => {
+        JstzCommand::DeployContract {
+            mut self_address,
+            contract_code,
+            balance,
+        } => {
             if let Some(alias) = cfg.get_name_alias(&self_address) {
-                println!("Using alias for {} instead of self_address: {}", self_address, alias);
+                println!(
+                    "Using alias for {} instead of self_address: {}",
+                    self_address, alias
+                );
                 self_address = alias;
             }
             deploy_contract(self_address, contract_code, balance, &cfg);
-        },
+        }
         JstzCommand::Run {
             url,
             referrer,
@@ -189,7 +197,7 @@ fn main() {
                 println!("Starting REPL without a self address");
                 //repl()
             }
-        },
+        }
         JstzCommand::ViewConsole => {}
     }
 

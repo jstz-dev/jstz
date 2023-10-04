@@ -5,7 +5,7 @@ use crate::utils::handle_output;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 
 use http::Method;
-use jstz_kernel::inbox::{Transaction, ExternalMessage};
+use jstz_kernel::inbox::{ExternalMessage, Transaction};
 
 pub fn run_contract(
     referrer: String,

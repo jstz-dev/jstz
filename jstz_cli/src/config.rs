@@ -81,11 +81,11 @@ impl Config {
 
     // // Getter and setter for octez_client_dir
     pub fn get_octez_client_dir(&self) -> &String {
-         &self.octez_client_dir
+        &self.octez_client_dir
     }
 
     pub fn set_octez_client_dir(&mut self, value: String) {
-         self.octez_client_dir = value;
+        self.octez_client_dir = value;
     }
 
     // // Getter and setter for rpc

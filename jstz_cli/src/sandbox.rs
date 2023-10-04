@@ -1,17 +1,17 @@
-use std::process;
-use std::env;
-use std::path::PathBuf;
-use std::fs;
-use std::path::Path;
-use std::thread;
-use std::sync::mpsc;
 use crate::config::Config;
 use nix::sys::signal::{kill, Signal};
 use nix::unistd::Pid;
+use std::env;
+use std::fs;
+use std::path::Path;
+use std::path::PathBuf;
+use std::process;
+use std::sync::mpsc;
+use std::thread;
 
 use crate::sandbox_initializer::init_sandboxed_client;
-use crate::sandbox_initializer::start_sandboxed_node;
 use crate::sandbox_initializer::start_rollup_node;
+use crate::sandbox_initializer::start_sandboxed_node;
 
 fn ensure_empty_directory(dir_path: &str) -> std::io::Result<()> {
     if Path::new(dir_path).exists() {
@@ -29,7 +29,6 @@ pub fn sandbox_start(cfg: &mut Config) {
             println!("Error getting current directory: {}", e);
         }
     }
-
 
     // Check if sandbox is already running
     if cfg.get_is_sandbox_running() {
@@ -60,9 +59,17 @@ pub fn sandbox_start(cfg: &mut Config) {
         println!("The octez client file does not exists.");
     }
 
-    let client = format!("{}/octez-client -base-dir {} -endpoint http://127.0.0.1:{}", root_dir.to_str().unwrap(), client_dir, rpc);
+    let client = format!(
+        "{}/octez-client -base-dir {} -endpoint http://127.0.0.1:{}",
+        root_dir.to_str().unwrap(),
+        client_dir,
+        rpc
+    );
 
-    let kernel = format!("{}/kernel/jstz_kernel_installer.hex", target_dir.to_str().unwrap());
+    let kernel = format!(
+        "{}/kernel/jstz_kernel_installer.hex",
+        target_dir.to_str().unwrap()
+    );
     let preimages = format!("{}/kernel/preimages", target_dir.to_str().unwrap());
 
     fs::create_dir_all(&log_dir).expect("Failed to create log directory");
@@ -73,13 +80,19 @@ pub fn sandbox_start(cfg: &mut Config) {
 
     // Start the sandboxed node using the CLI
 
-    let (tx, rx):(mpsc::Sender<&str>, mpsc::Receiver<&str>) = mpsc::channel();
-    let (tx_node_pid, rx_node_pid):(mpsc::Sender<u32>, mpsc::Receiver<u32>) = mpsc::channel();
+    let (tx, rx): (mpsc::Sender<&str>, mpsc::Receiver<&str>) = mpsc::channel();
+    let (tx_node_pid, rx_node_pid): (mpsc::Sender<u32>, mpsc::Receiver<u32>) =
+        mpsc::channel();
 
     let handle1 = thread::spawn({
         let script_dir_clone = script_dir.clone();
         move || {
-            let child = start_sandboxed_node(&PathBuf::from(&node_dir), port, rpc, &PathBuf::from(&script_dir_clone.to_str().unwrap()));
+            let child = start_sandboxed_node(
+                &PathBuf::from(&node_dir),
+                port,
+                rpc,
+                &PathBuf::from(&script_dir_clone.to_str().unwrap()),
+            );
             tx_node_pid.send(child.unwrap().id()).unwrap();
         }
     });
@@ -91,7 +104,13 @@ pub fn sandbox_start(cfg: &mut Config) {
 
     // Start the rollup node using the CLI
     let handle3 = thread::spawn(move || {
-        start_rollup_node(&kernel, &preimages, &PathBuf::from(&rollup_node_dir), &PathBuf::from(&log_dir.to_str().unwrap()), rx)
+        start_rollup_node(
+            &kernel,
+            &preimages,
+            &PathBuf::from(&rollup_node_dir),
+            &PathBuf::from(&log_dir.to_str().unwrap()),
+            rx,
+        )
     });
 
     //Save sandboxed node pid
