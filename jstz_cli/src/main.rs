@@ -79,9 +79,6 @@ enum JstzCommand {
     },
     /// Run a contract using a specified URL.
     Run {
-        /// Referer
-        #[arg(value_name = "REFERER")]
-        referer: String,
         /// The URL containing the contract's address or alias.
         #[arg(value_name = "URL")]
         url: String,
