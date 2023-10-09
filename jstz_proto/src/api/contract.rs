@@ -1,16 +1,13 @@
-use std::ops::DerefMut;
-
 use boa_engine::{
     js_string,
-    object::{builtins::JsPromise, Object, ObjectInitializer},
+    object::{builtins::JsPromise, ObjectInitializer},
     property::Attribute,
     Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
 };
+
 use jstz_api::http::request::Request;
-use jstz_core::{
-    host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
-    value::IntoJs,
-};
+use jstz_core::{api::Jstz, with_jstz};
+use jstz_core::{host::HostRuntime, native::JsNativeObject, value::IntoJs};
 
 use crate::{
     context::account::{Account, Address, Amount},
@@ -19,64 +16,41 @@ use crate::{
     receipt, Error, Result,
 };
 
-use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
-struct Contract {
-    contract_address: Address,
-}
-impl Finalize for Contract {}
-
-unsafe impl Trace for Contract {
-    empty_trace!();
-}
+use boa_gc::{Finalize, Trace};
+#[derive(Trace, Finalize)]
+struct Contract;
 
 impl Contract {
-    fn from_js_value<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
-        value
-            .as_object()
-            .and_then(|obj| obj.downcast_mut::<Self>())
-            .ok_or_else(|| {
-                JsNativeError::typ()
-                    .with_message("Failed to convert js value into rust type `Ledger`")
-                    .into()
-            })
-    }
-
     fn create(
-        &self,
+        jstz: &mut Jstz,
         hrt: &impl HostRuntime,
-        tx: &mut Transaction,
         contract_code: String,
         initial_balance: Amount,
     ) -> Result<String> {
+        let addr = jstz.self_address().clone();
+        let tx = jstz.transaction_mut();
         // 1. Check if the contract has sufficient balance
-        if Account::balance(hrt, tx, &self.contract_address)? < initial_balance {
+        if Account::balance(hrt, tx, &addr)? < initial_balance {
             return Err(Error::BalanceOverflow.into());
         }
 
         // 2. Deploy the contract
         let contract = ContractOrigination {
             contract_code,
-            originating_address: self.contract_address.clone(),
+            originating_address: addr.clone(),
             initial_balance,
         };
         let receipt::DeployContract { contract_address } =
             crate::executor::deploy_contract(hrt, tx, contract)?;
 
         // 3. Transfer the balance to the contract
-        Account::transfer(
-            hrt,
-            tx,
-            &self.contract_address,
-            &contract_address,
-            initial_balance,
-        )?;
+        Account::transfer(hrt, tx, &addr, &contract_address, initial_balance)?;
 
         Ok(contract_address.to_string())
     }
 
     fn call(
-        &self,
-        tx: &mut Transaction,
+        jstz: &Jstz,
         request: &JsNativeObject<Request>,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
@@ -91,42 +65,76 @@ impl Contract {
             })?;
 
         // 2. Set the referer of the request to the current contract address
-        headers::test_and_set_referrer(&request.deref(), &self.contract_address)?;
+        headers::test_and_set_referrer(&request.deref(), &jstz.self_address())?;
 
         // 3. Load, init and run!
-        Script::load_init_run(tx, &address, request.inner(), context)
+        Script::load_init_run(
+            jstz.contract_call_data(&address),
+            &request.inner(),
+            context,
+        )
     }
 }
 
-pub struct ContractApi {
-    pub contract_address: Address,
-}
+pub struct Api;
 
-impl ContractApi {
+impl Api {
     const NAME: &'static str = "Contract";
 
     fn call(
-        this: &JsValue,
+        _this: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        host_defined!(context, host_defined);
-        let mut tx = host_defined
-            .get_mut::<Transaction>()
-            .expect("Curent transaction undefined");
-
-        let contract = Contract::from_js_value(this)?;
         let request: JsNativeObject<Request> =
             args.get_or_undefined(0).clone().try_into()?;
 
-        contract.call(tx.deref_mut(), &request, context)
+        with_jstz!(context, [Contract::call](&jstz, &request, context))
     }
-
     fn create(
-        this: &JsValue,
+        _this: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        let contract_code: String = args
+            .get(0)
+            .ok_or_else(|| {
+                JsNativeError::typ()
+                    .with_message("Expected at least 1 argument but 0 provided")
+            })?
+            .try_js_into(context)?;
+        let initial_balance = match args.get(1) {
+            None => 0,
+            Some(balance) => balance
+                .to_big_uint64(context)?
+                .iter_u64_digits()
+                .next()
+                .unwrap_or_default(),
+        };
+        let promise = JsPromise::new(
+            move |resolvers, context| {
+                let address = with_jstz!(
+                    context,
+                    [Contract::create](
+                        &mut jstz,
+                        &mut hrt,
+                        contract_code,
+                        initial_balance
+                    )
+                )?;
+                resolvers.resolve.call(
+                    &JsValue::Undefined,
+                    &[address.into_js(context)],
+                    context,
+                )?;
+                Ok(JsValue::Undefined)
+            },
+            context,
+        )?;
+        Ok(promise.into())
+        //        Ok()
+    }
+    /*
         host_defined!(context, host_defined);
         let mut tx = host_defined.get_mut::<Transaction>().unwrap();
 
@@ -139,14 +147,6 @@ impl ContractApi {
             })?
             .try_js_into(context)?;
 
-        let initial_balance = match args.get(1) {
-            None => 0,
-            Some(balance) => balance
-                .to_big_uint64(context)?
-                .iter_u64_digits()
-                .next()
-                .unwrap_or_default(),
-        };
 
         let promise = JsPromise::new(
             move |resolvers, context| {
@@ -166,28 +166,23 @@ impl ContractApi {
 
         Ok(promise.into())
     }
+    */
 }
 
-impl jstz_core::Api for ContractApi {
-    fn init(self, context: &mut Context<'_>) {
-        let contract = ObjectInitializer::with_native(
-            Contract {
-                contract_address: self.contract_address,
-            },
-            context,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::call),
-            js_string!("call"),
-            2,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::create),
-            js_string!("create"),
-            1,
-        )
-        .build();
-
+impl jstz_core::GlobalApi for Api {
+    fn init(context: &mut Context) {
+        let contract = ObjectInitializer::with_native(Contract, context)
+            .function(
+                NativeFunction::from_fn_ptr(Self::call),
+                js_string!("call"),
+                1,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::create),
+                js_string!("create"),
+                1,
+            )
+            .build();
         context
             .register_global_property(js_string!(Self::NAME), contract, Attribute::all())
             .expect("The contract object shouldn't exist yet")

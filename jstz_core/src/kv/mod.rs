@@ -76,6 +76,7 @@ impl Storage {
     where
         V: Value + ?Sized,
     {
+        rt.write_debug(&format!("[🟢] committing {key}\n"));
         rt.store_write(key, &value::serialize(value), 0)?;
         Ok(())
     }

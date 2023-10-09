@@ -118,6 +118,7 @@ impl Realm {
         register_global_class::<T>(context)
     }
 
+    // TODO deprecate
     pub fn register_api<T: Api>(&self, api: T, context: &mut Context<'_>) {
         let context = &mut self.context_handle(context);
         api.init(context)
