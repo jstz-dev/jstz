@@ -1154,6 +1154,7 @@ dependencies = [
  "derive_more",
  "erased-serde",
  "getrandom",
+ "jstz_crypto",
  "serde",
  "tezos-smart-rollup-host",
 ]

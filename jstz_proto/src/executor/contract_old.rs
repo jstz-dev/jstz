@@ -1,7 +1,6 @@
 use std::io::Read;
 
 use boa_engine::{
-    js_string,
     object::{builtins::JsPromise, FunctionObjectBuilder},
     Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
 };
@@ -11,7 +10,6 @@ use jstz_api::http::request::Request;
 use jstz_api::http::{body::HttpBody, request::RequestClass, response::Response};
 use jstz_core::native::JsNativeObject;
 use jstz_core::{
-    api::JstzData,
     host::HostRuntime,
     host_defined,
     kv::{Kv, Transaction},
@@ -30,28 +28,7 @@ pub mod headers {
 
     use super::*;
     pub const REFERRER: &str = "Referer";
-    pub const ORIGIN: &str = "Origin";
 
-    pub fn test_and_set_call_headers(
-        request: &Request,
-        contract_data: &JstzData,
-    ) -> JsResult<()> {
-        if request.headers().deref().contains_key(REFERRER) {
-            return Err(JsError::from_native(
-                JsNativeError::error().with_message("Referer already set"),
-            ));
-        }
-        if request.headers().deref().contains_key(ORIGIN) {
-            return Err(JsError::from_native(
-                JsNativeError::error().with_message("Origin already set"),
-            ));
-        }
-
-        let mut headers = request.headers().deref_mut();
-        headers.set(REFERRER, &contract_data.calling_address.to_base58())?;
-        headers.set(ORIGIN, &contract_data.origin_address.to_base58())?;
-        Ok(())
-    }
     pub fn test_and_set_referrer(request: &Request, referer: &Address) -> JsResult<()> {
         if request.headers().deref().contains_key(REFERRER) {
             return Err(JsError::from_native(
@@ -77,7 +54,7 @@ fn on_success(
             promise
                 .then(
                     Some(
-                        FunctionObjectBuilder::new(context.realm(), unsafe {
+                        FunctionObjectBuilder::new(context, unsafe {
                             NativeFunction::from_closure(move |_, args, context| {
                                 f(context);
                                 Ok(args.get_or_undefined(0).clone())
@@ -108,50 +85,9 @@ fn register_web_apis(realm: &Realm, context: &mut Context<'_>) {
 #[derive(Debug, PartialEq, Eq, Clone, Deref, DerefMut, Trace, Finalize)]
 pub struct Script(Module);
 
-/*
- * Internal
- * 1. extract contract data
- * 2. add referer
- * 3. load script
- * 4. initialize & register apis
- * 5. run
- *
- * External
- * 1. create runtime (with some apis)
- * 2. extract address
- * 3. deserialise request
- * 4. create Js Request
- * 5. set referer
- * 6. load_init_run
- *
- *
- * Internal
- * 1. extract contract data
- *
- * 2. load script
- * 3. initialize and register
- *
- * 4. set referer
- * 5. run
- *
- * External
- * 1. deserialize request
- * 2. extract address
- *
- * 3. create contract data
- * 4. load script
- * 5. initialize and register
- *
- * 6. create Js request
- *
- * 7. set referer
- * 8. run
- *
- */
-
 impl Script {
     fn get_default_export(&self, context: &mut Context<'_>) -> JsResult<JsValue> {
-        self.namespace(context).get(js_string!("default"), context)
+        self.namespace(context).get("default", context)
     }
 
     fn invoke_handler(
@@ -173,11 +109,10 @@ impl Script {
     }
 
     pub fn load(
-        contract_parameters: &mut JstzData,
+        tx: &mut Transaction,
+        address: &Address,
         context: &mut Context<'_>,
     ) -> Result<Self> {
-        let tx = &mut contract_parameters.transaction;
-        let address = &contract_parameters.self_address;
         let src = with_global_host(|hrt| {
             Account::contract_code(hrt, tx, address)?.ok_or(Error::InvalidAddress)
         })?;
@@ -196,13 +131,8 @@ impl Script {
         Ok(Self(module))
     }
 
-    fn register_apis(&self, contract_data: JstzData, context: &mut Context<'_>) {
+    fn register_apis(&self, contract_address: Address, context: &mut Context<'_>) {
         register_web_apis(self.realm(), context);
-        // TODO: clones address for old api
-        let contract_address = contract_data.self_address.clone();
-        crate::api::initialize_apis(contract_data, self.realm(), context);
-
-        // TODO remove once migrated
         self.realm().register_api(
             jstz_api::KvApi {
                 contract_address: contract_address.clone(),
@@ -215,24 +145,28 @@ impl Script {
             },
             context,
         );
+        self.realm()
+            .register_api(api::ContractApi { contract_address }, context);
     }
 
     /// Initialize the script, registering all associated runtime APIs
     /// and evaluating the module of the script
     pub fn init(
         &self,
-        contract_data: JstzData,
+        contract_address: Address,
         context: &mut Context<'_>,
     ) -> JsResult<JsPromise> {
-        self.register_apis(contract_data, context);
+        self.register_apis(contract_address, context);
+
         self.realm().eval_module(&self, context)
     }
 
-    pub fn run(&self, args: &[JsValue], context: &mut Context<'_>) -> JsResult<JsValue> {
-        // 1. Extract the context from the realm
+    /// Runs the script
+    pub fn run(&self, request: &JsValue, context: &mut Context<'_>) -> JsResult<JsValue> {
         let context = &mut self.realm().context_handle(context);
 
-        // TODO: remove: this is now in register api's for the Jstz object
+        // 1. Register `Kv` and `Transaction` objects in `HostDefined`
+        // FIXME: `Kv` and `Transaction` should be externally provided
         {
             host_defined!(context, mut host_defined);
 
@@ -244,70 +178,54 @@ impl Script {
         }
 
         // 2. Invoke the script's handler
-        let result = self.invoke_handler(&JsValue::undefined(), args, context)?;
+        let result =
+            self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)?;
 
-        // 3. Ensure the transaction is committed
+        // 3. Ensure that the transaction is committed
         let result = on_success(
             result,
             |context| {
+                host_defined!(context, mut host_defined);
+
                 runtime::with_global_host(|rt| {
-                    if let Some(JstzData {
-                        transaction,
-                        mut kv_store,
-                        ..
-                    }) = JstzData::remove_from_context(context)
-                    //                            .expect("Rust type `JstzData` should be defined in `HostDefined`");
-                    {
-                        rt.write_debug("[🟢] Committing contract");
-                        kv_store
-                            .commit_transaction(rt, transaction)
-                            .expect("Failed to commit transaction");
-                    } else {
-                        rt.write_debug("[🔴] Rust type `JstzData` should be defined in `HostDefined`\n");
-                    }
-                    {
-                        // TODO: remove this when API's are migrated
-                        host_defined!(context, mut host_defined);
-                        let mut kv = host_defined
-                            .remove::<Kv>()
-                            .expect("Rust type `Kv` should be defined in `HostDefined`");
+                    let mut kv = host_defined
+                        .remove::<Kv>()
+                        .expect("Rust type `Kv` should be defined in `HostDefined`");
 
-                        let tx = host_defined.remove::<Transaction>().expect(
-                            "Rust type `Transaction` should be defined in `HostDefined`",
-                        );
+                    let tx = host_defined.remove::<Transaction>().expect(
+                        "Rust type `Transaction` should be defined in `HostDefined`",
+                    );
 
-                        kv.commit_transaction(rt, *tx)
-                            .expect("Failed to commit transaction");
-                    }
+                    kv.commit_transaction(rt, *tx)
+                        .expect("Failed to commit transaction");
                 })
             },
             context,
         );
+
         Ok(result)
     }
 
     /// Loads, initializes and runs the script
-    /// We do not check that the argument is a valid request object
     pub fn load_init_run(
-        mut contract_parameters: JstzData,
-        arg: &JsValue,
+        tx: &mut Transaction,
+        address: &Address,
+        request: &JsValue,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        // 2. Load script
-        let script = Script::load(&mut contract_parameters, context)?;
+        // 1. Load script
+        let script = Script::load(tx, address, context)?;
 
-        // 1. Load Apis and evaluate the script's module
-        let script_promise = script.init(contract_parameters, context)?;
+        // 2. Evaluate the script's module
+        let script_promise = script.init(address.clone(), context)?;
 
         // 3. Once evaluated, call the script's handler
         let result = script_promise.then(
             Some(
-                FunctionObjectBuilder::new(context.realm(), unsafe {
+                FunctionObjectBuilder::new(context, unsafe {
                     NativeFunction::from_closure_with_captures(
-                        |_, _, (script, arg), context| {
-                            script.run(&[arg.clone()], context)
-                        },
-                        (script, arg.clone()),
+                        |_, _, (script, request), context| script.run(request, context),
+                        (script, request.clone()),
                     )
                 })
                 .build(),
@@ -340,7 +258,7 @@ pub mod run {
 
     pub fn execute(
         hrt: &mut (impl HostRuntime + 'static),
-        _tx: &mut Transaction,
+        tx: &mut Transaction,
         source: &Address,
         run: operation::RunContract,
     ) -> Result<receipt::RunContract> {
@@ -360,36 +278,25 @@ pub mod run {
 
         // 3. Deserialize request
         let http_request = create_http_request(uri, method, headers, body);
+
         let request = JsNativeObject::new::<RequestClass>(
             Request::from_http_request(http_request, rt)?,
             rt,
         )?;
 
-        // 4. create the contract parameters
-        let kv_store = Kv::new();
-        let transaction = kv_store.begin_transaction();
-        let contract_parameters = JstzData {
-            self_address: address,
-            calling_address: source.clone(),
-            origin_address: source.clone(),
-            kv_store,
-            transaction,
-        };
+        // 4. Set referer as the source address of the operation
+        headers::test_and_set_referrer(&request.deref(), source)?;
 
-        // 5. Set referrer and origin headers
-        headers::test_and_set_call_headers(&request.deref(), &contract_parameters)?;
-
-        // 6. Run :)
+        // 5. Run :)
         let result: JsValue = runtime::with_host_runtime(hrt, || {
             jstz_core::future::block_on(async move {
-                let result =
-                    Script::load_init_run(contract_parameters, request.inner(), rt)?;
+                let result = Script::load_init_run(tx, &address, request.inner(), rt)?;
 
                 rt.resolve_value(&result).await
             })
         })?;
 
-        // 7. Serialize response
+        // 6. Serialize response
         let response = Response::try_from_js(&result)?;
 
         let (http_parts, body) = Response::to_http_response(&response).into_parts();

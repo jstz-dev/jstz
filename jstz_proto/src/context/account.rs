@@ -8,6 +8,7 @@ use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 
+// TODO move to jstz_core or jstz_crypto?
 pub type Address = PublicKeyHash;
 
 pub type Amount = u64;
