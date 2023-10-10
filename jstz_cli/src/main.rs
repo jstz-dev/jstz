@@ -1,23 +1,23 @@
 use clap::{Parser, Subcommand};
 
+mod config;
 mod deploy_bridge;
 mod deploy_contract;
 mod deposit;
+mod repl;
 mod run_contract;
 mod sandbox;
-//mod repl;
-mod config;
 mod sandbox_initializer;
 mod utils;
 
 use deposit::deposit;
 //use crate::deploy_bridge::deploy_bridge;
+use crate::repl::repl;
+use config::Config;
 use deploy_contract::deploy_contract;
 use run_contract::run_contract;
 use sandbox::sandbox_stop;
 use std::env;
-//use crate::sandbox::repl;
-use config::Config;
 
 use std::fs::File;
 use std::process::Command;
@@ -94,7 +94,19 @@ enum JstzCommand {
         #[arg(short, long)]
         self_address: Option<String>,
     },
-    ViewConsole,
+    /*ViewConsole {
+        /// Specify log symbols to filter for.
+        #[clap(long, use_value_delimiter(true), value_delimiter(","))]
+        log_levels: Vec<String>,
+
+        /// Specify a custom symbol to filter for.
+        #[clap(long)]
+        custom_filter: Option<String>,
+
+        /// Path to the log file.
+        #[clap(long)]
+        log_file_path: String,
+    },*/
 }
 
 #[derive(Subcommand)]
@@ -190,15 +202,16 @@ fn main() {
             run_contract(referrer, url, http_method, json_data, &cfg);
         }
         JstzCommand::Repl { self_address } => {
-            if let Some(address) = self_address {
+            if let Some(address) = self_address.clone() {
                 println!("Starting REPL with self address: {}", address);
-                //repl(address)
+                repl(self_address)
             } else {
                 println!("Starting REPL without a self address");
-                //repl()
+                repl(self_address);
             }
-        }
-        JstzCommand::ViewConsole => {}
+        } /*JstzCommand::ViewConsole {log_levels, custom_filter, log_file_path} => {
+              //filter_logs(log_levels, custom_filter, log_file_path);
+          }*/
     }
 
     if let Err(e) = cfg.save_to_file() {

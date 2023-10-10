@@ -72,6 +72,17 @@ pub fn sandbox_start(cfg: &mut Config) {
     );
     let preimages = format!("{}/kernel/preimages", target_dir.to_str().unwrap());
 
+    // Check if the file exists before trying to remove it
+    if PathBuf::from(&kernel).exists() {
+        fs::remove_file(&kernel)
+            .expect("Failed to remove jstz_kernel_installer.hex file.");
+    }
+
+    // Check if the directory exists before trying to remove it
+    if PathBuf::from(&preimages).exists() {
+        fs::remove_dir_all(&preimages).expect("Failed to remove preimages subdirectory.");
+    }
+
     fs::create_dir_all(&log_dir).expect("Failed to create log directory");
 
     cfg.add_pid(process::id());
