@@ -10,7 +10,7 @@ make build-deps
 make build
 ```
 
-See [installing Octez](/CONTRIBUTING.md#installing-octez-🐙) for installing the necessary dependencies for running `jstz`.
+See [installing Octez](/CONTRIBUTING.md#installing-octez-) for installing the necessary dependencies for running `jstz`.
 
 ## Quick Start
 
