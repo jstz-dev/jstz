@@ -15,6 +15,7 @@ export default defineConfig({
       },
     ],
   ],
+  base: "/jstz/",
   themeConfig: {
     search: {
       provider: "local",
