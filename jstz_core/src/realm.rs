@@ -7,7 +7,8 @@ use std::{
 
 pub use boa_engine::realm;
 use boa_engine::{
-    object::{builtins::JsPromise, shape::RootShape, NativeObject, ObjectInitializer},
+    js_string,
+    object::{builtins::JsPromise, NativeObject, ObjectInitializer},
     property::Attribute,
     Context, JsObject, JsResult, JsValue, Source,
 };
@@ -15,7 +16,6 @@ use boa_gc::{empty_trace, Finalize, GcRef, GcRefCell, GcRefMut, Trace};
 use derive_more::{Deref, DerefMut, From};
 
 use crate::{
-    host,
     native::{register_global_class, NativeClass},
     Api,
 };
@@ -256,7 +256,10 @@ macro_rules! host_defined {
     ($context:expr, $host_defined:ident) => {
         let host_defined_binding = $context
             .global_object()
-            .get($crate::realm::HostDefined::NAME, $context)
+            .get(
+                ::boa_engine::js_string!($crate::realm::HostDefined::NAME),
+                $context,
+            )
             .expect(&format!(
                 "{:?} should be defined",
                 $crate::realm::HostDefined::NAME
@@ -271,7 +274,10 @@ macro_rules! host_defined {
     ($context:expr, mut $host_defined:ident) => {
         let host_defined_binding = $context
             .global_object()
-            .get($crate::realm::HostDefined::NAME, $context)
+            .get(
+                ::boa_engine::js_string!($crate::realm::HostDefined::NAME),
+                $context,
+            )
             .expect(&format!(
                 "{:?} should be defined",
                 $crate::realm::HostDefined::NAME
@@ -292,7 +298,11 @@ impl HostDefined {
         let host_defined = ObjectInitializer::with_native(self, context).build();
 
         context
-            .register_global_property(Self::NAME, host_defined, Attribute::all())
+            .register_global_property(
+                js_string!(Self::NAME),
+                host_defined,
+                Attribute::all(),
+            )
             .expect(&format!(
                 "{:?} object should only be defined once",
                 Self::NAME
@@ -304,11 +314,7 @@ impl Realm {
     pub fn new(context: &mut Context<'_>) -> JsResult<Self> {
         // 1. Create `boa_engine` realm with defined host hooks
         let realm = Self {
-            inner: realm::Realm::create_with_default_global_bindings(
-                host::HOOKS,
-                &RootShape::default(),
-                context,
-            )?,
+            inner: context.create_realm()?,
         };
 
         // 2. Initialize `HostDefined`

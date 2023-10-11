@@ -16,6 +16,7 @@ use std::str::FromStr;
 
 use boa_engine::{
     builtins::{self},
+    js_string,
     object::{builtins::JsArray, Object},
     value::TryFromJs,
     Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue,
@@ -405,18 +406,30 @@ impl NativeClass for HeadersClass {
     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
         class
             .method(
-                "append",
+                js_string!("append"),
                 2,
                 NativeFunction::from_fn_ptr(HeadersClass::append),
             )
             .method(
-                "delete",
+                js_string!("delete"),
                 1,
                 NativeFunction::from_fn_ptr(HeadersClass::delete),
             )
-            .method("get", 1, NativeFunction::from_fn_ptr(HeadersClass::get))
-            .method("has", 1, NativeFunction::from_fn_ptr(HeadersClass::has))
-            .method("set", 2, NativeFunction::from_fn_ptr(HeadersClass::set));
+            .method(
+                js_string!("get"),
+                1,
+                NativeFunction::from_fn_ptr(HeadersClass::get),
+            )
+            .method(
+                js_string!("has"),
+                1,
+                NativeFunction::from_fn_ptr(HeadersClass::has),
+            )
+            .method(
+                js_string!("set"),
+                2,
+                NativeFunction::from_fn_ptr(HeadersClass::set),
+            );
 
         Ok(())
     }

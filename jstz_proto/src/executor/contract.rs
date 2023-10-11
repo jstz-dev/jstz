@@ -1,6 +1,7 @@
 use std::io::Read;
 
 use boa_engine::{
+    js_string,
     object::{builtins::JsPromise, FunctionObjectBuilder},
     Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
 };
@@ -54,7 +55,7 @@ fn on_success(
             promise
                 .then(
                     Some(
-                        FunctionObjectBuilder::new(context, unsafe {
+                        FunctionObjectBuilder::new(context.realm(), unsafe {
                             NativeFunction::from_closure(move |_, args, context| {
                                 f(context);
                                 Ok(args.get_or_undefined(0).clone())
@@ -87,7 +88,7 @@ pub struct Script(Module);
 
 impl Script {
     fn get_default_export(&self, context: &mut Context<'_>) -> JsResult<JsValue> {
-        self.namespace(context).get("default", context)
+        self.namespace(context).get(js_string!("default"), context)
     }
 
     fn invoke_handler(
@@ -222,7 +223,7 @@ impl Script {
         // 3. Once evaluated, call the script's handler
         let result = script_promise.then(
             Some(
-                FunctionObjectBuilder::new(context, unsafe {
+                FunctionObjectBuilder::new(context.realm(), unsafe {
                     NativeFunction::from_closure_with_captures(
                         |_, _, (script, request), context| script.run(request, context),
                         (script, request.clone()),

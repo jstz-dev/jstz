@@ -9,6 +9,7 @@
 use std::str::FromStr;
 
 use boa_engine::{
+    js_string,
     object::{builtins::JsPromise, Object},
     property::Attribute,
     value::TryFromJs,
@@ -445,10 +446,10 @@ impl ResponseClass {
             context,
             Response,
             "url",
-            get:((response, _context) => {
+            get:((response, context) => {
                 match response.url() {
                     None => Ok(JsValue::null()),
-                    Some(url) => Ok(url.to_string().into()),
+                    Some(url) => Ok(url.to_string().into_js(context)),
                 }
             })
         )
@@ -500,14 +501,16 @@ impl TryFromJs for ResponseOptions {
             JsError::from_native(JsNativeError::typ().with_message("Expected `JsObject`"))
         })?;
 
-        let status: u16 = if obj.has_property("status", context)? {
-            obj.get("status", context)?.try_js_into(context)?
+        let status: u16 = if obj.has_property(js_string!("status"), context)? {
+            obj.get(js_string!("status"), context)?
+                .try_js_into(context)?
         } else {
             200
         };
 
-        let headers: Headers = if obj.has_property("headers", context)? {
-            obj.get("headers", context)?.try_js_into(context)?
+        let headers: Headers = if obj.has_property(js_string!("headers"), context)? {
+            obj.get(js_string!("headers"), context)?
+                .try_js_into(context)?
         } else {
             Default::default()
         };
@@ -549,27 +552,43 @@ impl NativeClass for ResponseClass {
         let body_used = Self::body_used(class.context());
 
         class
-            .static_method("error", 0, NativeFunction::from_fn_ptr(Self::static_error))
             .static_method(
-                "redirect",
+                js_string!("error"),
+                0,
+                NativeFunction::from_fn_ptr(Self::static_error),
+            )
+            .static_method(
+                js_string!("redirect"),
                 1,
                 NativeFunction::from_fn_ptr(Self::static_redirect),
             )
-            .static_method("json", 1, NativeFunction::from_fn_ptr(Self::static_json))
-            .accessor("url", url, Attribute::all())
-            .accessor("redirected", redirected, Attribute::all())
-            .accessor("status", status, Attribute::all())
-            .accessor("ok", ok, Attribute::all())
-            .accessor("statusText", status_text, Attribute::all())
-            .accessor("headers", headers, Attribute::all())
-            .accessor("bodyUsed", body_used, Attribute::all())
+            .static_method(
+                js_string!("json"),
+                1,
+                NativeFunction::from_fn_ptr(Self::static_json),
+            )
+            .accessor(js_string!("url"), url, Attribute::all())
+            .accessor(js_string!("redirected"), redirected, Attribute::all())
+            .accessor(js_string!("status"), status, Attribute::all())
+            .accessor(js_string!("ok"), ok, Attribute::all())
+            .accessor(js_string!("statusText"), status_text, Attribute::all())
+            .accessor(js_string!("headers"), headers, Attribute::all())
+            .accessor(js_string!("bodyUsed"), body_used, Attribute::all())
             .method(
-                "arrayBuffer",
+                js_string!("arrayBuffer"),
                 0,
                 NativeFunction::from_fn_ptr(Self::array_buffer),
             )
-            .method("text", 0, NativeFunction::from_fn_ptr(Self::text))
-            .method("json", 0, NativeFunction::from_fn_ptr(Self::json));
+            .method(
+                js_string!("text"),
+                0,
+                NativeFunction::from_fn_ptr(Self::text),
+            )
+            .method(
+                js_string!("json"),
+                0,
+                NativeFunction::from_fn_ptr(Self::json),
+            );
 
         Ok(())
     }

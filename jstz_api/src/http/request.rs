@@ -9,6 +9,7 @@
 use std::str::FromStr;
 
 use boa_engine::{
+    js_string,
     object::{builtins::JsPromise, Object},
     property::Attribute,
     value::TryFromJs,
@@ -22,6 +23,7 @@ use jstz_core::{
     native::{
         register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
     },
+    value::IntoJs,
 };
 use url::Url;
 
@@ -315,7 +317,7 @@ impl RequestClass {
             context,
             Request,
             "method",
-            get:((request, _context) => Ok(request.method().to_string().into()))
+            get:((request, context) => Ok(request.method().to_string().into_js(context)))
         )
     }
 
@@ -324,7 +326,7 @@ impl RequestClass {
             context,
             Request,
             "url",
-            get:((request, _context) => Ok(request.url().to_string().into()))
+            get:((request, context) => Ok(request.url().to_string().into_js(context)))
         )
     }
 
@@ -402,20 +404,22 @@ impl TryFromJs for RequestOptions {
             JsError::from_native(JsNativeError::typ().with_message("Expected object"))
         })?;
 
-        let method: Method = if obj.has_property("method", context)? {
-            method_try_from_js(&obj.get("method", context)?, context)?
+        let method: Method = if obj.has_property(js_string!("method"), context)? {
+            method_try_from_js(&obj.get(js_string!("method"), context)?, context)?
         } else {
             Default::default()
         };
 
-        let headers: Option<Headers> = if obj.has_property("headers", context)? {
-            obj.get("headers", context)?.try_js_into(context)?
-        } else {
-            Default::default()
-        };
+        let headers: Option<Headers> =
+            if obj.has_property(js_string!("headers"), context)? {
+                obj.get(js_string!("headers"), context)?
+                    .try_js_into(context)?
+            } else {
+                Default::default()
+            };
 
-        let body: BodyWithType = if obj.has_property("body", context)? {
-            obj.get("body", context)?.try_js_into(context)?
+        let body: BodyWithType = if obj.has_property(js_string!("body"), context)? {
+            obj.get(js_string!("body"), context)?.try_js_into(context)?
         } else {
             Default::default()
         };
@@ -455,17 +459,25 @@ impl NativeClass for RequestClass {
         let url = Self::url(class.context());
 
         class
-            .accessor("bodyUsed", body_used, Attribute::all())
-            .accessor("headers", headers, Attribute::all())
-            .accessor("method", method, Attribute::all())
-            .accessor("url", url, Attribute::all())
+            .accessor(js_string!("bodyUsed"), body_used, Attribute::all())
+            .accessor(js_string!("headers"), headers, Attribute::all())
+            .accessor(js_string!("method"), method, Attribute::all())
+            .accessor(js_string!("url"), url, Attribute::all())
             .method(
-                "arrayBuffer",
+                js_string!("arrayBuffer"),
                 0,
                 NativeFunction::from_fn_ptr(Self::array_buffer),
             )
-            .method("json", 0, NativeFunction::from_fn_ptr(Self::json))
-            .method("text", 0, NativeFunction::from_fn_ptr(Self::text));
+            .method(
+                js_string!("json"),
+                0,
+                NativeFunction::from_fn_ptr(Self::json),
+            )
+            .method(
+                js_string!("text"),
+                0,
+                NativeFunction::from_fn_ptr(Self::text),
+            );
 
         Ok(())
     }

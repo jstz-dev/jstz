@@ -12,8 +12,8 @@ mod search_params;
 use std::{cmp::Ordering, ops::Deref};
 
 use boa_engine::{
-    object::Object, property::Attribute, Context, JsArgs, JsError, JsNativeError,
-    JsObject, JsResult, JsValue, NativeFunction,
+    js_string, object::Object, property::Attribute, Context, JsArgs, JsError,
+    JsNativeError, JsObject, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{custom_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{
@@ -340,7 +340,7 @@ impl UrlClass {
             context,
             Url,
             "href",
-            get:((url, _context) => Ok(url.href().into())),
+            get:((url, context) => Ok(url.href().into_js(context))),
             set:((url, href: String, _context) => url.set_href(&href)?)
         )
     }
@@ -350,7 +350,7 @@ impl UrlClass {
             context,
             Url,
             "origin",
-            get:((url, _context) => Ok(url.origin().into()))
+            get:((url, context) => Ok(url.origin().into_js(context)))
         )
     }
 
@@ -369,7 +369,7 @@ impl UrlClass {
             context,
             Url,
             "pathname",
-            get:((url, _context) => Ok(url.pathname().into())),
+            get:((url, context) => Ok(url.pathname().into_js(context))),
             set:((url, path: String, _context) => url.set_pathname(&path)?)
         )
     }
@@ -389,7 +389,7 @@ impl UrlClass {
             context,
             Url,
             "protocol",
-            get:((url, _context) => Ok(url.protocol().into())),
+            get:((url, context) => Ok(url.protocol().into_js(context))),
             set:((url, protocol: String, _context) => url.set_protocol(&protocol)?)
         )
     }
@@ -418,19 +418,19 @@ impl UrlClass {
             context,
             Url,
             "username",
-            get:((url, _context) => Ok(url.username().into())),
-            set:((url, search: String, _context) => url.set_username(&search)?)
+            get:((url, context) => Ok(url.username().into_js(context))),
+            set:((url, search: String, context) => url.set_username(&search)?)
         )
     }
 
     fn to_string(
         this: &JsValue,
         _args: &[JsValue],
-        _context: &mut Context<'_>,
+        context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         let url = Url::try_from_js(this)?;
 
-        Ok(url.href().into())
+        Ok(url.href().into_js(context))
     }
 
     fn to_json(
@@ -484,29 +484,33 @@ impl NativeClass for UrlClass {
         let username = UrlClass::username(class.context());
 
         class
-            .accessor("hash", hash, Attribute::all())
-            .accessor("host", host, Attribute::all())
-            .accessor("hostname", hostname, Attribute::all())
-            .accessor("href", href, Attribute::all())
-            .accessor("origin", origin, Attribute::all())
-            .accessor("password", password, Attribute::all())
-            .accessor("pathname", pathname, Attribute::all())
-            .accessor("port", port, Attribute::all())
-            .accessor("protocol", protocol, Attribute::all())
-            .accessor("search", search, Attribute::all())
-            .accessor("searchParams", search_params, Attribute::all())
-            .accessor("username", username, Attribute::all())
+            .accessor(js_string!("hash"), hash, Attribute::all())
+            .accessor(js_string!("host"), host, Attribute::all())
+            .accessor(js_string!("hostname"), hostname, Attribute::all())
+            .accessor(js_string!("href"), href, Attribute::all())
+            .accessor(js_string!("origin"), origin, Attribute::all())
+            .accessor(js_string!("password"), password, Attribute::all())
+            .accessor(js_string!("pathname"), pathname, Attribute::all())
+            .accessor(js_string!("port"), port, Attribute::all())
+            .accessor(js_string!("protocol"), protocol, Attribute::all())
+            .accessor(js_string!("search"), search, Attribute::all())
+            .accessor(js_string!("searchParams"), search_params, Attribute::all())
+            .accessor(js_string!("username"), username, Attribute::all())
             .static_method(
-                "canParse",
+                js_string!("canParse"),
                 1,
                 NativeFunction::from_fn_ptr(UrlClass::can_parse),
             )
             .method(
-                "toString",
+                js_string!("toString"),
                 0,
                 NativeFunction::from_fn_ptr(UrlClass::to_string),
             )
-            .method("toJSON", 0, NativeFunction::from_fn_ptr(UrlClass::to_json));
+            .method(
+                js_string!("toJSON"),
+                0,
+                NativeFunction::from_fn_ptr(UrlClass::to_json),
+            );
 
         Ok(())
     }

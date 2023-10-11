@@ -16,13 +16,14 @@
 use std::ops::Deref;
 
 use boa_engine::{
+    js_string,
     object::{Object, ObjectInitializer},
     property::Attribute,
     value::Numeric,
     Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
-use jstz_core::{host::HostRuntime, runtime};
+use jstz_core::{host::HostRuntime, runtime, value::IntoJs};
 
 /// This represents the different types of log messages.
 #[derive(Debug)]
@@ -172,12 +173,12 @@ impl Console {
             let mut args: Vec<JsValue> = Vec::from(data);
             let message = "Assertion failed".to_string();
             if args.is_empty() {
-                args.push(JsValue::new(message));
+                args.push(message.into_js(context));
             } else if !args[0].is_string() {
-                args.insert(0, JsValue::new(message));
+                args.insert(0, message.into_js(context));
             } else {
                 let concat = format!("{message}: {}", args[0].display());
-                args[0] = JsValue::new(concat);
+                args[0] = concat.into_js(context);
             }
 
             LogMessage::Error(formatter(&args, context)?).log(rt, self)
@@ -418,24 +419,56 @@ impl ConsoleApi {
 impl jstz_core::Api for ConsoleApi {
     fn init(self, context: &mut Context<'_>) {
         let console = ObjectInitializer::with_native(Console::new(), context)
-            .function(NativeFunction::from_fn_ptr(Self::log), "log", 0)
-            .function(NativeFunction::from_fn_ptr(Self::error), "error", 0)
-            .function(NativeFunction::from_fn_ptr(Self::debug), "debug", 0)
-            .function(NativeFunction::from_fn_ptr(Self::warn), "warn", 0)
-            .function(NativeFunction::from_fn_ptr(Self::info), "info", 0)
-            .function(NativeFunction::from_fn_ptr(Self::assert), "assert", 0)
-            .function(NativeFunction::from_fn_ptr(Self::group), "group", 0)
+            .function(NativeFunction::from_fn_ptr(Self::log), js_string!("log"), 0)
             .function(
-                NativeFunction::from_fn_ptr(Self::group),
-                "groupCollapsed",
+                NativeFunction::from_fn_ptr(Self::error),
+                js_string!("error"),
                 0,
             )
-            .function(NativeFunction::from_fn_ptr(Self::group_end), "groupEnd", 0)
-            .function(NativeFunction::from_fn_ptr(Self::clear), "clear", 0)
+            .function(
+                NativeFunction::from_fn_ptr(Self::debug),
+                js_string!("debug"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::warn),
+                js_string!("warn"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::info),
+                js_string!("info"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::assert),
+                js_string!("assert"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::group),
+                js_string!("group"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::group),
+                js_string!("groupCollapsed"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::group_end),
+                js_string!("groupEnd"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::clear),
+                js_string!("clear"),
+                0,
+            )
             .build();
 
         context
-            .register_global_property(Self::NAME, console, Attribute::all())
+            .register_global_property(js_string!(Self::NAME), console, Attribute::all())
             .expect("console api should only be registered once!")
     }
 }

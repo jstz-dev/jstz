@@ -2,7 +2,7 @@ use std::error::Error;
 
 use base64::prelude::{Engine as _, BASE64_URL_SAFE as DEFAULT_ENGINE};
 use boa_engine::{
-    object::ObjectInitializer, property::Attribute, Context, JsArgs, JsError,
+    js_string, object::ObjectInitializer, property::Attribute, Context, JsArgs, JsError,
     JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, Trace};
@@ -52,12 +52,20 @@ impl TextEncoderApi {
 impl jstz_core::Api for TextEncoderApi {
     fn init(self, context: &mut boa_engine::Context<'_>) {
         let encoding = ObjectInitializer::with_native(TextEncoder, context)
-            .function(NativeFunction::from_fn_ptr(Self::atob), "atob", 0)
-            .function(NativeFunction::from_fn_ptr(Self::btoa), "btoa", 0)
+            .function(
+                NativeFunction::from_fn_ptr(Self::atob),
+                js_string!("atob"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::btoa),
+                js_string!("btoa"),
+                0,
+            )
             .build();
 
         context
-            .register_global_property(Self::NAME, encoding, Attribute::all())
+            .register_global_property(js_string!(Self::NAME), encoding, Attribute::all())
             .expect("TextEncoder api should only be registered once!")
     }
 }

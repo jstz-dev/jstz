@@ -68,9 +68,14 @@ impl_into_js_from_into!(
     u32,
     u64,
     u8,
-    usize,
-    String
+    usize
 );
+
+impl IntoJs for String {
+    fn into_js(self, _context: &mut Context<'_>) -> JsValue {
+        JsString::from(self).into()
+    }
+}
 
 impl<T> IntoJs for Option<T>
 where

@@ -1,5 +1,5 @@
 use boa_engine::{
-    builtins,
+    builtins, js_string,
     object::{builtins::JsArray, Object},
     property::Attribute,
     value::TryFromJs,
@@ -12,6 +12,7 @@ use jstz_core::{
     native::{
         register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
     },
+    value::IntoJs,
 };
 
 use super::Url;
@@ -380,7 +381,7 @@ impl UrlSearchParamsClass {
         let name: String = args.get_or_undefined(0).try_js_into(context)?;
 
         match search_params.get(name) {
-            Some(value) => Ok(value.into()),
+            Some(value) => Ok(value.into_js(context)),
             None => Ok(JsValue::null()),
         }
     }
@@ -396,7 +397,7 @@ impl UrlSearchParamsClass {
         let values: Vec<JsValue> = search_params
             .get_all(name)
             .into_iter()
-            .map(|value| value.into())
+            .map(|value| value.into_js(context))
             .collect();
 
         Ok(JsArray::from_iter(values, context).into())
@@ -443,11 +444,11 @@ impl UrlSearchParamsClass {
     fn to_string(
         this: &JsValue,
         _args: &[JsValue],
-        _context: &mut Context<'_>,
+        context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         let search_params = UrlSearchParams::try_from_js(this)?;
 
-        Ok(search_params.to_string().into())
+        Ok(search_params.to_string().into_js(context))
     }
 }
 
@@ -471,44 +472,44 @@ impl NativeClass for UrlSearchParamsClass {
         let size = UrlSearchParamsClass::size(class.context());
 
         class
-            .accessor("size", size, Attribute::all())
+            .accessor(js_string!("size"), size, Attribute::all())
             .method(
-                "append",
+                js_string!("append"),
                 1,
                 NativeFunction::from_fn_ptr(UrlSearchParamsClass::append),
             )
             .method(
-                "delete",
+                js_string!("delete"),
                 1,
                 NativeFunction::from_fn_ptr(UrlSearchParamsClass::delete),
             )
             .method(
-                "get",
+                js_string!("get"),
                 1,
                 NativeFunction::from_fn_ptr(UrlSearchParamsClass::get),
             )
             .method(
-                "getAll",
+                js_string!("getAll"),
                 1,
                 NativeFunction::from_fn_ptr(UrlSearchParamsClass::get_all),
             )
             .method(
-                "has",
+                js_string!("has"),
                 1,
                 NativeFunction::from_fn_ptr(UrlSearchParamsClass::has),
             )
             .method(
-                "set",
+                js_string!("set"),
                 2,
                 NativeFunction::from_fn_ptr(UrlSearchParamsClass::set),
             )
             .method(
-                "sort",
+                js_string!("sort"),
                 0,
                 NativeFunction::from_fn_ptr(UrlSearchParamsClass::sort),
             )
             .method(
-                "toString",
+                js_string!("toString"),
                 0,
                 NativeFunction::from_fn_ptr(UrlSearchParamsClass::to_string),
             );
