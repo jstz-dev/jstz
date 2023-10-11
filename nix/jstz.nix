@@ -24,7 +24,7 @@
       lockFile = ../Cargo.lock;
       outputHashes = {
         "tezos-smart-rollup-0.2.1" = "sha256-ETMYanG7BINBhuKdALCShHhtLYSOCmG+Ak/G5QK88ks=";
-        "boa_engine-0.17.0" = "sha256-Gnt3rfF/XrwyR6kTiy3UO53vuez99ZCx31HLqJyXjB8=";
+        "boa_engine-0.17.0" = "sha256-pYeU2PoeykyRmxYw8/8qOSucOti/ysYujVO8HgGWwck=";
       };
     };
   };
