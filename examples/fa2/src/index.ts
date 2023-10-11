@@ -71,14 +71,11 @@ export function isBalanceRequest(
     return false;
   }
 }
-export type BalanceOf = { requests: BalanceRequest[]; callback: Address };
+export type BalanceOf = { requests: BalanceRequest[] };
 export function isBalanceOf(argument: unknown): argument is BalanceOf {
   let balanceOf = argument as BalanceOf;
   try {
-    return (
-      isAddress(balanceOf.callback) &&
-      isArray(isBalanceRequest, balanceOf.requests)
-    );
+    return isArray(isBalanceRequest, balanceOf.requests);
   } catch {
     return false;
   }
@@ -204,16 +201,8 @@ function performBalanceRequest(request: BalanceRequest): BalanceResponse {
   const balance = getBalance(request.owner, request.token_id);
   return { request, balance };
 }
-async function performBalanceOf(
-  balanceOf: BalanceOf,
-): Promise<BalanceResponse[]> {
-  let responses = balanceOf.requests.map(performBalanceRequest);
-  const request = new Request(`tezos://${balanceOf.callback}`, {
-    method: "POST",
-    body: JSON.stringify(responses),
-  });
-  let _ = Contract.call(request);
-  return responses;
+function performBalanceOf(balanceOf: BalanceOf): BalanceResponse[] {
+  return balanceOf.requests.map(performBalanceRequest);
 }
 
 function performMintNew(mintNew: MintNew) {
@@ -237,10 +226,9 @@ async function handler(request: Request): Promise<Response> {
             requests: JSON.parse(
               TextEncoder.atob(url.searchParams.get("requests") as string),
             ),
-            callback: url.searchParams.get("callback"),
           };
           if (isBalanceOf(balanceOf)) {
-            let responses = await performBalanceOf(balanceOf);
+            let responses = performBalanceOf(balanceOf);
             return Response.json(responses);
           } else {
             console.error("Invalid parameters", balanceOf);
