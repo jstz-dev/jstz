@@ -28,3 +28,28 @@ cargo run -- start sandbox
 tz4=tz492MCfwp9V961DhNGmKzD642uhU8j6H5nB
 cargo run -- deploy --self-address $tz4 --balance 0 --function-code "$(cat dist/index.js)"
 ```
+
+## Demo
+
+This example contains a test scenario that demonstrates the above functionality using a `scenario` smart function.
+
+The scenario performs the following:
+
+1. Deploys two scenario 'actors' (i.e. smart functions that own tokens).
+2. Mints two tokens with ids `1` and `2`, minting 3 of token 1 to the first actor and 3 of token 2 to the second actor.
+3. Transfers 1 token 1 from the first actor to the second actor, and 1 token 2 from the second actor to the first actor.
+4. Checks that the balances of the actors are as expected.
+5. Attempts for the scenario smart function to steal all tokens, this initially should fail.
+6. The first and second actors add the scenario smart function as an operator of their tokens.
+7. The scenario smart function successfully steals all tokens from the first and second actors.
+8. Checks that the balances of all actors are as expected.
+
+To deploy and run, execute:
+
+```sh
+npm run build:test
+fa2=tz4...
+cargo run -- deploy --self-address $tz4 --balance 0 --function-code "$(cat dist/test/index.js)"
+scenario=tz4...
+cargo run -- run "tezos://$scenario/?fa2=$fa2" $tz4
+```
