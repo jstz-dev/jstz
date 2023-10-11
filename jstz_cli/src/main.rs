@@ -5,6 +5,7 @@ mod bridge;
 mod config;
 mod deploy;
 mod octez;
+mod repl;
 mod run;
 mod sandbox;
 
@@ -46,6 +47,12 @@ enum Command {
         #[arg(name = "data", short, long, default_value = None)]
         json_data: Option<String>,
     },
+    /// Start a REPL session.
+    Repl {
+        /// Sets the address of the REPL environment.
+        #[arg(short, long)]
+        self_address: Option<String>,
+    },
 }
 
 fn exec(command: Command, cfg: &mut Config) -> Result<()> {
@@ -63,6 +70,7 @@ fn exec(command: Command, cfg: &mut Config) -> Result<()> {
             http_method,
             json_data,
         } => run::exec(cfg, referrer, url, http_method, json_data),
+        Command::Repl { self_address } => repl::exec(self_address),
     }
 }
 

@@ -1071,6 +1071,7 @@ dependencies = [
  "http",
  "jstz_crypto",
  "jstz_kernel",
+ "jstz_proto",
  "nix",
  "serde",
  "serde_json",

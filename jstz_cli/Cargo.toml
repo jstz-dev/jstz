@@ -17,6 +17,7 @@ dirs = "3.0"
 nix = "0.20"
 jstz_kernel.workspace = true
 jstz_crypto.workspace = true
+jstz_proto.workspace = true
 http = "0.2.9"
 fs_extra = "1.2"
 anyhow = "1.0.75"
