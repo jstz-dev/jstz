@@ -2,7 +2,7 @@
   pkgs,
   makeRustPlatform,
 }: let
-  rustVersion = "1.70.0";
+  rustVersion = "1.71.0";
 
   wasmTarget = "wasm32-unknown-unknown";
 
