@@ -37,6 +37,7 @@ export default defineConfig({
           { text: "KV", link: "/api/kv" },
           { text: "Ledger", link: "/api/ledger" },
           { text: "Headers", link: "/api/headers" },
+          { text: "Response", link: "/api/response" },
         ],
       },
     ],
