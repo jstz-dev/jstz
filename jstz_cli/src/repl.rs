@@ -18,7 +18,9 @@ use jstz_proto::api::LedgerApi;
 
 use jstz_crypto::public_key_hash::PublicKeyHash;
 
-pub fn exec(self_address: Option<String>) {
+use anyhow::Result;
+
+pub fn exec(self_address: Option<String>) -> Result<()> {
     let mock_address_string = "tz4FENGt5zkiGaHPm1ya4MgLomgkL1k7Dy7q";
 
     let contract_address_string = if let Some(address) = self_address {
@@ -37,7 +39,7 @@ pub fn exec(self_address: Option<String>) {
 
     let mut mock_hrt = MockHost::default();
 
-    let realm_clone = rt.realm();
+    let realm_clone = rt.realm().clone();
 
     realm_clone.register_api(jstz_api::ConsoleApi, rt.context());
 
@@ -71,32 +73,31 @@ pub fn exec(self_address: Option<String>) {
 
                 // Check for the exit command.
                 if input == "exit" {
-                    break;
+                    break Ok(());
                 }
 
                 // Add the line to history so you can use arrow keys to recall it
                 rl.add_history_entry(line.as_str());
 
-                evaluate(input, &mut rt, &mut mock_hrt); //,
+                evaluate(input, &mut rt, &mut mock_hrt);
             }
             Err(ReadlineError::Interrupted) => {
                 println!("CTRL-C");
-                break;
+                break Ok(());
             }
             Err(ReadlineError::Eof) => {
                 println!("CTRL-D");
-                break;
+                break Ok(());
             }
             Err(err) => {
                 println!("Error: {:?}", err);
-                break;
+                break Ok(());
             }
         }
     }
 }
 
 fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static)) {
-    //
     let rt_output =
         runtime::with_host_runtime(hrt, || rt.eval(Source::from_bytes(input)));
 
