@@ -141,7 +141,7 @@ declare interface Kv {
 
 declare var Kv: Kv;
 
-export type Mutez = number;
+declare type Mutez = number;
 
 declare interface Ledger {
   readonly selfAddress: Address;

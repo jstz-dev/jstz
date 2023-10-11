@@ -5,5 +5,6 @@
     "target": "esnext",
     "strict": true,
     "moduleResolution": "node"
-  }
+  },
+  "exclude": ["node_modules"]
 }
