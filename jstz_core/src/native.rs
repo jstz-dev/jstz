@@ -1,9 +1,11 @@
 use std::marker::PhantomData;
 
 use boa_engine::{
+    context::intrinsics::StandardConstructor,
+    js_string,
     object::{
-        builtins::JsFunction, ConstructorBuilder, FunctionObjectBuilder, Object,
-        ObjectData, PROTOTYPE,
+        builtins::JsFunction, ConstructorBuilder, FunctionBinding, FunctionObjectBuilder,
+        Object, ObjectData, PROTOTYPE,
     },
     property::{Attribute, PropertyDescriptor, PropertyKey},
     Context, JsError, JsNativeError, JsObject, JsResult, JsValue,
@@ -49,7 +51,7 @@ impl<T: NativeObject> JsNativeObject<T> {
         C: NativeClass<Instance = T>,
         P: Into<Option<JsObject>>,
     {
-        let class = context.global_object().get(C::NAME, context)?;
+        let class = context.global_object().get(js_string!(C::NAME), context)?;
         let JsValue::Object(ref class_constructor) = class else {
             return Err(JsNativeError::typ()
                 .with_message(format!(
@@ -151,7 +153,7 @@ impl Accessor {
     }
 
     pub fn get(mut self, function: NativeFunction, context: &mut Context<'_>) -> Self {
-        let get = FunctionObjectBuilder::new(context, function)
+        let get = FunctionObjectBuilder::new(context.realm(), function)
             .name(self.name)
             .length(0)
             .build();
@@ -160,7 +162,7 @@ impl Accessor {
     }
 
     pub fn set(mut self, function: NativeFunction, context: &mut Context<'_>) -> Self {
-        let set = FunctionObjectBuilder::new(context, function)
+        let set = FunctionObjectBuilder::new(context.realm(), function)
             .name(format!("set_{}", self.name))
             .length(1)
             .build();
@@ -218,8 +220,8 @@ impl<'ctx, 'host> ClassBuilder<'ctx, 'host> {
         Self { builder }
     }
 
-    fn build(self) -> JsFunction {
-        JsFunction::from_object(self.builder.build().into()).expect("Expect callable")
+    fn build(self) -> StandardConstructor {
+        self.builder.build()
     }
 
     /// Add a method to the class.
@@ -232,9 +234,9 @@ impl<'ctx, 'host> ClassBuilder<'ctx, 'host> {
         function: NativeFunction,
     ) -> &mut Self
     where
-        N: AsRef<str>,
+        N: Into<FunctionBinding>,
     {
-        self.builder.method(function, name.as_ref(), length);
+        self.builder.method(function, name, length);
         self
     }
 
@@ -248,9 +250,9 @@ impl<'ctx, 'host> ClassBuilder<'ctx, 'host> {
         function: NativeFunction,
     ) -> &mut Self
     where
-        N: AsRef<str>,
+        N: Into<FunctionBinding>,
     {
-        self.builder.static_method(function, name.as_ref(), length);
+        self.builder.static_method(function, name, length);
         self
     }
 
@@ -412,14 +414,16 @@ pub fn register_global_class<T: NativeClass>(context: &mut Context<'_>) -> JsRes
 
     let class = class_builder.build();
     let property = PropertyDescriptor::builder()
-        .value(class)
+        .value(class.constructor())
         .writable(T::ATTRIBUTES.writable())
         .enumerable(T::ATTRIBUTES.enumerable())
         .configurable(T::ATTRIBUTES.configurable());
 
-    context
-        .global_object()
-        .define_property_or_throw(T::NAME, property, context)?;
+    context.global_object().define_property_or_throw(
+        js_string!(T::NAME),
+        property,
+        context,
+    )?;
 
     Ok(())
 }

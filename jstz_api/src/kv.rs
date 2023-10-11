@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use boa_engine::{
-    object::ObjectInitializer, property::Attribute, Context, JsArgs, JsError,
+    js_string, object::ObjectInitializer, property::Attribute, Context, JsArgs, JsError,
     JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, Trace};
@@ -163,14 +163,18 @@ impl jstz_core::Api for KvApi {
             Kv::new(self.contract_address.to_string()),
             context,
         )
-        .function(NativeFunction::from_fn_ptr(Self::set), "set", 2)
-        .function(NativeFunction::from_fn_ptr(Self::get), "get", 1)
-        .function(NativeFunction::from_fn_ptr(Self::delete), "delete", 1)
-        .function(NativeFunction::from_fn_ptr(Self::has), "has", 1)
+        .function(NativeFunction::from_fn_ptr(Self::set), js_string!("set"), 2)
+        .function(NativeFunction::from_fn_ptr(Self::get), js_string!("get"), 1)
+        .function(
+            NativeFunction::from_fn_ptr(Self::delete),
+            js_string!("delete"),
+            1,
+        )
+        .function(NativeFunction::from_fn_ptr(Self::has), js_string!("has"), 1)
         .build();
 
         context
-            .register_global_property(Self::NAME, storage, Attribute::all())
+            .register_global_property(js_string!(Self::NAME), storage, Attribute::all())
             .expect("The storage object shouldn't exist yet");
     }
 }

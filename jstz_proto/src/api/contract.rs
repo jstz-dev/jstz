@@ -1,6 +1,7 @@
 use std::ops::DerefMut;
 
 use boa_engine::{
+    js_string,
     object::{builtins::JsPromise, Object, ObjectInitializer},
     property::Attribute,
     Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
@@ -8,6 +9,7 @@ use boa_engine::{
 use jstz_api::http::request::Request;
 use jstz_core::{
     host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
+    value::IntoJs,
 };
 
 use crate::{
@@ -154,7 +156,7 @@ impl ContractApi {
 
                 resolvers.resolve.call(
                     &JsValue::undefined(),
-                    &[address.into()],
+                    &[address.into_js(context)],
                     context,
                 )?;
                 Ok(JsValue::undefined())
@@ -174,12 +176,20 @@ impl jstz_core::Api for ContractApi {
             },
             context,
         )
-        .function(NativeFunction::from_fn_ptr(Self::call), "call", 2)
-        .function(NativeFunction::from_fn_ptr(Self::create), "create", 1)
+        .function(
+            NativeFunction::from_fn_ptr(Self::call),
+            js_string!("call"),
+            2,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::create),
+            js_string!("create"),
+            1,
+        )
         .build();
 
         context
-            .register_global_property(Self::NAME, contract, Attribute::all())
+            .register_global_property(js_string!(Self::NAME), contract, Attribute::all())
             .expect("The contract object shouldn't exist yet")
     }
 }

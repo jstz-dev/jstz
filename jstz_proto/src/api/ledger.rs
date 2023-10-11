@@ -1,6 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 use boa_engine::{
+    js_string,
     object::{Object, ObjectInitializer},
     property::Attribute,
     Context, JsArgs, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
@@ -8,7 +9,8 @@ use boa_engine::{
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
 use jstz_core::{
-    accessor, host::HostRuntime, host_defined, kv::Transaction, native::Accessor, runtime,
+    accessor, host::HostRuntime, host_defined, kv::Transaction, native::Accessor,
+    runtime, value::IntoJs,
 };
 
 use crate::{
@@ -95,7 +97,7 @@ impl LedgerApi {
             context,
             Ledger,
             "selfAddress",
-            get:((ledger, _context) => Ok(ledger.self_address().into()))
+            get:((ledger, context) => Ok(ledger.self_address().into_js(context)))
         )
     }
 
@@ -151,17 +153,25 @@ impl jstz_core::Api for LedgerApi {
             context,
         )
         .accessor(
-            self_address.name,
+            js_string!(self_address.name),
             self_address.get,
             self_address.set,
             Attribute::all(),
         )
-        .function(NativeFunction::from_fn_ptr(Self::balance), "balance", 1)
-        .function(NativeFunction::from_fn_ptr(Self::transfer), "transfer", 3)
+        .function(
+            NativeFunction::from_fn_ptr(Self::balance),
+            js_string!("balance"),
+            1,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::transfer),
+            js_string!("transfer"),
+            3,
+        )
         .build();
 
         context
-            .register_global_property(Self::NAME, ledger, Attribute::all())
+            .register_global_property(js_string!(Self::NAME), ledger, Attribute::all())
             .expect("The ledger object shouldn't exist yet");
     }
 }
