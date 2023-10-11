@@ -15,7 +15,7 @@ running on Tezos's smart optimistic rollups, some APIs are not available (e.g. `
 - Fetch API:
   - `Request`
   - `Response`
-  - `Headers`
+  - [`Headers`](./headers.md)
 - URL API:
   - `URL`
   - `URLSearchParams`
