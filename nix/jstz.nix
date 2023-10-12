@@ -1,7 +1,9 @@
 {
   pkgs,
   makeRustPlatform,
+  buildNpmPackage,
 }: let
+  # TODO: read this from the rust-toolchain file
   rustVersion = "1.71.0";
 
   wasmTarget = "wasm32-unknown-unknown";
@@ -52,6 +54,13 @@
           cp target/wasm32-unknown-unknown/release/*.wasm $out/lib/
         '';
       });
+
+  jsPackage = pname:
+    buildNpmPackage {
+      name = pname;
+      src = ../packages/${pname};
+      npmDepsHash = "sha256-gHkv831Mknd7McNJzzvIf7s5gwdErdHtMti8nkZGBjk=";
+    };
 in {
   jstz_core = crate "jstz_core";
 
@@ -62,4 +71,8 @@ in {
   jstz_proto = crate "jstz_proto";
 
   jstz_kernel = kernel "jstz_kernel";
+
+  js_jstz = jsPackage "jstz";
+
+  js_jstz-types = jsPackage "jstz-types";
 }
