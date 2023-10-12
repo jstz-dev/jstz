@@ -27,17 +27,27 @@
           };
 
           # Rust dev environment
-          devShells.default = pkgs.mkShell {
+          devShells.default = pkgs.mkShell rec {
             NIX_CFLAGS_COMPILE = "-mcpu=generic";
+            CC = "clang";
+
+            shellHook = ''
+              npm install
+              export PATH="$PWD/node_modules/.bin/:$PATH"
+            '';
 
             buildInputs = with pkgs; [
-              alejandra
+              llvmPackages_16.clangNoLibc
               (rust-bin.stable."1.71.0".default.override {
                 targets = ["wasm32-unknown-unknown"];
               })
-
               rust-analyzer
               wabt
+
+              nodejs
+              prefetch-npm-deps
+
+              alejandra
 
               python311Packages.base58
               jq
