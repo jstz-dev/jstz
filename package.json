@@ -15,10 +15,12 @@
     "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
-    "typescript": "^5.2.2",
-    "vitepress": "^1.0.0-rc.20"
+    "@tezos/jstz": "^0.0.0",
+    "@tezos/jstz-types": "^0.0.0"
   },
   "devDependencies": {
-    "prettier": "^3.0.3"
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2",
+    "vitepress": "^1.0.0-rc.20"
   }
 }
