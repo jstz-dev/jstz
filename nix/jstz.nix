@@ -15,7 +15,7 @@
   rustPlatformWasm = makeRustPlatform {
     cargo = rustWithWasmTarget;
     rustc = rustWithWasmTarget;
-    llvmPackages = pkgs.llvm_16;
+    llvmPackages = pkgs.llvmPackages_16;
   };
 
   common = {
@@ -44,9 +44,10 @@
         pname = pname;
 
         NIX_CFLAGS_COMPILE = "-mcpu=generic";
+        nativeBuildInputs = [pkgs.llvmPackages_16.clangNoLibc];
 
         buildPhase = ''
-          cargo build --release -p ${pname} --target=wasm32-unknown-unknown
+          CC=clang cargo build --release -p ${pname} --target=wasm32-unknown-unknown
         '';
 
         installPhase = ''
