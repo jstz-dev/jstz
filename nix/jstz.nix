@@ -73,6 +73,8 @@ in {
 
   jstz_kernel = kernel "jstz_kernel";
 
+  jstz_cli = crate "jstz_cli";
+
   js_jstz = jsPackage "jstz";
 
   js_jstz-types = jsPackage "jstz-types";

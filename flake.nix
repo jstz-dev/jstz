@@ -22,7 +22,7 @@
           jstz = pkgs.callPackage ./nix/jstz.nix {};
         in {
           packages = {
-            inherit jstz;
+            inherit (jstz) jstz_core jstz_api jstz_crypto jstz_proto jstz_kernel jstz_cli js_jstz js_jstz-types;
             default = jstz.jstz_kernel;
           };
 
