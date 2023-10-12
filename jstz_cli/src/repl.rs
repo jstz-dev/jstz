@@ -1,27 +1,19 @@
+use anyhow::Result;
 use boa_engine::Source;
-use jstz_core::runtime;
-use jstz_core::runtime::Runtime;
-use rustyline::error::ReadlineError;
-use rustyline::Editor;
+use jstz_api::{http::HttpApi, url::UrlApi, ConsoleApi, KvApi, TextEncoderApi};
+use jstz_core::host::HostRuntime;
+use jstz_core::{
+    host_defined,
+    kv::Kv,
+    runtime::{self, Runtime},
+};
+use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_proto::api::{ContractApi, LedgerApi};
+use rustyline::{error::ReadlineError, Editor};
 use tezos_smart_rollup_mock::MockHost;
 
-use jstz_core::host::HostRuntime;
-
-use jstz_api::http::HttpApi;
-use jstz_api::url::UrlApi;
-use jstz_api::ConsoleApi;
-use jstz_api::KvApi;
-use jstz_api::TextEncoderApi;
-
-use jstz_proto::api::ContractApi;
-use jstz_proto::api::LedgerApi;
-
-use jstz_crypto::public_key_hash::PublicKeyHash;
-
-use anyhow::Result;
-
 pub fn exec(self_address: Option<String>) -> Result<()> {
-    let mock_address_string = "tz4FENGt5zkiGaHPm1ya4MgLomgkL1k7Dy7q";
+    let mock_address_string = "tz4RepLRepLRepLRepLRepLRepLRepN7Cu8j";
 
     let contract_address_string = if let Some(address) = self_address {
         println!("Self address set to {}.", address);
@@ -35,31 +27,43 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
         .expect("Failed to create contract address.");
 
     let mut rt = Runtime::new().expect("Failed to create a new runtime.");
+
+    {
+        let context = rt.context();
+        host_defined!(context, mut host_defined);
+
+        let kv = Kv::new();
+        let tx = kv.begin_transaction();
+
+        host_defined.insert(kv);
+        host_defined.insert(tx);
+    }
+
     let mut rl = Editor::<()>::new().expect("Failed to create a new editor.");
 
     let mut mock_hrt = MockHost::default();
 
     let realm_clone = rt.realm().clone();
 
-    realm_clone.register_api(jstz_api::ConsoleApi, rt.context());
+    realm_clone.register_api(ConsoleApi, rt.context());
 
     realm_clone.register_api(
-        jstz_api::KvApi {
+        KvApi {
             contract_address: contract_address.clone(),
         },
         rt.context(),
     );
-    realm_clone.register_api(jstz_api::TextEncoderApi, rt.context());
-    realm_clone.register_api(jstz_api::url::UrlApi, rt.context());
-    realm_clone.register_api(jstz_api::http::HttpApi, rt.context());
+    realm_clone.register_api(TextEncoderApi, rt.context());
+    realm_clone.register_api(UrlApi, rt.context());
+    realm_clone.register_api(HttpApi, rt.context());
     realm_clone.register_api(
-        jstz_proto::api::LedgerApi {
+        LedgerApi {
             contract_address: contract_address.clone(),
         },
         rt.context(),
     );
     realm_clone.register_api(
-        jstz_proto::api::ContractApi {
+        ContractApi {
             contract_address: contract_address.clone(),
         },
         rt.context(),
