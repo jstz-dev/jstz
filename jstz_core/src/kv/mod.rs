@@ -15,7 +15,7 @@ use tezos_smart_rollup_host::{
 use crate::error::Result;
 
 mod transaction;
-mod value;
+pub mod value;
 
 pub use transaction::{Entry, Transaction};
 pub use value::Value;

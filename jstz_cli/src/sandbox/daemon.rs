@@ -1,6 +1,7 @@
 use std::{
     fs,
-    process::Child,
+    io::Write,
+    process::{Child, Command},
     sync::mpsc::{self, Sender},
     thread::{self, sleep, JoinHandle},
     time::Duration,
@@ -8,9 +9,12 @@ use std::{
 
 use anyhow::Result;
 use fs_extra::dir::CopyOptions;
+use jstz_core::kv::value::serialize;
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use nix::libc::{SIGINT, SIGTERM};
 use signal_hook::iterator::Signals;
 use tempfile::TempDir;
+use tezos_smart_rollup_installer_config::yaml::{Instr, SetArgs, YamlConfig};
 
 use crate::{
     bridge,
@@ -173,12 +177,53 @@ fn start_rollup_node(cfg: &Config) -> Result<Child> {
     )
 }
 
-fn set_ticketer(cfg: &Config, bridge_address: &str) -> Result<()> {
-    OctezClient::send_rollup_external_message(
-        cfg,
-        "bootstrap2",
-        &format!("{{ \"SetTicketer\": \"{}\" }}", bridge_address),
-    )
+fn smart_rollup_installer(cfg: &Config, bridge_address: &str) -> Result<()> {
+    //Convert address
+    let address_encoding =
+        serialize(&PublicKeyHash::from_base58(&bridge_address).unwrap());
+    let hex_address = hex::encode(address_encoding.clone());
+
+    let instructions = YamlConfig {
+        instructions: vec![Instr::Set(SetArgs {
+            value: hex_address.clone(),
+            to: "/ticketer".to_owned(),
+        })],
+    };
+    let yaml_config = serde_yaml::to_string(&instructions).unwrap();
+
+    // Create a temporary file for the serialized representation of the address computed by octez-codec
+    let mut temp_file = tempfile::NamedTempFile::new()?;
+    temp_file.write_all(yaml_config.as_bytes())?;
+
+    // Get the path to the temporary file if needed later in the code
+    let setup_file_path = temp_file.path().to_owned();
+
+    // Create an installer kernel
+    let _output = Command::new("smart-rollup-installer")
+        .args(&[
+            "get-reveal-installer",
+            "--setup-file",
+            &setup_file_path.to_str().expect("Invalid path"),
+            "--output",
+            cfg.jstz_path
+                .join("target/kernel/jstz_kernel_installer.hex")
+                .to_str()
+                .expect("Invalid path"),
+            "--preimages-dir",
+            &cfg.jstz_path
+                .join("target/kernel")
+                .join("preimages/")
+                .to_str()
+                .expect("Invalid path"),
+            "--upgrade-to",
+            &cfg.jstz_path
+                .join("target/wasm32-unknown-unknown/release/jstz_kernel.wasm")
+                .to_str()
+                .expect("Invalid path"),
+        ])
+        .output();
+
+    Ok(())
 }
 
 struct OctezThread {
@@ -293,36 +338,38 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     // 1. Init node
     init_node(&cfg)?;
 
-    // 3. As a thread, start node
+    // 2. As a thread, start node
     print!("Starting node...");
     let node = OctezThread::from_child(start_node(cfg)?);
     println!(" done");
 
-    // 4. Init client
+    // 3. Init client
     init_client(&cfg)?;
     println!("Client initialized");
 
-    // 5. As a thread, start baking
+    // 4. As a thread, start baking
     print!("Starting baker...");
     let baker = OctezThread::new(cfg, client_bake);
     println!(" done");
 
-    // 6. Originate the rollup
-    let rollup_address = originate_rollup(&cfg)?;
-    println!("`jstz_rollup` originated at {}", rollup_address);
-
-    // 7. As a thread, start rollup node
-    print!("Starting rollup node...");
-    let rollup_node = OctezThread::from_child(start_rollup_node(cfg)?);
-    println!(" done");
-
-    // 8. Deploy bridge
+    // 5. Deploy bridge
     println!("Deploying bridge...");
     let bridge_address = bridge::deploy(&cfg)?;
     println!("\t`jstz_bridge` deployed at {}", bridge_address);
 
-    set_ticketer(&cfg, &bridge_address)?;
-    println!("\t`jstz_rollup` ticketer set to {}", bridge_address);
+    // 6. Create an installer kernel
+    print!("Creating installer kernel...");
+    smart_rollup_installer(&cfg, bridge_address.as_str())?;
+    println!("done");
+
+    // 7. Originate the rollup
+    let rollup_address = originate_rollup(&cfg)?;
+    println!("`jstz_rollup` originated at {}", rollup_address);
+
+    // 8. As a thread, start rollup node
+    print!("Starting rollup node...");
+    let rollup_node = OctezThread::from_child(start_rollup_node(cfg)?);
+    println!(" done");
 
     bridge::set_rollup(&cfg, &rollup_address)?;
     println!("\t`jstz_bridge` `rollup` address set to {}", rollup_address);

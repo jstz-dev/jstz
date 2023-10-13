@@ -15,11 +15,6 @@ pub mod inbox;
 
 const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
 
-fn store_ticketer(rt: &mut impl Runtime, kt1: &ContractKt1Hash) -> Result<()> {
-    Storage::insert(rt, &TICKETER, kt1)?;
-    Ok(())
-}
-
 fn read_ticketer(rt: &impl Runtime) -> Option<ContractKt1Hash> {
     Some(Storage::get(rt, &TICKETER).ok()??)
 }
@@ -32,7 +27,6 @@ fn handle_message(rt: &mut (impl Runtime + 'static), message: Message) -> Result
         Message::External(ExternalMessage::RunContract(run)) => {
             apply_run_contract(rt, run)
         }
-        Message::External(ExternalMessage::SetTicketer(kt1)) => store_ticketer(rt, &kt1),
         Message::External(ExternalMessage::DeployContract(contract)) => {
             apply_deploy_contract(rt, contract)
         }
