@@ -20,7 +20,6 @@ pub enum InternalMessage {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExternalMessage {
-    SetTicketer(ContractKt1Hash),
     RunContract(RunContract),
     DeployContract(ContractOrigination),
     // TODO ⚰️ Deprecate will not be part of the CLI

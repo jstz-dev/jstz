@@ -11,7 +11,7 @@ fn bincode_options() -> impl bincode::Options {
         .allow_trailing_bytes()
 }
 
-pub(crate) fn serialize<T: erased_serde::Serialize + ?Sized>(value: &T) -> Vec<u8> {
+pub fn serialize<T: erased_serde::Serialize + ?Sized>(value: &T) -> Vec<u8> {
     let mut writer = Vec::new();
     let mut bincode_serializer = bincode::Serializer::new(&mut writer, bincode_options());
 
