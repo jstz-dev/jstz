@@ -1,5 +1,5 @@
 use anyhow::Result;
-use boa_engine::Source;
+use boa_engine::{JsResult, JsValue, Source};
 use jstz_api::{http::HttpApi, url::UrlApi, ConsoleApi, KvApi, TextEncoderApi};
 use jstz_core::host::HostRuntime;
 use jstz_core::{
@@ -102,8 +102,13 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
 }
 
 fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static)) {
-    let rt_output =
-        runtime::with_host_runtime(hrt, || rt.eval(Source::from_bytes(input)));
+    let rt_output = runtime::with_host_runtime(hrt, || -> JsResult<JsValue> {
+        let value = rt.eval(Source::from_bytes(input))?;
+
+        jstz_core::future::block_on(rt.run_event_loop());
+
+        Ok(value)
+    });
 
     match rt_output {
         Ok(res) => {
