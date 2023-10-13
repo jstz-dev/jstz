@@ -1,4 +1,4 @@
-# 🔗 URLSearchParams
+# 🔍 URLSearchParams
 
 `jstz`'s implementation of the `URLSearchParams` API defines utility methods for working with the query string of a URL according to the [URL specification](https://url.spec.whatwg.org/#urlsearchparams). It is used for building and manipulating search parameters.
 
