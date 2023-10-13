@@ -9,7 +9,7 @@ running on Tezos's smart optimistic rollups, some APIs are not available (e.g. `
 
 ## Web Platform APIs
 
-- `console`
+- [`console`](./console.md)
 - `atob`
 - `btoa`
 - Fetch API:

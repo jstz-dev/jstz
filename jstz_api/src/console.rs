@@ -351,7 +351,7 @@ impl Console {
     }
 }
 
-macro_rules! vardic_console_function {
+macro_rules! variadic_console_function {
     ($name:ident) => {
         fn $name(
             this: &JsValue,
@@ -371,11 +371,11 @@ macro_rules! vardic_console_function {
 impl ConsoleApi {
     const NAME: &'static str = "console";
 
-    vardic_console_function!(log);
-    vardic_console_function!(error);
-    vardic_console_function!(debug);
-    vardic_console_function!(warn);
-    vardic_console_function!(info);
+    variadic_console_function!(log);
+    variadic_console_function!(error);
+    variadic_console_function!(debug);
+    variadic_console_function!(warn);
+    variadic_console_function!(info);
 
     fn assert(
         this: &JsValue,
