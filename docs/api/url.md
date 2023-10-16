@@ -24,7 +24,7 @@ We may edit or construct a url by setting values for its properties.
 ```typescript
 let url = new URL('tezos://domain/);
 url.pathname = "my_entrypoint"
-url.hostname = Ledger.selfAddress();
+url.hostname = Ledger.selfAddress;
 url.hash = "my_fragment"
 console.log(url.href) // tezos://tz4../my_entrypoint#my_fagment
 ```
