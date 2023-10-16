@@ -31,3 +31,5 @@ node_modules/
 # Vitepress directories
 **/.vitepress/cache
 **/.vitepress/dist
+
+**/dist
