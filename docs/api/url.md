@@ -29,7 +29,7 @@ url.hash = "my_fragment"
 console.log(url.href) // tezos://tz4../my_entrypoint#my_fagment
 ```
 
-Search parameters may be read or edited through the [`URLSearchParams`](./url_search_params.md) API.
+The [`URLSearchParams`](./url_search_params.md) API may be used to build and manipulate search parameters. To get the search parameters from the URL, you may use the `.searchParams` instance property.
 ```typescript
 let url = new URL(`tezos://${address}/?first_name=Dave`);
 switch (url.searchParams.get("first_name")) {
