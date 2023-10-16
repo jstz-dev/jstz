@@ -7,6 +7,9 @@
   "dependencies": {
     "@tezos/jstz": "^0.0.0"
   },
+  "devDependencies": {
+    "esbuild": "^0.19.4"
+  },
   "scripts": {
     "check:types": "tsc --noEmit",
     "build": "esbuild src/index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js",
