@@ -1,0 +1,6 @@
+# Ignore git and node_modules:
+**/.git
+**/node_modules
+
+# Ignore artifacts:
+**/dist
