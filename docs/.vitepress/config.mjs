@@ -38,6 +38,7 @@ export default defineConfig({
           { text: "KV", link: "/api/kv" },
           { text: "Ledger", link: "/api/ledger" },
           { text: "Headers", link: "/api/headers" },
+          { text: "Request", link: "/api/request" },
           { text: "Response", link: "/api/response" },
           { text: "URL", link: "/api/url" },
           { text: "URLSearchParams", link: "/api/url_search_params" },
