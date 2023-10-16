@@ -16,6 +16,7 @@ Our implementation follows the TZIP-12 [specification](https://tzip.tezosagora.o
 To build and bundle the smart function, run:
 
 ```sh
+npm install
 npm run build
 ```
 
