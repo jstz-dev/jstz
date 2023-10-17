@@ -108,47 +108,6 @@ fn register_web_apis(realm: &Realm, context: &mut Context<'_>) {
 #[derive(Debug, PartialEq, Eq, Clone, Deref, DerefMut, Trace, Finalize)]
 pub struct Script(Module);
 
-/*
- * Internal
- * 1. extract contract data
- * 2. add referer
- * 3. load script
- * 4. initialize & register apis
- * 5. run
- *
- * External
- * 1. create runtime (with some apis)
- * 2. extract address
- * 3. deserialise request
- * 4. create Js Request
- * 5. set referer
- * 6. load_init_run
- *
- *
- * Internal
- * 1. extract contract data
- *
- * 2. load script
- * 3. initialize and register
- *
- * 4. set referer
- * 5. run
- *
- * External
- * 1. deserialize request
- * 2. extract address
- *
- * 3. create contract data
- * 4. load script
- * 5. initialize and register
- *
- * 6. create Js request
- *
- * 7. set referer
- * 8. run
- *
- */
-
 impl Script {
     fn get_default_export(&self, context: &mut Context<'_>) -> JsResult<JsValue> {
         self.namespace(context).get(js_string!("default"), context)
@@ -251,20 +210,16 @@ impl Script {
             result,
             |context| {
                 runtime::with_global_host(|rt| {
-                    if let Some(JstzData {
+                    let JstzData {
                         transaction,
                         mut kv_store,
                         ..
-                    }) = JstzData::remove_from_context(context)
-                    //                            .expect("Rust type `JstzData` should be defined in `HostDefined`");
-                    {
-                        rt.write_debug("[🟢] Committing contract");
-                        kv_store
-                            .commit_transaction(rt, transaction)
-                            .expect("Failed to commit transaction");
-                    } else {
-                        rt.write_debug("[🔴] Rust type `JstzData` should be defined in `HostDefined`\n");
-                    }
+                    } = JstzData::remove_from_context(context).expect(
+                        "Rust type `JstzData` should be defined in `HostDefined`",
+                    );
+                    kv_store
+                        .commit_transaction(rt, transaction)
+                        .expect("Failed to commit transaction");
                     {
                         // TODO: remove this when API's are migrated
                         host_defined!(context, mut host_defined);
