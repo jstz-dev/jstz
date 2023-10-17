@@ -1,6 +1,7 @@
 use anyhow::Result;
 use boa_engine::{js_string, JsResult, JsValue, Source};
-use jstz_api::{http::HttpApi, url::UrlApi, ConsoleApi, KvApi, TextEncoderApi};
+use jstz_api::{http::HttpApi, url::UrlApi, KvApi, TextEncoderApi};
+use jstz_core::api::JstzData;
 use jstz_core::host::HostRuntime;
 use jstz_core::{
     host_defined,
@@ -8,7 +9,7 @@ use jstz_core::{
     runtime::{self, Runtime},
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_proto::api::{ContractApi, LedgerApi};
+use jstz_proto::api::LedgerApi;
 use rustyline::{error::ReadlineError, Editor};
 use tezos_smart_rollup_mock::MockHost;
 
@@ -27,7 +28,7 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
         .expect("Failed to create contract address.");
 
     let mut rt = Runtime::new().expect("Failed to create a new runtime.");
-
+    let realm_clone = rt.realm().clone();
     {
         let context = rt.context();
         host_defined!(context, mut host_defined);
@@ -62,12 +63,26 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
         },
         rt.context(),
     );
-    realm_clone.register_api(
-        ContractApi {
-            contract_address: contract_address.clone(),
-        },
-        rt.context(),
+
+    let kv_store = Kv::new();
+    let transaction = kv_store.begin_transaction();
+    let realm_clone = rt.realm().clone();
+    let contract_parameters = JstzData {
+        calling_address: contract_address.clone(),
+        self_address: contract_address.clone(),
+        origin_address: contract_address.clone(),
+        kv_store,
+        transaction,
+    };
+    jstz_proto::api::initialize_apis(
+        contract_parameters,
+        &realm_clone,
+        &mut rt.context(),
     );
+
+    let mut rl = Editor::<()>::new().expect("Failed to create a new editor.");
+
+    let mut mock_hrt = MockHost::default();
 
     loop {
         let readline = rl.readline(">> ");
