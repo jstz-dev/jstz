@@ -46,7 +46,14 @@ Additionally, jstz implements APIs for easier manipulation with debug logs (Cons
 
 ##
 
-After
+//TODO: Explaining how exactly the following works and fits together:
+
+- the APIs get registered to in the Realm that consists of a set of intrinsic objects and global environment
+- The Realm wrapper implements various methods for registration and evaluation of different modules, types and host defined objects and handling of context
+- JSNative permits Rust types to be passed around as JavaScript objects.
+- There is implemented a wrapper over boa engines runtime and also a wrapper over the smart rollup's runtime - erased runtime.
+- the APIs use the functionality of the rollup runtime to interact with the blockchain storage and other functionality implemented in jstz_proto
+- jstz_kernel
 
 ## Bridge
 
