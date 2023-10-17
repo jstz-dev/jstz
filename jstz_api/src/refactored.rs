@@ -53,12 +53,16 @@ mod kv {
                 .insert(self.key_path(&key), value)
                 .expect("")
         }
-        fn get(&self, jstz: &mut Jstz, rt: &mut impl HostRuntime, key: String) -> String {
+        fn get(
+            &self,
+            jstz: &mut Jstz,
+            rt: &mut impl HostRuntime,
+            key: String,
+        ) -> Option<String> {
             jstz.transaction_mut()
                 .get::<String>(rt, self.key_path(&key))
                 .expect("")
-                .expect("")
-                .clone()
+                .cloned()
         }
         fn new(jstz: &Jstz) -> Self {
             Self {
@@ -89,8 +93,11 @@ mod kv {
             let refr = Kv::from_js(this)?;
             let this = refr.deref();
             let key = string_from_arg(args, 0)?;
-            let result = with_jstz!(context, [this.get](&mut jstz, &mut hrt, key));
-            Ok(JsString::from_str(&result).expect("infallible").into())
+            let result = match with_jstz!(context, [this.get](&mut jstz, &mut hrt, key)) {
+                None => JsValue::undefined(),
+                Some(value) => JsString::from_str(&value).expect("infallable").into(),
+            };
+            Ok(result)
         }
     }
     impl GlobalApi for Api {

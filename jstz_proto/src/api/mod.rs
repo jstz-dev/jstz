@@ -4,7 +4,7 @@ use jstz_core::{
     Realm,
 };
 
-mod contract;
+pub mod contract;
 mod ledger;
 
 pub use ledger::LedgerApi;
@@ -18,7 +18,7 @@ impl GlobalApi for Api {
         // ledger::Api::init(context);
     }
 }
-pub(crate) fn initialize_apis(
+pub fn initialize_apis(
     contract_parameters: JstzData,
     realm: &Realm,
     context: &mut Context,
