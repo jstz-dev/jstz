@@ -1,5 +1,6 @@
 use anyhow::Result;
 use boa_engine::{js_string, JsResult, JsValue, Source};
+use jstz_api::ConsoleApi;
 use jstz_api::{http::HttpApi, url::UrlApi, KvApi, TextEncoderApi};
 use jstz_core::api::JstzData;
 use jstz_core::host::HostRuntime;
@@ -28,7 +29,7 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
         .expect("Failed to create contract address.");
 
     let mut rt = Runtime::new().expect("Failed to create a new runtime.");
-    let realm_clone = rt.realm().clone();
+
     {
         let context = rt.context();
         host_defined!(context, mut host_defined);
@@ -79,10 +80,6 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
         &realm_clone,
         &mut rt.context(),
     );
-
-    let mut rl = Editor::<()>::new().expect("Failed to create a new editor.");
-
-    let mut mock_hrt = MockHost::default();
 
     loop {
         let readline = rl.readline(">> ");
