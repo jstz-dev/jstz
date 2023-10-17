@@ -132,41 +132,7 @@ impl Api {
             context,
         )?;
         Ok(promise.into())
-        //        Ok()
     }
-    /*
-        host_defined!(context, host_defined);
-        let mut tx = host_defined.get_mut::<Transaction>().unwrap();
-
-        let contract = Contract::from_js_value(this)?;
-        let contract_code: String = args
-            .get(0)
-            .ok_or_else(|| {
-                JsNativeError::typ()
-                    .with_message("Expected at least 1 argument but 0 provided")
-            })?
-            .try_js_into(context)?;
-
-
-        let promise = JsPromise::new(
-            move |resolvers, context| {
-                let address = runtime::with_global_host(|rt| {
-                    contract.create(rt, &mut tx, contract_code, initial_balance as Amount)
-                })?;
-
-                resolvers.resolve.call(
-                    &JsValue::undefined(),
-                    &[address.into_js(context)],
-                    context,
-                )?;
-                Ok(JsValue::undefined())
-            },
-            context,
-        )?;
-
-        Ok(promise.into())
-    }
-    */
 }
 
 impl jstz_core::GlobalApi for Api {
