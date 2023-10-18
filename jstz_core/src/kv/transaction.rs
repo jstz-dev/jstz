@@ -85,7 +85,7 @@ impl SnapshotEntry {
     where
         V: Value,
     {
-        self.value.downcast_ref().unwrap()
+        self.value.as_any().downcast_ref().unwrap()
     }
 
     fn as_mut<V>(&mut self) -> &mut V
@@ -93,7 +93,7 @@ impl SnapshotEntry {
         V: Value,
     {
         self.dirty = true;
-        self.value.downcast_mut().unwrap()
+        self.value.as_any_mut().downcast_mut().unwrap()
     }
 
     fn into_value<V>(self) -> V
