@@ -1,5 +1,5 @@
 use anyhow::Result;
-use boa_engine::{JsResult, JsValue, Source};
+use boa_engine::{js_string, JsResult, JsValue, Source};
 use jstz_api::{http::HttpApi, url::UrlApi, ConsoleApi, KvApi, TextEncoderApi};
 use jstz_core::host::HostRuntime;
 use jstz_core::{
@@ -104,10 +104,10 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
 fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static)) {
     let rt_output = runtime::with_host_runtime(hrt, || -> JsResult<JsValue> {
         let value = rt.eval(Source::from_bytes(input))?;
-
-        jstz_core::future::block_on(rt.run_event_loop());
-
-        Ok(value)
+        jstz_core::future::block_on(async {
+            rt.run_event_loop().await;
+            rt.resolve_value(&value).await
+        })
     });
 
     match rt_output {
@@ -120,9 +120,15 @@ fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static
                         .to_std_string_escaped()
                 );
             }
+            if let Err(err) =
+                rt.global_object()
+                    .set(js_string!("_"), res, false, rt.context())
+            {
+                println!("Couldn't set '_' property: {err}");
+            }
         }
         Err(e) => {
             eprintln!("Uncaught {e}")
         }
-    };
+    }
 }
