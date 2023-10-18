@@ -8,6 +8,7 @@ mod octez;
 mod repl;
 mod run;
 mod sandbox;
+pub(crate) mod utils;
 
 use config::Config;
 
@@ -26,10 +27,10 @@ enum Command {
         #[arg(short, long)]
         self_address: String,
         /// Function code.
-        #[arg(short, long)]
-        function_code: String,
+        #[arg(short, long, default_value = None)]
+        function_code: Option<String>,
         /// Initial balance
-        #[arg(short, long)]
+        #[arg(short, long, default_value_t = 0)]
         balance: u64,
     },
     /// Run a smart function using a specified URL.

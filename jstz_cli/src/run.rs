@@ -5,7 +5,11 @@ use http::Method;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_kernel::inbox::{ExternalMessage, Transaction};
 
-use crate::{config::Config, octez::OctezClient};
+use crate::{
+    config::Config,
+    octez::OctezClient,
+    utils::{from_file_or_id, piped_input},
+};
 
 pub fn exec(
     cfg: &Config,
@@ -19,7 +23,7 @@ pub fn exec(
         referrer: PublicKeyHash::from_base58(&referrer).unwrap(),
         url,
         method: Method::from_str(&http_method).unwrap(),
-        body: json_data,
+        body: json_data.map(from_file_or_id).or_else(piped_input),
     });
 
     // Create JSON message

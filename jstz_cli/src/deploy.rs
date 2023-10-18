@@ -1,14 +1,23 @@
 use anyhow::Result;
 use serde_json::json;
 
-use crate::{config::Config, octez::OctezClient};
+use crate::{
+    config::Config,
+    octez::OctezClient,
+    utils::{from_file_or_id, piped_input},
+};
 
 pub fn exec(
     self_address: String,
-    contract_code: String,
+    contract_code: Option<String>,
     balance: u64,
     cfg: &Config,
 ) -> Result<()> {
+    // resolve contract code
+    let contract_code = contract_code
+        .map(from_file_or_id)
+        .or_else(piped_input)
+        .unwrap_or(String::default());
     // Create JSON message
     let jmsg = json!({
         "DeployContract": {
