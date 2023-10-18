@@ -32,6 +32,7 @@ tezos-smart-rollup = "0.2.1"
 tezos-smart-rollup-mock = "0.2.1"
 tezos-smart-rollup-installer-config = "0.2.1"
 serde_yaml = "0.8"
+tezos_crypto_rs = "0.5.1"
 
 [[bin]]
 name = "jstz"
