@@ -1,4 +1,4 @@
-use std::any::{Any, TypeId};
+use std::any::Any;
 use std::fmt::Debug;
 
 use bincode::Options;
@@ -35,50 +35,16 @@ pub trait Value: Any + Debug + erased_serde::Serialize {
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-impl<T> Value for T where T: Any + Debug + erased_serde::Serialize {
+impl<T> Value for T
+where
+    T: Any + Debug + erased_serde::Serialize,
+{
     fn as_any(&self) -> &dyn Any {
         self
     }
 
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
-    }
-
-// Since trait downcasting isn't permitted, we implement all methods
-// from `dyn Any`.
-impl dyn Value {
-    pub fn is<T: Any>(&self) -> bool {
-        let t = TypeId::of::<T>();
-        let concrete = self.type_id();
-        t == concrete
-    }
-
-    pub unsafe fn downcast_ref_unchecked<T: Any>(&self) -> &T {
-        unsafe { &*(self as *const dyn Value as *const T) }
-    }
-
-    pub fn downcast_ref<T: Any>(&self) -> Option<&T> {
-        if self.is::<T>() {
-            unsafe { Some(self.downcast_ref_unchecked()) }
-        } else {
-            None
-        }
-    }
-
-    pub fn downcast_mut<T: Any>(&mut self) -> Option<&mut T> {
-        if self.is::<T>() {
-            unsafe { Some(self.downcast_mut_unchecked()) }
-        } else {
-            None
-        }
-    }
-
-    pub unsafe fn downcast_mut_unchecked<T: Any>(&mut self) -> &mut T {
-        unsafe { &mut *(self as *mut dyn Value as *mut T) }
-    }
-
-    pub fn serialize(&self) -> Vec<u8> {
-        serialize(self)
     }
 }
 
@@ -99,7 +65,7 @@ impl BoxedValue {
     where
         T: Any,
     {
-        if self.is::<T>() {
+        if self.as_any().is::<T>() {
             Ok(unsafe { self.downcast_unchecked() })
         } else {
             Err(self)
