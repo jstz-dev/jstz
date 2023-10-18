@@ -10,10 +10,10 @@ use std::{
 use anyhow::Result;
 use fs_extra::dir::CopyOptions;
 use jstz_core::kv::value::serialize;
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use nix::libc::{SIGINT, SIGTERM};
 use signal_hook::iterator::Signals;
 use tempfile::TempDir;
+use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup_installer_config::yaml::{Instr, SetArgs, YamlConfig};
 
 use crate::{
@@ -179,13 +179,11 @@ fn start_rollup_node(cfg: &Config) -> Result<Child> {
 
 fn smart_rollup_installer(cfg: &Config, bridge_address: &str) -> Result<()> {
     //Convert address
-    let address_encoding =
-        serialize(&PublicKeyHash::from_base58(&bridge_address).unwrap());
-    let hex_address = hex::encode(address_encoding.clone());
+    let bridge_address = ContractKt1Hash::from_base58_check(bridge_address)?;
 
     let instructions = YamlConfig {
         instructions: vec![Instr::Set(SetArgs {
-            value: hex_address.clone(),
+            value: hex::encode(serialize(&bridge_address)),
             to: "/ticketer".to_owned(),
         })],
     };
@@ -199,29 +197,39 @@ fn smart_rollup_installer(cfg: &Config, bridge_address: &str) -> Result<()> {
     let setup_file_path = temp_file.path().to_owned();
 
     // Create an installer kernel
-    let _output = Command::new("smart-rollup-installer")
-        .args(&[
-            "get-reveal-installer",
-            "--setup-file",
-            &setup_file_path.to_str().expect("Invalid path"),
-            "--output",
-            cfg.jstz_path
-                .join("target/kernel/jstz_kernel_installer.hex")
-                .to_str()
-                .expect("Invalid path"),
-            "--preimages-dir",
-            &cfg.jstz_path
-                .join("target/kernel")
-                .join("preimages/")
-                .to_str()
-                .expect("Invalid path"),
-            "--upgrade-to",
-            &cfg.jstz_path
-                .join("target/wasm32-unknown-unknown/release/jstz_kernel.wasm")
-                .to_str()
-                .expect("Invalid path"),
-        ])
-        .output();
+    let mut installer_command = Command::new("smart-rollup-installer");
+
+    installer_command.args(&[
+        "get-reveal-installer",
+        "--setup-file",
+        &setup_file_path.to_str().expect("Invalid path"),
+        "--output",
+        cfg.jstz_path
+            .join("target/kernel/jstz_kernel_installer.hex")
+            .to_str()
+            .expect("Invalid path"),
+        "--preimages-dir",
+        &cfg.jstz_path
+            .join("target/kernel")
+            .join("preimages/")
+            .to_str()
+            .expect("Invalid path"),
+        "--upgrade-to",
+        &cfg.jstz_path
+            .join("target/wasm32-unknown-unknown/release/jstz_kernel.wasm")
+            .to_str()
+            .expect("Invalid path"),
+    ]);
+
+    let installer_output = installer_command.output()?;
+
+    if !installer_output.status.success() {
+        return Err(anyhow::anyhow!(
+            "Command {:?} failed:\n {}",
+            installer_command,
+            String::from_utf8_lossy(&installer_output.stderr)
+        ));
+    }
 
     Ok(())
 }
@@ -409,7 +417,7 @@ pub fn main(cfg: &mut Config) -> Result<()> {
     cfg.save()?;
 
     // 4. Wait for the sandbox to shutdown (either by the user or by an error)
-    OctezThread::join(vec![rollup_node, baker, node])?;
+    OctezThread::join(vec![baker, rollup_node, node])?;
 
     cfg.sandbox = None;
     cfg.save()?;
