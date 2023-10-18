@@ -30,9 +30,19 @@ pub(crate) fn deserialize<T: DeserializeOwned>(bytes: &[u8]) -> T {
 
 /// A key-value 'value' is a value that is can be dynamically
 /// coerced (using `Any`) and serialized.
-pub trait Value: Any + Debug + erased_serde::Serialize {}
+pub trait Value: Any + Debug + erased_serde::Serialize {
+    fn as_any(&self) -> &dyn Any;
+    fn as_any_mut(&mut self) -> &mut dyn Any;
+}
 
-impl<T> Value for T where T: Any + Debug + erased_serde::Serialize {}
+impl<T> Value for T where T: Any + Debug + erased_serde::Serialize {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+
+    fn as_any_mut(&mut self) -> &mut dyn Any {
+        self
+    }
 
 // Since trait downcasting isn't permitted, we implement all methods
 // from `dyn Any`.
