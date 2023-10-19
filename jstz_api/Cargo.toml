@@ -7,7 +7,7 @@ repository.workspace = true
 
 [dependencies]
 base64 = "0.21.4"
-boa_engine = "0.17.0"
+boa_engine = {version = "0.17.0", features = ["fuzz"]}
 boa_gc = "0.17.0"
 bytes = "1.4.0"
 derive_more = "0.99.17"

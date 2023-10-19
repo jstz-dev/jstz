@@ -26,7 +26,7 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
     let contract_address = PublicKeyHash::from_base58(contract_address_string.as_str())
         .expect("Failed to create contract address.");
 
-    let mut rt = Runtime::new().expect("Failed to create a new runtime.");
+    let mut rt = Runtime::new(usize::MAX).expect("Failed to create a new runtime.");
 
     {
         let context = rt.context();

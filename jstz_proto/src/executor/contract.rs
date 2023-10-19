@@ -271,7 +271,7 @@ pub mod run {
         } = run;
 
         // 1. Initialize runtime (with Web APIs to construct request)
-        let rt = &mut jstz_core::Runtime::new()?;
+        let rt = &mut jstz_core::Runtime::new(usize::MAX)?;
         register_web_apis(&rt.realm().clone(), rt);
 
         // 2. Extract address from request

@@ -113,7 +113,7 @@ impl<'host> DerefMut for Runtime<'host> {
 }
 
 impl<'host> Runtime<'host> {
-    pub fn new() -> JsResult<Self> {
+    pub fn new(gas_limit: usize) -> JsResult<Self> {
         // 1. Initialize job queue
         let job_queue = Rc::new(JobQueue::new());
 
@@ -121,6 +121,7 @@ impl<'host> Runtime<'host> {
         // NB: At this point, the context contains a 'default' realm
         let mut context = Context::builder()
             .job_queue(job_queue.clone() as Rc<dyn boa_engine::job::JobQueue>)
+            .instructions_remaining(gas_limit)
             .build()
             .unwrap();
 
