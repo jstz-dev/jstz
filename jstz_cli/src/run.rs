@@ -43,6 +43,7 @@ pub async fn exec(
             headers: HeaderMap::default(),
             gas_limit,
             body,
+            gas_limit
         }),
     };
 
