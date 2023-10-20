@@ -27,6 +27,7 @@ export default defineConfig({
         items: [
           { text: "Installation", link: "/installation" },
           { text: "First Steps", link: "/first_steps" },
+          { text: "CLI", link: "/cli" },
         ],
       },
 
