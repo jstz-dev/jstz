@@ -19,7 +19,20 @@
             inherit system;
             overlays = [(import rust-overlay)];
           };
-          jstz = pkgs.callPackage ./nix/jstz.nix {};
+
+          makeFrameworkFlags = frameworks:
+            pkgs.lib.concatStringsSep " " (
+              pkgs.lib.concatMap
+              (
+                framework: [
+                  "-F${pkgs.darwin.apple_sdk.frameworks.${framework}}/Library/Frameworks"
+                  "-framework ${framework}"
+                ]
+              )
+              frameworks
+            );
+
+          jstz = pkgs.callPackage ./nix/jstz.nix {makeFrameworkFlags = makeFrameworkFlags;};
         in {
           packages = {
             inherit (jstz) jstz_core jstz_api jstz_crypto jstz_proto jstz_kernel jstz_cli js_jstz js_jstz-types;
@@ -29,6 +42,13 @@
           # Rust dev environment
           devShells.default = pkgs.mkShell rec {
             NIX_CFLAGS_COMPILE = "-mcpu=generic";
+            NIX_LDFLAGS = pkgs.lib.optional pkgs.stdenv.isDarwin (
+              makeFrameworkFlags [
+                "Security"
+                "SystemConfiguration"
+              ]
+            );
+
             CC = "clang";
 
             shellHook = ''
