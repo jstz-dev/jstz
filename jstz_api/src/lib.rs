@@ -2,6 +2,7 @@ mod console;
 mod kv;
 
 pub mod http;
+pub mod stream;
 mod text_encoder;
 pub mod url;
 pub use console::ConsoleApi;
