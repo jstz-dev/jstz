@@ -38,6 +38,7 @@ export default defineConfig({
           { text: "Ledger", link: "/api/ledger" },
           { text: "Headers", link: "/api/headers" },
           { text: "Response", link: "/api/response" },
+          { text: "URLSearchParams", link: "/api/url_search_params" },
         ],
       },
     ],
