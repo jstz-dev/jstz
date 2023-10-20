@@ -52,6 +52,9 @@ enum Command {
         /// The address of the caller (or referrer)
         #[arg(value_name = "referrer", default_value = None)]
         referrer: Option<String>,
+        /// The maximum amount of gas to be used
+        #[arg(short, long, default_value_t = u32::MAX)]
+        gas_limit: u32,
         /// The HTTP method used in the request.
         #[arg(name = "request", short, long, default_value = "GET")]
         http_method: String,
@@ -99,8 +102,9 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
             url,
             referrer,
             http_method,
+            gas_limit,
             json_data,
-        } => run::exec(cfg, referrer, url, http_method, json_data).await,
+        } => run::exec(cfg, referrer, url, http_method, gas_limit, json_data).await,
         Command::Repl { self_address } => repl::exec(self_address, cfg),
         Command::Logs(logs) => logs::exec(logs, cfg).await,
         Command::Login { alias } => account::login(alias, cfg),

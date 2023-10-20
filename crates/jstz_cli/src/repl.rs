@@ -20,7 +20,7 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
     let account = cfg.accounts.account_or_current(self_address)?;
     let address = account.address();
 
-    let mut rt = Runtime::new().expect("Failed to create a new runtime.");
+    let mut rt = Runtime::new(usize::MAX).expect("Failed to create a new runtime.");
 
     {
         let context = rt.context();

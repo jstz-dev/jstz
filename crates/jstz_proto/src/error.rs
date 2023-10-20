@@ -9,6 +9,7 @@ pub enum Error {
     InvalidNonce,
     InvalidAddress,
     RefererShouldNotBeSet,
+    GasLimitExceeded,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -30,6 +31,9 @@ impl From<Error> for JsError {
             }
             Error::RefererShouldNotBeSet => JsNativeError::eval()
                 .with_message("RefererShouldNotBeSet")
+                .into(),
+            Error::GasLimitExceeded => JsNativeError::eval()
+                .with_message("GasLimitExceeded")
                 .into(),
         }
     }

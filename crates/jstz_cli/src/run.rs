@@ -18,6 +18,7 @@ pub async fn exec(
     referrer: Option<String>,
     url: String,
     http_method: String,
+    gas_limit: u32,
     json_data: Option<String>,
 ) -> Result<()> {
     let jstz_client = JstzClient::new(cfg);
@@ -80,6 +81,7 @@ pub async fn exec(
             method,
             headers: HeaderMap::default(),
             body,
+            gas_limit: gas_limit.try_into().unwrap_or(usize::MAX),
         }),
     };
 

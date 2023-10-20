@@ -105,6 +105,7 @@ pub struct RunContract {
     #[serde(with = "http_serde::header_map")]
     pub headers: HeaderMap,
     pub body: HttpBody,
+    pub gas_limit: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
