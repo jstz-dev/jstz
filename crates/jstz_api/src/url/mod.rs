@@ -60,9 +60,7 @@ impl Url {
     fn parse_url(url: String, base: Option<String>) -> Option<InnerUrl> {
         let options = InnerUrl::options();
         let base = base.as_ref().and_then(|base| InnerUrl::parse(base).ok());
-        options.base_url(base.as_ref());
-
-        options.parse(&url).ok()
+        options.base_url(base.as_ref()).parse(&url).ok()
     }
 
     /// Creates and returns a URL object referencing the URL specified using an absolute

@@ -42,8 +42,9 @@
     cargoLock = {
       lockFile = ../Cargo.lock;
       outputHashes = {
-        "tezos-smart-rollup-0.2.2" = "sha256-mhgIqPh7fh7cANBrJFDE8hxvgKXNOF2ZvLgDunTUoCk=";
-        "boa_engine-0.17.0" = "sha256-bf6i5ESIHwepb1a4dUYREPprz7Rijq+P5z+NXpsT16Q=";
+        "tezos-smart-rollup-0.2.2" = "sha256-V5UGGmU0m+uyN6sZGI3R7ElkfyFjTzEgW68rfMlyPBc=";
+        "boa_engine-0.17.0" = "sha256-RNFuFvBwDA/tjhEonFnn3t1q5DDehQkqLteJpWIXTFU=";
+        "boa_gc-0.17.0" = "sha256-bf6i5ESIHwepb1a4dUYREPprz7Rijq+P5z+NXpsT16Q=";
       };
     };
   };

@@ -246,7 +246,7 @@ pub fn register_apis(context: &mut Context<'_>) {
 }
 
 pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
-    let mut rt: Runtime<'_> = Runtime::new()?;
+    let mut rt: Runtime<'_> = Runtime::new(usize::MAX)?;
 
     // Initialize the host-defined object with the test harness report
     {

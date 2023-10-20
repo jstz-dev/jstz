@@ -6,7 +6,7 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
-boa_engine = "0.17.0"
+boa_engine = { version = "0.17.0", features = ["fuzz"] }
 boa_gc = "0.17.0"
 tezos-smart-rollup-host.workspace = true
 getrandom = { version = "0.2.10", features = ["custom"] }
