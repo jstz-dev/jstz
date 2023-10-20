@@ -48,6 +48,8 @@ enum Command {
         /// The HTTP method used in the request.
         #[arg(name = "request", short, long, default_value = "GET")]
         http_method: String,
+        #[arg(short, long, default_value = None)]
+        gas_limit: Option<usize>,
         /// The JSON data in the request body.
         #[arg(name = "data", short, long, default_value = None)]
         json_data: Option<String>,
@@ -74,8 +76,9 @@ fn exec(command: Command, cfg: &mut Config) -> Result<()> {
             url,
             referrer,
             http_method,
+            gas_limit,
             json_data,
-        } => run::exec(cfg, referrer, url, http_method, json_data),
+        } => run::exec(cfg, referrer, url, http_method, gas_limit, json_data),
         Command::Repl { self_address } => repl::exec(self_address),
     }
 }

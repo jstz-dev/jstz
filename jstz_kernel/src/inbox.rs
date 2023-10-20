@@ -40,6 +40,7 @@ pub struct Transaction {
     pub body: Option<String>,
     pub referrer: PublicKeyHash,
     pub url: String,
+    pub gas_limit: Option<usize>,
 }
 
 // reciever, ticket

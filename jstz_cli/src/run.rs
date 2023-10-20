@@ -16,6 +16,7 @@ pub fn exec(
     referrer: String,
     url: String,
     http_method: String,
+    gas_limit: Option<usize>,
     json_data: Option<String>,
 ) -> Result<()> {
     // Create transaction
@@ -24,6 +25,7 @@ pub fn exec(
         url,
         method: Method::from_str(&http_method).unwrap(),
         body: json_data.map(from_file_or_id).or_else(piped_input),
+        gas_limit,
     });
 
     // Create JSON message

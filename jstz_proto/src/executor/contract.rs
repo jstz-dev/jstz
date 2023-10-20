@@ -268,10 +268,11 @@ pub mod run {
             method,
             headers,
             body,
+            gas_limit,
         } = run;
 
         // 1. Initialize runtime (with Web APIs to construct request)
-        let rt = &mut jstz_core::Runtime::new(usize::MAX)?;
+        let rt = &mut jstz_core::Runtime::new(gas_limit.unwrap_or(usize::MAX))?;
         register_web_apis(&rt.realm().clone(), rt);
 
         // 2. Extract address from request

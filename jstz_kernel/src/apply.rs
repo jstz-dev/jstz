@@ -51,6 +51,7 @@ pub fn apply_transaction(
         url,
         method,
         body,
+        gas_limit,
     } = tx;
 
     let mut kv = Kv::new();
@@ -66,6 +67,7 @@ pub fn apply_transaction(
             method,
             body: body.map(String::into_bytes),
             uri,
+            gas_limit,
         },
     )?;
 
