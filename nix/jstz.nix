@@ -2,6 +2,7 @@
   pkgs,
   makeRustPlatform,
   buildNpmPackage,
+  makeFrameworkFlags,
 }: let
   # TODO: read this from the rust-toolchain file
   rustVersion = "1.71.0";
@@ -21,6 +22,13 @@
   common = {
     version = "0.1.0";
     src = ../.;
+
+    NIX_LDFLAGS = pkgs.lib.optional pkgs.stdenv.isDarwin (
+      makeFrameworkFlags [
+        "Security"
+        "SystemConfiguration"
+      ]
+    );
 
     cargoLock = {
       lockFile = ../Cargo.lock;
@@ -78,6 +86,8 @@ in {
   jstz_kernel = kernel "jstz_kernel";
 
   jstz_cli = crate "jstz_cli";
+
+  jstz_node = crate "jstz_node";
 
   js_jstz = jsPackage "jstz";
 
