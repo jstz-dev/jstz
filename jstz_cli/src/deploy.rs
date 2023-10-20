@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use serde_json::json;
 
 use crate::{
@@ -17,7 +17,7 @@ pub fn exec(
     let contract_code = contract_code
         .map(from_file_or_id)
         .or_else(piped_input)
-        .unwrap_or(String::default());
+        .ok_or(anyhow!("No function code supplied"))?;
     // Create JSON message
     let jmsg = json!({
         "DeployContract": {

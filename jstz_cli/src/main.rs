@@ -26,12 +26,12 @@ enum Command {
         /// Address used when deploying the contract
         #[arg(short, long)]
         self_address: String,
-        /// Function code.
-        #[arg(short, long, default_value = None)]
-        function_code: Option<String>,
         /// Initial balance
         #[arg(short, long, default_value_t = 0)]
         balance: u64,
+        /// Function code.
+        #[arg(value_name = "function_code", default_value = None)]
+        function_code: Option<String>,
     },
     /// Run a smart function using a specified URL.
     Run {
