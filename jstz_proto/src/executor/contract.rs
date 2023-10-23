@@ -290,12 +290,23 @@ pub mod run {
         headers::test_and_set_referrer(&request.deref(), source)?;
 
         // 5. Run :)
-        let result: JsValue = runtime::with_host_runtime(hrt, || {
-            jstz_core::future::block_on(async move {
-                let result = Script::load_init_run(tx, &address, request.inner(), rt)?;
+        let result: JsValue = {
+            let rt = &mut *rt;
+            runtime::with_host_runtime(hrt, || {
+                jstz_core::future::block_on(async move {
+                    let result =
+                        Script::load_init_run(tx, &address, request.inner(), rt)?;
 
-                rt.resolve_value(&result).await
+                    rt.resolve_value(&result).await
+                })
             })
+        }
+        .map_err(|err| {
+            if rt.instructions_remaining == 0 {
+                Error::GasLimitExceeded
+            } else {
+                err.into()
+            }
         })?;
 
         // 6. Serialize response
