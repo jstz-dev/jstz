@@ -8,6 +8,8 @@ use std::{
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
+use crate::accounts::account_list::AccountList;
+
 fn home() -> PathBuf {
     dirs::home_dir()
         .expect("Failed to get home directory")
@@ -26,6 +28,8 @@ pub struct Config {
     pub octez_node_rpc_port: u16,
     /// Sandbox config (None if sandbox is not running)
     pub sandbox: Option<SandboxConfig>,
+    /// List of accounts
+    pub accounts: AccountList,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -66,6 +70,7 @@ impl Config {
             octez_node_port: 18731,
             octez_node_rpc_port: 18730,
             sandbox: None,
+            accounts: AccountList::default(),
         }
     }
 
@@ -105,5 +110,9 @@ impl Config {
         self.sandbox
             .as_ref()
             .ok_or(anyhow!("Sandbox is not running"))
+    }
+
+    pub fn accounts(&mut self) -> &mut AccountList {
+        &mut self.accounts
     }
 }
