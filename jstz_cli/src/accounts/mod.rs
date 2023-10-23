@@ -7,17 +7,6 @@ mod account_management;
 
 use crate::config::Config;
 
-/*
-1. Account creation:
-Use all functions from `jstz_crypto`/`tezos_crypto_rs`
-    - Create sk (potentially from user passphrase or random data)
-    - Create pk from sk
-    - Create address (pkh) from pk
-    - Assign alias
-
-    `jstz account create`
-*/
-
 fn create_account(
     passphrase: Option<String>,
     alias: String,
