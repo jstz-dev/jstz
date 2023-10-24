@@ -30,7 +30,7 @@ Creates a new instance of `UrlSearchParams` with the provided key-value pairs.
 
 ## Instance Properties
 
-### `size: number`
+### `readonly size: number`
 
 - **Returns**: The number of search parameters present.
 
