@@ -105,9 +105,11 @@ fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static
             if !res.is_undefined() {
                 println!(
                     "{}",
-                    res.to_string(&mut rt.context())
-                        .unwrap()
-                        .to_std_string_escaped()
+                    if res.is_callable() {
+                        res.to_string(rt.context()).unwrap().to_std_string_escaped()
+                    } else {
+                        res.display().to_string()
+                    },
                 );
             }
             if let Err(err) =

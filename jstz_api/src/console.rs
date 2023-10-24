@@ -24,6 +24,7 @@ use boa_engine::{
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
 use jstz_core::{host::HostRuntime, runtime, value::IntoJs};
+use tezos_smart_rollup::prelude::debug_msg;
 
 /// This represents the different types of log messages.
 #[derive(Debug)]
@@ -37,24 +38,24 @@ enum LogMessage {
 impl LogMessage {
     fn log(self, rt: &impl HostRuntime, console: &Console) {
         let indent = 2 * console.groups.len();
-
-        match self {
-            LogMessage::Error(msg) => {
-                rt.write_debug(&format!("[🔴] {:indent$}{}\n", "", msg))
-            }
-            LogMessage::Warn(msg) => {
-                rt.write_debug(&format!("[🟠] {:indent$}{}\n", "", msg))
-            }
-            LogMessage::Info(msg) => {
-                rt.write_debug(&format!("[🟢] {:indent$}{}\n", "", msg))
-            }
-            LogMessage::Log(msg) => {
-                rt.write_debug(&format!("[🪵] {:indent$}{}\n", "", msg))
-            }
+        let (msg, symbol) = match self {
+            LogMessage::Error(msg) => (msg, '🔴'),
+            LogMessage::Warn(msg) => (msg, '🟠'),
+            LogMessage::Info(msg) => (msg, '🟢'),
+            LogMessage::Log(msg) => (msg, '🪵'),
+        };
+        for line in msg.lines() {
+            debug_msg!(rt, "[{symbol}] {:>indent$}{line}\n", "");
         }
     }
 }
 
+fn display_js(value: &JsValue) -> String {
+    match value.as_string() {
+        Some(value) => value.to_std_string_escaped(),
+        None => value.display().to_string(),
+    }
+}
 /// This represents the `console` formatter.
 ///
 /// More information:
@@ -62,70 +63,71 @@ impl LogMessage {
 fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
     match data {
         [] => Ok(String::new()),
-        [val] => Ok(val.to_string(context)?.to_std_string_escaped()),
+        [val] => Ok(display_js(val)),
         data => {
             let mut formatted = String::new();
-            let mut arg_index = 1;
-            let target = data
+            let mut arg_index = 0;
+            if let Some(target) = data
                 .get_or_undefined(0)
-                .to_string(context)?
-                .to_std_string_escaped();
-            let mut chars = target.chars();
-            while let Some(c) = chars.next() {
-                if c == '%' {
-                    let fmt = chars.next().unwrap_or('%');
-                    match fmt {
-                        /* integer */
-                        'd' | 'i' => {
-                            let arg = match data
-                                .get_or_undefined(arg_index)
-                                .to_numeric(context)?
-                            {
-                                Numeric::Number(r) => (r.floor() + 0.0).to_string(),
-                                Numeric::BigInt(int) => int.to_string(),
-                            };
-                            formatted.push_str(&arg);
-                            arg_index += 1;
+                .as_string()
+                .map(|x| x.to_std_string_escaped())
+            {
+                arg_index = 1;
+                let mut chars = target.chars();
+                while let Some(c) = chars.next() {
+                    if c == '%' {
+                        let fmt = chars.next().unwrap_or('%');
+                        match fmt {
+                            /* integer */
+                            'd' | 'i' => {
+                                let arg = match data
+                                    .get_or_undefined(arg_index)
+                                    .to_numeric(context)?
+                                {
+                                    Numeric::Number(r) => (r.floor() + 0.0).to_string(),
+                                    Numeric::BigInt(int) => int.to_string(),
+                                };
+                                formatted.push_str(&arg);
+                                arg_index += 1;
+                            }
+                            /* float */
+                            'f' => {
+                                let arg = data
+                                    .get_or_undefined(arg_index)
+                                    .to_number(context)?;
+                                formatted.push_str(&format!("{arg:.6}"));
+                                arg_index += 1;
+                            }
+                            /* object */
+                            'o' | 'O' => {
+                                let arg = data.get_or_undefined(arg_index);
+                                formatted.push_str(&arg.display().to_string());
+                                arg_index += 1;
+                            }
+                            /* string */
+                            's' => {
+                                let arg = data
+                                    .get_or_undefined(arg_index)
+                                    .to_string(context)?
+                                    .to_std_string_escaped();
+                                formatted.push_str(&arg);
+                                arg_index += 1;
+                            }
+                            '%' => formatted.push('%'),
+                            c => {
+                                formatted.push('%');
+                                formatted.push(c);
+                            }
                         }
-                        /* float */
-                        'f' => {
-                            let arg =
-                                data.get_or_undefined(arg_index).to_number(context)?;
-                            formatted.push_str(&format!("{arg:.6}"));
-                            arg_index += 1;
-                        }
-                        /* object */
-                        'o' | 'O' => {
-                            let arg = data.get_or_undefined(arg_index);
-                            formatted.push_str(&arg.display().to_string());
-                            arg_index += 1;
-                        }
-                        /* string */
-                        's' => {
-                            let arg = data
-                                .get_or_undefined(arg_index)
-                                .to_string(context)?
-                                .to_std_string_escaped();
-                            formatted.push_str(&arg);
-                            arg_index += 1;
-                        }
-                        '%' => formatted.push('%'),
-                        c => {
-                            formatted.push('%');
-                            formatted.push(c);
-                        }
+                    } else {
+                        formatted.push(c);
                     }
-                } else {
-                    formatted.push(c);
-                };
+                }
             }
 
             /* unformatted data */
             for rest in data.iter().skip(arg_index) {
-                formatted.push_str(&format!(
-                    " {}",
-                    rest.to_string(context)?.to_std_string_escaped()
-                ));
+                formatted.push_str(&format!(" {}", display_js(rest)));
             }
 
             Ok(formatted)
