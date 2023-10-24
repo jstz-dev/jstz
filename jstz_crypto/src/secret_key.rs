@@ -1,27 +1,27 @@
 use serde::{Deserialize, Serialize};
-use tezos_crypto_rs::hash::PublicKeyBls;
+use tezos_crypto_rs::hash::SecretKeyBls;
 
 use crate::error::Result;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub enum PublicKey {
-    Bls(PublicKeyBls),
+pub enum SecretKey {
+    Bls(SecretKeyBls),
 }
 
-impl PublicKey {
+impl SecretKey {
     pub fn to_base58(&self) -> String {
-        let PublicKey::Bls(pk) = self;
+        let SecretKey::Bls(pk) = self;
         pk.to_base58_check()
     }
 
     pub fn from_base58(data: &str) -> Result<Self> {
-        let bls = PublicKeyBls::from_base58_check(data)?;
+        let bls = SecretKeyBls::from_base58_check(data)?;
 
-        Ok(PublicKey::Bls(bls))
+        Ok(SecretKey::Bls(bls))
     }
 }
 
-impl ToString for PublicKey {
+impl ToString for SecretKey {
     fn to_string(&self) -> String {
         self.to_base58()
     }
