@@ -39,7 +39,7 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
         host_defined.insert(tx);
     }
 
-    let mut rl = Editor::<()>::new().expect("Failed to create a new editor.");
+    let mut rl = Editor::<(), _>::new().expect("Failed to create a new editor.");
 
     let mut mock_hrt = MockHost::default();
 
@@ -81,7 +81,7 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
                 }
 
                 // Add the line to history so you can use arrow keys to recall it
-                rl.add_history_entry(line.as_str());
+                rl.add_history_entry(line.as_str())?;
 
                 evaluate(input, &mut rt, &mut mock_hrt);
             }
