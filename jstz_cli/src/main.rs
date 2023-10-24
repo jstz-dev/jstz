@@ -1,7 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 
-mod accounts;
+mod account;
 mod bridge;
 mod config;
 mod deploy;
@@ -24,7 +24,7 @@ enum Command {
     Bridge(bridge::Command),
     /// Commands related to the account management
     #[command(subcommand)]
-    Account(accounts::Command),
+    Account(account::Command),
     /// Deploys a smart function
     Deploy {
         /// Address used when deploying the contract
@@ -64,7 +64,7 @@ fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
         Command::Sandbox(sandbox_command) => sandbox::exec(cfg, sandbox_command),
         Command::Bridge(bridge_command) => bridge::exec(bridge_command, cfg),
-        Command::Account(account_command) => accounts::exec(account_command, cfg),
+        Command::Account(account_command) => account::exec(account_command, cfg),
         Command::Deploy {
             self_address,
             function_code,

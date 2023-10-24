@@ -9,7 +9,7 @@ use std::{
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::accounts::account::Account;
+use crate::account::account::Account;
 
 fn home() -> PathBuf {
     dirs::home_dir()
@@ -24,31 +24,9 @@ pub struct AccountConfig {
 }
 
 impl AccountConfig {
-    /*
-    pub fn new() -> Self {
-        AccountList {
-            accounts: HashMap::new(),
-        }
-    }
-    */
-
     pub fn upsert(&mut self, account: Account) {
-        self.accounts.insert(account.get_alias().clone(), account);
+        self.accounts.insert(account.alias.clone(), account);
     }
-
-    /*
-    pub fn remove(&mut self, alias: &String) -> Option<Account> {
-        self.accounts.remove(alias)
-    }
-
-    pub fn get(&self, alias: &String) -> Option<&Account> {
-        self.accounts.get(alias)
-    }
-
-    pub fn get_all(&self) -> &HashMap<String, Account> {
-        &self.accounts
-    }
-    */
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
