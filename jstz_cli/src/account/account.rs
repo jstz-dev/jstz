@@ -1,7 +1,7 @@
 use anyhow::Result;
 use jstz_crypto::{
-    public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
-    utils::keypair_from_passphrase,
+    keypair_from_passphrase, public_key::PublicKey, public_key_hash::PublicKeyHash,
+    secret_key::SecretKey,
 };
 use serde::{Deserialize, Serialize};
 
