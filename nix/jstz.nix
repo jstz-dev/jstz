@@ -58,6 +58,10 @@
           (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin)
           ["stackprotector"];
 
+        # Don't run the tests (this runs all tests for the workspace which we want to do
+        # at a later point)
+        doCheck = false;
+
         buildPhase = ''
           CC=clang cargo build --release -p ${pname} --target=wasm32-unknown-unknown
         '';
