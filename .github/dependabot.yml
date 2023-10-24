@@ -1,0 +1,68 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (NPM)"
+  - package-ecosystem: npm
+    directory: /packages/jstz/
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (NPM)"
+  - package-ecosystem: npm
+    directory: /packages/jstz-types/
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (NPM)"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (Actions)"
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (Cargo)"
+  - package-ecosystem: cargo
+    directory: /jstz_api/
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (Cargo)"
+  - package-ecosystem: cargo
+    directory: /jstz_cli/
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (Cargo)"
+  - package-ecosystem: cargo
+    directory: /jstz_core/
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (Cargo)"
+  - package-ecosystem: cargo
+    directory: /jstz_crypto/
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (Cargo)"
+  - package-ecosystem: cargo
+    directory: /jstz_kernel/
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (Cargo)"
+  - package-ecosystem: cargo
+    directory: /jstz_proto/
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "Deps (Cargo)"
