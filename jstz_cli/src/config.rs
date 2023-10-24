@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     fs,
     io::{Error, ErrorKind},
     path::PathBuf,
@@ -8,12 +9,46 @@ use std::{
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::accounts::account_list::AccountList;
+use crate::accounts::account::Account;
 
 fn home() -> PathBuf {
     dirs::home_dir()
         .expect("Failed to get home directory")
         .join(".jstz")
+}
+
+// Represents a collection of accounts
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+pub struct AccountConfig {
+    accounts: HashMap<String, Account>,
+}
+
+impl AccountConfig {
+    /*
+    pub fn new() -> Self {
+        AccountList {
+            accounts: HashMap::new(),
+        }
+    }
+    */
+
+    pub fn upsert(&mut self, account: Account) {
+        self.accounts.insert(account.get_alias().clone(), account);
+    }
+
+    /*
+    pub fn remove(&mut self, alias: &String) -> Option<Account> {
+        self.accounts.remove(alias)
+    }
+
+    pub fn get(&self, alias: &String) -> Option<&Account> {
+        self.accounts.get(alias)
+    }
+
+    pub fn get_all(&self) -> &HashMap<String, Account> {
+        &self.accounts
+    }
+    */
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -29,7 +64,7 @@ pub struct Config {
     /// Sandbox config (None if sandbox is not running)
     pub sandbox: Option<SandboxConfig>,
     /// List of accounts
-    pub accounts: AccountList,
+    pub accounts: AccountConfig,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -70,7 +105,7 @@ impl Config {
             octez_node_port: 18731,
             octez_node_rpc_port: 18730,
             sandbox: None,
-            accounts: AccountList::default(),
+            accounts: AccountConfig::default(),
         }
     }
 
@@ -112,7 +147,7 @@ impl Config {
             .ok_or(anyhow!("Sandbox is not running"))
     }
 
-    pub fn accounts(&mut self) -> &mut AccountList {
+    pub fn accounts(&mut self) -> &mut AccountConfig {
         &mut self.accounts
     }
 }

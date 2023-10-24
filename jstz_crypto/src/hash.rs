@@ -28,3 +28,9 @@ impl AsRef<[u8]> for Blake2b {
         &self.0
     }
 }
+
+impl Blake2b {
+    pub fn as_array(&self) -> &[u8; 32] {
+        &self.0
+    }
+}

@@ -1,11 +1,15 @@
 use anyhow::Result;
+use bip39::{Language, Mnemonic, MnemonicType};
 use clap::Subcommand;
 
 pub mod account;
-pub mod account_list;
-mod account_management;
 
 use crate::config::Config;
+
+fn generate_passphrase() -> String {
+    let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
+    return mnemonic.to_string();
+}
 
 fn create_account(
     passphrase: Option<String>,
@@ -15,14 +19,18 @@ fn create_account(
     let passphrase = match passphrase {
         Some(passphrase) => passphrase,
         None => {
-            let passphrase = account_management::generate_passphrase();
+            let passphrase = generate_passphrase();
             println!("Generated passphrase: {}", passphrase);
             passphrase
         }
     };
 
-    let address = account_management::create_account(passphrase, alias, cfg)?;
-    println!("Account created: {}", address);
+    let account = account::Account::from_passphrase(passphrase, alias)?;
+    cfg.accounts().upsert(account.clone());
+    cfg.save()?;
+
+    println!("Account created with address: {}", account.get_address());
+
     Ok(())
 }
 
