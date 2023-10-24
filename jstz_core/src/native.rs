@@ -1,6 +1,7 @@
 use std::marker::PhantomData;
 
 use boa_engine::{
+    builtins::object::Object as GlobalObject,
     context::intrinsics::StandardConstructor,
     js_string,
     object::{
@@ -384,6 +385,13 @@ fn raw_constructor<T: NativeClass>(
     Ok(object.inner.clone())
 }
 
+pub trait JsNativeObjectToString: NativeObject + Sized {
+    fn to_string(
+        this: &JsNativeObject<Self>,
+        context: &mut Context<'_>,
+    ) -> JsResult<JsValue>;
+}
+
 pub trait NativeClass {
     /// The Rust type of the class's instances.
     type Instance: NativeObject + Sized;
@@ -406,6 +414,21 @@ pub trait NativeClass {
 
     /// Initializes the internals and the methods of the class.
     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()>;
+
+    fn to_string(
+        this: &JsValue,
+        _args: &[JsValue],
+        context: &mut Context<'_>,
+    ) -> JsResult<JsValue>
+    where
+        Self::Instance: JsNativeObjectToString,
+    {
+        if let Ok(native_obj) = JsNativeObject::<Self::Instance>::try_from(this.clone()) {
+            Self::Instance::to_string(&native_obj, context)
+        } else {
+            GlobalObject::to_string(this, &[], context)
+        }
+    }
 }
 
 pub fn register_global_class<T: NativeClass>(context: &mut Context<'_>) -> JsResult<()> {
