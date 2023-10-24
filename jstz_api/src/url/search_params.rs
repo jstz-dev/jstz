@@ -10,7 +10,8 @@ use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{
     accessor,
     native::{
-        register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
+        register_global_class, Accessor, ClassBuilder, JsNativeObject,
+        JsNativeObjectToString, NativeClass,
     },
     value::IntoJs,
 };
@@ -37,6 +38,15 @@ unsafe impl Trace for UrlSearchParams {
     // there exists a parent `url` object (whose lifetime bounds the
     // search params object)
     empty_trace!();
+}
+
+impl JsNativeObjectToString for UrlSearchParams {
+    fn to_string(
+        this: &JsNativeObject<Self>,
+        context: &mut Context<'_>,
+    ) -> JsResult<JsValue> {
+        Ok(this.deref().to_string().into_js(context))
+    }
 }
 
 impl UrlSearchParams {
@@ -439,16 +449,6 @@ impl UrlSearchParamsClass {
         search_params.sort();
 
         Ok(JsValue::undefined())
-    }
-
-    fn to_string(
-        this: &JsValue,
-        _args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
-        let search_params = UrlSearchParams::try_from_js(this)?;
-
-        Ok(search_params.to_string().into_js(context))
     }
 }
 

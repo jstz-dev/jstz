@@ -19,7 +19,8 @@ use boa_gc::{custom_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{
     accessor,
     native::{
-        register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
+        register_global_class, Accessor, ClassBuilder, JsNativeObject,
+        JsNativeObjectToString, NativeClass,
     },
     value::IntoJs,
 };
@@ -44,6 +45,15 @@ unsafe impl Trace for Url {
     custom_trace!(this, {
         mark(this.search_params.deref().deref());
     });
+}
+
+impl JsNativeObjectToString for Url {
+    fn to_string(
+        this: &JsNativeObject<Self>,
+        context: &mut Context<'_>,
+    ) -> JsResult<JsValue> {
+        Ok(this.deref().href().into_js(context))
+    }
 }
 
 impl Url {
@@ -423,24 +433,6 @@ impl UrlClass {
         )
     }
 
-    fn to_string(
-        this: &JsValue,
-        _args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
-        let url = Url::try_from_js(this)?;
-
-        Ok(url.href().into_js(context))
-    }
-
-    fn to_json(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
-        Self::to_string(this, args, context)
-    }
-
     fn can_parse(
         _this: &JsValue,
         args: &[JsValue],
@@ -509,7 +501,7 @@ impl NativeClass for UrlClass {
             .method(
                 js_string!("toJSON"),
                 0,
-                NativeFunction::from_fn_ptr(UrlClass::to_json),
+                NativeFunction::from_fn_ptr(UrlClass::to_string),
             );
 
         Ok(())
