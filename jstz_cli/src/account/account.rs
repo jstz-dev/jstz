@@ -5,15 +5,11 @@ use jstz_crypto::{
 };
 use serde::{Deserialize, Serialize};
 
-fn create_address(pk: &PublicKey) -> String {
-    PublicKeyHash::try_from(pk).unwrap().to_base58()
-}
-
 // Represents an individual account
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
     pub alias: String,
-    pub address: String,
+    pub address: PublicKeyHash,
     pub secret_key: SecretKey,
     pub public_key: PublicKey,
 }
@@ -25,10 +21,10 @@ impl Account {
         println!("Secret key: {}", sk.to_string());
         println!("Public key: {}", pk.to_string());
 
-        let address = create_address(&pk);
+        let address = PublicKeyHash::try_from(&pk)?;
         let new_account = Account {
-            alias: alias,
-            address: address,
+            alias,
+            address,
             secret_key: sk,
             public_key: pk,
         };
