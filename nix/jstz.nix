@@ -54,6 +54,10 @@
         NIX_CFLAGS_COMPILE = "-mcpu=generic";
         nativeBuildInputs = [pkgs.llvmPackages_16.clangNoLibc];
 
+        # Don't run the tests (this runs all tests for the workspace which we want to do
+        # at a later point)
+        doCheck = false;
+
         buildPhase = ''
           CC=clang cargo build --release -p ${pname} --target=wasm32-unknown-unknown
         '';

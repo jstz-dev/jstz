@@ -16,3 +16,7 @@ hex = "0.4.3"
 reqwest = { version = "0.11.22", features = ["json"] }
 serde = { version = "1.0.183", features = ["derive"] }
 thiserror = "1.0.50"
+
+[[bin]]
+name = "jstz-node"
+path = "src/main.rs"
