@@ -1,6 +1,6 @@
 # 🙏 Request
 
-`jstz`'s [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) implementation is based on the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) specification. This API permits you to manipulate and inspect HTTP request and response headers.
+`jstz`'s [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) implementation is based on the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) specification. This API permits you to manipulate and inspect HTTP requests.
 
 ::: danger
 ⚠️ `jstz`'s implementation is not spec compliant ⚠️
@@ -8,77 +8,77 @@
 
 ## Constructors
 
-### `new Request(input : Request)`
+### `new Request(input: Request)`
 
-Constructs a new request object as a copy of its argument.
+::: danger
+**Spec deviation**: The `referrer` is copied from the given request. Additionally the `mode` conversion is not supported.
+:::
 
-### `new Request(input : string | URL, options: RequestOptions)`
+Constructs a new `Request` object as a copy of the given request.
 
-Creates a new `Request` object.
-The first argument may be either a string url, or a [`URL`](./url.md) object.
-The second, optional, argument is a javascript object containing any custom settings for the request.
+### `new Request(input: string, init?: RequestInit)`
+
+::: danger
+**Spec deviation**: Many of the `RequestInit` properties are not supported.
+:::
+
+Creates a new `Request` object, given a URL string and optionally any request settings.
+The possible settings are:
+
+- `method` (`string`, optional)
+
+  A string representing the HTTP method of the request. If omitted the default value is `'GET'`.
+
+- `headers` (`HeadersInit`, optional)
+
+  Any headers that should be attatched to the request. Either a [`Headers`](./headers.md) object, an `Array` of key-value pairs, or a `Record<string, string>`.
+
+- `body` (`BodyInit | null`, optional)
+
+  ::: danger
+  **Spec deviation**: `Blob`, `FormData`, `ReadableStream` and `URLSearchParams` are not supported for `BodyInit`.
+  :::
+
+  The body attached to the request. Either a `string` or `BufferSource` (an `ArrayBuffer` or `ArrayBufferView`). The body is required for the `'PUT'`, `'POST'` and `'PATCH'` methods and forbidden for the `'GET'`, `'CONNECT'`, `'TRACE'`, `'OPTIONS'` and `'HEAD'` methods.
 
 ```typescript
-type RequestOptions =
-  | {
-      method?: "GET" | "CONNECT" | "TRACE" | "OPTIONS" | "HEAD" | "DELETE";
-      headers?: Headers | { [headerName: string]: string };
-    }
-  | {
-      method: "POST" | "PUT" | "PATCH" | "DELETE";
-      headers?: Headers | { [headerName: string]: string };
-      body: ArrayBuffer | string;
-    };
+type BodyInit = string | BufferSource;
+
+interface RequestInit {
+  body?: BodyInit | null;
+  headers?: HeadersInit;
+  method?: string;
+}
 ```
-
-The available settings are.
-
-#### `method`
-
-A string representing the `http` method of the request, eg `'GET'`, `'PUT'`, `'POST'`.
-If omitted the default value is `'GET'`.
-
-#### `headers`
-
-Any headers that should be attatched to the request.
-Either a [`Headers`](./headers.md) object or an object literal whos values are strings.
-
-#### `body`
-
-The body attached to the request.
-This can either be a string or a javascript array buffer.
-The body is required for the `'PUT'`, `'POST'` and `'PATCH'` methods and forbidden for the
-`'GET'`, `'CONNECT'`, `'TRACE'`, `'OPTIONS'` and `'HEAD'` methods.
 
 ## Instance Properties
 
-### `readonly bodyUsed: bool`
+### `readonly Request.bodyUsed: bool`
 
-A boolean value representing whether the body has been accessed.
+A boolean property for whether the `body` of this `Request` has already been used or not.
 
-### `readonly headers`
+### `readonly Request.headers`
 
 A `Headers` object containing the headers attached to the request
 
-### `readonly method: string`
+### `readonly Request.method: string`
 
-A string representing the `http` method of the request, eg `'GET'`, `'PUT'`, `'POST'`.
+A string representing the HTTP method of the request, eg `'GET'`, `'PUT'`, `'POST'`.
 
-### `readonly url: URL`
+### `readonly Request.url: string`
 
-A `URL` object containing the request url.
+A string property for the URL of the request.
 
 ## Instance Methods
 
-### `async arrayBuffer() : Promise<ArrayBuffer>`
+### `Response.arrayBuffer(): Promise<ArrayBuffer>`
 
-Returns a promise containing the response body as an
-[`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/API/Request/arrayBuffer).
+Returns a promise that resolves with an `ArrayBuffer`.
 
-### `async json() : Promise<unknown>`
+### `Response.json(): Promise<any>`
 
-Returns a promise containing the response body parsed as JSON.
+Returns a promise that resolves with the result of parsing the body text as JSON.
 
-### `async text() : Promise<String>`
+### `Response.text(): Promise<string>`
 
-Returns a promise containing the response body as a string.
+Returns a promise that resolves with a UTF-16 `string`.
