@@ -47,7 +47,7 @@ impl LogMessage {
         }
     }
 }
-fn escape(unescaped: &String) -> String {
+fn escape(unescaped: &str) -> String {
     fn split(
         (in_string, escaped, done, iter): &mut (
             bool,
@@ -92,7 +92,7 @@ fn escape(unescaped: &String) -> String {
 fn display_js(value: &JsValue) -> String {
     match value.as_string() {
         Some(value) => value.to_std_string_escaped(),
-        None => value.display().to_string(),
+        None => escape(&value.display().to_string()),
     }
 }
 /// This represents the `console` formatter.
@@ -102,7 +102,7 @@ fn display_js(value: &JsValue) -> String {
 fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
     match data {
         [] => Ok(String::new()),
-        [val] => Ok(escape(&display_js(val)).to_string()),
+        [val] => Ok(display_js(val)),
         data => {
             let mut formatted = String::new();
             let mut arg_index = 0;
@@ -169,7 +169,7 @@ fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
                 formatted.push_str(&format!(" {}", display_js(rest)));
             }
 
-            Ok(escape(&formatted))
+            Ok(formatted)
         }
     }
 }
