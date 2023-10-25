@@ -27,6 +27,10 @@ impl AccountConfig {
     pub fn upsert(&mut self, account: Account) {
         self.accounts.insert(account.alias.clone(), account);
     }
+
+    pub fn get(&self, alias: &String) -> Option<&Account> {
+        self.accounts.get(alias)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]

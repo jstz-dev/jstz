@@ -136,6 +136,14 @@ pub struct SignedOperation {
 }
 
 impl SignedOperation {
+    pub fn new(public_key: PublicKey, signature: Signature, inner: Operation) -> Self {
+        Self {
+            public_key,
+            signature,
+            inner,
+        }
+    }
+
     pub fn hash(&self) -> Blake2b {
         self.inner.hash()
     }
