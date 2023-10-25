@@ -184,7 +184,7 @@ impl Script {
 
         Account::create(hrt, tx, &address, balance, Some(code))?;
 
-        debug_msg!(hrt, "[📜] Smart function created: {address}\n");
+        debug_msg!(hrt, "[📜] Smart function deployed: {address}\n");
 
         Ok(address)
     }
