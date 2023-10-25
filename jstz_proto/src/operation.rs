@@ -67,15 +67,6 @@ impl Operation {
                 )
                 .as_bytes(),
             ),
-            Content::CallContract(CallContract { contract_address }) => Blake2b::from(
-                format!(
-                    "{}{}{}",
-                    source.to_string(),
-                    nonce.to_string(),
-                    contract_address
-                )
-                .as_bytes(),
-            ),
             Content::RunContract(RunContract {
                 uri,
                 method,
@@ -105,11 +96,6 @@ pub struct DeployContract {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct CallContract {
-    pub contract_address: Address,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct RunContract {
     #[serde(with = "http_serde::uri")]
     pub uri: Uri,
@@ -124,7 +110,6 @@ pub struct RunContract {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum Content {
     DeployContract(DeployContract),
-    CallContract(CallContract),
     RunContract(RunContract),
 }
 
@@ -164,17 +149,9 @@ pub mod external {
         pub amount: Amount,
         pub reciever: Address,
     }
-
-    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-    pub struct ContractOrigination {
-        pub originating_address: Address,
-        pub initial_balance: Amount,
-        pub contract_code: String,
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum ExternalOperation {
     Deposit(external::Deposit),
-    ContractOrigination(external::ContractOrigination),
 }

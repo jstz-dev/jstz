@@ -32,11 +32,6 @@ pub struct DeployContract {
 }
 
 #[derive(Debug, Serialize)]
-pub struct CallContract {
-    pub result: String,
-}
-
-#[derive(Debug, Serialize)]
 pub struct RunContract {
     pub body: HttpBody,
     #[serde(with = "http_serde::status_code")]
@@ -48,6 +43,5 @@ pub struct RunContract {
 #[derive(Debug, Serialize)]
 pub enum Content {
     DeployContract(DeployContract),
-    CallContract(CallContract),
     RunContract(RunContract),
 }
