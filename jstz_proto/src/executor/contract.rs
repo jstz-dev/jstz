@@ -21,7 +21,7 @@ use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     api,
-    context::account::{Account, Address},
+    context::account::{Account, Address, Amount},
     Error, Result,
 };
 
@@ -160,6 +160,33 @@ impl Script {
         self.register_apis(contract_address, context);
 
         self.realm().eval_module(&self, context)
+    }
+
+    /// Deploys a script
+    pub fn deploy(
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        source: &Address,
+        code: String,
+        balance: Amount,
+    ) -> Result<Address> {
+        let nonce = Account::nonce(hrt, tx, source)?;
+
+        let address = Address::digest(
+            format!(
+                "{}{}{}",
+                source.to_string(),
+                code.to_string(),
+                nonce.to_string(),
+            )
+            .as_bytes(),
+        )?;
+
+        Account::create(hrt, tx, &address, balance, Some(code))?;
+
+        debug_msg!(hrt, "[📜] Smart function created: {address}\n");
+
+        Ok(address)
     }
 
     /// Runs the script
@@ -306,6 +333,29 @@ pub mod run {
             body,
             status_code: http_parts.status,
             headers: http_parts.headers,
+        })
+    }
+}
+
+pub mod deploy {
+    use super::*;
+    use crate::{operation, receipt};
+
+    pub fn execute(
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        source: &Address,
+        deployment: operation::DeployContract,
+    ) -> Result<receipt::DeployContract> {
+        let operation::DeployContract {
+            contract_code,
+            contract_credit,
+        } = deployment;
+
+        let address = Script::deploy(hrt, tx, source, contract_code, contract_credit)?;
+
+        Ok(receipt::DeployContract {
+            contract_address: address,
         })
     }
 }
