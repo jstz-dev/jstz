@@ -13,7 +13,7 @@ running on Tezos's smart optimistic rollups, some APIs are not available (e.g. `
 - `atob`
 - `btoa`
 - Fetch API:
-  - [`Headers`](./headers.md)  
+  - [`Headers`](./headers.md)
   - [`Request`](./request.md)
   - [`Response`](./response.md)
 - URL API:
