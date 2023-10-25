@@ -23,7 +23,7 @@ use boa_engine::{
     Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
-use escape_string::escape;
+use itertools::Itertools;
 use jstz_core::{host::HostRuntime, runtime, value::IntoJs};
 
 /// This represents the different types of log messages.
@@ -47,6 +47,48 @@ impl LogMessage {
         }
     }
 }
+fn escape(unescaped: &String) -> String {
+    fn split(
+        (in_string, escaped, done, iter): &mut (
+            bool,
+            bool,
+            bool,
+            impl Iterator<Item = char>,
+        ),
+    ) -> Option<String> {
+        if *done {
+            return None;
+        };
+        let mut accumulator = String::default();
+        for chr in iter {
+            *escaped = false;
+            match chr {
+                '\\' => {
+                    *escaped = true;
+                }
+                '"' => {
+                    if !*escaped {
+                        *in_string = !*in_string;
+                    }
+                }
+                '\n' => {
+                    if !*in_string {
+                        return Some(accumulator.trim().to_string());
+                    }
+                }
+                _ => (),
+            }
+            accumulator.push(chr)
+        }
+        if accumulator.len() > 0 {
+            *done = true;
+            Some(accumulator.trim().to_string())
+        } else {
+            None
+        }
+    }
+    itertools::unfold((false, false, false, unescaped.chars()), split).join(" ")
+}
 fn display_js(value: &JsValue) -> String {
     match value.as_string() {
         Some(value) => value.to_std_string_escaped(),
@@ -63,12 +105,13 @@ fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
         [val] => Ok(escape(&display_js(val)).to_string()),
         data => {
             let mut formatted = String::new();
-            let mut arg_index = 1;
+            let mut arg_index = 0;
             if let Some(target) = data
                 .get_or_undefined(0)
                 .as_string()
                 .map(|x| x.to_std_string_escaped())
             {
+                arg_index = 1;
                 let mut chars = target.chars();
                 while let Some(c) = chars.next() {
                     if c == '%' {
@@ -126,7 +169,7 @@ fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
                 formatted.push_str(&format!(" {}", display_js(rest)));
             }
 
-            Ok(escape(&formatted).to_string())
+            Ok(escape(&formatted))
         }
     }
 }
