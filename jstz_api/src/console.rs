@@ -65,20 +65,22 @@ fn escape(unescaped: &str) -> String {
             match chr {
                 '\\' => {
                     *escaped = true;
+                    accumulator.push(chr)
                 }
                 '"' => {
                     if !*escaped {
                         *in_string = !*in_string;
                     }
+                    accumulator.push(chr)
                 }
                 '\n' => {
                     if !*in_string {
                         return Some(accumulator.trim().to_string());
                     }
+                    accumulator.push_str("\\n")
                 }
-                _ => (),
+                _ => accumulator.push(chr),
             }
-            accumulator.push(chr)
         }
         if accumulator.len() > 0 {
             *done = true;
@@ -114,52 +116,59 @@ fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
                 arg_index = 1;
                 let mut chars = target.chars();
                 while let Some(c) = chars.next() {
-                    if c == '%' {
-                        let fmt = chars.next().unwrap_or('%');
-                        match fmt {
-                            /* integer */
-                            'd' | 'i' => {
-                                let arg = match data
-                                    .get_or_undefined(arg_index)
-                                    .to_numeric(context)?
-                                {
-                                    Numeric::Number(r) => (r.floor() + 0.0).to_string(),
-                                    Numeric::BigInt(int) => int.to_string(),
-                                };
-                                formatted.push_str(&arg);
-                                arg_index += 1;
-                            }
-                            /* float */
-                            'f' => {
-                                let arg = data
-                                    .get_or_undefined(arg_index)
-                                    .to_number(context)?;
-                                formatted.push_str(&format!("{arg:.6}"));
-                                arg_index += 1;
-                            }
-                            /* object */
-                            'o' | 'O' => {
-                                let arg = data.get_or_undefined(arg_index);
-                                formatted.push_str(&arg.display().to_string());
-                                arg_index += 1;
-                            }
-                            /* string */
-                            's' => {
-                                let arg = data
-                                    .get_or_undefined(arg_index)
-                                    .to_string(context)?
-                                    .to_std_string_escaped();
-                                formatted.push_str(&arg);
-                                arg_index += 1;
-                            }
-                            '%' => formatted.push('%'),
-                            c => {
-                                formatted.push('%');
-                                formatted.push(c);
+                    match c {
+                        '%' => {
+                            let fmt = chars.next().unwrap_or('%');
+                            match fmt {
+                                /* integer */
+                                'd' | 'i' => {
+                                    let arg = match data
+                                        .get_or_undefined(arg_index)
+                                        .to_numeric(context)?
+                                    {
+                                        Numeric::Number(r) => {
+                                            (r.floor() + 0.0).to_string()
+                                        }
+                                        Numeric::BigInt(int) => int.to_string(),
+                                    };
+                                    formatted.push_str(&arg);
+                                    arg_index += 1;
+                                }
+                                /* float */
+                                'f' => {
+                                    let arg = data
+                                        .get_or_undefined(arg_index)
+                                        .to_number(context)?;
+                                    formatted.push_str(&format!("{arg:.6}"));
+                                    arg_index += 1;
+                                }
+                                /* object */
+                                'o' | 'O' => {
+                                    let arg = data.get_or_undefined(arg_index);
+                                    formatted.push_str(&arg.display().to_string());
+                                    arg_index += 1;
+                                }
+                                /* string */
+                                's' => {
+                                    let arg = data
+                                        .get_or_undefined(arg_index)
+                                        .to_string(context)?
+                                        .to_std_string_escaped();
+                                    formatted.push_str(&arg);
+                                    arg_index += 1;
+                                }
+                                '%' => formatted.push('%'),
+                                '\n' => formatted.push_str("\\n"),
+                                c => {
+                                    formatted.push('%');
+                                    formatted.push(c);
+                                }
                             }
                         }
-                    } else {
-                        formatted.push(c);
+                        '\n' => formatted.push_str("\\n"),
+                        c => {
+                            formatted.push(c);
+                        }
                     };
                 }
             }
