@@ -15,8 +15,7 @@ use jstz_core::{
 use crate::{
     context::account::{Account, Address, Amount},
     executor::contract::{headers, Script},
-    operation::external::ContractOrigination,
-    receipt, Error, Result,
+    Error, Result,
 };
 
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
@@ -54,24 +53,23 @@ impl Contract {
         }
 
         // 2. Deploy the contract
-        let contract = ContractOrigination {
-            contract_code,
-            originating_address: self.contract_address.clone(),
-            initial_balance,
-        };
-        let receipt::DeployContract { contract_address } =
-            crate::executor::deploy_contract(hrt, tx, contract)?;
-
-        // 3. Transfer the balance to the contract
-        Account::transfer(
+        let address = Script::deploy(
             hrt,
             tx,
             &self.contract_address,
-            &contract_address,
+            contract_code,
             initial_balance,
         )?;
 
-        Ok(contract_address.to_string())
+        // 3. Increment nonce of current account
+        // Deploying a contract requires the nonce to be incremented to avoid a
+        // collision with the contract addressing scheme.
+        Account::nonce(hrt, tx, &self.contract_address)?.increment();
+
+        // 4. Transfer the balance to the contract
+        Account::transfer(hrt, tx, &self.contract_address, &address, initial_balance)?;
+
+        Ok(address.to_string())
     }
 
     fn call(
