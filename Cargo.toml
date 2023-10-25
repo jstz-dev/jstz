@@ -32,10 +32,10 @@ tezos-smart-rollup-debug = { git = "https://gitlab.com/tezos/tezos.git", branch 
 tezos-smart-rollup-panic-hook = { git = "https://gitlab.com/tezos/tezos.git", branch = "ajob410@sdk-ord-paths" }
 tezos-smart-rollup-storage = { git = "https://gitlab.com/tezos/tezos.git", branch = "ajob410@sdk-ord-paths" }
 
-boa_ast = { path = "../boa/boa_ast" }
-boa_engine = { path = "../boa/boa_engine" }
-boa_gc = { path = "../boa/boa_gc" }
-boa_interner = { path = "../boa/boa_interner" }
-boa_macros = { path = "../boa/boa_macros" }
-boa_parser = { path = "../boa/boa_parser" }
-boa_profiler = { path = "../boa/boa_profiler" }
+boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "sam.finch@/context/expose-instruction-count" }
+boa_engine = { git = "https://github.com/trilitech/boa.git", branch = "sam.finch@/context/expose-instruction-count" }
+boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "sam.finch@/context/expose-instruction-count" }
+boa_interner = { git = "https://github.com/trilitech/boa.git", brancH = "sam.finch@/context/expose-instruction-count" }
+boa_macros = { git = "https://github.com/trilitech/boa.git", branch = "sam.finch@/context/expose-instruction-count" }
+boa_parser = { git = "https://github.com/trilitech/boa.git", branch = "sam.finch@/context/expose-instruction-count" }
+boa_profiler = { git = "https://github.com/trilitech/boa.git", branch = "sam.finch@/context/expose-instruction-count" }

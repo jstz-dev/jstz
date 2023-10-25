@@ -212,6 +212,7 @@ dependencies = [
 [[package]]
 name = "boa_ast"
 version = "0.17.0"
+source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#c672ad23b86027d96e5c26cedba874d874099029"
 dependencies = [
  "arbitrary",
  "bitflags 2.4.1",
@@ -225,6 +226,7 @@ dependencies = [
 [[package]]
 name = "boa_engine"
 version = "0.17.0"
+source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#c672ad23b86027d96e5c26cedba874d874099029"
 dependencies = [
  "bitflags 2.4.1",
  "boa_ast",
@@ -262,6 +264,7 @@ dependencies = [
 [[package]]
 name = "boa_gc"
 version = "0.17.0"
+source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#c672ad23b86027d96e5c26cedba874d874099029"
 dependencies = [
  "boa_macros",
  "boa_profiler",
@@ -272,6 +275,7 @@ dependencies = [
 [[package]]
 name = "boa_interner"
 version = "0.17.0"
+source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#c672ad23b86027d96e5c26cedba874d874099029"
 dependencies = [
  "arbitrary",
  "boa_gc",
@@ -287,6 +291,7 @@ dependencies = [
 [[package]]
 name = "boa_macros"
 version = "0.17.0"
+source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#c672ad23b86027d96e5c26cedba874d874099029"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -297,6 +302,7 @@ dependencies = [
 [[package]]
 name = "boa_parser"
 version = "0.17.0"
+source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#c672ad23b86027d96e5c26cedba874d874099029"
 dependencies = [
  "bitflags 2.4.1",
  "boa_ast",
@@ -314,6 +320,7 @@ dependencies = [
 [[package]]
 name = "boa_profiler"
 version = "0.17.0"
+source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#c672ad23b86027d96e5c26cedba874d874099029"
 
 [[package]]
 name = "bs58"
@@ -2903,3 +2910,8 @@ dependencies = [
  "quote",
  "syn 2.0.38",
 ]
+
+[[patch.unused]]
+name = "boa_interner"
+version = "0.17.0"
+source = "git+https://github.com/trilitech/boa.git#348c757b94a251f65c65b88dd41bb860c8e46862"
