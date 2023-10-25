@@ -1,6 +1,5 @@
-use http::Method;
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_proto::operation::{external::Deposit, RunContract};
+use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -11,35 +10,13 @@ use tezos_smart_rollup::{
     types::Contract,
 };
 
-pub use jstz_proto::operation::external::ContractOrigination;
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub enum InternalMessage {
-    Deposit(Deposit),
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ExternalMessage {
-    RunContract(RunContract),
-    DeployContract(ContractOrigination),
-    // TODO ⚰️ Deprecate will not be part of the CLI
-    Transaction(Transaction),
-}
+pub type ExternalMessage = SignedOperation;
+pub type InternalMessage = ExternalOperation;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),
-}
-
-// TODO ⚰️ Deprecate will not be part of the CLI
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Transaction {
-    #[serde(with = "http_serde::method")]
-    pub method: Method,
-    pub body: Option<String>,
-    pub referrer: PublicKeyHash,
-    pub url: String,
 }
 
 // reciever, ticket
