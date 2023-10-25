@@ -1,9 +1,11 @@
 use std::str::FromStr;
 
 use anyhow::Result;
-use http::Method;
-use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_kernel::inbox::{ExternalMessage, Transaction};
+use http::{HeaderMap, Method};
+use jstz_proto::{
+    context::account::Nonce,
+    operation::{Content, Operation, RunContract, SignedOperation},
+};
 
 use crate::{
     config::Config,
@@ -18,17 +20,36 @@ pub fn exec(
     http_method: String,
     json_data: Option<String>,
 ) -> Result<()> {
-    // Create transaction
-    let tx = ExternalMessage::Transaction(Transaction {
-        referrer: PublicKeyHash::from_base58(&referrer).unwrap(),
-        url,
-        method: Method::from_str(&http_method).unwrap(),
-        body: json_data.map(from_file_or_id).or_else(piped_input),
-    });
+    let account = cfg.accounts.get(&referrer).unwrap();
 
-    // Create JSON message
-    let jmsg = serde_json::to_string(&tx).unwrap();
+    // Create operation TODO nonce
+    let op = Operation {
+        source: account.address.clone(),
+        nonce: Nonce::new(0),
+        content: Content::RunContract(RunContract {
+            uri: url.parse().expect("Failed to parse URI"),
+            method: Method::from_str(&http_method).unwrap(),
+            headers: HeaderMap::default(),
+            body: json_data
+                .map(from_file_or_id)
+                .or_else(piped_input)
+                .map(String::into_bytes),
+        }),
+    };
+
+    let signed_op = SignedOperation::new(
+        account.public_key.clone(),
+        account.secret_key.sign(op.hash())?,
+        op,
+    );
+
+    let json_string = serde_json::to_string_pretty(
+        &serde_json::to_value(&signed_op).expect("Failed to serialize to JSON value"),
+    )
+    .expect("Failed to serialize to JSON string");
+
+    println!("{}", json_string);
 
     // Send message
-    OctezClient::send_rollup_external_message(cfg, "bootstrap2", &jmsg)
+    OctezClient::send_rollup_external_message(cfg, "bootstrap2", &json_string)
 }

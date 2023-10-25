@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::SecretKeyBls;
 
-use crate::error::Result;
+use crate::{error::Result, signature::Signature};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum SecretKey {
@@ -18,6 +18,11 @@ impl SecretKey {
         let bls = SecretKeyBls::from_base58_check(data)?;
 
         Ok(SecretKey::Bls(bls))
+    }
+
+    pub fn sign(&self, message: impl AsRef<[u8]>) -> Result<Signature> {
+        let SecretKey::Bls(sk) = self;
+        Ok(Signature::Bls(sk.sign(message)?))
     }
 }
 
