@@ -16,6 +16,10 @@ pub type Amount = u64;
 pub struct Nonce(u64);
 
 impl Nonce {
+    pub fn new(value: u64) -> Self {
+        Nonce(value)
+    }
+
     pub fn next(&self) -> Nonce {
         Nonce(self.0 + 1)
     }
