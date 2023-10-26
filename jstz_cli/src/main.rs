@@ -7,6 +7,7 @@ mod bridge;
 mod config;
 mod deploy;
 mod jstz;
+mod logs;
 mod octez;
 mod repl;
 mod run;
@@ -60,6 +61,9 @@ enum Command {
         #[arg(short, long)]
         self_address: Option<String>,
     },
+    /// Commands related to the logs.
+    #[command(subcommand)]
+    Logs(logs::Command),
 }
 
 async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
@@ -79,6 +83,7 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
             json_data,
         } => run::exec(cfg, referrer, url, http_method, json_data).await,
         Command::Repl { self_address } => repl::exec(self_address, cfg),
+        Command::Logs(logs) => logs::exec(logs, cfg),
     }
 }
 
