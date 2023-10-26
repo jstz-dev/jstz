@@ -1,17 +1,20 @@
 use http::{HeaderMap, StatusCode};
 use jstz_api::http::body::HttpBody;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{context::account::Address, operation::OperationHash, Result};
 
-#[derive(Debug, Serialize)]
+pub type ReceiptResult<T> = std::result::Result<T, String>;
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Receipt {
     hash: OperationHash,
-    pub inner: Result<Content>,
+    pub inner: ReceiptResult<Content>,
 }
 
 impl Receipt {
     pub fn new(hash: OperationHash, inner: Result<Content>) -> Self {
+        let inner = inner.map_err(|e| e.to_string());
         Self { hash, inner }
     }
 
@@ -20,18 +23,12 @@ impl Receipt {
     }
 }
 
-impl AsRef<Result<Content>> for Receipt {
-    fn as_ref(&self) -> &Result<Content> {
-        &self.inner
-    }
-}
-
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct DeployContract {
     pub contract_address: Address,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct RunContract {
     pub body: HttpBody,
     #[serde(with = "http_serde::status_code")]
@@ -40,7 +37,7 @@ pub struct RunContract {
     pub headers: HeaderMap,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Content {
     DeployContract(DeployContract),
     RunContract(RunContract),

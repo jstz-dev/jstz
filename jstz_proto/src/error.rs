@@ -1,6 +1,5 @@
 use boa_engine::{JsError, JsNativeError};
 use derive_more::{Display, Error, From};
-use serde::Serialize;
 
 #[derive(Display, Debug, Error, From)]
 pub enum Error {
@@ -13,15 +12,6 @@ pub enum Error {
     GasLimitExceeded,
 }
 pub type Result<T> = std::result::Result<T, Error>;
-
-impl Serialize for Error {
-    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&format!("{}", self))
-    }
-}
 
 impl From<Error> for JsError {
     fn from(value: Error) -> Self {
