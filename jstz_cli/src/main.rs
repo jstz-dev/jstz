@@ -28,8 +28,8 @@ enum Command {
     /// Deploys a smart function
     Deploy {
         /// Address used when deploying the contract
-        #[arg(short, long)]
-        self_address: String,
+        #[arg(short, long, default_value = None)]
+        self_address: Option<String>,
         /// Initial balance
         #[arg(short, long, default_value_t = 0)]
         balance: u64,
@@ -43,8 +43,8 @@ enum Command {
         #[arg(value_name = "URL")]
         url: String,
         /// The address of the caller (or referrer)
-        #[arg(value_name = "referrer")]
-        referrer: String,
+        #[arg(value_name = "referrer", default_value = None)]
+        referrer: Option<String>,
         /// The HTTP method used in the request.
         #[arg(name = "request", short, long, default_value = "GET")]
         http_method: String,
@@ -76,7 +76,7 @@ fn exec(command: Command, cfg: &mut Config) -> Result<()> {
             http_method,
             json_data,
         } => run::exec(cfg, referrer, url, http_method, json_data),
-        Command::Repl { self_address } => repl::exec(self_address),
+        Command::Repl { self_address } => repl::exec(self_address, cfg),
     }
 }
 
