@@ -59,6 +59,17 @@ impl AccountConfig {
 
         self.get_mut(&alias)
     }
+
+    pub fn remove(&mut self, alias: &String) -> Option<Account> {
+        if self.current_alias == Some(alias.clone()) {
+            self.current_alias = None;
+        }
+        self.accounts.remove(alias)
+    }
+
+    pub fn list_all(&self) -> Vec<(&String, &Account)> {
+        self.accounts.iter().collect()
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
