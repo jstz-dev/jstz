@@ -12,12 +12,17 @@ use jstz_proto::api::{ContractApi, LedgerApi};
 use rustyline::{error::ReadlineError, Editor};
 use tezos_smart_rollup_mock::MockHost;
 
-pub fn exec(self_address: Option<String>) -> Result<()> {
+use crate::config::Config;
+
+pub fn exec(self_address: Option<String>, cfg: &mut Config) -> Result<()> {
     let mock_address_string = "tz4RepLRepLRepLRepLRepLRepLRepN7Cu8j";
 
-    let contract_address_string = if let Some(address) = self_address {
-        println!("Self address set to {}.", address);
-        address
+    let alias_option = cfg.accounts().choose_alias(self_address);
+
+    let contract_address_string = if let Some(alias) = alias_option {
+        let account = cfg.accounts.get(&alias).unwrap();
+        println!("Self address set to {}.", account.address);
+        account.address.to_string()
     } else {
         println!("Using mock self-address {}.", mock_address_string);
         mock_address_string.to_string()

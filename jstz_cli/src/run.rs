@@ -14,14 +14,19 @@ use crate::{
 };
 
 pub fn exec(
-    cfg: &Config,
-    referrer: String,
+    cfg: &mut Config,
+    referrer: Option<String>,
     url: String,
     http_method: String,
     gas_limit: Option<usize>,
     json_data: Option<String>,
 ) -> Result<()> {
-    let account = cfg.accounts.get(&referrer).unwrap();
+    let alias = cfg.accounts().choose_alias(referrer);
+    if alias.is_none() {
+        println!("No account selected");
+        return Ok(());
+    }
+    let account = cfg.accounts.get(&alias.unwrap()).unwrap();
 
     // Create operation TODO nonce
     let op = Operation {

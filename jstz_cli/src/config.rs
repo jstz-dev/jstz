@@ -20,6 +20,7 @@ fn home() -> PathBuf {
 // Represents a collection of accounts
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct AccountConfig {
+    pub current_alias: Option<String>,
     accounts: HashMap<String, Account>,
 }
 
@@ -30,6 +31,13 @@ impl AccountConfig {
 
     pub fn get(&self, alias: &String) -> Option<&Account> {
         self.accounts.get(alias)
+    }
+
+    pub fn choose_alias(&self, candidate: Option<String>) -> Option<String> {
+        if candidate.is_none() {
+            return self.current_alias.clone();
+        }
+        return candidate;
     }
 }
 
