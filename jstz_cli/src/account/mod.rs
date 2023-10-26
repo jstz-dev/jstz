@@ -35,6 +35,44 @@ fn create_account(
     Ok(())
 }
 
+fn login(alias: String, cfg: &mut Config) -> Result<()> {
+    let account = cfg.accounts().get(&alias);
+
+    if account.is_none() {
+        println!("Account {} does not exist", alias);
+        return Ok(());
+    }
+
+    println!(
+        "Logged in to account {} with address {}",
+        account.unwrap().alias,
+        account.unwrap().address
+    );
+
+    cfg.accounts().current_alias = Some(alias);
+    cfg.save()?;
+
+    Ok(())
+}
+
+fn whoami(cfg: &mut Config) -> Result<()> {
+    let alias = cfg.accounts().current_alias.clone();
+
+    if alias.is_none() {
+        println!("Not logged in");
+        return Ok(());
+    }
+
+    let account = cfg.accounts().get(&alias.unwrap()).unwrap();
+
+    println!(
+        "Logged in to account {} with address {}",
+        account.alias, account.address
+    );
+
+    Ok(())
+}
+
 #[derive(Subcommand)]
 pub enum Command {
     /// Creates account
@@ -46,10 +84,20 @@ pub enum Command {
         #[arg(short, long)]
         passphrase: Option<String>,
     },
+    /// Logs in to an account
+    Login {
+        /// User alias
+        #[arg(value_name = "ALIAS")]
+        alias: String,
+    },
+    /// Shows the current account
+    WhoAmI {},
 }
 
 pub fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
         Command::Create { alias, passphrase } => create_account(passphrase, alias, cfg),
+        Command::Login { alias } => login(alias, cfg),
+        Command::WhoAmI {} => whoami(cfg),
     }
 }

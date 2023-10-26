@@ -11,10 +11,10 @@ use crate::{
 };
 
 pub fn exec(
-    self_address: String,
+    self_address: Option<String>,
     contract_code: Option<String>,
     balance: u64,
-    cfg: &Config,
+    cfg: &mut Config,
 ) -> Result<()> {
     // resolve contract code
     let contract_code = contract_code
@@ -22,7 +22,12 @@ pub fn exec(
         .or_else(piped_input)
         .ok_or(anyhow!("No function code supplied"))?;
 
-    let account = cfg.accounts.get(&self_address).unwrap();
+    let alias = cfg.accounts().choose_alias(self_address).clone();
+    if alias.is_none() {
+        println!("No account selected");
+        return Ok(());
+    }
+    let account = cfg.accounts.get(&alias.unwrap()).unwrap();
 
     // Create operation TODO nonce
     let op = Operation {
