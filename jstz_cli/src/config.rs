@@ -74,6 +74,13 @@ impl AccountConfig {
     pub fn list_all(&self) -> Vec<(&String, &Account)> {
         self.accounts.iter().collect()
     }
+
+    pub fn choose_alias(&self, candidate: Option<String>) -> Option<String> {
+        if candidate.is_none() {
+            return self.current_alias.clone();
+        }
+        return candidate;
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
