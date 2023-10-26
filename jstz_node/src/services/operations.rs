@@ -3,6 +3,8 @@ use actix_web::{
     web::{Data, Path, ServiceConfig},
     HttpResponse, Responder, Scope,
 };
+use anyhow::anyhow;
+use jstz_proto::receipt::Receipt;
 
 use crate::{rollup::RollupClient, Result};
 
@@ -15,7 +17,13 @@ async fn receipt(
 
     let value = rollup_client.get_value(&key).await?;
 
-    Ok(HttpResponse::Ok().json(value))
+    let receipt = match value {
+        Some(value) => bincode::deserialize::<Receipt>(&value)
+            .map_err(|_| anyhow!("Failed to deserialize receipt"))?,
+        None => return Ok(HttpResponse::NotFound().finish()),
+    };
+
+    Ok(HttpResponse::Ok().json(receipt))
 }
 
 pub struct OperationsSerivce;
