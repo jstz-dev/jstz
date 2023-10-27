@@ -7,29 +7,20 @@ use jstz_core::{
     kv::Kv,
     runtime::{self, Runtime},
 };
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::api::{ContractApi, LedgerApi};
 use rustyline::{error::ReadlineError, Editor};
 use tezos_smart_rollup_mock::MockHost;
 
 use crate::config::Config;
 
-pub fn exec(self_address: Option<String>, cfg: &mut Config) -> Result<()> {
-    let mock_address_string = "tz4RepLRepLRepLRepLRepLRepLRepN7Cu8j";
+pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
+    // let mock_address_string = "tz4RepLRepLRepLRepLRepLRepLRepN7Cu8j";
 
-    let alias_option = cfg.accounts().choose_alias(self_address);
-
-    let contract_address_string = if let Some(alias) = alias_option {
-        let account = cfg.accounts.get(&alias).unwrap();
-        println!("Self address set to {}.", account.address);
-        account.address.to_string()
-    } else {
-        println!("Using mock self-address {}.", mock_address_string);
-        mock_address_string.to_string()
-    };
-
-    let contract_address = PublicKeyHash::from_base58(contract_address_string.as_str())
-        .expect("Failed to create contract address.");
+    let address = cfg
+        .accounts
+        .account_or_current(self_address)?
+        .address
+        .clone();
 
     let mut rt = Runtime::new().expect("Failed to create a new runtime.");
 
@@ -54,7 +45,7 @@ pub fn exec(self_address: Option<String>, cfg: &mut Config) -> Result<()> {
 
     realm_clone.register_api(
         KvApi {
-            contract_address: contract_address.clone(),
+            contract_address: address.clone(),
         },
         rt.context(),
     );
@@ -63,13 +54,13 @@ pub fn exec(self_address: Option<String>, cfg: &mut Config) -> Result<()> {
     realm_clone.register_api(HttpApi, rt.context());
     realm_clone.register_api(
         LedgerApi {
-            contract_address: contract_address.clone(),
+            contract_address: address.clone(),
         },
         rt.context(),
     );
     realm_clone.register_api(
         ContractApi {
-            contract_address: contract_address.clone(),
+            contract_address: address.clone(),
         },
         rt.context(),
     );
