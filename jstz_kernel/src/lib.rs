@@ -26,6 +26,7 @@ fn handle_message(hrt: &mut (impl Runtime + 'static), message: Message) -> Resul
             executor::execute_external_operation(hrt, &mut tx, external_operation)?
         }
         Message::External(signed_operation) => {
+            debug_msg!(hrt, "External operation: {signed_operation:?}\n");
             let receipt = executor::execute_operation(hrt, &mut tx, signed_operation);
             debug_msg!(hrt, "Receipt: {receipt:?}\n");
             receipt.write(hrt, &mut tx)?

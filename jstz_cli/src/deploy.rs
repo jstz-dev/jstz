@@ -39,12 +39,14 @@ pub fn exec(
         op,
     );
 
-    let json_string = serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?;
-
-    println!("{}", json_string);
+    println!("Signed operation: {:?}", signed_op);
 
     // Send message to jstz
-    OctezClient::send_rollup_external_message(cfg, "bootstrap2", &json_string)?;
+    OctezClient::send_rollup_external_message(
+        cfg,
+        "bootstrap2",
+        bincode::serialize(&signed_op)?,
+    )?;
 
     cfg.save()?;
     Ok(())
