@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use bip39::{Language, Mnemonic, MnemonicType};
 use clap::Subcommand;
 
@@ -36,17 +36,11 @@ fn create_account(
 }
 
 fn login(alias: String, cfg: &mut Config) -> Result<()> {
-    let account = cfg.accounts().get(&alias);
-
-    if account.is_none() {
-        println!("Account {} does not exist", alias);
-        return Ok(());
-    }
+    let account = cfg.accounts().get(&alias)?;
 
     println!(
         "Logged in to account {} with address {}",
-        account.unwrap().alias,
-        account.unwrap().address
+        account.alias, account.address
     );
 
     cfg.accounts().current_alias = Some(alias);
@@ -55,15 +49,14 @@ fn login(alias: String, cfg: &mut Config) -> Result<()> {
     Ok(())
 }
 
-fn whoami(cfg: &mut Config) -> Result<()> {
-    let alias = cfg.accounts().current_alias.clone();
+fn whoami(cfg: &Config) -> Result<()> {
+    let alias = cfg
+        .accounts
+        .current_alias
+        .as_ref()
+        .ok_or(anyhow!("Not logged in!"))?;
 
-    if alias.is_none() {
-        println!("Not logged in");
-        return Ok(());
-    }
-
-    let account = cfg.accounts().get(&alias.unwrap()).unwrap();
+    let account = cfg.accounts.get(&alias)?;
 
     println!(
         "Logged in to account {} with address {}",
