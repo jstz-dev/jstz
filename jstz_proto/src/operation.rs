@@ -36,9 +36,9 @@ impl Operation {
         rt: &impl HostRuntime,
         tx: &mut Transaction,
     ) -> Result<()> {
-        let next_nonce = Account::nonce(rt, tx, &self.source)?.next();
+        let next_nonce = Account::nonce(rt, tx, &self.source)?;
 
-        if self.nonce == next_nonce {
+        if self.nonce == *next_nonce {
             Ok(())
         } else {
             Err(Error::InvalidNonce)
