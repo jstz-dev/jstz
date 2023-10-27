@@ -71,7 +71,7 @@ fn read_transfer(
 }
 
 fn read_external_message(rt: &mut impl Runtime, bytes: &[u8]) -> Option<ExternalMessage> {
-    let msg: ExternalMessage = serde_json::from_slice(&bytes).ok()?;
+    let msg: ExternalMessage = bincode::deserialize(bytes).ok()?;
     debug_msg!(rt, "External message: {msg:?}\n");
     Some(msg)
 }
