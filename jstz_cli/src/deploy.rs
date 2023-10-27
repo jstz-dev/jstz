@@ -22,12 +22,7 @@ pub fn exec(
         .or_else(piped_input)
         .ok_or(anyhow!("No function code supplied"))?;
 
-    let alias = cfg.accounts().choose_alias(self_address).clone();
-    if alias.is_none() {
-        println!("No account selected");
-        return Ok(());
-    }
-    let account = cfg.accounts.get(&alias.unwrap()).unwrap();
+    let account = cfg.accounts.account_or_current_mut(self_address)?;
 
     // Create operation TODO nonce
     let op = Operation {
@@ -45,10 +40,7 @@ pub fn exec(
         op,
     );
 
-    let json_string = serde_json::to_string_pretty(
-        &serde_json::to_value(&signed_op).expect("Failed to serialize to JSON value"),
-    )
-    .expect("Failed to serialize to JSON string");
+    let json_string = serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?;
 
     println!("{}", json_string);
 

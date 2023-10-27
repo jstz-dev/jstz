@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
-use anyhow::Result;
-use http::{HeaderMap, Method};
+use anyhow::{anyhow, Result};
+use http::{HeaderMap, Method, Uri};
 use jstz_proto::{
     context::account::Nonce,
     operation::{Content, Operation, RunContract, SignedOperation},
@@ -21,26 +21,30 @@ pub fn exec(
     gas_limit: Option<usize>,
     json_data: Option<String>,
 ) -> Result<()> {
-    let alias = cfg.accounts().choose_alias(referrer);
-    if alias.is_none() {
-        println!("No account selected");
-        return Ok(());
-    }
-    let account = cfg.accounts.get(&alias.unwrap()).unwrap();
+    let account = cfg.accounts.account_or_current_mut(referrer)?;
 
     // Create operation TODO nonce
+    let url: Uri = url
+        .parse()
+        .map_err(|_| anyhow!("Failed to parse URL: {}", url))?;
+
+    let method =
+        Method::from_str(&http_method).map_err(|_| anyhow!("Invalid HTTP method"))?;
+
+    let body = json_data
+        .map(from_file_or_id)
+        .or_else(piped_input)
+        .map(String::into_bytes);
+
     let op = Operation {
         source: account.address.clone(),
         nonce: Nonce::new(0),
         content: Content::RunContract(RunContract {
-            uri: url.parse().expect("Failed to parse URI"),
-            method: Method::from_str(&http_method).unwrap(),
+            uri: url,
+            method,
             headers: HeaderMap::default(),
-            body: json_data
-                .map(from_file_or_id)
-                .or_else(piped_input)
-                .map(String::into_bytes),
             gas_limit,
+            body,
         }),
     };
 
@@ -50,10 +54,7 @@ pub fn exec(
         op,
     );
 
-    let json_string = serde_json::to_string_pretty(
-        &serde_json::to_value(&signed_op).expect("Failed to serialize to JSON value"),
-    )
-    .expect("Failed to serialize to JSON string");
+    let json_string = serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?;
 
     println!("{}", json_string);
 

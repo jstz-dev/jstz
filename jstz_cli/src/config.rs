@@ -29,15 +29,35 @@ impl AccountConfig {
         self.accounts.insert(account.alias.clone(), account);
     }
 
-    pub fn get(&self, alias: &String) -> Option<&Account> {
-        self.accounts.get(alias)
+    pub fn alias_or_current(&self, alias: Option<String>) -> Result<String> {
+        alias
+            .or(self.current_alias.clone())
+            .ok_or(anyhow!("No account selected!"))
     }
 
-    pub fn choose_alias(&self, candidate: Option<String>) -> Option<String> {
-        if candidate.is_none() {
-            return self.current_alias.clone();
-        }
-        return candidate;
+    pub fn get(&self, alias: &str) -> Result<&Account> {
+        self.accounts.get(alias).ok_or(anyhow!("Account not found"))
+    }
+
+    pub fn get_mut(&mut self, alias: &str) -> Result<&mut Account> {
+        self.accounts
+            .get_mut(alias)
+            .ok_or(anyhow!("Account not found"))
+    }
+
+    pub fn account_or_current(&self, alias: Option<String>) -> Result<&Account> {
+        let alias = self.alias_or_current(alias)?;
+
+        self.get(&alias)
+    }
+
+    pub fn account_or_current_mut(
+        &mut self,
+        alias: Option<String>,
+    ) -> Result<&mut Account> {
+        let alias = self.alias_or_current(alias)?;
+
+        self.get_mut(&alias)
     }
 }
 
