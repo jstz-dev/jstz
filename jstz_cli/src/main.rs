@@ -1,15 +1,17 @@
 use anyhow::Result;
 use clap::Parser;
+use tokio;
 
 mod account;
 mod bridge;
 mod config;
 mod deploy;
+mod jstz;
 mod octez;
 mod repl;
 mod run;
 mod sandbox;
-pub(crate) mod utils;
+mod utils;
 
 use config::Config;
 
@@ -60,7 +62,7 @@ enum Command {
     },
 }
 
-fn exec(command: Command, cfg: &mut Config) -> Result<()> {
+async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
         Command::Sandbox(sandbox_command) => sandbox::exec(cfg, sandbox_command),
         Command::Bridge(bridge_command) => bridge::exec(bridge_command, cfg),
@@ -69,21 +71,22 @@ fn exec(command: Command, cfg: &mut Config) -> Result<()> {
             self_address,
             function_code,
             balance,
-        } => deploy::exec(self_address, function_code, balance, cfg),
+        } => deploy::exec(self_address, function_code, balance, cfg).await,
         Command::Run {
             url,
             referrer,
             http_method,
             json_data,
-        } => run::exec(cfg, referrer, url, http_method, json_data),
+        } => run::exec(cfg, referrer, url, http_method, json_data).await,
         Command::Repl { self_address } => repl::exec(self_address, cfg),
     }
 }
 
-fn main() -> Result<()> {
+#[tokio::main]
+async fn main() -> Result<()> {
     let command = Command::parse();
 
     let mut cfg = Config::load()?;
 
-    exec(command, &mut cfg)
+    exec(command, &mut cfg).await
 }
