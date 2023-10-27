@@ -1,6 +1,6 @@
 use boa_engine::Context;
 use jstz_core::{
-    api::{GlobalApi, JstzData},
+    api::{GlobalApi, TezosData},
     Realm,
 };
 
@@ -19,7 +19,7 @@ impl GlobalApi for Api {
     }
 }
 pub fn initialize_apis(
-    contract_parameters: JstzData,
+    contract_parameters: TezosData,
     realm: &Realm,
     context: &mut Context,
 ) {

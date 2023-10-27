@@ -19,7 +19,10 @@ mod kv {
         JsNativeError, JsResult, JsString, JsValue, NativeFunction,
     };
     use boa_gc::{Finalize, Trace};
-    use jstz_core::{api::Jstz, host::HostRuntime, with_jstz, GlobalApi};
+    use jstz_core::{
+        api::TezosObject, host::HostRuntime, runtime::with_global_host, tezos_object,
+        GlobalApi,
+    };
     use std::{
         ops::{Deref, DerefMut},
         str::FromStr,
@@ -48,25 +51,27 @@ mod kv {
         fn key_path(&self, key: &String) -> OwnedPath {
             OwnedPath::try_from(format!("/{}/{}", self.prefix, key)).expect("")
         }
-        fn set(&self, jstz: &mut Jstz, key: String, value: String) {
-            jstz.transaction_mut()
+        fn set(&self, tezos: &mut TezosObject, key: String, value: String) {
+            tezos
+                .transaction_mut()
                 .insert(self.key_path(&key), value)
                 .expect("")
         }
         fn get(
             &self,
-            jstz: &mut Jstz,
+            tezos: &mut TezosObject,
             rt: &mut impl HostRuntime,
             key: String,
         ) -> Option<String> {
-            jstz.transaction_mut()
+            tezos
+                .transaction_mut()
                 .get::<String>(rt, self.key_path(&key))
                 .expect("")
                 .cloned()
         }
-        fn new(jstz: &Jstz) -> Self {
+        fn new(tezos: &TezosObject) -> Self {
             Self {
-                prefix: format!("test_storage/{}", jstz.self_address()),
+                prefix: format!("test_storage/{}", tezos.self_address()),
             }
         }
     }
@@ -82,7 +87,8 @@ mod kv {
             let this = refr.deref();
             let key = string_from_arg(args, 0)?;
             let value = string_from_arg(args, 1)?;
-            with_jstz!(context, [this.set](&mut jstz, key, value));
+            tezos_object!(mut tezos, context);
+            this.set(&mut tezos, key, value);
             Ok(JsValue::default())
         }
         fn get(
@@ -93,7 +99,8 @@ mod kv {
             let refr = Kv::from_js(this)?;
             let this = refr.deref();
             let key = string_from_arg(args, 0)?;
-            let result = match with_jstz!(context, [this.get](&mut jstz, &mut hrt, key)) {
+            tezos_object!(mut tezos, context);
+            let result = match with_global_host(|hrt| this.get(&mut tezos, hrt, key)) {
                 None => JsValue::undefined(),
                 Some(value) => JsString::from_str(&value).expect("infallable").into(),
             };
@@ -102,7 +109,8 @@ mod kv {
     }
     impl GlobalApi for Api {
         fn init(context: &mut Context) {
-            let native = with_jstz!(context, [Kv::new](&jstz,));
+            tezos_object!(tezos, context);
+            let native = Kv::new(&tezos);
             let kv = ObjectInitializer::with_native(native, context)
                 .function(NativeFunction::from_fn_ptr(Self::get), js_string!("get"), 1)
                 .function(NativeFunction::from_fn_ptr(Self::set), js_string!("set"), 2)
@@ -119,7 +127,10 @@ mod console {
         js_string, object::ObjectInitializer, property::Attribute, Context, JsResult,
         JsValue, NativeFunction,
     };
-    use jstz_core::{api::Jstz, host::HostRuntime, with_jstz, GlobalApi};
+    use jstz_core::{
+        api::TezosObject, host::HostRuntime, runtime::with_global_host, tezos_object,
+        GlobalApi,
+    };
     use tezos_smart_rollup::prelude::debug_msg;
 
     use crate::refactored::string_from_arg;
@@ -129,8 +140,8 @@ mod console {
         fn log(rt: &impl HostRuntime, message: String) {
             debug_msg!(rt, "[🪵] {message}\n")
         }
-        fn log_with_address(jstz: &Jstz, rt: &impl HostRuntime, message: String) {
-            let address = jstz.self_address();
+        fn log_with_address(tezos: &TezosObject, rt: &impl HostRuntime, message: String) {
+            let address = tezos.self_address();
             debug_msg!(rt, "[🪵] Contract at {address} says {message}\n")
         }
     }
@@ -140,10 +151,10 @@ mod console {
         fn log(
             _this: &JsValue,
             args: &[JsValue],
-            context: &mut Context,
+            _context: &mut Context,
         ) -> JsResult<JsValue> {
             let message = string_from_arg(args, 0)?;
-            with_jstz!(context, [Console::log](&hrt, message));
+            with_global_host(|hrt| Console::log(hrt, message));
             Ok(JsValue::default())
         }
         fn log_with_address(
@@ -152,7 +163,8 @@ mod console {
             context: &mut Context,
         ) -> JsResult<JsValue> {
             let message = string_from_arg(args, 0)?;
-            with_jstz!(context, [Console::log_with_address](&jstz, &hrt, message));
+            tezos_object!(tezos, context);
+            with_global_host(|hrt| Console::log_with_address(&tezos, hrt, message));
             Ok(JsValue::default())
         }
     }

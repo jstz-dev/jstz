@@ -2,7 +2,7 @@ use anyhow::Result;
 use boa_engine::{js_string, JsResult, JsValue, Source};
 use jstz_api::ConsoleApi;
 use jstz_api::{http::HttpApi, url::UrlApi, KvApi, TextEncoderApi};
-use jstz_core::api::JstzData;
+use jstz_core::api::TezosData;
 use jstz_core::host::HostRuntime;
 use jstz_core::{
     host_defined,
@@ -68,7 +68,7 @@ pub fn exec(self_address: Option<String>) -> Result<()> {
     let kv_store = Kv::new();
     let transaction = kv_store.begin_transaction();
     let realm_clone = rt.realm().clone();
-    let contract_parameters = JstzData {
+    let contract_parameters = TezosData {
         calling_address: contract_address.clone(),
         self_address: contract_address.clone(),
         origin_address: contract_address.clone(),

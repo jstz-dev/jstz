@@ -19,56 +19,17 @@ pub trait GlobalApi {
     fn init(context: &mut Context);
 }
 
-/// macro to allow access to the jstz object and host runtime
-/// Usage:
-/// Takes a context and a single function call as if there
-/// were variables jstz : Jstz and hrt : Runtime in scope.
-/// with_jstz!(context, my_function(&jstz, &mut hrt, my_variable ))
-/// limitations:
-///  * jstz and hrt must be passed by reference
-///  * jstz must be the first parameter
-///  * hrt must be either the first or, if jstz is present, the second parameter
-///  * if the function is an expression not an identifier it must be in parens
-///     -  with_jstz!(context, (my_class.method)(&mut jstz))
-///  * if the function is more complex it must be in square brackets
-///     -  with_jstz!(context, [MyClass::static_method](&mut jstz))
-///  * requires a trailing comma if only jstz and hrt arguments are used
 #[macro_export]
-macro_rules! with_jstz {
-    ($context:expr,$func:ident($($inner:tt)*)) => {
-        with_jstz![INTERNAL $context;[$func];$($inner)*]
+macro_rules! tezos_object {
+    (mut $tezos:ident, $context:expr) => {
+        tezos_object![INNER data, $context];
+        let mut $tezos = jstz_core::api::TezosObject{data};
     };
-    ($context:expr,($func:expr)($($inner:tt)*)) => {
-        with_jstz![INTERNAL $context;[$func];$($inner)*]
+    ($tezos:ident, $context:expr) => {
+        tezos_object![INNER data, $context];
+        let $tezos = jstz_core::api::TezosObject{data};
     };
-    ($context:expr,[$($func:tt)*]($($inner:tt)*)) => {
-        with_jstz![INTERNAL $context;[$($func)*];$($inner)*]
-    };
-
-    [INTERNAL $context:expr;[$($func:tt)*]; &mut jstz, $($tail:tt)* ] => {
-        {
-        with_jstz![HOST_DEFINED $context;data];
-        let mut jstz = jstz_core::api::Jstz{data};
-        with_jstz![CALL_WITH_RUNTIME [&mut jstz]; ($($func)*); $($tail)*]
-        }
-    };
-    [INTERNAL $context:expr;[$($func:tt)*]; &jstz, $($tail:tt)* ] => {
-        {
-        with_jstz![HOST_DEFINED $context;data];
-        let jstz = jstz_core::api::Jstz{data};
-        with_jstz![CALL_WITH_RUNTIME [&jstz]; ($($func)*); $($tail)* ]
-        }
-
-    };
-    [INTERNAL $context:expr;[$($func:tt)*]; $($tail:tt)* ] => {
-        {
-        with_jstz!(HOST_DEFINED $context;data);
-        let jstz = jstz_core::api::Jstz{data};
-        with_jstz![CALL_WITH_RUNTIME ; ($($func)*) ; $($tail)*]
-        }
-
-    };
-    [HOST_DEFINED $context:expr;$data:ident] => {
+    [INNER $data:ident, $context:expr] => {
         let host_defined_binding = $context
             .global_object()
             .get(js_string!(jstz_core::realm::HostDefined::NAME), $context)
@@ -82,22 +43,13 @@ macro_rules! with_jstz {
             .downcast_mut::<jstz_core::realm::HostDefined>()
             .expect("Failed to convert js object to rust type `HostDefined`");
         let $data = host_defined
-            .get_mut::<jstz_core::api::JstzData>()
-            .expect("Jstz object not initialized");
-    };
-    [CALL_WITH_RUNTIME $([$jstz:expr])? ; ($($func:tt)*); & hrt, $($tail:tt)*] => {
-        jstz_core::runtime::with_global_host(|hrt| $($func)*($($jstz,)? &*hrt, $($tail)*))
-    };
-    [CALL_WITH_RUNTIME $([$jstz:expr])? ; ($($func:tt)*); &mut hrt, $($tail:tt)*] => {
-        jstz_core::runtime::with_global_host(|hrt| $($func)*($($jstz,)? hrt, $($tail)*))
-    };
-    [CALL_WITH_RUNTIME $([$jstz:expr])? ; ($($func:tt)*); $($tail:tt)*] => {
-        $($func)*($($jstz,)? $($tail)*)
+            .get_mut::<jstz_core::api::TezosData>()
+            .expect("TezosObject object not initialized");
     }
 }
 
 #[derive(Finalize)]
-pub struct JstzData {
+pub struct TezosData {
     pub self_address: Address,
     pub calling_address: Address,
     pub origin_address: Address,
@@ -105,7 +57,7 @@ pub struct JstzData {
     pub kv_store: Kv,
 }
 
-impl JstzData {
+impl TezosData {
     pub fn contract_call_data(&self, address: &Address) -> Self {
         let kv_store = Kv::new();
         let transaction = kv_store.begin_transaction();
@@ -127,15 +79,15 @@ impl JstzData {
     }
 }
 
-unsafe impl Trace for JstzData {
+unsafe impl Trace for TezosData {
     empty_trace!();
 }
 
-pub struct Jstz<'a> {
-    pub data: GcRefMut<'a, Box<dyn NativeObject + 'static>, JstzData>,
+pub struct TezosObject<'a> {
+    pub data: GcRefMut<'a, Box<dyn NativeObject + 'static>, TezosData>,
 }
 
-impl<'a> Jstz<'a> {
+impl<'a> TezosObject<'a> {
     pub fn self_address<'b>(&'b self) -> &'b Address {
         &self.data.self_address
     }
@@ -157,7 +109,7 @@ impl<'a> Jstz<'a> {
     pub fn kv_store_mut<'b>(&'b mut self) -> &'b mut Kv {
         &mut self.data.kv_store
     }
-    pub fn contract_call_data(&self, address: &Address) -> JstzData {
+    pub fn contract_call_data(&self, address: &Address) -> TezosData {
         self.data.contract_call_data(address)
     }
 }

@@ -6,7 +6,7 @@ use boa_engine::{
 };
 
 use jstz_api::http::request::Request;
-use jstz_core::{api::Jstz, with_jstz};
+use jstz_core::{api::TezosObject, runtime::with_global_host, tezos_object};
 use jstz_core::{host::HostRuntime, native::JsNativeObject, value::IntoJs};
 
 use crate::{
@@ -22,13 +22,13 @@ struct Contract;
 
 impl Contract {
     fn create(
-        jstz: &mut Jstz,
+        tezos: &mut TezosObject,
         hrt: &impl HostRuntime,
         contract_code: String,
         initial_balance: Amount,
     ) -> Result<String> {
-        let addr = jstz.self_address().clone();
-        let tx = jstz.transaction_mut();
+        let addr = tezos.self_address().clone();
+        let tx = tezos.transaction_mut();
         // 1. Check if the contract has sufficient balance
         if Account::balance(hrt, tx, &addr)? < initial_balance {
             return Err(Error::BalanceOverflow.into());
@@ -50,7 +50,7 @@ impl Contract {
     }
 
     fn call(
-        jstz: &Jstz,
+        tezos: &TezosObject,
         request: &JsNativeObject<Request>,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
@@ -65,11 +65,11 @@ impl Contract {
             })?;
 
         // 2. Set the referer of the request to the current contract address
-        headers::test_and_set_referrer(&request.deref(), &jstz.self_address())?;
+        headers::test_and_set_referrer(&request.deref(), &tezos.self_address())?;
 
         // 3. Load, init and run!
         Script::load_init_run(
-            jstz.contract_call_data(&address),
+            tezos.contract_call_data(&address),
             &request.inner(),
             context,
         )
@@ -89,7 +89,8 @@ impl Api {
         let request: JsNativeObject<Request> =
             args.get_or_undefined(0).clone().try_into()?;
 
-        with_jstz!(context, [Contract::call](&jstz, &request, context))
+        tezos_object!(tezos, context);
+        Contract::call(&tezos, &request, context)
     }
     fn create(
         _this: &JsValue,
@@ -113,15 +114,10 @@ impl Api {
         };
         let promise = JsPromise::new(
             move |resolvers, context| {
-                let address = with_jstz!(
-                    context,
-                    [Contract::create](
-                        &mut jstz,
-                        &mut hrt,
-                        contract_code,
-                        initial_balance
-                    )
-                )?;
+                tezos_object!(mut tezos, context);
+                let address = with_global_host(|hrt| {
+                    Contract::create(&mut tezos, hrt, contract_code, initial_balance)
+                })?;
                 resolvers.resolve.call(
                     &JsValue::Undefined,
                     &[address.into_js(context)],

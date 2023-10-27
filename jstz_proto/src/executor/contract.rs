@@ -11,7 +11,7 @@ use jstz_api::http::request::Request;
 use jstz_api::http::{body::HttpBody, request::RequestClass, response::Response};
 use jstz_core::native::JsNativeObject;
 use jstz_core::{
-    api::JstzData,
+    api::TezosData,
     host::HostRuntime,
     host_defined,
     kv::{Kv, Transaction},
@@ -34,7 +34,7 @@ pub mod headers {
 
     pub fn test_and_set_call_headers(
         request: &Request,
-        contract_data: &JstzData,
+        contract_data: &TezosData,
     ) -> JsResult<()> {
         if request.headers().deref().contains_key(REFERRER) {
             return Err(JsError::from_native(
@@ -132,7 +132,7 @@ impl Script {
     }
 
     pub fn load(
-        contract_parameters: &mut JstzData,
+        contract_parameters: &mut TezosData,
         context: &mut Context<'_>,
     ) -> Result<Self> {
         let tx = &mut contract_parameters.transaction;
@@ -155,7 +155,7 @@ impl Script {
         Ok(Self(module))
     }
 
-    fn register_apis(&self, contract_data: JstzData, context: &mut Context<'_>) {
+    fn register_apis(&self, contract_data: TezosData, context: &mut Context<'_>) {
         register_web_apis(self.realm(), context);
         // TODO: clones address for old api
         let contract_address = contract_data.self_address.clone();
@@ -180,7 +180,7 @@ impl Script {
     /// and evaluating the module of the script
     pub fn init(
         &self,
-        contract_data: JstzData,
+        contract_data: TezosData,
         context: &mut Context<'_>,
     ) -> JsResult<JsPromise> {
         self.register_apis(contract_data, context);
@@ -210,12 +210,12 @@ impl Script {
             result,
             |context| {
                 runtime::with_global_host(|rt| {
-                    let JstzData {
+                    let TezosData {
                         transaction,
                         mut kv_store,
                         ..
-                    } = JstzData::remove_from_context(context).expect(
-                        "Rust type `JstzData` should be defined in `HostDefined`",
+                    } = TezosData::remove_from_context(context).expect(
+                        "Rust type `TezosData` should be defined in `HostDefined`",
                     );
                     kv_store
                         .commit_transaction(rt, transaction)
@@ -244,7 +244,7 @@ impl Script {
     /// Loads, initializes and runs the script
     /// We do not check that the argument is a valid request object
     pub fn load_init_run(
-        mut contract_parameters: JstzData,
+        mut contract_parameters: TezosData,
         arg: &JsValue,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
@@ -323,7 +323,7 @@ pub mod run {
         // 4. create the contract parameters
         let kv_store = Kv::new();
         let transaction = kv_store.begin_transaction();
-        let contract_parameters = JstzData {
+        let contract_parameters = TezosData {
             self_address: address,
             calling_address: source.clone(),
             origin_address: source.clone(),
