@@ -3,11 +3,12 @@ use jstz_proto::operation::{Content, DeployContract, Operation, SignedOperation}
 
 use crate::{
     config::Config,
+    node::JstzNode,
     octez::OctezClient,
     utils::{from_file_or_id, piped_input},
 };
 
-pub fn exec(
+pub async fn exec(
     self_address: Option<String>,
     contract_code: Option<String>,
     balance: u64,
@@ -39,6 +40,8 @@ pub fn exec(
         op,
     );
 
+    let hash = signed_op.hash();
+
     println!("Signed operation: {:?}", signed_op);
 
     // Send message to jstz
@@ -48,6 +51,11 @@ pub fn exec(
         bincode::serialize(&signed_op)?,
     )?;
 
+    let receipt = JstzNode::new().wait_for_operation_receipt(&hash).await?;
+
+    println!("Receipt: {:?}", receipt);
+
     cfg.save()?;
+
     Ok(())
 }
