@@ -1171,6 +1171,7 @@ name = "jstz_cli"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "boa_engine",
  "bs58",
  "clap",
@@ -1228,6 +1229,7 @@ dependencies = [
 name = "jstz_kernel"
 version = "0.1.0"
 dependencies = [
+ "bincode",
  "boa_engine",
  "http",
  "http-serde",
@@ -1237,7 +1239,6 @@ dependencies = [
  "jstz_proto",
  "num-traits",
  "serde",
- "serde_json",
  "tezos-smart-rollup",
  "tezos_crypto_rs",
 ]

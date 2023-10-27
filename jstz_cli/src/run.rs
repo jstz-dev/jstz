@@ -53,14 +53,17 @@ pub fn exec(
         op,
     );
 
-    let json_string_pretty =
-        serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?;
-    let json_string = serde_json::to_string(&serde_json::to_value(&signed_op)?)?;
-
-    println!("{}", json_string_pretty);
+    println!(
+        "Signed operation: {}",
+        serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?
+    );
 
     // Send message
-    OctezClient::send_rollup_external_message(cfg, "bootstrap2", &json_string)?;
+    OctezClient::send_rollup_external_message(
+        cfg,
+        "bootstrap2",
+        bincode::serialize(&signed_op)?,
+    )?;
 
     cfg.save()?;
     Ok(())
