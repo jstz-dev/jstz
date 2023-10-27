@@ -30,6 +30,10 @@
           devShells.default = pkgs.mkShell rec {
             NIX_CFLAGS_COMPILE = "-mcpu=generic";
             CC = "clang";
+            hardeningDisable =
+              pkgs.lib.optionals
+              (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin)
+              ["stackprotector"];
 
             shellHook = ''
               npm install

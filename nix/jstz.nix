@@ -45,6 +45,10 @@
 
         NIX_CFLAGS_COMPILE = "-mcpu=generic";
         nativeBuildInputs = [pkgs.llvmPackages_16.clangNoLibc];
+        hardeningDisable =
+          pkgs.lib.optionals
+          (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin)
+          ["stackprotector"];
 
         buildPhase = ''
           CC=clang cargo build --release -p ${pname} --target=wasm32-unknown-unknown

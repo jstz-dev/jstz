@@ -134,8 +134,8 @@ impl SignedOperation {
 
     pub fn verify(self) -> Result<Operation> {
         // FIXME: Adding signature verification kills to the rollup???!??!?!?!
-        // let hash = self.inner.hash();
-        // self.signature.verify(&self.public_key, hash.as_ref())?;
+        let hash = self.inner.hash();
+        self.signature.verify(&self.public_key, hash.as_ref())?;
 
         Ok(self.inner)
     }
