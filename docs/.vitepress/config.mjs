@@ -40,6 +40,7 @@ export default defineConfig({
           { text: "Headers", link: "/api/headers" },
           { text: "Request", link: "/api/request" },
           { text: "Response", link: "/api/response" },
+          { text: "URL", link: "/api/url" },
           { text: "URLSearchParams", link: "/api/url_search_params" },
         ],
       },
