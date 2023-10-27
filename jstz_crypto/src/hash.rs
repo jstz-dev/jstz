@@ -5,7 +5,7 @@ pub struct Blake2b([u8; 32]);
 
 impl ToString for Blake2b {
     fn to_string(&self) -> String {
-        format!("{:02X?}", self.0)
+        hex::encode(self.0)
     }
 }
 
