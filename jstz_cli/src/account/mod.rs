@@ -84,6 +84,7 @@ pub enum Command {
         alias: String,
     },
     /// Shows the current account
+    #[command(name = "whoami")]
     WhoAmI {},
 }
 
