@@ -2,10 +2,7 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use http::{HeaderMap, Method, Uri};
-use jstz_proto::{
-    context::account::Nonce,
-    operation::{Content, Operation, RunContract, SignedOperation},
-};
+use jstz_proto::operation::{Content, Operation, RunContract, SignedOperation};
 
 use crate::{
     config::Config,
@@ -37,7 +34,7 @@ pub fn exec(
 
     let op = Operation {
         source: account.address.clone(),
-        nonce: Nonce::new(0),
+        nonce: account.nonce.clone(),
         content: Content::RunContract(RunContract {
             uri: url,
             method,
@@ -45,6 +42,8 @@ pub fn exec(
             body,
         }),
     };
+
+    account.nonce.increment();
 
     let signed_op = SignedOperation::new(
         account.public_key.clone(),
@@ -57,5 +56,8 @@ pub fn exec(
     println!("{}", json_string);
 
     // Send message
-    OctezClient::send_rollup_external_message(cfg, "bootstrap2", &json_string)
+    OctezClient::send_rollup_external_message(cfg, "bootstrap2", &json_string)?;
+
+    cfg.save()?;
+    Ok(())
 }
