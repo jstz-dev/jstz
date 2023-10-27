@@ -5,6 +5,7 @@ mod account;
 mod bridge;
 mod config;
 mod deploy;
+mod log;
 mod octez;
 mod repl;
 mod run;
@@ -25,6 +26,9 @@ enum Command {
     /// Commands related to the account management
     #[command(subcommand)]
     Account(account::Command),
+    // Logs smart function
+    #[command(subcommand)]
+    Log(log::Command),
     /// Deploys a smart function
     Deploy {
         /// Address used when deploying the contract
@@ -65,6 +69,7 @@ fn exec(command: Command, cfg: &mut Config) -> Result<()> {
         Command::Sandbox(sandbox_command) => sandbox::exec(cfg, sandbox_command),
         Command::Bridge(bridge_command) => bridge::exec(bridge_command, cfg),
         Command::Account(account_command) => account::exec(account_command, cfg),
+        Command::Log(log_command) => log::exec(log_command, cfg),
         Command::Deploy {
             self_address,
             function_code,
