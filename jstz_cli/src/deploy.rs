@@ -1,8 +1,5 @@
 use anyhow::{anyhow, Result};
-use jstz_proto::{
-    context::account::Nonce,
-    operation::{Content, DeployContract, Operation, SignedOperation},
-};
+use jstz_proto::operation::{Content, DeployContract, Operation, SignedOperation};
 
 use crate::{
     config::Config,
@@ -27,12 +24,14 @@ pub fn exec(
     // Create operation TODO nonce
     let op = Operation {
         source: account.address.clone(),
-        nonce: Nonce::new(0),
+        nonce: account.nonce.clone(),
         content: Content::DeployContract(DeployContract {
             contract_code: contract_code,
             contract_credit: balance,
         }),
     };
+
+    account.nonce.increment();
 
     let signed_op = SignedOperation::new(
         account.public_key.clone(),
@@ -45,5 +44,8 @@ pub fn exec(
     println!("{}", json_string);
 
     // Send message to jstz
-    OctezClient::send_rollup_external_message(cfg, "bootstrap2", &json_string)
+    OctezClient::send_rollup_external_message(cfg, "bootstrap2", &json_string)?;
+
+    cfg.save()?;
+    Ok(())
 }

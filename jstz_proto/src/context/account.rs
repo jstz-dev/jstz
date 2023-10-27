@@ -12,14 +12,10 @@ pub type Address = PublicKeyHash;
 
 pub type Amount = u64;
 
-#[derive(Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Nonce(u64);
 
 impl Nonce {
-    pub fn new(value: u64) -> Self {
-        Nonce(value)
-    }
-
     pub fn next(&self) -> Nonce {
         Nonce(self.0 + 1)
     }
