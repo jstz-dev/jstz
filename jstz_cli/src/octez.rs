@@ -102,10 +102,10 @@ impl OctezClient {
         Ok(())
     }
 
-    pub fn send_rollup_external_message(
+    pub fn send_rollup_external_message<T: AsRef<[u8]>>(
         cfg: &Config,
         source: &str,
-        message: &str,
+        message: T,
     ) -> Result<()> {
         output(Self::command(cfg)?.args(&[
             "send",
