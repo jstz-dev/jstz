@@ -38,6 +38,10 @@ fn create_account(
 }
 
 fn delete_account(alias: String, cfg: &mut Config) -> Result<()> {
+    if !cfg.accounts().contains(&alias) {
+        return Err(anyhow!("Account not found"));
+    }
+
     // Determine the confirmation message based on the login status
     let confirmation_message = if cfg.accounts().current_alias.as_ref() == Some(&alias) {
         "You are currently logged into this account. Are you sure you want to delete it? (y/N): "
@@ -63,7 +67,7 @@ fn delete_account(alias: String, cfg: &mut Config) -> Result<()> {
     Ok(())
 }
 
-fn login(alias: String, cfg: &mut Config) -> Result<()> {
+pub fn login(alias: String, cfg: &mut Config) -> Result<()> {
     let account = cfg.accounts().get(&alias)?;
 
     println!(
@@ -77,13 +81,17 @@ fn login(alias: String, cfg: &mut Config) -> Result<()> {
     Ok(())
 }
 
-fn logout(cfg: &mut Config) -> Result<()> {
+pub fn logout(cfg: &mut Config) -> Result<()> {
+    if cfg.accounts().current_alias.is_none() {
+        return Err(anyhow!("Not logged in!"));
+    }
+
     cfg.accounts().current_alias = None;
     cfg.save()?;
     Ok(())
 }
 
-fn whoami(cfg: &mut Config) -> Result<()> {
+pub fn whoami(cfg: &mut Config) -> Result<()> {
     let alias = cfg
         .accounts
         .current_alias
@@ -128,17 +136,6 @@ pub enum Command {
         #[arg(value_name = "ALIAS")]
         alias: String,
     },
-    /// Logs in to an account
-    Login {
-        /// User alias
-        #[arg(value_name = "ALIAS")]
-        alias: String,
-    },
-    /// Logs out of the current account
-    Logout {},
-    /// Shows the current account
-    #[command(name = "whoami")]
-    WhoAmI {},
     /// Lists all accounts
     List {},
 }
@@ -147,9 +144,6 @@ pub fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
         Command::Create { alias, passphrase } => create_account(passphrase, alias, cfg),
         Command::Delete { alias } => delete_account(alias, cfg),
-        Command::Login { alias } => login(alias, cfg),
-        Command::Logout {} => logout(cfg),
-        Command::WhoAmI {} => whoami(cfg),
         Command::List {} => list(cfg),
     }
 }
