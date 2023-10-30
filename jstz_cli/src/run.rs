@@ -51,9 +51,11 @@ pub fn exec(
         op,
     );
 
-    let json_string = serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?;
+    let json_string_pretty =
+        serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?;
+    let json_string = serde_json::to_string(&serde_json::to_value(&signed_op)?)?;
 
-    println!("{}", json_string);
+    println!("{}", json_string_pretty);
 
     // Send message
     OctezClient::send_rollup_external_message(cfg, "bootstrap2", &json_string)?;
