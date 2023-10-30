@@ -14,7 +14,6 @@ use tezos_smart_rollup_mock::MockHost;
 use crate::config::Config;
 
 pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
-    // let mock_address_string = "tz4RepLRepLRepLRepLRepLRepLRepN7Cu8j";
 
     let address = &cfg
         .accounts
