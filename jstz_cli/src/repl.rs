@@ -16,11 +16,10 @@ use crate::config::Config;
 pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
     // let mock_address_string = "tz4RepLRepLRepLRepLRepLRepLRepN7Cu8j";
 
-    let address = cfg
+    let address = &cfg
         .accounts
         .account_or_current(self_address)?
-        .address
-        .clone();
+        .address;
 
     let mut rt = Runtime::new(usize::MAX).expect("Failed to create a new runtime.");
 
