@@ -1,5 +1,8 @@
 use anyhow::{anyhow, Result};
-use jstz_proto::operation::{Content, DeployContract, Operation, SignedOperation};
+use jstz_proto::{
+    context::account::Nonce,
+    operation::{Content, DeployContract, Operation, SignedOperation},
+};
 
 use crate::{
     config::Config,
