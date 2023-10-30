@@ -12,7 +12,7 @@ pub type Address = PublicKeyHash;
 
 pub type Amount = u64;
 
-#[derive(Clone, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Nonce(u64);
 
 impl Nonce {
