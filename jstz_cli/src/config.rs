@@ -25,6 +25,10 @@ pub struct AccountConfig {
 }
 
 impl AccountConfig {
+    pub fn contains(&self, alias: &str) -> bool {
+        self.accounts.contains_key(alias)
+    }
+
     pub fn upsert(&mut self, account: Account) {
         self.accounts.insert(account.alias.clone(), account);
     }
