@@ -39,10 +39,18 @@ impl LogMessage {
         let indent = 2 * console.groups.len();
 
         match self {
-            LogMessage::Error(msg) => rt.write_debug(&format!("[🔴] {msg:>indent$}\n")),
-            LogMessage::Warn(msg) => rt.write_debug(&format!("[🟠] {msg:>indent$}\n")),
-            LogMessage::Info(msg) => rt.write_debug(&format!("[🟢] {msg:>indent$}\n")),
-            LogMessage::Log(msg) => rt.write_debug(&format!("[🪵] {msg:>indent$}\n")),
+            LogMessage::Error(msg) => {
+                rt.write_debug(&format!("[🔴] {:indent$}{}\n", "", msg))
+            }
+            LogMessage::Warn(msg) => {
+                rt.write_debug(&format!("[🟠] {:indent$}{}\n", "", msg))
+            }
+            LogMessage::Info(msg) => {
+                rt.write_debug(&format!("[🟢] {:indent$}{}\n", "", msg))
+            }
+            LogMessage::Log(msg) => {
+                rt.write_debug(&format!("[🪵] {:indent$}{}\n", "", msg))
+            }
         }
     }
 }
