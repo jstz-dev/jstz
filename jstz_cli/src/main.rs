@@ -64,6 +64,17 @@ enum Command {
     /// Commands related to the logs.
     #[command(subcommand)]
     Logs(logs::Command),
+    /// Logs in to an account
+    Login {
+        /// User alias
+        #[arg(value_name = "ALIAS")]
+        alias: String,
+    },
+    /// Logs out of the current account
+    Logout {},
+    /// Shows the current account
+    #[command(name = "whoami")]
+    WhoAmI {},
 }
 
 async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
@@ -84,6 +95,9 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
         } => run::exec(cfg, referrer, url, http_method, json_data).await,
         Command::Repl { self_address } => repl::exec(self_address, cfg),
         Command::Logs(logs) => logs::exec(logs, cfg),
+        Command::Login { alias } => account::login(alias, cfg),
+        Command::Logout {} => account::logout(cfg),
+        Command::WhoAmI {} => account::whoami(cfg),
     }
 }
 
