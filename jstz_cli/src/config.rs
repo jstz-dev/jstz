@@ -25,6 +25,10 @@ pub struct AccountConfig {
 }
 
 impl AccountConfig {
+    pub fn contains(&self, alias: &str) -> bool {
+        self.accounts.contains_key(alias)
+    }
+
     pub fn upsert(&mut self, account: Account) {
         self.accounts.insert(account.alias.clone(), account);
     }
@@ -58,6 +62,17 @@ impl AccountConfig {
         let alias = self.alias_or_current(alias)?;
 
         self.get_mut(&alias)
+    }
+
+    pub fn remove(&mut self, alias: &String) -> Option<Account> {
+        if self.current_alias == Some(alias.clone()) {
+            self.current_alias = None;
+        }
+        self.accounts.remove(alias)
+    }
+
+    pub fn list_all(&self) -> Vec<(&String, &Account)> {
+        self.accounts.iter().collect()
     }
 }
 

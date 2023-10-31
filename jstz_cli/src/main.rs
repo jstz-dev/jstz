@@ -60,6 +60,17 @@ enum Command {
         #[arg(short, long)]
         self_address: Option<String>,
     },
+    /// Logs in to an account
+    Login {
+        /// User alias
+        #[arg(value_name = "ALIAS")]
+        alias: String,
+    },
+    /// Logs out of the current account
+    Logout {},
+    /// Shows the current account
+    #[command(name = "whoami")]
+    WhoAmI {},
 }
 
 async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
@@ -79,6 +90,9 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
             json_data,
         } => run::exec(cfg, referrer, url, http_method, json_data).await,
         Command::Repl { self_address } => repl::exec(self_address, cfg),
+        Command::Login { alias } => account::login(alias, cfg),
+        Command::Logout {} => account::logout(cfg),
+        Command::WhoAmI {} => account::whoami(cfg),
     }
 }
 
