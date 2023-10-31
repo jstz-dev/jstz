@@ -11,10 +11,14 @@ use jstz_proto::api::{ContractApi, LedgerApi};
 use rustyline::{error::ReadlineError, Editor};
 use tezos_smart_rollup_mock::MockHost;
 
-use crate::config::Config;
+use crate::{account::account::Account, config::Config};
 
 pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
-    let address = &cfg.accounts.account_or_current(self_address)?.address;
+    let account = cfg.accounts.account_or_current(self_address)?;
+    let address = match account {
+        Account::Owned { address, .. } => address,
+        _ => unreachable!(),
+    };
 
     let mut rt = Runtime::new().expect("Failed to create a new runtime.");
 

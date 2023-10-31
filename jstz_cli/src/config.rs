@@ -25,12 +25,29 @@ pub struct AccountConfig {
 }
 
 impl AccountConfig {
+    pub fn add_alias(&mut self, alias: String, address: String) -> Result<()> {
+        if self.contains(alias.as_str()) {
+            return Err(anyhow!("Account already exists"));
+        }
+
+        let account = Account::from_address(address.clone(), alias.clone())?;
+
+        self.upsert(account);
+
+        println!("Account alias {} created for address: {}", alias, address);
+
+        Ok(())
+    }
     pub fn contains(&self, alias: &str) -> bool {
         self.accounts.contains_key(alias)
     }
 
     pub fn upsert(&mut self, account: Account) {
-        self.accounts.insert(account.alias.clone(), account);
+        let alias = match account {
+            Account::Owned { ref alias, .. } => alias,
+            Account::Alias { ref alias, .. } => alias,
+        };
+        self.accounts.insert(alias.to_string(), account);
     }
 
     pub fn alias_or_current(&self, alias: Option<String>) -> Result<String> {

@@ -2,9 +2,11 @@ use std::str::FromStr;
 
 use anyhow::{anyhow, Result};
 use http::{HeaderMap, Method, Uri};
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::operation::{Content, Operation, RunContract, SignedOperation};
 
 use crate::{
+    account::account::Account,
     config::Config,
     jstz::JstzClient,
     octez::OctezClient,
@@ -19,6 +21,21 @@ pub async fn exec(
     json_data: Option<String>,
 ) -> Result<()> {
     let account = cfg.accounts.account_or_current_mut(referrer)?;
+    let (nonce,
+        _alias,
+        address,
+        secret_key,
+        public_key,
+        _function_code) = match account {
+        Account::Owned {
+            nonce,
+            alias,
+            address,
+            secret_key,
+            public_key,
+            function_code } => (nonce, address.clone(), alias.clone(), secret_key.clone(), public_key.clone(), function_code.clone()),
+        _ => return Err(anyhow!("The account is an alias and cannot be used for the run of a smart function. Please use an owned account.")),
+    };
 
     // Create operation TODO nonce
     let url: Uri = url
@@ -34,8 +51,8 @@ pub async fn exec(
         .map(String::into_bytes);
 
     let op = Operation {
-        source: account.address.clone(),
-        nonce: account.nonce.clone(),
+        source: PublicKeyHash::from_base58(address.as_str())?,
+        nonce: nonce.clone(),
         content: Content::RunContract(RunContract {
             uri: url,
             method,
@@ -44,13 +61,10 @@ pub async fn exec(
         }),
     };
 
-    account.nonce.increment();
+    nonce.increment();
 
-    let signed_op = SignedOperation::new(
-        account.public_key.clone(),
-        account.secret_key.sign(op.hash())?,
-        op,
-    );
+    let signed_op =
+        SignedOperation::new(public_key.clone(), secret_key.sign(op.hash())?, op);
 
     let hash = signed_op.hash();
 
