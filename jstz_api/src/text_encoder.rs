@@ -11,7 +11,10 @@ use boa_engine::{
 use boa_gc::{Finalize, GcRefMut, Trace};
 use jstz_core::{
     accessor,
-    native::{register_global_class, ClassBuilder, JsNativeObject, NativeClass},
+    native::{
+        register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
+    },
+    value::TryFromJs,
 };
 
 // https://encoding.spec.whatwg.org/#textencodercommon
@@ -36,7 +39,7 @@ use jstz_core::{
 #[derive(Trace, Finalize)]
 pub struct TextEncoder;
 
-#[derive(Trace, Finalize)]
+#[derive(Trace, Finalize, Default, TryFromJs)]
 pub struct TextEncoderEncodeIntoResult {
     read: u128,
     written: u128,
@@ -53,14 +56,21 @@ impl TextEncoderEncodeIntoResult {
                     .into()
             })
     }
-}
-
-impl Default for TextEncoderEncodeIntoResult {
-    fn default() -> TextEncoderEncodeIntoResult {
-        TextEncoderEncodeIntoResult {
-            read: 0,
-            written: 0,
-        }
+    fn read(context: &mut Context<'_>) -> Accessor {
+        accessor!(
+            context,
+            TextEncoderEncodeIntoResult,
+            "read",
+            get:((x, _context) => Ok(JsBigInt::new(x.read).into()))
+        )
+    }
+    fn written(context: &mut Context<'_>) -> Accessor {
+        accessor!(
+            context,
+            TextEncoderEncodeIntoResult,
+            "written",
+            get:((x, _context) => Ok(JsBigInt::new(x.written).into()))
+        )
     }
 }
 
@@ -78,18 +88,8 @@ impl NativeClass for TextEncoderEncodeIntoResult {
     }
 
     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
-        let read = accessor!(
-            class.context(),
-            TextEncoderEncodeIntoResult,
-            "read",
-            get:((x, _context) => Ok(JsBigInt::new(x.read).into()))
-        );
-        let written = accessor!(
-            class.context(),
-            TextEncoderEncodeIntoResult,
-            "written",
-            get:((x, _context) => Ok(JsBigInt::new(x.written).into()))
-        );
+        let read = Self::read(class.context());
+        let written = Self::written(class.context());
         class
             .accessor(js_string!("read"), read, Attribute::all())
             .accessor(js_string!("written"), written, Attribute::all());
@@ -98,7 +98,6 @@ impl NativeClass for TextEncoderEncodeIntoResult {
     }
 }
 
-// Note: Using Box as a way to get a fixed size array, probably wrong
 type Uint8Array = Box<[u8]>;
 
 impl TextEncoder {
@@ -115,8 +114,13 @@ impl TextEncoder {
             })
     }
 
-    fn encoding() -> &'static str {
-        "utf-8"
+    fn encoding(context: &mut Context<'_>) -> Accessor {
+        accessor!(
+            context,
+            TextEncoder,
+            "encoding",
+            get:((_x, _context) => Ok(JsString::from("utf-8").into()))
+        )
     }
 
     fn encode(input: Option<String>) -> Uint8Array {
@@ -146,16 +150,7 @@ impl TextEncoder {
 pub struct TextEncoderApi;
 impl TextEncoderApi {
     fn encode(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
-        let arg = match args.get(0) {
-            None => None,
-            Some(arg) => {
-                let arg = arg
-                    .as_string()
-                    .ok_or_else(|| JsNativeError::typ().with_message("expected string"))?
-                    .to_std_string_escaped();
-                Some(arg)
-            }
-        };
+        let arg = args.get_or_undefined(0).try_js_into(context)?;
         let result = TextEncoder::encode(arg);
         let byte_block = result.to_vec();
         let array_buffer: JsArrayBuffer =
@@ -212,12 +207,7 @@ impl NativeClass for TextEncoderApi {
     }
 
     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
-        let encoding = accessor!(
-            class.context(),
-            TextEncoder,
-            "encoding",
-            get:((_x, _context) => Ok(JsString::from(TextEncoder::encoding()).into()))
-        );
+        let encoding = TextEncoder::encoding(class.context());
         class
             .accessor(js_string!("encoding"), encoding, Attribute::all())
             .method(
