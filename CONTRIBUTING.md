@@ -179,6 +179,19 @@ To run the kernel with the inputs:
 > step inbox
 ```
 
+### Documentation 📚
+
+#### Runtime API documentation
+
+To edit documentation:
+
+- Find or add a documentation file in `docs/api/`
+- Modify documentation in markdown
+- Locally test the documentation (with live reload) using
+  ```sh
+  npm run docs:dev
+  ```
+
 ## Creating a pull request 📩
 
 Please write a meaningful description for your pull request. If your pull request references an issue or Asana task, please mention it in the description. The format for pull request titles is `component/kind: description`.
