@@ -1,17 +1,5 @@
-# Context
+Please go the the `Preview` tab and select the appropriate sub-template:
 
-<!-- Why is this change required? What problem does it solve? -->
-
-<!-- If it closes an Asana Task, please link to the task here. -->
-<!-- **Related Tasks**: [Task name](Task url) -->
-
-# Description
-
-<!-- Describe your changes in detail. -->
-
-<!-- If this PR has dependencies, please link them here. -->
-<!-- **Dependencies**: -->
-
-# Manually testing the PR
-
-<!-- Describe how reviewers and approvers can test this PR. -->
+- [🚧 Web/runtime APIs template](?expand=1&template=api_dev.md)
+- [📚 Web/runtime APIs documentation template](?expand=1&template=api_doc.md)
+- [⬜️ Blank template](?expand=1&template=default.md)
