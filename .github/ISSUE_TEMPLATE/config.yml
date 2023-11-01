@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 👨‍⚖️ `jstz` slack
+    url: https://tezos-dev.slack.com/archives/C061SSDBN69
+    about: If you have a question about `jstz`, please ask on our slack channel
