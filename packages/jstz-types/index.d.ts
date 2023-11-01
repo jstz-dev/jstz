@@ -40,6 +40,56 @@ declare var URL: {
   canParse(url: string, base?: string): boolean;
 };
 
+
+declare interface URLPatternInit {
+  protocol?: string;
+  username?: string;
+  password?: string;
+  hostname?: string;
+  port?: string;
+  pathname?: string;
+  search?: string;
+  hash?: string;
+  baseURL?: string;
+}
+
+declare type URLPatternInput = string | URLPatternInit;
+
+declare interface URLPatternComponentResult {
+  input: string;
+  groups: Record<string, string | undefined>;
+}
+
+declare interface URLPatternResult {
+  inputs: [URLPatternInit] | [URLPatternInit, string];
+  protocol: URLPatternComponentResult;
+  username: URLPatternComponentResult;
+  password: URLPatternComponentResult;
+  hostname: URLPatternComponentResult;
+  port: URLPatternComponentResult;
+  pathname: URLPatternComponentResult;
+  search: URLPatternComponentResult;
+  hash: URLPatternComponentResult;
+}
+
+declare interface URLPattern {
+  test(input: URLPatternInput, baseURL?: string): boolean;
+  exec(input: URLPatternInput, baseURL?: string): URLPatternResult | null;
+  readonly hash: string;
+  readonly hostname: string;
+  readonly password: string;
+  readonly pathname: string;
+  readonly port: string;
+  readonly protocol: string;
+  readonly search: string;
+  readonly username: string;
+}
+
+declare var URLPattern: {
+  readonly prototype: URLPattern;
+  new (input: URLPatternInput, baseURL?: string): URLPattern;
+};
+
 declare type BufferSource = ArrayBufferView | ArrayBuffer;
 
 declare type BodyInit = string | BufferSource;
