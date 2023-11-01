@@ -19,11 +19,4 @@ Additional documentation:
 - [`jstz` docs](https://trilitech.github.io/jstz/)
 
 The documentation is to be added to the `jstz` vitepress documentation site.
-To edit documentation:
-
-- Find or add a documentation file in `docs/api/`
-- Modify documentation in markdown
-- Locally test the documentation (with live reload) using
-  ```sh
-  npm run docs:dev
-  ```
+See [CONTRIBUTING](/CONTRIBUTING.md#documentation-) for more information to contribute to the documentation.
