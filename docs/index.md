@@ -8,7 +8,7 @@ import VPButton from "vitepress/dist/client/theme-default/components/VPButton.vu
 
 # 👨‍⚖️ `jstz`
 
-`jstz` (pronouced 'justice') is a JavaScript server runtime for Tezos 2.0
+`jstz` (pronounced 'justice') is a JavaScript server runtime powered by Tezos Smart Optimistic Rollups
 with a great developer experience. It is built on [Boa](https://boajs.dev/) and [Rust](https://www.rust-lang.org/).
 
 `jstz` is free and open source software under the [MIT license](https://github.com/trilitech/jstz/blob/main/LICENSE).
