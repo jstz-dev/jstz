@@ -4,7 +4,7 @@ Before contributing to `jstz`, please read these guidelines carefully.
 
 ## Overview
 
-`jstz` is a JavaScript server runtime for Tezos 2.0 designed to provide a great developer experience by aiming to be compatible with web standards.
+`jstz` is a JavaScript server runtime for Tezos smart optimistic rollups designed to provide a great developer experience by aiming to be compatible with web standards.
 
 Through `jstz` developers can set up, deploy and test so called _smart functions_ written in Javascript/Typescript that can get directly executed on the `jstz` smart rollup node.
 It provides a simple interface through which one can deploy smart functions and then call them by sending HTTP requests to a particular _smart function address_.

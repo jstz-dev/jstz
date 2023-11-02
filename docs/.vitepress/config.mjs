@@ -4,7 +4,7 @@ import { defineConfig } from "vitepress";
 export default defineConfig({
   titleTemplate: false,
   title: "👨‍⚖️ jstz",
-  description: "A JavaScript server runtime that powers Tezos 2.0",
+  description: "A JavaScript runtime powered by Tezos smart optimistic rollups",
   lang: "en-US",
   head: [
     [
