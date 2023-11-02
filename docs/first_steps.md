@@ -9,7 +9,7 @@ This guide will instruct through setting up and deploying your first _smart func
 
 ## Hello World
 
-`jstz` is a JavaScript runtime for Tezos 2.0 that aims to be compatible with web conventions.
+`jstz` is a JavaScript runtime for Tezos smart optimistic rollups that aims to be compatible with web conventions.
 `jstz` additionally has support for TypeScript, as our example below highlights.
 
 In this example, the smart function takes a HTTP `Request` object and returns a `Response` object
