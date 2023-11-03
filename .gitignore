@@ -22,7 +22,7 @@ octez-node
 octez-smart-rollup-node
 
 # Logs from sandbox
-logs/
+/logs
 
 # JavaScript dependencies
 node_modules/
