@@ -329,7 +329,7 @@ pub mod run {
             })
         }
         .map_err(|err| {
-            if rt.instructions_remaining == 0 {
+            if rt.instructions_remaining() == 0 {
                 Error::GasLimitExceeded
             } else {
                 err.into()
