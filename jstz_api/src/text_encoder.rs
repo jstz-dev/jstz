@@ -147,8 +147,8 @@ impl TextEncoder {
     }
 }
 #[derive(Default, Clone, Trace, Finalize)]
-pub struct TextEncoderApi;
-impl TextEncoderApi {
+pub struct TextEncoderClass;
+impl TextEncoderClass {
     fn encode(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         let arg = args.get_or_undefined(0).try_js_into(context)?;
         let result = TextEncoder::encode(arg);
@@ -193,7 +193,7 @@ impl TextEncoderApi {
     }
 }
 
-impl NativeClass for TextEncoderApi {
+impl NativeClass for TextEncoderClass {
     type Instance = TextEncoder;
 
     const NAME: &'static str = "TextEncoder";
@@ -213,21 +213,22 @@ impl NativeClass for TextEncoderApi {
             .method(
                 js_string!("encode"),
                 1,
-                NativeFunction::from_fn_ptr(TextEncoderApi::encode),
+                NativeFunction::from_fn_ptr(TextEncoderClass::encode),
             )
             .method(
                 js_string!("encodeInto"),
                 2,
-                NativeFunction::from_fn_ptr(TextEncoderApi::encode_into),
+                NativeFunction::from_fn_ptr(TextEncoderClass::encode_into),
             );
 
         Ok(())
     }
 }
 
+pub struct TextEncoderApi;
 impl jstz_core::Api for TextEncoderApi {
     fn init(self, context: &mut Context<'_>) {
-        register_global_class::<TextEncoderApi>(context)
+        register_global_class::<TextEncoderClass>(context)
             .expect("The `TextEncoder` class shouldn't exist yet");
         register_global_class::<TextEncoderEncodeIntoResult>(context)
             .expect("The `TextEncoderEncodeIntoResult` class shouldn't exist yet")
