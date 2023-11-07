@@ -1,7 +1,9 @@
 use std::time::Duration;
 
+use anyhow::anyhow;
 use anyhow::Result;
-use jstz_proto::{operation::OperationHash, receipt::Receipt};
+use http::StatusCode;
+use jstz_proto::{context::account::Nonce, operation::OperationHash, receipt::Receipt};
 use tokio::time::sleep;
 
 use crate::config::Config;
@@ -37,6 +39,22 @@ impl JstzClient {
             Ok(Some(receipt))
         } else {
             Ok(None)
+        }
+    }
+
+    pub async fn get_nonce(&self, address: &str) -> Result<Nonce> {
+        let response = self
+            .get(&format!("{}/accounts/{}/nonce", self.endpoint, address))
+            .await?;
+
+        match response.status() {
+            StatusCode::OK => {
+                let nonce = response.json::<Nonce>().await?;
+                Ok(nonce)
+            }
+            StatusCode::NOT_FOUND => Ok(Nonce::default()),
+            // For any other status, return a generic error
+            _ => Err(anyhow!("Failed to get nonce")),
         }
     }
 

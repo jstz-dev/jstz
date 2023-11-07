@@ -18,7 +18,13 @@ pub async fn exec(
     http_method: String,
     json_data: Option<String>,
 ) -> Result<()> {
+    let jstz_client = JstzClient::new(cfg);
+
     let account = cfg.accounts.account_or_current_mut(referrer)?;
+
+    let nonce = jstz_client
+        .get_nonce(account.address.clone().to_base58().as_str())
+        .await?;
 
     // Create operation TODO nonce
     let url: Uri = url
@@ -35,7 +41,7 @@ pub async fn exec(
 
     let op = Operation {
         source: account.address.clone(),
-        nonce: account.nonce.clone(),
+        nonce: nonce,
         content: Content::RunContract(RunContract {
             uri: url,
             method,
@@ -43,8 +49,6 @@ pub async fn exec(
             body,
         }),
     };
-
-    account.nonce.increment();
 
     let signed_op = SignedOperation::new(
         account.public_key.clone(),
@@ -66,9 +70,7 @@ pub async fn exec(
         bincode::serialize(&signed_op)?,
     )?;
 
-    let receipt = JstzClient::new(cfg)
-        .wait_for_operation_receipt(&hash)
-        .await?;
+    let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 
     println!("Receipt: {:?}", receipt);
 

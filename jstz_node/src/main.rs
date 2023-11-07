@@ -4,7 +4,10 @@ use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use clap::Parser;
 use env_logger::Env;
 
-use crate::{rollup::RollupClient, services::OperationsService};
+use crate::{
+    rollup::RollupClient,
+    services::{AccountsService, OperationsService},
+};
 pub use error::{Error, Result};
 
 mod error;
@@ -48,6 +51,7 @@ async fn main() -> io::Result<()> {
             .app_data(rollup_client.clone())
             .wrap(Logger::default())
             .configure(OperationsService::configure)
+            .configure(AccountsService::configure)
     })
     .bind(ENDPOINT)?
     .run()
