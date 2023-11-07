@@ -23,6 +23,15 @@
     version = "0.1.0";
     src = ../.;
 
+    # Needed to get openssl-sys (required by `jstz_proto`) to use pkg-config.
+    nativeBuildInputs = with pkgs; lib.optionals stdenv.isLinux [pkg-config];
+
+    # Needed to get openssl-sys to use pkg-config.
+    # Doesn't seem to like OpenSSL 3
+    OPENSSL_NO_VENDOR = 1;
+
+    buildInputs = with pkgs; lib.optionals stdenv.isLinux [openssl openssl.dev];
+
     NIX_LDFLAGS = pkgs.lib.optional pkgs.stdenv.isDarwin (
       makeFrameworkFlags [
         "Security"
