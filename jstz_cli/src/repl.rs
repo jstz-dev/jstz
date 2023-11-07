@@ -11,7 +11,7 @@ use jstz_proto::api::{ContractApi, LedgerApi};
 use rustyline::{error::ReadlineError, Editor};
 use tezos_smart_rollup_mock::MockHost;
 
-use crate::config::Config;
+use crate::{config::Config, debug_api::DebugApi};
 
 pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
     let account = cfg.accounts.account_or_current(self_address)?;
@@ -59,6 +59,8 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
         },
         rt.context(),
     );
+
+    realm_clone.register_api(DebugApi, rt.context());
 
     loop {
         let readline = rl.readline(">> ");

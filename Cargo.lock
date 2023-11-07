@@ -1640,6 +1640,7 @@ dependencies = [
  "anyhow",
  "bincode",
  "boa_engine",
+ "boa_gc",
  "bs58",
  "clap",
  "daemonize",

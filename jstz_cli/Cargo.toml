@@ -42,6 +42,8 @@ tokio = { version = "1.33.0", features = ["full"] }
 derive_more = "0.99.17"
 url = "2.2.2"
 
+boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }
+
 [[bin]]
 name = "jstz"
 path = "src/main.rs"
