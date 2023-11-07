@@ -5,6 +5,7 @@ use tokio;
 mod account;
 mod bridge;
 mod config;
+mod debug_api;
 mod deploy;
 mod jstz;
 mod logs;

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 
 #[derive(Debug, Trace, Finalize)]
-struct Kv {
+pub struct Kv {
     prefix: String,
 }
 
@@ -20,7 +20,7 @@ const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
 // TODO: Figure out a more effective way of serializing values using json
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(try_from = "String", into = "String")]
-pub struct KvValue(serde_json::Value);
+pub struct KvValue(pub serde_json::Value);
 
 impl Into<String> for KvValue {
     fn into(self) -> String {
@@ -47,11 +47,11 @@ impl Kv {
         Ok(path::concat(&KV_PATH, &key_path)?)
     }
 
-    fn set(&self, tx: &mut Transaction, key: &str, value: KvValue) -> Result<()> {
+    pub fn set(&self, tx: &mut Transaction, key: &str, value: KvValue) -> Result<()> {
         tx.insert(self.key_path(key)?, value)
     }
 
-    fn get<'a>(
+    pub fn get<'a>(
         &self,
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
@@ -60,7 +60,7 @@ impl Kv {
         tx.get::<KvValue>(hrt, self.key_path(key)?)
     }
 
-    fn delete(
+    pub fn delete(
         &self,
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
@@ -69,7 +69,7 @@ impl Kv {
         tx.remove(hrt, &self.key_path(key)?)
     }
 
-    fn has(
+    pub fn has(
         &self,
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
