@@ -98,6 +98,18 @@ impl Account {
         Ok(account.contract_code.as_mut())
     }
 
+    pub fn set_contract_code(
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        addr: &Address,
+        contract_code: String,
+    ) -> Result<()> {
+        let account = Self::get_mut(hrt, tx, addr)?;
+
+        account.contract_code = Some(contract_code);
+        Ok(())
+    }
+
     pub fn balance(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
