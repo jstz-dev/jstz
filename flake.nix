@@ -55,27 +55,38 @@
               (pkgs.stdenv.isAarch64 && pkgs.stdenv.isDarwin)
               ["stackprotector"];
 
-            shellHook = ''
-              npm install
-              export PATH="$PWD/node_modules/.bin/:$PATH"
-            '';
+            shellHook = with pkgs;
+              lib.strings.concatLines
+              ([
+                  ''
+                    npm install
+                    export PATH="$PWD/node_modules/.bin/:$PATH"
+                  ''
+                ]
+                ++ lib.optionals stdenv.isLinux [
+                  ''
+                    export PKG_CONFIG_PATH=${openssl.dev}/lib/pkgconfig
+                  ''
+                ]);
 
-            buildInputs = with pkgs; [
-              llvmPackages_16.clangNoLibc
-              (rust-bin.stable."1.71.0".default.override {
-                targets = ["wasm32-unknown-unknown"];
-              })
-              rust-analyzer
-              wabt
+            buildInputs = with pkgs;
+              [
+                llvmPackages_16.clangNoLibc
+                (rust-bin.stable."1.71.0".default.override {
+                  targets = ["wasm32-unknown-unknown"];
+                })
+                rust-analyzer
+                wabt
 
-              nodejs
-              prefetch-npm-deps
+                nodejs
+                prefetch-npm-deps
 
-              alejandra
+                alejandra
 
-              python311Packages.base58
-              jq
-            ];
+                python311Packages.base58
+                jq
+              ]
+              ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
           };
         }
       );
