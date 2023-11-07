@@ -3,6 +3,7 @@ use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Blake2b, public_key::PublicKey, signature::Signature};
 use serde::{Deserialize, Serialize};
+use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
@@ -36,11 +37,16 @@ impl Operation {
         rt: &impl HostRuntime,
         tx: &mut Transaction,
     ) -> Result<()> {
-        let next_nonce = Account::nonce(rt, tx, &self.source)?;
+        let account_nonce = Account::nonce(rt, tx, &self.source)?;
 
-        if self.nonce == *next_nonce {
+        if self.nonce == *account_nonce {
             Ok(())
         } else {
+            debug_msg!(
+                rt,
+                "[🔴] Invalid Nonce: expected {account_nonce:?}, received {:?}\n",
+                self.nonce
+            );
             Err(Error::InvalidNonce)
         }
     }

@@ -1,6 +1,7 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
 
 use crate::{
+    context::account::Account,
     operation::{self, ExternalOperation, Operation, SignedOperation},
     receipt::{self, Receipt},
     Result,
@@ -17,27 +18,24 @@ fn execute_operation_inner(
     let operation = signed_operation.verify()?;
 
     operation.verify_nonce(hrt, tx)?;
-    match operation {
-        Operation {
-            source,
-            content: operation::Content::DeployContract(deployment),
-            ..
-        } => {
+    let Operation {
+        source, content, ..
+    } = operation;
+    let receipt = match content {
+        operation::Content::DeployContract(deployment) => {
             let result = contract::deploy::execute(hrt, tx, &source, deployment)?;
 
-            Ok(receipt::Content::DeployContract(result))
+            receipt::Content::DeployContract(result)
         }
 
-        Operation {
-            content: operation::Content::RunContract(run),
-            source,
-            ..
-        } => {
+        operation::Content::RunContract(run) => {
             let result = contract::run::execute(hrt, tx, &source, run)?;
 
-            Ok(receipt::Content::RunContract(result))
+            receipt::Content::RunContract(result)
         }
-    }
+    };
+    Account::nonce(hrt, tx, &source)?.increment();
+    Ok(receipt)
 }
 
 pub fn execute_external_operation(
