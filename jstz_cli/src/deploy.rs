@@ -14,6 +14,8 @@ pub async fn exec(
     balance: u64,
     cfg: &mut Config,
 ) -> Result<()> {
+    let jstz_client = JstzClient::new(cfg);
+
     // resolve contract code
     let contract_code = contract_code
         .map(from_file_or_id)
@@ -22,17 +24,19 @@ pub async fn exec(
 
     let account = cfg.accounts.account_or_current_mut(self_address)?;
 
-    // Create operation TODO nonce
+    let nonce = jstz_client
+        .get_nonce(account.address.clone().to_base58().as_str())
+        .await?;
+
+    // Create operation
     let op = Operation {
         source: account.address.clone(),
-        nonce: account.nonce.clone(),
+        nonce: nonce,
         content: Content::DeployContract(DeployContract {
             contract_code: contract_code,
             contract_credit: balance,
         }),
     };
-
-    account.nonce.increment();
 
     let signed_op = SignedOperation::new(
         account.public_key.clone(),
@@ -54,9 +58,7 @@ pub async fn exec(
         bincode::serialize(&signed_op)?,
     )?;
 
-    let receipt = JstzClient::new(cfg)
-        .wait_for_operation_receipt(&hash)
-        .await?;
+    let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 
     println!("Receipt: {:?}", receipt);
 

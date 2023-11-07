@@ -15,6 +15,7 @@ clap = { version = "^4.0", features = ["derive"] }
 env_logger = "0.10.0"
 hex = "0.4.3"
 jstz_proto.workspace = true
+jstz_crypto.workspace = true
 reqwest = { version = "0.11.22", features = ["json"] }
 serde = { version = "1.0.183", features = ["derive"] }
 thiserror = "1.0.50"

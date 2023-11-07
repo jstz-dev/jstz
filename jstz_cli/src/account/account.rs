@@ -3,13 +3,11 @@ use jstz_crypto::{
     keypair_from_passphrase, public_key::PublicKey, public_key_hash::PublicKeyHash,
     secret_key::SecretKey,
 };
-use jstz_proto::context::account::Nonce;
 use serde::{Deserialize, Serialize};
 
 // Represents an individual account
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Account {
-    pub nonce: Nonce,
     pub alias: String,
     pub address: PublicKeyHash,
     pub secret_key: SecretKey,
@@ -25,7 +23,6 @@ impl Account {
 
         let address = PublicKeyHash::try_from(&pk)?;
         let new_account = Account {
-            nonce: Nonce::default(),
             alias,
             address,
             secret_key: sk,
