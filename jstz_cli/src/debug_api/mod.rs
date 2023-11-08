@@ -10,7 +10,7 @@ impl DebugApi {
 
 impl jstz_core::Api for DebugApi {
     fn init(self, context: &mut boa_engine::Context<'_>) {
-        let kv_api = kv::KvApi {}.init(context);
+        let kv_api = kv::KvApi::namespace(context);
 
         let storage = ObjectInitializer::new(context)
             .property(js_string!("Kv"), kv_api, Attribute::all())
