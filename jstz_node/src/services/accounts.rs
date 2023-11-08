@@ -4,7 +4,6 @@ use actix_web::{
     HttpResponse, Responder, Scope,
 };
 use anyhow::anyhow;
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::context::account::Account;
 
 use crate::{rollup::RollupClient, Result};
