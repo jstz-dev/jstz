@@ -14,14 +14,9 @@ async fn nonce(
     rollup_client: Data<RollupClient>,
     path: Path<String>,
 ) -> Result<impl Responder> {
-    let address = path.into_inner();
+    let key = format!("/jstz_account/{}", path.into_inner());
 
-    let address_path = Account::path(
-        &PublicKeyHash::from_base58(&address).expect("Failed to create address"),
-    )
-    .expect("Failed to get account path");
-
-    let value = rollup_client.get_value(&address_path.to_string()).await?;
+    let value = rollup_client.get_value(&key).await?;
 
     let nonce = match value {
         Some(value) => {
