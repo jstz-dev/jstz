@@ -1,8 +1,8 @@
 use std::ops::Deref;
 
 use boa_engine::{
-    js_string, object::ObjectInitializer, Context, JsArgs, JsNativeError, JsObject,
-    JsResult, JsString, JsValue, NativeFunction,
+    js_string, object::ObjectInitializer, Context, JsArgs, JsObject, JsResult, JsValue,
+    NativeFunction,
 };
 use jstz_api::{Kv, KvValue};
 use jstz_core::{host_defined, kv::Transaction, runtime};
@@ -16,19 +16,6 @@ macro_rules! preamble {
     };
 }
 
-macro_rules! set_value {
-    ($args:ident, $value:ident, $id:tt) => {
-        let $value = $args
-            .get_or_undefined($id)
-            .as_string()
-            .ok_or_else(|| {
-                JsNativeError::typ()
-                    .with_message("Failed to convert js value into rust type `String`")
-            })
-            .map(JsString::to_std_string_escaped)?;
-    };
-}
-
 pub struct KvApi;
 
 impl KvApi {
@@ -38,8 +25,8 @@ impl KvApi {
         context: &mut Context,
     ) -> JsResult<JsValue> {
         preamble!(args, context, tx);
-        set_value!(args, account, 0);
-        set_value!(args, key, 1);
+        let account: String = args.get_or_undefined(0).try_js_into(context)?;
+        let key: String = args.get_or_undefined(1).try_js_into(context)?;
 
         let kv = Kv::new(account);
 
@@ -57,8 +44,8 @@ impl KvApi {
         context: &mut Context,
     ) -> JsResult<JsValue> {
         preamble!(args, context, tx);
-        set_value!(args, account, 0);
-        set_value!(args, key, 1);
+        let account: String = args.get_or_undefined(0).try_js_into(context)?;
+        let key: String = args.get_or_undefined(1).try_js_into(context)?;
 
         let value = KvValue(args.get_or_undefined(2).to_json(context)?);
 
@@ -75,8 +62,8 @@ impl KvApi {
         context: &mut Context,
     ) -> JsResult<JsValue> {
         preamble!(args, context, tx);
-        set_value!(args, account, 0);
-        set_value!(args, key, 1);
+        let account: String = args.get_or_undefined(0).try_js_into(context)?;
+        let key: String = args.get_or_undefined(1).try_js_into(context)?;
 
         let kv = Kv::new(account);
 
@@ -91,8 +78,8 @@ impl KvApi {
         context: &mut Context,
     ) -> JsResult<JsValue> {
         preamble!(args, context, tx);
-        set_value!(args, account, 0);
-        set_value!(args, key, 1);
+        let account: String = args.get_or_undefined(0).try_js_into(context)?;
+        let key: String = args.get_or_undefined(1).try_js_into(context)?;
 
         let kv = Kv::new(account);
 
@@ -101,7 +88,7 @@ impl KvApi {
         Ok(result.into())
     }
 
-    pub fn init(self, context: &mut boa_engine::Context<'_>) -> JsObject {
+    pub fn namespace(context: &mut boa_engine::Context<'_>) -> JsObject {
         let storage = ObjectInitializer::new(context)
             .function(NativeFunction::from_fn_ptr(Self::get), js_string!("get"), 2)
             .function(NativeFunction::from_fn_ptr(Self::set), js_string!("set"), 3)
