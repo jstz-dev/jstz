@@ -176,6 +176,17 @@ async fn get_code(account: Option<String>, cfg: &mut Config) -> Result<()> {
     Ok(())
 }
 
+async fn get_balance(account: Option<String>, cfg: &mut Config) -> Result<()> {
+    let jstz_client = JstzClient::new(cfg);
+    let address = cfg.accounts.get_address_from(account)?;
+
+    let balance = jstz_client.get_balance(address.as_str()).await?;
+
+    println!("{}", balance);
+
+    Ok(())
+}
+
 #[derive(Subcommand)]
 pub enum Command {
     /// Creates alias
@@ -215,6 +226,12 @@ pub enum Command {
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<String>,
     },
+    /// Get account balance
+    Balance {
+        /// User address or alias
+        #[arg(short, long, value_name = "ALIAS|ADDRESS")]
+        account: Option<String>,
+    },
 }
 
 pub async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
@@ -224,5 +241,6 @@ pub async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
         Command::Delete { alias } => delete_account(alias, cfg),
         Command::List { long } => list_accounts(long, cfg),
         Command::Code { account } => get_code(account, cfg).await,
+        Command::Balance { account } => get_balance(account, cfg).await,
     }
 }

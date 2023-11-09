@@ -34,7 +34,7 @@ impl ToString for Nonce {
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Account {
     pub nonce: Nonce,
-    amount: Amount,
+    pub amount: Amount,
     pub contract_code: Option<String>,
 }
 
