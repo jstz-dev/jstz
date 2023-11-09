@@ -40,7 +40,7 @@ fn read_transfer(
         }
     };
 
-    if transfer.destination.hash().0 != &rt.reveal_metadata().raw_rollup_address {
+    if transfer.destination.hash().0 != rt.reveal_metadata().raw_rollup_address {
         debug_msg!(
             rt,
             "Deposit ignored because of different smart rollup address"

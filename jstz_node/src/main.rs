@@ -15,11 +15,11 @@ mod rollup;
 mod services;
 
 /// Endpoint details for the `octez-smart-rollup-node`
-const DEFAULT_ROLLUP_NODE_RPC_ADDR: &'static str = "127.0.0.1";
+const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
 
 /// Endpoint defailts for the `jstz-node`
-const ENDPOINT: (&'static str, u16) = ("127.0.0.1", 8933);
+const ENDPOINT: (&str, u16) = ("127.0.0.1", 8933);
 
 #[derive(Debug, Parser)]
 struct Args {

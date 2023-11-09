@@ -26,7 +26,7 @@ impl<T: NativeObject> Clone for JsNativeObject<T> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
-            _phantom: self._phantom.clone(),
+            _phantom: self._phantom,
         }
     }
 }

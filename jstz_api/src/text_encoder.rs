@@ -16,14 +16,14 @@ impl TextEncoder {
             JsNativeError::eval().with_message(err.to_string()).into()
         }
         let str = data.to_std_string_escaped();
-        let encoded = DEFAULT_ENGINE.decode(&str).map_err(on_err)?;
+        let encoded = DEFAULT_ENGINE.decode(str).map_err(on_err)?;
         let encoded_str = core::str::from_utf8(encoded.as_slice()).map_err(on_err)?;
 
         Ok(encoded_str.into())
     }
     fn btoa(data: &JsString) -> JsResult<JsString> {
         let str = data.to_std_string_escaped();
-        let encoded = DEFAULT_ENGINE.encode(&str);
+        let encoded = DEFAULT_ENGINE.encode(str);
         Ok(encoded.into())
     }
 }

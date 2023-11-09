@@ -28,8 +28,8 @@ enum Inner {
     Bytes(Vec<u8>),
 }
 
-fn bytes_to_string(bytes: &Vec<u8>) -> JsResult<String> {
-    String::from_utf8(bytes.clone()).map_err(|_| {
+fn bytes_to_string(bytes: &[u8]) -> JsResult<String> {
+    String::from_utf8(bytes.to_owned()).map_err(|_| {
         JsError::from_native(
             JsNativeError::typ().with_message("Failed to convert bytes into utf8 text"),
         )

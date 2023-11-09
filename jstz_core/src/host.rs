@@ -400,7 +400,7 @@ pub struct Host {
 }
 
 impl Host {
-    pub unsafe fn new(rt: &mut (impl Runtime + 'static)) -> Self {
+    pub(crate) unsafe fn new(rt: &mut (impl Runtime + 'static)) -> Self {
         let rt_ptr: *mut dyn erased_runtime::Runtime = rt;
 
         // SAFETY

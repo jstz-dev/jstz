@@ -83,6 +83,9 @@ impl UrlSearchParams {
     pub fn len(&self) -> usize {
         self.values.len()
     }
+    pub fn is_empty(&self) -> bool {
+        self.values.is_empty()
+    }
 
     /// Appends a specified key/value pair as a new search parameter.
     ///
@@ -330,7 +333,7 @@ impl TryFromJs for UrlSearchParams {
 pub struct UrlSearchParamsClass;
 
 impl UrlSearchParams {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())

@@ -31,9 +31,9 @@ pub async fn exec(
     // Create operation
     let op = Operation {
         source: account.address.clone(),
-        nonce: nonce,
+        nonce,
         content: Content::DeployContract(DeployContract {
-            contract_code: contract_code,
+            contract_code,
             contract_credit: balance,
         }),
     };

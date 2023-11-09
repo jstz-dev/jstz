@@ -167,6 +167,11 @@ impl Kv {
         drop(tx)
     }
 }
+impl Default for Kv {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 type Timestamp = u64;
 

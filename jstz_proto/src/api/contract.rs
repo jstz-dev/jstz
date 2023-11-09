@@ -29,7 +29,7 @@ unsafe impl Trace for Contract {
 }
 
 impl Contract {
-    fn from_js_value<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -49,7 +49,7 @@ impl Contract {
     ) -> Result<String> {
         // 1. Check if the contract has sufficient balance
         if Account::balance(hrt, tx, &self.contract_address)? < initial_balance {
-            return Err(Error::BalanceOverflow.into());
+            return Err(Error::BalanceOverflow);
         }
 
         // 2. Deploy the contract

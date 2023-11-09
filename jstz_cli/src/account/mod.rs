@@ -1,16 +1,46 @@
 use anyhow::{anyhow, Result};
 use bip39::{Language, Mnemonic, MnemonicType};
 use clap::Subcommand;
+use jstz_crypto::{
+    keypair_from_passphrase, public_key::PublicKey, public_key_hash::PublicKeyHash,
+    secret_key::SecretKey,
+};
+use serde::{Deserialize, Serialize};
 use std::io;
 use std::io::Write;
 
-pub mod account;
-
 use crate::config::Config;
 
+// Represents an individual account
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Account {
+    pub alias: String,
+    pub address: PublicKeyHash,
+    pub secret_key: SecretKey,
+    pub public_key: PublicKey,
+}
+
+impl Account {
+    pub fn from_passphrase(passphrase: String, alias: String) -> Result<Self> {
+        let (sk, pk) = keypair_from_passphrase(passphrase.as_str()).unwrap();
+
+        println!("Secret key: {}", sk.to_string());
+        println!("Public key: {}", pk.to_string());
+
+        let address = PublicKeyHash::try_from(&pk)?;
+        let new_account = Account {
+            alias,
+            address,
+            secret_key: sk,
+            public_key: pk,
+        };
+
+        Ok(new_account)
+    }
+}
 fn generate_passphrase() -> String {
     let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
-    return mnemonic.to_string();
+    mnemonic.to_string()
 }
 
 fn create_account(
@@ -31,7 +61,7 @@ fn create_account(
         }
     };
 
-    let account = account::Account::from_passphrase(passphrase, alias)?;
+    let account = Account::from_passphrase(passphrase, alias)?;
 
     println!("Account created with address: {}", account.address);
 
@@ -102,7 +132,7 @@ pub fn whoami(cfg: &mut Config) -> Result<()> {
         .as_ref()
         .ok_or(anyhow!("Not logged in!"))?;
 
-    let account = cfg.accounts.get(&alias)?;
+    let account = cfg.accounts.get(alias)?;
 
     println!(
         "Logged in to account {} with address {}",

@@ -1,6 +1,5 @@
 use anyhow::Result;
 use clap::Parser;
-use tokio;
 
 mod account;
 mod bridge;

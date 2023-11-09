@@ -7,7 +7,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use fs_extra::dir::CopyOptions;
 use jstz_core::kv::value::serialize;
 use nix::libc::{SIGINT, SIGTERM};
@@ -149,8 +149,8 @@ fn originate_rollup(cfg: &Config) -> Result<String> {
 
     fs::create_dir_all(rollup_node_preimages_dir)?;
     fs_extra::dir::copy(
-        &target.join("preimages/"),
-        &rollup_node_preimages_dir,
+        target.join("preimages/"),
+        rollup_node_preimages_dir,
         &CopyOptions {
             content_only: true,
             ..Default::default()
@@ -199,23 +199,23 @@ fn smart_rollup_installer(cfg: &Config, bridge_address: &str) -> Result<()> {
     // Create an installer kernel
     let mut installer_command = Command::new("smart-rollup-installer");
 
-    installer_command.args(&[
+    installer_command.args([
         "get-reveal-installer",
         "--setup-file",
-        &setup_file_path.to_str().expect("Invalid path"),
+        setup_file_path.to_str().expect("Invalid path"),
         "--output",
         cfg.jstz_path
             .join("target/kernel/jstz_kernel_installer.hex")
             .to_str()
             .expect("Invalid path"),
         "--preimages-dir",
-        &cfg.jstz_path
+        cfg.jstz_path
             .join("target/kernel")
             .join("preimages/")
             .to_str()
             .expect("Invalid path"),
         "--upgrade-to",
-        &cfg.jstz_path
+        cfg.jstz_path
             .join("target/wasm32-unknown-unknown/release/jstz_kernel.wasm")
             .to_str()
             .expect("Invalid path"),
@@ -300,17 +300,16 @@ impl OctezThread {
     pub fn shutdown(self) -> Result<()> {
         self.shutdown_tx.send(())?;
         match self.thread_handle.join() {
-            Ok(result) => result?,
+            Ok(result) => result,
             Err(_) => {
-                // thread paniced
-                ()
+                // thread panicked
+                Err(anyhow!("Sandbox Daemon Panicked!"))
             }
-        };
-        Ok(())
+        }
     }
 
     pub fn join(threads: Vec<Self>) -> Result<()> {
-        let mut signals = Signals::new(&[SIGINT, SIGTERM])?;
+        let mut signals = Signals::new([SIGINT, SIGTERM])?;
 
         // Loop until 1 of the threads fails
         'main_loop: loop {
@@ -344,7 +343,7 @@ impl OctezThread {
 
 fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)> {
     // 1. Init node
-    init_node(&cfg)?;
+    init_node(cfg)?;
 
     // 2. As a thread, start node
     print!("Starting node...");
@@ -352,7 +351,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     println!(" done");
 
     // 3. Init client
-    init_client(&cfg)?;
+    init_client(cfg)?;
     println!("Client initialized");
 
     // 4. As a thread, start baking
@@ -362,16 +361,16 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
 
     // 5. Deploy bridge
     println!("Deploying bridge...");
-    let bridge_address = bridge::deploy(&cfg)?;
+    let bridge_address = bridge::deploy(cfg)?;
     println!("\t`jstz_bridge` deployed at {}", bridge_address);
 
     // 6. Create an installer kernel
     print!("Creating installer kernel...");
-    smart_rollup_installer(&cfg, bridge_address.as_str())?;
+    smart_rollup_installer(cfg, bridge_address.as_str())?;
     println!("done");
 
     // 7. Originate the rollup
-    let rollup_address = originate_rollup(&cfg)?;
+    let rollup_address = originate_rollup(cfg)?;
     println!("`jstz_rollup` originated at {}", rollup_address);
 
     // 8. As a thread, start rollup node
@@ -379,7 +378,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     let rollup_node = OctezThread::from_child(start_rollup_node(cfg)?);
     println!(" done");
 
-    bridge::set_rollup(&cfg, &rollup_address)?;
+    bridge::set_rollup(cfg, &rollup_address)?;
     println!("\t`jstz_bridge` `rollup` address set to {}", rollup_address);
 
     println!("Bridge deployed");
@@ -409,7 +408,7 @@ pub fn main(cfg: &mut Config) -> Result<()> {
     println!(" done");
 
     // 2. Start sandbox
-    let (node, baker, rollup_node) = start_sandbox(&cfg)?;
+    let (node, baker, rollup_node) = start_sandbox(cfg)?;
     println!("Sandbox started 🎉");
 
     // 3. Save config

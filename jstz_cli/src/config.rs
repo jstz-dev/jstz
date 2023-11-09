@@ -9,7 +9,7 @@ use std::{
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::account::account::Account;
+use crate::account::Account;
 
 fn home() -> PathBuf {
     dirs::home_dir()

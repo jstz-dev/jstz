@@ -41,7 +41,7 @@ pub async fn exec(
 
     let op = Operation {
         source: account.address.clone(),
-        nonce: nonce,
+        nonce,
         content: Content::RunContract(RunContract {
             uri: url,
             method,

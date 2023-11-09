@@ -61,7 +61,7 @@ impl Operation {
             }) => Blake2b::from(
                 format!(
                     "{}{}{}{}",
-                    source.to_string(),
+                    source,
                     nonce.to_string(),
                     contract_code,
                     contract_credit
@@ -77,7 +77,7 @@ impl Operation {
             }) => Blake2b::from(
                 format!(
                     "{}{}{}{}{:?}{:?}",
-                    source.to_string(),
+                    source,
                     nonce.to_string(),
                     uri,
                     method,

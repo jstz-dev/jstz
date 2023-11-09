@@ -159,7 +159,7 @@ impl Script {
     ) -> JsResult<JsPromise> {
         self.register_apis(contract_address, context);
 
-        self.realm().eval_module(&self, context)
+        self.realm().eval_module(self, context)
     }
 
     /// Deploys a script
@@ -173,13 +173,7 @@ impl Script {
         let nonce = Account::nonce(hrt, tx, source)?;
 
         let address = Address::digest(
-            format!(
-                "{}{}{}",
-                source.to_string(),
-                code.to_string(),
-                nonce.to_string(),
-            )
-            .as_bytes(),
+            format!("{}{}{}", source, code, nonce.to_string(),).as_bytes(),
         )?;
 
         Account::create(hrt, tx, &address, balance, Some(code))?;
@@ -302,7 +296,7 @@ pub mod run {
         register_web_apis(&rt.realm().clone(), rt);
 
         // 2. Extract address from request
-        let address = Address::from_base58(&uri.host().expect("Expected host"))?;
+        let address = Address::from_base58(uri.host().expect("Expected host"))?;
 
         // 3. Deserialize request
         let http_request = create_http_request(uri, method, headers, body);
