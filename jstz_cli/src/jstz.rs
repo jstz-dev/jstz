@@ -3,6 +3,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Result;
 use http::StatusCode;
+use jstz_api::KvValue;
 use jstz_proto::{context::account::Nonce, operation::OperationHash, receipt::Receipt};
 use tokio::time::sleep;
 
@@ -55,6 +56,48 @@ impl JstzClient {
             StatusCode::NOT_FOUND => Ok(Nonce::default()),
             // For any other status, return a generic error
             _ => Err(anyhow!("Failed to get nonce")),
+        }
+    }
+
+    pub async fn get_value(&self, address: &str, key: &str) -> Result<Option<KvValue>> {
+        let response = self
+            .get(&format!(
+                "{}/accounts/{}/kv/{}",
+                self.endpoint, address, key
+            ))
+            .await?;
+
+        match response.status() {
+            StatusCode::OK => {
+                let kv = response.json::<KvValue>().await?;
+                Ok(Some(kv))
+            }
+            StatusCode::NOT_FOUND => Ok(None),
+            // For any other status, return a generic error
+            _ => Err(anyhow!("Failed to get value.")),
+        }
+    }
+
+    pub async fn get_subkey_list(
+        &self,
+        address: &str,
+        key: &str,
+    ) -> Result<Option<Vec<String>>> {
+        let response = self
+            .get(&format!(
+                "{}/accounts/{}/kv_subkeys/{}",
+                self.endpoint, address, key
+            ))
+            .await?;
+
+        match response.status() {
+            StatusCode::OK => {
+                let kv = response.json::<Vec<String>>().await?;
+                Ok(Some(kv))
+            }
+            StatusCode::NOT_FOUND => Ok(None),
+            // For any other status, return a generic error
+            _ => Err(anyhow!("Failed to get subkey list.")),
         }
     }
 

@@ -8,6 +8,7 @@ mod config;
 mod debug_api;
 mod deploy;
 mod jstz;
+mod kv;
 mod logs;
 mod octez;
 mod repl;
@@ -79,6 +80,9 @@ enum Command {
     /// Shows the current account
     #[command(name = "whoami")]
     WhoAmI {},
+    /// Commands realted to the KV store
+    #[command(subcommand)]
+    Kv(kv::Command),
 }
 
 async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
@@ -103,6 +107,7 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
         Command::Login { alias } => account::login(alias, cfg),
         Command::Logout {} => account::logout(cfg),
         Command::WhoAmI {} => account::whoami(cfg),
+        Command::Kv(kv_command) => kv::exec(kv_command, cfg).await,
     }
 }
 
