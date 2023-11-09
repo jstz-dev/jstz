@@ -23,5 +23,5 @@ running on Tezos's smart optimistic rollups, some APIs are not available (e.g. `
 ## `jstz`-specific APIs
 
 - [`Kv`](./kv.md)
-- `Contract`
+- [`Contract`](./contract.md)
 - [`Ledger`](./ledger.md)
