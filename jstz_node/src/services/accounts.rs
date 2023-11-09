@@ -60,6 +60,27 @@ async fn code(
     Ok(HttpResponse::Ok().json(code))
 }
 
+#[get("/{address}/balance")]
+async fn balance(
+    rollup_client: Data<RollupClient>,
+    path: Path<String>,
+) -> Result<impl Responder> {
+    let key = format!("/jstz_account/{}", path.into_inner());
+
+    let value = rollup_client.get_value(&key).await?;
+
+    let balance = match value {
+        Some(value) => {
+            bincode::deserialize::<Account>(&value)
+                .map_err(|_| anyhow!("Failed to deserialize account"))?
+                .amount
+        }
+        None => return Ok(HttpResponse::NotFound().finish()),
+    };
+
+    Ok(HttpResponse::Ok().json(balance))
+}
+
 #[get("/{address}/kv")]
 async fn kv(
     rollup_client: Data<RollupClient>,
@@ -111,6 +132,7 @@ impl AccountsService {
         let scope = Scope::new("/accounts")
             .service(nonce)
             .service(code)
+            .service(balance)
             .service(kv)
             .service(kv_subkeys);
 

@@ -69,9 +69,22 @@ impl JstzClient {
                 let code = response.json::<Option<String>>().await?;
                 Ok(code)
             }
-            StatusCode::NOT_FOUND => Ok(None),
             // For any other status, return a generic error
-            _ => Err(anyhow!("Failed to get nonce")),
+            _ => Err(anyhow!("Failed to get the code")),
+        }
+    }
+
+    pub async fn get_balance(&self, address: &str) -> Result<u64> {
+        let response = self
+            .get(&format!("{}/accounts/{}/balance", self.endpoint, address))
+            .await?;
+
+        match response.status() {
+            StatusCode::OK => {
+                let balance = response.json::<u64>().await?;
+                Ok(balance)
+            }
+            _ => Err(anyhow!("Failed to get the balance")),
         }
     }
 
