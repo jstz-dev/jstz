@@ -88,3 +88,16 @@ where
         }
     }
 }
+
+impl<T> IntoJs for Vec<T>
+where
+    T: IntoJs,
+{
+    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+        let mut values = Vec::new();
+        for val in self.into_iter() {
+            values.push(val.into_js(context));
+        }
+        JsArray::from_iter(values.into_iter(), context).into()
+    }
+}

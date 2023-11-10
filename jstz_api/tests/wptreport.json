@@ -2723,8 +2723,8 @@
                         "subtests": [
                           {
                             "name": "Headers.prototype.get combines set-cookie headers in order",
-                            "status": "Fail",
-                            "message": "assert_equals: expected (string) \"foo=bar, fizz=buzz; domain=example.com\" but got (object) [\"foo=bar\", \"fizz=buzz; domain=example.com\"]"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers iterator does not combine set-cookie headers",
@@ -2788,43 +2788,43 @@
                           },
                           {
                             "name": "Headers.prototype.getSetCookie with no headers present",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.getSetCookie with one header",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.getSetCookie with one header created from an object",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.getSetCookie with multiple headers",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.getSetCookie with an empty header",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.getSetCookie with two equal headers",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.getSetCookie ignores set-cookie2 headers",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.getSetCookie preserves header ordering",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Adding Set-Cookie headers normalizes their value",
@@ -2844,8 +2844,8 @@
                         ],
                         "status": "Null",
                         "metrics": {
-                          "passed": 2,
-                          "failed": 22,
+                          "passed": 11,
+                          "failed": 13,
                           "timed_out": 0
                         }
                       }
@@ -3233,8 +3233,8 @@
                         "subtests": [
                           {
                             "name": "Create headers using same name for different values",
-                            "status": "Fail",
-                            "message": "assert_equals: expected (string) \"doubleValue1, doubleValue2\" but got (object) [\"doubleValue1\", \"doubleValue2\"]"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check delete and has methods when using same name for different values",
@@ -3248,8 +3248,8 @@
                           },
                           {
                             "name": "Check append methods when called with already used name",
-                            "status": "Fail",
-                            "message": "assert_equals: expected (string) \"singleValue, newSingleValue\" but got (object) [\"singleValue\", \"newSingleValue\"]"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Iterate combined values",
@@ -3264,8 +3264,8 @@
                         ],
                         "status": "Null",
                         "metrics": {
-                          "passed": 2,
-                          "failed": 4,
+                          "passed": 4,
+                          "failed": 2,
                           "timed_out": 0
                         }
                       }
