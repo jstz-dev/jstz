@@ -9,7 +9,7 @@ use std::{
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::account::account::Account;
+use crate::account::account::{Account, AliasAccount};
 
 fn home() -> PathBuf {
     dirs::home_dir()
@@ -25,12 +25,25 @@ pub struct AccountConfig {
 }
 
 impl AccountConfig {
+    pub fn add_alias(&mut self, alias: String, address: String) -> Result<()> {
+        if self.contains(alias.as_str()) {
+            return Err(anyhow!("Account already exists"));
+        }
+
+        let account = AliasAccount::new(address.clone(), alias.clone())?;
+
+        self.upsert(account);
+
+        Ok(())
+    }
+
     pub fn contains(&self, alias: &str) -> bool {
         self.accounts.contains_key(alias)
     }
 
-    pub fn upsert(&mut self, account: Account) {
-        self.accounts.insert(account.alias.clone(), account);
+    pub fn upsert<T: Into<Account>>(&mut self, account: T) {
+        let account = account.into();
+        self.accounts.insert(account.alias().to_string(), account);
     }
 
     pub fn alias_or_current(&self, alias: Option<String>) -> Result<String> {

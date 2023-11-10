@@ -39,6 +39,9 @@ enum Command {
         /// Function code.
         #[arg(value_name = "function_code", default_value = None)]
         function_code: Option<String>,
+        /// Name
+        #[arg(short, long, default_value = None)]
+        name: Option<String>,
     },
     /// Run a smart function using a specified URL.
     Run {
@@ -86,7 +89,8 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
             self_address,
             function_code,
             balance,
-        } => deploy::exec(self_address, function_code, balance, cfg).await,
+            name,
+        } => deploy::exec(self_address, function_code, balance, name, cfg).await,
         Command::Run {
             url,
             referrer,
