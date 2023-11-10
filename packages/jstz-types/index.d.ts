@@ -111,6 +111,7 @@ declare var Response: {
 interface TextEncoderCommon {
   readonly encoding: string;
 }
+
 declare interface TextEncoderEncodeIntoResult {
   read: number;
   written: number;
