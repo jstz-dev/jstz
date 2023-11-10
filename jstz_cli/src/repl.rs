@@ -1,6 +1,8 @@
 use anyhow::Result;
 use boa_engine::{js_string, JsResult, JsValue, Source};
-use jstz_api::{http::HttpApi, url::UrlApi, ConsoleApi, KvApi, TextEncoderApi};
+use jstz_api::{
+    http::HttpApi, url::UrlApi, ConsoleApi, KvApi, TextDecoderApi, TextEncoderApi,
+};
 use jstz_core::host::HostRuntime;
 use jstz_core::{
     host_defined,
@@ -45,6 +47,7 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
         rt.context(),
     );
     realm_clone.register_api(TextEncoderApi, rt.context());
+    realm_clone.register_api(TextDecoderApi, rt.context());
     realm_clone.register_api(UrlApi, rt.context());
     realm_clone.register_api(HttpApi, rt.context());
     realm_clone.register_api(

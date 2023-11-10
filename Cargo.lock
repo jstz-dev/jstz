@@ -1623,6 +1623,7 @@ dependencies = [
  "boa_gc",
  "bytes",
  "derive_more",
+ "encoding_rs",
  "form_urlencoded",
  "http",
  "jstz_core",
