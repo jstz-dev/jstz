@@ -6,13 +6,22 @@ use std::io::Write;
 
 pub mod account;
 
-use crate::config::Config;
+use crate::{
+    account::account::{Account, AliasAccount, OwnedAccount},
+    config::Config,
+};
 
 fn generate_passphrase() -> String {
     let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
     return mnemonic.to_string();
 }
 
+fn alias(address: String, name: String, cfg: &mut Config) -> Result<()> {
+    cfg.accounts().add_alias(name, address)?;
+    cfg.save()?;
+
+    Ok(())
+}
 fn create_account(
     passphrase: Option<String>,
     alias: String,
@@ -31,7 +40,7 @@ fn create_account(
         }
     };
 
-    let account = account::Account::from_passphrase(passphrase, alias)?;
+    let account = OwnedAccount::new(passphrase, alias)?;
 
     println!("Account created with address: {}", account.address);
 
@@ -46,11 +55,17 @@ fn delete_account(alias: String, cfg: &mut Config) -> Result<()> {
         return Err(anyhow!("Account not found"));
     }
 
-    // Determine the confirmation message based on the login status
+    // Determine the confirmation message based on the login status. Use the name in the message.
     let confirmation_message = if cfg.accounts().current_alias.as_ref() == Some(&alias) {
-        "You are currently logged into this account. Are you sure you want to delete it? (y/N): "
+        format!(
+            "You are currently logged into the account {}. Are you sure you want to delete it? Please type the account name to confirm: ",
+            alias
+        )
     } else {
-        "Are you sure you want to delete this account? (y/N): "
+        format!(
+            "Are you sure you want to delete the account {}? Please type the account name to confirm: ",
+            alias
+        )
     };
 
     print!("{}", confirmation_message);
@@ -59,7 +74,7 @@ fn delete_account(alias: String, cfg: &mut Config) -> Result<()> {
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
 
-    if !["y", "Y", "yes", "Yes"].contains(&input.trim()) {
+    if !input.trim().eq(&alias) {
         println!("Account deletion aborted.");
         return Ok(());
     }
@@ -72,14 +87,19 @@ fn delete_account(alias: String, cfg: &mut Config) -> Result<()> {
 }
 
 pub fn login(alias: String, cfg: &mut Config) -> Result<()> {
+    if !cfg.accounts().contains(&alias) {
+        return Err(anyhow!("Account not found"));
+    }
+    if cfg.accounts().current_alias.as_ref() == Some(&alias) {
+        return Err(anyhow!("Already logged in to account {}!", alias));
+    }
+
     let account = cfg.accounts().get(&alias)?;
 
-    println!(
-        "Logged in to account {} with address {}",
-        account.alias, account.address
-    );
+    let OwnedAccount { alias, address, .. } = account.as_owned()?;
+    println!("Logged in to account {} with address {}", alias, address);
 
-    cfg.accounts().current_alias = Some(alias);
+    cfg.accounts().current_alias = Some(alias.to_string());
     cfg.save()?;
 
     Ok(())
@@ -95,29 +115,47 @@ pub fn logout(cfg: &mut Config) -> Result<()> {
     Ok(())
 }
 
-pub fn whoami(cfg: &mut Config) -> Result<()> {
+pub fn whoami(cfg: &Config) -> Result<()> {
     let alias = cfg
         .accounts
         .current_alias
         .as_ref()
         .ok_or(anyhow!("Not logged in!"))?;
 
-    let account = cfg.accounts.get(&alias)?;
+    let OwnedAccount { alias, address, .. } = cfg.accounts.get(alias)?.as_owned()?;
 
-    println!(
-        "Logged in to account {} with address {}",
-        account.alias, account.address
-    );
+    println!("Logged in to account {} with address {}", alias, address);
 
     Ok(())
 }
 
-fn list(cfg: &mut Config) -> Result<()> {
+fn list_accounts(long: bool, cfg: &mut Config) -> Result<()> {
     let accounts = cfg.accounts().list_all();
 
     println!("Accounts:");
     for (alias, account) in accounts {
-        println!("{}: {}", alias, account.address);
+        if long {
+            println!("Alias: {}", alias);
+            match account {
+                Account::Owned(OwnedAccount {
+                    alias: _,
+                    address,
+                    secret_key,
+                    public_key,
+                }) => {
+                    println!("  Type: Owned");
+                    println!("  Address: {}", address);
+                    println!("  Public Key: {}", public_key.to_string());
+                    println!("  Secret Key: {}", secret_key.to_string());
+                }
+                Account::Alias(AliasAccount { address, .. }) => {
+                    println!("  Type: Alias");
+                    println!("  Address: {}", address);
+                }
+            }
+        } else {
+            println!("{}: {}", account.alias(), account.address());
+        }
     }
 
     Ok(())
@@ -125,6 +163,15 @@ fn list(cfg: &mut Config) -> Result<()> {
 
 #[derive(Subcommand)]
 pub enum Command {
+    /// Creates alias
+    Alias {
+        /// Address
+        #[arg(value_name = "ADDRESS")]
+        address: String,
+        /// Name
+        #[arg(value_name = "NAME")]
+        name: String,
+    },
     /// Creates account
     Create {
         /// User alias
@@ -141,13 +188,19 @@ pub enum Command {
         alias: String,
     },
     /// Lists all accounts
-    List {},
+    #[clap(alias = "ls")]
+    List {
+        /// Option for long format output
+        #[arg(short, long)]
+        long: bool,
+    },
 }
 
 pub fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
+        Command::Alias { address, name } => alias(address, name, cfg),
         Command::Create { alias, passphrase } => create_account(passphrase, alias, cfg),
         Command::Delete { alias } => delete_account(alias, cfg),
-        Command::List {} => list(cfg),
+        Command::List { long } => list_accounts(long, cfg),
     }
 }

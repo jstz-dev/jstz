@@ -14,7 +14,8 @@ use tezos_smart_rollup_mock::MockHost;
 use crate::config::Config;
 
 pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
-    let address = &cfg.accounts.account_or_current(self_address)?.address;
+    let account = cfg.accounts.account_or_current(self_address)?;
+    let address = account.address();
 
     let mut rt = Runtime::new().expect("Failed to create a new runtime.");
 

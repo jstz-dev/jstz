@@ -1643,6 +1643,7 @@ dependencies = [
  "bs58",
  "clap",
  "daemonize",
+ "derive_more",
  "dirs",
  "fs_extra",
  "hex",
@@ -1668,6 +1669,7 @@ dependencies = [
  "tezos_crypto_rs",
  "tiny-bip39",
  "tokio",
+ "url",
 ]
 
 [[package]]

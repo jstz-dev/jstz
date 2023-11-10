@@ -3,8 +3,10 @@ use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use http::{HeaderMap, Method, Uri};
 use jstz_proto::operation::{Content, Operation, RunContract, SignedOperation};
+use url::Url;
 
 use crate::{
+    account::account::OwnedAccount,
     config::Config,
     jstz::JstzClient,
     octez::OctezClient,
@@ -20,16 +22,47 @@ pub async fn exec(
 ) -> Result<()> {
     let jstz_client = JstzClient::new(cfg);
 
-    let account = cfg.accounts.account_or_current_mut(referrer)?;
+    // Resolve URL
+    let mut url_object =
+        Url::parse(&url).map_err(|e| anyhow!("Failed to parse URL: {}", e))?;
+    if let Some(host) = url_object.host_str() {
+        if !host.starts_with("tz4") {
+            if cfg.accounts().contains(&host) {
+                url_object
+                    .set_host(Some(
+                        cfg.accounts().get(host)?.address().to_base58().as_str(),
+                    ))
+                    .map_err(|_| anyhow!("Failed to set host"))?;
+            } else {
+                return Err(anyhow!("No such account exists."));
+            }
+        }
+    } else {
+        return Err(anyhow!("URL requires a host"));
+    }
+
+    let resolved_url = url_object.to_string();
+    println!("Resolved URL: {}", resolved_url);
+
+    let account = cfg
+        .accounts
+        .account_or_current_mut(referrer)?
+        .as_owned_mut()?;
+    let OwnedAccount {
+        address,
+        secret_key,
+        public_key,
+        alias: _,
+    } = account;
 
     let nonce = jstz_client
-        .get_nonce(account.address.clone().to_base58().as_str())
+        .get_nonce(address.clone().to_base58().as_str())
         .await?;
 
     // Create operation TODO nonce
-    let url: Uri = url
+    let url: Uri = resolved_url
         .parse()
-        .map_err(|_| anyhow!("Failed to parse URL: {}", url))?;
+        .map_err(|_| anyhow!("Failed to parse URL: {}", resolved_url))?;
 
     let method =
         Method::from_str(&http_method).map_err(|_| anyhow!("Invalid HTTP method"))?;
@@ -40,8 +73,8 @@ pub async fn exec(
         .map(String::into_bytes);
 
     let op = Operation {
-        source: account.address.clone(),
-        nonce: nonce,
+        source: address.clone(),
+        nonce: nonce.clone(),
         content: Content::RunContract(RunContract {
             uri: url,
             method,
@@ -50,11 +83,8 @@ pub async fn exec(
         }),
     };
 
-    let signed_op = SignedOperation::new(
-        account.public_key.clone(),
-        account.secret_key.sign(op.hash())?,
-        op,
-    );
+    let signed_op =
+        SignedOperation::new(public_key.clone(), secret_key.sign(op.hash())?, op);
 
     let hash = signed_op.hash();
 
