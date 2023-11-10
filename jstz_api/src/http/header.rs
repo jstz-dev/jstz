@@ -12,15 +12,11 @@
 //! [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 //! [spec]: https://fetch.spec.whatwg.org/#headers-class
 
-use std::str::FromStr;
-
 use boa_engine::{
-    builtins::{self},
-    js_string,
+    builtins, js_string,
     object::{builtins::JsArray, Object},
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue,
-    NativeFunction,
+    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use derive_more::{Deref, DerefMut};
@@ -56,6 +52,38 @@ unsafe impl Trace for Headers {
 impl From<HeaderMap> for Headers {
     fn from(headers: HeaderMap) -> Self {
         Self { headers }
+    }
+}
+
+// A collection of header values
+pub struct Header {
+    pub headers: Vec<String>,
+}
+
+impl Header {
+    pub fn try_from_iter<'a, T>(iter: T) -> JsResult<Self>
+    where
+        T: IntoIterator<Item = &'a HeaderValue>,
+    {
+        let headers = iter
+            .into_iter()
+            .map(|header_value| header_value.to_str().map(|x| x.into()))
+            .collect::<Result<Vec<String>, http::header::ToStrError>>()
+            .map_err(|_| {
+                JsError::from_native(JsNativeError::typ().with_message(
+                    "Failed to convert header value to printable ascii string",
+                ))
+            })?;
+        Ok(Header { headers })
+    }
+}
+
+impl IntoJs for Header {
+    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+        if self.headers.is_empty() {
+            return JsValue::null();
+        }
+        self.headers.join(", ").into_js(context)
     }
 }
 
@@ -97,31 +125,21 @@ impl Headers {
         }
     }
 
-    /// Returns a String sequence of all the values of a header within a Headers object with a given name.
+    /// Returns a String of all the values of a header within a Headers object with a given name.
     ///
     /// More information:
     ///  - [WHATWG specification][spec]
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-headers-get
-    pub fn get(&self, name: &str) -> JsResult<Option<Header>> {
+    pub fn get(&self, name: &str) -> JsResult<Header> {
         let name = str_to_header_name(name)?;
-        let mut values = self.headers.get_all(name).into_iter();
-        match values.size_hint() {
-            (0, _) => Ok(None),
-            (1, Some(1)) => {
-                let header = values.next().expect("Expect 1 header");
+        let headers = Header::try_from_iter(self.headers.get_all(name))?;
+        Ok(headers)
+    }
 
-                Ok(Some(Header::Single(header_value_to_js_string(header)?)))
-            }
-            (1, None) => {
-                let values = values
-                    .map(header_value_to_js_string)
-                    .collect::<JsResult<Vec<JsString>>>()?;
-
-                Ok(Some(Header::Multiple(values)))
-            }
-            _ => todo!(),
-        }
+    pub fn get_set_cookie(&self) -> JsResult<Vec<String>> {
+        let headers = Header::try_from_iter(self.headers.get_all("set-cookie"))?;
+        Ok(headers.headers)
     }
 
     /// Returns a boolean stating whether a Headers object contains a certain header.
@@ -152,13 +170,13 @@ impl Headers {
 pub struct HeadersClass;
 
 impl Headers {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
             .ok_or_else(|| {
                 JsNativeError::typ()
-                    .with_message("Failed to convert js value into rust type `Console`")
+                    .with_message("Failed to convert js value into rust type `Headers`")
                     .into()
             })
     }
@@ -200,12 +218,16 @@ impl HeadersClass {
         let headers = Headers::try_from_js(this)?;
         let name: String = args.get_or_undefined(0).try_js_into(context)?;
 
-        let header = headers.get(&name)?;
+        Ok(headers.get(&name)?.into_js(context))
+    }
 
-        Ok(match header {
-            Some(header) => header.into_js(context),
-            None => JsValue::null(),
-        })
+    fn get_set_cookie(
+        this: &JsValue,
+        _args: &[JsValue],
+        context: &mut Context<'_>,
+    ) -> JsResult<JsValue> {
+        let headers = Headers::try_from_js(this)?;
+        Ok(headers.get_set_cookie()?.into_js(context))
     }
 
     fn has(
@@ -277,17 +299,6 @@ fn str_to_header_value(str: &str) -> JsResult<HeaderValue> {
     HeaderValue::try_from(str).map_err(|_| {
         JsError::from_native(JsNativeError::typ().with_message("Invalid header value"))
     })
-}
-
-fn header_value_to_js_string(header_value: &HeaderValue) -> JsResult<JsString> {
-    let str = header_value.to_str().map_err(|_| {
-        JsError::from_native(
-            JsNativeError::typ()
-                .with_message("Failed to convert `HeaderValue` to `&str`"),
-        )
-    })?;
-
-    Ok(JsString::from_str(str).expect("Infallible"))
 }
 
 /// The `HeadersInit` enum
@@ -365,28 +376,6 @@ impl TryFromJs for Headers {
     }
 }
 
-// FIXME: This representation isn't spec compliant.
-// The spec defines that we should join multiple headers into a single USVString
-// separated by `,` (with the exception of the `Set-Cookie`) header.
-pub enum Header {
-    Single(JsString),
-    Multiple(Vec<JsString>),
-}
-
-impl IntoJs for Header {
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
-        match self {
-            Header::Single(header) => header.into(),
-            Header::Multiple(headers) => {
-                let headers: Vec<JsValue> =
-                    headers.into_iter().map(|string| string.into()).collect();
-
-                JsArray::from_iter(headers, context).into()
-            }
-        }
-    }
-}
-
 impl NativeClass for HeadersClass {
     type Instance = Headers;
 
@@ -419,6 +408,11 @@ impl NativeClass for HeadersClass {
                 js_string!("get"),
                 1,
                 NativeFunction::from_fn_ptr(HeadersClass::get),
+            )
+            .method(
+                js_string!("getSetCookie"),
+                0,
+                NativeFunction::from_fn_ptr(HeadersClass::get_set_cookie),
             )
             .method(
                 js_string!("has"),
