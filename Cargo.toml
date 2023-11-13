@@ -7,6 +7,7 @@ members = [
     "jstz_kernel",
     "jstz_cli",
     "jstz_node",
+    "jstz_wpt",
 ]
 
 [workspace.package]
@@ -23,6 +24,7 @@ jstz_proto = { path = "jstz_proto" }
 jstz_crypto = { path = "jstz_crypto" }
 jstz_node = { path = "jstz_node" }
 jstz_cli = { path = "jstz_cli" }
+jstz_wpt = { path = "jstz_wpt" }
 
 [patch.crates-io]
 tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git", branch = "ajob410@sdk-ord-paths" }
