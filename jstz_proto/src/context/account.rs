@@ -132,6 +132,18 @@ impl Account {
         Ok(())
     }
 
+    pub fn set_balance(
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        addr: &Address,
+        amount: Amount,
+    ) -> Result<()> {
+        let account = Self::get_mut(hrt, tx, addr)?;
+
+        account.amount = amount;
+        Ok(())
+    }
+
     pub fn create(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
