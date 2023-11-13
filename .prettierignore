@@ -4,3 +4,6 @@
 
 # Ignore artifacts:
 **/dist
+
+# Ignore wpt submodule
+**/wpt
