@@ -4,20 +4,19 @@ use clap::Subcommand;
 use crate::{config::Config, jstz::JstzClient};
 
 async fn get(alias: Option<String>, key: String, cfg: &mut Config) -> Result<()> {
-    println!("get key: {}", key);
-    println!("alias: {:?}", alias);
-
     let jstz_client = JstzClient::new(cfg);
 
-    let account = cfg.accounts.account_or_current_mut(alias)?;
-
-    println!("account: {:?}", account);
+    let address = cfg.accounts.get_address_from(alias)?;
 
     let value = jstz_client
-        .get_value(account.address().clone().to_base58().as_str(), key.as_str())
+        .get_value(address.as_str(), key.as_str())
         .await?;
 
-    println!("{:?}", value);
+    // Print value
+    match value {
+        Some(value) => println!("{}", serde_json::to_string_pretty(&value).unwrap()),
+        None => println!("No value found"),
+    }
 
     Ok(())
 }
@@ -29,7 +28,7 @@ async fn list(
 ) -> Result<()> {
     let jstz_client = JstzClient::new(cfg);
 
-    let account = cfg.accounts.account_or_current_mut(alias)?;
+    let address = cfg.accounts.get_address_from(alias)?;
 
     let key_string = match key {
         Some(key) => key,
@@ -37,7 +36,7 @@ async fn list(
     };
 
     let value = jstz_client
-        .get_subkey_list(account.address().clone().to_base58().as_str(), &key_string)
+        .get_subkey_list(&address.as_str(), &key_string)
         .await?;
 
     // Print list of values
@@ -62,8 +61,8 @@ pub enum Command {
         key: String,
 
         /// User address or alias
-        #[arg(value_name = "ALIAS")]
-        alias: Option<String>,
+        #[arg(short, long, value_name = "ALIAS|ADDRESS")]
+        from: Option<String>,
     },
     /// List subkeys for a key
     List {
@@ -72,14 +71,14 @@ pub enum Command {
         key: Option<String>,
 
         /// User address or alias
-        #[arg(short, long)]
-        account: Option<String>,
+        #[arg(short, long, value_name = "ALIAS|ADDRESS")]
+        from: Option<String>,
     },
 }
 
 pub async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
-        Command::Get { key, alias } => get(alias, key, cfg).await,
-        Command::List { key, account } => list(account, key, cfg).await,
+        Command::Get { key, from } => get(from, key, cfg).await,
+        Command::List { key, from } => list(from, key, cfg).await,
     }
 }

@@ -96,7 +96,6 @@ impl JstzClient {
                 Ok(Some(kv))
             }
             StatusCode::NOT_FOUND => Ok(None),
-            // For any other status, return a generic error
             _ => Err(anyhow!("Failed to get subkey list.")),
         }
     }
