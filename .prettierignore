@@ -8,3 +8,4 @@
 # Ignore wpt submodule
 **/wpt
 **/manifest.json
+**/wptreport.json
