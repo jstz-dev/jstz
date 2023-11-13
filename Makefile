@@ -70,4 +70,4 @@ fmt-js:
 fmt: fmt-nix fmt-rust fmt-js
 
 .PHONY: fmt-check
-fmt: fmt-nix-check fmt-rust-check fmt-js-check
+fmt-check: fmt-nix-check fmt-rust-check fmt-js-check
