@@ -7,3 +7,4 @@
 
 # Ignore wpt submodule
 **/wpt
+**/manifest.json
