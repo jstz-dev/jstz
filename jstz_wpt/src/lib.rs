@@ -45,10 +45,12 @@ where
     cmd.args(args);
     cmd.stdout(options.stdout);
     cmd.stderr(options.stderr);
-    cmd.current_dir(root_dir()?.join("wpt"));
+    cmd.current_dir(root_dir()?);
 
     Ok(cmd.spawn()?)
 }
+
+const WPT_CMD: &str = "./wpt/wpt";
 
 pub struct Wpt {
     _private: (),
@@ -86,7 +88,7 @@ impl Wpt {
         let wpt_installed = {
             // Check that wpt is a directory and that it contains a `wpt` file
             let wpt_dir = root_dir()?.join("wpt");
-            wpt_dir.is_dir() && wpt_dir.join("wpt").is_file()
+            wpt_dir.exists() && wpt_dir.is_dir() && wpt_dir.join("wpt").is_file()
         };
 
         let hosts_configured = {
@@ -113,7 +115,7 @@ impl Wpt {
     }
 
     pub fn hosts(&self) -> Result<String> {
-        let args = ["wpt", "make-hosts-file"];
+        let args = [WPT_CMD, "make-hosts-file"];
 
         let output = run_python(
             &args,
@@ -147,12 +149,12 @@ impl Wpt {
 
     pub fn update_manifest(&self, rebuild: bool) -> Result<()> {
         let args = [
-            "wpt",
+            WPT_CMD,
             "manifest",
             "--tests-root",
             ".",
             "-p",
-            "../manifest.json",
+            "./manifest.json",
             if rebuild { "--rebuild" } else { "" },
         ];
 
@@ -170,7 +172,7 @@ impl Wpt {
     }
 
     pub async fn serve(&self, debug: bool) -> Result<WptServe> {
-        let args = ["wpt", "serve", "--config", "../config.json"];
+        let args = [WPT_CMD, "serve", "--config", "./config.json"];
 
         let options = if !debug {
             PythonOptions {
