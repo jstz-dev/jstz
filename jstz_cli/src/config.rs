@@ -52,6 +52,17 @@ impl AccountConfig {
             .ok_or(anyhow!("No account selected!"))
     }
 
+    pub fn get_address_from(&self, alias: Option<String>) -> Result<String> {
+        match alias {
+            Some(value) if value.starts_with("tz4") => Ok(value),
+            _ => Ok(self
+                .account_or_current(alias)?
+                .address()
+                .to_base58()
+                .to_string()),
+        }
+    }
+
     pub fn get(&self, alias: &str) -> Result<&Account> {
         self.accounts.get(alias).ok_or(anyhow!("Account not found"))
     }
