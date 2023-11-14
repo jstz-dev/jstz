@@ -12,6 +12,7 @@ use boa_engine::{
 use boa_gc::{Finalize, Trace};
 use derive_more::{From, Into};
 use expect_test::expect_file;
+use jstz_api::TextEncoderApi;
 use jstz_core::{host_defined, Api, Runtime};
 use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptReportTest, WptServe, WptSubtest,
@@ -258,34 +259,29 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
             .build(),
     );
 
+    // Register APIs
+    TextEncoderApi.init(&mut rt.context());
+
     // Run the bundle, evaluating each script in order
     // Instead of loading the TestHarnessReport script, we initialize it manually
     for item in &bundle.items {
         match item {
             BundleItem::TestHarnessReport => {
-                print!("Initializing TestHarnessReport...");
                 TestHarnessReportApi.init(&mut rt.context());
-                println!("done")
             }
             BundleItem::Inline(script) => {
-                print!("Evaluating inline script:\n{}", script);
-
                 rt.context().eval(Source::from_bytes(&format!(
                     "(function() {{ {} }})()",
                     script
                 )))?;
-
-                println!("\ndone")
             }
             BundleItem::Resource(location, script) => {
-                print!("Evaluating resource script: {}...", location);
+                println!("Evaluating resource script: {}...", location);
 
                 rt.context().eval(Source::from_bytes(&format!(
                     "(function() {{ {} }})()",
                     script
                 )))?;
-
-                println!("done")
             }
         }
     }
@@ -293,16 +289,12 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
     // Return the test harness report
     print!("Retrieving TestHarnessReport...");
 
-    io::stdout().flush().unwrap();
-
     let test_harness_report = {
         host_defined!(&mut rt, mut host_defined);
         host_defined
             .remove::<TestHarnessReport>()
             .expect("TestHarnessReport undefined")
     };
-
-    println!("done");
 
     io::stdout().flush().unwrap();
 

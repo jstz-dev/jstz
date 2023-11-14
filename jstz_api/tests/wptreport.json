@@ -10,17 +10,17 @@
                   {
                     "name": "Default encodings",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "Default inputs",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encode/decode round trip: utf-8",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "Decode sample: utf-16le",
@@ -40,8 +40,8 @@
                 ],
                 "status": "Err",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 6,
+                  "passed": 1,
+                  "failed": 5,
                   "timed_out": 0
                 }
               }
@@ -113,32 +113,32 @@
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Sanity check",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Surrogate half (low)",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Surrogate half (high)",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Surrogate half (low), in a string",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Surrogate half (high), in a string",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Wrong order",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   }
                 ],
                 "status": "Err",
@@ -1112,43 +1112,43 @@
                   {
                     "name": "USVString handling: lone surrogate lead",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "USVString handling: lone surrogate trail",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "USVString handling: unmatched surrogate lead",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "USVString handling: unmatched surrogate trail",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "USVString handling: swapped surrogate pair",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "USVString handling: properly encoded MUSICAL SYMBOL G CLEF (U+1D11E)",
                     "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "USVString default",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Err",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 7,
+                  "passed": 1,
+                  "failed": 6,
                   "timed_out": 0
                 }
               }
