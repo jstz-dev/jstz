@@ -1,4 +1,7 @@
-use std::future::IntoFuture;
+use std::{
+    future::IntoFuture,
+    io::{self, Write},
+};
 
 use anyhow::Result;
 use boa_engine::{
@@ -265,31 +268,43 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
                 println!("done")
             }
             BundleItem::Inline(script) => {
-                println!("Evaluating inline script:\n{}", script);
+                print!("Evaluating inline script:\n{}", script);
 
                 rt.context().eval(Source::from_bytes(&format!(
                     "(function() {{ {} }})()",
                     script
                 )))?;
+
+                println!("\ndone")
             }
             BundleItem::Resource(location, script) => {
-                println!("Evaluating resource script: {}", location);
+                print!("Evaluating resource script: {}...", location);
 
                 rt.context().eval(Source::from_bytes(&format!(
                     "(function() {{ {} }})()",
                     script
                 )))?;
+
+                println!("done")
             }
         }
     }
 
     // Return the test harness report
+    print!("Retrieving TestHarnessReport...");
+
+    io::stdout().flush().unwrap();
+
     let test_harness_report = {
         host_defined!(&mut rt, mut host_defined);
         host_defined
             .remove::<TestHarnessReport>()
             .expect("TestHarnessReport undefined")
     };
+
+    println!("done");
+
+    io::stdout().flush().unwrap();
 
     Ok(test_harness_report)
 }
@@ -321,7 +336,7 @@ fn run_wpt_test(
 
 #[tokio::test]
 async fn test_wpt() -> Result<()> {
-    let filter = TestFilter::from(["/encoding/"].as_ref());
+    let filter = TestFilter::try_from([r"^\/encoding\/[^\/]+\.any\.html$"].as_ref())?;
 
     let report = {
         let wpt = Wpt::new()?;

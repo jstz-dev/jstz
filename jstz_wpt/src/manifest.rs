@@ -1,5 +1,6 @@
 use std::{collections::BTreeMap, result};
 
+use regex::RegexSet;
 use serde::{Deserialize, Serialize};
 use url::Url;
 
@@ -123,30 +124,31 @@ pub struct WptTestOptions {
 }
 
 /// TestFilters provide a way to filter tests from [`WptManifest`]
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone)]
 pub struct TestFilter {
-    pub folders: Vec<String>,
+    pub folders: RegexSet,
 }
 
 impl TestFilter {
     /// Returns true if the path matches a folder in
     /// the filter
-    pub fn matches(&self, path: &str) -> bool {
+    pub fn is_match(&self, path: &str) -> bool {
         println!("Matching path: {}", path);
 
         if self.folders.is_empty() {
             return true;
         }
 
-        self.folders.iter().any(|folder| path.starts_with(folder))
+        self.folders.is_match(path)
     }
 }
 
-impl From<&[&str]> for TestFilter {
-    fn from(value: &[&str]) -> Self {
-        Self {
-            folders: value.iter().map(|&str| String::from(str)).collect(),
-        }
+impl TryFrom<&[&str]> for TestFilter {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &[&str]) -> anyhow::Result<Self> {
+        let folders = RegexSet::new(value)?;
+        Ok(Self { folders })
     }
 }
 
@@ -179,7 +181,7 @@ impl WptTests for WptManifestTest {
                     let url = Url::parse(&format!("http://localhost:8000/{}", url_path))
                         .ok()?;
 
-                    if !filter.matches(url.path()) {
+                    if !filter.is_match(url.path()) {
                         return None;
                     }
 
