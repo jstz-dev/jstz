@@ -46,7 +46,7 @@ pub mod headers {
 
 fn on_success(
     value: JsValue,
-    f: fn(&mut Context<'_>),
+    f: fn(&JsValue, &mut Context<'_>),
     context: &mut Context<'_>,
 ) -> JsValue {
     match value.as_promise() {
@@ -57,7 +57,7 @@ fn on_success(
                     Some(
                         FunctionObjectBuilder::new(context.realm(), unsafe {
                             NativeFunction::from_closure(move |_, args, context| {
-                                f(context);
+                                f(&value, context);
                                 Ok(args.get_or_undefined(0).clone())
                             })
                         })
@@ -70,7 +70,7 @@ fn on_success(
                 .into()
         }
         None => {
-            f(context);
+            f(&value, context);
             value
         }
     }
@@ -212,7 +212,7 @@ impl Script {
         // 3. Ensure that the transaction is committed
         let result = on_success(
             result,
-            |context| {
+            |value, context| {
                 host_defined!(context, mut host_defined);
 
                 runtime::with_global_host(|rt| {
@@ -224,8 +224,16 @@ impl Script {
                         "Rust type `Transaction` should be defined in `HostDefined`",
                     );
 
-                    kv.commit_transaction(rt, *tx)
-                        .expect("Failed to commit transaction");
+                    let response =
+                        Response::try_from_js(&value).expect("Expected valid response");
+
+                    // If status code is 2xx, commit transaction
+                    if response.ok() {
+                        kv.commit_transaction(rt, *tx)
+                            .expect("Failed to commit transaction");
+                    } else {
+                        kv.rollback_transaction(rt, *tx);
+                    }
                 })
             },
             context,
