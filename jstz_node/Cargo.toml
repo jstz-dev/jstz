@@ -9,16 +9,22 @@ repository.workspace = true
 
 [dependencies]
 actix-web = "4.4.0"
+actix-web-lab = "0.20.0"
 anyhow = "1.0.75"
 bincode = "1.3.3"
 clap = { version = "^4.0", features = ["derive"] }
 env_logger = "0.10.0"
+futures-util = "0.3.29"
 hex = "0.4.3"
 jstz_proto.workspace = true
 jstz_crypto.workspace = true
+parking_lot = "0.12.1"
 reqwest = { version = "0.11.22", features = ["json"] }
 serde = { version = "1.0.183", features = ["derive"] }
 thiserror = "1.0.50"
+tokio = "1.33.0"
+tokio-stream = "0.1.14"
+tokio-util = "0.7.10"
 
 [[bin]]
 name = "jstz-node"
