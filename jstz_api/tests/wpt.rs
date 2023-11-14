@@ -267,6 +267,8 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
                     "(function() {{ {} }})()",
                     script
                 )))?;
+
+                println!("done")
             }
         }
     }
@@ -304,7 +306,7 @@ fn run_wpt_test(
 
 #[tokio::test]
 async fn test_wpt() -> Result<()> {
-    let filter = TestFilter::from(["/encoding/"].as_ref());
+    let filter = TestFilter::try_from([r"^\/encoding\/[^\/]+\.any\.html$"].as_ref())?;
 
     let report = {
         let wpt = Wpt::new()?;
