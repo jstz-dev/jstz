@@ -42,11 +42,7 @@ impl AccountApi {
         let result =
             runtime::with_global_host(|rt| Account::balance(rt.deref(), &mut tx, &pkh))?;
 
-        if result <= i32::MAX as u64 {
-            Ok(JsValue::from(result as i32))
-        } else {
-            Err(JsNativeError::typ().with_message("Balance overflow").into())
-        }
+        Ok(JsValue::from(result))
     }
 
     fn set_balance(
@@ -62,14 +58,10 @@ impl AccountApi {
 
         let pkh = get_public_key_hash(account.as_str())?;
 
-        if balance <= i32::MAX as u64 {
-            runtime::with_global_host(|rt| {
-                Account::set_balance(rt.deref(), &mut tx, &pkh, balance)
-            })?;
-            Ok(JsValue::undefined())
-        } else {
-            Err(JsNativeError::typ().with_message("Balance overflow").into())
-        }
+        runtime::with_global_host(|rt| {
+            Account::set_balance(rt.deref(), &mut tx, &pkh, balance)
+        })?;
+        Ok(JsValue::undefined())
     }
 
     fn code(
@@ -112,7 +104,7 @@ impl AccountApi {
         Ok(JsValue::undefined())
     }
 
-    pub fn init(self, context: &mut boa_engine::Context<'_>) -> JsObject {
+    pub fn namespace(context: &mut boa_engine::Context<'_>) -> JsObject {
         let storage = ObjectInitializer::new(context)
             .function(
                 NativeFunction::from_fn_ptr(Self::balance),
