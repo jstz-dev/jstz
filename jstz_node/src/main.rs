@@ -3,7 +3,7 @@ use std::io;
 use actix_web::{middleware::Logger, web::Data, App, HttpServer, Scope};
 use clap::Parser;
 use env_logger::Env;
-use services::{logs::stream_logs, LogService};
+use services::{logs::stream_logs, LogsService};
 use tokio_util::sync::CancellationToken;
 
 use crate::{
@@ -55,7 +55,7 @@ async fn main() -> io::Result<()> {
     let cancellation_token = CancellationToken::new();
 
     let (broadcaster, tail_file_handle) =
-        LogService::init(args.kernel_file_path, &cancellation_token);
+        LogsService::init(args.kernel_file_path, &cancellation_token);
 
     HttpServer::new(move || {
         App::new()

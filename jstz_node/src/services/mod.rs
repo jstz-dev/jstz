@@ -5,4 +5,4 @@ mod operations;
 pub use accounts::AccountsService;
 pub use operations::OperationsService;
 
-pub use logs::LogService;
+pub use logs::LogsService;

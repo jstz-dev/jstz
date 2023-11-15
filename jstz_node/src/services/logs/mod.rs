@@ -24,9 +24,9 @@ async fn stream_logs(
     Ok(broadcaster.new_client().await)
 }
 
-pub struct LogService;
+pub struct LogsService;
 
-impl LogService {
+impl LogsService {
     // Initalise the LogService by spawning a future that reads and broadcasts the file
     pub fn init(
         path: String,
