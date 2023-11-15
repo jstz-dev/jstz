@@ -16,5 +16,9 @@ pub fn exec(from: String, to: String, amount: u64, cfg: &Config) -> Result<()> {
         "jstz_bridge",
         "deposit",
         &format!("(Pair {} 0x{})", amount, to_hex),
-    )
+    )?;
+
+    println!("Deposited {} CTEZ to {}", amount, to);
+
+    Ok(())
 }
