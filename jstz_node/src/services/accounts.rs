@@ -13,7 +13,6 @@ async fn nonce(
     rollup_client: Data<RollupClient>,
     path: Path<String>,
 ) -> Result<impl Responder> {
-    print!("nonce ");
     let key = format!("/jstz_account/{}", path.into_inner());
 
     let value = rollup_client.get_value(&key).await?;
