@@ -85,7 +85,7 @@ impl JstzClient {
     ) -> Result<Option<Vec<String>>> {
         let response = self
             .get(&format!(
-                "{}/accounts/{}/kv_subkeys/{}",
+                "{}/accounts/{}/kv/{}/subkeys",
                 self.endpoint, address, key
             ))
             .await?;

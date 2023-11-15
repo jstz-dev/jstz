@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use serde::Deserialize;
-use serde_json::Value;
 
 #[derive(Debug)]
 pub struct RollupClient {
@@ -23,6 +22,9 @@ pub enum ValueResponse {
     Value(String),
     Errors(Vec<ValueError>),
 }
+
+#[derive(Deserialize, Debug)]
+struct SubkeysResponse(Vec<String>);
 
 impl RollupClient {
     pub fn new(endpoint: String) -> Self {
@@ -72,28 +74,14 @@ impl RollupClient {
             .await?;
 
         if res.status() == 200 || res.status() == 500 {
-            let content_str = res.text().await?;
-            let content_json = serde_json::from_str::<Value>(&content_str);
+            let content =
+                serde_json::from_str::<SubkeysResponse>(res.text().await?.as_str());
 
-            match content_json {
-                Ok(serde_json::Value::Array(arr)) => {
-                    let list_of_strings: Result<Vec<String>> = arr
-                        .into_iter()
-                        .map(|item| match item {
-                            Value::String(s) => Ok(s),
-                            _ => Err(anyhow!("Non-string element found in the array")),
-                        })
-                        .collect();
-
-                    match list_of_strings {
-                        Ok(list) => Ok(Some(list)),
-                        Err(e) => Err(e),
-                    }
+            match content {
+                Ok(SubkeysResponse(subkeys)) => Ok(Some(subkeys)),
+                Err(e) => {
+                    Err(anyhow!("Failed to get subkeys for {}. Error: {:?}", key, e))
                 }
-                Ok(_) => Err(anyhow!(
-                    "Expected a JSON array but got a different structure"
-                )),
-                Err(e) => Err(anyhow!("Failed to parse content as JSON: {:?}", e)),
             }
         } else {
             Err(anyhow!("Unhandled response status: {}", res.status()))
