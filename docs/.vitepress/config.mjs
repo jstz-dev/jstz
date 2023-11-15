@@ -28,6 +28,7 @@ export default defineConfig({
           { text: "Installation", link: "/installation" },
           { text: "First Steps", link: "/first_steps" },
           { text: "CLI", link: "/cli" },
+          { text: "Asset Bridge", link: "/bridge" },
         ],
       },
 
