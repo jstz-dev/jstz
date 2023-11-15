@@ -32,7 +32,7 @@ async fn list(
 
     let key_string = match key {
         Some(key) => key,
-        None => "".to_string(),
+        None => "EMPTY".to_string(),
     };
 
     let value = jstz_client

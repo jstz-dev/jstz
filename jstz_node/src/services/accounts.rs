@@ -56,14 +56,14 @@ async fn kv(
     Ok(HttpResponse::Ok().json(value))
 }
 
-#[get("/{address}/kv_subkeys/{key:.*}")]
+#[get("/{address}/kv/{key}/subkeys")]
 async fn kv_subkeys(
     rollup_client: Data<RollupClient>,
     path: Path<(String, String)>,
 ) -> Result<impl Responder> {
     let (address, key) = path.into_inner();
 
-    let storage_key = if key.is_empty() {
+    let storage_key = if key == "EMPTY" {
         format!("/jstz_kv/{}", address)
     } else {
         format!("/jstz_kv/{}/{}", address, key)
@@ -85,8 +85,8 @@ impl AccountsService {
     pub fn configure(cfg: &mut ServiceConfig) {
         let scope = Scope::new("/accounts")
             .service(nonce)
-            .service(kv)
-            .service(kv_subkeys);
+            .service(kv_subkeys)
+            .service(kv);
 
         cfg.service(scope);
     }
