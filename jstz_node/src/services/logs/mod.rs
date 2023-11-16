@@ -11,8 +11,10 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 use self::broadcaster::Broadcaster;
+use self::unicode::starts_with_unicode_prefix;
 
 pub mod broadcaster;
+mod unicode;
 
 #[get("{address}/stream")]
 async fn stream_logs(
@@ -52,7 +54,9 @@ impl LogsService {
             tokio::select! {
                 line = lines.next_line() => {
                     if let Ok(Some(msg)) = line {
-                        broadcaster.broadcast(&msg).await;
+                        if starts_with_unicode_prefix(&msg) {
+                            broadcaster.broadcast(&msg).await;
+                        }
                     }
                 },
                 _ = stop_signal.cancelled() => {
