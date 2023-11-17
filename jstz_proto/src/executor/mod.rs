@@ -15,6 +15,7 @@ fn execute_operation_inner(
     signed_operation: SignedOperation,
 ) -> Result<receipt::Content> {
     let operation = signed_operation.verify()?;
+    let operation_hash = operation.hash();
 
     operation.verify_nonce(hrt, tx)?;
     match operation {
@@ -33,7 +34,7 @@ fn execute_operation_inner(
             source,
             ..
         } => {
-            let result = contract::run::execute(hrt, tx, &source, run)?;
+            let result = contract::run::execute(hrt, tx, &source, run, &operation_hash)?;
 
             Ok(receipt::Content::RunContract(result))
         }

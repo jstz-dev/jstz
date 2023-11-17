@@ -22,6 +22,7 @@ use tezos_smart_rollup::prelude::debug_msg;
 use crate::{
     api,
     context::account::{Account, Address, Amount},
+    operation::OperationHash,
     Error, Result,
 };
 
@@ -77,7 +78,6 @@ fn on_success(
 }
 
 fn register_web_apis(realm: &Realm, context: &mut Context<'_>) {
-    realm.register_api(jstz_api::ConsoleApi, context);
     realm.register_api(jstz_api::url::UrlApi, context);
     realm.register_api(jstz_api::urlpattern::UrlPatternApi, context);
     realm.register_api(jstz_api::http::HttpApi, context);
@@ -133,8 +133,21 @@ impl Script {
         Ok(Self(module))
     }
 
-    fn register_apis(&self, contract_address: Address, context: &mut Context<'_>) {
+    fn register_apis(
+        &self,
+        contract_address: Address,
+        context: &mut Context<'_>,
+        operation_hash: &OperationHash,
+    ) {
         register_web_apis(self.realm(), context);
+        // TODO: Register console API in `register_web_apis` once `Jstz` object is implemented
+        self.realm().register_api(
+            jstz_api::ConsoleApi {
+                contract_address: contract_address.clone(),
+                operation_hash: operation_hash.clone(),
+            },
+            context,
+        );
         self.realm().register_api(
             jstz_api::KvApi {
                 contract_address: contract_address.clone(),
@@ -147,8 +160,13 @@ impl Script {
             },
             context,
         );
-        self.realm()
-            .register_api(api::ContractApi { contract_address }, context);
+        self.realm().register_api(
+            api::ContractApi {
+                contract_address,
+                operation_hash: operation_hash.clone(),
+            },
+            context,
+        );
     }
 
     /// Initialize the script, registering all associated runtime APIs
@@ -156,9 +174,10 @@ impl Script {
     pub fn init(
         &self,
         contract_address: Address,
+        operation_hash: &OperationHash,
         context: &mut Context<'_>,
     ) -> JsResult<JsPromise> {
-        self.register_apis(contract_address, context);
+        self.register_apis(contract_address, context, operation_hash);
 
         self.realm().eval_module(&self, context)
     }
@@ -248,13 +267,14 @@ impl Script {
         tx: &mut Transaction,
         address: &Address,
         request: &JsValue,
+        operation_hash: &OperationHash,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         // 1. Load script
         let script = Script::load(tx, address, context)?;
 
         // 2. Evaluate the script's module
-        let script_promise = script.init(address.clone(), context)?;
+        let script_promise = script.init(address.clone(), operation_hash, context)?;
 
         // 3. Once evaluated, call the script's handler
         let result = script_promise.then(
@@ -278,7 +298,10 @@ impl Script {
 pub mod run {
 
     use super::*;
-    use crate::{operation, receipt};
+    use crate::{
+        operation::{self, OperationHash},
+        receipt,
+    };
 
     fn create_http_request(
         uri: http::Uri,
@@ -298,6 +321,7 @@ pub mod run {
         tx: &mut Transaction,
         source: &Address,
         run: operation::RunContract,
+        operation_hash: &OperationHash,
     ) -> Result<receipt::RunContract> {
         let operation::RunContract {
             uri,
@@ -305,7 +329,6 @@ pub mod run {
             headers,
             body,
         } = run;
-
         // 1. Initialize runtime (with Web APIs to construct request)
         let rt = &mut jstz_core::Runtime::new()?;
         register_web_apis(&rt.realm().clone(), rt);
@@ -327,7 +350,13 @@ pub mod run {
         // 5. Run :)
         let result: JsValue = runtime::with_host_runtime(hrt, || {
             jstz_core::future::block_on(async move {
-                let result = Script::load_init_run(tx, &address, request.inner(), rt)?;
+                let result = Script::load_init_run(
+                    tx,
+                    &address,
+                    request.inner(),
+                    operation_hash,
+                    rt,
+                )?;
 
                 rt.resolve_value(&result).await
             })
