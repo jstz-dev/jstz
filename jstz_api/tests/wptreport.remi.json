@@ -38,7 +38,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 6,
                   "failed": 0,
@@ -126,7 +126,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 6,
                   "failed": 0,
@@ -172,7 +172,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 6,
                   "failed": 0,
@@ -202,7 +202,7 @@
             "variations": [
               {
                 "subtests": [],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 0,
                   "failed": 0,
@@ -388,7 +388,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 34,
                   "failed": 0,
@@ -403,7 +403,7 @@
             "variations": [
               {
                 "subtests": [],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 0,
                   "failed": 0,
@@ -434,7 +434,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 3,
                   "failed": 0,
@@ -465,7 +465,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 3,
                   "failed": 0,
@@ -491,7 +491,7 @@
                     "message": "not a constructor"
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 1,
                   "failed": 1,
@@ -517,7 +517,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 2,
                   "failed": 0,
@@ -621,7 +621,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 2,
                   "failed": 0,
@@ -817,7 +817,7 @@
                     "message": "assert_equals: decode() should decode full sequence expected \"♥\" but got \"\""
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 35,
                   "failed": 1,
@@ -853,7 +853,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 4,
                   "failed": 0,
@@ -1979,7 +1979,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 222,
                   "failed": 0,
@@ -2155,7 +2155,7 @@
                     "message": "not a constructor"
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 16,
                   "failed": 16,
@@ -2221,7 +2221,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 10,
                   "failed": 0,
@@ -2632,7 +2632,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 79,
                   "failed": 0,
@@ -2683,7 +2683,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 7,
                   "failed": 0,
@@ -2698,7 +2698,7 @@
             "variations": [
               {
                 "subtests": [],
-                "status": "Null",
+                "status": "Err",
                 "metrics": {
                   "passed": 0,
                   "failed": 0,

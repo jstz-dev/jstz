@@ -9,6 +9,7 @@ use boa_engine::{
 use boa_gc::{Finalize, Trace};
 use derive_more::{From, Into};
 use expect_test::expect_file;
+use jstz_api::encoding::EncodingApi;
 use jstz_core::{host_defined, Api, Runtime};
 use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptReportTest, WptServe, WptSubtest,
@@ -238,8 +239,9 @@ impl jstz_core::Api for TestHarnessReportApi {
     }
 }
 
-pub fn register_apis(_context: &mut Context<'_>) {
+pub fn register_apis(context: &mut Context<'_>) {
     // Register all the APIs here
+    EncodingApi.init(context);
 }
 
 pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
