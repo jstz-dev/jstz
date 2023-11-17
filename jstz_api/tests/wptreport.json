@@ -513,14 +513,14 @@
                   },
                   {
                     "name": "TextDecoder end-of-queue handling using stream: true",
-                    "status": "Fail",
-                    "message": "assert_equals: expected \"\\ufffdA\" but got \"\""
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Err",
                 "metrics": {
-                  "passed": 1,
-                  "failed": 1,
+                  "passed": 2,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -617,14 +617,14 @@
                   },
                   {
                     "name": "Fatal flag, streaming cases",
-                    "status": "Fail",
-                    "message": "assert_equals: expected \"\\0\" but got \"\""
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Err",
                 "metrics": {
-                  "passed": 1,
-                  "failed": 1,
+                  "passed": 2,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -834,18 +834,18 @@
                 "subtests": [
                   {
                     "name": "BOM is ignored if ignoreBOM option is specified: utf-8",
-                    "status": "Fail",
-                    "message": "assert_equals: utf-8: BOM should be present in decoded string if ignored expected \"﻿abc\" but got \"abc\""
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "BOM is ignored if ignoreBOM option is specified: utf-16le",
-                    "status": "Fail",
-                    "message": "assert_equals: utf-16le: BOM should be present in decoded string if ignored expected \"﻿abc\" but got \"abc\""
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "BOM is ignored if ignoreBOM option is specified: utf-16be",
-                    "status": "Fail",
-                    "message": "assert_equals: utf-16be: BOM should be present in decoded string if ignored expected \"﻿abc\" but got \"abc\""
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "The ignoreBOM attribute of TextDecoder",
@@ -855,8 +855,8 @@
                 ],
                 "status": "Err",
                 "metrics": {
-                  "passed": 1,
-                  "failed": 3,
+                  "passed": 4,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -2071,8 +2071,8 @@
                   },
                   {
                     "name": "Streaming decode: UTF-8 chunk tests (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "assert_equals: expected \"\\ufffd\" but got \"\""
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-8, 1 byte window (SharedArrayBuffer)",
@@ -2157,8 +2157,8 @@
                 ],
                 "status": "Err",
                 "metrics": {
-                  "passed": 15,
-                  "failed": 17,
+                  "passed": 16,
+                  "failed": 16,
                   "timed_out": 0
                 }
               }

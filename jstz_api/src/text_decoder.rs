@@ -178,7 +178,7 @@ impl TextDecoder {
     }
 
     //  https://encoding.spec.whatwg.org/#concept-td-serialize
-    fn serialize(&mut self, written: usize) -> () {
+    fn serialize(&mut self, read: usize) -> () {
         //  1. Let output be the empty string.
         //  2. While true:
         //    1. Let item be the result of reading from ioQueue.
@@ -193,7 +193,7 @@ impl TextDecoder {
         //      The number of bytes “written” is what’s logically written. Garbage may
         //      be written in the output buffer beyond the point logically written to.
         //  NB: we handle BOM at the level of the decoding function from `::encoding_rs` crate
-        self.io_queue = self.io_queue.split_off(written);
+        self.io_queue.drain(0..read);
     }
 
     //  https://encoding.spec.whatwg.org/#dom-textdecoder-decode
@@ -208,6 +208,7 @@ impl TextDecoder {
         let options = options.unwrap_or(TextDecodeOptions::default());
         //  1. If this's do not flush is false,
         if !self.do_not_flush {
+            // println!("Flushing..");
             //  then set this's decoder to a new instance of this's encoding's decoder,
             self.decoder = if self.ignore_bom {
                 self.encoding.new_decoder_without_bom_handling()
@@ -223,11 +224,12 @@ impl TextDecoder {
         self.do_not_flush = options.stream;
         //  3. If input is given, then push a copy of input to this's I/O queue.
         //  FIXME: map this error into a JsError ? which one ?
+        // println!("io_queue {:?}", self.io_queue);
         let _: Result<usize, std::io::Error> = self.io_queue.write(input.as_slice());
+        // println!("io_queue {:?}", self.io_queue);
 
         //  4. Let output be the I/O queue of scalar values <<end-of-queue>>.
-        let mut output = Vec::new();
-
+        let mut output_buffer = [0u8; 2048];
         //  5. While true:
         //    1. Let item be the result of reading from this's I/O queue.
         //    2. If item is end-of-queue and this's do not flush is true,
@@ -241,31 +243,33 @@ impl TextDecoder {
         //  NB: the above is implemented using the encoding_rs crate:
         //    - in the case of a chunked input, we use the decoder's decode_to* method
         //      and we apply `self.serialize` to maintain a state in `self.io_queue`
-        //    - in the case of a plain input, we use `self.encoding.decode`
+        //    - in the case of a plain input, we use `self.encoding.decode` on `self.io_queue`
         // FIXME: ignore_bom should be used somewhere
         let (result, had_errors) = if self.do_not_flush {
             // chunked input
-            let (result, _read, written, had_errors) = self.decoder.decode_to_utf8(
-                &self.io_queue,
-                output.as_mut_slice(),
-                options.stream,
-            );
-
-            let () = match result {
+            let (result, read, written, had_errors) =
+                self.decoder
+                    .decode_to_utf8(&self.io_queue, &mut output_buffer, false);
+            match result {
                 // FIXME: result can indicate buffer size problem ? should we worry about that ?
                 CoderResult::InputEmpty => (),
                 CoderResult::OutputFull => (),
             };
-            self.serialize(written);
+            let output = output_buffer[..written].to_vec();
+            // println!("result {:?}", result);
+            // println!("read {:?}", read);
+            // println!("written {:?}", written);
+            // println!("had_errors {:?}", had_errors);
+            // println!("output {:?}", output);
+            self.serialize(read);
             (String::from_utf8(output).unwrap(), had_errors)
         } else {
             // plain input
-            let (result, _new_encoding, had_errors) =
-                self.encoding.decode(&self.io_queue);
-            // https://docs.rs/encoding_rs/latest/encoding_rs/struct.Encoding.html#method.decode
-            // The second item in the returned tuple is the encoding that was actually used (which may differ from this encoding thanks to BOM sniffing).
-            // FIXME: should we self.encoding with _new_encoding ?
-            (result.to_string(), had_errors)
+            let (_result, _read, written, had_errors) =
+                self.decoder
+                    .decode_to_utf8(&self.io_queue, &mut output_buffer, true);
+            let output = output_buffer[..written].to_vec();
+            (String::from_utf8(output).unwrap(), had_errors)
         };
         if had_errors && self.error_mode == "fatal" {
             return Err(JsError::from_native(
@@ -384,9 +388,75 @@ fn allow_shared_buffer_source<'a>(
 }
 
 /*
-let input = [0x1b, 0x24];
-var d = new TextDecoder("iso-2022-jp"),
-        buffer = new ArrayBuffer(input.length),
-        view = new Int8Array(buffer);
-d.decode(view)
+
+  const decoder = new TextDecoder();
+  decoder.decode(new Uint8Array([0xF0, 0x9F]), { stream: true });
+  decoder.decode(new Uint8Array([0x41]), { stream: true });
+  decoder.decode() == "";
+
+  1 | const decoder = new TextDecoder();
+  2 | decoder.decode(new Uint8Array([0xF0, 0x9F]), { stream: true }) == "";
+  3 | decoder.decode(new Uint8Array([0x41]), { stream: true }) == "\uFFFDA";
+  4 | decoder.decode() == "";
+
+
+  when processing line 3,
+
+  ioqueue = 0xF09F
+
+  11110000 10011111 01000001
+
+  [11110] 000   -> expecting 4-bytes sequence
+  [10] 011111   -> 1st byte of the sequence
+  [0] 1000001   -> malformed (do not start with 10) pushing U+FFFD (replacement char.) and 1000001
+
+===========================
+
+  const decoder = new TextDecoder();
+  decoder.decode(new Uint8Array([0xF0, 0x41, 0xF0]), { stream: true }) == "\uFFFDA";
+  decoder.decode() == "\uFFFD";
+
+
+
+*/
+/*
+
+const createBuffer = (() => {
+  // See https://github.com/whatwg/html/issues/5380 for why not `new SharedArrayBuffer()`
+  let sabConstructor;
+  try {
+    sabConstructor = new WebAssembly.Memory({ shared:true, initial:0, maximum:0 }).buffer.constructor;
+  } catch(e) {
+    sabConstructor = null;
+  }
+  return (type, length, opts) => {
+    if (type === "ArrayBuffer") {
+      return new ArrayBuffer(length, opts);
+    } else if (type === "SharedArrayBuffer") {
+      if (sabConstructor && sabConstructor.name !== "SharedArrayBuffer") {
+        throw new Error("WebAssembly.Memory does not support shared:true");
+      }
+      return new sabConstructor(length, opts);
+    } else {
+      throw new Error("type has to be ArrayBuffer or SharedArrayBuffer");
+    }
+  }
+})();
+const arrayBufferOrSharedArrayBuffer = "ArrayBuffer"
+const buf = createBuffer(arrayBufferOrSharedArrayBuffer, 2);
+const view = new Uint8Array(buf);
+const buf2 = createBuffer(arrayBufferOrSharedArrayBuffer, 2);
+const view2 = new Uint8Array(buf2);
+const decoder = new TextDecoder("utf-8");
+view[0] = 0xEF;
+view[1] = 0xBB;
+view2[0] = 0xBF;
+view2[1] = 0x40;
+
+decoder.decode(buf, {stream:true})
+
+view[0] = 0x01;
+view[1] = 0x02;
+decoder.decode(buf2)
+
 */
