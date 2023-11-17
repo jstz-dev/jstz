@@ -9,6 +9,7 @@ use boa_engine::{
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{
     accessor,
+    iterators::{PairIterable, PairIterableMethods, PairIteratorClass, PairValue},
     native::{
         register_global_class, Accessor, ClassBuilder, JsNativeObject,
         JsNativeObjectToString, NativeClass,
@@ -82,6 +83,11 @@ impl UrlSearchParams {
 
     pub fn len(&self) -> usize {
         self.values.len()
+    }
+
+    /// to satisfy clippy::len_without_is_empty
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 
     /// Appends a specified key/value pair as a new search parameter.
@@ -221,9 +227,6 @@ impl UrlSearchParams {
     }
 }
 
-// FIXME: (Alistair) implement iterable to be spec compliant
-// To achieve this, we need helper methods around constructing iterators (post MVP).
-
 impl ToString for UrlSearchParams {
     fn to_string(&self) -> String {
         self.values
@@ -330,7 +333,7 @@ impl TryFromJs for UrlSearchParams {
 pub struct UrlSearchParamsClass;
 
 impl UrlSearchParams {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -514,8 +517,38 @@ impl NativeClass for UrlSearchParamsClass {
                 NativeFunction::from_fn_ptr(UrlSearchParamsClass::to_string),
             );
 
+        PairIterableMethods::<UrlSearchParamsIteratorClass>::define_pair_iterable_methods(class)?;
+
         Ok(())
     }
+}
+
+impl PairIterable for UrlSearchParams {
+    fn pair_iterable_len(&self) -> usize {
+        self.values.len()
+    }
+
+    fn pair_iterable_get(
+        &self,
+        index: usize,
+        context: &mut Context<'_>,
+    ) -> JsResult<PairValue> {
+        let pair = self.values.get(index).ok_or::<JsError>(
+            JsNativeError::typ()
+                .with_message("index out of bounds in UrlSearchParams Iterator")
+                .into(),
+        )?;
+        let key = pair.0.clone().into_js(context);
+        let value = pair.1.clone().into_js(context);
+        Ok(PairValue { key, value })
+    }
+}
+
+struct UrlSearchParamsIteratorClass;
+
+impl PairIteratorClass for UrlSearchParamsIteratorClass {
+    type Iterable = UrlSearchParams;
+    const NAME: &'static str = "URLSearchParams Iterator";
 }
 
 pub struct UrlSearchParamsApi;
@@ -523,6 +556,10 @@ pub struct UrlSearchParamsApi;
 impl jstz_core::Api for UrlSearchParamsApi {
     fn init(self, context: &mut Context<'_>) {
         register_global_class::<UrlSearchParamsClass>(context)
-            .expect("The `URLSearchParams` class shouldn't exist yet")
+            .expect("The `URLSearchParams` class shouldn't exist yet");
+        // TODO should not really be a global class, remove from
+        // global object when possible
+        register_global_class::<UrlSearchParamsIteratorClass>(context)
+            .expect("The `URLSearchParams Iterator` class shouldn't exist yet");
     }
 }

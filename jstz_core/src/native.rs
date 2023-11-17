@@ -6,7 +6,7 @@ use boa_engine::{
     js_string,
     object::{
         builtins::JsFunction, ConstructorBuilder, FunctionBinding, FunctionObjectBuilder,
-        Object, ObjectData, PROTOTYPE,
+        JsPrototype, Object, ObjectData, PROTOTYPE,
     },
     property::{Attribute, PropertyDescriptor, PropertyKey},
     Context, JsError, JsNativeError, JsObject, JsResult, JsValue,
@@ -341,6 +341,12 @@ impl<'ctx, 'host> ClassBuilder<'ctx, 'host> {
         P: Into<PropertyDescriptor>,
     {
         self.builder.static_property_descriptor(key, property);
+        self
+    }
+
+    /// Specify the parent prototype for the class
+    pub fn inherit<O: Into<JsPrototype>>(&mut self, prototype: O) -> &mut Self {
+        self.builder.inherit(prototype);
         self
     }
 

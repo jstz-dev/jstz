@@ -90,3 +90,23 @@ Sorts all key/value pairs in the `UrlSearchParams` object by their keys. The sor
 ### `toString(): string`
 
 Returns a query string suitable for use in a URL.
+
+### `[Symbol.iterator](): Iterator<[string, string]>`
+
+Returns an iterator over the list of header name/value pairs. This makes Headers instances [iterable](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterable_protocol).
+
+### `entries(): Iterator<[string, string]>`
+
+Returns an iterator over the list of header name/value pairs.
+
+### `keys(): Iterator<string>`
+
+Returns an iterator over the header names.
+
+### `values(): Iterator<string>`
+
+Returns an iterator over the header values.
+
+### `forEach(callback: (value: string, name: string, headers: Headers) => void): void`
+
+Calls the callback for each header. Note that the header value is the first callback argument, while the header name is the second argument.
