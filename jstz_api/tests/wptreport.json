@@ -38,7 +38,7 @@
                     "message": "TextDecoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 6,
@@ -94,11 +94,42 @@
           "Test": {
             "variations": [
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Label for \"replacement\" should be rejected by API: csiso2022kr",
+                    "status": "Fail",
+                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                  },
+                  {
+                    "name": "Label for \"replacement\" should be rejected by API: hz-gb-2312",
+                    "status": "Fail",
+                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                  },
+                  {
+                    "name": "Label for \"replacement\" should be rejected by API: iso-2022-cn",
+                    "status": "Fail",
+                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                  },
+                  {
+                    "name": "Label for \"replacement\" should be rejected by API: iso-2022-cn-ext",
+                    "status": "Fail",
+                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                  },
+                  {
+                    "name": "Label for \"replacement\" should be rejected by API: iso-2022-kr",
+                    "status": "Fail",
+                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                  },
+                  {
+                    "name": "Label for \"replacement\" should be rejected by API: replacement",
+                    "status": "Fail",
+                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                  }
+                ],
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
-                  "failed": 0,
+                  "failed": 6,
                   "timed_out": 0
                 }
               }
@@ -141,7 +172,7 @@
                     "message": "TextEncoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 6,
@@ -171,7 +202,7 @@
             "variations": [
               {
                 "subtests": [],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 0,
@@ -357,7 +388,7 @@
                     "message": "TextDecoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 34,
@@ -372,7 +403,7 @@
             "variations": [
               {
                 "subtests": [],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 0,
@@ -403,7 +434,7 @@
                     "message": "TextDecoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 3,
@@ -434,7 +465,7 @@
                     "message": "TextDecoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 3,
@@ -452,15 +483,15 @@
                   {
                     "name": "Modify buffer after passing it in (ArrayBuffer)",
                     "status": "Fail",
-                    "message": "createBuffer is not defined"
+                    "message": "TextDecoder is not defined"
                   },
                   {
                     "name": "Modify buffer after passing it in (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "createBuffer is not defined"
+                    "message": "not a constructor"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 2,
@@ -486,7 +517,7 @@
                     "message": "TextDecoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 2,
@@ -590,7 +621,7 @@
                     "message": "TextDecoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 2,
@@ -786,7 +817,7 @@
                     "message": "TextDecoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 36,
@@ -822,7 +853,7 @@
                     "message": "TextDecoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 4,
@@ -836,11 +867,1122 @@
           "Test": {
             "variations": [
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "unicode-1-1-utf-8 => UTF-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "unicode11utf8 => UTF-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "unicode20utf8 => UTF-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "utf-8 => UTF-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "utf8 => UTF-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-unicode20utf8 => UTF-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "866 => IBM866",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp866 => IBM866",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csibm866 => IBM866",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ibm866 => IBM866",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatin2 => ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-2 => ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-101 => ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-2 => ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso88592 => ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-2 => ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-2:1987 => ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "l2 => ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "latin2 => ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatin3 => ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-3 => ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-109 => ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-3 => ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso88593 => ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-3 => ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-3:1988 => ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "l3 => ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "latin3 => ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatin4 => ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-4 => ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-110 => ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-4 => ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso88594 => ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-4 => ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-4:1988 => ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "l4 => ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "latin4 => ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatincyrillic => ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cyrillic => ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-5 => ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-144 => ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-5 => ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso88595 => ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-5 => ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-5:1988 => ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "arabic => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "asmo-708 => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csiso88596e => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csiso88596i => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatinarabic => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ecma-114 => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-6 => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-6-e => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-6-i => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-127 => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-6 => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso88596 => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-6 => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-6:1987 => ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatingreek => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ecma-118 => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "elot_928 => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "greek => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "greek8 => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-7 => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-126 => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-7 => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso88597 => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-7 => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-7:1987 => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "sun_eu_greek => ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csiso88598e => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatinhebrew => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "hebrew => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-8 => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-8-e => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-138 => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-8 => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso88598 => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-8 => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-8:1988 => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "visual => ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csiso88598i => ISO-8859-8-I",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-8-i => ISO-8859-8-I",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "logical => ISO-8859-8-I",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatin6 => ISO-8859-10",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-10 => ISO-8859-10",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-157 => ISO-8859-10",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-10 => ISO-8859-10",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso885910 => ISO-8859-10",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "l6 => ISO-8859-10",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "latin6 => ISO-8859-10",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-13 => ISO-8859-13",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-13 => ISO-8859-13",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso885913 => ISO-8859-13",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-14 => ISO-8859-14",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-14 => ISO-8859-14",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso885914 => ISO-8859-14",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatin9 => ISO-8859-15",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-15 => ISO-8859-15",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-15 => ISO-8859-15",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso885915 => ISO-8859-15",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-15 => ISO-8859-15",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "l9 => ISO-8859-15",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-16 => ISO-8859-16",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cskoi8r => KOI8-R",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "koi => KOI8-R",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "koi8 => KOI8-R",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "koi8-r => KOI8-R",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "koi8_r => KOI8-R",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "koi8-ru => KOI8-U",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "koi8-u => KOI8-U",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csmacintosh => macintosh",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "mac => macintosh",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "macintosh => macintosh",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-mac-roman => macintosh",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "dos-874 => windows-874",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-11 => windows-874",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-11 => windows-874",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso885911 => windows-874",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "tis-620 => windows-874",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-874 => windows-874",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp1250 => windows-1250",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-1250 => windows-1250",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-cp1250 => windows-1250",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp1251 => windows-1251",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-1251 => windows-1251",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-cp1251 => windows-1251",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ansi_x3.4-1968 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ascii => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp1252 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp819 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatin1 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ibm819 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-1 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-100 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-1 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso88591 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-1 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-1:1987 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "l1 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "latin1 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "us-ascii => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-1252 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-cp1252 => windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp1253 => windows-1253",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-1253 => windows-1253",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-cp1253 => windows-1253",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp1254 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csisolatin5 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-8859-9 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-148 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso8859-9 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso88599 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-9 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso_8859-9:1989 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "l5 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "latin5 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-1254 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-cp1254 => windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp1255 => windows-1255",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-1255 => windows-1255",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-cp1255 => windows-1255",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp1256 => windows-1256",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-1256 => windows-1256",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-cp1256 => windows-1256",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp1257 => windows-1257",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-1257 => windows-1257",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-cp1257 => windows-1257",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cp1258 => windows-1258",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-1258 => windows-1258",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-cp1258 => windows-1258",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-mac-cyrillic => x-mac-cyrillic",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-mac-ukrainian => x-mac-cyrillic",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "chinese => GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csgb2312 => GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csiso58gb231280 => GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "gb2312 => GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "gb_2312 => GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "gb_2312-80 => GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "gbk => GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-58 => GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-gbk => GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "gb18030 => gb18030",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "big5 => Big5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "big5-hkscs => Big5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cn-big5 => Big5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csbig5 => Big5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-x-big5 => Big5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cseucpkdfmtjapanese => EUC-JP",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "euc-jp => EUC-JP",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-euc-jp => EUC-JP",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csiso2022jp => ISO-2022-JP",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-2022-jp => ISO-2022-JP",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csshiftjis => Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ms932 => Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ms_kanji => Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "shift-jis => Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "shift_jis => Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "sjis => Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-31j => Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-sjis => Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "cseuckr => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csksc56011987 => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "euc-kr => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-ir-149 => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "korean => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ks_c_5601-1987 => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ks_c_5601-1989 => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ksc5601 => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ksc_5601 => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "windows-949 => EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "unicodefffe => UTF-16BE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "utf-16be => UTF-16BE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "csunicode => UTF-16LE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "iso-10646-ucs-2 => UTF-16LE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "ucs-2 => UTF-16LE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "unicode => UTF-16LE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "unicodefeff => UTF-16LE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "utf-16 => UTF-16LE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "utf-16le => UTF-16LE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "x-user-defined => x-user-defined",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  }
+                ],
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
-                  "failed": 0,
+                  "failed": 222,
                   "timed_out": 0
                 }
               }
@@ -1013,7 +2155,7 @@
                     "message": "TextDecoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 32,
@@ -1079,7 +2221,7 @@
                     "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 10,
@@ -1093,11 +2235,407 @@
           "Test": {
             "variations": [
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Encoding argument supported for decode: UTF-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: UTF-8",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: IBM866",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: IBM866",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-2",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-3",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-4",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-5",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-6",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-7",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-8",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-8-I",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-8-I",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-10",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-10",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-13",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-13",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-14",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-14",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-15",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-15",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-8859-16",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-8859-16",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: KOI8-R",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: KOI8-R",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: KOI8-U",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: KOI8-U",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: macintosh",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: macintosh",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-874",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-874",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-1250",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-1250",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-1251",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-1251",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-1252",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-1252",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-1253",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-1253",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-1254",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-1254",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-1255",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-1255",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-1256",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-1256",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-1257",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-1257",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: windows-1258",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: windows-1258",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: x-mac-cyrillic",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: x-mac-cyrillic",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: GBK",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: GBK",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: gb18030",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: gb18030",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: Big5",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: Big5",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: EUC-JP",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: EUC-JP",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: ISO-2022-JP",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: ISO-2022-JP",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: Shift_JIS",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: EUC-KR",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: EUC-KR",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: replacement",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: UTF-16BE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: UTF-16BE",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: UTF-16LE",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: UTF-16LE",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument supported for decode: x-user-defined",
+                    "status": "Fail",
+                    "message": "TextDecoder is not defined"
+                  },
+                  {
+                    "name": "Encoding argument not considered for encode: x-user-defined",
+                    "status": "Fail",
+                    "message": "TextEncoder is not defined"
+                  }
+                ],
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
-                  "failed": 0,
+                  "failed": 79,
                   "timed_out": 0
                 }
               }
@@ -1145,7 +2683,7 @@
                     "message": "TextEncoder is not defined"
                   }
                 ],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 7,
@@ -1160,7 +2698,7 @@
             "variations": [
               {
                 "subtests": [],
-                "status": "Err",
+                "status": "Null",
                 "metrics": {
                   "passed": 0,
                   "failed": 0,
