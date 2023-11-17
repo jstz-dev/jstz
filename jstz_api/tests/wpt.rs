@@ -241,7 +241,12 @@ impl jstz_core::Api for TestHarnessReportApi {
 
 pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
     let mut rt = Runtime::new()?;
-
+    rt.realm()
+        .clone()
+        .register_api(jstz_api::TextEncoderApi, rt.context());
+    rt.realm()
+        .clone()
+        .register_api(jstz_api::TextDecoderApi, rt.context());
     // Initialize the host-defined object with the test harness report
     {
         host_defined!(&mut rt, mut host_defined);
@@ -278,10 +283,11 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
             BundleItem::Resource(location, script) => {
                 println!("Evaluating resource script: {}...", location);
 
-                rt.context().eval(Source::from_bytes(&format!(
-                    "(function() {{ {} }})()",
-                    script
-                )))?;
+                rt.context().eval(Source::from_bytes(script))?;
+                // rt.context().eval(Source::from_bytes(&format!(
+                //     "(function() {{ {} }})()",
+                //     script
+                // )))?;
             }
         }
     }

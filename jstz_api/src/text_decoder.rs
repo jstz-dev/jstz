@@ -2,9 +2,13 @@ use std::io::Write;
 
 use boa_engine::{
     js_string,
-    object::{builtins::JsUint8Array, Object},
+    object::{
+        builtins::{JsArrayBuffer, JsInt8Array, JsUint8Array},
+        Object,
+    },
     property::Attribute,
-    Context, JsArgs, JsError, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
+    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue,
+    NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
 use encoding_rs::{CoderResult, Decoder, Encoding};
@@ -153,7 +157,7 @@ impl TextDecoder {
             context,
             TextDecoder,
             "encoding",
-            get:((x, context) => Ok(x.encoding.name().to_string().into_js(context)))
+            get:((x, context) => Ok(x.encoding.name().to_string().to_lowercase().into_js(context)))
         )
     }
     fn fatal(context: &mut Context<'_>) -> Accessor {
@@ -196,11 +200,11 @@ impl TextDecoder {
     fn decode(
         // input: Option<allowsharedbufersource>,
         &mut self,
-        input: Option<&[u8]>,
+        input: Option<Vec<u8>>,
         options: Option<TextDecodeOptions>,
     ) -> JsResult<String> {
         //  Handle optional parameters
-        let input = input.unwrap_or(&[]);
+        let input = input.unwrap_or(vec![]);
         let options = options.unwrap_or(TextDecodeOptions::default());
         //  1. If this's do not flush is false,
         if !self.do_not_flush {
@@ -219,7 +223,7 @@ impl TextDecoder {
         self.do_not_flush = options.stream;
         //  3. If input is given, then push a copy of input to this's I/O queue.
         //  FIXME: map this error into a JsError ? which one ?
-        let _: Result<usize, std::io::Error> = self.io_queue.write(input);
+        let _: Result<usize, std::io::Error> = self.io_queue.write(input.as_slice());
 
         //  4. Let output be the I/O queue of scalar values <<end-of-queue>>.
         let mut output = Vec::new();
@@ -281,21 +285,9 @@ impl TextDecoderClass {
         context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut text_decoder = TextDecoder::try_from_js(this)?;
-        let input: Option<JsUint8Array> =
-            args.get_or_undefined(0).try_js_into(context)?;
+        let input = args.get_or_undefined(0);
+        let input = allow_shared_buffer_source(input, context)?;
         let options = args.get_or_undefined(1).try_js_into(context)?;
-        let mut vec = vec![];
-        let input = match input {
-            Some(input) => {
-                let length = input.length(context)?;
-                for i in 0..length {
-                    let x = input.get(i, context)?.to_uint8(context)?;
-                    vec.push(x)
-                }
-                Some(vec.as_slice())
-            }
-            None => None,
-        };
         text_decoder
             .decode(input, options)
             .map(|x| JsString::from(x).into())
@@ -316,9 +308,9 @@ impl NativeClass for TextDecoderClass {
         let options: Option<TextDecoderOptions> =
             args.get_or_undefined(1).try_js_into(context)?;
         TextDecoder::constructor(label, options).map_err(|()| {
-            JsNativeError::typ().with_message(
-                "Failed to convert js value into rust type `TextEncoderEncodeIntoResult`",
-            ).into()
+            JsNativeError::range()
+                .with_message("Failed to construct 'TextDecoder'")
+                .into()
         })
     }
 
@@ -347,3 +339,54 @@ impl jstz_core::Api for TextDecoderApi {
             .expect("The `TextDecoder` class shouldn't exist yet");
     }
 }
+
+// TODO: put that in some shared space between APIs ?
+fn allow_shared_buffer_source<'a>(
+    js_value: &JsValue,
+    context: &mut Context<'_>,
+) -> JsResult<Option<Vec<u8>>> {
+    if js_value.is_undefined() {
+        return Ok(None);
+    }
+    let js_object: JsObject = js_value.to_object(context)?;
+    if js_object.is_array_buffer() {
+        let arr: JsArrayBuffer = js_value.try_js_into(context)?;
+        arr.take().map(Some)
+    } else if js_object.is_typed_array() {
+        if js_object.is_typed_uint8_array() {
+            let arr: JsUint8Array = js_value.try_js_into(context)?;
+            let mut vec = vec![];
+            let length = arr.length(context)?;
+            for i in 0..length {
+                let x = arr.get(i, context)?.to_uint8(context)?;
+                vec.push(x)
+            }
+            Ok(Some(vec))
+        } else if js_object.is_typed_int8_array() {
+            let arr: JsInt8Array = js_value.try_js_into(context)?;
+            let mut vec = vec![];
+            let length = arr.length(context)?;
+            for i in 0..length {
+                let x = arr.get(i, context)?.to_uint8(context)?;
+                vec.push(x)
+            }
+            Ok(Some(vec))
+        } else {
+            todo!()
+        }
+    } else if js_object.is_data_view() {
+        // FIXME
+        Ok(None)
+    } else {
+        // FIXME
+        Ok(None)
+    }
+}
+
+/*
+let input = [0x1b, 0x24];
+var d = new TextDecoder("iso-2022-jp"),
+        buffer = new ArrayBuffer(input.length),
+        view = new Int8Array(buffer);
+d.decode(view)
+*/
