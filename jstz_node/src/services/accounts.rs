@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use actix_web::{
     get,
-    web::{Data, Path, ServiceConfig},
+    web::{self, Data, Path, ServiceConfig},
     HttpResponse, Responder, Scope,
 };
 use anyhow::anyhow;
@@ -29,14 +31,16 @@ async fn nonce(
     Ok(HttpResponse::Ok().json(nonce))
 }
 
-#[get("/{address}/kv/{key:.*}")]
+#[get("/{address}/kv")]
 async fn kv(
     rollup_client: Data<RollupClient>,
-    path: Path<(String, String)>,
+    path: Path<String>,
+    query: web::Query<HashMap<String, String>>,
 ) -> Result<impl Responder> {
-    let (address, key) = path.into_inner();
+    let address = path.into_inner();
+    let key = query.get("key").cloned().unwrap_or_else(|| "".to_string());
 
-    let storage_key = if key.is_empty() {
+    let storage_key = if key == "" {
         format!("/jstz_kv/{}", address)
     } else {
         format!("/jstz_kv/{}/{}", address, key)
@@ -55,14 +59,16 @@ async fn kv(
     Ok(HttpResponse::Ok().json(value))
 }
 
-#[get("/{address}/kv/{key}/subkeys")]
+#[get("/{address}/kv/subkeys")]
 async fn kv_subkeys(
     rollup_client: Data<RollupClient>,
-    path: Path<(String, String)>,
+    path: Path<String>,
+    query: web::Query<HashMap<String, String>>,
 ) -> Result<impl Responder> {
-    let (address, key) = path.into_inner();
+    let address = path.into_inner();
+    let key = query.get("key").cloned().unwrap_or_else(|| "".to_string());
 
-    let storage_key = if key == "EMPTY" {
+    let storage_key = if key == "" {
         format!("/jstz_kv/{}", address)
     } else {
         format!("/jstz_kv/{}/{}", address, key)
@@ -84,8 +90,8 @@ impl AccountsService {
     pub fn configure(cfg: &mut ServiceConfig) {
         let scope = Scope::new("/accounts")
             .service(nonce)
-            .service(kv_subkeys)
-            .service(kv);
+            .service(kv)
+            .service(kv_subkeys);
 
         cfg.service(scope);
     }

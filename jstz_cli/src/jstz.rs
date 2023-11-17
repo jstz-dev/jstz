@@ -62,7 +62,7 @@ impl JstzClient {
     pub async fn get_value(&self, address: &str, key: &str) -> Result<Option<KvValue>> {
         let response = self
             .get(&format!(
-                "{}/accounts/{}/kv/{}",
+                "{}/accounts/{}/kv?key={}",
                 self.endpoint, address, key
             ))
             .await?;
@@ -85,7 +85,7 @@ impl JstzClient {
     ) -> Result<Option<Vec<String>>> {
         let response = self
             .get(&format!(
-                "{}/accounts/{}/kv/{}/subkeys",
+                "{}/accounts/{}/kv/subkeys?key={}",
                 self.endpoint, address, key
             ))
             .await?;
