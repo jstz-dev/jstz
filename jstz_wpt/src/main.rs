@@ -68,7 +68,9 @@ async fn main() -> Result<()> {
                 println!("      cat jstz_wpt/hosts | sudo tee -a /etc/hosts");
             }
 
-            println!("WPT is setup correctly!")
+            if diagnosis.is_healthy() {
+                println!("WPT is setup correctly!")
+            }
         }
         Command::Init { auto_config_hosts } => {
             let diagnosis = Wpt::doctor()?;

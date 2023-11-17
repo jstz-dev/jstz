@@ -92,7 +92,7 @@ impl Wpt {
         };
 
         let hosts_configured = {
-            let hosts = fs::read_to_string(root_dir()?.join("hosts"))?;
+            let hosts = fs::read_to_string("/etc/hosts")?;
             hosts.contains("web-platform.test")
         };
 
