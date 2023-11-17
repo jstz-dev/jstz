@@ -32,7 +32,7 @@ async fn list(
 
     let key_string = match key {
         Some(key) => key,
-        None => "EMPTY".to_string(),
+        None => "".to_string(),
     };
 
     let value = jstz_client
@@ -62,7 +62,7 @@ pub enum Command {
 
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
-        from: Option<String>,
+        account: Option<String>,
     },
     /// List subkeys for a key
     List {
@@ -72,13 +72,13 @@ pub enum Command {
 
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
-        from: Option<String>,
+        account: Option<String>,
     },
 }
 
 pub async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
-        Command::Get { key, from } => get(from, key, cfg).await,
-        Command::List { key, from } => list(from, key, cfg).await,
+        Command::Get { key, account } => get(account, key, cfg).await,
+        Command::List { key, account } => list(account, key, cfg).await,
     }
 }
