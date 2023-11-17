@@ -22,8 +22,9 @@ use boa_engine::{
     value::Numeric,
     Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction,
 };
-use boa_gc::{Finalize, GcRefMut, Trace};
+use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{host::HostRuntime, runtime, value::IntoJs};
+use jstz_crypto::{hash::Blake2b, public_key_hash::PublicKeyHash};
 use tezos_smart_rollup::prelude::debug_msg;
 
 /// This represents the different types of log messages.
@@ -135,15 +136,24 @@ fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
     }
 }
 
-#[derive(Trace, Finalize)]
+#[derive(Finalize)]
 struct Console {
     groups: Vec<String>,
+    // TODO: Remove these once `Jstz` object is implemented
+    contract_address: PublicKeyHash,
+    operation_hash: Blake2b,
+}
+
+unsafe impl Trace for Console {
+    empty_trace!();
 }
 
 impl Console {
-    fn new() -> Self {
+    fn new(contract_address: PublicKeyHash, operation_hash: Blake2b) -> Self {
         Self {
             groups: Vec::default(),
+            contract_address,
+            operation_hash,
         }
     }
 
@@ -336,7 +346,11 @@ impl Console {
 
 /// `ConsoleApi` implements `jstz_core::host::Api`, permitting it to be registered
 /// as a `jstz` runtime API.  
-pub struct ConsoleApi;
+pub struct ConsoleApi {
+    // TODO: remove this once `Jstz` object is implemented
+    pub contract_address: PublicKeyHash,
+    pub operation_hash: Blake2b,
+}
 
 impl Console {
     fn from_js_value<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
@@ -428,54 +442,57 @@ impl ConsoleApi {
 
 impl jstz_core::Api for ConsoleApi {
     fn init(self, context: &mut Context<'_>) {
-        let console = ObjectInitializer::with_native(Console::new(), context)
-            .function(NativeFunction::from_fn_ptr(Self::log), js_string!("log"), 0)
-            .function(
-                NativeFunction::from_fn_ptr(Self::error),
-                js_string!("error"),
-                0,
-            )
-            .function(
-                NativeFunction::from_fn_ptr(Self::debug),
-                js_string!("debug"),
-                0,
-            )
-            .function(
-                NativeFunction::from_fn_ptr(Self::warn),
-                js_string!("warn"),
-                0,
-            )
-            .function(
-                NativeFunction::from_fn_ptr(Self::info),
-                js_string!("info"),
-                0,
-            )
-            .function(
-                NativeFunction::from_fn_ptr(Self::assert),
-                js_string!("assert"),
-                0,
-            )
-            .function(
-                NativeFunction::from_fn_ptr(Self::group),
-                js_string!("group"),
-                0,
-            )
-            .function(
-                NativeFunction::from_fn_ptr(Self::group),
-                js_string!("groupCollapsed"),
-                0,
-            )
-            .function(
-                NativeFunction::from_fn_ptr(Self::group_end),
-                js_string!("groupEnd"),
-                0,
-            )
-            .function(
-                NativeFunction::from_fn_ptr(Self::clear),
-                js_string!("clear"),
-                0,
-            )
-            .build();
+        let console = ObjectInitializer::with_native(
+            Console::new(self.contract_address, self.operation_hash),
+            context,
+        )
+        .function(NativeFunction::from_fn_ptr(Self::log), js_string!("log"), 0)
+        .function(
+            NativeFunction::from_fn_ptr(Self::error),
+            js_string!("error"),
+            0,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::debug),
+            js_string!("debug"),
+            0,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::warn),
+            js_string!("warn"),
+            0,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::info),
+            js_string!("info"),
+            0,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::assert),
+            js_string!("assert"),
+            0,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::group),
+            js_string!("group"),
+            0,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::group),
+            js_string!("groupCollapsed"),
+            0,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::group_end),
+            js_string!("groupEnd"),
+            0,
+        )
+        .function(
+            NativeFunction::from_fn_ptr(Self::clear),
+            js_string!("clear"),
+            0,
+        )
+        .build();
 
         context
             .register_global_property(js_string!(Self::NAME), console, Attribute::all())

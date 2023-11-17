@@ -15,12 +15,14 @@ use jstz_core::{
 use crate::{
     context::account::{Account, Address, Amount},
     executor::contract::{headers, Script},
+    operation::OperationHash,
     Error, Result,
 };
 
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 struct Contract {
     contract_address: Address,
+    operation_hash: OperationHash,
 }
 impl Finalize for Contract {}
 
@@ -92,12 +94,19 @@ impl Contract {
         headers::test_and_set_referrer(&request.deref(), &self.contract_address)?;
 
         // 3. Load, init and run!
-        Script::load_init_run(tx, &address, request.inner(), context)
+        Script::load_init_run(
+            tx,
+            &address,
+            request.inner(),
+            &self.operation_hash,
+            context,
+        )
     }
 }
 
 pub struct ContractApi {
     pub contract_address: Address,
+    pub operation_hash: OperationHash,
 }
 
 impl ContractApi {
@@ -171,6 +180,7 @@ impl jstz_core::Api for ContractApi {
         let contract = ObjectInitializer::with_native(
             Contract {
                 contract_address: self.contract_address,
+                operation_hash: self.operation_hash,
             },
             context,
         )
