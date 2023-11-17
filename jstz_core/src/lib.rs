@@ -5,6 +5,7 @@ use boa_engine::Context;
 pub use error::{Error, Result};
 pub mod future;
 pub mod host;
+pub mod iterators;
 pub mod kv;
 pub mod native;
 pub mod realm;
