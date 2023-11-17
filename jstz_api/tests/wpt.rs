@@ -209,30 +209,37 @@ impl jstz_core::Api for TestHarnessReportApi {
         .length(3)
         .build();
 
-        // TODO: Make into a function
-        macro_rules! call_global_function {
-            ($name:literal, $args:expr) => {
-                let value = context
-                    .global_object()
-                    .get(js_string!($name), context)
-                    .expect(&format!("globalThis.{} is undefined", $name));
+        #[inline]
+        fn call_global_function(name: &str, args: &[JsValue], context: &mut Context<'_>) {
+            let value = context
+                .global_object()
+                .get(js_string!(name), context)
+                .expect(&format!("globalThis.{} is undefined", name));
 
-                let function = value
-                    .as_callable()
-                    .expect(&format!("globalThis.{} is not callable", $name));
+            let function = value
+                .as_callable()
+                .expect(&format!("globalThis.{} is not callable", name));
 
-                function
-                    .call(&JsValue::undefined(), $args, context)
-                    .expect(&format!("Failed to call globalThis.{}", $name));
-            };
+            function
+                .call(&JsValue::undefined(), args, context)
+                .expect(&format!("Failed to call globalThis.{}", name));
         }
 
-        call_global_function!("add_result_callback", &[test_result_callback.into()]);
-        call_global_function!(
+        call_global_function(
+            "add_result_callback",
+            &[test_result_callback.into()],
+            context,
+        );
+        call_global_function(
             "add_completion_callback",
-            &[test_completion_callback.into()]
+            &[test_completion_callback.into()],
+            context,
         );
     }
+}
+
+pub fn register_apis(_context: &mut Context<'_>) {
+    // Register all the APIs here
 }
 
 pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
@@ -243,6 +250,9 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
         host_defined!(&mut rt, mut host_defined);
         host_defined.insert(TestHarnessReport::default());
     }
+
+    // Register APIs
+    register_apis(&mut rt);
 
     // Define self
     rt.global_object().insert_property(
@@ -263,12 +273,7 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
                 TestHarnessReportApi.init(&mut rt.context());
             }
             BundleItem::Inline(script) | BundleItem::Resource(_, script) => {
-                rt.context().eval(Source::from_bytes(&format!(
-                    "(function() {{ {} }})()",
-                    script
-                )))?;
-
-                println!("done")
+                rt.context().eval(Source::from_bytes(script))?;
             }
         }
     }
