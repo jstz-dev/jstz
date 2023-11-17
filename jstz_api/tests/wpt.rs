@@ -296,7 +296,7 @@ fn run_wpt_test(
             return Ok(WptReportTest::new(WptTestStatus::Err, vec![]))
         };
 
-        let status = report.status.clone().unwrap_or(WptTestStatus::Err);
+        let status = report.status.clone().unwrap_or(WptTestStatus::Null);
 
         let subtests = report.subtests.clone();
 
