@@ -238,8 +238,10 @@ impl jstz_core::Api for TestHarnessReportApi {
     }
 }
 
-pub fn register_apis(_context: &mut Context<'_>) {
+pub fn register_apis(context: &mut Context<'_>) {
     // Register all the APIs here
+    // TODO this is not all the APIs
+    jstz_api::http::header::HeadersApi.init(context);
 }
 
 pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
@@ -311,7 +313,13 @@ fn run_wpt_test(
 
 #[tokio::test]
 async fn test_wpt() -> Result<()> {
-    let filter = TestFilter::try_from([r"^\/encoding\/[^\/]+\.any\.html$"].as_ref())?;
+    let filter = TestFilter::try_from(
+        [
+            r"^\/encoding\/[^\/]+\.any\.html$",
+            r"^\/fetch\/api\/headers\/[^\/]+\.any\.html$",
+        ]
+        .as_ref(),
+    )?;
 
     let report = {
         let wpt = Wpt::new()?;

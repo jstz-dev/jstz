@@ -2709,6 +2709,899 @@
           }
         }
       }
+    },
+    "fetch": {
+      "Folder": {
+        "api": {
+          "Folder": {
+            "headers": {
+              "Folder": {
+                "header-setcookie.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Headers.prototype.get combines set-cookie headers in order",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"foo=bar, fizz=buzz; domain=example.com\" but got (object) [\"foo=bar\", \"fizz=buzz; domain=example.com\"]"
+                          },
+                          {
+                            "name": "Headers iterator does not combine set-cookie headers",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Headers iterator does not special case set-cookie2 headers",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Headers iterator does not combine set-cookie & set-cookie2 headers",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Headers iterator preserves set-cookie ordering",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Headers iterator preserves per header ordering, but sorts keys alphabetically",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Headers iterator preserves per header ordering, but sorts keys alphabetically (and ignores value ordering)",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Headers iterator is correctly updated with set-cookie changes",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Headers iterator is correctly updated with set-cookie changes #2",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Headers.prototype.has works for set-cookie",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Headers.prototype.append works for set-cookie",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Headers.prototype.set works for set-cookie",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Headers.prototype.delete works for set-cookie",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Headers.prototype.getSetCookie with no headers present",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Headers.prototype.getSetCookie with one header",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Headers.prototype.getSetCookie with one header created from an object",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Headers.prototype.getSetCookie with multiple headers",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Headers.prototype.getSetCookie with an empty header",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Headers.prototype.getSetCookie with two equal headers",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Headers.prototype.getSetCookie ignores set-cookie2 headers",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Headers.prototype.getSetCookie preserves header ordering",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Adding Set-Cookie headers normalizes their value",
+                            "status": "Fail",
+                            "message": "Invalid header value"
+                          },
+                          {
+                            "name": "Adding invalid Set-Cookie headers throws",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Set-Cookie is a forbidden response header",
+                            "status": "Fail",
+                            "message": "Response is not defined"
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 2,
+                          "failed": 22,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "header-values-normalize.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "XMLHttpRequest with value %00",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %01",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %02",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %03",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %04",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %05",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %06",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %07",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %08",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %09",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %0A",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %0D",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %0E",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %0F",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %10",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %11",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %12",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %13",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %14",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %15",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %16",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %17",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %18",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %19",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %1A",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %1B",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %1C",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %1D",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %1E",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %1F",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value %20",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 31,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "header-values.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "XMLHttpRequest with value x%00x needs to throw",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value x%0Ax needs to throw",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with value x%0Dx needs to throw",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "XMLHttpRequest with all valid values",
+                            "status": "Fail",
+                            "message": "XMLHttpRequest is not defined"
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 4,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "headers-basic.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Create headers from no parameter",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Create headers from undefined parameter",
+                            "status": "Fail",
+                            "message": "Failed to convert js value into js object"
+                          },
+                          {
+                            "name": "Create headers from empty object",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Create headers with null should throw",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Create headers with 1 should throw",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Create headers with sequence",
+                            "status": "Fail",
+                            "message": "cannot convert value to a String"
+                          },
+                          {
+                            "name": "Create headers with record",
+                            "status": "Fail",
+                            "message": "cannot convert value to a String"
+                          },
+                          {
+                            "name": "Create headers with existing headers",
+                            "status": "Fail",
+                            "message": "cannot convert value to a String"
+                          },
+                          {
+                            "name": "Create headers with existing headers with custom iterator",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"test\" but got (object) null"
+                          },
+                          {
+                            "name": "Check append method",
+                            "status": "Fail",
+                            "message": "cannot convert value to a String"
+                          },
+                          {
+                            "name": "Check set method",
+                            "status": "Fail",
+                            "message": "cannot convert value to a String"
+                          },
+                          {
+                            "name": "Check has method",
+                            "status": "Fail",
+                            "message": "cannot convert value to a String"
+                          },
+                          {
+                            "name": "Check delete method",
+                            "status": "Fail",
+                            "message": "cannot convert value to a String"
+                          },
+                          {
+                            "name": "Check get method",
+                            "status": "Fail",
+                            "message": "cannot convert value to a String"
+                          },
+                          {
+                            "name": "Check keys method",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Check values method",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Check entries method",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Check Symbol.iterator method",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Check forEach method",
+                            "status": "Fail",
+                            "message": "not a callable function"
+                          },
+                          {
+                            "name": "Iteration skips elements removed while iterating",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Removing elements already iterated over causes an element to be skipped during iteration",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Appending a value pair during iteration causes it to be reached during iteration",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Prepending a value pair before the current element position causes it to be skipped during iteration and adds the current element a second time",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 4,
+                          "failed": 19,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "headers-casing.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Create headers, names use characters with different case",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check append method, names use characters with different case",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check set method, names use characters with different case",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check delete method, names use characters with different case",
+                            "status": "Pass",
+                            "message": null
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 4,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "headers-combine.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Create headers using same name for different values",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"doubleValue1, doubleValue2\" but got (object) [\"doubleValue1\", \"doubleValue2\"]"
+                          },
+                          {
+                            "name": "Check delete and has methods when using same name for different values",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check set methods when called with already used name",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check append methods when called with already used name",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"singleValue, newSingleValue\" but got (object) [\"singleValue\", \"newSingleValue\"]"
+                          },
+                          {
+                            "name": "Iterate combined values",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Iterate combined values in sorted order",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 2,
+                          "failed": 4,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "headers-errors.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Create headers giving an array having one string as init argument",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Create headers giving an array having three strings as init argument",
+                            "status": "Fail",
+                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Create headers giving bad header name as init argument",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Create headers giving bad header value as init argument",
+                            "status": "Fail",
+                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Check headers get with an invalid name invalidĀ",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers get with an invalid name [object Object]",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers delete with an invalid name invalidĀ",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers delete with an invalid name [object Object]",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers has with an invalid name invalidĀ",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers has with an invalid name [object Object]",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers set with an invalid name invalidĀ",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers set with an invalid name [object Object]",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers set with an invalid value invalidĀ",
+                            "status": "Fail",
+                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Check headers append with an invalid name invalidĀ",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers append with an invalid name [object Object]",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check headers append with an invalid value invalidĀ",
+                            "status": "Fail",
+                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Headers forEach throws if argument is not callable",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Headers forEach loop should stop if callback is throwing exception",
+                            "status": "Fail",
+                            "message": "assert_equals: expected 2 but got 0"
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 13,
+                          "failed": 5,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "headers-no-cors.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "\"no-cors\" Headers object cannot have accept set to sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss, , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+                            "status": "Fail",
+                            "message": "Request is not defined"
+                          },
+                          {
+                            "name": "\"no-cors\" Headers object cannot have accept-language set to sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss, , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+                            "status": "Fail",
+                            "message": "Request is not defined"
+                          },
+                          {
+                            "name": "\"no-cors\" Headers object cannot have content-language set to sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss, , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+                            "status": "Fail",
+                            "message": "Request is not defined"
+                          },
+                          {
+                            "name": "\"no-cors\" Headers object cannot have accept set to , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+                            "status": "Fail",
+                            "message": "Request is not defined"
+                          },
+                          {
+                            "name": "\"no-cors\" Headers object cannot have accept-language set to , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+                            "status": "Fail",
+                            "message": "Request is not defined"
+                          },
+                          {
+                            "name": "\"no-cors\" Headers object cannot have content-language set to , sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss",
+                            "status": "Fail",
+                            "message": "Request is not defined"
+                          },
+                          {
+                            "name": "\"no-cors\" Headers object cannot have content-type set to text/plain;ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss, text/plain",
+                            "status": "Fail",
+                            "message": "Request is not defined"
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 7,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "headers-normalize.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Create headers with not normalized values",
+                            "status": "Fail",
+                            "message": "Invalid header value"
+                          },
+                          {
+                            "name": "Check append method with not normalized values",
+                            "status": "Fail",
+                            "message": "assert_equals: name: name1 has value: space expected \"space\" but got \" space \""
+                          },
+                          {
+                            "name": "Check set method with not normalized values",
+                            "status": "Fail",
+                            "message": "assert_equals: name: name1 has value: space expected \"space\" but got \" space \""
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 3,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "headers-record.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Passing nothing to Headers constructor",
+                            "status": "Fail",
+                            "message": "value with type `object` is not iterable"
+                          },
+                          {
+                            "name": "Passing undefined to Headers constructor",
+                            "status": "Fail",
+                            "message": "Failed to convert js value into js object"
+                          },
+                          {
+                            "name": "Passing null to Headers constructor",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Basic operation with one property",
+                            "status": "Fail",
+                            "message": "assert_equals: expected 4 but got 3"
+                          },
+                          {
+                            "name": "Basic operation with one property and a proto",
+                            "status": "Fail",
+                            "message": "assert_equals: expected 4 but got 3"
+                          },
+                          {
+                            "name": "Correct operation ordering with two properties",
+                            "status": "Fail",
+                            "message": "assert_equals: expected 6 but got 5"
+                          },
+                          {
+                            "name": "Correct operation ordering with two properties one of which has an invalid name",
+                            "status": "Fail",
+                            "message": "assert_array_equals: lengths differ, expected array [\"get\", object \"[object Object]\", symbol \"Symbol(Symbol.iterator)\", object \"[object Object]\"] length 4, got [\"ownKeys\", object \"[object Object]\"] length 2"
+                          },
+                          {
+                            "name": "Correct operation ordering with two properties one of which has an invalid value",
+                            "status": "Fail",
+                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Correct operation ordering with non-enumerable properties",
+                            "status": "Fail",
+                            "message": "assert_equals: expected 6 but got 5"
+                          },
+                          {
+                            "name": "Correct operation ordering with undefined descriptors",
+                            "status": "Fail",
+                            "message": "assert_equals: expected 6 but got 5"
+                          },
+                          {
+                            "name": "Correct operation ordering with repeated keys",
+                            "status": "Fail",
+                            "message": "assert_equals: expected 2 but got 1"
+                          },
+                          {
+                            "name": "Basic operation with Symbol keys",
+                            "status": "Fail",
+                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Operation with non-enumerable Symbol keys",
+                            "status": "Fail",
+                            "message": "cannot convert value to a String"
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 1,
+                          "failed": 12,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "headers-structure.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Headers has append method",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Headers has delete method",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Headers has get method",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Headers has has method",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Headers has set method",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Headers has entries method",
+                            "status": "Fail",
+                            "message": "assert_true: headers has entries method expected true got false"
+                          },
+                          {
+                            "name": "Headers has keys method",
+                            "status": "Fail",
+                            "message": "assert_true: headers has keys method expected true got false"
+                          },
+                          {
+                            "name": "Headers has values method",
+                            "status": "Fail",
+                            "message": "assert_true: headers has values method expected true got false"
+                          }
+                        ],
+                        "status": "Null",
+                        "metrics": {
+                          "passed": 5,
+                          "failed": 3,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
