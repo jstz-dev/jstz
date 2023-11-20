@@ -1764,6 +1764,7 @@ dependencies = [
  "boa_gc",
  "bytes",
  "derive_more",
+ "encoding_rs",
  "expect-test",
  "form_urlencoded",
  "http",
