@@ -242,10 +242,11 @@ pub fn register_apis(context: &mut Context<'_>) {
     // Register all the APIs here
     // TODO this is not all the APIs
     jstz_api::http::header::HeadersApi.init(context);
+    jstz_api::encoding::EncodingApi.init(context);
 }
 
 pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
-    let mut rt = Runtime::new()?;
+    let mut rt: Runtime<'_> = Runtime::new()?;
 
     // Initialize the host-defined object with the test harness report
     {

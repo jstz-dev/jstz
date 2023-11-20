@@ -9,39 +9,39 @@
                 "subtests": [
                   {
                     "name": "Default encodings",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Default inputs",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encode/decode round trip: utf-8",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Decode sample: utf-16le",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Decode sample: utf-16be",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Decode sample: utf-16",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 6,
+                  "passed": 6,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -97,39 +97,39 @@
                 "subtests": [
                   {
                     "name": "Label for \"replacement\" should be rejected by API: csiso2022kr",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Label for \"replacement\" should be rejected by API: hz-gb-2312",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Label for \"replacement\" should be rejected by API: iso-2022-cn",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Label for \"replacement\" should be rejected by API: iso-2022-cn-ext",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Label for \"replacement\" should be rejected by API: iso-2022-kr",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Label for \"replacement\" should be rejected by API: replacement",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 6,
+                  "passed": 6,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -143,39 +143,39 @@
                 "subtests": [
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Sanity check",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Surrogate half (low)",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Surrogate half (high)",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Surrogate half (low), in a string",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Surrogate half (high), in a string",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Invalid surrogates encoded into UTF-8: Wrong order",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 6,
+                  "passed": 6,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -219,179 +219,179 @@
                 "subtests": [
                   {
                     "name": "iso-2022-jp decoder: Error ESC",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Error ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: ASCII ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Double ASCII ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: character, ASCII ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: characters",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: SO / SI",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Roman ESC, characters",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Roman ESC, SO / SI",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Roman ESC, error ESC, Katakana ESC",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Katakana ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Katakana ESC, multibyte ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Katakana ESC, error ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Katakana ESC, error ESC #2, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Katakana ESC, character, Katakana ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Katakana ESC, SO / SI",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Multibyte ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Multibyte ESC #2, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Multibyte ESC, error ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Double multibyte ESC",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Double multibyte ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Double multibyte ESC #2, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Multibyte ESC, error ESC #2, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Multibyte ESC, single byte, multibyte ESC, character",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Multibyte ESC, lead error byte",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: Multibyte ESC, trail error byte",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: character, error ESC",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: character, error ESC #2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: character, error ESC #3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: character, ASCII ESC",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: character, Roman ESC",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: character, Katakana ESC",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: character, Multibyte ESC",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp decoder: character, Multibyte ESC #2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 34,
+                  "passed": 34,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -420,24 +420,24 @@
                 "subtests": [
                   {
                     "name": "TextDecoder decode() with explicit undefined",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "TextDecoder decode() with undefined and undefined",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "TextDecoder decode() with undefined and options",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 3,
+                  "passed": 3,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -451,24 +451,24 @@
                 "subtests": [
                   {
                     "name": "Byte-order marks: utf-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Byte-order marks: utf-16le",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Byte-order marks: utf-16be",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 3,
+                  "passed": 3,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -482,8 +482,8 @@
                 "subtests": [
                   {
                     "name": "Modify buffer after passing it in (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Modify buffer after passing it in (SharedArrayBuffer)",
@@ -493,8 +493,8 @@
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 2,
+                  "passed": 1,
+                  "failed": 1,
                   "timed_out": 0
                 }
               }
@@ -508,19 +508,19 @@
                 "subtests": [
                   {
                     "name": "TextDecoder end-of-queue handling",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "TextDecoder end-of-queue handling using stream: true",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 2,
+                  "passed": 2,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -612,19 +612,19 @@
                 "subtests": [
                   {
                     "name": "Fatal flag, non-streaming cases",
-                    "status": "Fail",
-                    "message": "assert_throws_js: Unterminated utf-8 sequence should throw if fatal flag is set function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag, streaming cases",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 2,
+                  "passed": 2,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -638,189 +638,189 @@
                 "subtests": [
                   {
                     "name": "Fatal flag: utf-8 - invalid code",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - ends early",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - ends early 2",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - invalid trail",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - invalid trail 2",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - invalid trail 3",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - invalid trail 4",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - invalid trail 5",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - invalid trail 6",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - > 0x10FFFF",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - obsolete lead byte",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+0000 - 2 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+0000 - 3 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+0000 - 4 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+0000 - 5 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+0000 - 6 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+007F - 2 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+007F - 3 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+007F - 4 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+007F - 5 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+007F - 6 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+07FF - 3 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+07FF - 4 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+07FF - 5 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+07FF - 6 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+FFFF - 4 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+FFFF - 5 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+FFFF - 6 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+10FFFF - 5 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - overlong U+10FFFF - 6 bytes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - lead surrogate",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - trail surrogate",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-8 - surrogate pair",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Fatal flag: utf-16le - truncated code unit",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "The fatal attribute of TextDecoder",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Error seen with fatal does not prevent future decodes",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "assert_throws_js: decode() should throw on incomplete sequence function \"function () { [native code] }\" did not throw"
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 36,
+                  "passed": 35,
+                  "failed": 1,
                   "timed_out": 0
                 }
               }
@@ -834,29 +834,29 @@
                 "subtests": [
                   {
                     "name": "BOM is ignored if ignoreBOM option is specified: utf-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "BOM is ignored if ignoreBOM option is specified: utf-16le",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "BOM is ignored if ignoreBOM option is specified: utf-16be",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "The ignoreBOM attribute of TextDecoder",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 4,
+                  "passed": 4,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -870,1119 +870,1119 @@
                 "subtests": [
                   {
                     "name": "unicode-1-1-utf-8 => UTF-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "unicode11utf8 => UTF-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "unicode20utf8 => UTF-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-8 => UTF-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf8 => UTF-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-unicode20utf8 => UTF-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "866 => IBM866",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp866 => IBM866",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csibm866 => IBM866",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ibm866 => IBM866",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatin2 => ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-2 => ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-101 => ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-2 => ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso88592 => ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-2 => ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-2:1987 => ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "l2 => ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "latin2 => ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatin3 => ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-3 => ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-109 => ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-3 => ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso88593 => ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-3 => ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-3:1988 => ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "l3 => ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "latin3 => ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatin4 => ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-4 => ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-110 => ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-4 => ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso88594 => ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-4 => ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-4:1988 => ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "l4 => ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "latin4 => ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatincyrillic => ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cyrillic => ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-5 => ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-144 => ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-5 => ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso88595 => ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-5 => ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-5:1988 => ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "arabic => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "asmo-708 => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csiso88596e => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csiso88596i => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatinarabic => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ecma-114 => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-6 => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-6-e => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-6-i => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-127 => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-6 => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso88596 => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-6 => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-6:1987 => ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatingreek => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ecma-118 => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "elot_928 => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "greek => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "greek8 => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-7 => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-126 => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-7 => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso88597 => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-7 => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-7:1987 => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "sun_eu_greek => ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csiso88598e => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatinhebrew => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "hebrew => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-8 => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-8-e => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-138 => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-8 => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso88598 => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-8 => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-8:1988 => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "visual => ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csiso88598i => ISO-8859-8-I",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-8-i => ISO-8859-8-I",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "logical => ISO-8859-8-I",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatin6 => ISO-8859-10",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-10 => ISO-8859-10",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-157 => ISO-8859-10",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-10 => ISO-8859-10",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso885910 => ISO-8859-10",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "l6 => ISO-8859-10",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "latin6 => ISO-8859-10",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-13 => ISO-8859-13",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-13 => ISO-8859-13",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso885913 => ISO-8859-13",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-14 => ISO-8859-14",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-14 => ISO-8859-14",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso885914 => ISO-8859-14",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatin9 => ISO-8859-15",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-15 => ISO-8859-15",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-15 => ISO-8859-15",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso885915 => ISO-8859-15",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-15 => ISO-8859-15",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "l9 => ISO-8859-15",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-16 => ISO-8859-16",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cskoi8r => KOI8-R",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "koi => KOI8-R",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "koi8 => KOI8-R",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "koi8-r => KOI8-R",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "koi8_r => KOI8-R",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "koi8-ru => KOI8-U",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "koi8-u => KOI8-U",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csmacintosh => macintosh",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "mac => macintosh",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "macintosh => macintosh",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-mac-roman => macintosh",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "dos-874 => windows-874",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-11 => windows-874",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-11 => windows-874",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso885911 => windows-874",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "tis-620 => windows-874",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-874 => windows-874",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp1250 => windows-1250",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-1250 => windows-1250",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-cp1250 => windows-1250",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp1251 => windows-1251",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-1251 => windows-1251",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-cp1251 => windows-1251",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ansi_x3.4-1968 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ascii => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp1252 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp819 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatin1 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ibm819 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-1 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-100 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-1 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso88591 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-1 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-1:1987 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "l1 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "latin1 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "us-ascii => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-1252 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-cp1252 => windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp1253 => windows-1253",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-1253 => windows-1253",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-cp1253 => windows-1253",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp1254 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csisolatin5 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-8859-9 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-148 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso8859-9 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso88599 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-9 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso_8859-9:1989 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "l5 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "latin5 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-1254 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-cp1254 => windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp1255 => windows-1255",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-1255 => windows-1255",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-cp1255 => windows-1255",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp1256 => windows-1256",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-1256 => windows-1256",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-cp1256 => windows-1256",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp1257 => windows-1257",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-1257 => windows-1257",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-cp1257 => windows-1257",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cp1258 => windows-1258",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-1258 => windows-1258",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-cp1258 => windows-1258",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-mac-cyrillic => x-mac-cyrillic",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-mac-ukrainian => x-mac-cyrillic",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "chinese => GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csgb2312 => GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csiso58gb231280 => GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "gb2312 => GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "gb_2312 => GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "gb_2312-80 => GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "gbk => GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-58 => GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-gbk => GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "gb18030 => gb18030",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "big5 => Big5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "big5-hkscs => Big5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cn-big5 => Big5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csbig5 => Big5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-x-big5 => Big5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cseucpkdfmtjapanese => EUC-JP",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "euc-jp => EUC-JP",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-euc-jp => EUC-JP",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csiso2022jp => ISO-2022-JP",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-2022-jp => ISO-2022-JP",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csshiftjis => Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ms932 => Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ms_kanji => Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "shift-jis => Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "shift_jis => Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "sjis => Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-31j => Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-sjis => Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "cseuckr => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csksc56011987 => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "euc-kr => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-ir-149 => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "korean => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ks_c_5601-1987 => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ks_c_5601-1989 => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ksc5601 => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ksc_5601 => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "windows-949 => EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "unicodefffe => UTF-16BE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16be => UTF-16BE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "csunicode => UTF-16LE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "iso-10646-ucs-2 => UTF-16LE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "ucs-2 => UTF-16LE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "unicode => UTF-16LE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "unicodefeff => UTF-16LE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16 => UTF-16LE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le => UTF-16LE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "x-user-defined => x-user-defined",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 222,
+                  "passed": 222,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -1996,169 +1996,169 @@
                 "subtests": [
                   {
                     "name": "Streaming decode: utf-8, 1 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-8, 2 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-8, 3 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-8, 4 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-8, 5 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16le, 1 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16le, 2 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16le, 3 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16le, 4 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16le, 5 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16be, 1 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16be, 2 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16be, 3 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16be, 4 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-16be, 5 byte window (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: UTF-8 chunk tests (ArrayBuffer)",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Streaming decode: utf-8, 1 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-8, 2 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-8, 3 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-8, 4 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-8, 5 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16le, 1 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16le, 2 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16le, 3 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16le, 4 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16le, 5 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16be, 1 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16be, 2 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16be, 3 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16be, 4 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: utf-16be, 5 byte window (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   },
                   {
                     "name": "Streaming decode: UTF-8 chunk tests (SharedArrayBuffer)",
                     "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "message": "not a constructor"
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 32,
+                  "passed": 16,
+                  "failed": 16,
                   "timed_out": 0
                 }
               }
@@ -2172,59 +2172,59 @@
                 "subtests": [
                   {
                     "name": "utf-16le - lone surrogate lead",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le - lone surrogate lead (fatal flag set)",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le - lone surrogate trail",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le - lone surrogate trail (fatal flag set)",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le - unmatched surrogate lead",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le - unmatched surrogate lead (fatal flag set)",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le - unmatched surrogate trail",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le - unmatched surrogate trail (fatal flag set)",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le - swapped surrogate pair",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "utf-16le - swapped surrogate pair (fatal flag set)",
-                    "status": "Fail",
-                    "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoder is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 10,
+                  "passed": 10,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -2238,404 +2238,404 @@
                 "subtests": [
                   {
                     "name": "Encoding argument supported for decode: UTF-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: UTF-8",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: IBM866",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: IBM866",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-2",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-3",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-4",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-5",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-6",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-7",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-8",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-8-I",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-8-I",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-10",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-10",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-13",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-13",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-14",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-14",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-15",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-15",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-8859-16",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-8859-16",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: KOI8-R",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: KOI8-R",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: KOI8-U",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: KOI8-U",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: macintosh",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: macintosh",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-874",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-874",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-1250",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-1250",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-1251",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-1251",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-1252",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-1252",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-1253",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-1253",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-1254",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-1254",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-1255",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-1255",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-1256",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-1256",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-1257",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-1257",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: windows-1258",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: windows-1258",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: x-mac-cyrillic",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: x-mac-cyrillic",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: GBK",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: GBK",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: gb18030",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: gb18030",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: Big5",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: Big5",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: EUC-JP",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: EUC-JP",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: ISO-2022-JP",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: ISO-2022-JP",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: Shift_JIS",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: EUC-KR",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: EUC-KR",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: replacement",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: UTF-16BE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: UTF-16BE",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: UTF-16LE",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: UTF-16LE",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument supported for decode: x-user-defined",
-                    "status": "Fail",
-                    "message": "TextDecoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "Encoding argument not considered for encode: x-user-defined",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 79,
+                  "passed": 79,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -2649,44 +2649,44 @@
                 "subtests": [
                   {
                     "name": "USVString handling: lone surrogate lead",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "USVString handling: lone surrogate trail",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "USVString handling: unmatched surrogate lead",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "USVString handling: unmatched surrogate trail",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "USVString handling: swapped surrogate pair",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "USVString handling: properly encoded MUSICAL SYMBOL G CLEF (U+1D11E)",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   },
                   {
                     "name": "USVString default",
-                    "status": "Fail",
-                    "message": "TextEncoder is not defined"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 7,
+                  "passed": 7,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
