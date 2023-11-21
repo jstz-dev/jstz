@@ -15,9 +15,8 @@ pub struct ValueError {
     pub msg: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(untagged)]
-#[derive(Debug)]
 pub enum ValueResponse {
     Value(String),
     Errors(Vec<ValueError>),

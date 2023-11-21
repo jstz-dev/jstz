@@ -81,14 +81,17 @@ impl JstzClient {
     pub async fn get_subkey_list(
         &self,
         address: &str,
-        key: &str,
+        key: &Option<String>,
     ) -> Result<Option<Vec<String>>> {
-        let response = self
-            .get(&format!(
+        let url = match key {
+            Some(k) if !k.is_empty() => format!(
                 "{}/accounts/{}/kv/subkeys?key={}",
-                self.endpoint, address, key
-            ))
-            .await?;
+                self.endpoint, address, k
+            ),
+            _ => format!("{}/accounts/{}/kv/subkeys", self.endpoint, address),
+        };
+
+        let response = self.get(&url).await?;
 
         match response.status() {
             StatusCode::OK => {
