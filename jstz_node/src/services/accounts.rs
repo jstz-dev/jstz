@@ -39,6 +39,27 @@ async fn nonce(
     Ok(HttpResponse::Ok().json(nonce))
 }
 
+#[get("/{address}/code")]
+async fn code(
+    rollup_client: Data<RollupClient>,
+    path: Path<String>,
+) -> Result<impl Responder> {
+    let key = format!("/jstz_account/{}", path.into_inner());
+
+    let value = rollup_client.get_value(&key).await?;
+
+    let code = match value {
+        Some(value) => {
+            bincode::deserialize::<Account>(&value)
+                .map_err(|_| anyhow!("Failed to deserialize account"))?
+                .contract_code
+        }
+        None => return Ok(HttpResponse::NotFound().finish()),
+    };
+
+    Ok(HttpResponse::Ok().json(code))
+}
+
 #[get("/{address}/kv")]
 async fn kv(
     rollup_client: Data<RollupClient>,
@@ -89,6 +110,7 @@ impl AccountsService {
     pub fn configure(cfg: &mut ServiceConfig) {
         let scope = Scope::new("/accounts")
             .service(nonce)
+            .service(code)
             .service(kv)
             .service(kv_subkeys);
 

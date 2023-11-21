@@ -89,7 +89,7 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
         Command::Sandbox(sandbox_command) => sandbox::exec(cfg, sandbox_command),
         Command::Bridge(bridge_command) => bridge::exec(bridge_command, cfg),
-        Command::Account(account_command) => account::exec(account_command, cfg),
+        Command::Account(account_command) => account::exec(account_command, cfg).await,
         Command::Deploy {
             self_address,
             function_code,
