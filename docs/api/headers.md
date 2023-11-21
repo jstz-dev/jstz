@@ -59,13 +59,13 @@ Appends a new value onto an existing header inside a `Headers` object, or adds t
 
 Deletes a header from the `Headers` object.
 
-### `Headers.get(name: string): string | string[] | null`
+### `Headers.get(name: string): string | null`
 
-::: danger
-**Spec deviation**: `.get()` returns `string[]` in the case of many header values for a given header name, instead of concatenating them with `,` as per the spec.
-:::
+Returns the associated header value of the given name, or `null` if no values are found. If the header has more than 1 value, then the values are concatenated, separated by `", "`, as per the spec.
 
-Returns the associated header value of the given name, or `null` if no values are found. If the header has more than 1 value, then a sequence of values is returned.
+### `Headers.getSetCookie(): string[]`
+
+Returns an array of all the header values for the `Set-Cookie` header.
 
 ### `Headers.has(name: string): boolean`
 
@@ -74,3 +74,15 @@ Returns a boolean stating whether a `Headers` object contains a certain header.
 ### `Headers.set(name: string, value: string): void`
 
 Sets a new value for an existing header inside a `Headers` object, or adds the header if it does not already exist.
+
+## Known spec compliance problems
+
+- Headers should be iterable
+- Headers constructor should accept undefined and null
+- Headers constructor should treat iterables as sequences and should not have special behavior for Headers instances
+- Headers constructor, append, and set should normalize values (removing leading/trailing whitespace)
+- Headers constructor, append, and set should convert values to strings
+- Headers sequence constructor should throw when sequence elements aren't pairs
+- Some invalid header names and values are accepted
+- Some valid header values are not accepted
+- There are probably spec problems related to header security checks when used w/ Request
