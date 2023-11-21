@@ -4,3 +4,8 @@
 
 # Ignore artifacts:
 **/dist
+
+# Ignore wpt submodule
+**/wpt
+**/manifest.json
+**/wptreport.json
