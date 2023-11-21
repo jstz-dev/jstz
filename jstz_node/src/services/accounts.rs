@@ -10,6 +10,13 @@ use jstz_proto::context::account::Account;
 
 use crate::{rollup::RollupClient, Result};
 
+fn construct_storage_key(address: &str, key: &Option<String>) -> String {
+    match key {
+        Some(value) if !value.is_empty() => format!("/jstz_kv/{}/{}", address, value),
+        _ => format!("/jstz_kv/{}", address),
+    }
+}
+
 #[get("/{address}/nonce")]
 async fn nonce(
     rollup_client: Data<RollupClient>,
@@ -38,13 +45,9 @@ async fn kv(
     query: web::Query<HashMap<String, String>>,
 ) -> Result<impl Responder> {
     let address = path.into_inner();
-    let key = query.get("key").cloned().unwrap_or_else(|| "".to_string());
+    let key_option = query.get("key").cloned();
 
-    let storage_key = if key == "" {
-        format!("/jstz_kv/{}", address)
-    } else {
-        format!("/jstz_kv/{}/{}", address, key)
-    };
+    let storage_key = construct_storage_key(&address, &key_option);
 
     let value = rollup_client.get_value(&storage_key).await?;
 
@@ -66,13 +69,10 @@ async fn kv_subkeys(
     query: web::Query<HashMap<String, String>>,
 ) -> Result<impl Responder> {
     let address = path.into_inner();
-    let key = query.get("key").cloned().unwrap_or_else(|| "".to_string());
 
-    let storage_key = if key == "" {
-        format!("/jstz_kv/{}", address)
-    } else {
-        format!("/jstz_kv/{}/{}", address, key)
-    };
+    let key_option = query.get("key").cloned();
+
+    let storage_key = construct_storage_key(&address, &key_option);
 
     let value = rollup_client.get_subkeys(&storage_key).await?;
 
