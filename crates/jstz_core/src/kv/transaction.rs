@@ -1,6 +1,7 @@
 use std::{
     collections::{btree_map, BTreeMap, BTreeSet},
     marker::PhantomData,
+    mem,
 };
 
 use boa_gc::{empty_trace, Finalize, Trace};
@@ -40,16 +41,26 @@ use super::{Storage, Timestamp};
 /// +---------------+
 /// ```
 
+/*
 #[must_use]
 pub struct Transaction {
     remove_set: BTreeSet<OwnedPath>,
     snapshot: Snapshot,
     pub(crate) begin_timestamp: Timestamp,
 }
+*/
 
-impl Finalize for Transaction {}
+#[must_use]
+pub struct Transaction<'a> {
+    parent: Option<&'a mut Transaction<'a>>,
+    remove_set: BTreeSet<OwnedPath>,
+    snapshot: Snapshot,
+    pub(crate) begin_timestamp: Timestamp,
+}
 
-unsafe impl Trace for Transaction {
+impl<'a> Finalize for Transaction<'a> {}
+
+unsafe impl<'a> Trace for Transaction<'a> {
     empty_trace!();
 }
 
@@ -103,12 +114,21 @@ impl SnapshotEntry {
         let value = self.value.downcast().unwrap();
         *value
     }
+
+    fn into_value2<V>(self) -> V
+    where
+        V: Value,
+    {
+        let value = self.value.downcast().unwrap();
+        *value
+    }
 }
 
-impl Transaction {
+impl<'a> Transaction<'a> {
     pub(crate) fn new(begin_timestamp: Timestamp) -> Self {
         Self {
-            begin_timestamp,
+            parent: None,
+            begin_timestamp, // TODO: possibly remove later
             remove_set: BTreeSet::new(),
             snapshot: BTreeMap::new(),
         }
@@ -148,49 +168,56 @@ impl Transaction {
         self.insert_set().union(&self.remove_set).cloned().collect()
     }
 
-    pub(crate) fn flush(self, rt: &mut impl Runtime) -> Result<()> {
-        // Perform deletions
-        for key in self.remove_set {
-            Storage::remove(rt, &key)?
-        }
-
-        // Perform insertions
-        for (key, entry) in self.snapshot.into_iter() {
-            if entry.dirty {
-                Storage::insert(rt, &key, entry.value.as_ref())?;
-            }
-        }
-
-        Ok(())
-    }
-
-    fn lookup<'a, V>(
-        &'a mut self,
+    fn lookup<V>(
+        &mut self,
         rt: &impl Runtime,
         key: OwnedPath,
-    ) -> Result<Option<&'a mut SnapshotEntry>>
+    ) -> Result<Option<&mut SnapshotEntry>>
     where
         V: Value + DeserializeOwned,
     {
-        let entry = self.snapshot.entry(key);
+        let entry = self.snapshot.entry(key.clone());
+
+        // Recursively lookup in parent if not found in current snapshot. If found in parent, insert into current snapshot.
 
         match entry {
-            btree_map::Entry::Vacant(entry) => {
-                if let Some(value) = Storage::get::<V>(rt, entry.key())? {
-                    let snapshot_entry = entry.insert(SnapshotEntry::persistent(value));
-
-                    return Ok(Some(snapshot_entry));
+            btree_map::Entry::Vacant(entry) => match &mut self.parent {
+                Some(parent) => {
+                    let parent_entry = parent.lookup::<V>(rt, key.clone())?;
+                    match parent_entry {
+                        Some(value) => {
+                            let snapshot_entry = entry.insert(SnapshotEntry::persistent(
+                                value.into_value2::<V>(),
+                            ));
+                            return Ok(Some(snapshot_entry));
+                        }
+                        None => {
+                            return Ok(None);
+                        }
+                    }
                 }
+                None => {
+                    if Storage::contains_key(rt, entry.key())? {
+                        let value = Storage::get::<V>(rt, entry.key())?.unwrap();
+                        let snapshot_entry =
+                            entry.insert(SnapshotEntry::persistent(value));
+                        return Ok(Some(snapshot_entry));
+                    }
 
-                Ok(None)
-            }
+                    return Ok(None);
+                }
+            },
             btree_map::Entry::Occupied(entry) => Ok(Some(entry.into_mut())),
         }
     }
 
     /// Returns a reference to the value corresponding to the key in the
     /// key-value store if it exists.
-    pub fn get<V>(&mut self, rt: &impl Runtime, key: OwnedPath) -> Result<Option<&V>>
+    pub fn get<V>(
+        &'a mut self,
+        rt: &impl Runtime,
+        key: OwnedPath,
+    ) -> Result<Option<&'a V>>
     where
         V: Value + DeserializeOwned,
     {
@@ -201,10 +228,10 @@ impl Transaction {
     /// Returns a mutable reference to the value corresponding to the key in the
     /// key-value store if it exists.
     pub fn get_mut<V>(
-        &mut self,
+        &'a mut self,
         rt: &impl Runtime,
         key: OwnedPath,
-    ) -> Result<Option<&mut V>>
+    ) -> Result<Option<&'a mut V>>
     where
         V: Value + DeserializeOwned,
     {
@@ -215,7 +242,20 @@ impl Transaction {
     /// Returns `true` if the key-value store contains a key-value pair for the
     /// specified key.
     pub fn contains_key(&self, rt: &impl Runtime, key: &OwnedPath) -> Result<bool> {
-        Ok(self.snapshot.contains_key(key) || Storage::contains_key(rt, key)?)
+        // Recursively lookup in parent if not found in current snapshot. If found in parent, insert into current snapshot.
+        // Finally, check if the key exists in storage.
+        if self.snapshot.contains_key(key) {
+            return Ok(true);
+        } else {
+            match &self.parent {
+                Some(parent) => {
+                    return parent.contains_key(rt, key);
+                }
+                None => {
+                    return Storage::contains_key(rt, key);
+                }
+            }
+        }
     }
 
     /// Insert a key-value pair into the key-value store.
@@ -228,24 +268,31 @@ impl Transaction {
     }
 
     /// Removes a key from the key-value store.
-    pub fn remove(&mut self, rt: &impl Runtime, key: &OwnedPath) -> Result<()> {
-        self.snapshot.remove(key);
-        if Storage::contains_key(rt, key)? {
-            self.remove_set.insert(key.clone());
+    pub fn remove(&'a mut self, rt: &impl Runtime, key: &OwnedPath) -> Result<()> {
+        let key_clone = key.clone();
+
+        let key_exists = self.contains_key(rt, &key.clone())?;
+
+        self.snapshot.remove(&key_clone);
+        // Store the result of `contains_key` in a temporary variable
+
+        // Use the result after the immutable borrow ends
+        if key_exists {
+            self.remove_set.insert(key_clone);
         }
         Ok(())
     }
 
     /// Returns the given key's corresponding entry in the transactional
     /// snapshot for in-place manipulation.
-    pub fn entry<'a, 'b, V>(
+    pub fn entry<V>(
         &'a mut self,
         rt: &impl Runtime,
         key: OwnedPath,
-    ) -> Result<Entry<'b, V>>
+    ) -> Result<Entry<'a, V>>
     where
         V: Value + DeserializeOwned,
-        'a: 'b,
+        //'a: 'b,
     {
         self.lookup::<V>(rt, key.clone())?;
 
@@ -256,6 +303,54 @@ impl Transaction {
                 inner,
             ))),
         }
+    }
+
+    /// Begins a new transaction
+    pub fn begin(&'a mut self) -> Transaction<'a> {
+        let mut child = Transaction::new(self.begin_timestamp + 1);
+        child.parent = Some(self);
+        child
+    }
+
+    /// Commit a transaction. Returns `true` if the transaction
+    /// was successfully committed to the persistent key-value store.
+    pub fn commit<V>(&'a mut self, rt: &mut impl Runtime) -> Result<bool>
+    where
+        V: Value,
+    {
+        // Perform deletions
+        for key in &self.remove_set {
+            match &mut self.parent {
+                Some(parent) => {
+                    parent.snapshot.remove(&key);
+                    parent.remove_set.insert(key.clone());
+                }
+                None => println!(), //Storage::remove(rt, &key)?,
+            }
+        }
+
+        let snapshot = mem::take(&mut self.snapshot);
+
+        // Perform insertions
+        for (key, entry) in snapshot {
+            if entry.dirty {
+                match &mut self.parent {
+                    Some(parent) => {
+                        parent.insert(key, entry.into_value::<V>())?;
+                    }
+                    None => {
+                        Storage::insert(rt, &key, entry.value.as_ref())?;
+                    }
+                }
+            }
+        }
+
+        Ok(true)
+    }
+
+    /// Rollback a transaction.
+    pub fn rollback(self) {
+        drop(self);
     }
 }
 
