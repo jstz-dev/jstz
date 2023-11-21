@@ -115,11 +115,14 @@ impl Kv {
 
     /// Commit a transaction. Returns `true` if the transaction was successfully
     /// committed to the persistent key-value store.
-    pub fn commit_transaction(
+    pub fn commit_transaction<V>(
         &mut self,
         rt: &mut impl Runtime,
         tx: Transaction,
-    ) -> Result<bool> {
+    ) -> Result<bool>
+    where
+        V: Value + DeserializeOwned,
+    {
         // Transactions are (optimistically) assigned a timestamp when they
         // enter the validation phase.
         let possible_commit_timestamp = self.clock.current_timestamp() + 1;
@@ -155,7 +158,7 @@ impl Kv {
         let commit_timestamp = self.clock.next_timestamp();
         let update_set = tx.update_set();
         self.update_sets[(commit_timestamp as usize) % MAX_TX_COUNT] = update_set;
-        tx.flush(rt)?;
+        tx.commit::<V>(rt)?;
 
         Ok(true)
     }
