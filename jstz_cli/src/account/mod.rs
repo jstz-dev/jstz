@@ -9,6 +9,7 @@ pub mod account;
 use crate::{
     account::account::{Account, AliasAccount, OwnedAccount},
     config::Config,
+    jstz::JstzClient,
 };
 
 fn generate_passphrase() -> String {
@@ -161,6 +162,20 @@ fn list_accounts(long: bool, cfg: &mut Config) -> Result<()> {
     Ok(())
 }
 
+async fn get_code(account: Option<String>, cfg: &mut Config) -> Result<()> {
+    let jstz_client = JstzClient::new(cfg);
+    let address = cfg.accounts.get_address_from(account)?;
+
+    let code = jstz_client.get_code(address.as_str()).await?;
+
+    match code {
+        Some(code) => println!("{}", code),
+        None => println!("No code found"),
+    }
+
+    Ok(())
+}
+
 #[derive(Subcommand)]
 pub enum Command {
     /// Creates alias
@@ -194,13 +209,20 @@ pub enum Command {
         #[arg(short, long)]
         long: bool,
     },
+    /// Get account code
+    Code {
+        /// User address or alias
+        #[arg(short, long, value_name = "ALIAS|ADDRESS")]
+        account: Option<String>,
+    },
 }
 
-pub fn exec(command: Command, cfg: &mut Config) -> Result<()> {
+pub async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
         Command::Alias { address, name } => alias(address, name, cfg),
         Command::Create { alias, passphrase } => create_account(passphrase, alias, cfg),
         Command::Delete { alias } => delete_account(alias, cfg),
         Command::List { long } => list_accounts(long, cfg),
+        Command::Code { account } => get_code(account, cfg).await,
     }
 }

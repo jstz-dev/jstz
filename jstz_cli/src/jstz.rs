@@ -59,6 +59,22 @@ impl JstzClient {
         }
     }
 
+    pub async fn get_code(&self, address: &str) -> Result<Option<String>> {
+        let response = self
+            .get(&format!("{}/accounts/{}/code", self.endpoint, address))
+            .await?;
+
+        match response.status() {
+            StatusCode::OK => {
+                let code = response.json::<Option<String>>().await?;
+                Ok(code)
+            }
+            StatusCode::NOT_FOUND => Ok(None),
+            // For any other status, return a generic error
+            _ => Err(anyhow!("Failed to get nonce")),
+        }
+    }
+
     pub async fn get_value(&self, address: &str, key: &str) -> Result<Option<KvValue>> {
         let response = self
             .get(&format!(

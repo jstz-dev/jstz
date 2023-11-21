@@ -35,7 +35,7 @@ impl ToString for Nonce {
 pub struct Account {
     pub nonce: Nonce,
     amount: Amount,
-    contract_code: Option<String>,
+    pub contract_code: Option<String>,
 }
 
 const ACCOUNTS_PATH: RefPath = RefPath::assert_from(b"/jstz_account");
