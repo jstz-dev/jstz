@@ -2,10 +2,11 @@ use std::collections::HashMap;
 
 use actix_web::{
     get,
-    web::{self, Data, Path, ServiceConfig},
+    web::{Data, Path, Query, ServiceConfig},
     HttpResponse, Responder, Scope,
 };
 use anyhow::anyhow;
+use jstz_api::KvValue;
 use jstz_proto::context::account::Account;
 
 use crate::{rollup::RollupClient, Result};
@@ -42,7 +43,7 @@ async fn nonce(
 async fn kv(
     rollup_client: Data<RollupClient>,
     path: Path<String>,
-    query: web::Query<HashMap<String, String>>,
+    query: Query<HashMap<String, String>>,
 ) -> Result<impl Responder> {
     let address = path.into_inner();
     let key_option = query.get("key").cloned();
@@ -50,8 +51,6 @@ async fn kv(
     let storage_key = construct_storage_key(&address, &key_option);
 
     let value = rollup_client.get_value(&storage_key).await?;
-
-    println!("value: {:?}", value);
 
     let value = match value {
         Some(value) => bincode::deserialize::<KvValue>(&value)
@@ -66,7 +65,7 @@ async fn kv(
 async fn kv_subkeys(
     rollup_client: Data<RollupClient>,
     path: Path<String>,
-    query: web::Query<HashMap<String, String>>,
+    query: Query<HashMap<String, String>>,
 ) -> Result<impl Responder> {
     let address = path.into_inner();
 
