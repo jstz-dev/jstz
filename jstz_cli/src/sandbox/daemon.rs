@@ -1,5 +1,5 @@
 use std::{
-    fs,
+    fs::{self, File},
     io::Write,
     process::{Child, Command},
     sync::mpsc::{self, Sender},
@@ -119,12 +119,10 @@ fn init_client(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
-fn client_bake(cfg: &Config) -> Result<()> {
-    OctezClient::bake(
-        cfg,
-        &cfg.jstz_path.join("logs/client.log"),
-        &["for", "--minimal-timestamp"],
-    )?;
+fn client_bake(cfg: &Config, log_file: &File) -> Result<()> {
+    // SAFETY: When a baking fails, then we want to silently ignore the error and
+    // try again later since the `client_bake` function is looped in the `OctezThread`.
+    let _ = OctezClient::bake(cfg, &log_file, &["for", "--minimal-timestamp"]);
     Ok(())
 }
 
@@ -357,7 +355,11 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
 
     // 4. As a thread, start baking
     print!("Starting baker...");
-    let baker = OctezThread::new(cfg, client_bake);
+    let client_logs = File::create(cfg.jstz_path.join("logs/client.log"))?;
+    let baker = OctezThread::new(cfg, move |cfg| {
+        client_bake(cfg, &client_logs)?;
+        Ok(())
+    });
     println!(" done");
 
     // 5. Deploy bridge
