@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "prettier": "^3.1.0",
-    "typescript": "^5.2.2",
+    "typescript": "^5.3.2",
     "vitepress": "^1.0.0-rc.29",
     "esbuild": "^0.19.6"
   }
