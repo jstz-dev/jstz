@@ -260,13 +260,16 @@ impl<'a> Transaction<'a> {
 
     /// Removes a key from the key-value store.
     pub fn remove(&'a mut self, rt: &impl Runtime, key: &OwnedPath) -> Result<()> {
-        self.snapshot.remove(&key.clone());
-        // Store the result of `contains_key` in a temporary variable
+        let key_clone = key.clone();
+
         let key_exists = self.contains_key(rt, &key.clone())?;
+
+        self.snapshot.remove(&key_clone);
+        // Store the result of `contains_key` in a temporary variable
 
         // Use the result after the immutable borrow ends
         if key_exists {
-            self.remove_set.insert(key.clone());
+            self.remove_set.insert(key_clone);
         }
         Ok(())
     }
@@ -302,16 +305,16 @@ impl<'a> Transaction<'a> {
 
     /// Commit a transaction. Returns `true` if the transaction
     /// was successfully committed to the persistent key-value store.
-    pub fn commit<V>(self, rt: &mut impl Runtime) -> Result<bool>
+    pub fn commit<V>(&'a mut self, rt: &mut impl Runtime) -> Result<bool>
     where
         V: Value,
     {
         // Perform deletions
         for key in self.remove_set {
-            match &self.parent {
+            match &mut self.parent {
                 Some(parent) => {
                     parent.snapshot.remove(&key);
-                    parent.remove_set.insert(key);
+                    parent.remove_set.insert(key.clone());
                 }
                 None => Storage::remove(rt, &key)?,
             }
