@@ -36,6 +36,8 @@ impl OctezClient {
             &format!("http://127.0.0.1:{}", cfg.octez_node_rpc_port),
         ]);
 
+        command.env("TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER", "Y");
+
         Ok(command)
     }
 
@@ -128,9 +130,7 @@ impl OctezClient {
         Ok(())
     }
 
-    pub fn bake(cfg: &Config, log_file: &PathBuf, options: &[&str]) -> Result<String> {
-        let log_file = File::create(log_file)?;
-
+    pub fn bake(cfg: &Config, log_file: &File, options: &[&str]) -> Result<String> {
         output(
             Self::command(cfg)?
                 .arg("bake")
