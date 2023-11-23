@@ -1,6 +1,7 @@
 use std::{
     collections::{btree_map, BTreeMap, BTreeSet},
     marker::PhantomData,
+    mem,
 };
 
 use boa_gc::{empty_trace, Finalize, Trace};
@@ -113,6 +114,14 @@ impl SnapshotEntry {
         let value = self.value.downcast().unwrap();
         *value
     }
+
+    fn into_value2<V>(self) -> V
+    where
+        V: Value,
+    {
+        let value = self.value.downcast().unwrap();
+        *value
+    }
 }
 
 impl<'a> Transaction<'a> {
@@ -160,10 +169,10 @@ impl<'a> Transaction<'a> {
     }
 
     fn lookup<V>(
-        &'a mut self,
+        &mut self,
         rt: &impl Runtime,
         key: OwnedPath,
-    ) -> Result<Option<&'a mut SnapshotEntry>>
+    ) -> Result<Option<&mut SnapshotEntry>>
     where
         V: Value + DeserializeOwned,
     {
@@ -178,7 +187,7 @@ impl<'a> Transaction<'a> {
                     match parent_entry {
                         Some(value) => {
                             let snapshot_entry = entry.insert(SnapshotEntry::persistent(
-                                value.into_value::<V>(),
+                                value.into_value2::<V>(),
                             ));
                             return Ok(Some(snapshot_entry));
                         }
@@ -232,7 +241,7 @@ impl<'a> Transaction<'a> {
 
     /// Returns `true` if the key-value store contains a key-value pair for the
     /// specified key.
-    pub fn contains_key(&'a self, rt: &impl Runtime, key: &OwnedPath) -> Result<bool> {
+    pub fn contains_key(&self, rt: &impl Runtime, key: &OwnedPath) -> Result<bool> {
         // Recursively lookup in parent if not found in current snapshot. If found in parent, insert into current snapshot.
         // Finally, check if the key exists in storage.
         if self.snapshot.contains_key(key) {
@@ -310,20 +319,22 @@ impl<'a> Transaction<'a> {
         V: Value,
     {
         // Perform deletions
-        for key in self.remove_set {
+        for key in &self.remove_set {
             match &mut self.parent {
                 Some(parent) => {
                     parent.snapshot.remove(&key);
                     parent.remove_set.insert(key.clone());
                 }
-                None => Storage::remove(rt, &key)?,
+                None => println!(), //Storage::remove(rt, &key)?,
             }
         }
 
+        let snapshot = mem::take(&mut self.snapshot);
+
         // Perform insertions
-        for (key, entry) in self.snapshot.into_iter() {
+        for (key, entry) in snapshot {
             if entry.dirty {
-                match &self.parent {
+                match &mut self.parent {
                     Some(parent) => {
                         parent.insert(key, entry.into_value::<V>())?;
                     }

@@ -115,13 +115,14 @@ impl Kv {
 
     /// Commit a transaction. Returns `true` if the transaction was successfully
     /// committed to the persistent key-value store.
-    pub fn commit_transaction<V>(
-        &mut self,
+    pub fn commit_transaction<'a, 'b, V>(
+        &'a mut self,
         rt: &mut impl Runtime,
-        tx: Transaction,
+        tx: &'b mut Transaction<'b>,
     ) -> Result<bool>
     where
         V: Value + DeserializeOwned,
+        'a: 'b,
     {
         // Transactions are (optimistically) assigned a timestamp when they
         // enter the validation phase.
