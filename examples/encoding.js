@@ -1,9 +1,9 @@
 function encodeDecode(str) {
   console.log(`encoding "${str}"`);
-  let b64 = TextEncoder.btoa(str);
+  let b64 = btoa(str);
   console.info(b64);
   console.log(`decoding "${b64}"`);
-  let back = TextEncoder.atob(b64);
+  let back = atob(b64);
   console.info(back);
 }
 
