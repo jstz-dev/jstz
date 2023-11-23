@@ -157,13 +157,6 @@ declare var Response: {
   error(): Response;
 };
 
-declare interface TextEncoder {
-  atob(data: string): string;
-  btoa(data: string): string;
-}
-
-declare var TextEncoder: TextEncoder;
-
 declare interface Console {
   log(...data: any[]): void;
   error(...data: any[]): void;
