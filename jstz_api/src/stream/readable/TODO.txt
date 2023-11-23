@@ -1,0 +1,3 @@
+- Remove derive traits for enums that are not used
+- Remove Clone trait derive
+- change comment format
