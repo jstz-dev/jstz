@@ -41,15 +41,6 @@ use super::{Storage, Timestamp};
 /// +---------------+
 /// ```
 
-/*
-#[must_use]
-pub struct Transaction {
-    remove_set: BTreeSet<OwnedPath>,
-    snapshot: Snapshot,
-    pub(crate) begin_timestamp: Timestamp,
-}
-*/
-
 #[must_use]
 pub struct Transaction<'a> {
     parent: Option<&'a mut Transaction<'a>>,
@@ -114,13 +105,14 @@ impl SnapshotEntry {
         let value = self.value.downcast().unwrap();
         *value
     }
+}
 
-    fn into_value2<V>(self) -> V
-    where
-        V: Value,
-    {
-        let value = self.value.downcast().unwrap();
-        *value
+impl Clone for SnapshotEntry {
+    fn clone(&self) -> Self {
+        Self {
+            dirty: false,
+            value: self.value.clone(),
+        }
     }
 }
 
@@ -186,9 +178,7 @@ impl<'a> Transaction<'a> {
                     let parent_entry = parent.lookup::<V>(rt, key.clone())?;
                     match parent_entry {
                         Some(value) => {
-                            let snapshot_entry = entry.insert(SnapshotEntry::persistent(
-                                value.into_value2::<V>(),
-                            ));
+                            let snapshot_entry = entry.insert(value.clone());
                             return Ok(Some(snapshot_entry));
                         }
                         None => {

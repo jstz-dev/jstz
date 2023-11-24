@@ -39,11 +39,12 @@ pub(crate) fn deserialize<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
 pub trait Value: Any + Debug + erased_serde::Serialize {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
+    fn clone_box(&self) -> Box<dyn Value>;
 }
 
 impl<T> Value for T
 where
-    T: Any + Debug + erased_serde::Serialize,
+    T: Any + Debug + Clone + erased_serde::Serialize,
 {
     fn as_any(&self) -> &dyn Any {
         self
@@ -52,10 +53,20 @@ where
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }
+
+    fn clone_box(&self) -> Box<dyn Value> {
+        Box::new(self.clone())
+    }
 }
 
 #[derive(Debug, Deref, DerefMut)]
 pub(crate) struct BoxedValue(Box<dyn Value>);
+
+impl Clone for BoxedValue {
+    fn clone(&self) -> Self {
+        Self(self.0.clone_box())
+    }
+}
 
 impl BoxedValue {
     pub fn new(value: impl Value) -> Self {
