@@ -227,9 +227,9 @@ impl HostDefined {
     }
 
     #[track_caller]
-    pub fn get_mut<T: NativeObject>(
-        &self,
-    ) -> Option<GcRefMut<'_, Box<dyn NativeObject>, T>> {
+    pub fn get_mut<'a, T: NativeObject + 'static>(
+        &'a self,
+    ) -> Option<GcRefMut<'a, Box<dyn NativeObject>, T>> {
         let entry = self.env.get(&TracedTypeId::of::<T>())?;
 
         Some(GcRefMut::map(

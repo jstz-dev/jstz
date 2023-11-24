@@ -2,15 +2,10 @@
 //!
 //! This module provides a persistent transactional key-value store.
 
-use std::collections::BTreeSet;
-
-use boa_gc::{empty_trace, Finalize, Trace};
+use boa_gc::{Finalize, Trace};
 use serde::de::DeserializeOwned;
 use tezos_smart_rollup_host::runtime::ValueType;
-use tezos_smart_rollup_host::{
-    path::{OwnedPath, Path},
-    runtime::Runtime,
-};
+use tezos_smart_rollup_host::{path::Path, runtime::Runtime};
 
 use crate::error::Result;
 
@@ -19,8 +14,6 @@ pub mod value;
 
 pub use transaction::{Entry, Transaction};
 pub use value::Value;
-
-const MAX_TX_COUNT: usize = 16;
 
 /// A transactional key-value store using an optimistic concurrency control scheme.
 ///
@@ -89,7 +82,7 @@ impl Storage {
     }
 }
 
-#[derive(Default)]
+/*
 pub struct Kv {
     clock: Clock,
     update_sets: [BTreeSet<OwnedPath>; MAX_TX_COUNT],
@@ -169,23 +162,8 @@ impl Kv {
         drop(tx)
     }
 }
-
-type Timestamp = u64;
+*/
 
 // A simple (not atomic) lamport clock
 #[derive(Debug, Default)]
-struct Clock {
-    counter: Timestamp,
-}
-
-impl Clock {
-    fn current_timestamp(&self) -> Timestamp {
-        self.counter
-    }
-
-    fn next_timestamp(&mut self) -> Timestamp {
-        let timestamp = self.counter;
-        self.counter += 1;
-        timestamp
-    }
-}
+struct Clock {}

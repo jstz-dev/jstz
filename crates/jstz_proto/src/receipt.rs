@@ -6,7 +6,7 @@ use crate::{context::account::Address, operation::OperationHash, Result};
 
 pub type ReceiptResult<T> = std::result::Result<T, String>;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Receipt {
     hash: OperationHash,
     pub inner: ReceiptResult<Content>,
@@ -23,12 +23,12 @@ impl Receipt {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeployContract {
     pub contract_address: Address,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunContract {
     pub body: HttpBody,
     #[serde(with = "http_serde::status_code")]
@@ -37,7 +37,7 @@ pub struct RunContract {
     pub headers: HeaderMap,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Content {
     DeployContract(DeployContract),
     RunContract(RunContract),

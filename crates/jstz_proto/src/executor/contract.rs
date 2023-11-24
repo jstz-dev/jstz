@@ -11,7 +11,7 @@ use jstz_core::native::JsNativeObject;
 use jstz_core::{
     host::HostRuntime,
     host_defined,
-    kv::{Kv, Transaction},
+    kv::Transaction,
     runtime::{self, with_global_host},
     Module, Realm,
 };
@@ -180,13 +180,16 @@ impl Script {
     }
 
     /// Deploys a script
-    pub fn deploy(
+    pub fn deploy<'a, 'b>(
         hrt: &impl HostRuntime,
-        tx: &mut Transaction,
+        tx: &'b mut Transaction<'a>,
         source: &Address,
         code: String,
         balance: Amount,
-    ) -> Result<Address> {
+    ) -> Result<Address>
+    where
+        'a: 'b,
+    {
         let nonce = Account::nonce(hrt, tx, source)?;
 
         let address = Address::digest(
@@ -210,19 +213,17 @@ impl Script {
     ) -> JsResult<JsValue> {
         let context = &mut self.realm().context_handle(context);
 
-        // 1. Register `Kv` and `Transaction` objects in `HostDefined`
+        // 1. Register `Transaction` object in `HostDefined`
         // FIXME: `Kv` and `Transaction` should be externally provided
         {
             host_defined!(context, mut host_defined);
 
-            let kv = Kv::new();
-            let tx = kv.begin_transaction();
+            let tx = Transaction::new();
             let trace_data = TraceData {
                 contract_address: contract_address.clone(),
                 operation_hash: operation_hash.clone(),
             };
 
-            host_defined.insert(kv);
             host_defined.insert(tx);
             host_defined.insert(trace_data);
         }
@@ -246,11 +247,7 @@ impl Script {
                 host_defined!(context, mut host_defined);
 
                 runtime::with_global_host(|rt| {
-                    let mut kv = host_defined
-                        .remove::<Kv>()
-                        .expect("Rust type `Kv` should be defined in `HostDefined`");
-
-                    let tx = host_defined.remove::<Transaction>().expect(
+                    let mut tx = host_defined.remove::<Transaction>().expect(
                         "Rust type `Transaction` should be defined in `HostDefined`",
                     );
 
@@ -258,9 +255,10 @@ impl Script {
 
                     // If status code is 2xx, commit transaction
                     if response.ok() {
-                        kv.commit_transaction(rt, *tx)?;
+                        tx.commit::<Account>(rt)
+                            .expect("Failed to commit transaction");
                     } else {
-                        kv.rollback_transaction(rt, *tx);
+                        tx.rollback();
                     }
                     Ok(())
                 })
