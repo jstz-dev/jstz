@@ -68,7 +68,8 @@ impl_into_js_from_into!(
     u32,
     u64,
     u8,
-    usize
+    usize,
+    bool
 );
 
 impl IntoJs for String {
