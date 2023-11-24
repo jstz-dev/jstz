@@ -6,10 +6,11 @@ use jstz_api::{
     encoding::EncodingApi, http::HttpApi, js_log::set_js_logger, stream::StreamApi,
     url::UrlApi, urlpattern::UrlPatternApi, ConsoleApi, KvApi,
 };
+use jstz_core::host::HostRuntime;
+use jstz_core::kv::Transaction;
 use jstz_core::{
     host::HostRuntime,
     host_defined,
-    kv::Kv,
     runtime::{self, Runtime},
 };
 use jstz_proto::api::{ContractApi, LedgerApi};
@@ -108,10 +109,8 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
         let context = rt.context();
         host_defined!(context, mut host_defined);
 
-        let kv = Kv::new();
-        let tx = kv.begin_transaction();
+        let tx = Transaction::new();
 
-        host_defined.insert(kv);
         host_defined.insert(tx);
     }
     set_js_logger(&PrettyLogger);

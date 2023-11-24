@@ -2,11 +2,14 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 
 use crate::{context::account::Account, operation::external::Deposit, Result};
 
-pub fn execute(
+pub fn execute<'a, 'b>(
     hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    tx: &'b mut Transaction<'a>,
     deposit: Deposit,
-) -> Result<()> {
+) -> Result<()>
+where
+    'a: 'b,
+{
     let Deposit { amount, reciever } = deposit;
 
     Account::deposit(hrt, tx, &reciever, amount)
