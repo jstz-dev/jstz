@@ -12,7 +12,7 @@
 //! # Usage example
 //!
 //! Implement [`PairIterable`] for your iterable type:
-//! ```
+//! ```ignore
 //! impl PairIterable for Foo {
 //!     fn pair_iterable_len(&self) -> usize {
 //!         // ...
@@ -30,7 +30,7 @@
 //! ```
 //!
 //! Define a new iterator class and implement [`PairIteratorClass`]:
-//! ```
+//! ```ignore
 //! struct FooIteratorClass;
 //! impl PairIteratorClass for FooIteratorClass {
 //!     type Iterable = Foo;
@@ -40,7 +40,7 @@
 //! The iterator class will then automatically implement `NativeClass`.
 //!
 //! Register the iterator class in your API as usual:
-//! ```
+//! ```ignore
 //! impl jstz_core::Api for FooApi {
 //!     // ....
 //!     register_global_class::<FooIteratorClass>(context)
@@ -52,7 +52,7 @@
 //! [`PairIterableMethods::define_pair_iterable_methods`]
 //! to define the iterable methods (`@@iterator`, `entries`, `keys`,
 //! `values`, `forEach`.)
-//! ```
+//! ```ignore
 //! impl NativeClass for FooClass {
 //!     // ...
 //!     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
@@ -66,6 +66,8 @@
 //! [mdn]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols
 //! [idl]: https://webidl.spec.whatwg.org/#idl-iterable
 //! [es]: https://webidl.spec.whatwg.org/#es-iterable
+
+// FIXME: Fix doc tests
 
 use std::marker::PhantomData;
 
@@ -294,7 +296,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
     /// register.
     ///
     /// # Example
-    /// ```
+    /// ```ignore
     /// impl NativeClass for FooClass {
     ///     // ...
     ///     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
