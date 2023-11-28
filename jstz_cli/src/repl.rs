@@ -39,13 +39,7 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
 
     let realm_clone = rt.realm().clone();
 
-    realm_clone.register_api(
-        ConsoleApi {
-            contract_address: address.clone(),
-            operation_hash: Default::default(),
-        },
-        rt.context(),
-    );
+    realm_clone.register_api(ConsoleApi::Cli {}, rt.context());
 
     realm_clone.register_api(
         KvApi {

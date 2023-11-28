@@ -142,7 +142,7 @@ impl Script {
         register_web_apis(self.realm(), context);
         // TODO: Register console API in `register_web_apis` once `Jstz` object is implemented
         self.realm().register_api(
-            jstz_api::ConsoleApi {
+            jstz_api::ConsoleApi::Proto {
                 contract_address: contract_address.clone(),
                 operation_hash: operation_hash.clone(),
             },

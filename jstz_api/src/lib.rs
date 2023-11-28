@@ -6,7 +6,7 @@ pub mod http;
 pub mod idl;
 pub mod url;
 pub mod urlpattern;
-pub use console::ConsoleApi;
+pub use console::{ConsoleApi, LogRecord, LOG_PREFIX};
 pub use kv::Kv;
 pub use kv::KvApi;
 pub use kv::KvValue;

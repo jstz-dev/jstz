@@ -4,26 +4,31 @@ use actix_web::{
     web::{Data, Path},
     Responder,
 };
+use jstz_crypto::public_key_hash::PublicKeyHash;
 
-use std::io::Result;
+use std::io::{Error, ErrorKind::InvalidInput, Result};
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
+use jstz_api::{LogRecord, LOG_PREFIX};
+
 use self::broadcaster::Broadcaster;
-use self::unicode::starts_with_unicode_prefix;
 
 pub mod broadcaster;
-mod unicode;
 
 #[get("{address}/stream")]
 async fn stream_logs(
     broadcaster: Data<Broadcaster>,
     path: Path<String>,
 ) -> Result<impl Responder> {
-    let _address = path.into_inner();
+    let address = path.into_inner();
 
-    Ok(broadcaster.new_client().await)
+    // validate address
+    let address =
+        PublicKeyHash::from_base58(&address).map_err(|e| Error::new(InvalidInput, e))?;
+
+    Ok(broadcaster.new_client(address).await)
 }
 
 pub struct LogsService;
@@ -54,8 +59,9 @@ impl LogsService {
             tokio::select! {
                 line = lines.next_line() => {
                     if let Ok(Some(msg)) = line {
-                        if starts_with_unicode_prefix(&msg) {
-                            broadcaster.broadcast(&msg).await;
+                        if msg.starts_with(LOG_PREFIX) {
+                            let log = LogRecord::from_string(&msg[LOG_PREFIX.len()..]);
+                            broadcaster.broadcast(&log.contract_address, &msg[LOG_PREFIX.len()..]).await;
                         }
                     }
                 },
