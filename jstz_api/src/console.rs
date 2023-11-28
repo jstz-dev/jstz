@@ -25,7 +25,43 @@ use boa_engine::{
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{host::HostRuntime, runtime, value::IntoJs};
 use jstz_crypto::{hash::Blake2b, public_key_hash::PublicKeyHash};
+use serde::{Deserialize, Serialize};
+use serde_json;
 use tezos_smart_rollup::prelude::debug_msg;
+
+pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
+
+#[derive(Serialize, Deserialize)]
+pub struct LogRecord {
+    pub contract_address: PublicKeyHash,
+    request_id: String,
+    level: String,
+    text: String,
+}
+
+impl LogRecord {
+    fn new(
+        contract_address: PublicKeyHash,
+        request_id: String,
+        level: String,
+        text: String,
+    ) -> Self {
+        Self {
+            contract_address,
+            request_id,
+            level,
+            text,
+        }
+    }
+
+    fn to_string(&self) -> String {
+        serde_json::to_string(&self).expect("Failed to serialize JSONLog")
+    }
+
+    pub fn from_string(json: &str) -> Self {
+        serde_json::from_str(&json).expect("Failed to deserialize JSONLog")
+    }
+}
 
 /// This represents the different types of log messages.
 #[derive(Debug)]
@@ -38,15 +74,56 @@ enum LogMessage {
 
 impl LogMessage {
     fn log(self, rt: &impl HostRuntime, console: &Console) {
-        let indent = 2 * console.groups.len();
-        let (msg, symbol) = match self {
-            LogMessage::Error(msg) => (msg, '🔴'),
-            LogMessage::Warn(msg) => (msg, '🟠'),
-            LogMessage::Info(msg) => (msg, '🟢'),
-            LogMessage::Log(msg) => (msg, '🪵'),
-        };
-        for line in msg.lines() {
-            debug_msg!(rt, "[{symbol}] {:>indent$}{line}\n", "");
+        match console {
+            Console::Proto {
+                groups,
+                contract_address,
+                operation_hash,
+            } => {
+                let indent = 2 * groups.len();
+                let log_record = LogRecord::new(
+                    contract_address.clone(),
+                    operation_hash.to_string(),
+                    self.level().to_string(),
+                    " ".repeat(indent) + self.message(),
+                )
+                .to_string();
+                rt.write_debug(&(LOG_PREFIX.to_string() + &log_record + "\n"));
+            }
+            Console::Cli { groups } => {
+                let indent = 2 * groups.len();
+                let symbol = self.symbol();
+                for line in self.message().lines() {
+                    debug_msg!(rt, "[{symbol}] {:>indent$}{line}\n", "");
+                }
+            }
+        }
+    }
+
+    fn message(&self) -> &str {
+        match self {
+            LogMessage::Error(msg) => msg,
+            LogMessage::Warn(msg) => msg,
+            LogMessage::Info(msg) => msg,
+            LogMessage::Log(msg) => msg,
+        }
+    }
+
+    fn symbol(&self) -> char {
+        match self {
+            LogMessage::Error(_) => '🔴',
+            LogMessage::Warn(_) => '🟠',
+            LogMessage::Info(_) => '🟢',
+            LogMessage::Log(_) => '🪵',
+        }
+    }
+
+    fn level(&self) -> &str {
+        match self {
+            LogMessage::Error(_) => "error",
+            LogMessage::Warn(_) => "warn",
+            LogMessage::Info(_) => "info",
+            LogMessage::Log(_) => "log",
         }
     }
 }
@@ -137,11 +214,18 @@ fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
 }
 
 #[derive(Finalize)]
-struct Console {
-    groups: Vec<String>,
-    // TODO: Remove these once `Jstz` object is implemented
-    contract_address: PublicKeyHash,
-    operation_hash: Blake2b,
+enum Console {
+    // Json log
+    Proto {
+        groups: Vec<String>,
+        // TODO: Remove these once `Jstz` object is implemented
+        contract_address: PublicKeyHash,
+        operation_hash: Blake2b,
+    },
+    // pretty log
+    Cli {
+        groups: Vec<String>,
+    },
 }
 
 unsafe impl Trace for Console {
@@ -149,14 +233,12 @@ unsafe impl Trace for Console {
 }
 
 impl Console {
-    fn new(contract_address: PublicKeyHash, operation_hash: Blake2b) -> Self {
-        Self {
-            groups: Vec::default(),
-            contract_address,
-            operation_hash,
+    fn groups(&mut self) -> &mut Vec<String> {
+        match self {
+            Console::Proto { groups, .. } => groups,
+            Console::Cli { groups } => groups,
         }
     }
-
     /// `console.clear()`
     ///
     /// Removes all groups and clears console if possible.
@@ -168,7 +250,7 @@ impl Console {
     /// [spec]: https://console.spec.whatwg.org/#clear
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/clear
     fn clear(&mut self) {
-        self.groups.clear()
+        self.groups().clear()
     }
 
     /// `console.assert(condition, ...data)`
@@ -325,7 +407,7 @@ impl Console {
     ) -> JsResult<()> {
         let group_label = formatter(data, context)?;
         LogMessage::Log(format!("group: {group_label}")).log(rt, self);
-        self.groups.push(group_label);
+        self.groups().push(group_label);
         Ok(())
     }
 
@@ -340,16 +422,19 @@ impl Console {
     /// [spec]: https://console.spec.whatwg.org/#groupend
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/groupEnd
     fn group_end(&mut self) {
-        self.groups.pop();
+        self.groups().pop();
     }
 }
 
 /// `ConsoleApi` implements `jstz_core::host::Api`, permitting it to be registered
 /// as a `jstz` runtime API.  
-pub struct ConsoleApi {
+pub enum ConsoleApi {
     // TODO: remove this once `Jstz` object is implemented
-    pub contract_address: PublicKeyHash,
-    pub operation_hash: Blake2b,
+    Proto {
+        contract_address: PublicKeyHash,
+        operation_hash: Blake2b,
+    },
+    Cli,
 }
 
 impl Console {
@@ -438,61 +523,74 @@ impl ConsoleApi {
         console.clear();
         Ok(JsValue::undefined())
     }
+
+    fn to_console(self) -> Console {
+        match self {
+            ConsoleApi::Proto {
+                contract_address,
+                operation_hash,
+            } => Console::Proto {
+                groups: Vec::default(),
+                contract_address,
+                operation_hash,
+            },
+            ConsoleApi::Cli => Console::Cli {
+                groups: Vec::default(),
+            },
+        }
+    }
 }
 
 impl jstz_core::Api for ConsoleApi {
     fn init(self, context: &mut Context<'_>) {
-        let console = ObjectInitializer::with_native(
-            Console::new(self.contract_address, self.operation_hash),
-            context,
-        )
-        .function(NativeFunction::from_fn_ptr(Self::log), js_string!("log"), 0)
-        .function(
-            NativeFunction::from_fn_ptr(Self::error),
-            js_string!("error"),
-            0,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::debug),
-            js_string!("debug"),
-            0,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::warn),
-            js_string!("warn"),
-            0,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::info),
-            js_string!("info"),
-            0,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::assert),
-            js_string!("assert"),
-            0,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::group),
-            js_string!("group"),
-            0,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::group),
-            js_string!("groupCollapsed"),
-            0,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::group_end),
-            js_string!("groupEnd"),
-            0,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::clear),
-            js_string!("clear"),
-            0,
-        )
-        .build();
+        let console = ObjectInitializer::with_native(self.to_console(), context)
+            .function(NativeFunction::from_fn_ptr(Self::log), js_string!("log"), 0)
+            .function(
+                NativeFunction::from_fn_ptr(Self::error),
+                js_string!("error"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::debug),
+                js_string!("debug"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::warn),
+                js_string!("warn"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::info),
+                js_string!("info"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::assert),
+                js_string!("assert"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::group),
+                js_string!("group"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::group),
+                js_string!("groupCollapsed"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::group_end),
+                js_string!("groupEnd"),
+                0,
+            )
+            .function(
+                NativeFunction::from_fn_ptr(Self::clear),
+                js_string!("clear"),
+                0,
+            )
+            .build();
 
         context
             .register_global_property(js_string!(Self::NAME), console, Attribute::all())
