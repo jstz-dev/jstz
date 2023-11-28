@@ -29,6 +29,7 @@ macro_rules! impl_into_js_from_into {
 }
 
 impl_into_js_from_into!(
+    JsValue,
     JsArray,
     JsArrayBuffer,
     JsBigInt,
