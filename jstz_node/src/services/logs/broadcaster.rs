@@ -1,17 +1,18 @@
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 
 use actix_web::rt::time::interval;
 use actix_web_lab::{
-    sse::{self, Sse},
+    sse::{self, Data, Event, Sse},
     util::InfallibleStream,
 };
 use futures_util::future;
+use jstz_proto::context::account::Address;
 use parking_lot::Mutex;
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::{self, Sender};
 use tokio_stream::wrappers::ReceiverStream;
 
 pub struct Broadcaster {
-    clients: Mutex<Vec<mpsc::Sender<sse::Event>>>, // TODO: Use a read-write lock instead?
+    clients: Mutex<HashMap<Address, Vec<Sender<Event>>>>, // TODO: Use a read-write lock instead?
 }
 
 // Pings clients every 10 seconds
@@ -50,15 +51,21 @@ impl Broadcaster {
     async fn remove_stale_clients(&self) {
         let clients = self.clients.lock().clone();
 
-        let mut responsive_clients = Vec::new();
+        let mut responsive_clients: HashMap<Address, Vec<Sender<Event>>> = HashMap::new();
 
-        for client in clients {
-            if client
-                .send(sse::Event::Comment("ping".into()))
-                .await
-                .is_ok()
-            {
-                responsive_clients.push(client);
+        for (contract_address, senders) in clients {
+            let mut responsive_senders = Vec::new();
+            for sender in senders {
+                if sender
+                    .send(sse::Event::Comment("ping".into()))
+                    .await
+                    .is_ok()
+                {
+                    responsive_senders.push(sender);
+                }
+            }
+            if !responsive_senders.is_empty() {
+                responsive_clients.insert(contract_address, responsive_senders);
             }
         }
 
@@ -66,26 +73,35 @@ impl Broadcaster {
     }
 
     /// Registers client with broadcaster, returning an SSE response body.
-    pub async fn new_client(&self) -> Sse<InfallibleStream<ReceiverStream<sse::Event>>> {
+    pub async fn new_client(
+        &self,
+        contract_address: Address,
+    ) -> Sse<InfallibleStream<ReceiverStream<sse::Event>>> {
         let (tx, rx) = mpsc::channel(10);
 
         tx.send(sse::Data::new("connected").into()).await.unwrap();
 
-        self.clients.lock().push(tx);
+        self.clients
+            .lock()
+            .entry(contract_address)
+            .or_default()
+            .push(tx);
 
         Sse::from_infallible_receiver(rx)
     }
 
     /// Broadcasts `msg` to all clients.
-    pub async fn broadcast(&self, msg: &str) {
+    pub async fn broadcast(&self, contract_address: &Address, msg: &str) {
         let clients = self.clients.lock().clone();
 
-        let send_futures = clients
-            .iter()
-            .map(|client| client.send(sse::Data::new(msg).into()));
+        if let Some(clients) = clients.get(contract_address) {
+            let send_futures = clients
+                .iter()
+                .map(|client| client.send(Data::new(msg).into()));
 
-        // try to send to all clients, ignoring failures
-        // disconnected clients will get swept up by `remove_stale_clients`
-        let _ = future::join_all(send_futures).await;
+            // try to send to all clients, ignoring failures
+            // disconnected clients will get swept up by `remove_stale_clients`
+            let _ = future::join_all(send_futures).await;
+        }
     }
 }
