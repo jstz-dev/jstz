@@ -1,8 +1,8 @@
 use anyhow::Result;
 use boa_engine::{js_string, JsResult, JsValue, Source};
 use jstz_api::{
-    encoding::EncodingApi, http::HttpApi, url::UrlApi, urlpattern::UrlPatternApi,
-    ConsoleApi, KvApi,
+    encoding::EncodingApi, http::HttpApi, stream::StreamApi, url::UrlApi,
+    urlpattern::UrlPatternApi, ConsoleApi, KvApi, TextEncoderApi,
 };
 use jstz_core::host::HostRuntime;
 use jstz_core::{
@@ -50,6 +50,7 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
     realm_clone.register_api(EncodingApi, rt.context());
     realm_clone.register_api(UrlApi, rt.context());
     realm_clone.register_api(UrlPatternApi, rt.context());
+    realm_clone.register_api(StreamApi, rt.context());
     realm_clone.register_api(HttpApi, rt.context());
     realm_clone.register_api(
         LedgerApi {
