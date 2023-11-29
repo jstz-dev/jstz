@@ -10,8 +10,7 @@ running on Tezos's smart optimistic rollups, some APIs are not available (e.g. `
 ## Web Platform APIs
 
 - [`console`](./console.md)
-- `atob`
-- `btoa`
+- [Encoding API](./encoding.md)
 - Fetch API:
   - [`Headers`](./headers.md)
   - [`Request`](./request.md)
