@@ -6,7 +6,7 @@ use boa_engine::{
 use boa_gc::{custom_trace, Finalize, Trace};
 use jstz_core::{impl_into_js_from_into, native::JsNativeObject, value::IntoJs};
 
-use crate::{idl, stream::tmp::JsUnaryFunction, stream::tmp::*};
+use crate::{idl, stream::tmp::JsFunctionWithType, stream::tmp::*};
 
 /// dictionary [UnderlyingSource][spec] {
 ///   UnderlyingSourceStartCallback start;
@@ -157,19 +157,23 @@ unsafe impl Trace for ReadableStreamController {
 ///
 /// [spec]: https://streams.spec.whatwg.org/#callbackdef-underlyingsourcestartcallback
 pub type UnderlyingSourceStartCallback =
-    JsUnaryFunction<JsValue, JsNativeObject<ReadableStreamController>, idl::Any>;
+    JsFunctionWithType<JsValue, 1, (JsNativeObject<ReadableStreamController>,), idl::Any>;
 
 /// callback [UnderlyingSourcePullCallback][spec] = Promise<undefined> (ReadableStreamController controller);
 ///
 /// [spec]: https://streams.spec.whatwg.org/#callbackdef-underlyingsourcepullcallback
-pub type UnderlyingSourcePullCallback =
-    JsUnaryFunction<JsValue, JsNativeObject<ReadableStreamController>, Option<JsPromise>>;
+pub type UnderlyingSourcePullCallback = JsFunctionWithType<
+    JsValue,
+    1,
+    (JsNativeObject<ReadableStreamController>,),
+    Option<JsPromise>,
+>;
 
 /// callback [UnderlyingSourceCancelCallback][spec] = Promise<undefined> (optional any reason);
 ///
 /// [spec]: https://streams.spec.whatwg.org/#callbackdef-underlyingsourcecancelcallback
 pub type UnderlyingSourceCancelCallback =
-    JsUnaryFunction<JsValue, idl::Any, Option<JsPromise>>;
+    JsFunctionWithType<JsValue, 1, (idl::Any,), Option<JsPromise>>;
 
 impl UnderlyingSourceWithJsValue {
     /// **[start][spec](controller), of type UnderlyingSourceStartCallback**
@@ -187,7 +191,7 @@ impl UnderlyingSourceWithJsValue {
         context: &mut Context,
     ) -> JsResult<JsValue> {
         if let Some(ref start) = self.underlying_source.start {
-            start.call(self.js_value.clone(), controller, context)
+            start.call(self.js_value.clone(), (controller,), context)
         } else {
             todo!();
         }
@@ -210,7 +214,7 @@ impl UnderlyingSourceWithJsValue {
         context: &mut Context,
     ) -> JsResult<Option<JsPromise>> {
         if let Some(ref pull) = self.underlying_source.pull {
-            pull.call(self.js_value.clone(), controller, context)
+            pull.call(self.js_value.clone(), (controller,), context)
         } else {
             todo!();
         }
@@ -236,7 +240,11 @@ impl UnderlyingSourceWithJsValue {
         context: &mut Context,
     ) -> JsResult<Option<JsPromise>> {
         if let Some(ref cancel) = self.underlying_source.cancel {
-            cancel.call(self.js_value.clone(), reason.into_js(context), context)
+            cancel.call(
+                self.js_value.clone(),
+                (reason.unwrap_or(JsValue::Undefined),),
+                context,
+            )
         } else {
             todo!();
         }

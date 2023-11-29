@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use boa_engine::{
     object::{
         builtins::{JsArrayBuffer, JsDataView, JsTypedArray},
@@ -187,10 +185,8 @@ use std::ops::Deref;
 
 use boa_engine::{
     object::builtins::{JsDataView, JsTypedArray},
-    value::TryFromJs,
-    Context, JsError, JsObject, JsResult, JsValue,
+    JsValue,
 };
-use jstz_core::value::IntoJs;
 
 pub type Chunk = JsValue;
 
