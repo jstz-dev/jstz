@@ -242,7 +242,7 @@ impl TextEncoderClass {
         // create and return a TextEncoderEncodeIntoResult object
         let js_return: JsValue =
             JsNativeObject::new::<TextEncoderEncodeIntoResult>(result, context)
-                .unwrap()
+                .expect("Expect `TextEncoderEncodeIntoResult` to be constructible")
                 .to_inner();
         Ok(js_return)
     }
