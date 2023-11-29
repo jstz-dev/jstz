@@ -12,6 +12,7 @@ mod kv;
 mod logs;
 mod octez;
 mod repl;
+mod rollup;
 mod run;
 mod sandbox;
 mod utils;
@@ -83,6 +84,9 @@ enum Command {
     /// Commands realted to the KV store
     #[command(subcommand)]
     Kv(kv::Command),
+    /// Dev commands related to building the jstz
+    #[command(subcommand)]
+    Rollup(rollup::Command),
 }
 
 async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
@@ -108,6 +112,7 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
         Command::Logout {} => account::logout(cfg),
         Command::WhoAmI {} => account::whoami(cfg),
         Command::Kv(kv_command) => kv::exec(kv_command, cfg).await,
+        Command::Rollup(rollup_command) => rollup::exec(rollup_command, cfg),
     }
 }
 

@@ -1,0 +1,45 @@
+version: "3"
+
+services:
+  rollup:
+    build:
+      context: .
+      dockerfile: infra/docker/rollup/Dockerfile
+      args:
+        OCTEZ_TAG: v18.1
+        OCTEZ_PROTO: PtNairob
+    command: run-node
+    restart: "no"
+    environment:
+      OCTEZ_TAG: v18.1
+      OCTEZ_PROTO: PtNairob
+      NETWORK: nairobinet
+      OPERATOR_SK: unencrypted:edsk2yjLrk9QSensE6q2oLC9NvUuFzTFihYnxqfXQAp7QeFd6fAEPN
+      ROLLUP_ADDRESS: sr1Ca9Ev6H9DNa1RCR9efogfwE5gL6sebgeK
+    ports:
+      - 127.0.0.1:8932:8932
+    networks:
+      - internal
+    volumes:
+      - shared-logs:/tmp/logs
+
+  node:
+    build:
+      context: .
+      dockerfile: infra/docker/node/Dockerfile
+    command: --rollup-endpoint http://rollup:8932 --kernel-file-path /tmp/logs/kernel.log
+    restart: always
+    ports:
+      - 127.0.0.1:8933:8933
+    networks:
+      - internal
+    volumes:
+      - shared-logs:/tmp/logs
+    depends_on:
+      - rollup
+
+networks:
+  internal:
+
+volumes:
+  shared-logs:
