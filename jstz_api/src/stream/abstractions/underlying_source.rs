@@ -1,4 +1,4 @@
-// https://streams.spec.whatwg.org/#underlying-source-api
+//! https://streams.spec.whatwg.org/#underlying-source-api
 
 use boa_engine::{
     object::builtins::JsPromise, value::TryFromJs, Context, JsResult, JsValue,
@@ -81,14 +81,14 @@ pub struct UnderlyingSource {
 }
 
 impl Finalize for UnderlyingSource {
-    fn finalize(&self) {
-        todo!()
-    }
+    fn finalize(&self) {}
 }
 
 unsafe impl Trace for UnderlyingSource {
     custom_trace!(this, {
-        // TODO
+        mark(&this.start);
+        mark(&this.pull);
+        mark(&this.cancel);
     });
 }
 

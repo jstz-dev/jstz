@@ -69,6 +69,20 @@ pub struct JsFunctionWithType<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: Tr
     _output_type: PhantomData<O>,
 }
 
+impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> Finalize
+    for JsFunctionWithType<T, N, I, O>
+{
+    fn finalize(&self) {}
+}
+
+unsafe impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> Trace
+    for JsFunctionWithType<T, N, I, O>
+{
+    custom_trace!(this, {
+        mark(&this.function);
+    });
+}
+
 impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> Deref
     for JsFunctionWithType<T, N, I, O>
 {
