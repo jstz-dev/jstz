@@ -7,9 +7,8 @@ use reqwest_eventsource::{Event, EventSource};
 pub async fn exec(address_or_alias: String, cfg: &Config) -> Result<()> {
     let address = cfg.accounts.get_address(&address_or_alias)?;
     let url = format!(
-        "http://{}:{}/logs/{}/stream",
-        cfg.jstz_node_host,
-        cfg.jstz_node_port,
+        "http://127.0.0.1:{}/logs/{}/stream",
+        cfg.sandbox()?.jstz_node_port,
         &address.to_base58()
     );
 

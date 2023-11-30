@@ -1859,6 +1859,7 @@ dependencies = [
  "jstz_kernel",
  "jstz_proto",
  "nix 0.27.1",
+ "octez",
  "rand 0.8.5",
  "reqwest",
  "reqwest-eventsource",

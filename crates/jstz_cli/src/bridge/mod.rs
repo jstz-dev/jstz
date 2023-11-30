@@ -3,7 +3,7 @@ use clap::Subcommand;
 
 mod deposit;
 
-use crate::{config::Config, octez::OctezClient};
+use crate::config::Config;
 
 const BOOTSTRAP3_ADDRESS: &str = "tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU";
 
@@ -16,8 +16,7 @@ pub fn deploy(cfg: &Config) -> Result<String> {
         BOOTSTRAP3_ADDRESS, BOOTSTRAP3_ADDRESS
     );
 
-    let ctez_address = OctezClient::originate_contract(
-        cfg,
+    let ctez_address = cfg.octez_client()?.originate_contract(
         "jstz_ctez",
         "bootstrap3",
         bridge_dir
@@ -30,8 +29,7 @@ pub fn deploy(cfg: &Config) -> Result<String> {
     // 2. Originate bridge contract
     let init_bridge_storage = format!("(Pair \"{}\" None)", ctez_address);
 
-    let bridge_address = OctezClient::originate_contract(
-        cfg,
+    let bridge_address = cfg.octez_client()?.originate_contract(
         "jstz_bridge",
         "bootstrap3",
         bridge_dir
@@ -45,8 +43,7 @@ pub fn deploy(cfg: &Config) -> Result<String> {
 }
 
 pub fn set_rollup(cfg: &Config, rollup_address: &str) -> Result<()> {
-    OctezClient::transfer(
-        cfg,
+    cfg.octez_client()?.call_contract(
         "bootstrap3",
         "jstz_bridge",
         "set_rollup",

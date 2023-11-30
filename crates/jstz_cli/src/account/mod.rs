@@ -9,7 +9,6 @@ pub mod account;
 use crate::{
     account::account::{Account, AliasAccount, OwnedAccount},
     config::Config,
-    jstz::JstzClient,
 };
 
 fn generate_passphrase() -> String {
@@ -163,7 +162,7 @@ fn list_accounts(long: bool, cfg: &mut Config) -> Result<()> {
 }
 
 async fn get_code(account: Option<String>, cfg: &mut Config) -> Result<()> {
-    let jstz_client = JstzClient::new(cfg);
+    let jstz_client = cfg.jstz_client()?;
     let address = cfg.accounts.get_address_from(account)?;
 
     let code = jstz_client.get_code(address.as_str()).await?;
@@ -177,7 +176,7 @@ async fn get_code(account: Option<String>, cfg: &mut Config) -> Result<()> {
 }
 
 async fn get_balance(account: Option<String>, cfg: &mut Config) -> Result<()> {
-    let jstz_client = JstzClient::new(cfg);
+    let jstz_client = cfg.jstz_client()?;
     let address = cfg.accounts.get_address_from(account)?;
 
     let balance = jstz_client.get_balance(address.as_str()).await?;

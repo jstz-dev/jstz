@@ -8,8 +8,6 @@ use url::Url;
 use crate::{
     account::account::OwnedAccount,
     config::Config,
-    jstz::JstzClient,
-    octez::OctezClient,
     utils::{from_file_or_id, piped_input},
 };
 
@@ -21,7 +19,7 @@ pub async fn exec(
     gas_limit: u32,
     json_data: Option<String>,
 ) -> Result<()> {
-    let jstz_client = JstzClient::new(cfg);
+    let jstz_client = cfg.jstz_client()?;
 
     // Resolve URL
     let mut url_object =
@@ -96,11 +94,8 @@ pub async fn exec(
     );
 
     // Send message
-    OctezClient::send_rollup_external_message(
-        cfg,
-        "bootstrap2",
-        bincode::serialize(&signed_op)?,
-    )?;
+    cfg.octez_client()?
+        .send_rollup_external_message("bootstrap2", bincode::serialize(&signed_op)?)?;
 
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 

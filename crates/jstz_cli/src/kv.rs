@@ -1,10 +1,10 @@
 use anyhow::Result;
 use clap::Subcommand;
 
-use crate::{config::Config, jstz::JstzClient};
+use crate::config::Config;
 
 async fn get(alias: Option<String>, key: String, cfg: &mut Config) -> Result<()> {
-    let jstz_client = JstzClient::new(cfg);
+    let jstz_client = cfg.jstz_client()?;
 
     let address = cfg.accounts.get_address_from(alias)?;
 
@@ -26,7 +26,7 @@ async fn list(
     key: Option<String>,
     cfg: &mut Config,
 ) -> Result<()> {
-    let jstz_client = JstzClient::new(cfg);
+    let jstz_client = cfg.jstz_client()?;
 
     let address = cfg.accounts.get_address_from(alias)?;
 

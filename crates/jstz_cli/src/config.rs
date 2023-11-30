@@ -3,14 +3,17 @@ use std::{
     fs,
     io::{Error, ErrorKind},
     path::PathBuf,
-    str::FromStr,
 };
 
 use anyhow::{anyhow, Result};
 use jstz_proto::context::account::Address;
+use octez::{OctezClient, OctezNode, OctezRollupNode};
 use serde::{Deserialize, Serialize};
 
-use crate::account::account::{Account, AliasAccount};
+use crate::{
+    account::account::{Account, AliasAccount},
+    jstz::JstzClient,
+};
 
 fn home() -> PathBuf {
     dirs::home_dir()
@@ -119,19 +122,13 @@ pub struct Config {
     pub jstz_path: PathBuf,
     /// Path to octez installation
     pub octez_path: PathBuf,
-    /// The port of the octez node
-    pub octez_node_port: u16,
-    /// The port of the octez RPC node
-    pub octez_node_rpc_port: u16,
-    /// The host of the jstz node
-    pub jstz_node_host: String,
-    /// The port of the jstz node
-    pub jstz_node_port: u16,
     /// Sandbox config (None if sandbox is not running)
     pub sandbox: Option<SandboxConfig>,
     /// List of accounts
     pub accounts: AccountConfig,
 }
+
+pub const SANDBOX_OCTEZ_SMART_ROLLUP_PORT: u16 = 8932;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SandboxConfig {
@@ -141,6 +138,12 @@ pub struct SandboxConfig {
     pub octez_node_dir: PathBuf,
     /// Directory of the octez rollup node
     pub octez_rollup_node_dir: PathBuf,
+    /// The port of the octez node
+    pub octez_node_port: u16,
+    /// The port of the octez RPC node
+    pub octez_node_rpc_port: u16,
+    /// The port of the jstz node
+    pub jstz_node_port: u16,
     /// Pid of the pid
     pub pid: u32,
     private: (),
@@ -158,25 +161,15 @@ impl SandboxConfig {
             octez_node_dir,
             octez_rollup_node_dir,
             pid,
+            octez_node_port: 18731,
+            octez_node_rpc_port: 18730,
+            jstz_node_port: 8933,
             private: (),
         }
     }
 }
 
 impl Config {
-    fn default() -> Self {
-        Config {
-            jstz_path: PathBuf::from_str(".").unwrap(),
-            octez_path: PathBuf::from_str(".").unwrap(),
-            octez_node_port: 18731,
-            octez_node_rpc_port: 18730,
-            jstz_node_host: "127.0.0.1".to_string(),
-            jstz_node_port: 8933,
-            sandbox: None,
-            accounts: AccountConfig::default(),
-        }
-    }
-
     /// Path to the configuration file
     pub fn path() -> PathBuf {
         home().join("config.json")
@@ -217,5 +210,45 @@ impl Config {
 
     pub fn accounts(&mut self) -> &mut AccountConfig {
         &mut self.accounts
+    }
+
+    pub fn octez_client(&self) -> Result<OctezClient> {
+        let sandbox = self.sandbox()?;
+
+        Ok(OctezClient {
+            octez_client_bin: Some(self.octez_path.join("octez-client")),
+            octez_client_dir: sandbox.octez_client_dir.clone(),
+            endpoint: format!("http://127.0.0.1:{}", sandbox.octez_node_rpc_port),
+            disable_disclaimer: true,
+        })
+    }
+
+    pub fn jstz_client(&self) -> Result<JstzClient> {
+        let sandbox = self.sandbox()?;
+
+        Ok(JstzClient::new(format!(
+            "http://127.0.0.1:{}",
+            sandbox.jstz_node_port
+        )))
+    }
+
+    pub fn octez_node(&self) -> Result<OctezNode> {
+        let sandbox = self.sandbox()?;
+
+        Ok(OctezNode {
+            octez_node_bin: Some(self.octez_path.join("octez-node")),
+            octez_node_dir: sandbox.octez_node_dir.clone(),
+        })
+    }
+
+    pub fn octez_rollup_node(&self) -> Result<OctezRollupNode> {
+        let sandbox = self.sandbox()?;
+
+        Ok(OctezRollupNode {
+            octez_rollup_node_bin: Some(self.octez_path.join("octez-smart-rollup-node")),
+            octez_rollup_node_dir: sandbox.octez_rollup_node_dir.clone(),
+            octez_client_dir: sandbox.octez_client_dir.clone(),
+            endpoint: format!("http://127.0.0.1:{}", sandbox.octez_node_rpc_port),
+        })
     }
 }

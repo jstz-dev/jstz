@@ -9,7 +9,6 @@ mod deploy;
 mod jstz;
 mod kv;
 mod logs;
-mod octez;
 mod repl;
 mod run;
 mod sandbox;

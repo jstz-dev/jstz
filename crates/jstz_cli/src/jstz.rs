@@ -7,17 +7,15 @@ use jstz_proto::{context::account::Nonce, operation::OperationHash, receipt::Rec
 use reqwest::StatusCode;
 use tokio::time::sleep;
 
-use crate::config::Config;
-
 pub struct JstzClient {
     endpoint: String,
     client: reqwest::Client,
 }
 
 impl JstzClient {
-    pub fn new(cfg: &Config) -> Self {
+    pub fn new(endpoint: String) -> Self {
         Self {
-            endpoint: format!("http://{}:{}", cfg.jstz_node_host, cfg.jstz_node_port),
+            endpoint,
             client: reqwest::Client::new(),
         }
     }

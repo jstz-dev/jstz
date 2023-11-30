@@ -18,19 +18,23 @@ use tezos_smart_rollup_installer_config::yaml::{Instr, SetArgs, YamlConfig};
 
 use crate::{
     bridge,
-    config::{Config, SandboxConfig},
-    octez::{OctezClient, OctezNode, OctezRollupNode},
+    config::{Config, SandboxConfig, SANDBOX_OCTEZ_SMART_ROLLUP_PORT},
 };
 
 fn init_node(cfg: &Config) -> Result<()> {
     // 1. Initialize the octez-node configuration
     print!("Initializing octez-node configuration...");
-    OctezNode::config_init(cfg, "sandbox", "0")?;
+    cfg.octez_node()?.config_init(
+        "sandbox",
+        &format!("127.0.0.1:{}", cfg.sandbox()?.octez_node_port),
+        &format!("127.0.0.1:{}", cfg.sandbox()?.octez_node_rpc_port),
+        0,
+    )?;
     println!(" done");
 
     // 2. Generate an identity
     print!("Generating identity...");
-    OctezNode::generate_identity(cfg)?;
+    cfg.octez_node()?.generate_identity()?;
     println!(" done");
     Ok(())
 }
@@ -38,10 +42,10 @@ fn init_node(cfg: &Config) -> Result<()> {
 fn start_node(cfg: &Config) -> Result<Child> {
     // Run the octez-node in sandbox mode
     let sandbox_file = cfg.jstz_path.join("crates/jstz_cli/sandbox.json");
+    let log_file = File::create(cfg.jstz_path.join("logs/node.log"))?;
 
-    OctezNode::run(
-        cfg,
-        &cfg.jstz_path.join("logs/node.log"),
+    cfg.octez_node()?.run(
+        &log_file,
         &[
             "--synchronisation-threshold",
             "0",
@@ -53,22 +57,26 @@ fn start_node(cfg: &Config) -> Result<Child> {
     )
 }
 
-fn is_node_running(cfg: &Config) -> bool {
-    OctezClient::rpc(cfg, &["get", "/chains/main/blocks/head/hash"]).is_ok()
+fn is_node_running(cfg: &Config) -> Result<bool> {
+    Ok(cfg
+        .octez_client()?
+        .rpc(&["get", "/chains/main/blocks/head/hash"])
+        .is_ok())
 }
 
-fn wait_for_node_to_initialize(cfg: &Config) {
-    if is_node_running(cfg) {
-        return;
+fn wait_for_node_to_initialize(cfg: &Config) -> Result<()> {
+    if is_node_running(cfg)? {
+        return Ok(());
     }
 
     print!("Waiting for node to initialize...");
-    while !is_node_running(cfg) {
+    while !is_node_running(cfg)? {
         sleep(Duration::from_secs(1));
         print!(".")
     }
 
     println!(" done");
+    Ok(())
 }
 
 const ACTIVATOR_ACCOUNT_SK: &str =
@@ -84,24 +92,24 @@ const BOOTSTRAP_ACCOUNT_SKS: [&str; 5] = [
 
 fn init_client(cfg: &Config) -> Result<()> {
     // 1. Wait for the node to initialize
-    wait_for_node_to_initialize(cfg);
+    wait_for_node_to_initialize(cfg)?;
 
     // 2. Wait for the node to be bootstrapped
     print!("Waiting for node to bootstrap...");
-    OctezClient::wait_for_node_to_bootstrap(cfg)?;
+    cfg.octez_client()?.wait_for_node_to_bootstrap()?;
     println!(" done");
 
     // 3. Import activator and bootstrap accounts
     print!("Importing activator account...");
-    OctezClient::import_secret_key(cfg, "activator", ACTIVATOR_ACCOUNT_SK)?;
+    cfg.octez_client()?
+        .import_secret_key("activator", ACTIVATOR_ACCOUNT_SK)?;
     println!(" done");
 
     // 4. Activate alpha
     let sandbox_params_file = cfg.jstz_path.join("crates/jstz_cli/sandbox-params.json");
 
     print!("Activating alpha...");
-    OctezClient::activate_protocol(
-        cfg,
+    cfg.octez_client()?.activate_protocol(
         "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
         "1",
         "activator",
@@ -113,7 +121,7 @@ fn init_client(cfg: &Config) -> Result<()> {
     for (i, sk) in BOOTSTRAP_ACCOUNT_SKS.iter().enumerate() {
         let name = format!("bootstrap{}", i + 1);
         println!("Importing account {}:{}", name, sk);
-        OctezClient::import_secret_key(cfg, &name, sk)?
+        cfg.octez_client()?.import_secret_key(&name, sk)?
     }
 
     Ok(())
@@ -122,7 +130,9 @@ fn init_client(cfg: &Config) -> Result<()> {
 fn client_bake(cfg: &Config, log_file: &File) -> Result<()> {
     // SAFETY: When a baking fails, then we want to silently ignore the error and
     // try again later since the `client_bake` function is looped in the `OctezThread`.
-    let _ = OctezClient::bake(cfg, log_file, &["for", "--minimal-timestamp"]);
+    let _ = cfg
+        .octez_client()?
+        .bake(log_file, &["for", "--minimal-timestamp"]);
     Ok(())
 }
 
@@ -132,8 +142,7 @@ fn originate_rollup(cfg: &Config) -> Result<String> {
     // 1. Originate the rollup
     let kernel_file = target.join("jstz_kernel_installer.hex");
 
-    let address = OctezClient::originate_rollup(
-        cfg,
+    let address = cfg.octez_client()?.originate_rollup(
         "bootstrap1",
         "jstz_rollup",
         "wasm_2_0_0",
@@ -159,11 +168,12 @@ fn originate_rollup(cfg: &Config) -> Result<String> {
 }
 
 fn start_rollup_node(cfg: &Config) -> Result<Child> {
-    let rollup_log_file = cfg.jstz_path.join("logs/rollup.log");
+    let rollup_log_file = File::create(cfg.jstz_path.join("logs/rollup.log"))?;
     let kernel_log_file = cfg.jstz_path.join("logs/kernel.log");
 
-    OctezRollupNode::run(
-        cfg,
+    cfg.octez_rollup_node()?.run(
+        "127.0.0.1",
+        SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
         &rollup_log_file,
         "jstz_rollup",
         "bootstrap2",
