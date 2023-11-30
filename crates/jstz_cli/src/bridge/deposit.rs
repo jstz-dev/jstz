@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::{config::Config, octez::OctezClient};
+use crate::config::Config;
 
 pub fn exec(from: String, to: String, amount: u64, cfg: &Config) -> Result<()> {
     // 1. Convert tz4 address to hexencoded bytes
@@ -9,8 +9,7 @@ pub fn exec(from: String, to: String, amount: u64, cfg: &Config) -> Result<()> {
     let to_hex = hex::encode_upper(to_bytes);
 
     // 2. Execute the octez-client command
-    OctezClient::transfer(
-        cfg,
+    cfg.octez_client()?.call_contract(
         &from,
         "jstz_bridge",
         "deposit",
