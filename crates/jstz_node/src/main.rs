@@ -3,17 +3,14 @@ use std::io;
 use actix_web::{middleware::Logger, web::Data, App, HttpServer, Scope};
 use clap::Parser;
 use env_logger::Env;
+use octez::OctezRollupClient;
 use services::{logs::stream_logs, LogsService};
 use tokio_util::sync::CancellationToken;
 
-use crate::{
-    rollup::RollupClient,
-    services::{AccountsService, OperationsService},
-};
+use crate::services::{AccountsService, OperationsService};
 pub use error::{Error, Result};
 
 mod error;
-mod rollup;
 mod services;
 mod tailed_file;
 
@@ -50,7 +47,7 @@ async fn main() -> io::Result<()> {
         args.rollup_node_rpc_addr, args.rollup_node_rpc_port
     ));
 
-    let rollup_client = Data::new(RollupClient::new(rollup_endpoint));
+    let rollup_client = Data::new(OctezRollupClient::new(rollup_endpoint));
 
     let cancellation_token = CancellationToken::new();
 

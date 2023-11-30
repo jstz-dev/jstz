@@ -8,8 +8,9 @@ use actix_web::{
 use anyhow::anyhow;
 use jstz_api::KvValue;
 use jstz_proto::context::account::Account;
+use octez::OctezRollupClient;
 
-use crate::{rollup::RollupClient, Result};
+use crate::Result;
 
 fn construct_storage_key(address: &str, key: &Option<String>) -> String {
     match key {
@@ -20,7 +21,7 @@ fn construct_storage_key(address: &str, key: &Option<String>) -> String {
 
 #[get("/{address}/nonce")]
 async fn nonce(
-    rollup_client: Data<RollupClient>,
+    rollup_client: Data<OctezRollupClient>,
     path: Path<String>,
 ) -> Result<impl Responder> {
     let key = format!("/jstz_account/{}", path.into_inner());
@@ -41,7 +42,7 @@ async fn nonce(
 
 #[get("/{address}/code")]
 async fn code(
-    rollup_client: Data<RollupClient>,
+    rollup_client: Data<OctezRollupClient>,
     path: Path<String>,
 ) -> Result<impl Responder> {
     let key = format!("/jstz_account/{}", path.into_inner());
@@ -62,7 +63,7 @@ async fn code(
 
 #[get("/{address}/balance")]
 async fn balance(
-    rollup_client: Data<RollupClient>,
+    rollup_client: Data<OctezRollupClient>,
     path: Path<String>,
 ) -> Result<impl Responder> {
     let key = format!("/jstz_account/{}", path.into_inner());
@@ -83,7 +84,7 @@ async fn balance(
 
 #[get("/{address}/kv")]
 async fn kv(
-    rollup_client: Data<RollupClient>,
+    rollup_client: Data<OctezRollupClient>,
     path: Path<String>,
     query: Query<HashMap<String, String>>,
 ) -> Result<impl Responder> {
@@ -105,7 +106,7 @@ async fn kv(
 
 #[get("/{address}/kv/subkeys")]
 async fn kv_subkeys(
-    rollup_client: Data<RollupClient>,
+    rollup_client: Data<OctezRollupClient>,
     path: Path<String>,
     query: Query<HashMap<String, String>>,
 ) -> Result<impl Responder> {

@@ -5,12 +5,13 @@ use actix_web::{
 };
 use anyhow::anyhow;
 use jstz_proto::receipt::Receipt;
+use octez::OctezRollupClient;
 
-use crate::{rollup::RollupClient, Result};
+use crate::Result;
 
 #[get("/{hash}/receipt")]
 async fn receipt(
-    rollup_client: Data<RollupClient>,
+    rollup_client: Data<OctezRollupClient>,
     path: Path<String>,
 ) -> Result<impl Responder> {
     let key = format!("/jstz_receipt/{}", path.into_inner());

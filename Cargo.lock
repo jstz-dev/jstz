@@ -1920,6 +1920,7 @@ dependencies = [
  "jstz_api",
  "jstz_crypto",
  "jstz_proto",
+ "octez",
  "parking_lot",
  "reqwest",
  "serde",
