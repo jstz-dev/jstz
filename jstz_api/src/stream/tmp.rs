@@ -7,8 +7,6 @@ use jstz_core::value::IntoJs;
 
 use boa_gc::{custom_trace, Finalize, Trace};
 
-pub enum Todo {} // TODO remove
-
 #[macro_export]
 macro_rules! todo_boa_type {
     ( $t:ident ) => {
@@ -23,8 +21,25 @@ macro_rules! todo_boa_type {
         unsafe impl Trace for $t {
             custom_trace!(this, { todo!() });
         }
+
+        impl IntoJs for $t {
+            fn into_js(self, _context: &mut Context<'_>) -> JsValue {
+                todo!()
+            }
+        }
+
+        impl TryFromJs for $t {
+            fn try_from_js(
+                _value: &JsValue,
+                _context: &mut Context<'_>,
+            ) -> JsResult<Self> {
+                todo!()
+            }
+        }
     };
 }
+
+todo_boa_type!(Todo);
 
 todo_boa_type!(ReadableStreamDefaultController);
 
@@ -35,7 +50,7 @@ pub trait IntoJsArgs<const N: usize> {
 }
 
 impl IntoJsArgs<0> for () {
-    fn into_js_args(self, context: &mut Context<'_>) -> [JsValue; 0] {
+    fn into_js_args(self, _context: &mut Context<'_>) -> [JsValue; 0] {
         []
     }
 }
@@ -62,7 +77,7 @@ impl<T0: IntoJs, T1: IntoJs, T2: IntoJs> IntoJsArgs<3> for (T0, T1, T2) {
     }
 }
 
-pub struct JsFunctionWithType<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> {
+pub struct JsFn<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> {
     function: JsFunction,
     _this_type: PhantomData<T>,
     _inputs_type: PhantomData<I>,
@@ -70,13 +85,13 @@ pub struct JsFunctionWithType<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: Tr
 }
 
 impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> Finalize
-    for JsFunctionWithType<T, N, I, O>
+    for JsFn<T, N, I, O>
 {
     fn finalize(&self) {}
 }
 
 unsafe impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> Trace
-    for JsFunctionWithType<T, N, I, O>
+    for JsFn<T, N, I, O>
 {
     custom_trace!(this, {
         mark(&this.function);
@@ -84,7 +99,7 @@ unsafe impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> Trace
 }
 
 impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> Deref
-    for JsFunctionWithType<T, N, I, O>
+    for JsFn<T, N, I, O>
 {
     type Target = JsFunction;
 
@@ -94,7 +109,7 @@ impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> Deref
 }
 
 impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> IntoJs
-    for JsFunctionWithType<T, N, I, O>
+    for JsFn<T, N, I, O>
 {
     fn into_js(self, context: &mut Context<'_>) -> JsValue {
         self.function.into_js(context)
@@ -102,10 +117,10 @@ impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> IntoJs
 }
 
 impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> From<JsFunction>
-    for JsFunctionWithType<T, N, I, O>
+    for JsFn<T, N, I, O>
 {
     fn from(value: JsFunction) -> Self {
-        JsFunctionWithType {
+        JsFn {
             function: value,
             _this_type: PhantomData,
             _inputs_type: PhantomData,
@@ -115,16 +130,14 @@ impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> From<JsFunction>
 }
 
 impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> TryFromJs
-    for JsFunctionWithType<T, N, I, O>
+    for JsFn<T, N, I, O>
 {
     fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
-        JsFunction::try_from_js(value, context).map(JsFunctionWithType::from)
+        JsFunction::try_from_js(value, context).map(JsFn::from)
     }
 }
 
-impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs>
-    JsFunctionWithType<T, N, I, O>
-{
+impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> JsFn<T, N, I, O> {
     pub fn call(&self, this: T, inputs: I, context: &mut Context<'_>) -> JsResult<O> {
         let js_this = this.into_js(context);
         let js_args = inputs.into_js_args(context);
