@@ -1,0 +1,17 @@
+[package]
+name = "octez"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.75"
+hex = "0.4.3"
+regex = "1.10.2"
+reqwest = { version = "0.11.22", features = ["json"] }
+serde = { version = "1.0.183", features = ["derive"] }
+serde_json = "1.0.108"
+signal-hook = "0.3.17"

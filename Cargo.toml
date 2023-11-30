@@ -8,6 +8,7 @@ members = [
     "crates/jstz_cli",
     "crates/jstz_node",
     "crates/jstz_wpt",
+    "crates/octez",
 ]
 
 
@@ -26,6 +27,7 @@ jstz_crypto = { path = "crates/jstz_crypto" }
 jstz_node = { path = "crates/jstz_node" }
 jstz_cli = { path = "crates/jstz_cli" }
 jstz_wpt = { path = "crates/jstz_wpt" }
+octez = { path = "crates/octez" }
 
 [workspace.dependencies.tezos-smart-rollup]
 git = "https://gitlab.com/tezos/tezos.git"

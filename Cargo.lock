@@ -2306,6 +2306,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "octez"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "hex",
+ "regex",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "signal-hook",
+]
+
+[[package]]
 name = "once_cell"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
