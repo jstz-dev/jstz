@@ -13,5 +13,6 @@ impl jstz_core::Api for StreamApi {
     fn init(self, context: &mut Context<'_>) {
         ReadableStreamApi.init(context);
         WritableStreamApi.init(context);
+        tmp::TmpTestApi.init(context);
     }
 }

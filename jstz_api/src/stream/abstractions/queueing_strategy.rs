@@ -1,4 +1,4 @@
-use boa_engine::Context;
+use boa_engine::{value::TryFromJs, Context};
 
 use crate::{
     idl,
@@ -11,6 +11,7 @@ use crate::{
 /// };
 ///
 /// [spec]: https://streams.spec.whatwg.org/#qs
+#[derive(TryFromJs)]
 pub struct QueueingStrategy {
     /// **highWaterMark, of type unrestricted double**\
     /// A non-negative number indicating the high water mark of the stream using this queuing strategy.

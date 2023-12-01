@@ -1,11 +1,20 @@
 use std::{marker::PhantomData, ops::Deref};
 
 use boa_engine::{
-    object::builtins::JsFunction, value::TryFromJs, Context, JsResult, JsValue,
+    js_string, object::builtins::JsFunction, value::TryFromJs, Context, JsArgs, JsResult,
+    JsValue, NativeFunction,
 };
-use jstz_core::value::IntoJs;
+use jstz_core::{
+    accessor,
+    native::{
+        register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
+    },
+    value::IntoJs,
+};
 
 use boa_gc::{custom_trace, Finalize, Trace};
+
+use super::abstractions::underlying_source::UnderlyingSource;
 
 #[macro_export]
 macro_rules! todo_boa_type {
@@ -144,5 +153,58 @@ impl<T: IntoJs, const N: usize, I: IntoJsArgs<N>, O: TryFromJs> JsFn<T, N, I, O>
         self.deref()
             .call(&js_this, &js_args, context)
             .and_then(|output| O::try_from_js(&output, context))
+    }
+}
+
+todo_boa_type!(TmpTest);
+pub struct TmpTestClass {}
+impl TmpTestClass {
+    fn static_test(
+        this: &JsValue,
+        args: &[JsValue],
+        context: &mut Context<'_>,
+    ) -> JsResult<JsValue> {
+        let arg_0 = args.get_or_undefined(0);
+        let x = UnderlyingSource::try_from_js(arg_0, context)?;
+        x.cancel(None, context);
+        Ok(JsValue::Null)
+    }
+}
+
+impl NativeClass for TmpTestClass {
+    type Instance = TmpTest;
+
+    const NAME: &'static str = "TmpTest";
+
+    fn constructor(
+        _this: &JsNativeObject<Self::Instance>,
+        args: &[boa_engine::JsValue],
+        context: &mut Context<'_>,
+    ) -> JsResult<Self::Instance> {
+        todo!()
+    }
+
+    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+        class.static_method(
+            js_string!("test"),
+            0,
+            NativeFunction::from_fn_ptr(Self::static_test),
+        );
+
+        Ok(())
+    }
+
+    const LENGTH: usize = 0usize;
+
+    const ATTRIBUTES: boa_engine::property::Attribute =
+        boa_engine::property::Attribute::all();
+}
+
+pub struct TmpTestApi;
+
+impl jstz_core::Api for TmpTestApi {
+    fn init(self, context: &mut Context<'_>) {
+        register_global_class::<TmpTestClass>(context)
+            .expect("The `TmpTest` class shouldn't exist yet")
     }
 }
