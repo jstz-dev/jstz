@@ -43,7 +43,7 @@ pub struct UnderlyingSource {
     ///  If this setup process is asynchronous, it can return a promise to signal success or failure; a rejected promise will error the stream. Any thrown exceptions will be re-thrown by the ReadableStream() constructor.
     ///
     /// [spec]: https://streams.spec.whatwg.org/#dom-underlyingsource-start
-    pub start: UnderlyingSourceStartCallback,
+    pub start: Option<UnderlyingSourceStartCallback>,
 
     /// **[pull][spec](controller), of type UnderlyingSourcePullCallback**
     ///
@@ -56,7 +56,7 @@ pub struct UnderlyingSource {
     /// If the function returns a promise, then it will not be called again until that promise fulfills. (If the promise rejects, the stream will become errored.) This is mainly used in the case of pull sources, where the promise returned represents the process of acquiring a new chunk. Throwing an exception is treated the same as returning a rejected promise.
     ///
     /// [spec]: https://streams.spec.whatwg.org/#dom-underlyingsource-pull
-    pub pull: UnderlyingSourcePullCallback,
+    pub pull: Option<UnderlyingSourcePullCallback>,
 
     /// **cancel(reason), of type UnderlyingSourceCancelCallback**
     /// A function that is called whenever the consumer cancels the stream, via stream.cancel() or reader.cancel(). It takes as its argument the same value as was passed to those methods by the consumer.
@@ -72,7 +72,7 @@ pub struct UnderlyingSource {
     /// *Even if the cancelation process fails, the stream will still close; it will not be put into an errored state. This is because a failure in the cancelation process doesn’t matter to the consumer’s view of the stream, once they’ve expressed disinterest in it by canceling. The failure is only communicated to the immediate caller of the corresponding method.*
     ///
     /// *This is different from the behavior of the close and abort options of a WritableStream's underlying sink, which upon failure put the corresponding WritableStream into an errored state. Those correspond to specific actions the producer is requesting and, if those actions fail, they indicate something more persistently wrong.*
-    pub cancel: UnderlyingSourceCancelCallback,
+    pub cancel: Option<UnderlyingSourceCancelCallback>,
 
     /// **[type][spec] (byte streams only), of type ReadableStreamType**
     ///
@@ -109,7 +109,7 @@ unsafe impl Trace for UnderlyingSource {
 }
 
 // TODO remove this function
-// This function has not been tested yet, it might not work
+// This function has not been tested enough yet, and may have unexpected behaviors
 pub fn TMP_get_JsObject_property(
     obj: &JsObject,
     name: &str,
@@ -127,53 +127,6 @@ pub fn TMP_get_JsObject_property(
 impl TryFromJs for UnderlyingSource {
     fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
         let this = value.to_object(context)?;
-        fn return_undefined(
-            this: &JsValue,
-            args: &[JsValue],
-            context: &mut Context<'_>,
-        ) -> JsResult<JsValue> {
-            Ok(JsValue::Undefined)
-        }
-        fn return_resolved_undefined_promise(
-            this: &JsValue,
-            args: &[JsValue],
-            context: &mut Context<'_>,
-        ) -> JsResult<JsValue> {
-            JsPromise::resolve(JsValue::Undefined, context).map(Into::into)
-        }
-        fn default_start(context: &mut Context<'_>) -> UnderlyingSourceStartCallback {
-            unsafe {
-                FunctionObjectBuilder::new(
-                    context.realm(),
-                    NativeFunction::from_fn_ptr(return_undefined),
-                )
-                .build()
-                .try_into()
-                .unwrap_unchecked()
-            }
-        }
-        fn default_pull(context: &mut Context<'_>) -> UnderlyingSourcePullCallback {
-            unsafe {
-                FunctionObjectBuilder::new(
-                    context.realm(),
-                    NativeFunction::from_fn_ptr(return_resolved_undefined_promise),
-                )
-                .build()
-                .try_into()
-                .unwrap_unchecked()
-            }
-        }
-        fn default_cancel(context: &mut Context<'_>) -> UnderlyingSourceCancelCallback {
-            unsafe {
-                FunctionObjectBuilder::new(
-                    context.realm(),
-                    NativeFunction::from_fn_ptr(return_resolved_undefined_promise),
-                )
-                .build()
-                .try_into()
-                .unwrap_unchecked()
-            }
-        }
         let start: Option<UnderlyingSourceStartCallback> =
             TMP_get_JsObject_property(&this, "start", context)?.try_js_into(context)?;
         let pull: Option<UnderlyingSourcePullCallback> =
@@ -187,9 +140,9 @@ impl TryFromJs for UnderlyingSource {
                 .try_js_into(context)?;
         Ok(UnderlyingSource {
             this,
-            start: start.unwrap_or_else(|| default_start(context)),
-            pull: pull.unwrap_or_else(|| default_pull(context)),
-            cancel: cancel.unwrap_or_else(|| default_cancel(context)),
+            start,
+            pull,
+            cancel,
             r#type,
             auto_allocate_chunk_size,
         })
@@ -260,11 +213,15 @@ impl UnderlyingSource {
         controller: JsNativeObject<ReadableStreamController>,
         context: &mut Context,
     ) -> JsResult<JsValue> {
-        self.start.call(
-            self.this.clone(), // TODO remove clone? https://tezos-dev.slack.com/archives/C061SSDBN69/p1701192316869399
-            (controller,),
-            context,
-        )
+        if let Some(ref start) = self.start {
+            start.call(
+                self.this.clone(), // TODO remove clone? https://tezos-dev.slack.com/archives/C061SSDBN69/p1701192316869399
+                (controller,),
+                context,
+            )
+        } else {
+            Ok(JsValue::Undefined) // TODO doc
+        }
     }
 
     /// **[pull][spec](controller), of type UnderlyingSourcePullCallback**
@@ -283,11 +240,15 @@ impl UnderlyingSource {
         controller: JsNativeObject<ReadableStreamController>,
         context: &mut Context,
     ) -> JsResult<Option<JsPromise>> {
-        self.pull.call(
-            self.this.clone(), // TODO remove clone? https://tezos-dev.slack.com/archives/C061SSDBN69/p1701192316869399
-            (controller,),
-            context,
-        )
+        if let Some(ref pull) = self.pull {
+            pull.call(
+                self.this.clone(), // TODO remove clone? https://tezos-dev.slack.com/archives/C061SSDBN69/p1701192316869399
+                (controller,),
+                context,
+            )
+        } else {
+            JsPromise::resolve(JsValue::Undefined, context).map(Option::Some)
+        }
     }
 
     /// **cancel(reason), of type UnderlyingSourceCancelCallback**
@@ -309,11 +270,15 @@ impl UnderlyingSource {
         reason: Option<JsValue>,
         context: &mut Context,
     ) -> JsResult<Option<JsPromise>> {
-        self.cancel.call(
-            self.this.clone(), // TODO remove clone? https://tezos-dev.slack.com/archives/C061SSDBN69/p1701192316869399
-            (reason.unwrap_or(JsValue::Undefined),),
-            context,
-        )
+        if let Some(ref cancel) = self.cancel {
+            cancel.call(
+                self.this.clone(), // TODO remove clone? https://tezos-dev.slack.com/archives/C061SSDBN69/p1701192316869399
+                (reason.unwrap_or(JsValue::Undefined),),
+                context,
+            )
+        } else {
+            JsPromise::resolve(JsValue::Undefined, context).map(Option::Some)
+        }
     }
 
     pub fn auto_allocate_chunk_size(&self) -> u64 {
