@@ -133,6 +133,8 @@ impl Script {
         Ok(Self(module))
     }
 
+    // TODO: we need to be able to specify the type of console API (Proto vs Cli),
+    // With current implementation, calling a contract in CLI will revert the logging back to Proto
     fn register_apis(
         &self,
         contract_address: Address,
