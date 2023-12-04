@@ -28,43 +28,33 @@ jstz_wpt = { path = "jstz_wpt" }
 
 [workspace.dependencies.tezos-smart-rollup]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [workspace.dependencies.tezos-smart-rollup-host]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [workspace.dependencies.tezos-smart-rollup-core]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [workspace.dependencies.tezos-smart-rollup-mock]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [workspace.dependencies.tezos-smart-rollup-encoding]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [workspace.dependencies.tezos-smart-rollup-entrypoint]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [workspace.dependencies.tezos-smart-rollup-debug]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [workspace.dependencies.tezos-smart-rollup-panic-hook]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [workspace.dependencies.tezos-smart-rollup-storage]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [workspace.dependencies.tezos-smart-rollup-installer-config]
 git = "https://gitlab.com/tezos/tezos.git"
-branch = "ole@risc-v@abort"
 
 [patch.crates-io]
 boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }
