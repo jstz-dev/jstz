@@ -1,8 +1,9 @@
 use boa_engine::{value::TryFromJs, Context};
+use jstz_core::js_fn::JsFn;
 
 use crate::{
     idl,
-    stream::tmp::{self, JsFn},
+    stream::tmp::{self},
 };
 
 /// dictionary [QueuingStrategy][spec] {

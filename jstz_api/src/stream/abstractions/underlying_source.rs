@@ -1,18 +1,13 @@
 //! https://streams.spec.whatwg.org/#underlying-source-api
 
 use boa_engine::{
-    js_string,
-    native_function::NativeFunctionPointer,
-    object::{
-        builtins::{JsFunction, JsPromise},
-        FunctionObjectBuilder,
-    },
-    property::PropertyKey,
-    value::TryFromJs,
-    Context, JsNativeError, JsObject, JsResult, JsString, JsValue, NativeFunction,
+    js_string, object::builtins::JsPromise, property::PropertyKey, value::TryFromJs,
+    Context, JsNativeError, JsObject, JsResult, JsValue,
 };
 use boa_gc::{custom_trace, Finalize, Trace};
-use jstz_core::{impl_into_js_from_into, native::JsNativeObject, value::IntoJs};
+use jstz_core::{
+    impl_into_js_from_into, js_fn::JsFn, native::JsNativeObject, value::IntoJs,
+};
 use std::str::FromStr;
 use strum_macros::EnumString;
 
@@ -30,6 +25,7 @@ use crate::{idl, stream::tmp::*};
 ///
 /// [spec]: https://streams.spec.whatwg.org/#dictdef-underlyingsource
 /// [spec2]: https://streams.spec.whatwg.org/#rs-constructor
+#[derive(Debug)]
 pub struct UnderlyingSource {
     /// TODO
     pub this: JsObject,
@@ -108,35 +104,38 @@ unsafe impl Trace for UnderlyingSource {
     });
 }
 
-// TODO remove this function
-// This function has not been tested enough yet, and may have unexpected behaviors
-pub fn TMP_get_JsObject_property(
-    obj: &JsObject,
-    name: &str,
-    context: &mut Context<'_>,
-) -> JsResult<JsValue> {
-    let key = PropertyKey::from(js_string!(name));
-    let key2 = key.clone();
-    if obj.has_property(key, context).is_ok() {
-        obj.get(key2, context)
-    } else {
-        Ok(JsValue::Undefined)
-    }
-}
-
+// TODO derive this implementation with a macro?
 impl TryFromJs for UnderlyingSource {
     fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+        // TODO check that this function works as intended in all cases,
+        // and move it either to a new derive macro for TryFromJs, or to JsObject
+        #[allow(non_snake_case)]
+        pub fn get_JsObject_property(
+            obj: &JsObject,
+            name: &str,
+            context: &mut Context<'_>,
+        ) -> JsResult<JsValue> {
+            let key = PropertyKey::from(js_string!(name));
+            let key2 = key.clone();
+            let has_prop = obj.has_property(key, context)?;
+            if has_prop {
+                obj.get(key2, context)
+            } else {
+                Ok(JsValue::Undefined)
+            }
+        }
+
         let this = value.to_object(context)?;
         let start: Option<UnderlyingSourceStartCallback> =
-            TMP_get_JsObject_property(&this, "start", context)?.try_js_into(context)?;
+            get_JsObject_property(&this, "start", context)?.try_js_into(context)?;
         let pull: Option<UnderlyingSourcePullCallback> =
-            TMP_get_JsObject_property(&this, "pull", context)?.try_js_into(context)?;
+            get_JsObject_property(&this, "pull", context)?.try_js_into(context)?;
         let cancel: Option<UnderlyingSourceCancelCallback> =
-            TMP_get_JsObject_property(&this, "cancel", context)?.try_js_into(context)?;
+            get_JsObject_property(&this, "cancel", context)?.try_js_into(context)?;
         let r#type =
-            TMP_get_JsObject_property(&this, "type", context)?.try_js_into(context)?;
+            get_JsObject_property(&this, "type", context)?.try_js_into(context)?;
         let auto_allocate_chunk_size =
-            TMP_get_JsObject_property(&this, "autoAllocateChunkSize", context)?
+            get_JsObject_property(&this, "autoAllocateChunkSize", context)?
                 .try_js_into(context)?;
         Ok(UnderlyingSource {
             this,
@@ -160,6 +159,7 @@ impl_into_js_from_into!(UnderlyingSource);
 /// typedef (ReadableStreamDefaultController or ReadableByteStreamController) [ReadableStreamController][spec];
 ///
 /// [spec]: https://streams.spec.whatwg.org/#typedefdef-readablestreamcontroller
+#[derive(Debug)]
 pub enum ReadableStreamController {
     DefaultController(ReadableStreamDefaultController),
     ByteController(ReadableByteStreamController),
@@ -280,22 +280,21 @@ impl UnderlyingSource {
             JsPromise::resolve(JsValue::Undefined, context).map(Option::Some)
         }
     }
-
-    pub fn auto_allocate_chunk_size(&self) -> u64 {
-        self.auto_allocate_chunk_size.expect("TODO")
-    }
 }
 
-#[derive(PartialEq, EnumString)]
+#[derive(Debug, EnumString, PartialEq)]
 pub enum ReadableStreamType {
-    #[strum(serialize = "bytes")] // TODO allow "Bytes"?
+    #[strum(serialize = "bytes")]
     Bytes,
 }
 
 impl TryFromJs for ReadableStreamType {
     fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
         let str = String::try_from_js(value, context)?;
-        ReadableStreamType::from_str(&str).map_err(|_| JsNativeError::typ().into())
-        // TODO add error message
+        ReadableStreamType::from_str(&str).map_err(
+            |strum::ParseError::VariantNotFound| {
+                JsNativeError::typ().with_message("TODO").into()
+            },
+        )
     }
 }
