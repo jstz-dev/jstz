@@ -11,8 +11,8 @@ build-installer: build
 
 .PHONY: build-bridge
 build-bridge:
-	@ligo compile contract jstz_bridge/jstz_bridge.mligo \
-		--module "Jstz_bridge" > jstz_bridge/jstz_bridge.tz
+	@ligo compile contract contracts/jstz_bridge.mligo \
+		--module "Jstz_bridge" > contracts/jstz_bridge.tz
 
 .PHONY: build
 build:

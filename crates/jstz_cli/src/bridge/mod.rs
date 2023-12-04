@@ -8,7 +8,7 @@ use crate::{config::Config, octez::OctezClient};
 const BOOTSTRAP3_ADDRESS: &str = "tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU";
 
 pub fn deploy(cfg: &Config) -> Result<String> {
-    let bridge_dir = cfg.jstz_path.join("jstz_bridge");
+    let bridge_dir = cfg.jstz_path.join("contracts");
 
     // 1. Originate ctez contract
     let init_ctez_storage = format!(
