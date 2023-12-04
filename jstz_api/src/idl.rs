@@ -181,28 +181,19 @@ impl ArrayBufferLike for JsBufferSource {
     }
 }
 
-use std::ops::Deref;
+// https://webidl.spec.whatwg.org/#idl-types
 
-use boa_engine::{
-    object::builtins::{JsDataView, JsTypedArray},
-    JsValue,
-};
-
-pub type Chunk = JsValue;
-
-pub type ChunkOrUndefined = JsValue; // TODO replace by JsOptional<JsValue>
-
-// TODO valid def?
-pub enum JsArrayBufferView {
-    TypedArray(JsTypedArray),
-    DataView(JsDataView),
-}
-
-pub type UnrestrictedDouble = f64;
 pub type Any = JsValue;
-
+pub type Bytes = i8;
+pub type Octet = u8;
+pub type Short = i16;
+pub type UnsignedShort = u16;
+pub type Long = i32;
+pub type UnsignedLong = u32;
+pub type LongLong = i64;
 pub type UnsignedLongLong = u64;
+pub type UnrestrictedFloat = f32;
+pub type UnrestrictedDouble = f64;
 
 pub type PositiveInteger = UnsignedLongLong;
-
 pub type Number = f64;
