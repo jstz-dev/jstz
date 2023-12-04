@@ -34,26 +34,12 @@ pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
 #[derive(Serialize, Deserialize)]
 pub struct LogRecord {
     pub contract_address: PublicKeyHash,
-    request_id: String,
-    level: String,
-    text: String,
+    pub request_id: String,
+    pub level: String,
+    pub text: String,
 }
 
 impl LogRecord {
-    fn new(
-        contract_address: PublicKeyHash,
-        request_id: String,
-        level: String,
-        text: String,
-    ) -> Self {
-        Self {
-            contract_address,
-            request_id,
-            level,
-            text,
-        }
-    }
-
     fn to_string(&self) -> String {
         serde_json::to_string(&self).expect("Failed to serialize JSONLog")
     }
@@ -81,12 +67,12 @@ impl LogMessage {
                 operation_hash,
             } => {
                 let indent = 2 * groups.len();
-                let log_record = LogRecord::new(
-                    contract_address.clone(),
-                    operation_hash.to_string(),
-                    self.level().to_string(),
-                    " ".repeat(indent) + self.message(),
-                )
+                let log_record = LogRecord {
+                    contract_address: contract_address.clone(),
+                    request_id: operation_hash.to_string(),
+                    level: self.level().to_string(),
+                    text: " ".repeat(indent) + self.message(),
+                }
                 .to_string();
                 rt.write_debug(&(LOG_PREFIX.to_string() + &log_record + "\n"));
             }
