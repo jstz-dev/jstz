@@ -18,7 +18,7 @@ pub use boa_engine::{object::NativeObject, NativeFunction};
 use crate::value::IntoJs;
 
 /// This struct permits Rust types to be passed around as JavaScript objects.
-#[derive(Trace, Finalize)]
+#[derive(Trace, Finalize, Debug)]
 pub struct JsNativeObject<T: NativeObject> {
     inner: JsValue,
     _phantom: PhantomData<T>,
@@ -131,7 +131,7 @@ impl<T: NativeObject> Into<JsValue> for JsNativeObject<T> {
 
 impl<T: NativeObject> IntoJs for JsNativeObject<T> {
     #[inline]
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, _context: &mut Context<'_>) -> JsValue {
         self.into()
     }
 }
