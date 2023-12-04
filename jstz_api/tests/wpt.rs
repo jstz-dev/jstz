@@ -301,7 +301,7 @@ fn run_wpt_test(
         let bundle = wpt_serve.bundle(&test.url_path).await?;
 
         let Ok(report) = run_wpt_test_harness(&bundle) else {
-            return Ok(WptReportTest::new(WptTestStatus::Err, vec![]))
+            return Ok(WptReportTest::new(WptTestStatus::Err, vec![]));
         };
 
         let status = report.status.clone().unwrap_or(WptTestStatus::Null);

@@ -5,7 +5,7 @@
   makeFrameworkFlags,
 }: let
   # TODO: read this from the rust-toolchain file
-  rustVersion = "1.71.0";
+  rustVersion = "1.73.0";
 
   wasmTarget = "wasm32-unknown-unknown";
 

@@ -11,11 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          override: true
-          components: rustfmt
+
+      - name: Rust setup
+        run: rustup show active-toolchain
+
       - uses: luisnquin/setup-alejandra@v1.0.0
 
       - name: Format (rustfmt)
@@ -33,19 +32,11 @@ jobs:
     needs: fmt
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          override: true
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - uses: Swatinem/rust-cache@v2.7.0
+
+      - name: Rust setup
+        run: rustup show active-toolchain
 
       - name: Build
         run: cargo build
