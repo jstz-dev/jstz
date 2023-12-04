@@ -13,7 +13,7 @@ jstz_core.workspace = true
 jstz_proto.workspace = true
 jstz_crypto.workspace = true
 jstz_api.workspace = true
-tezos-smart-rollup = "0.2.1"
+tezos-smart-rollup.workspace = true
 tezos_crypto_rs = { version = "0.5.0", default-features = false }
 serde = "1.0.185"
 num-traits = "0.2.16"
