@@ -10,6 +10,7 @@
     "examples/hello-world"
   ],
   "scripts": {
+    "commitlint": "commitlint --from HEAD~1 --to HEAD --verbose",
     "check:format": "prettier . --check --ignore-unknown",
     "format": "prettier . --write --ignore-unknown",
     "docs:dev": "vitepress dev docs",
@@ -21,9 +22,11 @@
     "@tezos/jstz-types": "^0.0.0"
   },
   "devDependencies": {
+    "@commitlint/cli": "^18.4.3",
+    "@commitlint/config-conventional": "^18.4.3",
+    "esbuild": "^0.19.8",
     "prettier": "^3.1.0",
     "typescript": "^5.3.2",
-    "vitepress": "^1.0.0-rc.31",
-    "esbuild": "^0.19.8"
+    "vitepress": "^1.0.0-rc.31"
   }
 }
