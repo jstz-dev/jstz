@@ -64,7 +64,9 @@ impl<T: NativeObject> JsNativeObject<T> {
                 .into());
         };
 
-        let JsValue::Object(class_prototype) = class_constructor.get(PROTOTYPE, context)? else {
+        let JsValue::Object(class_prototype) =
+            class_constructor.get(PROTOTYPE, context)?
+        else {
             return Err(JsNativeError::typ()
                 .with_message(format!(
                     "invalid default prototype for native class `{}`",

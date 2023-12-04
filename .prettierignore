@@ -9,3 +9,6 @@
 **/wpt
 **/manifest.json
 **/wptreport.json
+
+# Lock files
+**/*.lock

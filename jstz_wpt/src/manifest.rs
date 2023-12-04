@@ -171,7 +171,9 @@ impl WptTests for WptManifestTest {
                      options,
                  }|
                  -> Option<TestToRun> {
-                    let Some(url_path) = url_path else { return None };
+                    let Some(url_path) = url_path else {
+                        return None;
+                    };
 
                     // We need to parse the path as a URL to get the path and query string (separately)
                     let url = Url::parse(&format!("http://localhost:8000/{}", url_path))

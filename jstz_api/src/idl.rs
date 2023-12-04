@@ -62,7 +62,7 @@ impl ArrayBufferLike for JsDataView {
         let JsValue::Object(array_buffer) = self.buffer(context)? else {
             return Err(JsNativeError::typ()
                 .with_message("The provided value is not of type `JsObject`")
-                .into())
+                .into());
         };
 
         Ok(JsArrayBufferData {
@@ -116,7 +116,7 @@ impl TryFromJs for JsArrayBufferView {
         let Some(js_object) = value.as_object() else {
             return Err(JsNativeError::typ()
                 .with_message("Expected `JsObject`")
-                .into())
+                .into());
         };
 
         if js_object.is_typed_array() {
@@ -154,7 +154,7 @@ impl TryFromJs for JsBufferSource {
         let Some(js_object) = value.as_object() else {
             return Err(JsNativeError::typ()
                 .with_message("Expected `JsObject`")
-                .into())
+                .into());
         };
 
         if js_object.is_array_buffer() {
