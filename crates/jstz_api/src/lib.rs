@@ -6,6 +6,7 @@ pub mod js_log;
 mod kv;
 pub mod random;
 pub mod stream;
+pub mod todo;
 pub mod url;
 pub mod urlpattern;
 
