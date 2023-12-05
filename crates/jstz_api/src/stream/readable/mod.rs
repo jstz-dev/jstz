@@ -1,8 +1,14 @@
-use boa_engine::{Context, JsResult};
+use boa_engine::{value::TryFromJs, Context, JsArgs, JsResult};
 use boa_gc::{custom_trace, Finalize, Trace};
 use jstz_core::native::{
     register_global_class, ClassBuilder, JsNativeObject, NativeClass,
 };
+
+use crate::stream::readable::underlying_source::{
+    UnderlyingSource, UnderlyingSourceTrait,
+};
+
+pub mod underlying_source;
 
 pub struct ReadableStream {
     // TODO
@@ -30,6 +36,8 @@ impl NativeClass for ReadableStreamClass {
         args: &[boa_engine::JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance> {
+        let underlying_source =
+            Option::<UnderlyingSource>::try_from_js(args.get_or_undefined(0), context)?;
         todo!()
     }
 
