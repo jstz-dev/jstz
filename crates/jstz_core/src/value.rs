@@ -15,6 +15,7 @@ pub trait IntoJs {
     fn into_js(self, context: &mut Context<'_>) -> JsValue;
 }
 
+#[macro_export]
 macro_rules! impl_into_js_from_into {
     ($($T: ty), *) => {
         $(
