@@ -6,6 +6,7 @@ pub use error::{Error, Result};
 pub mod future;
 pub mod host;
 pub mod iterators;
+pub mod js_fn;
 pub mod kv;
 pub mod native;
 pub mod realm;
