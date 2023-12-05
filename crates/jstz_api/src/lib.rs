@@ -5,6 +5,7 @@ pub mod idl;
 pub mod js_log;
 mod kv;
 pub mod random;
+pub mod stream;
 pub mod url;
 pub mod urlpattern;
 
