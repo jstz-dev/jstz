@@ -9,7 +9,7 @@ repository.workspace = true
 
 [dependencies]
 anyhow = "1.0.75"
-clap = { version = "^4.0", features = ["derive"] }
+clap = { version = "^4.4", features = ["derive"] }
 ctrlc = "3.4.1"
 nix = { version = "0.27.1", features = ["signal"] }
 regex = "1.10.2"
