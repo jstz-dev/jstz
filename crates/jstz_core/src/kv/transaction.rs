@@ -11,7 +11,7 @@ use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 use crate::error::Result;
 
 use super::value::{BoxedValue, Value};
-use super::{Storage, Timestamp};
+use super::Storage;
 
 /// A transaction is a 'lazy' snapshot of the persistent key-value store from
 /// the point in time when the transaction began. Modifications to new or old
@@ -46,13 +46,18 @@ pub struct Transaction<'a> {
     parent: Option<&'a mut Transaction<'a>>,
     remove_set: BTreeSet<OwnedPath>,
     snapshot: Snapshot,
-    pub(crate) begin_timestamp: Timestamp,
 }
 
 impl<'a> Finalize for Transaction<'a> {}
 
 unsafe impl<'a> Trace for Transaction<'a> {
     empty_trace!();
+}
+
+impl<'a> Transaction<'a> {
+    pub unsafe fn extend_lifetime(self) -> Transaction<'static> {
+        std::mem::transmute::<Transaction<'a>, Transaction<'static>>(self)
+    }
 }
 
 struct SnapshotEntry {
@@ -117,15 +122,15 @@ impl Clone for SnapshotEntry {
 }
 
 impl<'a> Transaction<'a> {
-    pub(crate) fn new(begin_timestamp: Timestamp) -> Self {
+    pub fn new() -> Self {
         Self {
             parent: None,
-            begin_timestamp, // TODO: possibly remove later
             remove_set: BTreeSet::new(),
             snapshot: BTreeMap::new(),
         }
     }
 
+    /*
     pub(crate) fn read_set(&self) -> BTreeSet<OwnedPath> {
         self.snapshot
             .iter()
@@ -159,6 +164,7 @@ impl<'a> Transaction<'a> {
     pub(crate) fn update_set(&self) -> BTreeSet<OwnedPath> {
         self.insert_set().union(&self.remove_set).cloned().collect()
     }
+    */
 
     fn lookup<V>(
         &mut self,
@@ -171,7 +177,6 @@ impl<'a> Transaction<'a> {
         let entry = self.snapshot.entry(key.clone());
 
         // Recursively lookup in parent if not found in current snapshot. If found in parent, insert into current snapshot.
-
         match entry {
             btree_map::Entry::Vacant(entry) => match &mut self.parent {
                 Some(parent) => {
@@ -203,11 +208,11 @@ impl<'a> Transaction<'a> {
 
     /// Returns a reference to the value corresponding to the key in the
     /// key-value store if it exists.
-    pub fn get<V>(
-        &'a mut self,
+    pub fn get<'b, V>(
+        &'b mut self,
         rt: &impl Runtime,
         key: OwnedPath,
-    ) -> Result<Option<&'a V>>
+    ) -> Result<Option<&'b V>>
     where
         V: Value + DeserializeOwned,
     {
@@ -258,7 +263,7 @@ impl<'a> Transaction<'a> {
     }
 
     /// Removes a key from the key-value store.
-    pub fn remove(&'a mut self, rt: &impl Runtime, key: &OwnedPath) -> Result<()> {
+    pub fn remove<'b>(&'b mut self, rt: &impl Runtime, key: &OwnedPath) -> Result<()> {
         let key_clone = key.clone();
 
         let key_exists = self.contains_key(rt, &key.clone())?;
@@ -275,11 +280,7 @@ impl<'a> Transaction<'a> {
 
     /// Returns the given key's corresponding entry in the transactional
     /// snapshot for in-place manipulation.
-    pub fn entry<V>(
-        &'a mut self,
-        rt: &impl Runtime,
-        key: OwnedPath,
-    ) -> Result<Entry<'a, V>>
+    pub fn entry<V>(&mut self, rt: &impl Runtime, key: OwnedPath) -> Result<Entry<V>>
     where
         V: Value + DeserializeOwned,
         //'a: 'b,
@@ -297,14 +298,14 @@ impl<'a> Transaction<'a> {
 
     /// Begins a new transaction
     pub fn begin(&'a mut self) -> Transaction<'a> {
-        let mut child = Transaction::new(self.begin_timestamp + 1);
+        let mut child = Transaction::new();
         child.parent = Some(self);
         child
     }
 
     /// Commit a transaction. Returns `true` if the transaction
     /// was successfully committed to the persistent key-value store.
-    pub fn commit<V>(&'a mut self, rt: &mut impl Runtime) -> Result<bool>
+    pub fn commit<V>(&mut self, rt: &mut impl Runtime) -> Result<bool>
     where
         V: Value,
     {
@@ -315,7 +316,7 @@ impl<'a> Transaction<'a> {
                     parent.snapshot.remove(&key);
                     parent.remove_set.insert(key.clone());
                 }
-                None => println!(), //Storage::remove(rt, &key)?,
+                None => Storage::remove(rt, key.into())?,
             }
         }
 

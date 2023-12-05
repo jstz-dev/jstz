@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use crate::error::{Error, Result};
 use jstz_core::{
     host::HostRuntime,
@@ -31,7 +33,7 @@ impl ToString for Nonce {
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub nonce: Nonce,
     pub amount: Amount,
@@ -49,24 +51,27 @@ impl Account {
 
     fn get_mut<'a, 'b>(
         hrt: &impl HostRuntime,
-        tx: &'a mut Transaction,
+        tx: &'b mut Transaction<'a>,
         addr: &Address,
     ) -> Result<&'b mut Account>
     where
         'a: 'b,
     {
-        let account_entry = tx.entry(hrt, Self::path(addr)?)?;
+        let account_entry = tx.entry::<Account>(hrt, Self::path(addr)?)?;
 
         Ok(account_entry.or_insert_default())
     }
 
-    fn try_insert(
+    fn try_insert<'a, 'b>(
         self,
         hrt: &impl HostRuntime,
-        tx: &mut Transaction,
+        tx: &'b mut Transaction<'a>,
         addr: &Address,
-    ) -> Result<()> {
-        match tx.entry(hrt, Self::path(addr)?)? {
+    ) -> Result<()>
+    where
+        'a: 'b,
+    {
+        match tx.entry::<Account>(hrt, Self::path(addr)?)? {
             Entry::Occupied(ntry) => {
                 let acc: &Self = ntry.get();
                 hrt.write_debug(&format!("📜 already exists: {:?}\n", acc.contract_code));
@@ -78,21 +83,27 @@ impl Account {
             }
         }
     }
-    pub fn nonce<'a>(
+    pub fn nonce<'a, 'b>(
         hrt: &impl HostRuntime,
-        tx: &'a mut Transaction,
+        tx: &'b mut Transaction<'a>,
         addr: &Address,
-    ) -> Result<&'a mut Nonce> {
+    ) -> Result<&'b mut Nonce>
+    where
+        'a: 'b,
+    {
         let account = Self::get_mut(hrt, tx, addr)?;
 
         Ok(&mut account.nonce)
     }
 
-    pub fn contract_code<'a>(
+    pub fn contract_code<'a, 'b>(
         hrt: &impl HostRuntime,
-        tx: &'a mut Transaction,
+        tx: &'b mut Transaction<'a>,
         addr: &Address,
-    ) -> Result<Option<&'a mut String>> {
+    ) -> Result<Option<&'b mut String>>
+    where
+        'a: 'b,
+    {
         let account = Self::get_mut(hrt, tx, addr)?;
 
         Ok(account.contract_code.as_mut())
@@ -112,20 +123,26 @@ impl Account {
 
     pub fn balance(
         hrt: &impl HostRuntime,
-        tx: &mut Transaction,
+        tx: &'b mut Transaction<'a>,
         addr: &Address,
-    ) -> Result<Amount> {
+    ) -> Result<Amount>
+    where
+        'a: 'b,
+    {
         let account = Self::get_mut(hrt, tx, addr)?;
 
         Ok(account.amount)
     }
 
-    pub fn deposit(
+    pub fn deposit<'a, 'b>(
         hrt: &impl HostRuntime,
-        tx: &mut Transaction,
+        tx: &'b mut Transaction<'a>,
         addr: &Address,
         amount: Amount,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        'a: 'b,
+    {
         let account = Self::get_mut(hrt, tx, addr)?;
 
         account.amount += amount;
@@ -146,11 +163,14 @@ impl Account {
 
     pub fn create(
         hrt: &impl HostRuntime,
-        tx: &mut Transaction,
-        addr: &Address,
+        tx: &'b mut Transaction<'a>,
+        addr: &'b Address,
         amount: Amount,
         contract_code: Option<String>,
-    ) -> Result<()> {
+    ) -> Result<()>
+    where
+        'a: 'b,
+    {
         Self {
             nonce: Nonce::default(),
             amount,
@@ -159,23 +179,32 @@ impl Account {
         .try_insert(hrt, tx, addr)
     }
 
-    pub fn transfer(
+    pub fn transfer<'a, 'b>(
         hrt: &impl HostRuntime,
-        tx: &mut Transaction,
+        tx: &'b mut Transaction<'a>,
         src: &Address,
         dst: &Address,
         amt: Amount,
-    ) -> Result<()> {
-        let src = Self::get_mut(hrt, tx, src)?;
-        match src.amount.checked_sub(amt) {
-            Some(amt) => src.amount = amt,
-            None => return Err(Error::BalanceOverflow),
+    ) -> Result<()>
+    where
+        'a: 'b,
+    {
+        {
+            let src = tx
+                .entry::<Account>(hrt, Self::path(src)?)?
+                .or_insert_default();
+            match src.amount.checked_sub(amt) {
+                Some(amt) => src.amount = amt,
+                None => return Err(Error::BalanceOverflow),
+            }
         }
 
-        let dst = Self::get_mut(hrt, tx, dst)?;
-        match dst.amount.checked_add(amt) {
-            Some(amt) => dst.amount = amt,
-            None => return Err(Error::BalanceOverflow),
+        {
+            let dst = Self::get_mut(hrt, tx, dst)?;
+            match dst.amount.checked_add(amt) {
+                Some(amt) => dst.amount = amt,
+                None => return Err(Error::BalanceOverflow),
+            }
         }
 
         Ok(())
@@ -185,25 +214,32 @@ impl Account {
 #[cfg(test)]
 mod test {
     use super::*;
-    use jstz_core::kv::Kv;
     use tezos_smart_rollup_mock::MockHost;
 
     #[test]
-    fn test_zero_account_balance_for_new_accounts() {
+    fn test_zero_account_balance_for_new_accounts() -> Result<()> {
         let hrt = &mut MockHost::default();
-        let mut kv = Kv::new();
 
-        let mut tx = kv.begin_transaction();
+        let tx = &mut Transaction::new();
 
         let pkh = PublicKeyHash::from_base58("tz4FENGt5zkiGaHPm1ya4MgLomgkL1k7Dy7q")
             .expect("Could not parse pkh");
 
         // Act
-        let amt = Account::balance(hrt, &mut tx, &pkh).expect("Could not get balance");
-
-        kv.commit_transaction(hrt, tx).expect("Could not commit tx");
+        let amt = {
+            // This mutable borrow ends at the end of this block
+            //Account::balance(hrt, tx, &pkh).expect("Could not get balance")
+            tx.entry::<Account>(hrt, Account::path(&pkh)?)?
+                .or_insert_default()
+                .amount
+        };
+        {
+            tx.commit::<Account>(hrt).expect("Could not commit tx");
+        }
 
         // Assert
         assert_eq!(amt, 0);
+
+        Ok(())
     }
 }
