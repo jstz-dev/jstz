@@ -37,7 +37,7 @@ fn init_node(cfg: &Config) -> Result<()> {
 
 fn start_node(cfg: &Config) -> Result<Child> {
     // Run the octez-node in sandbox mode
-    let sandbox_file = cfg.jstz_path.join("jstz_cli/sandbox.json");
+    let sandbox_file = cfg.jstz_path.join("crates/jstz_cli/sandbox.json");
 
     OctezNode::run(
         cfg,
@@ -97,7 +97,7 @@ fn init_client(cfg: &Config) -> Result<()> {
     println!(" done");
 
     // 4. Activate alpha
-    let sandbox_params_file = cfg.jstz_path.join("jstz_cli/sandbox-params.json");
+    let sandbox_params_file = cfg.jstz_path.join("crates/jstz_cli/sandbox-params.json");
 
     print!("Activating alpha...");
     OctezClient::activate_protocol(
