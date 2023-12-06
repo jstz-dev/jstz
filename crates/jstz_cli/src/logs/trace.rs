@@ -1,71 +1,33 @@
-use anyhow::Result;
-use std::process::{Command, Stdio};
-
 use crate::Config;
+use anyhow::Result;
+use futures_util::stream::StreamExt;
+use jstz_api::LogRecord;
+use jstz_proto::context::account::Address;
+use reqwest_eventsource::{Event, EventSource};
 
-const ERROR: &str = "🔴";
-const WARN: &str = "🟠";
-const INFO: &str = "🟢";
-const LOG: &str = "🪵";
-const CONTRACT: &str = "📜";
+pub async fn exec(address: Address, cfg: &Config) -> Result<()> {
+    let url = format!(
+        "http://{}:{}/logs/{}/stream",
+        cfg.jstz_node_host,
+        cfg.jstz_node_port,
+        &address.to_base58()
+    );
 
-pub fn exec(
-    log: bool,
-    info: bool,
-    warn: bool,
-    error: bool,
-    contract: bool,
-    custom: Vec<String>,
-    cfg: &Config,
-) -> Result<()> {
-    let logs_dir = cfg.jstz_path.join("logs");
-    let log_path = logs_dir.join("kernel.log");
+    let mut event_source = EventSource::get(&url);
 
-    let mut grep_for = Vec::new();
-    if log {
-        grep_for.push(LOG.to_string());
-    }
-    if info {
-        grep_for.push(INFO.to_string());
-    }
-    if warn {
-        grep_for.push(WARN.to_string());
-    }
-    if error {
-        grep_for.push(ERROR.to_string());
-    }
-    if contract {
-        grep_for.push(CONTRACT.to_string());
-    }
-    for s in &custom {
-        grep_for.push(s.clone());
-    }
-
-    if grep_for.is_empty() {
-        grep_for.extend(
-            [LOG, INFO, WARN, ERROR, CONTRACT]
-                .iter()
-                .map(|&s| s.to_string()),
-        );
-    }
-
-    let grep_pattern = grep_for.join("\\|");
-
-    let tail = Command::new("tail")
-        .arg("-f")
-        .arg(log_path.clone())
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("Failed to start tail command");
-
-    if let Some(tail_stdout) = tail.stdout {
-        Command::new("grep")
-            .arg(grep_pattern)
-            .stdin(tail_stdout)
-            .spawn()
-            .expect("Failed to start grep command")
-            .wait()
-            .expect("Failed to wait for grep command");
+    while let Some(event) = event_source.next().await {
+        match event {
+            Ok(Event::Open) => println!("Connection open with {}", url),
+            Ok(Event::Message(message)) => {
+                if let Ok(log_record) = serde_json::from_str::<LogRecord>(&message.data) {
+                    println!("{}", serde_json::to_string_pretty(&log_record).unwrap());
+                }
+            }
+            Err(err) => {
+                println!("Event source error: {}", err);
+                event_source.close();
+            }
+        }
     }
 
     Ok(())
