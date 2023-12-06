@@ -1,7 +1,9 @@
 use std::{
+    borrow::BorrowMut,
     collections::{btree_map, BTreeMap, BTreeSet},
     marker::PhantomData,
     mem,
+    ops::Deref,
 };
 
 use boa_gc::{empty_trace, Finalize, Trace};
@@ -12,6 +14,9 @@ use crate::error::Result;
 
 use super::value::{BoxedValue, Value};
 use super::Storage;
+
+use std::cell::RefCell;
+use std::rc::Rc;
 
 /// A transaction is a 'lazy' snapshot of the persistent key-value store from
 /// the point in time when the transaction began. Modifications to new or old
@@ -42,23 +47,25 @@ use super::Storage;
 /// ```
 
 #[must_use]
-pub struct Transaction<'a> {
-    parent: Option<&'a mut Transaction<'a>>,
+pub struct Transaction {
+    parent: Option<Rc<RefCell<Transaction>>>,
     remove_set: BTreeSet<OwnedPath>,
     snapshot: Snapshot,
 }
 
-impl<'a> Finalize for Transaction<'a> {}
+impl Finalize for Transaction {}
 
-unsafe impl<'a> Trace for Transaction<'a> {
+unsafe impl Trace for Transaction {
     empty_trace!();
 }
 
-impl<'a> Transaction<'a> {
+/*
+impl<' Transaction {
     pub unsafe fn extend_lifetime(self) -> Transaction<'static> {
         std::mem::transmute::<Transaction<'a>, Transaction<'static>>(self)
     }
 }
+*/
 
 struct SnapshotEntry {
     dirty: bool,
@@ -121,7 +128,7 @@ impl Clone for SnapshotEntry {
     }
 }
 
-impl<'a> Transaction<'a> {
+impl Transaction {
     pub fn new() -> Self {
         Self {
             parent: None,
@@ -178,8 +185,9 @@ impl<'a> Transaction<'a> {
 
         // Recursively lookup in parent if not found in current snapshot. If found in parent, insert into current snapshot.
         match entry {
-            btree_map::Entry::Vacant(entry) => match &mut self.parent {
+            btree_map::Entry::Vacant(entry) => match &self.parent {
                 Some(parent) => {
+                    let parent = &mut parent.deref().borrow_mut();
                     let parent_entry = parent.lookup::<V>(rt, key.clone())?;
                     match parent_entry {
                         Some(value) => {
@@ -223,10 +231,10 @@ impl<'a> Transaction<'a> {
     /// Returns a mutable reference to the value corresponding to the key in the
     /// key-value store if it exists.
     pub fn get_mut<V>(
-        &'a mut self,
+        &mut self,
         rt: &impl Runtime,
         key: OwnedPath,
-    ) -> Result<Option<&'a mut V>>
+    ) -> Result<Option<&mut V>>
     where
         V: Value + DeserializeOwned,
     {
@@ -244,7 +252,7 @@ impl<'a> Transaction<'a> {
         } else {
             match &self.parent {
                 Some(parent) => {
-                    return parent.contains_key(rt, key);
+                    return parent.borrow().contains_key(rt, key);
                 }
                 None => {
                     return Storage::contains_key(rt, key);
@@ -297,9 +305,9 @@ impl<'a> Transaction<'a> {
     }
 
     /// Begins a new transaction
-    pub fn begin(&'a mut self) -> Transaction<'a> {
+    pub fn begin(self) -> Transaction {
         let mut child = Transaction::new();
-        child.parent = Some(self);
+        child.parent = Some(Rc::new(RefCell::new(self)));
         child
     }
 
@@ -311,10 +319,10 @@ impl<'a> Transaction<'a> {
     {
         // Perform deletions
         for key in &self.remove_set {
-            match &mut self.parent {
+            match &self.parent {
                 Some(parent) => {
-                    parent.snapshot.remove(&key);
-                    parent.remove_set.insert(key.clone());
+                    (*parent).borrow().snapshot.remove(&key);
+                    (*parent).borrow().remove_set.insert(key.clone());
                 }
                 None => Storage::remove(rt, key.into())?,
             }
@@ -327,7 +335,7 @@ impl<'a> Transaction<'a> {
             if entry.dirty {
                 match &mut self.parent {
                     Some(parent) => {
-                        parent.insert(key, entry.into_value::<V>())?;
+                        parent.borrow().insert(key, entry.into_value::<V>())?;
                     }
                     None => {
                         Storage::insert(rt, &key, entry.value.as_ref())?;
