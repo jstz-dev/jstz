@@ -31,14 +31,11 @@ impl Operation {
 
     /// Verify the nonce of the operation
     /// Returns the operation's
-    pub fn verify_nonce<'a, 'b>(
+    pub fn verify_nonce(
         &self,
         rt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
-    ) -> Result<()>
-    where
-        'a: 'b,
-    {
+        tx: &mut Transaction,
+    ) -> Result<()> {
         let next_nonce = Account::nonce(rt, tx, &self.source)?;
 
         if self.nonce == *next_nonce {

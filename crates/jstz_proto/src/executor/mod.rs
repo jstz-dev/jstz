@@ -9,14 +9,11 @@ use crate::{
 pub mod contract;
 pub mod deposit;
 
-fn execute_operation_inner<'a, 'b>(
+fn execute_operation_inner(
     hrt: &mut (impl HostRuntime + 'static),
-    tx: &'b mut Transaction<'a>,
+    tx: &mut Transaction,
     signed_operation: SignedOperation,
-) -> Result<receipt::Content>
-where
-    'a: 'b,
-{
+) -> Result<receipt::Content> {
     let operation = signed_operation.verify()?;
     let operation_hash = operation.hash();
 

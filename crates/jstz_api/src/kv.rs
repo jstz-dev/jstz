@@ -54,18 +54,18 @@ impl Kv {
     }
 
     pub fn get<'a>(
-        &'a self,
+        &self,
         hrt: &impl HostRuntime,
-        tx: &'a mut Transaction<'static>,
+        tx: &'a mut Transaction,
         key: &str,
     ) -> Result<Option<&'a KvValue>> {
         tx.get::<KvValue>(hrt, self.key_path(key)?)
     }
 
-    pub fn delete<'a>(
-        &'a self,
+    pub fn delete(
+        &self,
         hrt: &impl HostRuntime,
-        tx: &'a mut Transaction<'static>,
+        tx: &mut Transaction,
         key: &str,
     ) -> Result<()> {
         tx.remove(hrt, &self.key_path(key)?)
@@ -85,7 +85,7 @@ macro_rules! preamble {
     ($this:ident, $args:ident, $context:ident, $key:ident, $tx:ident) => {
         host_defined!($context, host_defined);
         let mut $tx = host_defined
-            .get_mut::<Transaction<'static>>()
+            .get_mut::<Transaction>()
             .expect("Curent transaction undefined");
 
         let $this = $this
@@ -122,8 +122,8 @@ macro_rules! preamble_static {
             .downcast_mut::<HostDefined>()
             .expect("Failed to convert js object to rust type `HostDefined`");
 
-        let mut $tx: GcRefMut<'_, _, Transaction<'static>> =
-            HostDefined::get_mut::<Transaction<'static>>(host_defined.deref_mut())
+        let mut $tx: GcRefMut<'_, _, Transaction> =
+            HostDefined::get_mut::<Transaction>(host_defined.deref_mut())
                 .expect("Curent transaction undefined");
 
         let $this = $this
@@ -222,48 +222,106 @@ impl jstz_core::Api for KvApi {
 
 #[cfg(test)]
 mod test {
+    use std::{cell::RefCell, rc::Rc};
+
     use super::*;
+    use jstz_core::kv;
+    use jstz_crypto::keypair_from_passphrase;
     use jstz_proto::context::account::Account;
     use tezos_smart_rollup_mock::MockHost;
+
+    fn get_random_public_key_hash(passphrase: &str) -> PublicKeyHash {
+        let (_, pk) =
+            keypair_from_passphrase(passphrase).expect("Failed to generate keypair");
+        return PublicKeyHash::try_from(&pk)
+            .expect("Failed to generate public key hash.");
+    }
+
+    fn get_account_balance_from_storage(
+        hrt: &impl HostRuntime,
+        pkh: &PublicKeyHash,
+    ) -> u64 {
+        let account = match kv::Storage::get::<Account>(
+            hrt,
+            &Account::path(&pkh).expect("Could not get path"),
+        )
+        .expect("Could not find the account")
+        {
+            Some(account) => account,
+            None => panic!("Account not found"),
+        };
+
+        account.amount
+    }
+
+    fn verify_account_balance(
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        pkh: &PublicKeyHash,
+        expected: u64,
+    ) {
+        let amt = Account::balance(hrt, tx, &pkh).expect("Could not get balance");
+
+        assert_eq!(amt, expected);
+    }
+
+    fn commit_transaction_mock(hrt: &mut MockHost, tx: &Rc<RefCell<Transaction>>) {
+        tx.deref()
+            .borrow_mut()
+            .commit::<Account>(hrt)
+            .expect("Could not commit tx");
+    }
 
     #[test]
     fn test_nested_transactions() -> Result<()> {
         let hrt = &mut MockHost::default();
+        let tx = Rc::new(RefCell::new(Transaction::new()));
+        let pkh1 = get_random_public_key_hash("passphrase1");
+        let pkh2 = get_random_public_key_hash("passphrase2");
 
-        let mut tx = Transaction::new();
+        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh1, 0);
+        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh2, 0);
 
-        let pkh = PublicKeyHash::from_base58("tz4FENGt5zkiGaHPm1ya4MgLomgkL1k7Dy7q")
-            .expect("Could not parse pkh");
+        let child_tx = Transaction::begin(Rc::clone(&tx));
 
-        // Act
-        let amt = {
-            // This mutable borrow ends at the end of this block
-            Account::balance(hrt, &mut tx, &pkh).expect("Could not get balance")
-        };
+        let _ = Account::deposit(hrt, &mut child_tx.deref().borrow_mut(), &pkh2, 25);
 
-        {
-            {
-                let mut child_tx = tx.begin();
-            }
-            /*{
+        verify_account_balance(hrt, &mut child_tx.deref().borrow_mut(), &pkh1, 0);
 
-                {
-                    let mut grandchild_tx = child_tx.begin();
-                    grandchild_tx
-                        .commit::<Account>(hrt)
-                        .expect("Could not commit tx");
-                }
-                child_tx
-                    .commit::<Account>(hrt)
-                    .expect("Could not commit tx");
-            }*/
-            {
-                tx.commit::<Account>(hrt).expect("Could not commit tx");
-            }
-        }
+        verify_account_balance(hrt, &mut child_tx.deref().borrow_mut(), &pkh2, 25);
+        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh2, 0);
 
-        // Assert
-        assert_eq!(amt, 0);
+        let grandchild_tx = Transaction::begin(Rc::clone(&child_tx));
+
+        verify_account_balance(hrt, &mut grandchild_tx.deref().borrow_mut(), &pkh2, 25);
+
+        let _ = Account::deposit(hrt, &mut grandchild_tx.deref().borrow_mut(), &pkh1, 57);
+
+        verify_account_balance(hrt, &mut grandchild_tx.deref().borrow_mut(), &pkh1, 57);
+
+        commit_transaction_mock(hrt, &grandchild_tx);
+
+        verify_account_balance(hrt, &mut child_tx.deref().borrow_mut(), &pkh2, 25);
+
+        let _ = Account::deposit(hrt, &mut child_tx.deref().borrow_mut(), &pkh1, 57);
+
+        verify_account_balance(hrt, &mut child_tx.deref().borrow_mut(), &pkh1, 2 * 57);
+
+        commit_transaction_mock(hrt, &child_tx);
+
+        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh1, 2 * 57);
+
+        let _ = Account::deposit(hrt, &mut tx.deref().borrow_mut(), &pkh1, 57);
+
+        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh1, 3 * 57);
+
+        commit_transaction_mock(hrt, &tx);
+
+        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh1, 3 * 57);
+
+        assert_eq!(get_account_balance_from_storage(hrt, &pkh1), 3 * 57);
+
+        assert_eq!(get_account_balance_from_storage(hrt, &pkh2), 25);
 
         Ok(())
     }
