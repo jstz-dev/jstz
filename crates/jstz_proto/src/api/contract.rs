@@ -53,16 +53,13 @@ impl Contract {
             })
     }
 
-    fn create<'a, 'b>(
+    fn create(
         &self,
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
+        tx: &mut Transaction,
         contract_code: String,
         initial_balance: Amount,
-    ) -> Result<String>
-    where
-        'a: 'b,
-    {
+    ) -> Result<String> {
         // 1. Check if the contract has sufficient balance
         {
             let balance = Account::balance(hrt, tx, &self.contract_address)
