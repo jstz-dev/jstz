@@ -110,6 +110,8 @@ pub struct Config {
     pub octez_node_port: u16,
     /// The port of the octez RPC node
     pub octez_node_rpc_port: u16,
+    /// The host of the jstz node
+    pub jstz_node_host: String,
     /// The port of the jstz node
     pub jstz_node_port: u16,
     /// Sandbox config (None if sandbox is not running)
@@ -155,6 +157,7 @@ impl Config {
             octez_path: PathBuf::from_str(".").unwrap(),
             octez_node_port: 18731,
             octez_node_rpc_port: 18730,
+            jstz_node_host: "127.0.0.1".to_string(),
             jstz_node_port: 8933,
             sandbox: None,
             accounts: AccountConfig::default(),
