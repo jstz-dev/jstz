@@ -1,5 +1,6 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use clap::Subcommand;
+use jstz_crypto::public_key_hash::PublicKeyHash;
 
 use crate::config::Config;
 
@@ -9,36 +10,17 @@ mod trace;
 pub enum Command {
     /// View logs
     Trace {
-        /// View console.log messages
-        #[arg(long)]
-        log: bool,
-        /// View console.info messages
-        #[arg(long)]
-        info: bool,
-        /// View console.warn messages
-        #[arg(long)]
-        warn: bool,
-        /// View console.error messages
-        #[arg(long)]
-        error: bool,
-        /// View contract creations
-        #[arg(long)]
-        contract: bool,
-        /// Add custom search strings
-        #[arg(long, value_name = "custom_strings")]
-        custom: Vec<String>,
+        #[arg(value_name = "SMART_FUNCTIOIN")]
+        address: String,
     },
 }
 
-pub fn exec(command: Command, cfg: &mut Config) -> Result<()> {
+pub async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
     match command {
-        Command::Trace {
-            log,
-            info,
-            warn,
-            error,
-            contract,
-            custom,
-        } => trace::exec(log, info, warn, error, contract, custom, cfg),
+        Command::Trace { address } => {
+            let address = PublicKeyHash::from_base58(&address)
+                .map_err(|_| anyhow!("Invalid smart function address"))?;
+            trace::exec(address, cfg).await
+        }
     }
 }

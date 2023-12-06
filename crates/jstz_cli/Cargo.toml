@@ -43,6 +43,8 @@ derive_more = "0.99.17"
 url = "2.2.2"
 
 boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@create-realm-with-default-globals" }
+reqwest-eventsource = "0.5.0"
+futures-util = "0.3.29"
 
 [[bin]]
 name = "jstz"
