@@ -58,7 +58,7 @@ impl AccountConfig {
 
     pub fn get_address_from(&self, alias: Option<String>) -> Result<String> {
         match alias {
-            Some(value) if value.starts_with("tz4") => Ok(value),
+            Some(value) if value.starts_with("tz1") => Ok(value),
             _ => Ok(self
                 .account_or_current(alias)?
                 .address()

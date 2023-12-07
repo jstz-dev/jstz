@@ -25,7 +25,7 @@ pub async fn exec(
     let mut url_object =
         Url::parse(&url).map_err(|e| anyhow!("Failed to parse URL: {}", e))?;
     if let Some(host) = url_object.host_str() {
-        if !host.starts_with("tz4") {
+        if !host.starts_with("tz1") {
             if cfg.accounts().contains(host) {
                 url_object
                     .set_host(Some(
