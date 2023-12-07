@@ -32,6 +32,48 @@ jstz_wpt = { path = "crates/jstz_wpt" }
 octez = { path = "crates/octez" }
 jstz_rollup = { path = "crates/jstz_rollup" }
 
+[workspace.dependencies.tezos-smart-rollup]
+version = "0.2.2"
+default-features = false
+features = ["std", "crypto", "panic-hook", "data-encoding", "storage", "proto-alpha"]
+
+[workspace.dependencies.tezos-smart-rollup-host]
+version = "0.2.2"
+features = ["proto-alpha"]
+
+[workspace.dependencies.tezos-smart-rollup-core]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-mock]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-encoding]
+version = "0.2.2"
+default-features = false
+features = ["alloc", "tezos-encoding", "crypto"]
+
+[workspace.dependencies.tezos-smart-rollup-entrypoint]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-debug]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-panic-hook]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-storage]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-installer-config]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-installer]
+version = "0.2.2"
+
+[workspace.dependencies.tezos_crypto_rs]
+version = "0.5.2"
+default-features = false
+
 [patch.crates-io]
 tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git" }
 tezos-smart-rollup-host = { git = "https://gitlab.com/tezos/tezos.git" }
