@@ -6,7 +6,7 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
-tezos_crypto_rs = { version = "0.5.0", default-features = false }
+tezos_crypto_rs.workspace = true
 derive_more = "0.99.17"
 serde = "1.0.185"
 anyhow = "1.0.75"
