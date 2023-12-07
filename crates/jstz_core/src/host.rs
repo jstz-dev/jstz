@@ -7,6 +7,7 @@ use boa_engine::{
 use derive_more::Display;
 use getrandom::{register_custom_getrandom, Error as RandomError};
 use tezos_smart_rollup_host::{
+    dal_parameters::RollupDalParameters,
     input,
     metadata::RollupMetadata,
     path::{self, Path},
@@ -99,6 +100,14 @@ mod erased_runtime {
         ) -> Result<usize, HostError>;
         fn erased_mark_for_reboot(&mut self) -> Result<(), HostError>;
         fn erased_reveal_metadata(&self) -> RollupMetadata;
+        fn erased_reveal_dal_page(
+            &self,
+            published_level: i32,
+            slot_index: u8,
+            page_index: i16,
+            destination: &mut [u8],
+        ) -> Result<usize, HostError>;
+        fn erased_reveal_dal_parameters(&self) -> RollupDalParameters;
         fn erased_last_run_aborted(&self) -> Result<bool, HostError>;
         fn erased_upgrade_failed(&self) -> Result<bool, HostError>;
         fn erased_restart_forced(&self) -> Result<bool, HostError>;
@@ -248,6 +257,20 @@ mod erased_runtime {
             self.reveal_metadata()
         }
 
+        fn erased_reveal_dal_page(
+            &self,
+            published_level: i32,
+            slot_index: u8,
+            page_index: i16,
+            destination: &mut [u8],
+        ) -> Result<usize, HostError> {
+            self.reveal_dal_page(published_level, slot_index, page_index, destination)
+        }
+
+        fn erased_reveal_dal_parameters(&self) -> RollupDalParameters {
+            self.reveal_dal_parameters()
+        }
+
         fn erased_last_run_aborted(&self) -> Result<bool, HostError> {
             self.last_run_aborted()
         }
@@ -371,6 +394,25 @@ mod erased_runtime {
 
         fn reveal_metadata(&self) -> RollupMetadata {
             self.erased_reveal_metadata()
+        }
+
+        fn reveal_dal_page(
+            &self,
+            published_level: i32,
+            slot_index: u8,
+            page_index: i16,
+            destination: &mut [u8],
+        ) -> Result<usize, HostError> {
+            self.erased_reveal_dal_page(
+                published_level,
+                slot_index,
+                page_index,
+                destination,
+            )
+        }
+
+        fn reveal_dal_parameters(&self) -> RollupDalParameters {
+            self.erased_reveal_dal_parameters()
         }
 
         fn last_run_aborted(&self) -> Result<bool, HostError> {
@@ -515,6 +557,21 @@ impl HostRuntime for Host {
 
     fn reveal_metadata(&self) -> RollupMetadata {
         self.inner.reveal_metadata()
+    }
+
+    fn reveal_dal_page(
+        &self,
+        published_level: i32,
+        slot_index: u8,
+        page_index: i16,
+        destination: &mut [u8],
+    ) -> Result<usize, HostError> {
+        self.inner
+            .reveal_dal_page(published_level, slot_index, page_index, destination)
+    }
+
+    fn reveal_dal_parameters(&self) -> RollupDalParameters {
+        self.inner.reveal_dal_parameters()
     }
 
     fn last_run_aborted(&self) -> Result<bool, HostError> {
