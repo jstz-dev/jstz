@@ -17,7 +17,7 @@ pub struct JstzClient {
 impl JstzClient {
     pub fn new(cfg: &Config) -> Self {
         Self {
-            endpoint: format!("http://127.0.0.1:{}", cfg.jstz_node_port),
+            endpoint: format!("http://{}:{}", cfg.jstz_node_host, cfg.jstz_node_port),
             client: reqwest::Client::new(),
         }
     }
