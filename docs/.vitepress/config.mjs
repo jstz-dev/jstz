@@ -44,6 +44,7 @@ export default defineConfig({
           { text: "Request", link: "/api/request" },
           { text: "Response", link: "/api/response" },
           { text: "URL", link: "/api/url" },
+          { text: "URLPattern", link: "/api/url_pattern" },
           { text: "URLSearchParams", link: "/api/url_search_params" },
         ],
       },
