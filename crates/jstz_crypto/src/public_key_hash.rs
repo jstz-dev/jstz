@@ -1,5 +1,6 @@
 use std::fmt;
 
+use boa_gc::{empty_trace, Finalize, Trace};
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::{
     blake2b::digest,
@@ -12,10 +13,17 @@ use crate::{
     public_key::PublicKey,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Finalize,
+)]
 pub enum PublicKeyHash {
     Tz4(ContractTz4Hash),
 }
+
+unsafe impl Trace for PublicKeyHash {
+    empty_trace!();
+}
+
 impl PublicKeyHash {
     pub fn to_base58(&self) -> String {
         let PublicKeyHash::Tz4(tz4) = self;
