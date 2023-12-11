@@ -2,10 +2,10 @@ use crate::Config;
 use anyhow::Result;
 use futures_util::stream::StreamExt;
 use jstz_api::LogRecord;
-use jstz_proto::context::account::Address;
 use reqwest_eventsource::{Event, EventSource};
 
-pub async fn exec(address: Address, cfg: &Config) -> Result<()> {
+pub async fn exec(address_or_alias: String, cfg: &Config) -> Result<()> {
+    let address = cfg.accounts.get_address(&address_or_alias)?;
     let url = format!(
         "http://{}:{}/logs/{}/stream",
         cfg.jstz_node_host,

@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::{anyhow, Result};
+use jstz_proto::context::account::Address;
 use serde::{Deserialize, Serialize};
 
 use crate::account::account::{Account, AliasAccount};
@@ -97,6 +98,18 @@ impl AccountConfig {
 
     pub fn list_all(&self) -> Vec<(&String, &Account)> {
         self.accounts.iter().collect()
+    }
+
+    pub fn get_address(&self, address_or_alias: &str) -> Result<Address> {
+        if let Ok(address) = Address::from_base58(address_or_alias) {
+            return Ok(address);
+        }
+
+        if let Ok(account) = self.get(address_or_alias) {
+            return Ok(account.address().clone());
+        }
+
+        Err(anyhow!("Invalid alias or address"))
     }
 }
 
