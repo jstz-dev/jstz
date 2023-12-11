@@ -6,8 +6,10 @@ use boa_engine::{
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
 use jstz_core::{
-    host::HostRuntime, host_defined, kv::Transaction, realm::HostDefined, runtime, Result,
+    host::HostRuntime, host_defined, kv::Storage, kv::Transaction, realm::HostDefined,
+    runtime, Result,
 };
+use jstz_crypto::keypair_from_passphrase;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
@@ -54,18 +56,18 @@ impl Kv {
     }
 
     pub fn get<'a>(
-        &'a self,
+        &self,
         hrt: &impl HostRuntime,
-        tx: &'a mut Transaction<'static>,
+        tx: &'a mut Transaction,
         key: &str,
     ) -> Result<Option<&'a KvValue>> {
         tx.get::<KvValue>(hrt, self.key_path(key)?)
     }
 
-    pub fn delete<'a>(
-        &'a self,
+    pub fn delete(
+        &self,
         hrt: &impl HostRuntime,
-        tx: &'a mut Transaction<'static>,
+        tx: &mut Transaction,
         key: &str,
     ) -> Result<()> {
         tx.remove(hrt, &self.key_path(key)?)
@@ -85,7 +87,7 @@ macro_rules! preamble {
     ($this:ident, $args:ident, $context:ident, $key:ident, $tx:ident) => {
         host_defined!($context, host_defined);
         let mut $tx = host_defined
-            .get_mut::<Transaction<'static>>()
+            .get_mut::<Transaction>()
             .expect("Curent transaction undefined");
 
         let $this = $this
@@ -122,8 +124,8 @@ macro_rules! preamble_static {
             .downcast_mut::<HostDefined>()
             .expect("Failed to convert js object to rust type `HostDefined`");
 
-        let mut $tx: GcRefMut<'_, _, Transaction<'static>> =
-            HostDefined::get_mut::<Transaction<'static>>(host_defined.deref_mut())
+        let mut $tx: GcRefMut<'_, _, Transaction> =
+            HostDefined::get_mut::<Transaction>(host_defined.deref_mut())
                 .expect("Curent transaction undefined");
 
         let $this = $this
@@ -222,48 +224,100 @@ impl jstz_core::Api for KvApi {
 
 #[cfg(test)]
 mod test {
+    use std::{cell::RefCell, rc::Rc};
+
     use super::*;
+    use jstz_core::kv;
     use jstz_proto::context::account::Account;
     use tezos_smart_rollup_mock::MockHost;
+
+    fn get_random_public_key_hash() -> PublicKeyHash {
+        let (_, pk) =
+            keypair_from_passphrase("passphrase1").expect("Failed to generate keypair");
+        return PublicKeyHash::try_from(&pk)
+            .expect("Failed to generate public key hash.");
+    }
+
+    fn get_account_balance_from_storage(
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        pkh: &PublicKeyHash,
+    ) -> u64 {
+        let account = match kv::Storage::get::<Account>(
+            hrt,
+            &Account::path(&pkh).expect("Could not get path"),
+        )
+        .expect("Could not find the account")
+        {
+            Some(account) => account,
+            None => panic!("Account not found"),
+        };
+
+        account.amount
+    }
 
     #[test]
     fn test_nested_transactions() -> Result<()> {
         let hrt = &mut MockHost::default();
 
-        let mut tx = Transaction::new();
+        let tx = Rc::new(RefCell::new(Transaction::new()));
 
-        let pkh = PublicKeyHash::from_base58("tz4FENGt5zkiGaHPm1ya4MgLomgkL1k7Dy7q")
-            .expect("Could not parse pkh");
+        let pkh = get_random_public_key_hash();
 
         // Act
         let amt = {
             // This mutable borrow ends at the end of this block
-            Account::balance(hrt, &mut tx, &pkh).expect("Could not get balance")
+            Account::balance(hrt, &mut tx.deref().borrow_mut(), &pkh)
+                .expect("Could not get balance")
         };
 
-        {
-            {
-                let mut child_tx = tx.begin();
-            }
-            /*{
+        let child_tx = Transaction::begin(Rc::clone(&tx));
+        let mut grandchild_tx = Transaction::begin(Rc::clone(&child_tx));
 
-                {
-                    let mut grandchild_tx = child_tx.begin();
-                    grandchild_tx
-                        .commit::<Account>(hrt)
-                        .expect("Could not commit tx");
-                }
-                child_tx
-                    .commit::<Account>(hrt)
-                    .expect("Could not commit tx");
-            }*/
-            {
-                tx.commit::<Account>(hrt).expect("Could not commit tx");
-            }
-        }
+        let _ = Account::deposit(hrt, &mut grandchild_tx.deref().borrow_mut(), &pkh, 57);
+
+        let amt2 = Account::balance(hrt, &mut grandchild_tx.deref().borrow_mut(), &pkh)
+            .expect("Could not get balance");
+
+        grandchild_tx
+            .deref()
+            .borrow_mut()
+            .commit::<Account>(hrt)
+            .expect("Could not commit tx");
+
+        let amt3 = Account::balance(hrt, &mut child_tx.deref().borrow_mut(), &pkh)
+            .expect("Could not get balance");
+
+        child_tx
+            .deref()
+            .borrow_mut()
+            .commit::<Account>(hrt)
+            .expect("Could not commit tx");
+
+        tx.deref()
+            .borrow_mut()
+            .commit::<Account>(hrt)
+            .expect("Could not commit tx");
+
+        let amt4 = {
+            // This mutable borrow ends at the end of this block
+            Account::balance(hrt, &mut tx.deref().borrow_mut(), &pkh)
+                .expect("Could not get balance")
+        };
+
+        let amt5 =
+            get_account_balance_from_storage(hrt, &mut tx.deref().borrow_mut(), &pkh);
 
         // Assert
         assert_eq!(amt, 0);
+
+        assert_eq!(amt2, 57);
+
+        assert_eq!(amt3, 57);
+
+        assert_eq!(amt4, 57);
+
+        assert_eq!(amt5, 57);
 
         Ok(())
     }

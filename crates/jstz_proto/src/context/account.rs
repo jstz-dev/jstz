@@ -51,7 +51,7 @@ impl Account {
 
     fn get_mut<'a, 'b>(
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
+        tx: &'b mut Transaction,
         addr: &Address,
     ) -> Result<&'b mut Account>
     where
@@ -62,15 +62,12 @@ impl Account {
         Ok(account_entry.or_insert_default())
     }
 
-    fn try_insert<'a, 'b>(
+    fn try_insert(
         self,
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
+        tx: &mut Transaction,
         addr: &Address,
-    ) -> Result<()>
-    where
-        'a: 'b,
-    {
+    ) -> Result<()> {
         match tx.entry::<Account>(hrt, Self::path(addr)?)? {
             Entry::Occupied(ntry) => {
                 let acc: &Self = ntry.get();
@@ -83,27 +80,21 @@ impl Account {
             }
         }
     }
-    pub fn nonce<'a, 'b>(
+    pub fn nonce<'a>(
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
+        tx: &'a mut Transaction,
         addr: &Address,
-    ) -> Result<&'b mut Nonce>
-    where
-        'a: 'b,
-    {
+    ) -> Result<&'a mut Nonce> {
         let account = Self::get_mut(hrt, tx, addr)?;
 
         Ok(&mut account.nonce)
     }
 
-    pub fn contract_code<'a, 'b>(
+    pub fn contract_code<'a>(
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
+        tx: &'a mut Transaction,
         addr: &Address,
-    ) -> Result<Option<&'b mut String>>
-    where
-        'a: 'b,
-    {
+    ) -> Result<Option<&'a mut String>> {
         let account = Self::get_mut(hrt, tx, addr)?;
 
         Ok(account.contract_code.as_mut())
@@ -123,26 +114,20 @@ impl Account {
 
     pub fn balance(
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
+        tx: &mut Transaction,
         addr: &Address,
-    ) -> Result<Amount>
-    where
-        'a: 'b,
-    {
+    ) -> Result<Amount> {
         let account = Self::get_mut(hrt, tx, addr)?;
 
         Ok(account.amount)
     }
 
-    pub fn deposit<'a, 'b>(
+    pub fn deposit(
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
+        tx: &mut Transaction,
         addr: &Address,
         amount: Amount,
-    ) -> Result<()>
-    where
-        'a: 'b,
-    {
+    ) -> Result<()> {
         let account = Self::get_mut(hrt, tx, addr)?;
 
         account.amount += amount;
@@ -163,14 +148,11 @@ impl Account {
 
     pub fn create(
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
-        addr: &'b Address,
+        tx: &mut Transaction,
+        addr: &Address,
         amount: Amount,
         contract_code: Option<String>,
-    ) -> Result<()>
-    where
-        'a: 'b,
-    {
+    ) -> Result<()> {
         Self {
             nonce: Nonce::default(),
             amount,
@@ -179,16 +161,13 @@ impl Account {
         .try_insert(hrt, tx, addr)
     }
 
-    pub fn transfer<'a, 'b>(
+    pub fn transfer(
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
+        tx: &mut Transaction,
         src: &Address,
         dst: &Address,
         amt: Amount,
-    ) -> Result<()>
-    where
-        'a: 'b,
-    {
+    ) -> Result<()> {
         {
             let src = tx
                 .entry::<Account>(hrt, Self::path(src)?)?

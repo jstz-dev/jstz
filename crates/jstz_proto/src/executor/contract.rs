@@ -180,16 +180,13 @@ impl Script {
     }
 
     /// Deploys a script
-    pub fn deploy<'a, 'b>(
+    pub fn deploy(
         hrt: &impl HostRuntime,
-        tx: &'b mut Transaction<'a>,
+        tx: &mut Transaction,
         source: &Address,
         code: String,
         balance: Amount,
-    ) -> Result<Address>
-    where
-        'a: 'b,
-    {
+    ) -> Result<Address> {
         let nonce = Account::nonce(hrt, tx, source)?;
 
         let address = Address::digest(
