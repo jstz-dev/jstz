@@ -1,5 +1,6 @@
 use anyhow::Result;
 use boa_engine::{js_string, JsResult, JsValue, Source};
+use jstz_api::set_js_logger;
 use jstz_api::{
     encoding::EncodingApi, http::HttpApi, url::UrlApi, urlpattern::UrlPatternApi,
     ConsoleApi, KvApi,
@@ -11,6 +12,7 @@ use jstz_core::{
     runtime::{self, Runtime},
 };
 use jstz_proto::api::{ContractApi, LedgerApi};
+use jstz_proto::executor::contract::PrettyLogger;
 use rustyline::{error::ReadlineError, Editor};
 use tezos_smart_rollup_mock::MockHost;
 
@@ -32,6 +34,7 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
         host_defined.insert(kv);
         host_defined.insert(tx);
     }
+    set_js_logger(&PrettyLogger);
 
     let mut rl = Editor::<(), _>::new().expect("Failed to create a new editor.");
 
@@ -39,7 +42,7 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
 
     let realm_clone = rt.realm().clone();
 
-    realm_clone.register_api(ConsoleApi::Cli {}, rt.context());
+    realm_clone.register_api(ConsoleApi, rt.context());
 
     realm_clone.register_api(
         KvApi {
@@ -60,7 +63,6 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
     realm_clone.register_api(
         ContractApi {
             contract_address: address.clone(),
-            operation_hash: Default::default(),
         },
         rt.context(),
     );

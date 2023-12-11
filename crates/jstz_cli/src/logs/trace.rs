@@ -1,7 +1,7 @@
 use crate::Config;
 use anyhow::Result;
 use futures_util::stream::StreamExt;
-use jstz_api::LogRecord;
+use jstz_proto::executor::contract::LogRecord;
 use reqwest_eventsource::{Event, EventSource};
 
 pub async fn exec(address_or_alias: String, cfg: &Config) -> Result<()> {
