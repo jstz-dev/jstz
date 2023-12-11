@@ -34,7 +34,7 @@ fn execute_operation_inner(
             source,
             ..
         } => {
-            let result = contract::run::execute(hrt, tx, &source, run, &operation_hash)?;
+            let result = contract::run::execute(hrt, tx, &source, run, operation_hash)?;
 
             Ok(receipt::Content::RunContract(result))
         }
