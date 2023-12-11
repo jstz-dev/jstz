@@ -1,9 +1,23 @@
+use boa_gc::{empty_trace, Finalize, Trace};
 use serde::{Deserialize, Serialize};
-
 #[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Default,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+    Default,
+    Finalize,
 )]
 pub struct Blake2b([u8; 32]);
+
+unsafe impl Trace for Blake2b {
+    empty_trace!();
+}
 
 impl ToString for Blake2b {
     fn to_string(&self) -> String {

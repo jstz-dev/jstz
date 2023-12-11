@@ -1923,9 +1923,11 @@ name = "jstz_crypto"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "boa_gc",
  "derive_more",
  "hex",
  "serde",
+ "serde_json",
  "tezos_crypto_rs",
 ]
 
