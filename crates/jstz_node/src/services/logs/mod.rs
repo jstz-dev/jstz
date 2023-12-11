@@ -5,6 +5,7 @@ use actix_web::{
     Responder,
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_proto::executor::contract::{LogRecord, LOG_PREFIX};
 
 use std::sync::Arc;
 use std::{
@@ -13,8 +14,6 @@ use std::{
 };
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-
-use jstz_api::{LogRecord, LOG_PREFIX};
 
 use self::broadcaster::Broadcaster;
 
