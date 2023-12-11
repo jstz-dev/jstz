@@ -16,7 +16,7 @@ jstz_api.workspace = true
 clap = { version = "^4.4", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-bs58 = "0.4"
+bs58 = "0.5"
 hex = "0.4"
 dirs = "3.0"
 nix = "^0.20.2"
