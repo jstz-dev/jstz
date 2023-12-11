@@ -20,9 +20,20 @@ use crate::{
 };
 
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
+
+pub struct TraceData {
+    pub contract_address: Address,
+    pub operation_hash: OperationHash,
+}
+
+impl Finalize for TraceData {}
+
+unsafe impl Trace for TraceData {
+    empty_trace!();
+}
+
 struct Contract {
     contract_address: Address,
-    operation_hash: OperationHash,
 }
 impl Finalize for Contract {}
 
@@ -80,6 +91,7 @@ impl Contract {
         request: &JsNativeObject<Request>,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        host_defined!(context, host_defined);
         // 1. Get address from request
         let address = request
             .deref()
@@ -94,11 +106,14 @@ impl Contract {
         headers::test_and_set_referrer(&request.deref(), &self.contract_address)?;
 
         // 3. Load, init and run!
+        let trace_data = host_defined
+            .get::<TraceData>()
+            .expect("TraceData not found");
         Script::load_init_run(
             tx,
-            &address,
+            address,
+            trace_data.operation_hash.clone(),
             request.inner(),
-            &self.operation_hash,
             context,
         )
     }
@@ -106,7 +121,6 @@ impl Contract {
 
 pub struct ContractApi {
     pub contract_address: Address,
-    pub operation_hash: OperationHash,
 }
 
 impl ContractApi {
@@ -180,7 +194,6 @@ impl jstz_core::Api for ContractApi {
         let contract = ObjectInitializer::with_native(
             Contract {
                 contract_address: self.contract_address,
-                operation_hash: self.operation_hash,
             },
             context,
         )
