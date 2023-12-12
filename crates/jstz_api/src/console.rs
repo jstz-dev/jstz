@@ -13,7 +13,7 @@
 //!
 //! The implementation is heavily inspired by https://github.com/boa-dev/boa/blob/main/boa_runtime/src/console/mod.rs
 
-use std::{cell::Cell, fmt, fmt::Display, ops::Deref};
+use std::{cell::Cell, fmt::Display, ops::Deref};
 
 use boa_engine::{
     js_string,
@@ -24,80 +24,80 @@ use boa_engine::{
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::value::IntoJs;
-use serde::{Deserialize, Serialize};
+use log::js_log;
+pub use log::{set_js_logger, JsLog, LogData, LogLevel};
 
 use tezos_smart_rollup::prelude::debug_msg;
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum LogLevel {
-    Error,
-    Warn,
-    Info,
-    Log,
-}
+mod log {
+    use boa_engine::{Context, JsNativeError, JsResult};
+    use serde::{Deserialize, Serialize};
+    use std::{cell::Cell, fmt};
 
-impl LogLevel {
-    pub fn symbol(&self) -> char {
-        match self {
-            LogLevel::Error => '🔴',
-            LogLevel::Warn => '🟠',
-            LogLevel::Info => '🟢',
-            LogLevel::Log => '🪵',
+    #[derive(Serialize, Deserialize, Debug)]
+    pub enum LogLevel {
+        Error,
+        Warn,
+        Info,
+        Log,
+    }
+
+    impl LogLevel {
+        pub fn symbol(&self) -> char {
+            match self {
+                LogLevel::Error => '🔴',
+                LogLevel::Warn => '🟠',
+                LogLevel::Info => '🟢',
+                LogLevel::Log => '🪵',
+            }
         }
     }
-}
 
-impl fmt::Display for LogLevel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let log_level_str = match self {
-            LogLevel::Error => "error",
-            LogLevel::Warn => "warn",
-            LogLevel::Info => "info",
-            LogLevel::Log => "log",
-        };
-        write!(f, "{}", log_level_str)
-    }
-}
-#[derive(Serialize, Deserialize)]
-pub struct LogData {
-    pub level: LogLevel,
-    pub text: String,
-    pub groups_len: usize,
-}
-
-impl Display for LogRecord {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&serde_json::to_string(self).map_err(|_| std::fmt::Error)?)
-    }
-}
-
-impl FromStr for LogRecord {
-    type Err = serde_json::Error;
-    fn from_str(json: &str) -> Result<Self, Self::Err> {
-        serde_json::from_str(json)
-    }
-}
-
-thread_local! {
-    /// Thread-local logger
-    static JS_LOGGER: Cell<Option<&'static dyn JsLog>> = Cell::new(None)
-}
-
-pub fn set_js_logger(logger: &'static dyn JsLog) {
-    JS_LOGGER.set(Some(logger));
-}
-
-fn js_log(log_data: LogData, context: &mut Context<'_>) -> JsResult<()> {
-    JS_LOGGER.with(|logger| {
-        if let Some(logger) = logger.get() {
-            logger.log(log_data, context);
-            Ok(())
-        } else {
-            Err(JsNativeError::eval()
-                .with_message("JS_LOGGER not set")
-                .into())
+    impl fmt::Display for LogLevel {
+        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            let log_level_str = match self {
+                LogLevel::Error => "error",
+                LogLevel::Warn => "warn",
+                LogLevel::Info => "info",
+                LogLevel::Log => "log",
+            };
+            write!(f, "{}", log_level_str)
         }
-    })
+    }
+    #[derive(Serialize, Deserialize)]
+    pub struct LogData {
+        pub level: LogLevel,
+        pub text: String,
+        pub groups_len: usize,
+    }
+
+    // The implementor of this trait controls how console.log is handled.
+    pub trait JsLog {
+        fn log(&self, log_data: LogData, context: &mut Context<'_>);
+        fn flush(&self);
+    }
+
+    thread_local! {
+        /// Thread-local logger
+        static JS_LOGGER: Cell<Option<&'static dyn JsLog>> = Cell::new(None)
+    }
+
+    pub fn set_js_logger(logger: &'static dyn JsLog) {
+        JS_LOGGER.set(Some(logger));
+    }
+
+    pub(super) fn js_log(log_data: LogData, context: &mut Context<'_>) -> JsResult<()> {
+        JS_LOGGER.with(|logger| {
+            if let Some(logger) = logger.get() {
+                logger.log(log_data, context);
+                Ok(())
+            } else {
+                Err(JsNativeError::eval()
+                    .with_message("JS_LOGGER not set")
+                    .into())
+            }
+        })
+    }
 }
 
 fn display_js(value: &JsValue) -> String {
