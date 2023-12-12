@@ -43,6 +43,8 @@ use std::rc::Rc;
 /// | commit: false |
 /// +---------------+
 /// ```
+///
+/// Current implementation does NOT support concurrent transactions.
 
 #[must_use]
 #[derive(Debug)]
@@ -57,14 +59,6 @@ impl Finalize for Transaction {}
 unsafe impl Trace for Transaction {
     empty_trace!();
 }
-
-/*
-impl<' Transaction {
-    pub unsafe fn extend_lifetime(self) -> Transaction<'static> {
-        std::mem::transmute::<Transaction<'a>, Transaction<'static>>(self)
-    }
-}
-*/
 
 #[derive(Debug)]
 struct SnapshotEntry {
@@ -84,25 +78,6 @@ impl SnapshotEntry {
             value: BoxedValue::new(value),
         }
     }
-
-    fn persistent<V>(value: V) -> Self
-    where
-        V: Value,
-    {
-        Self {
-            dirty: false,
-            value: BoxedValue::new(value),
-        }
-    }
-
-    /*fn as_ref<V>(&self) -> &V
-    where
-        V: Value,
-    {
-        let borrowed = self.value.borrow(); // Get an immutable borrow
-        let any_ref: &dyn Any = &*borrowed; // Cast Box<Value> to &dyn Any
-        any_ref.downcast_ref::<V>().unwrap() // Safely attempt to downcast &dyn Any to &V
-    }*/
 
     fn as_ref<V>(&self) -> &V
     //TODO: These don't really work when it is a RefCell, since the value can be mutated without needing as_mut.
@@ -128,35 +103,6 @@ impl SnapshotEntry {
         let value = self.value.downcast().unwrap();
         *value
     }
-
-    /*
-    fn into_value<V: Value>(value: Rc<RefCell<dyn Value>>) -> Option<V> {
-        let boxed_value = Rc::try_downcast::<RefCell<Box<V>>>(value)?;
-        let value: Box<V> = boxed_value.into_inner();
-        // Return the extracted value
-        Some(value)
-    }
-
-    fn into_valude<V>(&mut self) -> Option<V>
-    where
-        V: Value,
-    {
-        let borrowed_value = self.value.try_borrow().ok()?;
-        let downcasted_value = borrowed_value.as_any().downcast_ref::<V>()?;
-        Some(downcasted_value)
-
-        /*
-        self.value
-            .deref()
-            .borrow_mut()
-            .as_any_mut()
-            .downcast_mut()
-            .unwrap()
-            .deref()
-        //let value = *self.value.deref().borrow_mut()//.downcast().unwrap();
-        // *value*/
-    }
-    */
 }
 
 impl Clone for SnapshotEntry {
@@ -177,42 +123,6 @@ impl Transaction {
         }
     }
 
-    /*
-    pub(crate) fn read_set(&self) -> BTreeSet<OwnedPath> {
-        self.snapshot
-            .iter()
-            .filter_map(
-                |(k, entry)| {
-                    if !entry.dirty {
-                        Some(k.clone())
-                    } else {
-                        None
-                    }
-                },
-            )
-            .collect()
-    }
-
-    fn insert_set(&self) -> BTreeSet<OwnedPath> {
-        self.snapshot
-            .iter()
-            .filter_map(
-                |(k, entry)| {
-                    if entry.dirty {
-                        Some(k.clone())
-                    } else {
-                        None
-                    }
-                },
-            )
-            .collect()
-    }
-
-    pub(crate) fn update_set(&self) -> BTreeSet<OwnedPath> {
-        self.insert_set().union(&self.remove_set).cloned().collect()
-    }
-    */
-
     fn lookup<'a, V>(
         &'a mut self,
         rt: &impl Runtime,
@@ -231,10 +141,6 @@ impl Transaction {
                     let parent_entry = parent.lookup::<V>(rt, key.clone())?;
                     match parent_entry {
                         Some(value) => {
-                            //let new_entry =
-                            //Rc::new(RefCell::new(value.deref().borrow_mut().clone()));
-                            //entry.insert(new_entry);
-                            //return Ok(Some(Rc::clone(&new_entry)));
                             let snapshot_entry = entry.insert(value.clone());
                             return Ok(Some(snapshot_entry));
                         }
@@ -246,12 +152,8 @@ impl Transaction {
                 None => {
                     if Storage::contains_key(rt, entry.key())? {
                         let value = Storage::get::<V>(rt, entry.key())?.unwrap();
-                        //let new_entry =
-                        //    Rc::new(RefCell::new(SnapshotEntry::persistent(value)));
-                        //entry.insert(new_entry);
-                        //return Ok(Some(Rc::clone(&new_entry)));
                         let snapshot_entry =
-                            entry.insert(SnapshotEntry::ephemeral(value)); // TODO: Basically everything is ephemeral right now.
+                            entry.insert(SnapshotEntry::ephemeral(value));
                         return Ok(Some(snapshot_entry));
                     }
 
@@ -368,7 +270,6 @@ impl Transaction {
     where
         V: Value,
     {
-        println!("Committing transaction");
         // Perform deletions
         for key in &self.remove_set.clone() {
             match &self.parent {
@@ -384,20 +285,15 @@ impl Transaction {
 
         // Perform insertions
         for (key, entry) in snapshot {
-            println!("Woohoo this is an entry.");
-            println!("Entry: {:?}", entry);
             if entry.dirty {
-                println!("This entry is dirty.");
                 match &self.parent {
                     Some(parent) => {
-                        println!("Inserting into parent");
                         parent
                             .deref()
                             .borrow_mut()
                             .insert(key, entry.into_value::<V>())?;
                     }
                     None => {
-                        println!("Where is my parent?");
                         Storage::insert(rt, &key, entry.value.deref().as_ref())?;
                     }
                 }

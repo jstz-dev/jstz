@@ -1946,6 +1946,7 @@ dependencies = [
  "syntect",
  "tempfile",
  "tezos-smart-rollup",
+ "tezos-smart-rollup-installer-config",
  "tezos-smart-rollup-mock",
  "tezos_crypto_rs",
  "tiny-bip39",
@@ -2042,27 +2043,6 @@ dependencies = [
  "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-mock",
-]
-
-[[package]]
-name = "jstz_rollup"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "bincode",
- "clap",
- "derive_more",
- "dirs",
- "figment",
- "fs_extra",
- "hex",
- "octez",
- "serde",
- "serde_json",
- "tezos-smart-rollup-host",
- "tezos-smart-rollup-installer",
- "tezos-smart-rollup-installer-config",
- "tezos_crypto_rs",
 ]
 
 [[package]]
@@ -3597,7 +3577,7 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-encoding"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#2bb0fe7d1c5d1787d4647bd6211f0a0c3245e036"
+source = "git+https://gitlab.com/tezos/tezos.git#9202e544c351f2449e94d364eb47be342759f773"
 dependencies = [
  "hex",
  "nom",
@@ -3634,22 +3614,6 @@ dependencies = [
  "tezos_crypto_rs",
  "tezos_data_encoding",
  "thiserror",
-]
-
-[[package]]
-name = "tezos-smart-rollup-installer"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb576c183fd245057dc06e16ab7a85218cd267a485854384aa4561e1472a9d64"
-dependencies = [
- "clap",
- "hex",
- "serde_yaml",
- "tezos-smart-rollup-encoding",
- "tezos-smart-rollup-host",
- "tezos-smart-rollup-installer-config",
- "tezos_data_encoding",
- "thiserror",
  "wasm-gen",
 ]
 
@@ -3662,7 +3626,7 @@ dependencies = [
  "hex",
  "nom",
  "serde",
- "serde_yaml",
+ "serde_yaml 0.9.25",
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-encoding",
  "tezos-smart-rollup-host",
