@@ -1,4 +1,3 @@
-mod logger;
 use boa_engine::{
     js_string,
     object::{builtins::JsPromise, FunctionObjectBuilder},
@@ -19,15 +18,17 @@ use jstz_core::{
 use std::io::Read;
 use tezos_smart_rollup::prelude::debug_msg;
 
-use self::logger::JsonLogger;
-pub use self::logger::{LogRecord, PrettyLogger, LOG_PREFIX};
-
 use crate::{
     api::{self, TraceData},
     context::account::{Account, Address, Amount},
     operation::OperationHash,
     Error, Result,
 };
+use js_logger::JsonLogger;
+
+pub use js_logger::{LogRecord, PrettyLogger, LOG_PREFIX};
+
+mod js_logger;
 
 pub mod headers {
 

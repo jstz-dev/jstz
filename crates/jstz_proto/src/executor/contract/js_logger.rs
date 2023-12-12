@@ -50,7 +50,8 @@ impl LogRecord {
     }
 }
 
-pub struct JsonLogger;
+pub(super) struct JsonLogger;
+
 impl JsLog for JsonLogger {
     fn log(&self, log_data: LogData, context: &mut Context<'_>) {
         let log_record = LogRecord::new(log_data, context).to_string();
@@ -59,11 +60,12 @@ impl JsLog for JsonLogger {
         });
     }
     fn flush(&self) {
-        todo!()
+        panic!("JsonLogger does not support flush")
     }
 }
 
 pub struct PrettyLogger;
+
 impl JsLog for PrettyLogger {
     fn log(&self, log_data: LogData, _context: &mut Context<'_>) {
         let LogData {
@@ -81,6 +83,6 @@ impl JsLog for PrettyLogger {
         });
     }
     fn flush(&self) {
-        todo!()
+        panic!("PrettyLogger does not support flush")
     }
 }
