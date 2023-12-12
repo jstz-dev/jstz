@@ -81,7 +81,3 @@ impl Storage {
         Ok(())
     }
 }
-
-// A simple (not atomic) lamport clock
-#[derive(Debug, Default)]
-struct Clock {}

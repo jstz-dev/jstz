@@ -59,8 +59,9 @@ fn on_success(
                 Some(
                     FunctionObjectBuilder::new(context.realm(), unsafe {
                         NativeFunction::from_closure(move |_, args, context| {
-                            f(&value, context)?;
-                            Ok(args.get_or_undefined(0).clone())
+                            let value = args.get_or_undefined(0).clone();
+                            let _ = f(&value, context);
+                            Ok(value)
                         })
                     })
                     .build(),
@@ -121,8 +122,6 @@ impl Script {
                 .ok_or(Error::InvalidAddress)
         })?;
 
-        with_global_host(|hrt| debug_msg!(hrt, "Evaluating: {src:?}\n"));
-
         Ok(Self::parse(Source::from_bytes(&src), context)?)
     }
 
@@ -131,7 +130,6 @@ impl Script {
         context: &mut Context<'_>,
     ) -> JsResult<Self> {
         let module = Module::parse(src, Some(Realm::new(context)?), context)?;
-
         Ok(Self(module))
     }
 
@@ -193,9 +191,16 @@ impl Script {
             format!("{}{}{}", source, code, nonce.to_string(),).as_bytes(),
         )?;
 
-        Account::create(hrt, tx, &address, balance, Some(code))?;
-
-        debug_msg!(hrt, "[📜] Smart function deployed: {address}\n");
+        let account = Account::create(hrt, tx, &address, balance, Some(code));
+        if account.is_ok() {
+            debug_msg!(hrt, "[📜] Smart function deployed: {address}\n");
+        } else if let Err(Error::InvalidAddress) = account {
+            debug_msg!(hrt, "[📜] Smart function was already deployed: {address}\n");
+        } else {
+            // Unreachable?
+            debug_msg!(hrt, "[📜] Smart function deployment failed. \n");
+            account?
+        }
 
         Ok(address)
     }

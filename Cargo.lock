@@ -507,6 +507,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "blst"
+version = "0.3.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6a30d0edd9dd1c60ddb42b80341c7852f6f985279a5c1a83659dcb65899dec99"
+dependencies = [
+ "cc",
+ "glob",
+ "threadpool",
+ "which",
+ "zeroize",
+]
+
+[[package]]
 name = "boa_ast"
 version = "0.17.0"
 source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#41b24d59549faaec36d076a18546c9c323e93b5e"
@@ -1428,6 +1441,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4271d37baee1b8c7e4b708028c57d816cf9d2434acb33a549475f78c181f6253"
 
 [[package]]
+name = "glob"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
+
+[[package]]
 name = "group"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1949,14 +1968,22 @@ dependencies = [
 name = "jstz_core"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bincode",
  "boa_engine",
  "boa_gc",
  "derive_more",
  "erased-serde",
+ "expect-test",
  "getrandom",
+ "jstz_crypto",
+ "jstz_proto",
+ "jstz_wpt",
  "serde",
+ "tezos-smart-rollup",
  "tezos-smart-rollup-host",
+ "tezos-smart-rollup-mock",
+ "tokio",
 ]
 
 [[package]]
@@ -3771,6 +3798,7 @@ checksum = "284fa6f4be10eff67ca5b2f9e8ec9544be81a07223f6a4c8d3a49a13aecce768"
 dependencies = [
  "anyhow",
  "base58",
+ "blst",
  "byteorder 1.5.0",
  "cryptoxide",
  "ed25519-dalek",
@@ -3844,6 +3872,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.48",
+]
+
+[[package]]
+name = "threadpool"
+version = "1.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d050e60b33d41c19108b32cea32164033a9013fe3b46cbd4457559bfbf77afaa"
+dependencies = [
+ "num_cpus",
 ]
 
 [[package]]
@@ -4372,6 +4409,18 @@ name = "webpki-roots"
 version = "0.25.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1778a42e8b3b90bff8d0f5032bf22250792889a5cdc752aa0020c84abe3aaf10"
+
+[[package]]
+name = "which"
+version = "4.4.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87ba24419a2078cd2b0f2ede2691b6c66d8e47836da3b6db8265ebad47afbfc7"
+dependencies = [
+ "either",
+ "home",
+ "once_cell",
+ "rustix",
+]
 
 [[package]]
 name = "winapi"

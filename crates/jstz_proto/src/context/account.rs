@@ -58,7 +58,6 @@ impl Account {
         'a: 'b,
     {
         let account_entry = tx.entry::<Account>(hrt, Self::path(addr)?)?;
-
         Ok(account_entry.or_insert_default())
     }
 
@@ -96,7 +95,6 @@ impl Account {
         addr: &Address,
     ) -> Result<Option<&'a mut String>> {
         let account = Self::get_mut(hrt, tx, addr)?;
-
         Ok(account.contract_code.as_mut())
     }
 
@@ -206,8 +204,6 @@ mod test {
 
         // Act
         let amt = {
-            // This mutable borrow ends at the end of this block
-            //Account::balance(hrt, tx, &pkh).expect("Could not get balance")
             tx.entry::<Account>(hrt, Account::path(&pkh)?)?
                 .or_insert_default()
                 .amount
