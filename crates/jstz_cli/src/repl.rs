@@ -64,7 +64,6 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
         },
         rt.context(),
     );
-
     realm_clone.register_api(DebugApi, rt.context());
 
     loop {
