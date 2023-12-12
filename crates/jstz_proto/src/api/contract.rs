@@ -157,14 +157,7 @@ impl ContractApi {
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         host_defined!(context, host_defined);
-        let mut tx = host_defined.get_mut::<Transaction>().expect("fsasdf");
-
-        /*unsafe {
-            host_defined
-                .get_mut::<Transaction>()
-                .unwrap()
-                .extend_lifetime()
-        };*/
+        let mut tx = host_defined.get_mut::<Transaction>().unwrap();
 
         let contract = Contract::from_js_value(this)?;
         let contract_code: String = args
