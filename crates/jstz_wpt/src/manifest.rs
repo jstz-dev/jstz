@@ -81,12 +81,12 @@ impl TryFrom<internal::WptManifestTest> for WptManifestTest {
     }
 }
 
-impl Into<internal::WptManifestTest> for WptManifestTest {
-    fn into(self) -> internal::WptManifestTest {
-        let mut items = vec![internal::WptManifestTestItem::Hash(self.hash)];
+impl From<WptManifestTest> for internal::WptManifestTest {
+    fn from(val: WptManifestTest) -> Self {
+        let mut items = vec![internal::WptManifestTestItem::Hash(val.hash)];
 
         items.extend(
-            self.variations
+            val.variations
                 .into_iter()
                 .map(internal::WptManifestTestItem::Variations),
         );
@@ -111,9 +111,9 @@ impl From<(Option<String>, WptTestOptions)> for WptTestVariation {
     }
 }
 
-impl Into<(Option<String>, WptTestOptions)> for WptTestVariation {
-    fn into(self) -> (Option<String>, WptTestOptions) {
-        (self.path, self.options)
+impl From<WptTestVariation> for (Option<String>, WptTestOptions) {
+    fn from(val: WptTestVariation) -> Self {
+        (val.path, val.options)
     }
 }
 

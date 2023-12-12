@@ -77,7 +77,7 @@ pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<Address> {
 }
 
 impl Ledger {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -133,7 +133,7 @@ impl LedgerApi {
             let amount = args
                 .get_or_undefined(1)
                 .as_number()
-                .ok_or_else(|| JsNativeError::typ())?;
+                .ok_or_else(JsNativeError::typ)?;
 
             ledger.transfer(rt.deref(), tx.deref_mut(), &dst, amount as Amount)?;
 

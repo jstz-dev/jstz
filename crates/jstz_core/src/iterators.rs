@@ -125,7 +125,7 @@ pub struct PairValue {
 
 impl IntoJs for PairValue {
     fn into_js(self, context: &mut Context<'_>) -> JsValue {
-        JsArray::from_iter([self.key, self.value].into_iter(), context).into()
+        JsArray::from_iter([self.key, self.value], context).into()
     }
 }
 

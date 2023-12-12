@@ -16,14 +16,14 @@ impl Global {
             JsNativeError::eval().with_message(err.to_string()).into()
         }
         let str = data.to_std_string_escaped();
-        let encoded = DEFAULT_ENGINE.decode(&str).map_err(on_err)?;
+        let encoded = DEFAULT_ENGINE.decode(str).map_err(on_err)?;
         let encoded_str = core::str::from_utf8(encoded.as_slice()).map_err(on_err)?;
 
         Ok(encoded_str.into())
     }
     fn btoa(data: &JsString) -> JsResult<JsString> {
         let str = data.to_std_string_escaped();
-        let encoded = DEFAULT_ENGINE.encode(&str);
+        let encoded = DEFAULT_ENGINE.encode(str);
         Ok(encoded.into())
     }
 }
@@ -37,7 +37,7 @@ impl GlobalApi {
             .ok_or_else(|| JsNativeError::typ().with_message("expected string"))?;
         // TODO: https://github.com/trilitech/jstz/pull/197#discussion_r1413836707
         // let data: JsString = args.get_or_undefined(0).try_js_into(context);
-        let result = Global::atob(&data)?;
+        let result = Global::atob(data)?;
         Ok(result.into())
     }
     fn btoa(_: &JsValue, args: &[JsValue], _context: &mut Context) -> JsResult<JsValue> {
@@ -46,7 +46,7 @@ impl GlobalApi {
             .as_string()
             .ok_or_else(|| JsNativeError::typ().with_message("expected string"))?;
         // TODO: https://github.com/trilitech/jstz/pull/197#discussion_r1413836707
-        let result = Global::btoa(&data)?;
+        let result = Global::btoa(data)?;
         Ok(result.into())
     }
 }

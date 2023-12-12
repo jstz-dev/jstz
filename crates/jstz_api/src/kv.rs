@@ -22,9 +22,9 @@ const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
 #[serde(try_from = "String", into = "String")]
 pub struct KvValue(pub serde_json::Value);
 
-impl Into<String> for KvValue {
-    fn into(self) -> String {
-        self.0.to_string()
+impl From<KvValue> for String {
+    fn from(val: KvValue) -> Self {
+        val.0.to_string()
     }
 }
 

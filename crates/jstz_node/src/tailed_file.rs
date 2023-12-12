@@ -12,7 +12,7 @@ impl TailedFile {
         let _ = file.seek(SeekFrom::End(0));
         let reader = BufReader::new(file);
 
-        return Ok(TailedFile(reader));
+        Ok(TailedFile(reader))
     }
 
     pub fn lines(self) -> Lines<BufReader<File>> {

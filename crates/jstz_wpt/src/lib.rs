@@ -73,7 +73,7 @@ impl Wpt {
     pub fn doctor() -> Result<Diagnosis> {
         let python_installed = {
             let python_version = run_python(
-                &["--version"],
+                ["--version"],
                 PythonOptions {
                     stdout: Stdio::piped(),
                     ..Default::default()
@@ -118,7 +118,7 @@ impl Wpt {
         let args = [WPT_CMD, "make-hosts-file"];
 
         let output = run_python(
-            &args,
+            args,
             PythonOptions {
                 stdout: Stdio::piped(),
                 ..Default::default()
@@ -183,7 +183,7 @@ impl Wpt {
             Default::default()
         };
 
-        let mut child = run_python(&args, options)?;
+        let mut child = run_python(args, options)?;
 
         // Wait for the server to start
         let mut attempts = 0;

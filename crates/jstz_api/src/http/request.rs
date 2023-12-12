@@ -84,10 +84,9 @@ fn clone_inner_request<T: Clone>(request: &InnerRequest<T>) -> InnerRequest<T> {
         *h = headers;
     }
 
-    let request = request
-        .body(body)
-        .expect("Cannot construct a malformed request from a valid one");
     request
+        .body(body)
+        .expect("Cannot construct a malformed request from a valid one")
 }
 
 impl Clone for Request {
@@ -299,7 +298,7 @@ impl Request {
 pub struct RequestClass;
 
 impl Request {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())

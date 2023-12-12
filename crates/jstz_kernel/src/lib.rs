@@ -14,7 +14,7 @@ pub mod inbox;
 const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
 
 fn read_ticketer(rt: &impl Runtime) -> Option<ContractKt1Hash> {
-    Some(Storage::get(rt, &TICKETER).ok()??)
+    Storage::get(rt, &TICKETER).ok()?
 }
 
 fn handle_message(hrt: &mut (impl Runtime + 'static), message: Message) -> Result<()> {

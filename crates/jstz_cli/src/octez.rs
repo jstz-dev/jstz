@@ -29,7 +29,7 @@ impl OctezClient {
         let octez_client_dir = &cfg.sandbox()?.octez_client_dir;
 
         let mut command = Command::new(cfg.octez_path.join("octez-client"));
-        command.args(&[
+        command.args([
             "-base-dir",
             octez_client_dir.to_str().expect("Invalid path"),
             "-endpoint",
@@ -48,7 +48,7 @@ impl OctezClient {
         script: &str,
         storage: &str,
     ) -> Result<String> {
-        let output = output(Self::command(cfg)?.args(&[
+        let output = output(Self::command(cfg)?.args([
             "originate",
             "contract",
             name,
@@ -69,8 +69,7 @@ impl OctezClient {
         // TODO: Replace with KT1 regex
         let address = output
             .lines()
-            .filter(|line| line.contains("New contract"))
-            .next()
+            .find(|line| line.contains("New contract"))
             .unwrap()
             .split_whitespace()
             .nth(2)
@@ -87,7 +86,7 @@ impl OctezClient {
         entrypoint: &str,
         parameter: &str,
     ) -> Result<()> {
-        output(Self::command(cfg)?.args(&[
+        output(Self::command(cfg)?.args([
             "transfer",
             "0",
             "from",
@@ -109,7 +108,7 @@ impl OctezClient {
         source: &str,
         message: T,
     ) -> Result<()> {
-        output(Self::command(cfg)?.args(&[
+        output(Self::command(cfg)?.args([
             "send",
             "smart",
             "rollup",
@@ -141,7 +140,7 @@ impl OctezClient {
     }
 
     pub fn import_secret_key(cfg: &Config, name: &str, sk: &str) -> Result<()> {
-        output(Self::command(cfg)?.args(&["import", "secret", "key", name, sk]))?;
+        output(Self::command(cfg)?.args(["import", "secret", "key", name, sk]))?;
         Ok(())
     }
 
@@ -152,7 +151,7 @@ impl OctezClient {
         key: &str,
         parameters_file: &str,
     ) -> Result<()> {
-        output(Self::command(cfg)?.args(&[
+        output(Self::command(cfg)?.args([
             "-block",
             "genesis",
             "activate",
@@ -179,7 +178,7 @@ impl OctezClient {
         r#type: &str,
         kernel: &str,
     ) -> Result<String> {
-        let output = output(Self::command(cfg)?.args(&[
+        let output = output(Self::command(cfg)?.args([
             "originate",
             "smart",
             "rollup",
@@ -223,7 +222,7 @@ impl OctezNode {
 
     pub fn config_init(cfg: &Config, network: &str, connections: &str) -> Result<()> {
         output(
-            Self::command(cfg).args(&[
+            Self::command(cfg).args([
                 "config",
                 "init",
                 "--network",
@@ -246,7 +245,7 @@ impl OctezNode {
 
     pub fn generate_identity(cfg: &Config) -> Result<()> {
         output(
-            Self::command(cfg).args(&[
+            Self::command(cfg).args([
                 "identity",
                 "generate",
                 "--data-dir",
@@ -263,7 +262,7 @@ impl OctezNode {
         let log_file = File::create(log_file)?;
 
         Ok(Self::command(cfg)
-            .args(&[
+            .args([
                 "run",
                 "--data-dir",
                 cfg.sandbox()?
@@ -285,7 +284,7 @@ impl OctezRollupNode {
         let octez_client_dir = &cfg.sandbox()?.octez_client_dir;
 
         let mut command = Command::new(cfg.octez_path.join("octez-smart-rollup-node"));
-        command.args(&[
+        command.args([
             "-base-dir",
             octez_client_dir.to_str().expect("Invalid path"),
             "-endpoint",
@@ -307,7 +306,7 @@ impl OctezRollupNode {
         Ok(Self::command(cfg)?
             .stdout(Stdio::from(log_file.try_clone()?))
             .stderr(Stdio::from(log_file.try_clone()?))
-            .args(&[
+            .args([
                 "run",
                 "operator",
                 "for",

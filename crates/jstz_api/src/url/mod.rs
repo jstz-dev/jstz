@@ -150,7 +150,7 @@ impl Url {
         self.url = parsed_url;
 
         // 6. If `query` is non-null (not empty)
-        if query.len() > 0 {
+        if !query.is_empty() {
             // 4. Empty `self`'s query object's list
             // 6. (cont.) then set `self`’s query object’s list to `query`
             self.search_params.deref_mut().set_values(query)
@@ -302,7 +302,7 @@ impl Url {
 pub struct UrlClass;
 
 impl Url {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())

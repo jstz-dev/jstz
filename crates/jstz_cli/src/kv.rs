@@ -30,7 +30,7 @@ async fn list(
 
     let address = cfg.accounts.get_address_from(alias)?;
 
-    let value = jstz_client.get_subkey_list(&address.as_str(), &key).await?;
+    let value = jstz_client.get_subkey_list(address.as_str(), &key).await?;
 
     // Print list of values
     match value {

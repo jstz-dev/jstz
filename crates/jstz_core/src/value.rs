@@ -100,6 +100,6 @@ where
         for val in self.into_iter() {
             values.push(val.into_js(context));
         }
-        JsArray::from_iter(values.into_iter(), context).into()
+        JsArray::from_iter(values, context).into()
     }
 }

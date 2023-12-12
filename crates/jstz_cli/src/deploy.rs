@@ -50,9 +50,9 @@ pub async fn exec(
     // Create operation TODO nonce
     let op = Operation {
         source: address,
-        nonce: nonce.clone(),
+        nonce,
         content: Content::DeployContract(DeployContract {
-            contract_code: contract_code,
+            contract_code,
             contract_credit: balance,
         }),
     };
@@ -83,7 +83,7 @@ pub async fn exec(
             name,
             match receipt.inner {
                 Ok(ReceiptContent::DeployContract(deploy)) => {
-                    (&deploy.contract_address).to_string()
+                    deploy.contract_address.to_string()
                 }
                 _ => return Err(anyhow!("Content is not of type 'DeployContract'")),
             },
