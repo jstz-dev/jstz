@@ -102,7 +102,7 @@ impl TryFromJs for TextDecodeOptions {
 }
 
 impl TextDecoder {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -131,7 +131,7 @@ impl TextDecoder {
 
         Ok(TextDecoder {
             //  3. Set this's encoding to encoding.
-            encoding: encoding,
+            encoding,
             //  4. If options["fatal"] is true, then set this's error mode to "fatal".
             error_mode: if options.fatal {
                 "fatal".to_string()
@@ -164,7 +164,7 @@ impl TextDecoder {
     }
 
     //  https://encoding.spec.whatwg.org/#concept-td-serialize
-    fn serialize(&mut self, read: usize) -> () {
+    fn serialize(&mut self, read: usize) {
         //  1. Let output be the empty string.
         //  2. While true:
         //    1. Let item be the result of reading from ioQueue.

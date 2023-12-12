@@ -28,7 +28,7 @@ impl<T: NativeObject> Clone for JsNativeObject<T> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
-            _phantom: self._phantom.clone(),
+            _phantom: self._phantom,
         }
     }
 }
@@ -125,15 +125,15 @@ impl<T: NativeObject> JsNativeObject<T> {
     }
 }
 
-impl<T: NativeObject> Into<JsValue> for JsNativeObject<T> {
-    fn into(self) -> JsValue {
-        self.to_inner()
+impl<T: NativeObject> From<JsNativeObject<T>> for JsValue {
+    fn from(val: JsNativeObject<T>) -> Self {
+        val.to_inner()
     }
 }
 
 impl<T: NativeObject> IntoJs for JsNativeObject<T> {
     #[inline]
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, _context: &mut Context<'_>) -> JsValue {
         self.into()
     }
 }

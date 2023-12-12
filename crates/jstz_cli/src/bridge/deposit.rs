@@ -1,5 +1,4 @@
 use anyhow::Result;
-use bs58;
 
 use crate::{config::Config, octez::OctezClient};
 

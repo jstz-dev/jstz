@@ -49,7 +49,7 @@ pub struct TextEncoderEncodeIntoResult {
 }
 
 impl TextEncoderEncodeIntoResult {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
           .as_object()
           .and_then(|obj| obj.downcast_mut::<Self>())
@@ -105,7 +105,7 @@ impl NativeClass for TextEncoderEncodeIntoResult {
 }
 
 impl TextEncoder {
-    fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -124,7 +124,7 @@ impl TextEncoder {
 
     fn encode(input: Option<&[u16]>) -> JsResult<Vec<u8>> {
         //  handle optional argument
-        let input = input.unwrap_or_else(|| &[]);
+        let input = input.unwrap_or(&[]);
         //  1. Convert input to an I/O queue of scalar values.
 
         //  2. Let output be the I/O queue of bytes << end-of-queue >>.

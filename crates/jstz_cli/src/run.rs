@@ -27,7 +27,7 @@ pub async fn exec(
         Url::parse(&url).map_err(|e| anyhow!("Failed to parse URL: {}", e))?;
     if let Some(host) = url_object.host_str() {
         if !host.starts_with("tz4") {
-            if cfg.accounts().contains(&host) {
+            if cfg.accounts().contains(host) {
                 url_object
                     .set_host(Some(
                         cfg.accounts().get(host)?.address().to_base58().as_str(),
@@ -74,7 +74,7 @@ pub async fn exec(
 
     let op = Operation {
         source: address.clone(),
-        nonce: nonce.clone(),
+        nonce,
         content: Content::RunContract(RunContract {
             uri: url,
             method,

@@ -14,7 +14,7 @@ use crate::{
 
 fn generate_passphrase() -> String {
     let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
-    return mnemonic.to_string();
+    mnemonic.to_string()
 }
 
 fn alias(address: String, name: String, cfg: &mut Config) -> Result<()> {

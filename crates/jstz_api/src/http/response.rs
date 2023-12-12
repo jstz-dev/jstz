@@ -341,7 +341,7 @@ impl ResponseBuilder {
 pub struct ResponseClass;
 
 impl Response {
-    pub fn try_from_js<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    pub fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())

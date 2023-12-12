@@ -26,7 +26,7 @@ use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{host::HostRuntime, runtime, value::IntoJs};
 use jstz_crypto::{hash::Blake2b, public_key_hash::PublicKeyHash};
 use serde::{Deserialize, Serialize};
-use serde_json;
+
 use tezos_smart_rollup::prelude::debug_msg;
 
 pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
@@ -45,7 +45,7 @@ impl LogRecord {
     }
 
     pub fn from_string(json: &str) -> Self {
-        serde_json::from_str(&json).expect("Failed to deserialize JSONLog")
+        serde_json::from_str(json).expect("Failed to deserialize JSONLog")
     }
 }
 
@@ -424,7 +424,7 @@ pub enum ConsoleApi {
 }
 
 impl Console {
-    fn from_js_value<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -470,7 +470,7 @@ impl ConsoleApi {
         let console = Console::from_js_value(this)?;
         runtime::with_global_host(|rt| {
             let assertion = args.get_or_undefined(0).to_boolean();
-            let data = if args.len() >= 1 { &args[1..] } else { &[] };
+            let data = if !args.is_empty() { &args[1..] } else { &[] };
             console.assert(assertion, data, rt.deref(), context)?;
 
             Ok(JsValue::undefined())

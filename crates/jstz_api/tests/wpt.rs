@@ -214,15 +214,15 @@ impl jstz_core::Api for TestHarnessReportApi {
             let value = context
                 .global_object()
                 .get(js_string!(name), context)
-                .expect(&format!("globalThis.{} is undefined", name));
+                .unwrap_or_else(|_| panic!("globalThis.{} is undefined", name));
 
             let function = value
                 .as_callable()
-                .expect(&format!("globalThis.{} is not callable", name));
+                .unwrap_or_else(|| panic!("globalThis.{} is not callable", name));
 
             function
                 .call(&JsValue::undefined(), args, context)
-                .expect(&format!("Failed to call globalThis.{}", name));
+                .unwrap_or_else(|_| panic!("Failed to call globalThis.{}", name));
         }
 
         call_global_function(
@@ -273,7 +273,7 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
     for item in &bundle.items {
         match item {
             BundleItem::TestHarnessReport => {
-                TestHarnessReportApi.init(&mut rt.context());
+                TestHarnessReportApi.init(rt.context());
             }
             BundleItem::Inline(script) | BundleItem::Resource(_, script) => {
                 rt.context().eval(Source::from_bytes(script))?;
