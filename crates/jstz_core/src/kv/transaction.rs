@@ -8,10 +8,9 @@ use boa_gc::{empty_trace, Finalize, Trace};
 use serde::de::DeserializeOwned;
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
-use crate::error::Result;
-
 use super::value::{BoxedValue, Value};
 use super::Storage;
+use crate::error::Result;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -80,7 +79,6 @@ impl SnapshotEntry {
     }
 
     fn as_ref<V>(&self) -> &V
-    //TODO: These don't really work when it is a RefCell, since the value can be mutated without needing as_mut.
     where
         V: Value,
     {
@@ -91,8 +89,6 @@ impl SnapshotEntry {
     where
         V: Value,
     {
-        //self.dirty = true;
-        println!("Avoided dirtying.");
         self.value.as_any_mut().downcast_mut().unwrap()
     }
 
@@ -123,8 +119,8 @@ impl Transaction {
         }
     }
 
-    fn lookup<'a, V>(
-        &'a mut self,
+    fn lookup<V>(
+        &mut self,
         rt: &impl Runtime,
         key: OwnedPath,
     ) -> Result<Option<&mut SnapshotEntry>>
@@ -151,10 +147,13 @@ impl Transaction {
                 }
                 None => {
                     if Storage::contains_key(rt, entry.key())? {
-                        let value = Storage::get::<V>(rt, entry.key())?.unwrap();
-                        let snapshot_entry =
-                            entry.insert(SnapshotEntry::ephemeral(value));
-                        return Ok(Some(snapshot_entry));
+                        if let Some(value) = Storage::get::<V>(rt, entry.key())? {
+                            let snapshot_entry =
+                                entry.insert(SnapshotEntry::ephemeral(value));
+                            return Ok(Some(snapshot_entry));
+                        } else {
+                            return Ok(None);
+                        }
                     }
 
                     return Ok(None);
@@ -221,16 +220,14 @@ impl Transaction {
 
     /// Removes a key from the key-value store.
     pub fn remove(&mut self, rt: &impl Runtime, key: &OwnedPath) -> Result<()> {
-        let key_clone = key.clone();
+        let key_exists = self.contains_key(rt, &key)?;
 
-        let key_exists = self.contains_key(rt, &key.clone())?;
-
-        self.snapshot.remove(&key_clone);
+        self.snapshot.remove(&key);
         // Store the result of `contains_key` in a temporary variable
 
         // Use the result after the immutable borrow ends
         if key_exists {
-            self.remove_set.insert(key_clone);
+            self.remove_set.insert(key.clone());
         }
         Ok(())
     }

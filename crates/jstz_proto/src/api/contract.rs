@@ -8,7 +8,11 @@ use boa_engine::{
 };
 use jstz_api::http::request::Request;
 use jstz_core::{
-    host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
+    host::HostRuntime,
+    host_defined,
+    kv::Transaction,
+    native::JsNativeObject,
+    runtime::{self},
     value::IntoJs,
 };
 
@@ -99,7 +103,6 @@ impl Contract {
         request: &JsNativeObject<Request>,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        host_defined!(context, host_defined);
         // 1. Get address from request
         let address = request
             .deref()
@@ -157,14 +160,7 @@ impl ContractApi {
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         host_defined!(context, host_defined);
-        let mut tx = host_defined.get_mut::<Transaction>().expect("fsasdf");
-
-        /*unsafe {
-            host_defined
-                .get_mut::<Transaction>()
-                .unwrap()
-                .extend_lifetime()
-        };*/
+        let mut tx = host_defined.get_mut::<Transaction>().unwrap();
 
         let contract = Contract::from_js_value(this)?;
         let contract_code: String = args

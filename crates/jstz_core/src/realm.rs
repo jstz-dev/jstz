@@ -49,11 +49,10 @@ impl Module {
         context: &mut Context<'_>,
     ) -> JsResult<Self> {
         let realm = realm.unwrap_or_else(|| context.realm().clone().into());
-
-        let module = boa_engine::Module::parse(src, Some(realm.inner_realm()), context)?;
+        let module = boa_engine::Module::parse(src, Some(realm.inner_realm()), context);
         Ok(Self {
             realm,
-            inner: module,
+            inner: module?,
         })
     }
 
