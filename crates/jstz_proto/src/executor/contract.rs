@@ -157,6 +157,13 @@ impl Script {
             context,
         );
         self.realm().register_api(
+            jstz_api::RandomApi {
+                contract_address: contract_address.clone(),
+                operation_hash: operation_hash.clone(),
+            },
+            context,
+        );
+        self.realm().register_api(
             api::LedgerApi {
                 contract_address: contract_address.clone(),
             },
