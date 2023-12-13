@@ -1965,6 +1965,7 @@ dependencies = [
  "boa_gc",
  "derive_more",
  "hex",
+ "proptest",
  "serde",
  "serde_json",
  "tezos_crypto_rs",
