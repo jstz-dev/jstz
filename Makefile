@@ -32,9 +32,7 @@ test:
 	@cargo test
 
 .PHONY: check
-check:
-	@cargo fmt --check
-	@cargo clippy --all-targets -- --deny warnings
+check: lint fmt
 
 .PHONY: clean
 clean:
