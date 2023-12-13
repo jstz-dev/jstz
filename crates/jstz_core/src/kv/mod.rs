@@ -89,6 +89,7 @@ impl Storage {
     }
 }
 
+#[derive(Default)]
 pub struct Kv {
     clock: Clock,
     update_sets: [BTreeSet<OwnedPath>; MAX_TX_COUNT],
@@ -104,10 +105,7 @@ impl Kv {
     /// Create an in-memory representation of the persistent key-value store
     /// with a given _scheme_.
     pub fn new() -> Self {
-        Self {
-            clock: Clock::default(),
-            update_sets: Default::default(),
-        }
+        Self::default()
     }
 
     /// Begin a new transaction.

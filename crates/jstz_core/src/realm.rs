@@ -176,7 +176,7 @@ type HostDefinedMap = HashMap<TracedTypeId, GcRefCell<Box<dyn NativeObject>>>;
 /// objects.
 ///
 /// This allows storing types which are mapped by their [`TypeId`].
-#[derive(Trace, Finalize)]
+#[derive(Trace, Finalize, Default)]
 pub struct HostDefined {
     env: HostDefinedMap,
 }
@@ -190,9 +190,7 @@ unsafe fn downcast_boxed_native_object_unchecked<T: NativeObject>(
 
 impl HostDefined {
     pub fn new() -> Self {
-        Self {
-            env: HashMap::new(),
-        }
+        Self::default()
     }
 
     #[track_caller]
