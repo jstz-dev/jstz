@@ -1,0 +1,23 @@
+# docker
+.dockerignore
+docker-compose.yml
+**/Dockerfile
+**/Dockerfile.*
+
+# git
+.git
+.github
+
+# build artifacts
+node_modules/
+**/dist
+**/.vitepress/cache
+**/.vitepress/dist
+debug/
+target/
+result/
+
+# tooling artifacts
+/.direnv
+/.vscode
+/.ligo

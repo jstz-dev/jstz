@@ -1,14 +1,6 @@
 .PHONY: all
 all: build test check
 
-.PHONY: build-installer
-build-installer: build
-	@rm -rf target/kernel/preimages
-	@smart-rollup-installer get-reveal-installer \
-		--upgrade-to target/wasm32-unknown-unknown/release/jstz_kernel.wasm \
-		--output target/kernel/jstz_kernel_installer.hex \
-		--preimages-dir target/kernel/preimages/
-
 .PHONY: build-bridge
 build-bridge:
 	@ligo compile contract contracts/jstz_bridge.mligo \
@@ -21,7 +13,6 @@ build:
 .PHONY: build-deps
 build-deps:
 	@rustup target add wasm32-unknown-unknown
-	@cargo install tezos-smart-rollup-installer
 
 .PHONY: build-dev-deps
 build-dev-deps: build-deps

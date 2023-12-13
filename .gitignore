@@ -36,3 +36,5 @@ node_modules/
 
 # direnv artifacts
 /.direnv
+
+.env

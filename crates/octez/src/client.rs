@@ -266,6 +266,7 @@ impl OctezClient {
             kernel,
             "--burn-cap",
             "999",
+            "--force",
         ]))?;
 
         regex_extract(r"Address: (sr1[^\s]+)", &output)
