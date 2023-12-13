@@ -10,6 +10,7 @@ pub enum Error {
     InvalidAddress,
     RefererShouldNotBeSet,
     GasLimitExceeded,
+    InvalidHttpRequest,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -34,6 +35,9 @@ impl From<Error> for JsError {
                 .into(),
             Error::GasLimitExceeded => JsNativeError::eval()
                 .with_message("GasLimitExceeded")
+                .into(),
+            Error::InvalidHttpRequest => JsNativeError::eval()
+                .with_message("InvalidHttpRequest")
                 .into(),
         }
     }
