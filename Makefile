@@ -71,3 +71,7 @@ fmt: fmt-nix fmt-rust fmt-js
 
 .PHONY: fmt-check
 fmt-check: fmt-nix-check fmt-rust-check fmt-js-check
+
+.PHONY: lint
+lint:
+	@cargo clippy -- -D warnings -A clippy::let_underscore_future -A clippy::module_inception -A clippy::op_ref -A clippy::manual_strip -A clippy::missing_safety_doc -A clippy::slow_vector_initialization -A clippy::empty_loop
