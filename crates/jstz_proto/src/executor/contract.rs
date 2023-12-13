@@ -47,32 +47,30 @@ pub mod headers {
 
 fn on_success(
     value: JsValue,
-    f: fn(&JsValue, &mut Context<'_>),
+    f: fn(&JsValue, &mut Context<'_>) -> JsResult<()>,
     context: &mut Context<'_>,
-) -> JsValue {
+) -> JsResult<JsValue> {
     match value.as_promise() {
         Some(promise) => {
             let promise = JsPromise::from_object(promise.clone()).unwrap();
-            promise
-                .then(
-                    Some(
-                        FunctionObjectBuilder::new(context.realm(), unsafe {
-                            NativeFunction::from_closure(move |_, args, context| {
-                                f(&value, context);
-                                Ok(args.get_or_undefined(0).clone())
-                            })
+            let result = promise.then(
+                Some(
+                    FunctionObjectBuilder::new(context.realm(), unsafe {
+                        NativeFunction::from_closure(move |_, args, context| {
+                            f(&value, context)?;
+                            Ok(args.get_or_undefined(0).clone())
                         })
-                        .build(),
-                    ),
-                    None,
-                    context,
-                )
-                .unwrap()
-                .into()
+                    })
+                    .build(),
+                ),
+                None,
+                context,
+            )?;
+            Ok(result.into())
         }
         None => {
-            f(&value, context);
-            value
+            f(&value, context)?;
+            Ok(value)
         }
     }
 }
@@ -233,7 +231,7 @@ impl Script {
             self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)?;
 
         // 3. Ensure that the transaction is committed
-        let result = on_success(
+        on_success(
             result,
             |value, context| {
                 host_defined!(context, mut host_defined);
@@ -247,22 +245,19 @@ impl Script {
                         "Rust type `Transaction` should be defined in `HostDefined`",
                     );
 
-                    let response =
-                        Response::try_from_js(value).expect("Expected valid response");
+                    let response = Response::try_from_js(&value)?;
 
                     // If status code is 2xx, commit transaction
                     if response.ok() {
-                        kv.commit_transaction(rt, *tx)
-                            .expect("Failed to commit transaction");
+                        kv.commit_transaction(rt, *tx)?;
                     } else {
                         kv.rollback_transaction(rt, *tx);
                     }
+                    Ok(())
                 })
             },
             context,
-        );
-
-        Ok(result)
+        )
     }
 
     /// Loads, initializes and runs the script
@@ -311,12 +306,12 @@ pub mod run {
         method: http::Method,
         headers: http::HeaderMap,
         body: HttpBody,
-    ) -> http::Request<HttpBody> {
+    ) -> Result<http::Request<HttpBody>> {
         let mut builder = http::Request::builder().uri(uri).method(method);
 
-        *builder.headers_mut().unwrap() = headers;
+        *builder.headers_mut().ok_or(Error::InvalidHttpRequest)? = headers;
 
-        builder.body(body).expect("Expected valid http request")
+        builder.body(body).map_err(|_| Error::InvalidHttpRequest)
     }
 
     pub fn execute(
@@ -338,10 +333,10 @@ pub mod run {
         register_web_apis(&rt.realm().clone(), rt);
 
         // 2. Extract address from request
-        let address = Address::from_base58(uri.host().expect("Expected host"))?;
+        let address = Address::from_base58(&uri.host().ok_or(Error::InvalidAddress)?)?;
 
         // 3. Deserialize request
-        let http_request = create_http_request(uri, method, headers, body);
+        let http_request = create_http_request(uri, method, headers, body)?;
 
         let request = JsNativeObject::new::<RequestClass>(
             Request::from_http_request(http_request, rt)?,
