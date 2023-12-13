@@ -5,7 +5,7 @@ use boa_engine::{
         JsMapIterator, JsPromise, JsProxy, JsRegExp, JsSet, JsSetIterator, JsTypedArray,
         JsUint16Array, JsUint32Array, JsUint8Array,
     },
-    Context, JsBigInt, JsObject, JsString, JsSymbol, JsValue,
+    Context, JsBigInt, JsObject, JsString, JsSymbol,
 };
 
 pub use boa_engine::value::*;

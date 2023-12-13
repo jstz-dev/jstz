@@ -13,7 +13,7 @@
 //!
 //! The implementation is heavily inspired by https://github.com/boa-dev/boa/blob/main/boa_runtime/src/console/mod.rs
 
-use std::ops::Deref;
+use std::{fmt::Display, ops::Deref};
 
 use boa_engine::{
     js_string,
@@ -39,11 +39,15 @@ pub struct LogRecord {
     pub text: String,
 }
 
-impl LogRecord {
-    fn to_string(&self) -> String {
-        serde_json::to_string(&self).expect("Failed to serialize JSONLog")
+impl Display for LogRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(
+            &serde_json::to_string(self).expect("Failed to convert LogRecord to string"),
+        )
     }
+}
 
+impl LogRecord {
     pub fn from_string(json: &str) -> Self {
         serde_json::from_str(json).expect("Failed to deserialize JSONLog")
     }
@@ -510,15 +514,15 @@ impl ConsoleApi {
         Ok(JsValue::undefined())
     }
 
-    fn to_console(self) -> Console {
+    fn to_console(&self) -> Console {
         match self {
             ConsoleApi::Proto {
                 contract_address,
                 operation_hash,
             } => Console::Proto {
                 groups: Vec::default(),
-                contract_address,
-                operation_hash,
+                contract_address: contract_address.clone(),
+                operation_hash: operation_hash.clone(),
             },
             ConsoleApi::Cli => Console::Cli {
                 groups: Vec::default(),
