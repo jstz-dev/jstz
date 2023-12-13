@@ -17,3 +17,18 @@ pub fn keypair_from_passphrase(passphrase: &str) -> Result<(SecretKey, PublicKey
     let (pk, sk) = seed.keypair()?;
     Ok((SecretKey::Ed25519(sk), PublicKey::Ed25519(pk)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::keypair_from_passphrase;
+    use proptest::prelude::*;
+
+    proptest! {
+        #[test]
+        fn test_keygen_verify(passphrase in any::<String>(), message in any::<Vec<u8>>()) {
+            let (sk, pk) = keypair_from_passphrase(&passphrase).unwrap();
+            let sig = sk.sign(&message).unwrap();
+            assert!(sig.verify(&pk, &message).is_ok());
+        }
+    }
+}
