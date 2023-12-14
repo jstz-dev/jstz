@@ -1855,7 +1855,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_yaml 0.8.26",
- "sha2 0.9.9",
+ "sha2 0.10.8",
  "signal-hook",
  "tempfile",
  "tezos-smart-rollup",
