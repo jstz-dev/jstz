@@ -42,7 +42,7 @@ pub struct RandomApi {
 }
 
 impl RandomApi {
-    fn to_random_gen(self) -> RandomGen {
+    fn to_random_gen(&self) -> RandomGen {
         let mut seed: u64 = 0;
         for byte in self
             .operation_hash
