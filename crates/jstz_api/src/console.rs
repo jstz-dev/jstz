@@ -13,7 +13,7 @@
 //!
 //! The implementation is heavily inspired by https://github.com/boa-dev/boa/blob/main/boa_runtime/src/console/mod.rs
 
-use std::{fmt::Display, ops::Deref};
+use std::{fmt::Display, ops::Deref, str::FromStr};
 
 use boa_engine::{
     js_string,
@@ -45,9 +45,10 @@ impl Display for LogRecord {
     }
 }
 
-impl LogRecord {
-    pub fn try_from_string(json: &str) -> Option<Self> {
-        serde_json::from_str(json).ok()
+impl FromStr for LogRecord {
+    type Err = serde_json::Error;
+    fn from_str(json: &str) -> Result<Self, Self::Err> {
+        serde_json::from_str(json)
     }
 }
 
