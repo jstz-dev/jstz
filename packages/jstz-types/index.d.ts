@@ -199,3 +199,37 @@ declare interface SmartFunction {
 }
 
 declare var SmartFunction: SmartFunction;
+
+declare type BlobPart = BufferSource | Blob | string;
+
+declare interface BlobPropertyBag {
+  type?: string;
+  endings?: "transparent" | "native";
+}
+
+declare interface Blob {
+  readonly size: number;
+  readonly type: string;
+  arrayBuffer(): Promise<ArrayBuffer>;
+  slice(start?: number, end?: number, contentType?: string): Blob;
+  text(): Promise<string>;
+}
+
+declare var Blob: {
+  readonly prototype: Blob;
+  new (blobParts?: BlobPart[], options?: BlobPropertyBag): Blob;
+};
+
+declare interface FilePropertyBag extends BlobPropertyBag {
+  lastModified?: number;
+}
+
+declare interface File extends Blob {
+  readonly lastModified: number;
+  readonly name: string;
+}
+
+declare var File: {
+  readonly prototype: File;
+  new (fileBits: BlobPart[], fileName: string, options?: FilePropertyBag): File;
+};

@@ -1,5 +1,6 @@
 mod console;
 pub mod encoding;
+pub mod file;
 pub mod http;
 pub mod idl;
 pub mod js_log;

@@ -100,6 +100,7 @@ pub fn register_web_apis(realm: &Realm, context: &mut Context<'_>) {
     realm.register_api(jstz_api::http::HttpApi, context);
     realm.register_api(jstz_api::encoding::EncodingApi, context);
     realm.register_api(jstz_api::ConsoleApi, context);
+    realm.register_api(jstz_api::file::FileApi, context);
 }
 
 pub fn register_jstz_apis(
