@@ -243,6 +243,7 @@ pub fn register_apis(context: &mut Context<'_>) {
     // TODO this is not all the APIs
     jstz_api::http::header::HeadersApi.init(context);
     jstz_api::encoding::EncodingApi.init(context);
+    jstz_api::file::FileApi.init(context);
 }
 
 pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
@@ -318,6 +319,7 @@ async fn test_wpt() -> Result<()> {
         [
             r"^\/encoding\/[^\/]+\.any\.html$",
             r"^\/fetch\/api\/headers\/[^\/]+\.any\.html$",
+            r"^\/FileAPI\/blob\/Blob-slice-overflow.any.html$",
         ]
         .as_ref(),
     )?;

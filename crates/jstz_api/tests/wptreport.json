@@ -1,5 +1,49 @@
 {
   "test_harness": {
+    "FileAPI": {
+      "Folder": {
+        "blob": {
+          "Folder": {
+            "Blob-slice-overflow.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "slice start is negative, relativeStart will be max((size + start), 0)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "slice start is greater than blob size, relativeStart will be min(start, size)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "slice end is negative, relativeEnd will be max((size + end), 0)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "slice end is greater than blob size, relativeEnd will be min(end, size)",
+                        "status": "Pass",
+                        "message": null
+                      }
+                    ],
+                    "status": "Null",
+                    "metrics": {
+                      "passed": 4,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "encoding": {
       "Folder": {
         "api-basics.any.js": {
