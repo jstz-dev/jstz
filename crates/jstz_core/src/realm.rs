@@ -301,10 +301,9 @@ impl HostDefined {
                 host_defined,
                 Attribute::all(),
             )
-            .expect(&format!(
-                "{:?} object should only be defined once",
-                Self::NAME
-            ))
+            .unwrap_or_else(|_| {
+                panic!("{:?} object should only be defined once", Self::NAME)
+            })
     }
 }
 

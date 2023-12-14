@@ -263,7 +263,10 @@ impl ResponseBuilder {
         let headers = Headers::new();
 
         Ok(Response {
-            response: InnerResponse::builder().status(status).body(body).unwrap(),
+            response: InnerResponse::builder()
+                .status(status)
+                .body(body)
+                .expect("fixed inputs should never fail"),
             headers: JsNativeObject::new::<HeadersClass>(headers, context)?,
             url: None,
         })
@@ -314,7 +317,7 @@ impl ResponseBuilder {
             response: InnerResponse::builder()
                 .status(status)
                 .body(Body::null())
-                .unwrap(),
+                .expect("fixed inputs should never fail"),
             headers: JsNativeObject::new::<HeadersClass>(headers, context)?,
             url: Some(parsed_url),
         })

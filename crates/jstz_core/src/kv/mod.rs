@@ -55,7 +55,7 @@ impl Storage {
         match rt.store_has(key)? {
             Some(ValueType::Value | ValueType::ValueWithSubtree) => {
                 let bytes = rt.store_read_all(key)?;
-                let value = value::deserialize(&bytes);
+                let value = value::deserialize(&bytes)?;
                 Ok(Some(value))
             }
             _ => Ok(None),
@@ -76,7 +76,7 @@ impl Storage {
     where
         V: Value + ?Sized,
     {
-        rt.store_write(key, &value::serialize(value), 0)?;
+        rt.store_write(key, &value::serialize(value)?, 0)?;
         Ok(())
     }
 
