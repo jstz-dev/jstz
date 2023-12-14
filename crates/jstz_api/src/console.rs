@@ -41,15 +41,13 @@ pub struct LogRecord {
 
 impl Display for LogRecord {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(
-            &serde_json::to_string(self).expect("Failed to convert LogRecord to string"),
-        )
+        f.write_str(&serde_json::to_string(self).map_err(|_| std::fmt::Error)?)
     }
 }
 
 impl LogRecord {
-    pub fn from_string(json: &str) -> Self {
-        serde_json::from_str(json).expect("Failed to deserialize JSONLog")
+    pub fn try_from_string(json: &str) -> Option<Self> {
+        serde_json::from_str(json).ok()
     }
 }
 

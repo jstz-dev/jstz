@@ -361,7 +361,12 @@ impl TryFromJs for HeadersInit {
                 context,
             )?
             .to_object(context)
-            .expect("Expected array from `Object.entries`");
+            .map_err(|_| {
+                JsError::from_native(
+                    JsNativeError::typ()
+                        .with_message("Expected array from `Object.entries`"),
+                )
+            })?;
 
             Ok(Self::New(js_array_to_header_entries(&arr, context)?))
         }

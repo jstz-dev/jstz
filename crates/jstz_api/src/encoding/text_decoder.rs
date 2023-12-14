@@ -218,7 +218,9 @@ impl TextDecoder {
         let mut output: Vec<u16> = Vec::with_capacity(
             self.decoder
                 .max_utf16_buffer_length(input.len())
-                .expect("If usize overflows, then we cannot alloc this"),
+                .ok_or_else(|| {
+                    JsNativeError::eval().with_message("Input too large for buffer")
+                })?,
         );
         output.resize(output.capacity(), 0);
 

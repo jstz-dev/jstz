@@ -181,7 +181,9 @@ fn smart_rollup_installer(cfg: &Config, bridge_address: &str) -> Result<()> {
 
     let instructions = YamlConfig {
         instructions: vec![Instr::Set(SetArgs {
-            value: hex::encode(serialize(&bridge_address)),
+            value: hex::encode(
+                serialize(&bridge_address).expect("Could not serialize address"),
+            ),
             to: "/ticketer".to_owned(),
         })],
     };

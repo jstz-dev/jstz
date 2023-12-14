@@ -245,7 +245,7 @@ impl Script {
                         "Rust type `Transaction` should be defined in `HostDefined`",
                     );
 
-                    let response = Response::try_from_js(&value)?;
+                    let response = Response::try_from_js(value)?;
 
                     // If status code is 2xx, commit transaction
                     if response.ok() {
@@ -333,7 +333,7 @@ pub mod run {
         register_web_apis(&rt.realm().clone(), rt);
 
         // 2. Extract address from request
-        let address = Address::from_base58(&uri.host().ok_or(Error::InvalidAddress)?)?;
+        let address = Address::from_base58(uri.host().ok_or(Error::InvalidAddress)?)?;
 
         // 3. Deserialize request
         let http_request = create_http_request(uri, method, headers, body)?;

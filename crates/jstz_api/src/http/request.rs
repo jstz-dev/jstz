@@ -55,16 +55,23 @@ impl Request {
         request: http::Request<HttpBody>,
         context: &mut Context<'_>,
     ) -> JsResult<Self> {
-        let url = Url::from_str(&request.uri().to_string()).expect("Expected valid URL");
+        let url = Url::from_str(&request.uri().to_string()).map_err(|_| {
+            JsError::from_native(JsNativeError::typ().with_message("Expected valid URL"))
+        })?;
         let headers = JsNativeObject::new::<HeadersClass>(
             Headers::from_http_headers(request.headers().clone(), context)?,
             context,
         )?;
 
-        let request = request.map(|body| {
-            Body::from_http_body(body, context).expect("Expected valid body")
-        });
-
+        let request = {
+            let (parts, body) = request.into_parts();
+            let body = Body::from_http_body(body, context).map_err(|_| {
+                JsError::from_native(
+                    JsNativeError::typ().with_message("Expected valid body"),
+                )
+            })?;
+            http::Request::from_parts(parts, body)
+        };
         Ok(Self {
             request,
             headers,
@@ -174,7 +181,11 @@ impl Request {
 
                 // 4. Set `request` to a new request whose URL is `parsed_url`
                 let request = InnerRequest::builder()
-                    .uri(Uri::from_str(&url).expect("Invalid URI"))
+                    .uri(Uri::from_str(&url).map_err(|_| {
+                        JsError::from_native(
+                            JsNativeError::typ().with_message("Invalid URI"),
+                        )
+                    })?)
                     .body(Body::null())
                     .unwrap();
 

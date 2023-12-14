@@ -12,6 +12,9 @@ pub enum Error {
     JsError {
         source: JsError,
     },
+    SerializationError {
+        description: String,
+    },
 }
 
 impl From<Error> for JsError {
@@ -26,6 +29,9 @@ impl From<Error> for JsError {
             Error::JsError { source } => JsNativeError::eval()
                 .with_message("JsError")
                 .with_cause(source)
+                .into(),
+            Error::SerializationError { description } => JsNativeError::eval()
+                .with_message(format!("serialization error: {description}"))
                 .into(),
         }
     }

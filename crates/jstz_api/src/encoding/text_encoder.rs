@@ -138,7 +138,9 @@ impl TextEncoder {
         let mut buffer: Vec<u8> = Vec::with_capacity(
             encoder
                 .max_buffer_length_from_utf16_if_no_unmappables(input.len())
-                .expect("If usize overflows, then we cannot alloc this"),
+                .ok_or_else(|| {
+                    JsNativeError::eval().with_message("Input too large for buffer")
+                })?,
         );
         buffer.resize(buffer.capacity(), 0);
 
