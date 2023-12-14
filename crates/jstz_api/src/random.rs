@@ -15,7 +15,7 @@ struct RandomGen {
 }
 
 impl RandomGen {
-    fn from_js_value<'a>(value: &'a JsValue) -> JsResult<GcRefMut<'a, Object, Self>> {
+    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
