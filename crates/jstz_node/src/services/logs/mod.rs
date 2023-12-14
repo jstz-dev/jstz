@@ -6,8 +6,11 @@ use actix_web::{
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
 
-use std::io::{Error, ErrorKind::InvalidInput, Result};
 use std::sync::Arc;
+use std::{
+    io::{Error, ErrorKind::InvalidInput, Result},
+    str::FromStr,
+};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
@@ -60,8 +63,8 @@ impl LogsService {
                 line = lines.next_line() => {
                     if let Ok(Some(msg)) = line {
                         if msg.starts_with(LOG_PREFIX) {
-                            let log = LogRecord::try_from_string(&msg[LOG_PREFIX.len()..])
-                                .unwrap();
+                            let log = LogRecord::from_str(&msg[LOG_PREFIX.len()..])
+                                .expect("Could not parse log record");
                             broadcaster.broadcast(&log.contract_address, &msg[LOG_PREFIX.len()..]).await;
                         }
                     }
