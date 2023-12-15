@@ -2728,43 +2728,43 @@
                           },
                           {
                             "name": "Headers iterator does not combine set-cookie headers",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers iterator does not special case set-cookie2 headers",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers iterator does not combine set-cookie & set-cookie2 headers",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers iterator preserves set-cookie ordering",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers iterator preserves per header ordering, but sorts keys alphabetically",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers iterator preserves per header ordering, but sorts keys alphabetically (and ignores value ordering)",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers iterator is correctly updated with set-cookie changes",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers iterator is correctly updated with set-cookie changes #2",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.has works for set-cookie",
@@ -2773,18 +2773,18 @@
                           },
                           {
                             "name": "Headers.prototype.append works for set-cookie",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.set works for set-cookie",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.delete works for set-cookie",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers.prototype.getSetCookie with no headers present",
@@ -2828,8 +2828,8 @@
                           },
                           {
                             "name": "Adding Set-Cookie headers normalizes their value",
-                            "status": "Fail",
-                            "message": "Invalid header value"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Adding invalid Set-Cookie headers throws",
@@ -2844,8 +2844,8 @@
                         ],
                         "status": "Null",
                         "metrics": {
-                          "passed": 11,
-                          "failed": 13,
+                          "passed": 23,
+                          "failed": 1,
                           "timed_out": 0
                         }
                       }
@@ -3071,8 +3071,8 @@
                           },
                           {
                             "name": "Create headers from undefined parameter",
-                            "status": "Fail",
-                            "message": "Failed to convert js value into js object"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Create headers from empty object",
@@ -3091,99 +3091,99 @@
                           },
                           {
                             "name": "Create headers with sequence",
-                            "status": "Fail",
-                            "message": "cannot convert value to a String"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Create headers with record",
-                            "status": "Fail",
-                            "message": "cannot convert value to a String"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Create headers with existing headers",
-                            "status": "Fail",
-                            "message": "cannot convert value to a String"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Create headers with existing headers with custom iterator",
-                            "status": "Fail",
-                            "message": "assert_equals: expected (string) \"test\" but got (object) null"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check append method",
-                            "status": "Fail",
-                            "message": "cannot convert value to a String"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check set method",
-                            "status": "Fail",
-                            "message": "cannot convert value to a String"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check has method",
-                            "status": "Fail",
-                            "message": "cannot convert value to a String"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check delete method",
-                            "status": "Fail",
-                            "message": "cannot convert value to a String"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check get method",
-                            "status": "Fail",
-                            "message": "cannot convert value to a String"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check keys method",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check values method",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check entries method",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check Symbol.iterator method",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check forEach method",
-                            "status": "Fail",
-                            "message": "not a callable function"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Iteration skips elements removed while iterating",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Removing elements already iterated over causes an element to be skipped during iteration",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Appending a value pair during iteration causes it to be reached during iteration",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Prepending a value pair before the current element position causes it to be skipped during iteration and adds the current element a second time",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           }
                         ],
                         "status": "Null",
                         "metrics": {
-                          "passed": 4,
-                          "failed": 19,
+                          "passed": 23,
+                          "failed": 0,
                           "timed_out": 0
                         }
                       }
@@ -3253,19 +3253,19 @@
                           },
                           {
                             "name": "Iterate combined values",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Iterate combined values in sorted order",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           }
                         ],
                         "status": "Null",
                         "metrics": {
-                          "passed": 4,
-                          "failed": 2,
+                          "passed": 6,
+                          "failed": 0,
                           "timed_out": 0
                         }
                       }
@@ -3284,8 +3284,8 @@
                           },
                           {
                             "name": "Create headers giving an array having three strings as init argument",
-                            "status": "Fail",
-                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Create headers giving bad header name as init argument",
@@ -3294,8 +3294,8 @@
                           },
                           {
                             "name": "Create headers giving bad header value as init argument",
-                            "status": "Fail",
-                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check headers get with an invalid name invalidĀ",
@@ -3339,8 +3339,8 @@
                           },
                           {
                             "name": "Check headers set with an invalid value invalidĀ",
-                            "status": "Fail",
-                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Check headers append with an invalid name invalidĀ",
@@ -3354,8 +3354,8 @@
                           },
                           {
                             "name": "Check headers append with an invalid value invalidĀ",
-                            "status": "Fail",
-                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers forEach throws if argument is not callable",
@@ -3364,14 +3364,14 @@
                           },
                           {
                             "name": "Headers forEach loop should stop if callback is throwing exception",
-                            "status": "Fail",
-                            "message": "assert_equals: expected 2 but got 0"
+                            "status": "Pass",
+                            "message": null
                           }
                         ],
                         "status": "Null",
                         "metrics": {
-                          "passed": 13,
-                          "failed": 5,
+                          "passed": 18,
+                          "failed": 0,
                           "timed_out": 0
                         }
                       }
@@ -3442,12 +3442,12 @@
                           {
                             "name": "Check append method with not normalized values",
                             "status": "Fail",
-                            "message": "assert_equals: name: name1 has value: space expected \"space\" but got \" space \""
+                            "message": "Invalid header value"
                           },
                           {
                             "name": "Check set method with not normalized values",
                             "status": "Fail",
-                            "message": "assert_equals: name: name1 has value: space expected \"space\" but got \" space \""
+                            "message": "Invalid header value"
                           }
                         ],
                         "status": "Null",
@@ -3467,13 +3467,13 @@
                         "subtests": [
                           {
                             "name": "Passing nothing to Headers constructor",
-                            "status": "Fail",
-                            "message": "value with type `object` is not iterable"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Passing undefined to Headers constructor",
-                            "status": "Fail",
-                            "message": "Failed to convert js value into js object"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Passing null to Headers constructor",
@@ -3482,43 +3482,43 @@
                           },
                           {
                             "name": "Basic operation with one property",
-                            "status": "Fail",
-                            "message": "assert_equals: expected 4 but got 3"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Basic operation with one property and a proto",
-                            "status": "Fail",
-                            "message": "assert_equals: expected 4 but got 3"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Correct operation ordering with two properties",
-                            "status": "Fail",
-                            "message": "assert_equals: expected 6 but got 5"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Correct operation ordering with two properties one of which has an invalid name",
                             "status": "Fail",
-                            "message": "assert_array_equals: lengths differ, expected array [\"get\", object \"[object Object]\", symbol \"Symbol(Symbol.iterator)\", object \"[object Object]\"] length 4, got [\"ownKeys\", object \"[object Object]\"] length 2"
+                            "message": "assert_equals: expected 5 but got 6"
                           },
                           {
                             "name": "Correct operation ordering with two properties one of which has an invalid value",
                             "status": "Fail",
-                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                            "message": "assert_equals: expected 4 but got 6"
                           },
                           {
                             "name": "Correct operation ordering with non-enumerable properties",
-                            "status": "Fail",
-                            "message": "assert_equals: expected 6 but got 5"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Correct operation ordering with undefined descriptors",
-                            "status": "Fail",
-                            "message": "assert_equals: expected 6 but got 5"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Correct operation ordering with repeated keys",
-                            "status": "Fail",
-                            "message": "assert_equals: expected 2 but got 1"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Basic operation with Symbol keys",
@@ -3528,13 +3528,13 @@
                           {
                             "name": "Operation with non-enumerable Symbol keys",
                             "status": "Fail",
-                            "message": "cannot convert value to a String"
+                            "message": "assert_equals: expected 9 but got 8"
                           }
                         ],
                         "status": "Null",
                         "metrics": {
-                          "passed": 1,
-                          "failed": 12,
+                          "passed": 9,
+                          "failed": 4,
                           "timed_out": 0
                         }
                       }
@@ -3573,24 +3573,24 @@
                           },
                           {
                             "name": "Headers has entries method",
-                            "status": "Fail",
-                            "message": "assert_true: headers has entries method expected true got false"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers has keys method",
-                            "status": "Fail",
-                            "message": "assert_true: headers has keys method expected true got false"
+                            "status": "Pass",
+                            "message": null
                           },
                           {
                             "name": "Headers has values method",
-                            "status": "Fail",
-                            "message": "assert_true: headers has values method expected true got false"
+                            "status": "Pass",
+                            "message": null
                           }
                         ],
                         "status": "Null",
                         "metrics": {
-                          "passed": 5,
-                          "failed": 3,
+                          "passed": 8,
+                          "failed": 0,
                           "timed_out": 0
                         }
                       }
