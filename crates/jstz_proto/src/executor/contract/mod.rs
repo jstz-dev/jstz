@@ -137,9 +137,12 @@ impl Script {
         Ok(Self(module))
     }
 
-    // TODO: we need to be able to specify the type of console API (Proto vs Cli),
-    // With current implementation, calling a contract in CLI will revert the logging back to Proto
-    fn register_apis(&self, contract_address: Address, context: &mut Context<'_>) {
+    fn register_apis(
+        &self,
+        contract_address: Address,
+        operation_hash: &OperationHash,
+        context: &mut Context<'_>,
+    ) {
         register_web_apis(self.realm(), context);
 
         self.realm().register_api(
@@ -170,9 +173,10 @@ impl Script {
     pub fn init(
         &self,
         contract_address: Address,
+        operation_hash: &OperationHash,
         context: &mut Context<'_>,
     ) -> JsResult<JsPromise> {
-        self.register_apis(contract_address, context);
+        self.register_apis(contract_address, operation_hash, context);
 
         self.realm().eval_module(self, context)
     }
@@ -272,7 +276,8 @@ impl Script {
         let script = Script::load(tx, &contract_address, context)?;
 
         // 2. Evaluate the script's module
-        let script_promise = script.init(contract_address.clone(), context)?;
+        let script_promise =
+            script.init(contract_address.clone(), &operation_hash, context)?;
 
         // 3. Once evaluated, call the script's handler
         let result = script_promise.then(
@@ -352,19 +357,22 @@ pub mod run {
         headers::test_and_set_referrer(&request.deref(), source)?;
 
         // 5. Run :)
-        let result: JsValue = runtime::with_host_runtime(hrt, || {
-            jstz_core::future::block_on(async move {
-                let result = Script::load_init_run(
-                    tx,
-                    address,
-                    operation_hash,
-                    request.inner(),
-                    rt,
-                )?;
+        let result: JsValue = {
+            let rt = &mut *rt;
+            runtime::with_host_runtime(hrt, || {
+                jstz_core::future::block_on(async move {
+                    let result = Script::load_init_run(
+                        tx,
+                        address,
+                        operation_hash,
+                        request.inner(),
+                        rt,
+                    )?;
 
-                rt.resolve_value(&result).await
+                    rt.resolve_value(&result).await
+                })
             })
-        })
+        }
         .map_err(|err| {
             if rt.instructions_remaining() == 0 {
                 Error::GasLimitExceeded
