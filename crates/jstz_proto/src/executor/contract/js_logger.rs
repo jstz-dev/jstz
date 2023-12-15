@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use boa_engine::prelude::Context;
 pub use jstz_api::JsLog;
 use jstz_api::{LogData, LogLevel};
@@ -17,6 +19,14 @@ pub struct LogRecord {
     pub request_id: String,
     pub level: LogLevel,
     pub text: String,
+}
+
+impl Display for LogRecord {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(
+            &serde_json::to_string(self).expect("Failed to convert LogRecord to string"),
+        )
+    }
 }
 
 impl LogRecord {
@@ -39,10 +49,6 @@ impl LogRecord {
             level,
             text: " ".repeat(indent) + &text,
         }
-    }
-
-    pub fn to_string(&self) -> String {
-        serde_json::to_string(self).expect("Failed to serialize JSONLog")
     }
 
     pub fn from_string(s: &str) -> Self {

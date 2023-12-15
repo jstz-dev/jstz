@@ -13,8 +13,6 @@
 //!
 //! The implementation is heavily inspired by https://github.com/boa-dev/boa/blob/main/boa_runtime/src/console/mod.rs
 
-use std::{cell::Cell, fmt::Display, ops::Deref};
-
 use boa_engine::{
     js_string,
     object::{Object, ObjectInitializer},
@@ -26,8 +24,6 @@ use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::value::IntoJs;
 use log::js_log;
 pub use log::{set_js_logger, JsLog, LogData, LogLevel};
-
-use tezos_smart_rollup::prelude::debug_msg;
 
 mod log {
     use boa_engine::{Context, JsNativeError, JsResult};
@@ -449,7 +445,7 @@ impl ConsoleApi {
         let console = Console::from_js_value(this)?;
 
         let assertion = args.get_or_undefined(0).to_boolean();
-        let data = if args.len() >= 1 { &args[1..] } else { &[] };
+        let data = if !args.is_empty() { &args[1..] } else { &[] };
         console.assert(assertion, data, context)?;
 
         Ok(JsValue::undefined())
