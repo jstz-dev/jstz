@@ -7,7 +7,7 @@ repository.workspace = true
 
 [dependencies]
 derive_more = "0.99.17"
-erased-serde = "0.3.28"
+erased-serde = "0.4.1"
 serde = "1.0.183"
 jstz_core.workspace = true
 jstz_crypto.workspace = true
