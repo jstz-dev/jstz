@@ -9,7 +9,7 @@ use crate::{
     Error, Result,
 };
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct Operation {
     pub source: Address,
     pub nonce: Nonce,
@@ -114,7 +114,7 @@ pub enum Content {
     RunContract(RunContract),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct SignedOperation {
     pub public_key: PublicKey,
     signature: Signature,
@@ -146,14 +146,14 @@ impl SignedOperation {
 pub mod external {
     use super::*;
 
-    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
     pub struct Deposit {
         pub amount: Amount,
         pub reciever: Address,
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum ExternalOperation {
     Deposit(external::Deposit),
 }
