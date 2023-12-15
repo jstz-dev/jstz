@@ -422,8 +422,10 @@ impl TryFromJs for RequestOptions {
 
         let headers: Option<Headers> =
             if obj.has_property(js_string!("headers"), context)? {
-                obj.get(js_string!("headers"), context)?
-                    .try_js_into(context)?
+                Some(Headers::from_init(
+                    obj.get(js_string!("headers"), context)?
+                        .try_js_into(context)?,
+                )?)
             } else {
                 Default::default()
             };

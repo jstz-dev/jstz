@@ -18,7 +18,8 @@ use boa_engine::{
     builtins, js_string,
     object::{builtins::JsArray, Object},
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsValue, NativeFunction,
+    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsSymbol, JsValue,
+    NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use derive_more::Deref;
@@ -327,12 +328,57 @@ pub struct HeaderEntry {
 
 impl TryFromJs for HeaderEntry {
     fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
-        let arr: JsArray = value.try_js_into(context)?;
+        let obj = value.as_object()
+	    .ok_or(JsNativeError::typ()
+		   .with_message("Failed to construct 'Headers': The provided value cannot be converted to a sequence."))?;
+        let arr: JsArray = iterable_to_sequence(obj, context)?.try_js_into(context)?;
 
         let name: String = arr.get(0, context)?.try_js_into(context)?;
         let value: String = arr.get(1, context)?.try_js_into(context)?;
 
         Ok(Self { name, value })
+    }
+}
+
+fn get_iterator(obj: &JsObject, context: &mut Context<'_>) -> JsResult<JsValue> {
+    // TODO workaround until JsSymbol::iterator() is pub
+    let symbol_iterator: JsSymbol = context
+        .intrinsics()
+        .constructors()
+        .symbol()
+        .constructor()
+        .get(js_string!("iterator"), context)?
+        .as_symbol()
+        .ok_or(JsNativeError::typ().with_message("Symbol.iterator was not a Symbol?"))?;
+    obj.get(symbol_iterator, context)
+}
+
+// TODO this is not spec compliant, because it doesn't observe the
+// object in the precisely the right way.
+//
+// Should do: https://webidl.spec.whatwg.org/#es-sequence
+// for HeadersInit in particular we have sequence<sequence<ByteString>>
+//
+// TODO: using Array.from as a hack, expose something in boa
+fn iterable_to_sequence(obj: &JsObject, context: &mut Context<'_>) -> JsResult<JsValue> {
+    let array_from_obj = context
+        .intrinsics()
+        .constructors()
+        .array()
+        .constructor()
+        .get(js_string!("from"), context)?;
+    let array_from: &JsObject = array_from_obj.as_callable().ok_or::<JsError>(
+        JsNativeError::typ()
+            .with_message("Array.from was not callable")
+            .into(),
+    )?;
+
+    if get_iterator(obj, context)?.is_callable() {
+        array_from.call(&JsValue::null(), &[obj.clone().into()], context)
+    } else {
+        Err(JsNativeError::typ()
+            .with_message("expected iterable to convert to sequence")
+            .into())
     }
 }
 
@@ -370,34 +416,27 @@ fn str_to_header_value(str: &str) -> JsResult<HeaderValue> {
 ///  - [WHATWG specification][spec]
 ///
 /// [spec] https://fetch.spec.whatwg.org/#typedefdef-headersinit
-pub enum HeadersInit {
-    New(Vec<HeaderEntry>),
-    Existing(Headers),
-}
-
-impl Default for HeadersInit {
-    fn default() -> Self {
-        Self::Existing(Headers::default())
-    }
+#[derive(Default)]
+pub struct HeadersInit {
+    entries: Vec<HeaderEntry>,
 }
 
 impl Headers {
     pub fn from_init(init: HeadersInit) -> JsResult<Headers> {
-        match init {
-            HeadersInit::New(entries) => {
-                let mut headers = Headers::default();
-                for entry in entries {
-                    headers.append(&entry.name, &entry.value)?
-                }
-                Ok(headers)
-            }
-            HeadersInit::Existing(headers) => Ok(headers),
+        let mut headers = Headers::default();
+        for entry in init.entries {
+            headers.append(&entry.name, &entry.value)?
         }
+        Ok(headers)
     }
 }
 
 impl TryFromJs for HeadersInit {
     fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+        if value.is_undefined() {
+            return Ok(HeadersInit::default());
+        }
+
         let obj = value.as_object().ok_or_else(|| {
             JsError::from_native(
                 JsNativeError::typ()
@@ -405,42 +444,34 @@ impl TryFromJs for HeadersInit {
             )
         })?;
 
-        if obj.is_array() {
-            Ok(Self::New(js_array_to_header_entries(obj, context)?))
-        } else if obj.is_native_object() {
-            let headers =
-                obj.downcast_ref::<Headers>().ok_or_else(|| {
-                    JsError::from_native(JsNativeError::typ().with_message(
-                        "Failed to convert js object into Rust type `Headers`",
-                    ))
-                })?;
-
-            Ok(Self::Existing(headers.clone()))
+        // if it looks iterable, convert to sequence<sequence<ByteString>>
+        let entries = if get_iterator(obj, context)?.is_callable() {
+            let entries_obj = iterable_to_sequence(obj, context)?;
+            let entries_array = entries_obj
+                .as_object()
+                .ok_or(JsNativeError::typ().with_message(
+                "Internal error in Headers constructor: expected array from `Array.from`",
+            ))?;
+            js_array_to_header_entries(entries_array, context)?
         } else {
             // TODO: Expose `enumerable_own_property_names` in Boa
+            // TODO: also should throw if there are any own property
+            // symbols, because we should try to ToString them
             let arr = builtins::object::Object::entries(
                 &JsValue::undefined(),
                 &[value.clone()],
                 context,
             )?
             .to_object(context)
-            .map_err(|_| {
-                JsError::from_native(
-                    JsNativeError::typ()
-                        .with_message("Expected array from `Object.entries`"),
-                )
-            })?;
+            .ok()
+            .ok_or(
+                JsNativeError::typ().with_message("Expected array from `Object.entries`"),
+            )?;
 
-            Ok(Self::New(js_array_to_header_entries(&arr, context)?))
-        }
-    }
-}
+            js_array_to_header_entries(&arr, context)?
+        };
 
-impl TryFromJs for Headers {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
-        let init: HeadersInit = value.try_js_into(context)?;
-
-        Headers::from_init(init)
+        Ok(HeadersInit { entries })
     }
 }
 
@@ -456,7 +487,10 @@ impl NativeClass for HeadersClass {
     ) -> JsResult<Headers> {
         match args.get(0) {
             None => Ok(Headers::default()),
-            Some(value) => value.try_js_into(context),
+            Some(value) => {
+                let init: HeadersInit = value.try_js_into(context)?;
+                Headers::from_init(init)
+            }
         }
     }
 
@@ -509,7 +543,8 @@ impl PairIterable for Headers {
     ) -> JsResult<jstz_core::iterators::PairValue> {
         let cached_iteration = self.get_cached_iteration()?;
         match cached_iteration.get(index) {
-            None => todo!("OOB err"),
+            None => Err(JsNativeError::typ()
+                .with_message("Index out of bounds error in iterator"))?,
             Some(elem) => {
                 let elem = elem.clone();
                 let key: JsValue = elem.0.into_js(context);
