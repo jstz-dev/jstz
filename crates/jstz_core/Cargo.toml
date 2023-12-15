@@ -12,5 +12,5 @@ tezos-smart-rollup-host.workspace = true
 getrandom = { version = "0.2.10", features = ["custom"] }
 derive_more = "0.99.17"
 bincode = "1.3.3"
-erased-serde = "0.3.28"
+erased-serde = "0.4.1"
 serde = { version = "1.0.183", features = ["derive"] }
