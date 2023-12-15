@@ -18,8 +18,8 @@ use boa_engine::{
     builtins, js_string,
     object::{builtins::JsArray, Object},
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsSymbol, JsValue,
-    NativeFunction,
+    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsString, JsSymbol,
+    JsValue, NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use derive_more::Deref;
@@ -246,15 +246,81 @@ impl Headers {
     }
 }
 
+// hmm, this doesn't seem to belong here
+fn require_args(
+    args: &[JsValue],
+    length: usize,
+    method_name: &str,
+    class_name: &str,
+) -> JsResult<()> {
+    if args.len() < length {
+        return Err(JsNativeError::typ()
+            .with_message(format!(
+		"Failed to execute '{}' on '{}': {} arguments required, but only {} present.",
+		method_name,
+		class_name,
+		length,
+		args.len()
+            ))
+            .into());
+    }
+    Ok(())
+}
+
+#[derive(Deref)]
+struct ByteString(String);
+
+impl TryFromJs for ByteString {
+    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+        let s: JsString = value.to_string(context)?;
+        for c in s.iter() {
+            if c >= &256 {
+                return Err(JsNativeError::typ().with_message("invalid ByteString"))?;
+            }
+        }
+        let string = s.to_std_string().ok().ok_or::<JsError>(
+            JsNativeError::typ()
+                .with_message("error converting value to String")
+                .into(),
+        )?;
+        Ok(ByteString(string))
+    }
+}
+
+#[derive(Deref)]
+struct HeaderVal(String);
+
+const HTTP_WHITESPACE: &[char] = &[
+    '\u{09}', // HT
+    '\u{20}', // SP
+    '\u{0A}', // LF
+    '\u{0D}', // CR
+];
+
+fn normalize_header_value(string: &str) -> &str {
+    string
+        .trim_start_matches(HTTP_WHITESPACE)
+        .trim_end_matches(HTTP_WHITESPACE)
+}
+
+impl TryFromJs for HeaderVal {
+    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+        let ByteString(string) = value.try_js_into(context)?;
+        let string = normalize_header_value(string.as_str()).to_string();
+        Ok(HeaderVal(string))
+    }
+}
+
 impl HeadersClass {
     fn append(
         this: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        require_args(args, 2, "append", "Headers")?;
         let mut headers = Headers::try_from_js(this)?;
-        let name: String = args.get_or_undefined(0).try_js_into(context)?;
-        let value: String = args.get_or_undefined(1).try_js_into(context)?;
+        let name: ByteString = args.get_or_undefined(0).try_js_into(context)?;
+        let value: HeaderVal = args.get_or_undefined(1).try_js_into(context)?;
 
         headers.append(&name, &value)?;
 
@@ -266,8 +332,9 @@ impl HeadersClass {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        require_args(args, 1, "delete", "Headers")?;
         let mut headers = Headers::try_from_js(this)?;
-        let name: String = args.get_or_undefined(0).try_js_into(context)?;
+        let name: ByteString = args.get_or_undefined(0).try_js_into(context)?;
 
         headers.remove(&name)?;
 
@@ -279,8 +346,9 @@ impl HeadersClass {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        require_args(args, 1, "get", "Headers")?;
         let headers = Headers::try_from_js(this)?;
-        let name: String = args.get_or_undefined(0).try_js_into(context)?;
+        let name: ByteString = args.get_or_undefined(0).try_js_into(context)?;
 
         Ok(headers.get(&name)?.into_js(context))
     }
@@ -299,8 +367,9 @@ impl HeadersClass {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        require_args(args, 1, "has", "Headers")?;
         let headers = Headers::try_from_js(this)?;
-        let name: String = args.get_or_undefined(0).try_js_into(context)?;
+        let name: ByteString = args.get_or_undefined(0).try_js_into(context)?;
 
         Ok(headers.contains(&name)?.into())
     }
@@ -310,9 +379,10 @@ impl HeadersClass {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        require_args(args, 2, "set", "Headers")?;
         let mut headers = Headers::try_from_js(this)?;
-        let name: String = args.get_or_undefined(0).try_js_into(context)?;
-        let value: String = args.get_or_undefined(1).try_js_into(context)?;
+        let name: ByteString = args.get_or_undefined(0).try_js_into(context)?;
+        let value: HeaderVal = args.get_or_undefined(1).try_js_into(context)?;
 
         headers.set(&name, &value)?;
 
@@ -333,8 +403,16 @@ impl TryFromJs for HeaderEntry {
 		   .with_message("Failed to construct 'Headers': The provided value cannot be converted to a sequence."))?;
         let arr: JsArray = iterable_to_sequence(obj, context)?.try_js_into(context)?;
 
-        let name: String = arr.get(0, context)?.try_js_into(context)?;
-        let value: String = arr.get(1, context)?.try_js_into(context)?;
+        if arr.length(context)? != 2 {
+            return Err(JsNativeError::typ().with_message(
+                "Failed to construct 'Headers': sequence element with length not 2",
+            ))?;
+        }
+
+        let name: ByteString = arr.get(0, context)?.try_js_into(context)?;
+        let value: HeaderVal = arr.get(1, context)?.try_js_into(context)?;
+        let name: String = name.to_string();
+        let value: String = value.to_string();
 
         Ok(Self { name, value })
     }
