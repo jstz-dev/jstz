@@ -9,7 +9,7 @@ use boa_engine::{
         JsPrototype, Object, ObjectData, PROTOTYPE,
     },
     property::{Attribute, PropertyDescriptor, PropertyKey},
-    Context, JsError, JsNativeError, JsObject, JsResult, JsValue,
+    Context, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue,
 };
 use boa_gc::{Finalize, GcRef, GcRefMut, Trace};
 
@@ -255,6 +255,33 @@ impl<'ctx, 'host> ClassBuilder<'ctx, 'host> {
         N: Into<FunctionBinding>,
     {
         self.builder.method(function, name, length);
+        self
+    }
+
+    /// Add a method to the prototype but with enumerable: true
+    // It appears to be impossible to keep same interface of
+    // `method<N>`, because FunctionBinding .name field is pub(crate)?
+    pub fn enumerable_method(
+        &mut self,
+        name: JsString,
+        length: usize,
+        function: NativeFunction,
+    ) -> &mut Self {
+        let context = self.builder.context();
+        let function = FunctionObjectBuilder::new(context.realm(), function)
+            .name(name.clone())
+            .length(length)
+            .constructor(false)
+            .build();
+        let mut attribute: Attribute = Attribute::default();
+        attribute.set_writable(true);
+        attribute.set_enumerable(true);
+        attribute.set_configurable(true);
+        self.builder.property::<JsString, JsValue>(
+            name.clone(),
+            function.into(),
+            attribute,
+        );
         self
     }
 

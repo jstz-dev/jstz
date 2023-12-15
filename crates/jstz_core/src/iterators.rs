@@ -463,7 +463,7 @@ impl<T: PairIteratorClass> NativeClass for T {
             .iterator_prototypes()
             .iterator();
         class
-            .method(
+            .enumerable_method(
                 js_string!("next"),
                 0,
                 NativeFunction::from_fn_ptr(PairIteratorMethods::<T::Iterable>::next),
