@@ -24,7 +24,7 @@
   "devDependencies": {
     "@commitlint/cli": "^18.4.3",
     "@commitlint/config-conventional": "^18.4.3",
-    "esbuild": "^0.19.8",
+    "esbuild": "^0.19.9",
     "prettier": "^3.1.0",
     "typescript": "^5.3.3",
     "vitepress": "^1.0.0-rc.31"
