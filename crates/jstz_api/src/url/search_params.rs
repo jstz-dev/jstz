@@ -524,8 +524,8 @@ impl NativeClass for UrlSearchParamsClass {
 }
 
 impl PairIterable for UrlSearchParams {
-    fn pair_iterable_len(&self) -> usize {
-        self.values.len()
+    fn pair_iterable_len(&self) -> JsResult<usize> {
+        Ok(self.values.len())
     }
 
     fn pair_iterable_get(
