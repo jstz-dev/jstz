@@ -12,6 +12,8 @@
 //! [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/Headers
 //! [spec]: https://fetch.spec.whatwg.org/#headers-class
 
+use std::{cell::RefCell, collections::BTreeMap, ops::DerefMut};
+
 use boa_engine::{
     builtins, js_string,
     object::{builtins::JsArray, Object},
@@ -19,15 +21,49 @@ use boa_engine::{
     Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
-use derive_more::{Deref, DerefMut};
+use derive_more::Deref;
 use http::{header::Entry, HeaderMap, HeaderName, HeaderValue};
 use jstz_core::{
+    iterators::{PairIterable, PairIterableMethods, PairIteratorClass, PairValue},
     native::{register_global_class, ClassBuilder, JsNativeObject, NativeClass},
     value::IntoJs,
 };
-#[derive(Default, Clone, Deref, DerefMut)]
+#[derive(Default, Clone, Deref)]
 pub struct Headers {
+    // TODO probably don't need Deref? It exposes HeaderMap impl and
+    // probably shouldn't
+    // NOT implementing DerefMut because mutators would need to also
+    // clear the cache
+    #[deref]
     headers: HeaderMap,
+    // Cached sorted and combined list of header entries for iteration
+    cached_iteration: RefCell<Option<Vec<(String, String)>>>,
+}
+
+// Sort and combine header entries, see:
+// https://fetch.spec.whatwg.org/#concept-header-list-sort-and-combine
+fn sort_and_combine_headers(headers: &HeaderMap) -> JsResult<Vec<(String, String)>> {
+    // collect header entries into a BTreeMap to sort by header name
+    let mut map: BTreeMap<String, Vec<String>> = BTreeMap::new();
+
+    for key in headers.keys() {
+        let vals = Header::try_from_iter(headers.get_all(key))?;
+        map.insert(key.to_string(), vals.headers);
+    }
+
+    // combine headers except for set-cookie
+    let mut entries: Vec<(String, String)> = Vec::default();
+    for (key, vals) in map.into_iter() {
+        if key == "set-cookie" {
+            for val in vals {
+                entries.push((key.clone(), val));
+            }
+        } else {
+            entries.push((key.clone(), vals.join(", ")))
+        }
+    }
+
+    Ok(entries)
 }
 
 impl Headers {
@@ -35,11 +71,34 @@ impl Headers {
         headers: http::HeaderMap,
         _context: &mut Context<'_>,
     ) -> JsResult<Self> {
-        Ok(Self { headers })
+        Ok(Self {
+            headers,
+            cached_iteration: RefCell::default(),
+        })
     }
 
     pub fn to_http_headers(&self) -> http::HeaderMap {
         self.headers.clone()
+    }
+
+    // clear cached iteration vector, should be called whenever we
+    // modify the headers
+    fn clear_cached_iteration(&self) {
+        let mut cached_iteration = self.cached_iteration.borrow_mut();
+        *cached_iteration = None;
+    }
+
+    // get (or rebuild) cached iteration vector
+    fn get_cached_iteration(&self) -> JsResult<Vec<(String, String)>> {
+        let mut cached_iteration = self.cached_iteration.borrow_mut();
+        match cached_iteration.deref_mut() {
+            Some(iterable) => Ok(iterable.clone()),
+            None => {
+                let iterable = sort_and_combine_headers(&self.headers)?;
+                *cached_iteration = Some(iterable.clone());
+                Ok(iterable)
+            }
+        }
     }
 }
 
@@ -51,7 +110,10 @@ unsafe impl Trace for Headers {
 
 impl From<HeaderMap> for Headers {
     fn from(headers: HeaderMap) -> Self {
-        Self { headers }
+        Self {
+            headers,
+            cached_iteration: RefCell::default(),
+        }
     }
 }
 
@@ -90,9 +152,7 @@ impl IntoJs for Header {
 impl Headers {
     /// Creates a new Headers object
     pub fn new() -> Self {
-        Self {
-            headers: HeaderMap::new(),
-        }
+        Self::default()
     }
 
     /// Appends a new value onto an existing header inside a Headers object, or adds the
@@ -103,6 +163,7 @@ impl Headers {
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-headers-append
     pub fn append(&mut self, name: &str, value: &str) -> JsResult<()> {
+        self.clear_cached_iteration();
         self.headers
             .append(str_to_header_name(name)?, str_to_header_value(value)?);
         Ok(())
@@ -115,6 +176,7 @@ impl Headers {
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-headers-delete
     pub fn remove(&mut self, name: &str) -> JsResult<()> {
+        self.clear_cached_iteration();
         let name = str_to_header_name(name)?;
         match self.headers.entry(name) {
             Entry::Occupied(entry) => {
@@ -160,6 +222,7 @@ impl Headers {
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-headers-set
     pub fn set(&mut self, name: &str, value: &str) -> JsResult<()> {
+        self.clear_cached_iteration();
         let name = str_to_header_name(name)?;
         let value = str_to_header_value(value)?;
         self.headers.insert(name, value);
@@ -429,9 +492,39 @@ impl NativeClass for HeadersClass {
                 2,
                 NativeFunction::from_fn_ptr(HeadersClass::set),
             );
-
+        PairIterableMethods::<HeadersIteratorClass>::define_pair_iterable_methods(class)?;
         Ok(())
     }
+}
+
+impl PairIterable for Headers {
+    fn pair_iterable_len(&self) -> JsResult<usize> {
+        Ok(self.get_cached_iteration()?.len())
+    }
+
+    fn pair_iterable_get(
+        &self,
+        index: usize,
+        context: &mut Context<'_>,
+    ) -> JsResult<jstz_core::iterators::PairValue> {
+        let cached_iteration = self.get_cached_iteration()?;
+        match cached_iteration.get(index) {
+            None => todo!("OOB err"),
+            Some(elem) => {
+                let elem = elem.clone();
+                let key: JsValue = elem.0.into_js(context);
+                let value: JsValue = elem.1.into_js(context);
+                Ok(PairValue { key, value })
+            }
+        }
+    }
+}
+
+struct HeadersIteratorClass;
+impl PairIteratorClass for HeadersIteratorClass {
+    type Iterable = Headers;
+
+    const NAME: &'static str = "Headers Iterator";
 }
 
 pub struct HeadersApi;
@@ -439,6 +532,8 @@ pub struct HeadersApi;
 impl jstz_core::Api for HeadersApi {
     fn init(self, context: &mut Context<'_>) {
         register_global_class::<HeadersClass>(context)
-            .expect("The `Headers` class shouldn't exist yet")
+            .expect("The `Headers` class shouldn't exist yet");
+        register_global_class::<HeadersIteratorClass>(context)
+            .expect("The `Headers Iterator` class shouldn't exist yet");
     }
 }

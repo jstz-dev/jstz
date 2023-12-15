@@ -135,7 +135,7 @@ pub trait PairIterable: NativeObject + TryFromJs {
     // I don't know how to disambiguate these without giving them
     // unique names
     /// Length of the list of value pairs to iterate over.
-    fn pair_iterable_len(&self) -> usize;
+    fn pair_iterable_len(&self) -> JsResult<usize>;
     /// Get one of the value pairs. Should return `Ok` if the provided
     /// `index` is less than the current
     /// [`pair_iterable_len`][`PairIterable::pair_iterable_len`].
@@ -144,11 +144,6 @@ pub trait PairIterable: NativeObject + TryFromJs {
         index: usize,
         context: &mut Context<'_>,
     ) -> JsResult<PairValue>;
-    // not really needed while len is named pair_iterable_len
-    /// To satisfy `clippy::len_without_is_empty`.
-    fn is_empty(&self) -> bool {
-        self.pair_iterable_len() == 0
-    }
 }
 
 /// Rust type used for pair iterator objects. Not relevant to users.
@@ -248,7 +243,7 @@ impl<T: PairIterable> PairIteratorMethods<T> {
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         let mut pair_iterator = PairIterator::<T>::try_from_js(this)?;
-        if pair_iterator.index >= pair_iterator.target.deref().pair_iterable_len() {
+        if pair_iterator.index >= pair_iterator.target.deref().pair_iterable_len()? {
             let done = true;
             let value = JsValue::undefined();
             let result = IteratorResult { done, value };
@@ -403,7 +398,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
                     let undef_this = JsValue::undefined();
                     let this_arg = args.get(1).unwrap_or(&undef_this);
                     let mut index = 0;
-                    while index < target.deref().pair_iterable_len() {
+                    while index < target.deref().pair_iterable_len()? {
                         let pair = target.deref().pair_iterable_get(index, context)?;
                         let args = [pair.value, pair.key, target.to_inner()];
                         callback.call(this_arg, &args, context)?;
