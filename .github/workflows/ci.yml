@@ -49,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: Swatinem/rust-cache@v2.7.0
+      - uses: Swatinem/rust-cache@v2.7.1
 
       - name: Rust setup
         run: rustup show active-toolchain
