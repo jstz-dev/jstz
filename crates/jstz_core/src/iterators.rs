@@ -131,7 +131,7 @@ impl IntoJs for PairValue {
 
 /// Trait for pair iterable objects (objects which have a "list of
 /// value pairs to iterate over.")
-pub trait PairIterable: NativeObject + TryFromJs {
+pub trait PairIterable: NativeObject {
     // I don't know how to disambiguate these without giving them
     // unique names
     /// Length of the list of value pairs to iterate over.
@@ -304,6 +304,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
     pub fn define_pair_iterable_methods(
         class: &mut ClassBuilder<'_, '_>,
     ) -> JsResult<()> {
+        // TODO workaround until JsSymbol::iterator() is pub
         let symbol_iterator: JsSymbol = class
             .context()
             .intrinsics()

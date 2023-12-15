@@ -512,8 +512,10 @@ impl TryFromJs for ResponseOptions {
         };
 
         let headers: Headers = if obj.has_property(js_string!("headers"), context)? {
-            obj.get(js_string!("headers"), context)?
-                .try_js_into(context)?
+            Headers::from_init(
+                obj.get(js_string!("headers"), context)?
+                    .try_js_into(context)?,
+            )?
         } else {
             Default::default()
         };
