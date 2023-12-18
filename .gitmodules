@@ -1,3 +1,3 @@
 [submodule "jstz_wpt/wpt"]
 	path = crates/jstz_wpt/wpt
-	url = git@github.com:web-platform-tests/wpt.git
+	url = https://github.com/web-platform-tests/wpt.git
