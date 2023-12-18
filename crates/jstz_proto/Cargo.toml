@@ -17,7 +17,7 @@ boa_gc = "0.17.0"
 tezos-smart-rollup.workspace = true
 jstz_api.workspace = true
 http = "0.2.9"
-http-serde = "1.1.3"
+http-serde = "2.0.0"
 either = "1.9.0"
 
 [dev-dependencies]
