@@ -40,7 +40,7 @@ dependencies = [
  "flate2",
  "futures-core",
  "h2",
- "http",
+ "http 0.2.11",
  "httparse",
  "httpdate",
  "itoa",
@@ -75,7 +75,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d66ff4d247d2b160861fa2866457e85706833527840e4133f8f49aa423a38799"
 dependencies = [
  "bytestring",
- "http",
+ "http 0.2.11",
  "regex",
  "serde",
  "tracing",
@@ -202,7 +202,7 @@ dependencies = [
  "derive_more",
  "futures-core",
  "futures-util",
- "http",
+ "http 0.2.11",
  "impl-more",
  "itertools",
  "local-channel",
@@ -1398,7 +1398,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "futures-util",
- "http",
+ "http 0.2.11",
  "indexmap 2.1.0",
  "slab",
  "tokio",
@@ -1497,23 +1497,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "http"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b32afd38673a8016f7c9ae69e5af41a58f81b1d31689040f2f1959594ce194ea"
+dependencies = [
+ "bytes",
+ "fnv",
+ "itoa",
+]
+
+[[package]]
 name = "http-body"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ceab25649e9960c0311ea418d17bee82c0dcec1bd053b5f9a66e265a693bed2"
 dependencies = [
  "bytes",
- "http",
+ "http 0.2.11",
  "pin-project-lite",
 ]
 
 [[package]]
 name = "http-serde"
-version = "1.1.3"
+version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f560b665ad9f1572cfcaf034f7fb84338a7ce945216d64a90fd81f046a3caee"
+checksum = "7fb7239a6d49eda628c2dfdd7e982c59b0c3f0fb99ce45c4237f02a520030688"
 dependencies = [
- "http",
+ "http 1.0.0",
  "serde",
 ]
 
@@ -1546,7 +1557,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.11",
  "http-body",
  "httparse",
  "httpdate",
@@ -1813,7 +1824,7 @@ dependencies = [
  "expect-test",
  "fastrand",
  "form_urlencoded",
- "http",
+ "http 0.2.11",
  "jstz_core",
  "jstz_crypto",
  "jstz_wpt",
@@ -1841,7 +1852,7 @@ dependencies = [
  "fs_extra",
  "futures-util",
  "hex",
- "http",
+ "http 0.2.11",
  "jstz_api",
  "jstz_core",
  "jstz_crypto",
@@ -1898,7 +1909,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "boa_engine",
- "http",
+ "http 0.2.11",
  "http-serde",
  "jstz_api",
  "jstz_core",
@@ -1944,7 +1955,7 @@ dependencies = [
  "derive_more",
  "either",
  "erased-serde",
- "http",
+ "http 0.2.11",
  "http-serde",
  "jstz_api",
  "jstz_core",
@@ -2741,7 +2752,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.11",
  "http-body",
  "hyper",
  "hyper-tls",
