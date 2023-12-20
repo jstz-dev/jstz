@@ -62,8 +62,8 @@ impl LogsService {
                 line = lines.next_line() => {
                     if let Ok(Some(msg)) = line {
                         if msg.starts_with(LOG_PREFIX) {
-                            let log = LogRecord::from_str(&msg[LOG_PREFIX.len()..])
-                                .expect("Could not parse log record");
+                            let log = LogRecord::try_from_string(&msg[LOG_PREFIX.len()..])
+                                .expect("Failed to parse log record from string");
                             broadcaster.broadcast(&log.contract_address, &msg[LOG_PREFIX.len()..]).await;
                         }
                     }
