@@ -51,8 +51,8 @@ impl LogRecord {
         }
     }
 
-    pub fn from_string(s: &str) -> Self {
-        serde_json::from_str::<LogRecord>(s).expect("Failed to deserialize JSONLog")
+    pub fn try_from_string(json: &str) -> Option<Self> {
+        serde_json::from_str(json).ok()
     }
 }
 

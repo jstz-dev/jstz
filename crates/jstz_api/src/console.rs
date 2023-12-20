@@ -237,7 +237,7 @@ impl Console {
             js_log(
                 LogData {
                     level: LogLevel::Error,
-                    text: formatter(data, context)?,
+                    text: formatter(&args, context)?,
                     groups_len: self.groups.len(),
                 },
                 context,
