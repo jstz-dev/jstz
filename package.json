@@ -27,6 +27,6 @@
     "esbuild": "^0.19.8",
     "prettier": "^3.1.0",
     "typescript": "^5.3.3",
-    "vitepress": "^1.0.0-rc.31"
+    "vitepress": "^1.0.0-rc.33"
   }
 }
