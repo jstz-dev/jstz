@@ -8,7 +8,7 @@
     "@tezos/jstz": "^0.0.0"
   },
   "devDependencies": {
-    "esbuild": "^0.19.8"
+    "esbuild": "^0.19.11"
   },
   "scripts": {
     "check:types": "tsc --noEmit",
