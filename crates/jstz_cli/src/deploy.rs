@@ -7,6 +7,7 @@ use jstz_proto::{
 use crate::{
     account::account::OwnedAccount,
     config::Config,
+    sandbox::CLIENT_ADDRESS,
     utils::{from_file_or_id, piped_input},
 };
 
@@ -66,7 +67,7 @@ pub async fn exec(
 
     // Send message to jstz
     cfg.octez_client()?
-        .send_rollup_external_message("bootstrap2", bincode::serialize(&signed_op)?)?;
+        .send_rollup_external_message(CLIENT_ADDRESS, bincode::serialize(&signed_op)?)?;
 
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 

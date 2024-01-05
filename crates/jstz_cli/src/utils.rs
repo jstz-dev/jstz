@@ -7,10 +7,12 @@ pub fn from_file_or_id(data_or_file: String) -> String {
         // file doesn't exist so assume it's raw data
         .unwrap_or(data_or_file)
 }
+
 fn get_stdin() -> String {
     let lines: Result<Vec<_>, _> = io::stdin().lines().collect();
     lines.expect("Can't read from stdin").join("\n")
 }
+
 pub fn piped_input() -> Option<String> {
     let stdin = io::stdin();
     if !stdin.is_terminal() {
