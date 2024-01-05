@@ -70,7 +70,7 @@ mod log {
     // The implementor of this trait controls how console.log is handled.
     pub trait JsLog {
         fn log(&self, log_data: LogData, context: &mut Context<'_>);
-        fn flush(&self);
+        fn flush(&self) {}
     }
 
     thread_local! {
