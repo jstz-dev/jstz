@@ -16,7 +16,7 @@ boa_engine = { version = "0.17.0", features = ["fuzz"] }
 boa_gc = "0.17.0"
 tezos-smart-rollup.workspace = true
 jstz_api.workspace = true
-http = "0.2.9"
+http = "1.0.0"
 http-serde = "2.0.0"
 either = "1.9.0"
 

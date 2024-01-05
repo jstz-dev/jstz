@@ -2,9 +2,9 @@ use std::time::Duration;
 
 use anyhow::anyhow;
 use anyhow::Result;
-use http::StatusCode;
 use jstz_api::KvValue;
 use jstz_proto::{context::account::Nonce, operation::OperationHash, receipt::Receipt};
+use reqwest::StatusCode;
 use tokio::time::sleep;
 
 use crate::config::Config;
