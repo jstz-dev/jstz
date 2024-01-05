@@ -65,9 +65,6 @@ impl JsLog for JsonLogger {
             rt.write_debug(&(LOG_PREFIX.to_string() + &log_record + "\n"));
         });
     }
-    fn flush(&self) {
-        panic!("JsonLogger does not support flush")
-    }
 }
 
 pub struct PrettyLogger;
@@ -87,8 +84,5 @@ impl JsLog for PrettyLogger {
                 debug_msg!(rt, "[{symbol}] {:>indent$}{line}\n", "");
             }
         });
-    }
-    fn flush(&self) {
-        panic!("PrettyLogger does not support flush")
     }
 }

@@ -19,7 +19,8 @@ pub async fn exec(address_or_alias: String, cfg: &Config) -> Result<()> {
             Ok(Event::Open) => println!("Connection open with {}", url),
             Ok(Event::Message(message)) => {
                 if let Ok(log_record) = serde_json::from_str::<LogRecord>(&message.data) {
-                    println!("{}", serde_json::to_string_pretty(&log_record).unwrap());
+                    let LogRecord { level, text, .. } = log_record;
+                    println!("[{}]: {}", level.symbol(), text);
                 }
             }
             Err(err) => {
