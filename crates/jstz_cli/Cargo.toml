@@ -24,7 +24,7 @@ http = "1.0.0"
 fs_extra = "1.2"
 anyhow = "1.0.75"
 daemonize = "0.5.0"
-tempfile = "3.8.0"
+tempfile = "3.9.0"
 signal-hook = "0.3.17"
 boa_engine = { version = "0.17.0", features = ["fuzz"] }
 rustyline = "12.0.0"
