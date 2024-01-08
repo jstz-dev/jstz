@@ -14,12 +14,13 @@ mod error;
 mod services;
 mod tailed_file;
 
-/// Endpoint details for the `octez-smart-rollup-node`
+/// Endpoint defaults for the `octez-smart-rollup-node`
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
 
-/// Endpoint defailts for the `jstz-node`
-const ENDPOINT: (&str, u16) = ("127.0.0.1", 8933);
+/// Endpoint defaults for the `jstz-node`
+const DEFAULT_JSTZ_NODE_ADDR: &str = "127.0.0.1";
+const DEFAULT_JSTZ_NODE_PORT: u16 = 8933;
 
 #[derive(Debug, Parser)]
 struct Args {
@@ -31,6 +32,12 @@ struct Args {
 
     #[arg(short, long)]
     rollup_endpoint: Option<String>,
+
+    #[arg(long, default_value = DEFAULT_JSTZ_NODE_ADDR)]
+    addr: String,
+
+    #[arg(long, default_value_t = DEFAULT_JSTZ_NODE_PORT)]
+    port: u16,
 
     #[arg(long)]
     kernel_file_path: String,
@@ -63,7 +70,7 @@ async fn main() -> io::Result<()> {
             .configure(LogsService::configure)
             .wrap(Logger::default())
     })
-    .bind(ENDPOINT)?
+    .bind((args.addr, args.port))?
     .run()
     .await?;
 

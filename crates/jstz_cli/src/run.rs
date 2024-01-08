@@ -8,7 +8,6 @@ use url::Url;
 use crate::{
     account::account::OwnedAccount,
     config::Config,
-    sandbox::CLIENT_ADDRESS,
     utils::{from_file_or_id, piped_input},
 };
 
@@ -95,8 +94,7 @@ pub async fn exec(
     );
 
     // Send message
-    cfg.octez_client()?
-        .send_rollup_external_message(CLIENT_ADDRESS, bincode::serialize(&signed_op)?)?;
+    cfg.jstz_client()?.post_operation(&signed_op).await?;
 
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 

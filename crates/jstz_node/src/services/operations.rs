@@ -1,6 +1,6 @@
 use actix_web::{
-    get,
-    web::{Data, Path, ServiceConfig},
+    get, post,
+    web::{self, Data, Path, ServiceConfig},
     HttpResponse, Responder, Scope,
 };
 use anyhow::anyhow;
@@ -10,6 +10,21 @@ use octez::OctezRollupClient;
 use crate::Result;
 
 use super::Service;
+
+#[post("")]
+async fn inject(
+    rollup_client: Data<OctezRollupClient>,
+    operation: web::Bytes,
+) -> Result<impl Responder> {
+    // FIXME: @johnyob
+    // The operation should be deserialized from JSON here and serialized to an internal format
+    // But it seems that there is a serde issue with JSON serialization + deserialization of BLS signatures
+    // So for now we just pass the raw bytes to the rollup node.
+
+    rollup_client.batcher_injection([operation]).await?;
+
+    Ok(HttpResponse::Ok())
+}
 
 #[get("/{hash}/receipt")]
 async fn receipt(
@@ -33,7 +48,7 @@ pub struct OperationsService;
 
 impl Service for OperationsService {
     fn configure(cfg: &mut ServiceConfig) {
-        let scope = Scope::new("/operations").service(receipt);
+        let scope = Scope::new("/operations").service(inject).service(receipt);
 
         cfg.service(scope);
     }
