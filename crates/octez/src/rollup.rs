@@ -103,6 +103,31 @@ impl OctezRollupClient {
         }
     }
 
+    pub async fn batcher_injection<S, I>(&self, external_messages: I) -> Result<()>
+    where
+        I: IntoIterator<Item = S>,
+        S: AsRef<[u8]>,
+    {
+        let res = self
+            .client
+            .post(format!("{}/local/batcher/injection", self.endpoint))
+            .json(
+                &external_messages
+                    .into_iter()
+                    .map(hex::encode)
+                    .collect::<Vec<String>>(),
+            )
+            .send()
+            .await?;
+
+        if res.status() == 200 {
+            // TODO: Should we ignore the response?
+            Ok(())
+        } else {
+            Err(anyhow!("Unhandled response status: {}", res.status()))
+        }
+    }
+
     pub async fn get_value(&self, key: &str) -> Result<Option<Vec<u8>>> {
         let res = self
             .client

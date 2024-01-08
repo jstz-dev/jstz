@@ -7,8 +7,6 @@ use nix::{
 
 mod daemon;
 
-pub(crate) use daemon::CLIENT_ADDRESS;
-
 use crate::config::Config;
 
 #[derive(Subcommand)]

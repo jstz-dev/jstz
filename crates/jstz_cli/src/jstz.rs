@@ -3,6 +3,7 @@ use std::time::Duration;
 use anyhow::anyhow;
 use anyhow::Result;
 use jstz_api::KvValue;
+use jstz_proto::operation::SignedOperation;
 use jstz_proto::{context::account::Nonce, operation::OperationHash, receipt::Receipt};
 use reqwest::StatusCode;
 use tokio::time::sleep;
@@ -140,7 +141,22 @@ impl JstzClient {
             }
 
             // tokio sleep
-            sleep(Duration::from_millis(100)).await;
+            sleep(Duration::from_millis(200)).await;
+        }
+    }
+
+    pub async fn post_operation(&self, operation: &SignedOperation) -> Result<()> {
+        let response = self
+            .client
+            .post(&format!("{}/operations", self.endpoint))
+            .body(bincode::serialize(operation)?)
+            .send()
+            .await?;
+
+        match response.status() {
+            StatusCode::OK => Ok(()),
+            // For any other status, return a generic error
+            _ => Err(anyhow!("Failed to post operation")),
         }
     }
 
