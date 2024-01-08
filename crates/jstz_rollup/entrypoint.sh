@@ -9,7 +9,7 @@ mkdir -p "$JSTZ_ROLLUP_OCTEZ_ROLLUP_NODE_DIR"
 
 # shellcheck disable=SC2034 
 # JSTZ_ROLLUP_OCTEZ_NODE_ENDPOINT is used in the jstz-rollup command
-export JSTZ_ROLLUP_OCTEZ_NODE_ENDPOINT="https://rpc.$NETWORK.teztnets.xyz/"
+export JSTZ_ROLLUP_OCTEZ_NODE_ENDPOINT="https://rpc.$NETWORK.teztnets.com/"
 
 installer_dir="root/installer"
 
