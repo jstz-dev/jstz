@@ -13,7 +13,7 @@ use crate::context::account::Address;
 
 pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize)]
 pub struct LogRecord {
     pub contract_address: Address,
     pub request_id: String,

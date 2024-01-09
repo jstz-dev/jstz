@@ -28,36 +28,24 @@ pub use log::{set_js_logger, JsLog, LogData, LogLevel};
 mod log {
     use boa_engine::{Context, JsNativeError, JsResult};
     use serde::{Deserialize, Serialize};
-    use std::{cell::Cell, fmt};
+    use std::cell::Cell;
 
-    #[derive(Serialize, Deserialize, Debug)]
+    #[derive(Serialize, Deserialize)]
     pub enum LogLevel {
-        Error,
-        Warn,
-        Info,
-        Log,
+        ERROR,
+        WARN,
+        INFO,
+        LOG,
     }
 
     impl LogLevel {
         pub fn symbol(&self) -> char {
             match self {
-                LogLevel::Error => '🔴',
-                LogLevel::Warn => '🟠',
-                LogLevel::Info => '🟢',
-                LogLevel::Log => '🪵',
+                LogLevel::ERROR => '🔴',
+                LogLevel::WARN => '🟠',
+                LogLevel::INFO => '🟢',
+                LogLevel::LOG => '🪵',
             }
-        }
-    }
-
-    impl fmt::Display for LogLevel {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            let log_level_str = match self {
-                LogLevel::Error => "error",
-                LogLevel::Warn => "warn",
-                LogLevel::Info => "info",
-                LogLevel::Log => "log",
-            };
-            write!(f, "{}", log_level_str)
         }
     }
     #[derive(Serialize, Deserialize)]
@@ -236,7 +224,7 @@ impl Console {
 
             js_log(
                 LogData {
-                    level: LogLevel::Error,
+                    level: LogLevel::ERROR,
                     text: formatter(&args, context)?,
                     groups_len: self.groups.len(),
                 },
@@ -260,7 +248,7 @@ impl Console {
     fn debug(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
         js_log(
             LogData {
-                level: LogLevel::Log,
+                level: LogLevel::LOG,
                 text: formatter(data, context)?,
                 groups_len: self.groups.len(),
             },
@@ -282,7 +270,7 @@ impl Console {
     fn warn(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
         js_log(
             LogData {
-                level: LogLevel::Warn,
+                level: LogLevel::WARN,
                 text: formatter(data, context)?,
                 groups_len: self.groups.len(),
             },
@@ -304,7 +292,7 @@ impl Console {
     fn error(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
         js_log(
             LogData {
-                level: LogLevel::Error,
+                level: LogLevel::ERROR,
                 text: formatter(data, context)?,
                 groups_len: self.groups.len(),
             },
@@ -326,7 +314,7 @@ impl Console {
     fn info(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
         js_log(
             LogData {
-                level: LogLevel::Info,
+                level: LogLevel::INFO,
                 text: formatter(data, context)?,
                 groups_len: self.groups.len(),
             },
@@ -348,7 +336,7 @@ impl Console {
     fn log(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
         js_log(
             LogData {
-                level: LogLevel::Log,
+                level: LogLevel::LOG,
                 text: formatter(data, context)?,
                 groups_len: self.groups.len(),
             },
@@ -371,7 +359,7 @@ impl Console {
         let group_label = formatter(data, context)?;
         js_log(
             LogData {
-                level: LogLevel::Log,
+                level: LogLevel::LOG,
                 text: format!("group: {group_label}"),
                 groups_len: self.groups.len(),
             },
