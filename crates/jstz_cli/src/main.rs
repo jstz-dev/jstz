@@ -6,6 +6,7 @@ mod bridge;
 mod config;
 mod debug_api;
 mod deploy;
+mod js_logger;
 mod jstz;
 mod kv;
 mod logs;

@@ -6,7 +6,7 @@ use boa_engine::{
 use boa_gc::{Finalize, Trace};
 use derive_more::{Deref, DerefMut};
 use jstz_api::http::{body::HttpBody, request::RequestClass, response::Response};
-use jstz_api::{http::request::Request, set_js_logger};
+use jstz_api::{http::request::Request, js_log::set_js_logger};
 use jstz_core::native::JsNativeObject;
 use jstz_core::{
     host::HostRuntime,
@@ -24,11 +24,8 @@ use crate::{
     operation::OperationHash,
     Error, Result,
 };
-use js_logger::JsonLogger;
 
-pub use js_logger::{LogRecord, PrettyLogger, LOG_PREFIX};
-
-mod js_logger;
+use crate::js_logger::JsonLogger;
 
 pub mod headers {
 

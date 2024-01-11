@@ -22,67 +22,8 @@ use boa_engine::{
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::value::IntoJs;
-use log::js_log;
-pub use log::{set_js_logger, JsLog, LogData, LogLevel};
 
-mod log {
-    use boa_engine::{Context, JsNativeError, JsResult};
-    use serde::{Deserialize, Serialize};
-    use std::cell::Cell;
-
-    #[derive(Serialize, Deserialize)]
-    pub enum LogLevel {
-        ERROR,
-        WARN,
-        INFO,
-        LOG,
-    }
-
-    impl LogLevel {
-        pub fn symbol(&self) -> char {
-            match self {
-                LogLevel::ERROR => '🔴',
-                LogLevel::WARN => '🟠',
-                LogLevel::INFO => '🟢',
-                LogLevel::LOG => '🪵',
-            }
-        }
-    }
-    #[derive(Serialize, Deserialize)]
-    pub struct LogData {
-        pub level: LogLevel,
-        pub text: String,
-        pub groups_len: usize,
-    }
-
-    // The implementor of this trait controls how console.log is handled.
-    pub trait JsLog {
-        fn log(&self, log_data: LogData, context: &mut Context<'_>);
-        fn flush(&self) {}
-    }
-
-    thread_local! {
-        /// Thread-local logger
-        static JS_LOGGER: Cell<Option<&'static dyn JsLog>> = Cell::new(None)
-    }
-
-    pub fn set_js_logger(logger: &'static dyn JsLog) {
-        JS_LOGGER.set(Some(logger));
-    }
-
-    pub(super) fn js_log(log_data: LogData, context: &mut Context<'_>) -> JsResult<()> {
-        JS_LOGGER.with(|logger| {
-            if let Some(logger) = logger.get() {
-                logger.log(log_data, context);
-                Ok(())
-            } else {
-                Err(JsNativeError::eval()
-                    .with_message("JS_LOGGER not set")
-                    .into())
-            }
-        })
-    }
-}
+use crate::js_log::{log, LogData, LogLevel};
 
 fn display_js(value: &JsValue) -> String {
     match value.as_string() {
@@ -222,7 +163,7 @@ impl Console {
                 args[0] = concat.into_js(context);
             }
 
-            js_log(
+            log(
                 LogData {
                     level: LogLevel::ERROR,
                     text: formatter(&args, context)?,
@@ -246,7 +187,7 @@ impl Console {
     /// [spec]: https://console.spec.whatwg.org/#debug
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/debug
     fn debug(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        js_log(
+        log(
             LogData {
                 level: LogLevel::LOG,
                 text: formatter(data, context)?,
@@ -268,7 +209,7 @@ impl Console {
     /// [spec]: https://console.spec.whatwg.org/#warn
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/warn
     fn warn(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        js_log(
+        log(
             LogData {
                 level: LogLevel::WARN,
                 text: formatter(data, context)?,
@@ -290,7 +231,7 @@ impl Console {
     /// [spec]: https://console.spec.whatwg.org/#error
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/error
     fn error(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        js_log(
+        log(
             LogData {
                 level: LogLevel::ERROR,
                 text: formatter(data, context)?,
@@ -312,7 +253,7 @@ impl Console {
     /// [spec]: https://console.spec.whatwg.org/#info
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/info
     fn info(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        js_log(
+        log(
             LogData {
                 level: LogLevel::INFO,
                 text: formatter(data, context)?,
@@ -334,7 +275,7 @@ impl Console {
     /// [spec]: https://console.spec.whatwg.org/#log
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/log
     fn log(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
-        js_log(
+        log(
             LogData {
                 level: LogLevel::LOG,
                 text: formatter(data, context)?,
@@ -357,7 +298,7 @@ impl Console {
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/group
     fn group(&mut self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
         let group_label = formatter(data, context)?;
-        js_log(
+        log(
             LogData {
                 level: LogLevel::LOG,
                 text: format!("group: {group_label}"),
