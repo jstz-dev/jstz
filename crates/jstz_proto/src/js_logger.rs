@@ -1,12 +1,10 @@
 use std::fmt::Display;
 
 use boa_engine::prelude::Context;
-pub use jstz_api::JsLog;
-use jstz_api::{LogData, LogLevel};
+pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
 use jstz_core::{host::HostRuntime, host_defined, runtime::with_global_host};
 use serde::Deserialize;
 use serde::Serialize;
-use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::api::TraceData;
 use crate::context::account::Address;
@@ -56,33 +54,13 @@ impl LogRecord {
     }
 }
 
-pub(super) struct JsonLogger;
+pub(crate) struct JsonLogger;
 
 impl JsLog for JsonLogger {
     fn log(&self, log_data: LogData, context: &mut Context<'_>) {
         let log_record = LogRecord::new(log_data, context).to_string();
         with_global_host(|rt| {
             rt.write_debug(&(LOG_PREFIX.to_string() + &log_record + "\n"));
-        });
-    }
-}
-
-pub struct PrettyLogger;
-
-impl JsLog for PrettyLogger {
-    fn log(&self, log_data: LogData, _context: &mut Context<'_>) {
-        let LogData {
-            level,
-            text,
-            groups_len,
-        } = log_data;
-
-        let indent = 2 * groups_len;
-        let symbol = level.symbol();
-        with_global_host(|rt| {
-            for line in text.lines() {
-                debug_msg!(rt, "[{symbol}] {:>indent$}{line}\n", "");
-            }
         });
     }
 }

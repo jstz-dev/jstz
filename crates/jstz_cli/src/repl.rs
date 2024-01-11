@@ -1,9 +1,9 @@
+use crate::js_logger::PrettyLogger;
 use anyhow::Result;
 use boa_engine::{js_string, JsResult, JsValue, Source};
-use jstz_api::set_js_logger;
 use jstz_api::{
-    encoding::EncodingApi, http::HttpApi, url::UrlApi, urlpattern::UrlPatternApi,
-    ConsoleApi, KvApi,
+    encoding::EncodingApi, http::HttpApi, js_log::set_js_logger, url::UrlApi,
+    urlpattern::UrlPatternApi, ConsoleApi, KvApi,
 };
 use jstz_core::host::HostRuntime;
 use jstz_core::{
@@ -12,7 +12,6 @@ use jstz_core::{
     runtime::{self, Runtime},
 };
 use jstz_proto::api::{ContractApi, LedgerApi};
-use jstz_proto::executor::contract::PrettyLogger;
 use rustyline::{error::ReadlineError, Editor};
 use tezos_smart_rollup_mock::MockHost;
 

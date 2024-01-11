@@ -5,13 +5,10 @@ use actix_web::{
     Responder,
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_proto::executor::contract::{LogRecord, LOG_PREFIX};
+use jstz_proto::js_logger::{LogRecord, LOG_PREFIX};
 
+use std::io::{Error, ErrorKind::InvalidInput, Result};
 use std::sync::Arc;
-use std::{
-    io::{Error, ErrorKind::InvalidInput, Result},
-    str::FromStr,
-};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
