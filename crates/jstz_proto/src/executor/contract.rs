@@ -55,12 +55,15 @@ fn on_success(
     match value.as_promise() {
         Some(promise) => {
             let promise = JsPromise::from_object(promise.clone()).unwrap();
-            let result = promise.then(
-                Some(
-                    FunctionObjectBuilder::new(context.realm(), unsafe {
-                        NativeFunction::from_closure(move |_, args, context| {
-                            f(&value, context)?;
-                            Ok(args.get_or_undefined(0).clone())
+            promise
+                .then(
+                    Some(
+                        FunctionObjectBuilder::new(context.realm(), unsafe {
+                            NativeFunction::from_closure(move |_, args, context| {
+                                let value = args.get_or_undefined(0).clone();
+                                f(&value, context);
+                                Ok(value)
+                            })
                         })
                     })
                     .build(),
@@ -116,12 +119,14 @@ impl Script {
         contract_address: &Address,
         context: &mut Context<'_>,
     ) -> Result<Self> {
+        with_global_host(|hrt| debug_msg!(hrt, "Loading 1. \n"));
         let src = with_global_host(|hrt| {
             Account::contract_code(hrt, tx, contract_address)?
                 .ok_or(Error::InvalidAddress)
         })?;
-
-        with_global_host(|hrt| debug_msg!(hrt, "Evaluating: {src:?}\n"));
+        with_global_host(|hrt| debug_msg!(hrt, "Loading 2. \n"));
+        with_global_host(|hrt| debug_msg!(hrt, "Loading contract: {src:?}\n"));
+        //with_global_host(|hrt| debug_msg!(hrt, "Evaluating: {src:?}\n"));
 
         Ok(Self::parse(Source::from_bytes(&src), context)?)
     }
@@ -130,8 +135,9 @@ impl Script {
         src: Source<'_, R>,
         context: &mut Context<'_>,
     ) -> JsResult<Self> {
+        with_global_host(|hrt| debug_msg!(hrt, "Parse 1. \n"));
         let module = Module::parse(src, Some(Realm::new(context)?), context)?;
-
+        with_global_host(|hrt| debug_msg!(hrt, "Parse 2. \n"));
         Ok(Self(module))
     }
 
@@ -193,9 +199,16 @@ impl Script {
             format!("{}{}{}", source, code, nonce.to_string(),).as_bytes(),
         )?;
 
-        Account::create(hrt, tx, &address, balance, Some(code))?;
-
-        debug_msg!(hrt, "[📜] Smart function deployed: {address}\n");
+        let account = Account::create(hrt, tx, &address, balance, Some(code));
+        if account.is_ok() {
+            debug_msg!(hrt, "[📜] Smart function deployed: {address}\n");
+        } else if let Err(Error::InvalidAddress) = account {
+            debug_msg!(hrt, "[📜] Smart function was already deployed: {address}\n");
+        } else {
+            // Unreachable?
+            debug_msg!(hrt, "[📜] Smart function deployment failed. \n");
+            account?
+        }
 
         Ok(address)
     }
@@ -272,13 +285,16 @@ impl Script {
         request: &JsValue,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        with_global_host(|hrt| debug_msg!(hrt, "Script 1. \n"));
         // 1. Load script
         let script = Script::load(tx, &contract_address, context)?;
 
+        with_global_host(|hrt| debug_msg!(hrt, "Script 2. \n"));
         // 2. Evaluate the script's module
         let script_promise =
             script.init(contract_address.clone(), &operation_hash, context)?;
 
+        with_global_host(|hrt| debug_msg!(hrt, "Script 3. \n"));
         // 3. Once evaluated, call the script's handler
         let result = script_promise.then(
             Some(
@@ -298,6 +314,8 @@ impl Script {
             None,
             context,
         )?;
+
+        with_global_host(|hrt| debug_msg!(hrt, "Script 4. \n"));
 
         Ok(result.into())
     }

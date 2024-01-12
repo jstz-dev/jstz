@@ -8,9 +8,14 @@ use boa_engine::{
 };
 use jstz_api::http::request::Request;
 use jstz_core::{
-    host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
+    host::HostRuntime,
+    host_defined,
+    kv::Transaction,
+    native::JsNativeObject,
+    runtime::{self, with_global_host},
     value::IntoJs,
 };
+use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     context::account::{Account, Address, Amount},
@@ -100,6 +105,7 @@ impl Contract {
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         host_defined!(context, host_defined);
+        with_global_host(|hrt| debug_msg!(hrt, "Call 1. \n"));
         // 1. Get address from request
         let address = request
             .deref()
@@ -110,8 +116,12 @@ impl Contract {
                 JsError::from_native(JsNativeError::error().with_message("Invalid host"))
             })?;
 
+        with_global_host(|hrt| debug_msg!(hrt, "Call 2. \n"));
+
         // 2. Set the referer of the request to the current contract address
         headers::test_and_set_referrer(&request.deref(), &self.contract_address)?;
+
+        with_global_host(|hrt| debug_msg!(hrt, "Call 3. \n"));
 
         // 3. Load, init and run!
         let trace_data = host_defined
@@ -139,15 +149,23 @@ impl ContractApi {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        with_global_host(|hrt| {
+            debug_msg!(hrt, "Now I am calling a contract. Woohoo. \n")
+        });
+        with_global_host(|hrt| debug_msg!(hrt, "Small step. \n"));
         host_defined!(context, host_defined);
+        with_global_host(|hrt| debug_msg!(hrt, "Larger step. \n"));
         let mut tx = host_defined
             .get_mut::<Transaction>()
             .expect("Curent transaction undefined");
+
+        with_global_host(|hrt| debug_msg!(hrt, "Fisrt step done. \n"));
 
         let contract = Contract::from_js_value(this)?;
         let request: JsNativeObject<Request> =
             args.get_or_undefined(0).clone().try_into()?;
 
+        with_global_host(|hrt| debug_msg!(hrt, "Second step done. \n"));
         contract.call(tx.deref_mut(), &request, context)
     }
 
@@ -156,6 +174,10 @@ impl ContractApi {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        println!("wooohooo I am creating a contract.");
+        with_global_host(|hrt| {
+            debug_msg!(hrt, "Wooohooo I am createing a contract (GH). \n")
+        });
         host_defined!(context, host_defined);
         let mut tx = host_defined.get_mut::<Transaction>().unwrap();
 
@@ -192,6 +214,8 @@ impl ContractApi {
             },
             context,
         )?;
+
+        with_global_host(|hrt| debug_msg!(hrt, "Yup its done. \n"));
 
         Ok(promise.into())
     }

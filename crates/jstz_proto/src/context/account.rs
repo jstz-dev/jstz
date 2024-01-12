@@ -4,11 +4,15 @@ use crate::error::{Error, Result};
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
+    runtime::with_global_host,
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
 
 use serde::{Deserialize, Serialize};
-use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
+use tezos_smart_rollup::{
+    prelude::debug_msg,
+    storage::path::{self, OwnedPath, RefPath},
+};
 
 pub type Address = PublicKeyHash;
 
@@ -57,8 +61,11 @@ impl Account {
     where
         'a: 'b,
     {
+        debug_msg!(hrt, "Get mut.");
+        //with_global_host(|hrt| debug_msg!(hrt, "Get mut 1. \n"));
         let account_entry = tx.entry::<Account>(hrt, Self::path(addr)?)?;
-
+        //with_global_host(|hrt| debug_msg!(hrt, "Get mut 2. \n"));
+        //with_global_host(|rt| debug_msg!(rt, "Woohoo I am here in get_mut."));
         Ok(account_entry.or_insert_default())
     }
 
@@ -95,8 +102,11 @@ impl Account {
         tx: &'a mut Transaction,
         addr: &Address,
     ) -> Result<Option<&'a mut String>> {
+        //with_global_host(|rt| debug_msg!(rt, "I am in contract code."));
+        debug_msg!(hrt, "Contract code 1. \n");
         let account = Self::get_mut(hrt, tx, addr)?;
-
+        debug_msg!(hrt, "Contract code 2. \n");
+        //with_global_host(|rt| debug_msg!(rt, "I have finished contract code."));
         Ok(account.contract_code.as_mut())
     }
 

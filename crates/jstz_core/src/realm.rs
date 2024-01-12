@@ -14,9 +14,11 @@ use boa_engine::{
 };
 use boa_gc::{empty_trace, Finalize, GcRef, GcRefCell, GcRefMut, Trace};
 use derive_more::{Deref, DerefMut, From};
+use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     native::{register_global_class, NativeClass},
+    runtime::with_global_host,
     Api,
 };
 
@@ -48,12 +50,18 @@ impl Module {
         realm: Option<Realm>,
         context: &mut Context<'_>,
     ) -> JsResult<Self> {
+        with_global_host(|hrt| debug_msg!(hrt, "Module Parse 1. \n"));
         let realm = realm.unwrap_or_else(|| context.realm().clone().into());
-
-        let module = boa_engine::Module::parse(src, Some(realm.inner_realm()), context)?;
+        with_global_host(|hrt| debug_msg!(hrt, "Module Parse 2. \n"));
+        let module = boa_engine::Module::parse(src, Some(realm.inner_realm()), context);
+        if module.is_err() {
+            let string_error = module.as_ref().err().unwrap().to_string();
+            with_global_host(|hrt| debug_msg!(hrt, "{string_error:?}"));
+        }
+        with_global_host(|hrt| debug_msg!(hrt, "Module Parse 3. \n"));
         Ok(Self {
             realm,
-            inner: module,
+            inner: module?,
         })
     }
 

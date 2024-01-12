@@ -1965,6 +1965,7 @@ dependencies = [
  "erased-serde",
  "getrandom 0.2.11",
  "serde",
+ "tezos-smart-rollup",
  "tezos-smart-rollup-host",
 ]
 
