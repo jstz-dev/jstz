@@ -4,7 +4,6 @@ use crate::error::{Error, Result};
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
-    runtime::with_global_host,
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
 

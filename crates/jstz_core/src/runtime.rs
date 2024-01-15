@@ -1,5 +1,4 @@
 use std::{
-    backtrace::Backtrace,
     cell::RefCell,
     collections::VecDeque,
     future::poll_fn,

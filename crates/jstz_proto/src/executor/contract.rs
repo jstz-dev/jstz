@@ -55,15 +55,13 @@ fn on_success(
     match value.as_promise() {
         Some(promise) => {
             let promise = JsPromise::from_object(promise.clone()).unwrap();
-            promise
-                .then(
-                    Some(
-                        FunctionObjectBuilder::new(context.realm(), unsafe {
-                            NativeFunction::from_closure(move |_, args, context| {
-                                let value = args.get_or_undefined(0).clone();
-                                f(&value, context);
-                                Ok(value)
-                            })
+            let result = promise.then(
+                Some(
+                    FunctionObjectBuilder::new(context.realm(), unsafe {
+                        NativeFunction::from_closure(move |_, args, context| {
+                            let value = args.get_or_undefined(0).clone();
+                            let _ = f(&value, context);
+                            Ok(value)
                         })
                     })
                     .build(),
