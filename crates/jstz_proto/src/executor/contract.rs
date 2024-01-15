@@ -22,6 +22,7 @@ use crate::{
     api::{self, TraceData},
     context::account::{Account, Address, Amount},
     operation::OperationHash,
+    request_logger::{log_request_end, log_request_start},
     Error, Result,
 };
 
@@ -227,11 +228,22 @@ impl Script {
         }
         set_js_logger(&JsonLogger);
 
-        // 2. Invoke the script's handler
+        // 2. Set logger
+        set_js_logger(&JsonLogger);
+        log_request_start(contract_address.clone(), operation_hash.to_string());
+
+        // 3. Invoke the script's handler
         let result =
             self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)?;
 
-        // 3. Ensure that the transaction is committed
+        // TODO: decode request and add more fields to the request (status, header etc).
+        log_request_end(
+            contract_address.clone(),
+            operation_hash.to_string(),
+            "tezos://abcdef".to_string(),
+        );
+
+        // 4. Ensure that the transaction is committed
         on_success(
             result,
             |value, context| {

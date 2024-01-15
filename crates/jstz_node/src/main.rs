@@ -1,14 +1,13 @@
 use std::io;
 
+use crate::services::{AccountsService, OperationsService};
 use actix_web::{middleware::Logger, web::Data, App, HttpServer, Scope};
 use clap::Parser;
 use env_logger::Env;
+pub use error::{Error, Result};
 use octez::OctezRollupClient;
 use services::{logs::stream_logs, LogsService};
 use tokio_util::sync::CancellationToken;
-
-use crate::services::{AccountsService, OperationsService};
-pub use error::{Error, Result};
 
 mod error;
 mod services;
@@ -51,8 +50,17 @@ async fn main() -> io::Result<()> {
 
     let cancellation_token = CancellationToken::new();
 
+    // todo: add db_file_path to args;
+    let db_path = dirs::home_dir()
+        .expect("Failed to get home directory")
+        .join(".jstz")
+        .join("log.db")
+        .to_str()
+        .unwrap()
+        .to_owned();
+
     let (broadcaster, tail_file_handle) =
-        LogsService::init(args.kernel_file_path, &cancellation_token);
+        LogsService::init(args.kernel_file_path, db_path, &cancellation_token);
 
     HttpServer::new(move || {
         App::new()
