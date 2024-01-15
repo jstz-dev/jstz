@@ -6,7 +6,10 @@ use clap::Parser;
 use env_logger::Env;
 pub use error::{Error, Result};
 use octez::OctezRollupClient;
-use services::{logs::stream_logs, LogsService};
+use services::{
+    logs::{persistent_logs, stream_logs},
+    LogsService,
+};
 use tokio_util::sync::CancellationToken;
 
 mod error;
@@ -59,7 +62,7 @@ async fn main() -> io::Result<()> {
         .unwrap()
         .to_owned();
 
-    let (broadcaster, tail_file_handle) =
+    let (broadcaster, db_pool, tail_file_handle) =
         LogsService::init(args.kernel_file_path, db_path, &cancellation_token);
 
     HttpServer::new(move || {
@@ -68,7 +71,9 @@ async fn main() -> io::Result<()> {
             .service(
                 Scope::new("/logs")
                     .app_data(Data::from(broadcaster.clone()))
-                    .service(stream_logs),
+                    .app_data(Data::new(db_pool.clone()))
+                    .service(stream_logs)
+                    .service(persistent_logs),
             )
             .wrap(Logger::default())
             .configure(OperationsService::configure)

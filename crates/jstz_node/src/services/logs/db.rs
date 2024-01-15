@@ -8,7 +8,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::Result;
 
 pub type SqliteConnectionPool = r2d2::Pool<SqliteConnectionManager>;
-
+pub type SqliteConnection = r2d2::PooledConnection<r2d2_sqlite::SqliteConnectionManager>;
 pub struct DB {
     pool: SqliteConnectionPool,
 }
@@ -17,14 +17,14 @@ impl DB {
     // Connects to the database in the given path.
     pub fn connect<P: AsRef<Path>>(path: P) -> Self {
         let manager = SqliteConnectionManager::file(path);
-        let pool = SqliteConnectionPool::new(manager).expect(&format!(
+        let pool = SqliteConnectionPool::new(manager).expect(
             "Failed to connect to the database, make sure the db is initalized with `setup_log.db`",
-        ));
+        );
 
         DB { pool }
     }
 
-    fn pool(&self) -> SqliteConnectionPool {
+    pub fn pool(&self) -> SqliteConnectionPool {
         self.pool.clone()
     }
 
