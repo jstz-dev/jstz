@@ -120,8 +120,8 @@ impl Transaction {
         }
     }
 
-    fn lookup<'a, V>(
-        &'a mut self,
+    fn lookup<V>(
+        &mut self,
         rt: &impl Runtime,
         key: OwnedPath,
     ) -> Result<Option<&mut SnapshotEntry>>
