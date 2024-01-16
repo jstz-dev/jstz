@@ -9,6 +9,8 @@ use octez::OctezRollupClient;
 
 use crate::Result;
 
+use super::Service;
+
 #[get("/{hash}/receipt")]
 async fn receipt(
     rollup_client: Data<OctezRollupClient>,
@@ -29,8 +31,8 @@ async fn receipt(
 
 pub struct OperationsService;
 
-impl OperationsService {
-    pub fn configure(cfg: &mut ServiceConfig) {
+impl Service for OperationsService {
+    fn configure(cfg: &mut ServiceConfig) {
         let scope = Scope::new("/operations").service(receipt);
 
         cfg.service(scope);

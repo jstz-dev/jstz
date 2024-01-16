@@ -12,6 +12,8 @@ use octez::OctezRollupClient;
 
 use crate::Result;
 
+use super::Service;
+
 fn construct_storage_key(address: &str, key: &Option<String>) -> String {
     match key {
         Some(value) if !value.is_empty() => format!("/jstz_kv/{}/{}", address, value),
@@ -128,8 +130,8 @@ async fn kv_subkeys(
 
 pub struct AccountsService;
 
-impl AccountsService {
-    pub fn configure(cfg: &mut ServiceConfig) {
+impl Service for AccountsService {
+    fn configure(cfg: &mut ServiceConfig) {
         let scope = Scope::new("/accounts")
             .service(nonce)
             .service(code)
