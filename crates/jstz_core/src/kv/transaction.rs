@@ -148,10 +148,13 @@ impl Transaction {
                 }
                 None => {
                     if Storage::contains_key(rt, entry.key())? {
-                        let value = Storage::get::<V>(rt, entry.key())?.unwrap();
-                        let snapshot_entry =
-                            entry.insert(SnapshotEntry::ephemeral(value));
-                        return Ok(Some(snapshot_entry));
+                        if let Some(value) = Storage::get::<V>(rt, entry.key())? {
+                            let snapshot_entry =
+                                entry.insert(SnapshotEntry::ephemeral(value));
+                            return Ok(Some(snapshot_entry));
+                        } else {
+                            return Ok(None);
+                        }
                     }
 
                     return Ok(None);
