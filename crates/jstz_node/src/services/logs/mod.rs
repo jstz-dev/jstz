@@ -37,7 +37,6 @@ pub struct LogsService;
 impl Service for LogsService {
     fn configure(cfg: &mut ServiceConfig) {
         let scope = Scope::new("/logs").service(stream_logs);
-
         cfg.service(scope);
     }
 }
