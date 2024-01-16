@@ -1,8 +1,8 @@
 use crate::tailed_file::TailedFile;
 use actix_web::{
     get,
-    web::{Data, Path},
-    Responder,
+    web::{Data, Path, ServiceConfig},
+    Responder, Scope,
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::js_logger::{LogRecord, LOG_PREFIX};
@@ -13,6 +13,8 @@ use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
 use self::broadcaster::Broadcaster;
+
+use super::Service;
 
 pub mod broadcaster;
 
@@ -31,6 +33,14 @@ async fn stream_logs(
 }
 
 pub struct LogsService;
+
+impl Service for LogsService {
+    fn configure(cfg: &mut ServiceConfig) {
+        let scope = Scope::new("/logs").service(stream_logs);
+
+        cfg.service(scope);
+    }
+}
 
 impl LogsService {
     // Initalise the LogService by spawning a future that reads and broadcasts the file

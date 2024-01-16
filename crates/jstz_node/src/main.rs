@@ -1,10 +1,10 @@
 use std::io;
 
-use actix_web::{middleware::Logger, web::Data, App, HttpServer, Scope};
+use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use clap::Parser;
 use env_logger::Env;
 use octez::OctezRollupClient;
-use services::{logs::stream_logs, LogsService};
+use services::{LogsService, Service};
 use tokio_util::sync::CancellationToken;
 
 use crate::services::{AccountsService, OperationsService};
@@ -57,14 +57,11 @@ async fn main() -> io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .app_data(rollup_client.clone())
-            .service(
-                Scope::new("/logs")
-                    .app_data(Data::from(broadcaster.clone()))
-                    .service(stream_logs),
-            )
-            .wrap(Logger::default())
             .configure(OperationsService::configure)
             .configure(AccountsService::configure)
+            .app_data(Data::from(broadcaster.clone()))
+            .configure(LogsService::configure)
+            .wrap(Logger::default())
     })
     .bind(ENDPOINT)?
     .run()
