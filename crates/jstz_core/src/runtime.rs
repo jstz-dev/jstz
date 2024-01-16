@@ -86,12 +86,7 @@ pub fn with_global_host<F, R>(f: F) -> R
 where
     F: FnOnce(&mut Host) -> R,
 {
-    HOST.with(|host| {
-        f(host.borrow_mut().as_mut().expect(
-            ("Host should be set - ".to_owned()/*+ &Backtrace::capture().to_string()*/)
-                .as_str(),
-        ))
-    })
+    HOST.with(|host| f(host.borrow_mut().as_mut().expect("Host should be set")))
 }
 
 #[derive(Debug)]

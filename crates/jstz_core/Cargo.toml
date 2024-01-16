@@ -15,3 +15,13 @@ derive_more = "0.99.17"
 bincode = "1.3.3"
 erased-serde = "0.4.2"
 serde = { version = "1.0.183", features = ["derive"] }
+jstz_crypto.workspace = true
+
+[dev-dependencies]
+anyhow = "1.0.75"
+expect-test = "1.4.1"
+jstz_wpt = { version = "0.1.0", path = "../jstz_wpt" }
+tokio = { version = "1.34.0", features = ["full"] }
+jstz_proto.workspace = true
+jstz_crypto.workspace = true
+tezos-smart-rollup-mock = "0.2.2"

@@ -1957,15 +1957,22 @@ dependencies = [
 name = "jstz_core"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "bincode",
  "boa_engine",
  "boa_gc",
  "derive_more",
  "erased-serde",
+ "expect-test",
  "getrandom 0.2.11",
+ "jstz_crypto",
+ "jstz_proto",
+ "jstz_wpt",
  "serde",
  "tezos-smart-rollup",
  "tezos-smart-rollup-host",
+ "tezos-smart-rollup-mock",
+ "tokio",
 ]
 
 [[package]]

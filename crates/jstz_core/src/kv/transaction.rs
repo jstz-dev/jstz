@@ -8,10 +8,9 @@ use boa_gc::{empty_trace, Finalize, Trace};
 use serde::de::DeserializeOwned;
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
-use crate::error::Result;
-
 use super::value::{BoxedValue, Value};
 use super::Storage;
+use crate::error::Result;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -91,8 +90,6 @@ impl SnapshotEntry {
     where
         V: Value,
     {
-        //self.dirty = true;
-        println!("Avoided dirtying.");
         self.value.as_any_mut().downcast_mut().unwrap()
     }
 
@@ -131,14 +128,12 @@ impl Transaction {
     where
         V: Value + DeserializeOwned,
     {
-        //with_global_host(|hrt| debug_msg!(hrt, "I am looking it up. Woohoo. \n"));
         let first_entry = self.snapshot.entry(key.clone());
 
         // Recursively lookup in parent if not found in current snapshot. If found in parent, insert into current snapshot.
         match first_entry {
             btree_map::Entry::Vacant(entry) => match &self.parent {
                 Some(parent) => {
-                    //with_global_host(|hrt| debug_msg!(hrt, "Vacant Some(parent) \n"));
                     let parent = &mut parent.deref().borrow_mut();
                     let parent_entry = parent.lookup::<V>(rt, key.clone())?;
                     match parent_entry {
@@ -152,7 +147,6 @@ impl Transaction {
                     }
                 }
                 None => {
-                    //with_global_host(|hrt| debug_msg!(hrt, "Vacant None \n"));
                     if Storage::contains_key(rt, entry.key())? {
                         let value = Storage::get::<V>(rt, entry.key())?.unwrap();
                         let snapshot_entry =
@@ -164,7 +158,6 @@ impl Transaction {
                 }
             },
             btree_map::Entry::Occupied(entry) => {
-                //with_global_host(|hrt| debug_msg!(hrt, "Occupied \n"));
                 let entry = entry.into_mut();
                 Ok(Some(entry))
             }
@@ -225,16 +218,14 @@ impl Transaction {
 
     /// Removes a key from the key-value store.
     pub fn remove(&mut self, rt: &impl Runtime, key: &OwnedPath) -> Result<()> {
-        let key_clone = key.clone();
+        let key_exists = self.contains_key(rt, &key)?;
 
-        let key_exists = self.contains_key(rt, &key.clone())?;
-
-        self.snapshot.remove(&key_clone);
+        self.snapshot.remove(&key);
         // Store the result of `contains_key` in a temporary variable
 
         // Use the result after the immutable borrow ends
         if key_exists {
-            self.remove_set.insert(key_clone);
+            self.remove_set.insert(key.clone());
         }
         Ok(())
     }
@@ -250,12 +241,7 @@ impl Transaction {
         V: Value + DeserializeOwned,
         'a: 'b,
     {
-        println!("Looking up key: {:?}", key);
-        //with_global_host(|hrt| debug_msg!(hrt, "In theq entry. \n"));
-
         self.lookup::<V>(rt, key.clone())?;
-
-        //with_global_host(|hrt| debug_msg!(hrt, "I looked it up. Woohoo. \n"));
 
         match self.snapshot.entry(key) {
             btree_map::Entry::Vacant(inner) => Ok(Entry::Vacant(VacantEntry::new(inner))),
