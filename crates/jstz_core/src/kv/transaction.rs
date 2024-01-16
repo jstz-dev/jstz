@@ -79,7 +79,6 @@ impl SnapshotEntry {
     }
 
     fn as_ref<V>(&self) -> &V
-    //TODO: These don't really work when it is a RefCell, since the value can be mutated without needing as_mut.
     where
         V: Value,
     {
