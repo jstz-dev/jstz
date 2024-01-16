@@ -8,10 +8,9 @@ pub use tokio::io::AsyncBufReadExt;
 
 impl TailedFile {
     pub async fn init(path: &str) -> Result<Self> {
-        let mut file = File::open(path).await?;
-        let _ = file.seek(SeekFrom::End(0));
-        let reader = BufReader::new(file);
-
+        let file = File::open(path).await?;
+        let mut reader = BufReader::new(file);
+        let _ = reader.seek(SeekFrom::End(0)).await?;
         Ok(TailedFile(reader))
     }
 
