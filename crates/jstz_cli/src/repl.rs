@@ -14,9 +14,31 @@ use jstz_proto::api::{ContractApi, LedgerApi};
 use rustyline::{error::ReadlineError, Editor};
 use tezos_smart_rollup_mock::MockHost;
 
+use syntect::{
+    easy::HighlightLines,
+    highlighting::{Style, Theme, ThemeSet},
+    parsing::{SyntaxReference, SyntaxSet},
+    util::LinesWithEndings,
+};
+
+use crossterm::{
+    cursor::MoveUp,
+    terminal::{Clear, ClearType},
+    ExecutableCommand,
+};
+use std::io::{stdout, Write};
+
 use crate::{config::Config, debug_api::DebugApi};
 
 pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
+    // Initialize syntax set and theme set
+    let ss = SyntaxSet::load_defaults_newlines();
+    let ts = ThemeSet::load_defaults();
+
+    // Find JavaScript syntax and a theme (e.g., base16-ocean.dark)
+    let syntax = ss.find_syntax_by_extension("js").unwrap();
+    let theme = &ts.themes["base16-ocean.dark"];
+
     let account = cfg.accounts.account_or_current(self_address)?;
     let address = account.address();
 
@@ -80,6 +102,15 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
                 // Add the line to history so you can use arrow keys to recall it
                 rl.add_history_entry(line.as_str())?;
 
+                // Syntax highlighting
+                stdout().execute(Clear(ClearType::CurrentLine)).unwrap();
+                stdout().execute(MoveUp(1)).unwrap();
+                stdout().execute(Clear(ClearType::CurrentLine)).unwrap();
+
+                print!(">> ");
+                highlight_and_print(input, &ss, syntax, theme);
+                stdout().flush().unwrap();
+
                 evaluate(input, &mut rt, &mut mock_hrt);
             }
             Err(ReadlineError::Interrupted) => {
@@ -95,6 +126,36 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
                 break Ok(());
             }
         }
+    }
+}
+
+fn apply_foreground_only(styles: &[(Style, &str)]) -> String {
+    let mut result = String::new();
+
+    for &(style, text) in styles {
+        let color = style.foreground;
+        let color_string = format!("\x1b[38;2;{};{};{}m", color.r, color.g, color.b);
+
+        result.push_str(&color_string);
+        result.push_str(text);
+
+        result.push_str("\x1b[0m");
+    }
+
+    result
+}
+
+fn highlight_and_print(
+    input: &str,
+    ss: &SyntaxSet,
+    syntax: &SyntaxReference,
+    theme: &Theme,
+) {
+    let mut h = HighlightLines::new(syntax, theme);
+    for line in LinesWithEndings::from(input) {
+        let ranges: Vec<(Style, &str)> = h.highlight(line, ss);
+        let formatted_line = apply_foreground_only(&ranges);
+        println!("{}", formatted_line);
     }
 }
 
