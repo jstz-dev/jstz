@@ -5,41 +5,98 @@ use jstz_api::{
     encoding::EncodingApi, http::HttpApi, js_log::set_js_logger, stream::StreamApi,
     url::UrlApi, urlpattern::UrlPatternApi, ConsoleApi, KvApi,
 };
-use jstz_core::host::HostRuntime;
 use jstz_core::{
+    host::HostRuntime,
     host_defined,
     kv::Kv,
     runtime::{self, Runtime},
 };
 use jstz_proto::api::{ContractApi, LedgerApi};
-use rustyline::{error::ReadlineError, Editor};
+use rustyline::{
+    completion::Completer, error::ReadlineError, highlight::Highlighter, hint::Hinter,
+    validate::Validator, Editor, Helper,
+};
+use std::borrow::Cow;
 use tezos_smart_rollup_mock::MockHost;
 
 use syntect::{
     easy::HighlightLines,
     highlighting::{Style, Theme, ThemeSet},
     parsing::{SyntaxReference, SyntaxSet},
-    util::LinesWithEndings,
 };
-
-use crossterm::{
-    cursor::MoveUp,
-    terminal::{Clear, ClearType},
-    ExecutableCommand,
-};
-use std::io::{stdout, Write};
 
 use crate::{config::Config, debug_api::DebugApi};
 
+struct JsHighlighter {
+    ss: SyntaxSet,
+    syntax: SyntaxReference,
+    theme: Theme,
+}
+
+impl JsHighlighter {
+    pub fn new() -> Self {
+        // Initialize syntax set and theme set only once
+        let ss = SyntaxSet::load_defaults_newlines();
+        let ts = ThemeSet::load_defaults();
+
+        // Find JavaScript syntax and a theme
+        let syntax = ss.find_syntax_by_extension("js").unwrap();
+        let theme = &ts.themes["base16-ocean.dark"];
+
+        JsHighlighter {
+            ss: ss.clone(),
+            syntax: syntax.clone(),
+            theme: theme.clone(),
+        }
+    }
+
+    fn apply_foreground_only(&self, styles: &[(Style, &str)]) -> String {
+        let mut result = String::new();
+
+        for &(style, text) in styles {
+            let color = style.foreground;
+            let color_string = format!("\x1b[38;2;{};{};{}m", color.r, color.g, color.b);
+
+            result.push_str(&color_string);
+            result.push_str(text);
+
+            result.push_str("\x1b[0m");
+        }
+
+        result
+    }
+
+    fn highlight(&self, input: &str) -> String {
+        let mut h = HighlightLines::new(&self.syntax, &self.theme);
+        let ranges: Vec<(Style, &str)> = h.highlight(input, &self.ss);
+        let formatted_line = self.apply_foreground_only(&ranges);
+        return formatted_line;
+    }
+}
+
+impl Highlighter for JsHighlighter {
+    fn highlight<'l>(&self, line: &'l str, _pos: usize) -> Cow<'l, str> {
+        Cow::Owned(self.highlight(line))
+    }
+
+    fn highlight_char(&self, _line: &str, _pos: usize) -> bool {
+        true
+    }
+}
+
+impl Helper for JsHighlighter {}
+
+impl Hinter for JsHighlighter {
+    type Hint = String;
+}
+
+impl Validator for JsHighlighter {}
+
+impl Completer for JsHighlighter {
+    type Candidate = String;
+}
+
 pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
-    // Initialize syntax set and theme set
-    let ss = SyntaxSet::load_defaults_newlines();
-    let ts = ThemeSet::load_defaults();
-
-    // Find JavaScript syntax and a theme (e.g., base16-ocean.dark)
-    let syntax = ss.find_syntax_by_extension("js").unwrap();
-    let theme = &ts.themes["base16-ocean.dark"];
-
     let account = cfg.accounts.account_or_current(self_address)?;
     let address = account.address();
 
@@ -57,7 +114,9 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
     }
     set_js_logger(&PrettyLogger);
 
-    let mut rl = Editor::<(), _>::new().expect("Failed to create a new editor.");
+    let mut rl =
+        Editor::<JsHighlighter, _>::new().expect("Failed to create a new editor.");
+    rl.set_helper(Some(JsHighlighter::new()));
 
     let mut mock_hrt = MockHost::default();
 
@@ -104,15 +163,6 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
                 // Add the line to history so you can use arrow keys to recall it
                 rl.add_history_entry(line.as_str())?;
 
-                // Syntax highlighting
-                stdout().execute(Clear(ClearType::CurrentLine)).unwrap();
-                stdout().execute(MoveUp(1)).unwrap();
-                stdout().execute(Clear(ClearType::CurrentLine)).unwrap();
-
-                print!(">> ");
-                highlight_and_print(input, &ss, syntax, theme);
-                stdout().flush().unwrap();
-
                 evaluate(input, &mut rt, &mut mock_hrt);
             }
             Err(ReadlineError::Interrupted) => {
@@ -128,36 +178,6 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
                 break Ok(());
             }
         }
-    }
-}
-
-fn apply_foreground_only(styles: &[(Style, &str)]) -> String {
-    let mut result = String::new();
-
-    for &(style, text) in styles {
-        let color = style.foreground;
-        let color_string = format!("\x1b[38;2;{};{};{}m", color.r, color.g, color.b);
-
-        result.push_str(&color_string);
-        result.push_str(text);
-
-        result.push_str("\x1b[0m");
-    }
-
-    result
-}
-
-fn highlight_and_print(
-    input: &str,
-    ss: &SyntaxSet,
-    syntax: &SyntaxReference,
-    theme: &Theme,
-) {
-    let mut h = HighlightLines::new(syntax, theme);
-    for line in LinesWithEndings::from(input) {
-        let ranges: Vec<(Style, &str)> = h.highlight(line, ss);
-        let formatted_line = apply_foreground_only(&ranges);
-        println!("{}", formatted_line);
     }
 }
 
