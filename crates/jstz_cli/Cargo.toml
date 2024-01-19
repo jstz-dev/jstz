@@ -20,7 +20,7 @@ serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bs58 = "0.5"
 hex = "0.4"
-dirs = "3.0"
+dirs = "5.0"
 nix = { version = "^0.27.1", features = [ "process", "signal" ] }
 http = "1.0.0"
 fs_extra = "1.2"
