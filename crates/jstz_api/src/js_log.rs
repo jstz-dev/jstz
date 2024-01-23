@@ -10,6 +10,18 @@ pub enum LogLevel {
     LOG,
 }
 
+impl ToString for LogLevel {
+    fn to_string(&self) -> String {
+        match self {
+            LogLevel::ERROR => "ERROR",
+            LogLevel::WARN => "WARN",
+            LogLevel::INFO => "INFO",
+            LogLevel::LOG => "LOG",
+        }
+        .to_string()
+    }
+}
+
 impl LogLevel {
     pub fn symbol(&self) -> char {
         match self {
