@@ -1,13 +1,30 @@
 use boa_engine::{Context, JsNativeError, JsResult};
 use serde::{Deserialize, Serialize};
 use std::cell::Cell;
+use std::str::FromStr;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub enum LogLevel {
-    ERROR,
-    WARN,
-    INFO,
-    LOG,
+    ERROR = 1,
+    WARN = 2,
+    INFO = 3,
+    LOG = 4,
+}
+
+pub const DEFAULT_LOG_LOG_LEVEL: LogLevel = LogLevel::LOG;
+
+impl FromStr for LogLevel {
+    type Err = &'static str;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "ERROR" => Ok(LogLevel::ERROR),
+            "WARN" => Ok(LogLevel::WARN),
+            "INFO" => Ok(LogLevel::INFO),
+            "LOG" => Ok(LogLevel::LOG),
+            _ => Err("no match"),
+        }
+    }
 }
 
 impl LogLevel {
