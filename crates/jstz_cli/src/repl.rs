@@ -114,8 +114,7 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
     }
     set_js_logger(&PrettyLogger);
 
-    let mut rl =
-        Editor::<JsHighlighter, _>::new().expect("Failed to create a new editor.");
+    let mut rl = Editor::<JsHighlighter, _>::new()?;
     rl.set_helper(Some(JsHighlighter::new()));
 
     let mut mock_hrt = MockHost::default();
