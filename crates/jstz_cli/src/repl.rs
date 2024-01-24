@@ -44,26 +44,23 @@ impl JsHighlighter {
         let theme = &ts.themes["base16-ocean.dark"];
 
         JsHighlighter {
-            ss: ss.clone(),
             syntax: syntax.clone(),
             theme: theme.clone(),
+            ss,
         }
     }
 
     fn apply_foreground_only(&self, styles: &[(Style, &str)]) -> String {
-        let mut result = String::new();
-
-        for &(style, text) in styles {
-            let color = style.foreground;
-            let color_string = format!("\x1b[38;2;{};{};{}m", color.r, color.g, color.b);
-
-            result.push_str(&color_string);
-            result.push_str(text);
-
-            result.push_str("\x1b[0m");
-        }
-
-        result
+        styles
+            .iter()
+            .map(|&(style, text)| {
+                let color = style.foreground;
+                format!(
+                    "\x1b[38;2;{};{};{}m{}\x1b[0m",
+                    color.r, color.g, color.b, text
+                )
+            })
+            .collect()
     }
 
     fn highlight(&self, input: &str) -> String {
