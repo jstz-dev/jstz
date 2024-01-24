@@ -118,8 +118,6 @@ impl AccountConfig {
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Config {
-    /// Path to `jstz` directory
-    pub jstz_path: PathBuf,
     /// Path to octez installation
     pub octez_path: PathBuf,
     /// Sandbox config (None if sandbox is not running)

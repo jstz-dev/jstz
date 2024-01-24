@@ -1,5 +1,7 @@
 use std::{
+    env,
     fs::{self, File},
+    path::{Path, PathBuf},
     process::Child,
     thread::sleep,
     time::Duration,
@@ -14,6 +16,20 @@ use octez::OctezThread;
 use tempfile::TempDir;
 
 use crate::config::{Config, SandboxConfig, SANDBOX_OCTEZ_SMART_ROLLUP_PORT};
+
+include!(concat!(env!("OUT_DIR"), "/sandbox_paths.rs"));
+
+fn logs_dir() -> Result<PathBuf> {
+    Ok(env::current_dir()?.join("logs"))
+}
+
+fn node_log_path() -> Result<PathBuf> {
+    Ok(logs_dir()?.join("node.log"))
+}
+
+fn client_log_path() -> Result<PathBuf> {
+    Ok(logs_dir()?.join("client.log"))
+}
 
 const ACTIVATOR_ACCOUNT_SK: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
@@ -52,8 +68,7 @@ fn init_node(cfg: &Config) -> Result<()> {
 
 fn start_node(cfg: &Config) -> Result<Child> {
     // Run the octez-node in sandbox mode
-    let sandbox_file = cfg.jstz_path.join("crates/jstz_cli/sandbox.json");
-    let log_file = File::create(cfg.jstz_path.join("logs/node.log"))?;
+    let log_file = File::create(node_log_path()?)?;
 
     cfg.octez_node()?.run(
         &log_file,
@@ -63,7 +78,7 @@ fn start_node(cfg: &Config) -> Result<Child> {
             "--network",
             "sandbox",
             "--sandbox",
-            sandbox_file.to_str().expect("Invalid path"),
+            SANDBOX_PATH,
         ],
     )
 }
@@ -106,14 +121,12 @@ fn init_client(cfg: &Config) -> Result<()> {
     println!(" done");
 
     // 4. Activate alpha
-    let sandbox_params_file = cfg.jstz_path.join("crates/jstz_cli/sandbox-params.json");
-
     print!("Activating alpha...");
     cfg.octez_client()?.activate_protocol(
         "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
         "1",
         "activator",
-        sandbox_params_file.to_str().expect("Invalid path"),
+        SANDBOX_PARAMS_PATH,
     )?;
     println!(" done");
 
@@ -151,7 +164,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
 
     // 4. As a thread, start baking
     print!("Starting baker...");
-    let client_logs = File::create(cfg.jstz_path.join("logs/client.log"))?;
+    let client_logs = File::create(client_log_path()?)?;
     let baker = OctezThread::new(cfg.clone(), move |cfg| {
         client_bake(cfg, &client_logs)?;
         Ok(())
@@ -181,13 +194,9 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     // 6. Create an installer kernel
     print!("Creating installer kernel...");
 
-    let preimages_dir = cfg.jstz_path.join("target/kernel/preimages/");
-    let installer = make_installer(
-        &cfg.jstz_path
-            .join("target/wasm32-unknown-unknown/release/jstz_kernel.wasm"),
-        &preimages_dir,
-        &bridge,
-    )?;
+    let preimages_dir = TempDir::with_prefix("jstz_sandbox_preimages")?.into_path();
+
+    let installer = make_installer(Path::new(JSTZ_KERNEL_PATH), &preimages_dir, &bridge)?;
     println!("done");
 
     // 7. Originate the rollup
@@ -201,7 +210,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
         &cfg.octez_rollup_node()?,
         OPERATOR_ADDRESS,
         &preimages_dir,
-        &cfg.jstz_path.join("logs"),
+        &logs_dir()?,
         "127.0.0.1",
         SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     )?);
@@ -232,7 +241,7 @@ pub fn main(cfg: &mut Config) -> Result<()> {
     );
 
     // Create logs directory
-    fs::create_dir_all(cfg.jstz_path.join("logs"))?;
+    fs::create_dir_all(logs_dir()?)?;
 
     cfg.sandbox = Some(sandbox_cfg);
     println!(" done");
