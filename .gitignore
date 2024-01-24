@@ -38,3 +38,6 @@ node_modules/
 /.direnv
 
 .env
+
+# Required by the CLI
+crates/jstz_cli/jstz_kernel.wasm
