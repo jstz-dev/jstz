@@ -107,6 +107,8 @@
 
                 python311Packages.base58
                 jq
+
+                sqlite
               ]
               ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
           };
