@@ -42,8 +42,8 @@ jobs:
       - name: Format (rustfmt)
         run: make fmt-rust-check
 
-      #- name: Format (prettier)
-      #  run: npx prettier --check .
+      - name: Format (prettier)
+        run: npx prettier --check .
 
       - name: Format (Nix)
         run: make fmt-nix-check
