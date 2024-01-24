@@ -69,8 +69,7 @@ impl JsHighlighter {
     fn highlight(&self, input: &str) -> String {
         let mut h = HighlightLines::new(&self.syntax, &self.theme);
         let ranges: Vec<(Style, &str)> = h.highlight(input, &self.ss);
-        let formatted_line = self.apply_foreground_only(&ranges);
-        return formatted_line;
+        self.apply_foreground_only(&ranges)
     }
 }
 
