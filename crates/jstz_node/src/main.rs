@@ -1,14 +1,13 @@
-use std::io;
+use std::io::{self, ErrorKind::Other};
 
+use crate::services::{AccountsService, OperationsService, Service};
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use clap::Parser;
 use env_logger::Env;
-use octez::OctezRollupClient;
-use services::{LogsService, Service};
-use tokio_util::sync::CancellationToken;
-
-use crate::services::{AccountsService, OperationsService};
 pub use error::{Error, Result};
+use octez::OctezRollupClient;
+use services::LogsService;
+use tokio_util::sync::CancellationToken;
 
 mod error;
 mod services;
@@ -58,8 +57,10 @@ async fn main() -> io::Result<()> {
 
     let cancellation_token = CancellationToken::new();
 
-    let (broadcaster, tail_file_handle) =
-        LogsService::init(args.kernel_file_path, &cancellation_token);
+    let (broadcaster, db_pool, tail_file_handle) =
+        LogsService::init(args.kernel_file_path, &cancellation_token)
+            .await
+            .map_err(|e| io::Error::new(Other, e.to_string()))?;
 
     HttpServer::new(move || {
         App::new()
@@ -67,6 +68,7 @@ async fn main() -> io::Result<()> {
             .configure(OperationsService::configure)
             .configure(AccountsService::configure)
             .app_data(Data::from(broadcaster.clone()))
+            .app_data(Data::new(db_pool.clone()))
             .configure(LogsService::configure)
             .wrap(Logger::default())
     })
