@@ -24,7 +24,7 @@ encoding_rs = "0.8.33"
 fastrand = "2.0.1"
 
 [dev-dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.79"
 expect-test = "1.4.1"
 jstz_wpt = { version = "0.1.0", path = "../jstz_wpt" }
 tokio = { version = "1.34.0", features = ["full"] }
