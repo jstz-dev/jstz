@@ -19,6 +19,7 @@ use rustyline::{
 use std::borrow::Cow;
 use tezos_smart_rollup_mock::MockHost;
 
+use std::fmt::Write;
 use syntect::{
     easy::HighlightLines,
     highlighting::{Style, Theme, ThemeSet},
@@ -53,14 +54,15 @@ impl JsHighlighter {
     fn apply_foreground_only(&self, styles: &[(Style, &str)]) -> String {
         styles
             .iter()
-            .map(|&(style, text)| {
+            .fold(String::new(), |mut output, &(style, text)| {
                 let color = style.foreground;
-                format!(
+                let _ = write!(
+                    &mut output,
                     "\x1b[38;2;{};{};{}m{}\x1b[0m",
                     color.r, color.g, color.b, text
-                )
+                );
+                output
             })
-            .collect()
     }
 
     fn highlight(&self, input: &str) -> String {
