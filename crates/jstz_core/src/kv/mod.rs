@@ -9,7 +9,7 @@ use tezos_smart_rollup_host::{path::Path, runtime::Runtime};
 
 use crate::error::Result;
 
-mod transaction;
+pub mod transaction;
 pub mod value;
 
 pub use transaction::{Entry, Transaction};

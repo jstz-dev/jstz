@@ -312,7 +312,6 @@ fn run_wpt_test(
     }
 }
 
-/*
 #[tokio::test]
 async fn test_wpt() -> Result<()> {
     let filter = TestFilter::try_from(
@@ -339,4 +338,3 @@ async fn test_wpt() -> Result<()> {
 
     Ok(())
 }
-*/

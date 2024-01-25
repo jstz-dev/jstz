@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod test {
+    use std::ops::Deref;
     use std::{cell::RefCell, rc::Rc};
 
-    use super::*;
     use jstz_core::{error::Result, host::HostRuntime, kv, kv::transaction::Transaction};
     use jstz_crypto::keypair_from_passphrase;
     use jstz_crypto::public_key_hash::PublicKeyHash;
