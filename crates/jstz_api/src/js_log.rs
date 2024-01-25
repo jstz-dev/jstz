@@ -1,13 +1,14 @@
 use boa_engine::{Context, JsNativeError, JsResult};
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::cell::Cell;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, PartialEq, PartialOrd, Clone, ValueEnum)]
 pub enum LogLevel {
-    ERROR,
-    WARN,
-    INFO,
-    LOG,
+    ERROR = 1,
+    WARN = 2,
+    INFO = 3,
+    LOG = 4,
 }
 
 impl ToString for LogLevel {

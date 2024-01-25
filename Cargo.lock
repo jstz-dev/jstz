@@ -1887,6 +1887,7 @@ dependencies = [
  "boa_engine",
  "boa_gc",
  "bytes",
+ "clap",
  "derive_more",
  "encoding_rs",
  "expect-test",
