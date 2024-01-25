@@ -17,20 +17,15 @@ fn execute_operation_inner(
     let operation = signed_operation.verify()?;
     let operation_hash = operation.hash();
 
-    {
-        let tx = &mut *tx;
-        operation.verify_nonce(hrt, tx)?;
-    }
+    operation.verify_nonce(hrt, tx)?;
+
     match operation {
         Operation {
             source,
             content: operation::Content::DeployContract(deployment),
             ..
         } => {
-            let result = {
-                let tx = &mut *tx;
-                contract::deploy::execute(hrt, tx, &source, deployment)?
-            };
+            let result = contract::deploy::execute(hrt, tx, &source, deployment)?;
 
             Ok(receipt::Content::DeployContract(result))
         }

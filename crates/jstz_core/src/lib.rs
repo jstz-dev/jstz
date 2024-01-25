@@ -1,4 +1,4 @@
-mod error;
+pub mod error;
 
 use boa_engine::Context;
 
