@@ -7,6 +7,8 @@ use std::{
     time::Duration,
 };
 
+use anyhow::Result;
+use jstz_node::run_node;
 use jstz_rollup::{
     deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
     JstzRollup,
@@ -259,8 +261,16 @@ pub fn main(cfg: &mut Config) -> Result<()> {
     println!("Saving sandbox config");
     cfg.save()?;
 
+    // Run node
+    let jstz_node = OctezThread::from_child(run_node(
+        DEFAULT_ROLLUP_NODE_RPC_ADDR,
+        DEFAULT_ROLLUP_RPC_PORT,
+        None,
+        DEFAULT_KERNEL_FILE_PATH,
+    ));
+
     // 4. Wait for the sandbox to shutdown (either by the user or by an error)
-    OctezThread::join(vec![baker, rollup_node, node])?;
+    OctezThread::join(vec![baker, rollup_node, node, jstz_node])?;
 
     cfg.sandbox = None;
     cfg.save()?;
