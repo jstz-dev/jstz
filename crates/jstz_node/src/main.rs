@@ -3,7 +3,22 @@ use std::path::PathBuf;
 use clap::Parser;
 use env_logger::Env;
 
+<<<<<<< HEAD
 // Defaults for `octez-smart-rollup-node`
+=======
+use crate::{
+    node_runner::run_node,
+    services::{AccountsService, OperationsService},
+};
+pub use error::{Error, Result};
+
+mod error;
+mod node_runner;
+mod services;
+mod tailed_file;
+
+/// Endpoint defaults for the `octez-smart-rollup-node`
+>>>>>>> 6a2e650 (feat(node): node runner)
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
 const DEFAULT_KERNEL_LOG_PATH: &str = "logs/kernel.log";
