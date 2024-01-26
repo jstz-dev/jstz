@@ -61,7 +61,6 @@ unsafe impl Trace for Transaction {
 
 #[derive(Debug)]
 struct SnapshotEntry {
-    dirty: bool,
     value: BoxedValue,
 }
 
@@ -73,7 +72,6 @@ impl SnapshotEntry {
         V: Value,
     {
         Self {
-            dirty: true,
             value: BoxedValue::new(value),
         }
     }
@@ -104,7 +102,6 @@ impl SnapshotEntry {
 impl Clone for SnapshotEntry {
     fn clone(&self) -> Self {
         Self {
-            dirty: self.dirty,
             value: self.value.clone(),
         }
     }
@@ -268,13 +265,17 @@ impl Transaction {
         V: Value,
     {
         // Perform deletions
-        for key in &self.remove_set.clone() {
-            match &self.parent {
-                Some(parent) => {
+        match &self.parent {
+            Some(parent) => {
+                for key in &self.remove_set.clone() {
                     parent.deref().borrow_mut().snapshot.remove(&key);
                     parent.deref().borrow_mut().remove_set.insert(key.clone());
                 }
-                None => Storage::remove(rt, key.into())?,
+            }
+            None => {
+                for key in &self.remove_set.clone() {
+                    Storage::remove(rt, key.into())?;
+                }
             }
         }
 
@@ -282,17 +283,15 @@ impl Transaction {
 
         // Perform insertions
         for (key, entry) in snapshot {
-            if entry.dirty {
-                match &self.parent {
-                    Some(parent) => {
-                        parent
-                            .deref()
-                            .borrow_mut()
-                            .insert(key, entry.into_value::<V>())?;
-                    }
-                    None => {
-                        Storage::insert(rt, &key, entry.value.deref().as_ref())?;
-                    }
+            match &self.parent {
+                Some(parent) => {
+                    parent
+                        .deref()
+                        .borrow_mut()
+                        .insert(key, entry.into_value::<V>())?;
+                }
+                None => {
+                    Storage::insert(rt, &key, entry.value.deref().as_ref())?;
                 }
             }
         }
