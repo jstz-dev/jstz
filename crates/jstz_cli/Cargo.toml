@@ -58,6 +58,8 @@ prettytable = "0.10.0"
 serde_with = { version = "3.6.1", features = ["macros"] }
 clap_complete = "4.4.10"
 spinners = "4.1.1"
+regex = "1"
+indicatif = "0.17.0"
 
 [[bin]]
 name = "jstz"
