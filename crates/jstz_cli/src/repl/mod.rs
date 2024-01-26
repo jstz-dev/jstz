@@ -6,11 +6,10 @@ use jstz_api::{
     encoding::EncodingApi, http::HttpApi, js_log::set_js_logger, stream::StreamApi,
     url::UrlApi, urlpattern::UrlPatternApi, ConsoleApi, KvApi,
 };
-use jstz_core::host::HostRuntime;
-use jstz_core::kv::Transaction;
 use jstz_core::{
     host::HostRuntime,
     host_defined,
+    kv::Transaction,
     runtime::{self, Runtime},
 };
 use jstz_proto::api::{ContractApi, LedgerApi};

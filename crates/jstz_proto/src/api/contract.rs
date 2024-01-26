@@ -103,6 +103,7 @@ impl Contract {
         request: &JsNativeObject<Request>,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
+        host_defined!(context, host_defined);
         // 1. Get address from request
         let address = request
             .deref()
