@@ -103,7 +103,6 @@ impl Contract {
         request: &JsNativeObject<Request>,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        host_defined!(context, host_defined);
         // 1. Get address from request
         let address = request
             .deref()
@@ -118,16 +117,15 @@ impl Contract {
         headers::test_and_set_referrer(&request.deref(), &self.contract_address)?;
 
         // 3. Load, init and run!
-        let trace_data = host_defined
-            .get::<TraceData>()
-            .expect("TraceData not found");
-        Script::load_init_run(
-            tx,
-            address,
-            trace_data.operation_hash.clone(),
-            request.inner(),
-            context,
-        )
+        let operation_hash = {
+            host_defined!(context, mut host_defined);
+            let trace_data = host_defined
+                .get::<TraceData>()
+                .expect("TraceData not found");
+            trace_data.operation_hash.clone()
+        };
+
+        Script::load_init_run(tx, address, operation_hash, request.inner(), context)
     }
 }
 
