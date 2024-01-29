@@ -7,7 +7,9 @@ use std::{
     time::Duration,
 };
 
+use anyhow::Result;
 use console::style;
+use jstz_node::run_node;
 use jstz_rollup::{
     deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
     JstzRollup,
