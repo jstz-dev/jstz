@@ -1,4 +1,5 @@
-use crate::js_logger::PrettyLogger;
+use std::{borrow::Cow, fmt::Write};
+
 use anyhow::Result;
 use boa_engine::{js_string, JsResult, JsValue, Source};
 use jstz_api::{
@@ -16,17 +17,20 @@ use rustyline::{
     completion::Completer, error::ReadlineError, highlight::Highlighter, hint::Hinter,
     validate::Validator, Editor, Helper,
 };
-use std::borrow::Cow;
-use tezos_smart_rollup_mock::MockHost;
-
-use std::fmt::Write;
 use syntect::{
     easy::HighlightLines,
     highlighting::{Style, Theme, ThemeSet},
     parsing::{SyntaxReference, SyntaxSet},
 };
+use tezos_smart_rollup_mock::MockHost;
 
-use crate::{config::Config, debug_api::DebugApi};
+use crate::config::Config;
+
+mod debug_api;
+mod js_logger;
+
+use debug_api::DebugApi;
+use js_logger::PrettyLogger;
 
 struct JsHighlighter {
     ss: SyntaxSet,
