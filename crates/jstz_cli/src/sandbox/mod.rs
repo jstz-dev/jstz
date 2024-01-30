@@ -1,4 +1,4 @@
-use anyhow::{Ok, Result};
+use anyhow::{anyhow, Ok, Result};
 use clap::Subcommand;
 use log::info;
 use nix::{

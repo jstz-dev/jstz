@@ -4,11 +4,14 @@ use clap::Parser;
 use env_logger::Env;
 
 use crate::{
+    config::{
+        DEFAULT_KERNEL_FILE_PATH, DEFAULT_ROLLUP_NODE_RPC_ADDR, DEFAULT_ROLLUP_RPC_PORT,
+    },
     node_runner::run_node,
-    services::{AccountsService, OperationsService},
 };
 pub use error::{Error, Result};
 
+mod config;
 mod error;
 mod node_runner;
 mod services;

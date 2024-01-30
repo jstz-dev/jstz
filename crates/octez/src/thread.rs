@@ -44,6 +44,27 @@ impl OctezThread {
         }
     }
 
+    pub fn run_once<I, F>(x: I, f: F) -> Self
+    where
+        F: Fn(&I) -> Result<()> + Send + 'static,
+        I: Send + 'static,
+    {
+        let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>();
+
+        let thread_handle = thread::spawn(move || {
+            if shutdown_rx.try_recv().is_err() {
+                f(&x)
+            } else {
+                Ok(())
+            }
+        });
+
+        Self {
+            shutdown_tx,
+            thread_handle,
+        }
+    }
+
     pub fn from_child(mut child: Child) -> Self {
         let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>();
 
