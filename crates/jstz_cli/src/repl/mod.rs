@@ -143,6 +143,7 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
     realm_clone.register_api(
         ContractApi {
             contract_address: address.clone(),
+            operation_hash: Default::default(),
         },
         rt.context(),
     );

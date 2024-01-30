@@ -160,8 +160,13 @@ impl Script {
             },
             context,
         );
-        self.realm()
-            .register_api(api::ContractApi { contract_address }, context);
+        self.realm().register_api(
+            api::ContractApi {
+                contract_address,
+                operation_hash: operation_hash.clone(),
+            },
+            context,
+        );
     }
 
     /// Initialize the script, registering all associated runtime APIs

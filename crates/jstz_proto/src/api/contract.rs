@@ -38,6 +38,7 @@ unsafe impl Trace for TraceData {
 
 struct Contract {
     contract_address: Address,
+    operation_hash: OperationHash,
 }
 impl Finalize for Contract {}
 
@@ -117,20 +118,19 @@ impl Contract {
         headers::test_and_set_referrer(&request.deref(), &self.contract_address)?;
 
         // 3. Load, init and run!
-        let operation_hash = {
-            host_defined!(context, mut host_defined);
-            let trace_data = host_defined
-                .get::<TraceData>()
-                .expect("TraceData not found");
-            trace_data.operation_hash.clone()
-        };
-
-        Script::load_init_run(tx, address, operation_hash, request.inner(), context)
+        Script::load_init_run(
+            tx,
+            address,
+            self.operation_hash.clone(),
+            request.inner(),
+            context,
+        )
     }
 }
 
 pub struct ContractApi {
     pub contract_address: Address,
+    pub operation_hash: OperationHash,
 }
 
 impl ContractApi {
@@ -204,6 +204,7 @@ impl jstz_core::Api for ContractApi {
         let contract = ObjectInitializer::with_native(
             Contract {
                 contract_address: self.contract_address,
+                operation_hash: self.operation_hash,
             },
             context,
         )
