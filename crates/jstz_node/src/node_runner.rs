@@ -1,15 +1,11 @@
 use std::io;
 
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
-use clap::Parser;
 use env_logger::Env;
 use octez::OctezRollupClient;
 use tokio_util::sync::CancellationToken;
 
-use crate::{
-    error::{Error, Result},
-    services::{AccountsService, LogsService, OperationsService, Service},
-};
+use crate::services::{AccountsService, LogsService, OperationsService, Service};
 
 /// Endpoint defailts for the `jstz-node`
 const ENDPOINT: (&str, u16) = ("127.0.0.1", 8933);
@@ -19,8 +15,11 @@ pub async fn run_node(
     rollup_node_rpc_port: u16,
     rollup_endpoint: Option<String>,
     kernel_file_path: String,
+    enable_logging: bool,
 ) -> io::Result<()> {
-    env_logger::init_from_env(Env::default().default_filter_or("info"));
+    if enable_logging {
+        env_logger::init_from_env(Env::default().default_filter_or("info"));
+    }
 
     let rollup_endpoint = rollup_endpoint.unwrap_or(format!(
         "http://{}:{}",

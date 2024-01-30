@@ -1,3 +1,13 @@
+use anyhow::Result;
+use jstz_node::{
+    run_node, DEFAULT_KERNEL_FILE_PATH, DEFAULT_ROLLUP_NODE_RPC_ADDR,
+    DEFAULT_ROLLUP_RPC_PORT,
+};
+use jstz_rollup::{
+    deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
+    JstzRollup,
+};
+use octez::OctezThread;
 use std::{
     env,
     fs::{self, File},
@@ -6,14 +16,6 @@ use std::{
     thread::sleep,
     time::Duration,
 };
-
-use anyhow::Result;
-use jstz_node::run_node;
-use jstz_rollup::{
-    deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
-    JstzRollup,
-};
-use octez::OctezThread;
 use tempfile::TempDir;
 
 use crate::{
@@ -232,7 +234,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     Ok((node, baker, rollup_node))
 }
 
-pub fn main(cfg: &mut Config) -> Result<()> {
+pub async fn main(cfg: &mut Config) -> Result<()> {
     // 1. Check if sandbox is already running
     if cfg.sandbox.is_some() {
         bail_user_error!("The sandbox is already running!");
@@ -261,16 +263,28 @@ pub fn main(cfg: &mut Config) -> Result<()> {
     println!("Saving sandbox config");
     cfg.save()?;
 
-    // Run node
-    let jstz_node = OctezThread::from_child(run_node(
-        DEFAULT_ROLLUP_NODE_RPC_ADDR,
-        DEFAULT_ROLLUP_RPC_PORT,
-        None,
-        DEFAULT_KERNEL_FILE_PATH,
-    ));
+    // Run jstz node
+    let local = tokio::task::LocalSet::new();
+    let _ = local
+        .run_until(async {
+            tokio::task::spawn_local(async {
+                println!("Jstz node started 🎉");
+                let _ = run_node(
+                    DEFAULT_ROLLUP_NODE_RPC_ADDR.to_string(),
+                    DEFAULT_ROLLUP_RPC_PORT,
+                    None,
+                    DEFAULT_KERNEL_FILE_PATH.to_string(),
+                    false,
+                )
+                .await;
+            })
+            .await
+            .expect("Local task panicked");
+        })
+        .await;
 
     // 4. Wait for the sandbox to shutdown (either by the user or by an error)
-    OctezThread::join(vec![baker, rollup_node, node, jstz_node])?;
+    OctezThread::join(vec![baker, rollup_node, node])?;
 
     cfg.sandbox = None;
     cfg.save()?;

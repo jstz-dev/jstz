@@ -51,6 +51,7 @@ syntect = "4.6.0"
 crossterm = "0.27"
 ansi_term = "0.12.1"
 console = "0.15.8"
+futures = "0.3"
 
 [[bin]]
 name = "jstz"

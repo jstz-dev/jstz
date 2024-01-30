@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Ok, Result};
 use clap::Subcommand;
 use nix::{
     sys::signal::{kill, Signal},
@@ -11,15 +12,6 @@ use crate::{
     error::{bail_user_error, Result},
 };
 
-/// Endpoint details for the `octez-smart-rollup-node`
-pub const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
-pub const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
-
-/// Endpoint defailts for the `jstz-node`
-pub const ENDPOINT: (&str, u16) = ("127.0.0.1", 8933);
-
-pub const DEFAULT_KERNEL_FILE_PATH: &str = "logs/kernel.log";
-
 #[derive(Subcommand)]
 pub enum Command {
     /// Starts a sandbox.
@@ -28,16 +20,11 @@ pub enum Command {
     Stop,
 }
 
-pub fn start() -> Result<()> {
+pub async fn start() -> Result<()> {
     let mut cfg = Config::load()?;
 
-    // let sandboxd_log = File::create(cfg.jstz_path.join("/logs/sandboxd.log"))?;
-
-    // let daemonize = Daemonize::new().stdout(sandboxd_log);
-
-    // daemonize.start()?;
-
-    daemon::main(&mut cfg)
+    daemon::main(cfg).await?;
+    Ok(())
 }
 
 pub fn stop() -> Result<()> {
@@ -53,9 +40,9 @@ pub fn stop() -> Result<()> {
     }
 }
 
-pub fn exec(command: Command) -> Result<()> {
+pub async fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Start => start(),
+        Command::Start => start().await,
         Command::Stop => stop(),
     }
 }
