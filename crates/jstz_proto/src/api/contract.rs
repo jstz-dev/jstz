@@ -69,21 +69,18 @@ impl Contract {
             let balance = Account::balance(hrt, tx, &self.contract_address)
                 .expect("Could not get balance");
             if balance < initial_balance {
-                return Err(Error::BalanceOverflow.into());
+                return Err(Error::BalanceOverflow);
             }
         } // The mutable borrow of `tx` in `balance` is released here
 
         // 2. Deploy the contract
-        let address = {
-            let address = Script::deploy(
-                hrt,
-                tx,
-                &self.contract_address,
-                contract_code,
-                initial_balance,
-            )?;
-            address
-        }; // The mutable borrow of `tx` in `Script::deploy` is released here
+        let address = Script::deploy(
+            hrt,
+            tx,
+            &self.contract_address,
+            contract_code,
+            initial_balance,
+        )?; // The mutable borrow of `tx` in `Script::deploy` is released here
 
         // 3. Increment nonce of current account
         {
@@ -101,9 +98,9 @@ impl Contract {
         &self,
         tx: &mut Transaction,
         request: &JsNativeObject<Request>,
+        operation_hash: OperationHash,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        host_defined!(context, host_defined);
         // 1. Get address from request
         let address = request
             .deref()
@@ -118,16 +115,7 @@ impl Contract {
         headers::test_and_set_referrer(&request.deref(), &self.contract_address)?;
 
         // 3. Load, init and run!
-        let trace_data = host_defined
-            .get::<TraceData>()
-            .expect("TraceData not found");
-        Script::load_init_run(
-            tx,
-            address,
-            trace_data.operation_hash.clone(),
-            request.inner(),
-            context,
-        )
+        Script::load_init_run(tx, address, operation_hash, request.inner(), context)
     }
 }
 
@@ -147,12 +135,20 @@ impl ContractApi {
         let mut tx = host_defined
             .get_mut::<Transaction>()
             .expect("Curent transaction undefined");
+        let trace_data = host_defined
+            .get::<TraceData>()
+            .expect("trace data undefined");
 
         let contract = Contract::from_js_value(this)?;
         let request: JsNativeObject<Request> =
             args.get_or_undefined(0).clone().try_into()?;
 
-        contract.call(tx.deref_mut(), &request, context)
+        contract.call(
+            tx.deref_mut(),
+            &request,
+            trace_data.operation_hash.clone(),
+            context,
+        )
     }
 
     fn create(

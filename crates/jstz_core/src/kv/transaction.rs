@@ -107,6 +107,12 @@ impl Clone for SnapshotEntry {
     }
 }
 
+impl Default for Transaction {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Transaction {
     pub fn new() -> Self {
         Self {
@@ -126,7 +132,7 @@ impl Transaction {
     {
         let first_entry = self.snapshot.entry(key.clone());
 
-        // Recursively lookup in parent if not found in current snapshot. If found in parent, insert into current snapshot.
+        // Recursively lookup in parent if not found in current snapshot. If it is found in parent, insert into current snapshot.
         match first_entry {
             btree_map::Entry::Vacant(entry) => match &self.parent {
                 Some(parent) => {
@@ -135,25 +141,19 @@ impl Transaction {
                     match parent_entry {
                         Some(value) => {
                             let snapshot_entry = entry.insert(value.clone());
-                            return Ok(Some(snapshot_entry));
+                            Ok(Some(snapshot_entry))
                         }
-                        None => {
-                            return Ok(None);
-                        }
+                        None => Ok(None),
                     }
                 }
                 None => {
-                    if Storage::contains_key(rt, entry.key())? {
-                        if let Some(value) = Storage::get::<V>(rt, entry.key())? {
-                            let snapshot_entry =
-                                entry.insert(SnapshotEntry::ephemeral(value));
-                            return Ok(Some(snapshot_entry));
-                        } else {
-                            return Ok(None);
-                        }
+                    if let Some(value) = Storage::get::<V>(rt, entry.key())? {
+                        let snapshot_entry =
+                            entry.insert(SnapshotEntry::ephemeral(value));
+                        return Ok(Some(snapshot_entry));
                     }
 
-                    return Ok(None);
+                    Ok(None)
                 }
             },
             btree_map::Entry::Occupied(entry) => {
@@ -190,18 +190,12 @@ impl Transaction {
     /// Returns `true` if the key-value store contains a key-value pair for the
     /// specified key.
     pub fn contains_key(&self, rt: &impl Runtime, key: &OwnedPath) -> Result<bool> {
-        // Recursively lookup in parent if not found in current snapshot. If found in parent, insert into current snapshot.
-        // Finally, check if the key exists in storage.
         if self.snapshot.contains_key(key) {
-            return Ok(true);
+            Ok(true)
         } else {
             match &self.parent {
-                Some(parent) => {
-                    return parent.borrow().contains_key(rt, key);
-                }
-                None => {
-                    return Storage::contains_key(rt, key);
-                }
+                Some(parent) => parent.borrow().contains_key(rt, key),
+                None => Storage::contains_key(rt, key),
             }
         }
     }
@@ -217,10 +211,9 @@ impl Transaction {
 
     /// Removes a key from the key-value store.
     pub fn remove(&mut self, rt: &impl Runtime, key: &OwnedPath) -> Result<()> {
-        let key_exists = self.contains_key(rt, &key)?;
+        let key_exists = self.contains_key(rt, key)?;
 
-        self.snapshot.remove(&key);
-        // Store the result of `contains_key` in a temporary variable
+        self.snapshot.remove(key);
 
         // Use the result after the immutable borrow ends
         if key_exists {
@@ -268,13 +261,13 @@ impl Transaction {
         match &self.parent {
             Some(parent) => {
                 for key in &self.remove_set.clone() {
-                    parent.deref().borrow_mut().snapshot.remove(&key);
+                    parent.deref().borrow_mut().snapshot.remove(key);
                     parent.deref().borrow_mut().remove_set.insert(key.clone());
                 }
             }
             None => {
                 for key in &self.remove_set.clone() {
-                    Storage::remove(rt, key.into())?;
+                    Storage::remove(rt, key)?;
                 }
             }
         }
