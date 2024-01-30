@@ -148,8 +148,6 @@ impl Transaction {
                             let snapshot_entry =
                                 entry.insert(SnapshotEntry::ephemeral(value));
                             return Ok(Some(snapshot_entry));
-                        } else {
-                            return Ok(None);
                         }
                     }
 
@@ -190,8 +188,6 @@ impl Transaction {
     /// Returns `true` if the key-value store contains a key-value pair for the
     /// specified key.
     pub fn contains_key(&self, rt: &impl Runtime, key: &OwnedPath) -> Result<bool> {
-        // Recursively lookup in parent if not found in current snapshot. If found in parent, insert into current snapshot.
-        // Finally, check if the key exists in storage.
         if self.snapshot.contains_key(key) {
             return Ok(true);
         } else {
@@ -220,7 +216,6 @@ impl Transaction {
         let key_exists = self.contains_key(rt, &key)?;
 
         self.snapshot.remove(&key);
-        // Store the result of `contains_key` in a temporary variable
 
         // Use the result after the immutable borrow ends
         if key_exists {
