@@ -2062,6 +2062,7 @@ dependencies = [
  "jstz_api",
  "jstz_crypto",
  "jstz_proto",
+ "log",
  "octez",
  "parking_lot 0.12.1",
  "r2d2",
@@ -3164,6 +3165,9 @@ dependencies = [
  "spin",
  "untrusted",
  "windows-sys 0.48.0",
+]
+
+[[package]]
 name = "rusqlite"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4349,7 +4353,7 @@ version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f00cc9702ca12d3c81455259621e676d0f7251cec66a21e98fe2e9a37db93b2a"
 dependencies = [
- "getrandom 0.2.11",
+ "getrandom",
  "rand 0.8.5",
 ]
 
