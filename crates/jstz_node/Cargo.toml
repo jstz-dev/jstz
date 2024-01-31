@@ -32,7 +32,6 @@ dirs = "3.0"
 r2d2 = "0.8"
 r2d2_sqlite = "0.22"
 rusqlite = "0.29"
-load_file="1.0.1"
 
 [[bin]]
 name = "jstz-node"
