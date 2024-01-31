@@ -1,29 +1,23 @@
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::SecretKeyEd25519;
-use tezos_crypto_rs::hash::SeedEd25519;
 
 use crate::{error::Result, signature::Signature};
 
-// FIXME: workaround via `SeedEd25519` will be unnecessary in the next tezos_crypto_rs release
-//        (will be included in next SDK release)
-
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-#[serde(from = "SecretKeySerde", into = "SecretKeySerde")]
 pub enum SecretKey {
     Ed25519(SecretKeyEd25519),
 }
 
 impl SecretKey {
     pub fn to_base58(&self) -> String {
-        let SecretKey::Ed25519(SecretKeyEd25519(sk)) = self;
-        let sk = SeedEd25519(sk.clone());
-        sk.to_base58_check()
+        let SecretKey::Ed25519(pk) = self;
+        pk.to_base58_check()
     }
 
     pub fn from_base58(data: &str) -> Result<Self> {
-        let SeedEd25519(sk) = SeedEd25519::from_base58_check(data)?;
+        let sk = SecretKeyEd25519::from_base58_check(data)?;
 
-        Ok(SecretKey::Ed25519(SecretKeyEd25519(sk)))
+        Ok(SecretKey::Ed25519(sk))
     }
 
     pub fn sign(&self, message: impl AsRef<[u8]>) -> Result<Signature> {
@@ -35,24 +29,5 @@ impl SecretKey {
 impl ToString for SecretKey {
     fn to_string(&self) -> String {
         self.to_base58()
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-enum SecretKeySerde {
-    Ed25519(SeedEd25519),
-}
-
-impl From<SecretKey> for SecretKeySerde {
-    fn from(s: SecretKey) -> Self {
-        let SecretKey::Ed25519(SecretKeyEd25519(sk)) = s;
-        Self::Ed25519(SeedEd25519(sk))
-    }
-}
-
-impl From<SecretKeySerde> for SecretKey {
-    fn from(s: SecretKeySerde) -> Self {
-        let SecretKeySerde::Ed25519(SeedEd25519(sk)) = s;
-        Self::Ed25519(SecretKeyEd25519(sk))
     }
 }
