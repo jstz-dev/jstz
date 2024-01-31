@@ -57,7 +57,7 @@ async fn main() -> io::Result<()> {
 
     let cancellation_token = CancellationToken::new();
 
-    let (broadcaster, db_pool, tail_file_handle) =
+    let (broadcaster, db, tail_file_handle) =
         LogsService::init(args.kernel_file_path, &cancellation_token)
             .await
             .map_err(|e| io::Error::new(Other, e.to_string()))?;
@@ -68,7 +68,7 @@ async fn main() -> io::Result<()> {
             .configure(OperationsService::configure)
             .configure(AccountsService::configure)
             .app_data(Data::from(broadcaster.clone()))
-            .app_data(Data::new(db_pool.clone()))
+            .app_data(Data::new(db.clone()))
             .configure(LogsService::configure)
             .wrap(Logger::default())
     })
