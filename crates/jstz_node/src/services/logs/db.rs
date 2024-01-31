@@ -25,7 +25,7 @@ impl Db {
     pub async fn init() -> Result<Self> {
         let db_path = dirs::home_dir()
             .expect("failed to get home directory")
-            .join(".jstz/log.db");
+            .join(DB_PATH);
         let manager = SqliteConnectionManager::file(db_path);
         let pool = SqliteConnectionPool::new(manager)?;
 
@@ -60,7 +60,7 @@ impl Db {
     // On success, returns the number of rows that were changed/inserted.
     pub(super) async fn flush(&self, line: &Line) -> Result<()> {
         let connection = self.connection().await?;
-        let a = match line {
+        match line {
             Line::Request(RequestEvent::Start {
                 request_id,
                 contract_address,

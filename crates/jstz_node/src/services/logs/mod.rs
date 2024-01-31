@@ -1,9 +1,8 @@
-use crate::tailed_file::TailedFile;
+use crate::{tailed_file::TailedFile, Error, Result};
 use actix_web::{
-    error::ErrorInternalServerError,
     get,
     web::{Data, Path, Query, ServiceConfig},
-    Error, HttpResponse, Responder, Scope,
+    HttpResponse, Responder, Scope,
 };
 
 use anyhow;
@@ -35,6 +34,7 @@ async fn stream_logs(
 ) -> io::Result<impl Responder> {
     let address = path.into_inner();
 
+    // TODO: add better error
     let address =
         Address::from_base58(&address).map_err(|e| io::Error::new(InvalidInput, e))?;
 
@@ -52,11 +52,10 @@ async fn persistent_logs(
     pagination: Query<Pagination>,
     db: Data<Db>,
     path: Path<String>,
-) -> anyhow::Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse> {
     let address = path.into_inner();
 
-    let address =
-        Address::from_base58(&address).map_err(|e| io::Error::new(InvalidInput, e))?;
+    let address = Address::from_base58(&address)?;
 
     let Pagination { limit, offset } = pagination.into_inner();
     let result = query(
@@ -76,11 +75,10 @@ async fn persistent_logs(
 async fn persistent_logs_by_request_id(
     db: Data<Db>,
     path: Path<(String, String)>,
-) -> anyhow::Result<HttpResponse, actix_web::Error> {
+) -> Result<HttpResponse> {
     let (address, request_id) = path.into_inner();
 
-    let address =
-        Address::from_base58(&address).map_err(|e| io::Error::new(InvalidInput, e))?;
+    let address = Address::from_base58(&address)?;
 
     let result = query(
         &db,
@@ -156,7 +154,7 @@ impl LogsService {
                             if let Some(line) = Self::parse_line(&line_str) {
                                     let _ = db.flush(&line).await.map_err(|e|
                                         {
-                                            println!("Failed to flush log to database: {:?}", e.to_string());
+                                            log::warn!("Failed to flush log to database: {:?}", e.to_string());
                                         }
                                     );
 
@@ -217,10 +215,7 @@ pub enum QueryResponse {
     },
 }
 
-pub async fn query(
-    db: &Db,
-    param: QueryParams,
-) -> anyhow::Result<Vec<QueryResponse>, Error> {
+pub async fn query(db: &Db, param: QueryParams) -> Result<Vec<QueryResponse>> {
     match param {
         QueryParams::GetLogsByAddress(addr, offset, limit) => {
             db.logs_by_address(addr, offset, limit).await
@@ -229,5 +224,5 @@ pub async fn query(
             db.logs_by_address_and_request_id(addr, request_id).await
         }
     }
-    .map_err(ErrorInternalServerError)
+    .map_err(Error::InternalError)
 }

@@ -32,6 +32,7 @@ dirs = "3.0"
 r2d2 = "0.8"
 r2d2_sqlite = "0.22"
 rusqlite = "0.29"
+log = "0.4.20"
 
 [[bin]]
 name = "jstz-node"
