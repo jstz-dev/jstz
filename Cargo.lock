@@ -2062,7 +2062,6 @@ dependencies = [
  "jstz_api",
  "jstz_crypto",
  "jstz_proto",
- "load_file",
  "octez",
  "parking_lot 0.12.1",
  "r2d2",
@@ -2263,12 +2262,6 @@ name = "litemap"
 version = "0.7.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f9d642685b028806386b2b6e75685faadd3eb65a85fff7df711ce18446a422da"
-
-[[package]]
-name = "load_file"
-version = "1.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "31da4bce62428941030036a44d0d4b123f031b04080f8aeb44248b41de3e79cd"
 
 [[package]]
 name = "local-channel"
