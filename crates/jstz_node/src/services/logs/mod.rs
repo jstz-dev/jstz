@@ -12,7 +12,7 @@ use jstz_proto::{
     request_logger::{RequestEvent, REQUEST_END_PREFIX, REQUEST_START_PREFIX},
 };
 use serde::{Deserialize, Serialize};
-use std::io::{self, ErrorKind::InvalidInput};
+use std::io::ErrorKind::InvalidInput;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
@@ -31,12 +31,12 @@ const DEAULT_PAGINATION_OFFSET: usize = 0;
 async fn stream_logs(
     broadcaster: Data<Broadcaster>,
     path: Path<String>,
-) -> io::Result<impl Responder> {
+) -> std::io::Result<impl Responder> {
     let address = path.into_inner();
 
     // TODO: add better error
-    let address =
-        Address::from_base58(&address).map_err(|e| io::Error::new(InvalidInput, e))?;
+    let address = Address::from_base58(&address)
+        .map_err(|e| std::io::Error::new(InvalidInput, e))?;
 
     Ok(broadcaster.new_client(address).await)
 }
@@ -111,19 +111,18 @@ pub enum Line {
 }
 
 impl LogsService {
-    /// Initalise the LogService by spawning a future that reads the file.
-    /// The content of the file is broadcasted to clients and flushed to storage.
+    // Initalise the LogService by spawning a future that reads and broadcasts the file
     pub async fn init(
-        log_file_path: String,
+        path: &std::path::Path,
         cancellation_token: &CancellationToken,
-    ) -> anyhow::Result<(Arc<Broadcaster>, Db, JoinHandle<io::Result<()>>)> {
+    ) -> anyhow::Result<(Arc<Broadcaster>, Db, JoinHandle<std::io::Result<()>>)> {
         // Create a broadcaster for streaming logs.
         let broadcaster = Broadcaster::create();
 
         // Create a connection with the sqlite database.
         let db = Db::init().await?;
 
-        let file = TailedFile::init(&log_file_path).await?;
+        let file = TailedFile::init(path).await?;
         // Spawn a future that reads from the log file.
         // The line is broadcast to client / flushed to storage.
         let tail_file_handle = Self::tail_file(
@@ -144,7 +143,7 @@ impl LogsService {
         broadcaster: Arc<Broadcaster>,
         db: Db,
         cancellation_token: CancellationToken,
-    ) -> JoinHandle<io::Result<()>> {
+    ) -> JoinHandle<std::io::Result<()>> {
         actix_web::rt::spawn(async move {
             let mut lines = file.lines();
             loop {

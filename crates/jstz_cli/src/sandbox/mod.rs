@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Ok, Result};
+use anyhow::{Ok, Result};
 use clap::Subcommand;
 use nix::{
     sys::signal::{kill, Signal},
@@ -7,10 +7,7 @@ use nix::{
 
 mod daemon;
 
-use crate::{
-    config::Config,
-    error::{bail_user_error, Result},
-};
+use crate::{config::Config, error::bail_user_error};
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -23,7 +20,7 @@ pub enum Command {
 pub async fn start() -> Result<()> {
     let mut cfg = Config::load()?;
 
-    daemon::main(cfg).await?;
+    daemon::main(&mut cfg).await?;
     Ok(())
 }
 
