@@ -85,9 +85,9 @@ enum Command {
 
 async fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Sandbox(sandbox_command) => sandbox::exec(cfg, sandbox_command).await,
-        Command::Bridge(bridge_command) => bridge::exec(bridge_command, cfg),
-        Command::Account(account_command) => account::exec(account_command, cfg).await,
+        Command::Sandbox(sandbox_command) => sandbox::exec(sandbox_command).await,
+        Command::Bridge(bridge_command) => bridge::exec(bridge_command),
+        Command::Account(account_command) => account::exec(account_command).await,
         Command::Deploy {
             code,
             balance,

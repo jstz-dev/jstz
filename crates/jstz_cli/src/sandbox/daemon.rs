@@ -1,8 +1,4 @@
 use anyhow::Result;
-use jstz_node::{
-    run_node, DEFAULT_KERNEL_FILE_PATH, DEFAULT_ROLLUP_NODE_RPC_ADDR,
-    DEFAULT_ROLLUP_RPC_PORT,
-};
 use jstz_rollup::{
     deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
     JstzRollup,
@@ -17,14 +13,19 @@ use std::{
     time::Duration,
 };
 use tempfile::TempDir;
+use tokio::task;
 
 use crate::{
     config::{
         Config, SandboxConfig, SANDBOX_OCTEZ_NODE_PORT, SANDBOX_OCTEZ_NODE_RPC_PORT,
         SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     },
-    error::{bail_user_error, Result},
+    error::bail_user_error,
 };
+
+const SANDBOX_JSTZ_NODE_ADDR: &str = "127.0.0.1";
+const SANDBOX_JSTZ_NODE_PORT: u16 = 8933;
+const SANDBOX_OCTEZ_SMART_ROLLUP_ADDR: &str = "127.0.0.1";
 
 include!(concat!(env!("OUT_DIR"), "/sandbox_paths.rs"));
 
@@ -158,6 +159,32 @@ fn client_bake(cfg: &Config, log_file: &File) -> Result<()> {
     Ok(())
 }
 
+async fn run_jstz_node() -> Result<()> {
+    let local = task::LocalSet::new();
+
+    local
+        .run_until(async {
+            task::spawn_local(async {
+                println!("Jstz node started 🎉");
+
+                jstz_node::run(
+                    SANDBOX_JSTZ_NODE_ADDR,
+                    SANDBOX_JSTZ_NODE_PORT,
+                    &format!(
+                        "http://{}:{}",
+                        SANDBOX_OCTEZ_SMART_ROLLUP_ADDR, SANDBOX_OCTEZ_SMART_ROLLUP_PORT
+                    ),
+                    &logs_dir()?.join("kernel.log"),
+                )
+                .await
+            })
+            .await
+        })
+        .await??;
+
+    Ok(())
+}
+
 fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)> {
     // 1. Init node
     init_node(cfg)?;
@@ -215,11 +242,12 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
 
     // 8. As a thread, start rollup node
     print!("Starting rollup node...");
+    let logs_dir = logs_dir()?;
     let rollup_node = OctezThread::from_child(rollup.run(
         &cfg.octez_rollup_node()?,
         OPERATOR_ADDRESS,
         &preimages_dir,
-        &logs_dir()?,
+        &logs_dir,
         "127.0.0.1",
         SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     )?);
@@ -263,27 +291,8 @@ pub async fn main(cfg: &mut Config) -> Result<()> {
     println!("Saving sandbox config");
     cfg.save()?;
 
-    // Run jstz node
-    let local = tokio::task::LocalSet::new();
-    let _ = local
-        .run_until(async {
-            tokio::task::spawn_local(async {
-                println!("Jstz node started 🎉");
-                let _ = run_node(
-                    DEFAULT_ROLLUP_NODE_RPC_ADDR.to_string(),
-                    DEFAULT_ROLLUP_RPC_PORT,
-                    None,
-                    DEFAULT_KERNEL_FILE_PATH.to_string(),
-                    false,
-                )
-                .await;
-            })
-            .await
-            .expect("Local task panicked");
-        })
-        .await;
-
-    // 4. Wait for the sandbox to shutdown (either by the user or by an error)
+    // 4. Wait for the sandbox or jstz-node to shutdown (either by the user or by an error)
+    run_jstz_node().await?;
     OctezThread::join(vec![baker, rollup_node, node])?;
 
     cfg.sandbox = None;

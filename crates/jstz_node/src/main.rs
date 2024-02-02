@@ -1,31 +1,25 @@
-use std::io::{self, ErrorKind::Other};
+use std::path::PathBuf;
 
-<<<<<<< HEAD
-use crate::services::{AccountsService, OperationsService, Service};
-use actix_web::{middleware::Logger, web::Data, App, HttpServer};
-=======
->>>>>>> fd96ac4 (feat(node): running node in sandbox)
 use clap::Parser;
+use env_logger::Env;
 
-use crate::{
-    config::{
-        DEFAULT_KERNEL_FILE_PATH, DEFAULT_ROLLUP_NODE_RPC_ADDR, DEFAULT_ROLLUP_RPC_PORT,
-    },
-    node_runner::run_node,
-};
-pub use error::{Error, Result};
-use octez::OctezRollupClient;
-use services::LogsService;
-use tokio_util::sync::CancellationToken;
+// Defaults for `octez-smart-rollup-node`
+const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
+const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
+const DEFAULT_KERNEL_LOG_PATH: &str = "logs/kernel.log";
 
-mod config;
-mod error;
-mod node_runner;
-mod services;
-mod tailed_file;
+// Endpoint defaults for the `jstz-node`
+const DEFAULT_JSTZ_NODE_ADDR: &str = "127.0.0.1";
+const DEFAULT_JSTZ_NODE_PORT: u16 = 8933;
 
 #[derive(Debug, Parser)]
 struct Args {
+    #[arg(long, default_value = DEFAULT_JSTZ_NODE_ADDR)]
+    addr: String,
+
+    #[arg(long, default_value_t = DEFAULT_JSTZ_NODE_PORT)]
+    port: u16,
+
     #[arg(long, default_value = DEFAULT_ROLLUP_NODE_RPC_ADDR)]
     rollup_node_rpc_addr: String,
 
@@ -35,19 +29,26 @@ struct Args {
     #[arg(short, long)]
     rollup_endpoint: Option<String>,
 
-    #[arg(long, default_value = DEFAULT_KERNEL_FILE_PATH)]
-    kernel_file_path: String,
+    #[arg(long, default_value = DEFAULT_KERNEL_LOG_PATH)]
+    kernel_log_path: PathBuf,
 }
 
 #[tokio::main]
-async fn main() -> io::Result<()> {
+async fn main() -> anyhow::Result<()> {
+    env_logger::init_from_env(Env::default().default_filter_or("info"));
+
     let args = Args::parse();
-    run_node(
-        args.rollup_node_rpc_addr,
-        args.rollup_node_rpc_port,
-        args.rollup_endpoint,
-        args.kernel_file_path,
-        true,
+
+    let rollup_endpoint = args.rollup_endpoint.unwrap_or(format!(
+        "http://{}:{}",
+        args.rollup_node_rpc_addr, args.rollup_node_rpc_port
+    ));
+
+    jstz_node::run(
+        &args.addr,
+        args.port,
+        &rollup_endpoint,
+        &args.kernel_log_path,
     )
     .await
 }
