@@ -15,7 +15,10 @@ use octez::OctezThread;
 use tempfile::TempDir;
 
 use crate::{
-    config::{Config, SandboxConfig, SANDBOX_OCTEZ_SMART_ROLLUP_PORT},
+    config::{
+        Config, SandboxConfig, SANDBOX_OCTEZ_NODE_PORT, SANDBOX_OCTEZ_NODE_RPC_PORT,
+        SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
+    },
     error::{bail_user_error, Result},
 };
 
@@ -55,8 +58,8 @@ fn init_node(cfg: &Config) -> Result<()> {
     print!("Initializing octez-node configuration...");
     cfg.octez_node()?.config_init(
         "sandbox",
-        &format!("127.0.0.1:{}", cfg.sandbox()?.octez_node_port),
-        &format!("127.0.0.1:{}", cfg.sandbox()?.octez_node_rpc_port),
+        &format!("127.0.0.1:{}", SANDBOX_OCTEZ_NODE_PORT),
+        &format!("127.0.0.1:{}", SANDBOX_OCTEZ_NODE_RPC_PORT),
         0,
     )?;
     println!(" done");
@@ -235,12 +238,12 @@ pub fn main(cfg: &mut Config) -> Result<()> {
 
     // 1. Configure sandbox
     print!("Configuring sandbox...");
-    let sandbox_cfg = SandboxConfig::new(
-        std::process::id(),
-        TempDir::with_prefix("octez_client")?.into_path(),
-        TempDir::with_prefix("octez_node")?.into_path(),
-        TempDir::with_prefix("octez_rollup_node")?.into_path(),
-    );
+    let sandbox_cfg = SandboxConfig {
+        pid: std::process::id(),
+        octez_client_dir: TempDir::with_prefix("octez_client")?.into_path(),
+        octez_node_dir: TempDir::with_prefix("octez_node")?.into_path(),
+        octez_rollup_node_dir: TempDir::with_prefix("octez_rollup_node")?.into_path(),
+    };
 
     // Create logs directory
     fs::create_dir_all(logs_dir()?)?;

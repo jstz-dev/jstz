@@ -1,15 +1,12 @@
 use clap::Subcommand;
 
-use crate::{config::Config, error::Result};
+use crate::{config::Config, error::Result, utils::AddressOrAlias};
 
-async fn get(alias: Option<String>, key: String, cfg: &mut Config) -> Result<()> {
-    let jstz_client = cfg.jstz_client()?;
+async fn get(account: Option<AddressOrAlias>, key: String) -> Result<()> {
+    let cfg = Config::load()?;
+    let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
 
-    let address = cfg.accounts.get_address_from(alias)?;
-
-    let value = jstz_client
-        .get_value(address.as_str(), key.as_str())
-        .await?;
+    let value = cfg.jstz_client()?.get_value(&address, key.as_str()).await?;
 
     // Print value
     match value {
@@ -20,16 +17,11 @@ async fn get(alias: Option<String>, key: String, cfg: &mut Config) -> Result<()>
     Ok(())
 }
 
-async fn list(
-    alias: Option<String>,
-    key: Option<String>,
-    cfg: &mut Config,
-) -> Result<()> {
-    let jstz_client = cfg.jstz_client()?;
+async fn list(account: Option<AddressOrAlias>, key: Option<String>) -> Result<()> {
+    let cfg = Config::load()?;
+    let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
 
-    let address = cfg.accounts.get_address_from(alias)?;
-
-    let value = jstz_client.get_subkey_list(address.as_str(), &key).await?;
+    let value = cfg.jstz_client()?.get_subkey_list(&address, &key).await?;
 
     // Print list of values
     match value {
@@ -51,10 +43,9 @@ pub enum Command {
         /// Key
         #[arg(value_name = "KEY")]
         key: String,
-
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
-        account: Option<String>,
+        account: Option<AddressOrAlias>,
     },
     /// List subkeys for a key
     List {
@@ -64,13 +55,13 @@ pub enum Command {
 
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
-        account: Option<String>,
+        account: Option<AddressOrAlias>,
     },
 }
 
-pub async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
+pub async fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Get { key, account } => get(account, key, cfg).await,
-        Command::List { key, account } => list(account, key, cfg).await,
+        Command::Get { key, account } => get(account, key).await,
+        Command::List { key, account } => list(account, key).await,
     }
 }

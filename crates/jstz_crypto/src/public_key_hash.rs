@@ -1,4 +1,4 @@
-use std::fmt;
+use std::{fmt, str::FromStr};
 
 use boa_gc::{empty_trace, Finalize, Trace};
 use serde::{Deserialize, Serialize};
@@ -22,6 +22,14 @@ pub enum PublicKeyHash {
 
 unsafe impl Trace for PublicKeyHash {
     empty_trace!();
+}
+
+impl FromStr for PublicKeyHash {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        PublicKeyHash::from_base58(s)
+    }
 }
 
 impl PublicKeyHash {

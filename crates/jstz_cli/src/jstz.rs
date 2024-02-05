@@ -3,11 +3,12 @@ use std::time::Duration;
 use anyhow::{bail, Result};
 use jstz_api::KvValue;
 use jstz_proto::{
-    context::account::Nonce,
+    context::account::{Address, Nonce},
     operation::{OperationHash, SignedOperation},
     receipt::Receipt,
 };
 use reqwest::StatusCode;
+use reqwest_eventsource::EventSource;
 use tokio::time::sleep;
 
 pub struct JstzClient {
@@ -21,6 +22,12 @@ impl JstzClient {
             endpoint,
             client: reqwest::Client::new(),
         }
+    }
+
+    pub fn logs_stream(&self, address: &Address) -> EventSource {
+        let url = format!("{}/accounts/{}/logs/stream", self.endpoint, address);
+
+        EventSource::get(url)
     }
 
     pub async fn get_operation_receipt(
@@ -44,7 +51,7 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_nonce(&self, address: &str) -> Result<Nonce> {
+    pub async fn get_nonce(&self, address: &Address) -> Result<Nonce> {
         let response = self
             .get(&format!("{}/accounts/{}/nonce", self.endpoint, address))
             .await?;
@@ -60,7 +67,7 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_code(&self, address: &str) -> Result<Option<String>> {
+    pub async fn get_code(&self, address: &Address) -> Result<Option<String>> {
         let response = self
             .get(&format!("{}/accounts/{}/code", self.endpoint, address))
             .await?;
@@ -75,7 +82,7 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_balance(&self, address: &str) -> Result<u64> {
+    pub async fn get_balance(&self, address: &Address) -> Result<u64> {
         let response = self
             .get(&format!("{}/accounts/{}/balance", self.endpoint, address))
             .await?;
@@ -89,7 +96,11 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_value(&self, address: &str, key: &str) -> Result<Option<KvValue>> {
+    pub async fn get_value(
+        &self,
+        address: &Address,
+        key: &str,
+    ) -> Result<Option<KvValue>> {
         let response = self
             .get(&format!(
                 "{}/accounts/{}/kv?key={}",
@@ -110,7 +121,7 @@ impl JstzClient {
 
     pub async fn get_subkey_list(
         &self,
-        address: &str,
+        address: &Address,
         key: &Option<String>,
     ) -> Result<Option<Vec<String>>> {
         let url = match key {
