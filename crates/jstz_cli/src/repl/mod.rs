@@ -9,6 +9,7 @@ use jstz_core::{
     runtime::{self, Runtime},
 };
 use jstz_proto::executor::contract::{register_jstz_apis, register_web_apis};
+use log::{debug, error, info, warn};
 use rustyline::{
     completion::Completer, error::ReadlineError, highlight::Highlighter, hint::Hinter,
     validate::Validator, Editor, Helper,
@@ -111,6 +112,7 @@ pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
             .parse()
             .expect("`DEFAULT_SMART_FUNCTION_ADDRESS` is an invalid address."),
     };
+    debug!("resolved `account` -> {:?}", address);
 
     // 1. Setup editor
     let mut rl = Editor::<JsHighlighter, _>::new()?;
@@ -119,8 +121,8 @@ pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     // 2. Setup runtime
     let mut rt = Runtime::new(DEFAULT_GAS_LIMIT)
         .map_err(|_| anyhow!("Failed to initialize jstz's JavaScript runtime."))?;
-    set_js_logger(&PrettyLogger);
 
+    set_js_logger(&PrettyLogger);
     {
         host_defined!(&mut rt, mut host_defined);
 
@@ -155,11 +157,11 @@ pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
                 evaluate(input, &mut rt, &mut mock_hrt);
             }
             Err(ReadlineError::Interrupted) => {
-                println!("CTRL-C");
+                info!("CTRL-C");
                 break Ok(());
             }
             Err(ReadlineError::Eof) => {
-                println!("CTRL-D");
+                info!("CTRL-D");
                 break Ok(());
             }
             Err(err) => {
@@ -181,7 +183,7 @@ fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static
     match rt_output {
         Ok(res) => {
             if !res.is_undefined() {
-                println!(
+                info!(
                     "{}",
                     if res.is_callable() {
                         res.to_string(rt.context())
@@ -198,11 +200,11 @@ fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static
                 .set(js_string!("_"), res, false, rt.context())
                 .is_err()
             {
-                println!("Couldn't set '_' to REPL result.");
+                warn!("Couldn't set '_' to REPL result.");
             }
         }
         Err(e) => {
-            eprintln!("Uncaught {e}")
+            error!("Uncaught {e}")
         }
     }
 }

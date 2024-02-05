@@ -1,3 +1,5 @@
+use std::fmt::{self, Debug};
+
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::SecretKeyEd25519;
 use tezos_crypto_rs::hash::SeedEd25519;
@@ -7,10 +9,16 @@ use crate::{error::Result, signature::Signature};
 // FIXME: workaround via `SeedEd25519` will be unnecessary in the next tezos_crypto_rs release
 //        (will be included in next SDK release)
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
 #[serde(from = "SecretKeySerde", into = "SecretKeySerde")]
 pub enum SecretKey {
     Ed25519(SecretKeyEd25519),
+}
+
+impl Debug for SecretKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("SecretKey").field(&self.to_base58()).finish()
+    }
 }
 
 impl SecretKey {

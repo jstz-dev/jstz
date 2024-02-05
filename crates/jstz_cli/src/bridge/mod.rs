@@ -4,7 +4,7 @@ mod deposit;
 
 use crate::{error::Result, utils::AddressOrAlias};
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 pub enum Command {
     /// Deposits from an existing L1 sandbox address to a L2 sandbox address.
     Deposit {
