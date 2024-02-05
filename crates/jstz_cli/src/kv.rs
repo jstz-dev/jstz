@@ -1,7 +1,6 @@
-use anyhow::Result;
 use clap::Subcommand;
 
-use crate::config::Config;
+use crate::{config::Config, error::Result};
 
 async fn get(alias: Option<String>, key: String, cfg: &mut Config) -> Result<()> {
     let jstz_client = cfg.jstz_client()?;

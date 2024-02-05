@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use jstz_proto::{
     operation::{Content, DeployContract, Operation, SignedOperation},
     receipt::Content as ReceiptContent,
@@ -7,7 +6,8 @@ use jstz_proto::{
 use crate::{
     account::account::OwnedAccount,
     config::Config,
-    utils::{from_file_or_id, piped_input},
+    error::{bail, bail_user_error, user_error, Result},
+    utils::read_file_or_input_or_piped,
 };
 
 pub async fn exec(
@@ -17,16 +17,16 @@ pub async fn exec(
     name: Option<String>,
     cfg: &mut Config,
 ) -> Result<()> {
+    let account = cfg.accounts.account_or_current(self_address)?;
+
     // Check if account already exists
     if let Some(name) = &name {
         if cfg.accounts.contains(name) {
-            return Err(anyhow!("Account already exists"));
+            bail_user_error!("A function with the alias '{}' already exists.", name);
         }
     }
 
     let jstz_client = cfg.jstz_client()?;
-
-    let account = cfg.accounts.account_or_current_mut(self_address)?;
 
     let nonce = jstz_client
         .get_nonce(account.address().clone().to_base58().as_str())
@@ -40,10 +40,8 @@ pub async fn exec(
         ..
     } = account.as_owned()?.clone();
 
-    let contract_code = contract_code
-        .map(from_file_or_id)
-        .or_else(piped_input)
-        .ok_or(anyhow!("No function code supplied"))?;
+    let contract_code = read_file_or_input_or_piped(contract_code)?
+        .ok_or(user_error!("No function code supplied. Please provide a filename or pipe the file contents into stdin."))?;
 
     // Create operation TODO nonce
     let op = Operation {
@@ -79,7 +77,9 @@ pub async fn exec(
                 Ok(ReceiptContent::DeployContract(deploy)) => {
                     deploy.contract_address.to_string()
                 }
-                _ => return Err(anyhow!("Content is not of type 'DeployContract'")),
+                _ => {
+                    bail!("Expected a `DeployContract` receipt, but got something else.")
+                }
             },
         )?;
     }

@@ -1,6 +1,4 @@
-use anyhow::Result;
-
-use crate::config::Config;
+use crate::{config::Config, error::Result};
 
 pub fn exec(from: String, to: String, amount: u64, cfg: &Config) -> Result<()> {
     // 1. Convert tz1 address to hexencoded bytes

@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
 use http::{HeaderMap, Method, Uri};
 use jstz_proto::operation::{Content, Operation, RunContract, SignedOperation};
 use url::Url;
@@ -8,7 +7,9 @@ use url::Url;
 use crate::{
     account::account::OwnedAccount,
     config::Config,
-    utils::{from_file_or_id, piped_input},
+    error::{anyhow, bail_user_error, user_error, Result},
+    term::styles,
+    utils::read_file_or_input_or_piped,
 };
 
 pub async fn exec(
@@ -22,31 +23,35 @@ pub async fn exec(
     let jstz_client = cfg.jstz_client()?;
 
     // Resolve URL
-    let mut url_object =
-        Url::parse(&url).map_err(|e| anyhow!("Failed to parse URL: {}", e))?;
+    let mut url_object = Url::parse(&url)
+        .map_err(|_| user_error!("Invalid URL {}.", styles::url(&url)))?;
+
     if let Some(host) = url_object.host_str() {
         if !host.starts_with("tz1") {
+            println!("Resolving host '{}'...", host);
+
             if cfg.accounts().contains(host) {
+                let address = cfg.accounts().get(host)?.address().to_base58();
+
+                println!("Resolved host '{}' to '{}'.", host, address);
+
                 url_object
-                    .set_host(Some(
-                        cfg.accounts().get(host)?.address().to_base58().as_str(),
-                    ))
+                    .set_host(Some(&address))
                     .map_err(|_| anyhow!("Failed to set host"))?;
             } else {
-                return Err(anyhow!("No such account exists."));
+                bail_user_error!(
+                    "The function '{}' is not known. Please add it to your accounts using `jstz account add`.",
+                    host
+                )
             }
         }
     } else {
-        return Err(anyhow!("URL requires a host"));
+        bail_user_error!("URL {} requires a host.", styles::url(&url));
     }
 
-    let resolved_url = url_object.to_string();
-    println!("Resolved URL: {}", resolved_url);
+    // Login
+    let account = cfg.accounts.account_or_current(referrer)?.as_owned()?;
 
-    let account = cfg
-        .accounts
-        .account_or_current_mut(referrer)?
-        .as_owned_mut()?;
     let OwnedAccount {
         address,
         secret_key,
@@ -58,18 +63,16 @@ pub async fn exec(
         .get_nonce(address.clone().to_base58().as_str())
         .await?;
 
-    // Create operation TODO nonce
-    let url: Uri = resolved_url
+    // SAFETY: `url` is a valid URI since URLs are a subset of  URIs and `url_object` is a valid URL.
+    let url: Uri = url_object
+        .to_string()
         .parse()
-        .map_err(|_| anyhow!("Failed to parse URL: {}", resolved_url))?;
+        .expect("`url_object` is an invalid URL.");
 
-    let method =
-        Method::from_str(&http_method).map_err(|_| anyhow!("Invalid HTTP method"))?;
+    let method = Method::from_str(&http_method)
+        .map_err(|_| user_error!("Invalid HTTP method: {}", http_method))?;
 
-    let body = json_data
-        .map(from_file_or_id)
-        .or_else(piped_input)
-        .map(String::into_bytes);
+    let body = read_file_or_input_or_piped(json_data)?.map(String::into_bytes);
 
     let op = Operation {
         source: address.clone(),

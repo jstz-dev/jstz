@@ -1,11 +1,11 @@
-use anyhow::anyhow;
-use anyhow::Result;
 use derive_more::From;
 use jstz_crypto::{
     keypair_from_passphrase, public_key::PublicKey, public_key_hash::PublicKeyHash,
     secret_key::SecretKey,
 };
 use serde::{Deserialize, Serialize};
+
+use crate::error::{bail, Result};
 
 // Represents an individual account
 #[derive(Serialize, Deserialize, Debug, Clone, From)]
@@ -69,17 +69,10 @@ impl Account {
         }
     }
 
-    pub fn as_owned_mut(&mut self) -> Result<&mut OwnedAccount> {
-        match self {
-            Account::Owned(owned_account) => Ok(owned_account),
-            Account::Alias(_) => Err(anyhow!("Account is not owned")),
-        }
-    }
-
     pub fn as_owned(&self) -> Result<&OwnedAccount> {
         match self {
             Account::Owned(owned_account) => Ok(owned_account),
-            Account::Alias(_) => Err(anyhow!("Account is not owned")),
+            Account::Alias(_) => bail!("Account is not owned."),
         }
     }
 }

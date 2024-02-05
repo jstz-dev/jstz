@@ -7,7 +7,6 @@ use std::{
     time::Duration,
 };
 
-use anyhow::Result;
 use jstz_rollup::{
     deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
     JstzRollup,
@@ -15,7 +14,10 @@ use jstz_rollup::{
 use octez::OctezThread;
 use tempfile::TempDir;
 
-use crate::config::{Config, SandboxConfig, SANDBOX_OCTEZ_SMART_ROLLUP_PORT};
+use crate::{
+    config::{Config, SandboxConfig, SANDBOX_OCTEZ_SMART_ROLLUP_PORT},
+    error::{bail_user_error, Result},
+};
 
 include!(concat!(env!("OUT_DIR"), "/sandbox_paths.rs"));
 
@@ -228,7 +230,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
 pub fn main(cfg: &mut Config) -> Result<()> {
     // 1. Check if sandbox is already running
     if cfg.sandbox.is_some() {
-        return Err(anyhow::anyhow!("Sandbox is already running!"));
+        bail_user_error!("The sandbox is already running!");
     }
 
     // 1. Configure sandbox

@@ -1,23 +1,39 @@
 use std::fs;
 use std::io::{self, IsTerminal};
 
-pub fn from_file_or_id(data_or_file: String) -> String {
+use crate::error::Result;
+
+pub fn read_file_or_input(input_or_filename: String) -> String {
     // try and read the file
-    fs::read_to_string(&data_or_file)
+    fs::read_to_string(&input_or_filename)
         // file doesn't exist so assume it's raw data
-        .unwrap_or(data_or_file)
+        .unwrap_or(input_or_filename)
 }
 
-fn get_stdin() -> String {
-    let lines: Result<Vec<_>, _> = io::stdin().lines().collect();
-    lines.expect("Can't read from stdin").join("\n")
+fn read_stdin_lines() -> Result<String> {
+    let lines = io::stdin().lines().collect::<io::Result<Vec<_>>>()?;
+    Ok(lines.join("\n"))
 }
 
-pub fn piped_input() -> Option<String> {
+pub fn read_piped_input() -> Result<Option<String>> {
     let stdin = io::stdin();
     if !stdin.is_terminal() {
-        Some(get_stdin())
+        Ok(Some(read_stdin_lines()?))
     } else {
-        None
+        Ok(None)
+    }
+}
+
+pub fn read_file_or_input_or_piped(
+    input_or_filename: Option<String>,
+) -> Result<Option<String>> {
+    let contents = input_or_filename.map(read_file_or_input);
+
+    match contents {
+        Some(x) => Ok(Some(x)),
+        None => {
+            // If none, read piped input
+            read_piped_input()
+        }
     }
 }

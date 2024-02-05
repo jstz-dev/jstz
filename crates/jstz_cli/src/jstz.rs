@@ -1,10 +1,12 @@
 use std::time::Duration;
 
-use anyhow::anyhow;
-use anyhow::Result;
+use anyhow::{bail, Result};
 use jstz_api::KvValue;
-use jstz_proto::operation::SignedOperation;
-use jstz_proto::{context::account::Nonce, operation::OperationHash, receipt::Receipt};
+use jstz_proto::{
+    context::account::Nonce,
+    operation::{OperationHash, SignedOperation},
+    receipt::Receipt,
+};
 use reqwest::StatusCode;
 use tokio::time::sleep;
 
@@ -54,7 +56,7 @@ impl JstzClient {
             }
             StatusCode::NOT_FOUND => Ok(Nonce::default()),
             // For any other status, return a generic error
-            _ => Err(anyhow!("Failed to get nonce")),
+            _ => bail!("Failed to get nonce"),
         }
     }
 
@@ -69,7 +71,7 @@ impl JstzClient {
                 Ok(code)
             }
             // For any other status, return a generic error
-            _ => Err(anyhow!("Failed to get the code")),
+            _ => bail!("Failed to get the code"),
         }
     }
 
@@ -83,7 +85,7 @@ impl JstzClient {
                 let balance = response.json::<u64>().await?;
                 Ok(balance)
             }
-            _ => Err(anyhow!("Failed to get the balance")),
+            _ => bail!("Failed to get the balance"),
         }
     }
 
@@ -102,7 +104,7 @@ impl JstzClient {
             }
             StatusCode::NOT_FOUND => Ok(None),
             // For any other status, return a generic error
-            _ => Err(anyhow!("Failed to get value.")),
+            _ => bail!("Failed to get value."),
         }
     }
 
@@ -127,7 +129,7 @@ impl JstzClient {
                 Ok(Some(kv))
             }
             StatusCode::NOT_FOUND => Ok(None),
-            _ => Err(anyhow!("Failed to get subkey list.")),
+            _ => bail!("Failed to get subkey list."),
         }
     }
 
@@ -156,7 +158,7 @@ impl JstzClient {
         match response.status() {
             StatusCode::OK => Ok(()),
             // For any other status, return a generic error
-            _ => Err(anyhow!("Failed to post operation")),
+            _ => bail!("Failed to post operation"),
         }
     }
 

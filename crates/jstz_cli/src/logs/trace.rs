@@ -1,9 +1,9 @@
-use crate::Config;
-use anyhow::Result;
 use futures_util::stream::StreamExt;
 use jstz_api::js_log::LogLevel;
 use jstz_proto::js_logger::LogRecord;
 use reqwest_eventsource::{Event, EventSource};
+
+use crate::{error::Result, Config};
 
 const DEFAULT_LOG_LOG_LEVEL: LogLevel = LogLevel::LOG;
 
@@ -24,7 +24,7 @@ pub async fn exec(
 
     while let Some(event) = event_source.next().await {
         match event {
-            Ok(Event::Open) => println!("Connection open with {}", url),
+            Ok(Event::Open) => println!("Event source opened."),
             Ok(Event::Message(message)) => {
                 if let Ok(log_record) = serde_json::from_str::<LogRecord>(&message.data) {
                     let LogRecord { level, text, .. } = log_record;
@@ -34,8 +34,8 @@ pub async fn exec(
                 }
             }
             Err(err) => {
-                println!("Event source error: {}", err);
                 event_source.close();
+                eprintln!("Event source closed with an error: {}", err);
             }
         }
     }
