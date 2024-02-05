@@ -3,7 +3,7 @@ use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 use std::cell::Cell;
 
-#[derive(Serialize, Deserialize, PartialEq, PartialOrd, Clone, ValueEnum)]
+#[derive(Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug, ValueEnum)]
 pub enum LogLevel {
     ERROR = 1,
     WARN = 2,

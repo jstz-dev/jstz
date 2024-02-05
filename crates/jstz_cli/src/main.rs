@@ -16,10 +16,11 @@ mod utils;
 
 use config::Config;
 use error::Result;
+use log::debug;
 use run::DEFAULT_GAS_LIMIT;
 use utils::AddressOrAlias;
 
-#[derive(Parser)]
+#[derive(Debug, Parser)]
 #[command(author, version)]
 enum Command {
     /// Commands related to the jstz sandbox.
@@ -110,7 +111,11 @@ async fn exec(command: Command) -> Result<()> {
 
 #[tokio::main]
 async fn main() {
+    term::init_logger();
+
     let command = Command::parse();
+
+    debug!("Command: {:?}", command);
 
     if let Err(err) = exec(command).await {
         error::print(&err);

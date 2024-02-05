@@ -1,17 +1,24 @@
 use clap::Subcommand;
+use log::{debug, info};
 
-use crate::{config::Config, error::Result, utils::AddressOrAlias};
+use crate::{
+    config::Config,
+    error::{bail_user_error, Result},
+    utils::AddressOrAlias,
+};
 
 async fn get(account: Option<AddressOrAlias>, key: String) -> Result<()> {
     let cfg = Config::load()?;
+
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
+    debug!("resolved `account` -> {:?}", address);
 
     let value = cfg.jstz_client()?.get_value(&address, key.as_str()).await?;
 
     // Print value
     match value {
-        Some(value) => println!("{}", serde_json::to_string_pretty(&value).unwrap()),
-        None => println!("No value found"),
+        Some(value) => info!("{}", serde_json::to_string_pretty(&value).unwrap()),
+        None => bail_user_error!("No value found"),
     }
 
     Ok(())
@@ -19,7 +26,9 @@ async fn get(account: Option<AddressOrAlias>, key: String) -> Result<()> {
 
 async fn list(account: Option<AddressOrAlias>, key: Option<String>) -> Result<()> {
     let cfg = Config::load()?;
+
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
+    debug!("resolved `account` -> {:?}", address);
 
     let value = cfg.jstz_client()?.get_subkey_list(&address, &key).await?;
 
@@ -27,16 +36,16 @@ async fn list(account: Option<AddressOrAlias>, key: Option<String>) -> Result<()
     match value {
         Some(value) => {
             for item in value {
-                println!("{}", item);
+                info!("{}", item);
             }
         }
-        None => println!("No values found"),
+        None => bail_user_error!("No values found"),
     }
 
     Ok(())
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 pub enum Command {
     /// Get value for a key
     Get {
