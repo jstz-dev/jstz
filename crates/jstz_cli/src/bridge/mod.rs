@@ -1,9 +1,8 @@
-use anyhow::Result;
 use clap::Subcommand;
 
 mod deposit;
 
-use crate::config::Config;
+use crate::{config::Config, error::Result};
 
 #[derive(Subcommand)]
 pub enum Command {

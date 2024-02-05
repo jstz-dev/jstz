@@ -1,19 +1,21 @@
-use anyhow::Result;
 use clap::Parser;
 
 mod account;
 mod bridge;
 mod config;
 mod deploy;
+mod error;
 mod jstz;
 mod kv;
 mod logs;
 mod repl;
 mod run;
 mod sandbox;
+mod term;
 mod utils;
 
 use config::Config;
+use error::Result;
 
 #[derive(Parser)]
 #[command(author, version)]
@@ -113,10 +115,17 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() {
     let command = Command::parse();
 
-    let mut cfg = Config::load()?;
+    if let Err(err) = async {
+        let mut cfg = Config::load()?;
 
-    exec(command, &mut cfg).await
+        exec(command, &mut cfg).await
+    }
+    .await
+    {
+        error::print(&err);
+        std::process::exit(1);
+    }
 }

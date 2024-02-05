@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use clap::Subcommand;
 use nix::{
     sys::signal::{kill, Signal},
@@ -7,7 +6,10 @@ use nix::{
 
 mod daemon;
 
-use crate::config::Config;
+use crate::{
+    config::Config,
+    error::{bail_user_error, Result},
+};
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -34,7 +36,7 @@ pub fn stop(cfg: &mut Config) -> Result<()> {
             kill(pid, Signal::SIGTERM)?;
             Ok(())
         }
-        None => Err(anyhow!("Sandbox is not running!")),
+        None => bail_user_error!("The sandbox is not running!"),
     }
 }
 

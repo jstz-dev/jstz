@@ -1,8 +1,7 @@
-use anyhow::Result;
 use clap::Subcommand;
 use jstz_api::js_log::LogLevel;
 
-use crate::config::Config;
+use crate::{config::Config, Result};
 
 mod trace;
 

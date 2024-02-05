@@ -49,6 +49,7 @@ futures-util = "0.3.29"
 syntect = "4.6.0"
 crossterm = "0.22"
 ansi_term = "0.12.1"
+console = "0.15.8"
 
 [[bin]]
 name = "jstz"

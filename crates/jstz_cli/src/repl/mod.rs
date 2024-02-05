@@ -1,6 +1,5 @@
 use std::{borrow::Cow, fmt::Write};
 
-use anyhow::Result;
 use boa_engine::{js_string, JsResult, JsValue, Source};
 use jstz_api::{
     encoding::EncodingApi, http::HttpApi, js_log::set_js_logger, stream::StreamApi,
@@ -24,7 +23,10 @@ use syntect::{
 };
 use tezos_smart_rollup_mock::MockHost;
 
-use crate::config::Config;
+use crate::{
+    config::Config,
+    error::{user_error, Result},
+};
 
 mod debug_api;
 mod js_logger;
@@ -173,8 +175,7 @@ pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
                 break Ok(());
             }
             Err(err) => {
-                println!("Error: {:?}", err);
-                break Ok(());
+                break Err(user_error!("Unexpected REPL error.").context(err));
             }
         }
     }
@@ -195,17 +196,21 @@ fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static
                 println!(
                     "{}",
                     if res.is_callable() {
-                        res.to_string(rt.context()).unwrap().to_std_string_escaped()
+                        res.to_string(rt.context())
+                            .expect("Expected [[toString]] to be defined.")
+                            .to_std_string_escaped()
                     } else {
                         res.display().to_string()
                     },
                 );
             }
-            if let Err(err) =
-                rt.global_object()
-                    .set(js_string!("_"), res, false, rt.context())
+
+            if rt
+                .global_object()
+                .set(js_string!("_"), res, false, rt.context())
+                .is_err()
             {
-                println!("Couldn't set '_' property: {err}");
+                println!("Couldn't set '_' to REPL result.");
             }
         }
         Err(e) => {

@@ -1,4 +1,3 @@
-use anyhow::{anyhow, Result};
 use bip39::{Language, Mnemonic, MnemonicType};
 use clap::Subcommand;
 use std::io;
@@ -9,6 +8,7 @@ pub mod account;
 use crate::{
     account::account::{Account, AliasAccount, OwnedAccount},
     config::Config,
+    error::{bail_user_error, user_error, Result},
 };
 
 fn generate_passphrase() -> String {
@@ -28,7 +28,10 @@ fn create_account(
     cfg: &mut Config,
 ) -> Result<()> {
     if cfg.accounts().contains(&alias) {
-        return Err(anyhow!("Account already exists"));
+        bail_user_error!(
+            "The account '{}' already exists. Please choose another name.",
+            alias
+        );
     }
 
     let passphrase = match passphrase {
@@ -52,7 +55,7 @@ fn create_account(
 
 fn delete_account(alias: String, cfg: &mut Config) -> Result<()> {
     if !cfg.accounts().contains(&alias) {
-        return Err(anyhow!("Account not found"));
+        bail_user_error!("The account '{}' does not exist.", alias);
     }
 
     // Determine the confirmation message based on the login status. Use the name in the message.
@@ -75,23 +78,26 @@ fn delete_account(alias: String, cfg: &mut Config) -> Result<()> {
     io::stdin().read_line(&mut input)?;
 
     if !input.trim().eq(&alias) {
-        println!("Account deletion aborted.");
-        return Ok(());
+        bail_user_error!("Account deletion aborted.");
     }
 
     cfg.accounts().remove(&alias);
     cfg.save()?;
 
-    println!("Account successfully deleted.");
+    println!("Account '{}' successfully deleted.", alias);
     Ok(())
 }
 
 pub fn login(alias: String, cfg: &mut Config) -> Result<()> {
     if !cfg.accounts().contains(&alias) {
-        return Err(anyhow!("Account not found"));
+        bail_user_error!("Account '{}' not found", alias);
     }
+
     if cfg.accounts().current_alias.as_ref() == Some(&alias) {
-        return Err(anyhow!("Already logged in to account {}!", alias));
+        bail_user_error!(
+            "You are already logged in to '{}'. Please logout first using `jstz logout`.",
+            alias
+        )
     }
 
     let account = cfg.accounts().get(&alias)?;
@@ -107,20 +113,21 @@ pub fn login(alias: String, cfg: &mut Config) -> Result<()> {
 
 pub fn logout(cfg: &mut Config) -> Result<()> {
     if cfg.accounts().current_alias.is_none() {
-        return Err(anyhow!("Not logged in!"));
+        bail_user_error!("You are not logged in.");
     }
 
     cfg.accounts().current_alias = None;
     cfg.save()?;
+
+    println!("You have been logged out.");
+
     Ok(())
 }
 
 pub fn whoami(cfg: &Config) -> Result<()> {
-    let alias = cfg
-        .accounts
-        .current_alias
-        .as_ref()
-        .ok_or(anyhow!("Not logged in!"))?;
+    let alias = cfg.accounts.current_alias.as_ref().ok_or(user_error!(
+        "You are not logged in. Please run `jstz login`."
+    ))?;
 
     let OwnedAccount { alias, address, .. } = cfg.accounts.get(alias)?.as_owned()?;
 
@@ -169,7 +176,7 @@ async fn get_code(account: Option<String>, cfg: &mut Config) -> Result<()> {
 
     match code {
         Some(code) => println!("{}", code),
-        None => println!("No code found"),
+        None => eprintln!("No code found"),
     }
 
     Ok(())
@@ -181,7 +188,7 @@ async fn get_balance(account: Option<String>, cfg: &mut Config) -> Result<()> {
 
     let balance = jstz_client.get_balance(address.as_str()).await?;
 
-    println!("{}", balance);
+    println!("Balance of {} is {} $CTEZ", address, balance);
 
     Ok(())
 }

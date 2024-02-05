@@ -1,17 +1,12 @@
-use std::{
-    collections::HashMap,
-    fs,
-    io::{Error, ErrorKind},
-    path::PathBuf,
-};
+use std::{collections::HashMap, fs, path::PathBuf};
 
-use anyhow::{anyhow, Result};
 use jstz_proto::context::account::Address;
 use octez::{OctezClient, OctezNode, OctezRollupNode};
 use serde::{Deserialize, Serialize};
 
 use crate::{
     account::account::{Account, AliasAccount},
+    error::{bail_user_error, user_error, Result},
     jstz::JstzClient,
 };
 
@@ -31,7 +26,7 @@ pub struct AccountConfig {
 impl AccountConfig {
     pub fn add_alias(&mut self, alias: String, address: String) -> Result<()> {
         if self.contains(alias.as_str()) {
-            return Err(anyhow!("Account already exists"));
+            bail_user_error!("Account with the name '{}' already exists.", alias);
         }
 
         let account = AliasAccount::new(address.clone(), alias.clone())?;
@@ -51,9 +46,9 @@ impl AccountConfig {
     }
 
     pub fn alias_or_current(&self, alias: Option<String>) -> Result<String> {
-        alias
-            .or(self.current_alias.clone())
-            .ok_or(anyhow!("No account selected!"))
+        alias.or(self.current_alias.clone()).ok_or(user_error!(
+            "You are not logged in. Please run `jstz login`."
+        ))
     }
 
     pub fn get_address_from(&self, alias: Option<String>) -> Result<String> {
@@ -68,28 +63,15 @@ impl AccountConfig {
     }
 
     pub fn get(&self, alias: &str) -> Result<&Account> {
-        self.accounts.get(alias).ok_or(anyhow!("Account not found"))
-    }
-
-    pub fn get_mut(&mut self, alias: &str) -> Result<&mut Account> {
         self.accounts
-            .get_mut(alias)
-            .ok_or(anyhow!("Account not found"))
+            .get(alias)
+            .ok_or(user_error!("Account '{}' not found.", alias))
     }
 
     pub fn account_or_current(&self, alias: Option<String>) -> Result<&Account> {
         let alias = self.alias_or_current(alias)?;
 
         self.get(&alias)
-    }
-
-    pub fn account_or_current_mut(
-        &mut self,
-        alias: Option<String>,
-    ) -> Result<&mut Account> {
-        let alias = self.alias_or_current(alias)?;
-
-        self.get_mut(&alias)
     }
 
     pub fn remove(&mut self, alias: &String) -> Option<Account> {
@@ -112,7 +94,10 @@ impl AccountConfig {
             return Ok(account.address().clone());
         }
 
-        Err(anyhow!("Invalid alias or address"))
+        Err(user_error!(
+            "Account '{}' not found. Please provide a valid address or alias.",
+            address_or_alias
+        ))
     }
 }
 
@@ -174,13 +159,15 @@ impl Config {
     }
 
     /// Load the configuration from the file
-    pub fn load() -> std::io::Result<Self> {
+    pub fn load() -> Result<Self> {
         let path = Self::path();
 
         let config = if path.exists() {
             let json = fs::read_to_string(&path)?;
-            serde_json::from_str(&json)
-                .map_err(|e| Error::new(ErrorKind::InvalidData, e))?
+
+            serde_json::from_str(&json).map_err(|_| {
+                user_error!("Your configuration file is improperly configured.")
+            })?
         } else {
             Config::default()
         };
@@ -189,7 +176,7 @@ impl Config {
     }
 
     /// Save the configuration to the file
-    pub fn save(&self) -> std::io::Result<()> {
+    pub fn save(&self) -> Result<()> {
         let path = Self::path();
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
@@ -201,9 +188,9 @@ impl Config {
     }
 
     pub fn sandbox(&self) -> Result<&SandboxConfig> {
-        self.sandbox
-            .as_ref()
-            .ok_or(anyhow!("Sandbox is not running"))
+        self.sandbox.as_ref().ok_or(user_error!(
+            "The sandbox is not running. Please run `jstz sandbox start`."
+        ))
     }
 
     pub fn accounts(&mut self) -> &mut AccountConfig {
