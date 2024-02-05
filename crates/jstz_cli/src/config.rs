@@ -7,6 +7,7 @@ use std::{
 use derive_more::{From, TryInto};
 use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
 use jstz_proto::context::account::Address;
+use log::debug;
 use octez::{OctezClient, OctezNode, OctezRollupNode};
 use serde::{Deserialize, Serialize};
 
@@ -210,6 +211,7 @@ impl Config {
 
         let config = if path.exists() {
             let json = fs::read_to_string(&path)?;
+            debug!("Config file contents: {}", json);
 
             serde_json::from_str(&json).map_err(|_| {
                 user_error!("Your configuration file is improperly configured.")
@@ -218,11 +220,15 @@ impl Config {
             Config::default()
         };
 
+        debug!("Config (on load): {:?}", config);
+
         Ok(config)
     }
 
     /// Save the configuration to the file
     pub fn save(&self) -> Result<()> {
+        debug!("Config (on save): {:?}", self);
+
         let path = Self::path();
 
         if !path.exists() {

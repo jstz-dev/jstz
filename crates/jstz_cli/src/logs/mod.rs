@@ -5,7 +5,7 @@ use crate::{utils::AddressOrAlias, Result};
 
 mod trace;
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 pub enum Command {
     /// View logs
     Trace {

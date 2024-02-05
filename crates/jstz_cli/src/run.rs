@@ -1,7 +1,12 @@
 use std::str::FromStr;
 
+use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
-use jstz_proto::operation::{Content, Operation, RunContract, SignedOperation};
+use jstz_proto::{
+    operation::{Content as OperationContent, Operation, RunContract, SignedOperation},
+    receipt::Content as ReceiptContent,
+};
+use log::{debug, info};
 use url::Url;
 
 use crate::{
@@ -36,11 +41,11 @@ pub async fn exec(
         let address_or_alias = AddressOrAlias::from_str(host)?;
 
         if address_or_alias.is_alias() {
-            println!("Resolving host '{}'...", host);
+            info!("Resolving host '{}'...", host);
 
             let address = address_or_alias.resolve(&cfg)?;
 
-            println!("Resolved host '{}' to '{}'.", host, address);
+            info!("Resolved host '{}' to '{}'.", host, address);
 
             url_object
                 .set_host(Some(&address.to_string()))
@@ -49,6 +54,8 @@ pub async fn exec(
     } else {
         bail_user_error!("URL {} requires a host.", styles::url(&url));
     }
+
+    debug!("Resolved URL: {}", url_object.to_string());
 
     // 3. Construct the signed operation
     let nonce = jstz_client.get_nonce(&user.address).await?;
@@ -62,12 +69,16 @@ pub async fn exec(
     let method = Method::from_str(&http_method)
         .map_err(|_| user_error!("Invalid HTTP method: {}", http_method))?;
 
+    debug!("Method: {:?}", method);
+
     let body = read_file_or_input_or_piped(json_data)?.map(String::into_bytes);
+
+    debug!("Body: {:?}", body);
 
     let op = Operation {
         source: user.address.clone(),
         nonce,
-        content: Content::RunContract(RunContract {
+        content: OperationContent::RunContract(RunContract {
             uri: url,
             method,
             headers: HeaderMap::default(),
@@ -78,20 +89,42 @@ pub async fn exec(
         }),
     };
 
+    debug!("Operation: {:?}", op);
+
     let hash = op.hash();
+
+    debug!("Operation hash: {}", hash.to_string());
 
     let signed_op =
         SignedOperation::new(user.public_key.clone(), user.secret_key.sign(&hash)?, op);
 
-    println!(
-        "Signed operation: {}",
-        serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?
-    );
+    debug!("Signed operation: {:?}", signed_op);
 
     // 4. Send message to jstz node
+    info!(
+        "Running function at {}...",
+        styles::url(&url_object.to_string())
+    );
+
     jstz_client.post_operation(&signed_op).await?;
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
-    println!("Receipt: {:?}", receipt);
+
+    debug!("Receipt: {:?}", receipt);
+    let (status_code, headers, body) = match receipt.inner {
+        Ok(ReceiptContent::RunContract(run_contract)) => (
+            run_contract.status_code,
+            run_contract.headers,
+            run_contract.body,
+        ),
+
+        _ => bail!("Expected a `DeployContract` receipt, but got something else."),
+    };
+
+    info!("Status code: {}", status_code);
+    info!("Headers: {:?}", headers);
+    if let Some(body) = body {
+        info!("Body: {}", String::from_utf8_lossy(&body));
+    }
 
     cfg.save()?;
 

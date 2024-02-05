@@ -2,6 +2,7 @@ use bip39::{Language, Mnemonic, MnemonicType};
 use clap::Subcommand;
 use jstz_crypto::keypair_from_passphrase;
 use jstz_proto::context::account::Address;
+use log::{debug, info};
 use std::io;
 use std::io::Write;
 
@@ -40,6 +41,8 @@ fn add_deployment(alias: String, address: Address) -> Result<()> {
         );
     }
 
+    info!("Added deployment: {} -> {}", alias, address);
+
     cfg.accounts.insert(alias, Deployment { address });
     cfg.save()?;
 
@@ -60,13 +63,15 @@ fn create_account(alias: String, passphrase: Option<String>) -> Result<()> {
         Some(passphrase) => passphrase,
         None => {
             let passphrase = generate_passphrase();
-            println!("Generated passphrase: {}", passphrase);
+            info!("Generated passphrase: {}", passphrase);
             passphrase
         }
     };
 
     let user = User::from_passphrase(passphrase)?;
-    println!("Account created with address: {}", user.address);
+
+    debug!("User created: {:?}", user);
+    info!("User created with address: {}", user.address);
 
     cfg.accounts.insert(alias, user);
     cfg.save()?;
@@ -94,11 +99,13 @@ fn delete_account(alias: String) -> Result<()> {
         )
     };
 
-    print!("{}", confirmation_message);
+    info!("{}", confirmation_message);
     io::stdout().flush()?;
 
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
+
+    debug!("User input: {:?}", input);
 
     if !input.trim().eq(&alias) {
         bail_user_error!("Account deletion aborted.");
@@ -107,7 +114,7 @@ fn delete_account(alias: String) -> Result<()> {
     cfg.accounts.remove(&alias);
     cfg.save()?;
 
-    println!("Account '{}' successfully deleted.", alias);
+    info!("Account '{}' successfully deleted.", alias);
     Ok(())
 }
 
@@ -118,6 +125,8 @@ pub fn login(alias: String) -> Result<()> {
         "Account '{}' not found. Please provide a alias or use `jstz account create`.",
         alias
     ))?;
+
+    debug!("Account found: {:?}", account);
 
     if cfg.accounts.current_alias() == Some(&alias) {
         bail_user_error!(
@@ -132,7 +141,7 @@ pub fn login(alias: String) -> Result<()> {
             alias
         ),
         Account::User(user) => {
-            println!(
+            info!(
                 "Logged in to account {} with address {}",
                 alias, user.address
             );
@@ -155,7 +164,7 @@ pub fn logout() -> Result<()> {
     cfg.accounts.set_current_alias(None)?;
     cfg.save()?;
 
-    println!("You have been logged out.");
+    info!("You have been logged out.");
 
     Ok(())
 }
@@ -167,7 +176,9 @@ pub fn whoami() -> Result<()> {
         "You are not logged in. Please run `jstz login`."
     ))?;
 
-    println!(
+    debug!("Current user ({:?}): {:?}", alias, user);
+
+    info!(
         "Logged in to account {} with address {}",
         alias, user.address
     );
@@ -178,28 +189,28 @@ pub fn whoami() -> Result<()> {
 fn list_accounts(long: bool) -> Result<()> {
     let cfg = Config::load()?;
 
-    println!("Accounts:");
+    info!("Accounts:");
     for (alias, account) in cfg.accounts.iter() {
         if long {
-            println!("Alias: {}", alias);
+            info!("Alias: {}", alias);
             match account {
                 Account::User(User {
                     address,
                     secret_key,
                     public_key,
                 }) => {
-                    println!("  Type: User");
-                    println!("  Address: {}", address);
-                    println!("  Public Key: {}", public_key.to_string());
-                    println!("  Secret Key: {}", secret_key.to_string());
+                    info!("  Type: User");
+                    info!("  Address: {}", address);
+                    info!("  Public Key: {}", public_key.to_string());
+                    info!("  Secret Key: {}", secret_key.to_string());
                 }
                 Account::Deployment(Deployment { address, .. }) => {
-                    println!("  Type: Deployment");
-                    println!("  Address: {}", address);
+                    info!("  Type: Deployment");
+                    info!("  Address: {}", address);
                 }
             }
         } else {
-            println!("{}: {}", alias, account.address());
+            info!("{}: {}", alias, account.address());
         }
     }
 
@@ -210,12 +221,15 @@ async fn get_code(account: Option<AddressOrAlias>) -> Result<()> {
     let cfg = Config::load()?;
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
-    let code = cfg.jstz_client()?.get_code(&address).await?;
+    debug!("resolved `account` -> {:?}", address);
 
-    match code {
-        Some(code) => println!("{}", code),
-        None => eprintln!("No code found"),
-    }
+    let code = cfg
+        .jstz_client()?
+        .get_code(&address)
+        .await?
+        .ok_or(user_error!("No code found for account {}", address))?;
+
+    info!("{}", code);
 
     Ok(())
 }
@@ -224,14 +238,16 @@ async fn get_balance(account: Option<AddressOrAlias>) -> Result<()> {
     let cfg = Config::load()?;
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
+    debug!("resolved `account` -> {:?}", address);
+
     let balance = cfg.jstz_client()?.get_balance(&address).await?;
 
-    println!("Balance of {} is {} $CTEZ", address, balance);
+    info!("Balance of {} is {} $CTEZ", address, balance);
 
     Ok(())
 }
 
-#[derive(Subcommand)]
+#[derive(Debug, Subcommand)]
 pub enum Command {
     /// Creates alias
     Alias {

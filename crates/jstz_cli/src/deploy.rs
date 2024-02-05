@@ -2,6 +2,7 @@ use jstz_proto::{
     operation::{Content, DeployContract, Operation, SignedOperation},
     receipt::Content as ReceiptContent,
 };
+use log::{debug, info};
 
 use crate::{
     config::{Config, Deployment},
@@ -35,8 +36,12 @@ pub async fn exec(
 
     let nonce = jstz_client.get_nonce(&user.address).await?;
 
+    debug!("Nonce: {:?}", nonce);
+
     let code = read_file_or_input_or_piped(code)?
         .ok_or(user_error!("No function code supplied. Please provide a filename or pipe the file contents into stdin."))?;
+
+    debug!("Code: {}", code);
 
     let op = Operation {
         source: user.address.clone(),
@@ -47,12 +52,18 @@ pub async fn exec(
         }),
     };
 
+    debug!("Operation: {:?}", op);
+
     let hash = op.hash();
+
+    debug!("Operation hash: {}", hash.to_string());
 
     let signed_op =
         SignedOperation::new(user.public_key.clone(), user.secret_key.sign(&hash)?, op);
 
-    println!(
+    debug!("Signed operation: {:?}", signed_op);
+
+    info!(
         "Signed operation: {}",
         serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?
     );
@@ -61,7 +72,7 @@ pub async fn exec(
     jstz_client.post_operation(&signed_op).await?;
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 
-    println!("Receipt: {:?}", receipt);
+    debug!("Receipt: {:?}", receipt);
 
     let address = match receipt.inner {
         Ok(ReceiptContent::DeployContract(deploy)) => deploy.contract_address,

@@ -11,6 +11,7 @@ use jstz_rollup::{
     deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
     JstzRollup,
 };
+use log::info;
 use octez::OctezThread;
 use tempfile::TempDir;
 
@@ -48,26 +49,23 @@ const BOOTSTRAP_ACCOUNT_SKS: [&str; 5] = [
 ];
 
 const OPERATOR_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx"; // bootstrap1
-
-// FIXME: Exposing this address is a hack (consistent with the current implementation)
-// In future, we should permit users to configure the L1 client address they wish to use
-pub(crate) const CLIENT_ADDRESS: &str = "tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN"; // bootstrap2
+const CLIENT_ADDRESS: &str = "tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN"; // bootstrap2
 
 fn init_node(cfg: &Config) -> Result<()> {
     // 1. Initialize the octez-node configuration
-    print!("Initializing octez-node configuration...");
+    info!("Initializing octez-node configuration...");
     cfg.octez_node()?.config_init(
         "sandbox",
         &format!("127.0.0.1:{}", SANDBOX_OCTEZ_NODE_PORT),
         &format!("127.0.0.1:{}", SANDBOX_OCTEZ_NODE_RPC_PORT),
         0,
     )?;
-    println!(" done");
+    info!(" done");
 
     // 2. Generate an identity
-    print!("Generating identity...");
+    info!("Generating identity...");
     cfg.octez_node()?.generate_identity()?;
-    println!(" done");
+    info!("done");
     Ok(())
 }
 
@@ -100,13 +98,13 @@ fn wait_for_node_to_initialize(cfg: &Config) -> Result<()> {
         return Ok(());
     }
 
-    print!("Waiting for node to initialize...");
+    info!("Waiting for node to initialize...");
     while !is_node_running(cfg)? {
         sleep(Duration::from_secs(1));
-        print!(".")
+        info!(".")
     }
 
-    println!(" done");
+    info!(" done");
     Ok(())
 }
 
@@ -115,30 +113,30 @@ fn init_client(cfg: &Config) -> Result<()> {
     wait_for_node_to_initialize(cfg)?;
 
     // 2. Wait for the node to be bootstrapped
-    print!("Waiting for node to bootstrap...");
+    info!("Waiting for node to bootstrap...");
     cfg.octez_client()?.wait_for_node_to_bootstrap()?;
-    println!(" done");
+    info!(" done");
 
     // 3. Import activator and bootstrap accounts
-    print!("Importing activator account...");
+    info!("Importing activator account...");
     cfg.octez_client()?
         .import_secret_key("activator", ACTIVATOR_ACCOUNT_SK)?;
-    println!(" done");
+    info!("done");
 
     // 4. Activate alpha
-    print!("Activating alpha...");
+    info!("Activating alpha...");
     cfg.octez_client()?.activate_protocol(
         "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
         "1",
         "activator",
         SANDBOX_PARAMS_PATH,
     )?;
-    println!(" done");
+    info!("done");
 
     // 5. Import bootstrap accounts
     for (i, sk) in BOOTSTRAP_ACCOUNT_SKS.iter().enumerate() {
         let name = format!("bootstrap{}", i + 1);
-        println!("Importing account {}:{}", name, sk);
+        info!("Importing account {}:{}", name, sk);
         cfg.octez_client()?.import_secret_key(&name, sk)?
     }
 
@@ -159,25 +157,25 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     init_node(cfg)?;
 
     // 2. As a thread, start node
-    print!("Starting node...");
+    info!("Starting node...");
     let node = OctezThread::from_child(start_node(cfg)?);
-    println!(" done");
+    info!("done");
 
     // 3. Init client
     init_client(cfg)?;
-    println!("Client initialized");
+    info!("Client initialized");
 
     // 4. As a thread, start baking
-    print!("Starting baker...");
+    info!("Starting baker...");
     let client_logs = File::create(client_log_path()?)?;
     let baker = OctezThread::new(cfg.clone(), move |cfg| {
         client_bake(cfg, &client_logs)?;
         Ok(())
     });
-    println!(" done");
+    info!(" done");
 
     // 5. Deploy bridge
-    print!("Deploying bridge...");
+    info!("Deploying bridge...");
 
     let ctez_bootstrap_accounts = &[BootstrapAccount {
         address: String::from(CLIENT_ADDRESS),
@@ -193,24 +191,24 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     let bridge =
         BridgeContract::deploy(&cfg.octez_client()?, OPERATOR_ADDRESS, &ctez_address)?;
 
-    println!(" done");
-    println!("\t`jstz_bridge` deployed at {}", bridge);
+    info!("done");
+    info!("\t`jstz_bridge` deployed at {}", bridge);
 
     // 6. Create an installer kernel
-    print!("Creating installer kernel...");
+    info!("Creating installer kernel...");
 
     let preimages_dir = TempDir::with_prefix("jstz_sandbox_preimages")?.into_path();
 
     let installer = make_installer(Path::new(JSTZ_KERNEL_PATH), &preimages_dir, &bridge)?;
-    println!("done");
+    info!("done");
 
     // 7. Originate the rollup
     let rollup = JstzRollup::deploy(&cfg.octez_client()?, OPERATOR_ADDRESS, &installer)?;
 
-    println!("`jstz_rollup` originated at {}", rollup);
+    info!("`jstz_rollup` originated at {}", rollup);
 
     // 8. As a thread, start rollup node
-    print!("Starting rollup node...");
+    info!("Starting rollup node...");
     let rollup_node = OctezThread::from_child(rollup.run(
         &cfg.octez_rollup_node()?,
         OPERATOR_ADDRESS,
@@ -219,13 +217,13 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
         "127.0.0.1",
         SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     )?);
-    println!(" done");
+    info!("done");
 
     // 9. Set the rollup address in the bridge
     bridge.set_rollup(&cfg.octez_client()?, OPERATOR_ADDRESS, &rollup)?;
-    println!("\t`jstz_bridge` `rollup` address set to {}", rollup);
+    info!("\t`jstz_bridge` `rollup` address set to {}", rollup);
 
-    println!("Bridge deployed");
+    info!("Bridge deployed");
 
     Ok((node, baker, rollup_node))
 }
@@ -237,7 +235,7 @@ pub fn main(cfg: &mut Config) -> Result<()> {
     }
 
     // 1. Configure sandbox
-    print!("Configuring sandbox...");
+    info!("Configuring sandbox...");
     let sandbox_cfg = SandboxConfig {
         pid: std::process::id(),
         octez_client_dir: TempDir::with_prefix("octez_client")?.into_path(),
@@ -249,14 +247,14 @@ pub fn main(cfg: &mut Config) -> Result<()> {
     fs::create_dir_all(logs_dir()?)?;
 
     cfg.sandbox = Some(sandbox_cfg);
-    println!(" done");
+    info!("done");
 
     // 2. Start sandbox
     let (node, baker, rollup_node) = start_sandbox(cfg)?;
-    println!("Sandbox started 🎉");
+    info!("Sandbox started 🎉");
 
     // 3. Save config
-    println!("Saving sandbox config");
+    info!("Saving sandbox config");
     cfg.save()?;
 
     // 4. Wait for the sandbox to shutdown (either by the user or by an error)
