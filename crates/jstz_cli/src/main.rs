@@ -16,6 +16,8 @@ mod utils;
 
 use config::Config;
 use error::Result;
+use run::DEFAULT_GAS_LIMIT;
+use utils::AddressOrAlias;
 
 #[derive(Parser)]
 #[command(author, version)]
@@ -31,15 +33,12 @@ enum Command {
     Account(account::Command),
     /// Deploys a smart function
     Deploy {
-        /// Address used when deploying the contract
-        #[arg(short, long, default_value = None)]
-        self_address: Option<String>,
+        /// Function code.
+        #[arg(default_value = None)]
+        code: Option<String>,
         /// Initial balance
         #[arg(short, long, default_value_t = 0)]
         balance: u64,
-        /// Function code.
-        #[arg(value_name = "function_code", default_value = None)]
-        function_code: Option<String>,
         /// Name
         #[arg(short, long, default_value = None)]
         name: Option<String>,
@@ -49,11 +48,8 @@ enum Command {
         /// The URL containing the functions's address or alias.
         #[arg(value_name = "URL")]
         url: String,
-        /// The address of the caller (or referrer)
-        #[arg(value_name = "referrer", default_value = None)]
-        referrer: Option<String>,
         /// The maximum amount of gas to be used
-        #[arg(short, long, default_value_t = u32::MAX)]
+        #[arg(short, long, default_value_t = DEFAULT_GAS_LIMIT)]
         gas_limit: u32,
         /// The HTTP method used in the request.
         #[arg(name = "request", short, long, default_value = "GET")]
@@ -66,7 +62,7 @@ enum Command {
     Repl {
         /// Sets the address of the REPL environment.
         #[arg(short, long)]
-        self_address: Option<String>,
+        account: Option<AddressOrAlias>,
     },
     /// Commands related to the logs.
     #[command(subcommand)]
@@ -87,30 +83,28 @@ enum Command {
     Kv(kv::Command),
 }
 
-async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
+async fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Sandbox(sandbox_command) => sandbox::exec(cfg, sandbox_command),
-        Command::Bridge(bridge_command) => bridge::exec(bridge_command, cfg),
-        Command::Account(account_command) => account::exec(account_command, cfg).await,
+        Command::Sandbox(sandbox_command) => sandbox::exec(sandbox_command),
+        Command::Bridge(bridge_command) => bridge::exec(bridge_command),
+        Command::Account(account_command) => account::exec(account_command).await,
         Command::Deploy {
-            self_address,
-            function_code,
+            code,
             balance,
             name,
-        } => deploy::exec(self_address, function_code, balance, name, cfg).await,
+        } => deploy::exec(code, balance, name).await,
         Command::Run {
             url,
-            referrer,
             http_method,
             gas_limit,
             json_data,
-        } => run::exec(cfg, referrer, url, http_method, gas_limit, json_data).await,
-        Command::Repl { self_address } => repl::exec(self_address, cfg),
-        Command::Logs(logs) => logs::exec(logs, cfg).await,
-        Command::Login { alias } => account::login(alias, cfg),
-        Command::Logout {} => account::logout(cfg),
-        Command::WhoAmI {} => account::whoami(cfg),
-        Command::Kv(kv_command) => kv::exec(kv_command, cfg).await,
+        } => run::exec(url, http_method, gas_limit, json_data).await,
+        Command::Repl { account } => repl::exec(account),
+        Command::Logs(logs) => logs::exec(logs).await,
+        Command::Login { alias } => account::login(alias),
+        Command::Logout {} => account::logout(),
+        Command::WhoAmI {} => account::whoami(),
+        Command::Kv(kv_command) => kv::exec(kv_command).await,
     }
 }
 
@@ -118,13 +112,7 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
 async fn main() {
     let command = Command::parse();
 
-    if let Err(err) = async {
-        let mut cfg = Config::load()?;
-
-        exec(command, &mut cfg).await
-    }
-    .await
-    {
+    if let Err(err) = exec(command).await {
         error::print(&err);
         std::process::exit(1);
     }

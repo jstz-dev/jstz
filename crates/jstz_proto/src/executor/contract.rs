@@ -1,3 +1,5 @@
+use std::{io::Read, ops::BitXor};
+
 use boa_engine::{
     js_string,
     object::{builtins::JsPromise, FunctionObjectBuilder},
@@ -5,17 +7,22 @@ use boa_engine::{
 };
 use boa_gc::{Finalize, Trace};
 use derive_more::{Deref, DerefMut};
-use jstz_api::http::{body::HttpBody, request::RequestClass, response::Response};
-use jstz_api::{http::request::Request, js_log::set_js_logger};
-use jstz_core::native::JsNativeObject;
+use jstz_api::{
+    http::{
+        body::HttpBody,
+        request::{Request, RequestClass},
+        response::Response,
+    },
+    js_log::set_js_logger,
+};
 use jstz_core::{
     host::HostRuntime,
     host_defined,
     kv::Transaction,
+    native::JsNativeObject,
     runtime::{self, with_global_host},
     Module, Realm,
 };
-use std::io::Read;
 use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
@@ -78,12 +85,48 @@ fn on_success(
     }
 }
 
-fn register_web_apis(realm: &Realm, context: &mut Context<'_>) {
+fn compute_seed(address: &Address, operation_hash: &OperationHash) -> u64 {
+    let mut seed: u64 = 0;
+    for byte in operation_hash.as_array().iter().chain(address.as_bytes()) {
+        seed = seed.rotate_left(8).bitxor(*byte as u64)
+    }
+
+    seed
+}
+
+pub fn register_web_apis(realm: &Realm, context: &mut Context<'_>) {
     realm.register_api(jstz_api::url::UrlApi, context);
     realm.register_api(jstz_api::urlpattern::UrlPatternApi, context);
     realm.register_api(jstz_api::http::HttpApi, context);
     realm.register_api(jstz_api::encoding::EncodingApi, context);
     realm.register_api(jstz_api::ConsoleApi, context);
+}
+
+pub fn register_jstz_apis(
+    realm: &Realm,
+    address: &Address,
+    seed: u64,
+    context: &mut Context<'_>,
+) {
+    realm.register_api(
+        jstz_api::KvApi {
+            contract_address: address.clone(),
+        },
+        context,
+    );
+    realm.register_api(jstz_api::RandomApi { seed }, context);
+    realm.register_api(
+        api::LedgerApi {
+            contract_address: address.clone(),
+        },
+        context,
+    );
+    realm.register_api(
+        api::ContractApi {
+            contract_address: address.clone(),
+        },
+        context,
+    );
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deref, DerefMut, Trace, Finalize)]
@@ -135,40 +178,24 @@ impl Script {
 
     fn register_apis(
         &self,
-        contract_address: Address,
+        contract_address: &Address,
         operation_hash: &OperationHash,
         context: &mut Context<'_>,
     ) {
         register_web_apis(self.realm(), context);
-
-        self.realm().register_api(
-            jstz_api::KvApi {
-                contract_address: contract_address.clone(),
-            },
+        register_jstz_apis(
+            self.realm(),
+            contract_address,
+            compute_seed(contract_address, operation_hash),
             context,
         );
-        self.realm().register_api(
-            jstz_api::RandomApi {
-                contract_address: contract_address.clone(),
-                operation_hash: operation_hash.clone(),
-            },
-            context,
-        );
-        self.realm().register_api(
-            api::LedgerApi {
-                contract_address: contract_address.clone(),
-            },
-            context,
-        );
-        self.realm()
-            .register_api(api::ContractApi { contract_address }, context);
     }
 
     /// Initialize the script, registering all associated runtime APIs
     /// and evaluating the module of the script
     pub fn init(
         &self,
-        contract_address: Address,
+        contract_address: &Address,
         operation_hash: &OperationHash,
         context: &mut Context<'_>,
     ) -> JsResult<JsPromise> {
@@ -281,8 +308,7 @@ impl Script {
         let script = Script::load(tx, &contract_address, context)?;
 
         // 2. Evaluate the script's module
-        let script_promise =
-            script.init(contract_address.clone(), &operation_hash, context)?;
+        let script_promise = script.init(&contract_address, &operation_hash, context)?;
 
         // 3. Once evaluated, call the script's handler
         let result = script_promise.then(

@@ -1,17 +1,14 @@
 use std::{borrow::Cow, fmt::Write};
 
 use boa_engine::{js_string, JsResult, JsValue, Source};
-use jstz_api::{
-    encoding::EncodingApi, http::HttpApi, js_log::set_js_logger, stream::StreamApi,
-    url::UrlApi, urlpattern::UrlPatternApi, ConsoleApi, KvApi,
-};
+use jstz_api::{js_log::set_js_logger, stream::StreamApi};
 use jstz_core::{
     host::HostRuntime,
     host_defined,
     kv::Transaction,
     runtime::{self, Runtime},
 };
-use jstz_proto::api::{ContractApi, LedgerApi};
+use jstz_proto::executor::contract::{register_jstz_apis, register_web_apis};
 use rustyline::{
     completion::Completer, error::ReadlineError, highlight::Highlighter, hint::Hinter,
     validate::Validator, Editor, Helper,
@@ -25,7 +22,8 @@ use tezos_smart_rollup_mock::MockHost;
 
 use crate::{
     config::Config,
-    error::{user_error, Result},
+    error::{anyhow, user_error, Result},
+    utils::AddressOrAlias,
 };
 
 mod debug_api;
@@ -100,55 +98,45 @@ impl Completer for JsHighlighter {
     type Candidate = String;
 }
 
-pub fn exec(self_address: Option<String>, cfg: &Config) -> Result<()> {
-    let account = cfg.accounts.account_or_current(self_address)?;
-    let address = account.address();
+const DEFAULT_SMART_FUNCTION_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
+const DEFAULT_GAS_LIMIT: usize = usize::MAX;
+const DEFAULT_RANDOM_SEED: u64 = 42;
 
-    let mut rt = Runtime::new(usize::MAX).expect("Failed to create a new runtime.");
+pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
+    let cfg = Config::load()?;
 
-    {
-        let context = rt.context();
-        host_defined!(context, mut host_defined);
+    let address = match account {
+        Some(account) => account.resolve(&cfg)?.clone(),
+        None => DEFAULT_SMART_FUNCTION_ADDRESS
+            .parse()
+            .expect("`DEFAULT_SMART_FUNCTION_ADDRESS` is a valid address."),
+    };
 
-        let tx = Transaction::new();
-
-        host_defined.insert(tx);
-    }
-    set_js_logger(&PrettyLogger);
-
+    // 1. Setup editor
     let mut rl = Editor::<JsHighlighter, _>::new()?;
     rl.set_helper(Some(JsHighlighter::new()));
 
+    // 2. Setup runtime
+    let mut rt = Runtime::new(DEFAULT_GAS_LIMIT)
+        .map_err(|_| anyhow!("Failed to initialize jstz's JavaScript runtime."))?;
+    set_js_logger(&PrettyLogger);
+
+    {
+        host_defined!(&mut rt, mut host_defined);
+
+        let tx = Transaction::new();
+        host_defined.insert(tx);
+    }
+
     let mut mock_hrt = MockHost::default();
+    let realm = rt.realm().clone();
 
-    let realm_clone = rt.realm().clone();
+    register_web_apis(&realm, &mut rt);
+    register_jstz_apis(&realm, &address, DEFAULT_RANDOM_SEED, &mut rt);
 
-    realm_clone.register_api(ConsoleApi, rt.context());
-
-    realm_clone.register_api(
-        KvApi {
-            contract_address: address.clone(),
-        },
-        rt.context(),
-    );
-    realm_clone.register_api(EncodingApi, rt.context());
-    realm_clone.register_api(StreamApi, rt.context());
-    realm_clone.register_api(UrlApi, rt.context());
-    realm_clone.register_api(UrlPatternApi, rt.context());
-    realm_clone.register_api(HttpApi, rt.context());
-    realm_clone.register_api(
-        LedgerApi {
-            contract_address: address.clone(),
-        },
-        rt.context(),
-    );
-    realm_clone.register_api(
-        ContractApi {
-            contract_address: address.clone(),
-        },
-        rt.context(),
-    );
-    realm_clone.register_api(DebugApi, rt.context());
+    // realm.register_api(ConsoleApi, rt.context());
+    realm.register_api(StreamApi, rt.context());
+    realm.register_api(DebugApi, rt.context());
 
     loop {
         let readline = rl.readline(">> ");

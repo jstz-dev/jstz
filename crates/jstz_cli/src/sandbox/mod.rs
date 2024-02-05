@@ -19,18 +19,22 @@ pub enum Command {
     Stop,
 }
 
-pub fn start(cfg: &mut Config) -> Result<()> {
+pub fn start() -> Result<()> {
+    let mut cfg = Config::load()?;
+
     // let sandboxd_log = File::create(cfg.jstz_path.join("/logs/sandboxd.log"))?;
 
     // let daemonize = Daemonize::new().stdout(sandboxd_log);
 
     // daemonize.start()?;
 
-    daemon::main(cfg)
+    daemon::main(&mut cfg)
 }
 
-pub fn stop(cfg: &mut Config) -> Result<()> {
-    match cfg.sandbox.take() {
+pub fn stop() -> Result<()> {
+    let cfg = Config::load()?;
+
+    match cfg.sandbox {
         Some(sandbox_cfg) => {
             let pid = Pid::from_raw(sandbox_cfg.pid as i32);
             kill(pid, Signal::SIGTERM)?;
@@ -40,9 +44,9 @@ pub fn stop(cfg: &mut Config) -> Result<()> {
     }
 }
 
-pub fn exec(cfg: &mut Config, command: Command) -> Result<()> {
+pub fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Start => start(cfg),
-        Command::Stop => stop(cfg),
+        Command::Start => start(),
+        Command::Stop => stop(),
     }
 }

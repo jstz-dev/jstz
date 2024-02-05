@@ -1,25 +1,21 @@
 use futures_util::stream::StreamExt;
 use jstz_api::js_log::LogLevel;
 use jstz_proto::js_logger::LogRecord;
-use reqwest_eventsource::{Event, EventSource};
+use reqwest_eventsource::Event;
 
-use crate::{error::Result, Config};
+use crate::{error::Result, utils::AddressOrAlias, Config};
 
 const DEFAULT_LOG_LOG_LEVEL: LogLevel = LogLevel::LOG;
 
 pub async fn exec(
-    address_or_alias: String,
+    address_or_alias: AddressOrAlias,
     log_level: Option<LogLevel>,
-    cfg: &Config,
 ) -> Result<()> {
-    let address = cfg.accounts.get_address(&address_or_alias)?;
-    let url = format!(
-        "http://127.0.0.1:{}/logs/{}/stream",
-        cfg.sandbox()?.jstz_node_port,
-        &address.to_base58()
-    );
+    let cfg = Config::load()?;
 
-    let mut event_source = EventSource::get(&url);
+    let address = address_or_alias.resolve(&cfg)?;
+
+    let mut event_source = cfg.jstz_client()?.logs_stream(&address);
     let log_level = log_level.unwrap_or(DEFAULT_LOG_LOG_LEVEL);
 
     while let Some(event) = event_source.next().await {

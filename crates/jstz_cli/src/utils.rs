@@ -1,7 +1,36 @@
-use std::fs;
-use std::io::{self, IsTerminal};
+use std::{
+    fs,
+    io::{self, IsTerminal},
+    str::FromStr,
+};
 
-use crate::error::Result;
+use jstz_proto::context::account::Address;
+
+use crate::error::{Error, Result};
+
+#[derive(Clone, Debug)]
+pub enum AddressOrAlias {
+    Address(Address),
+    Alias(String),
+}
+
+impl AddressOrAlias {
+    pub fn is_alias(&self) -> bool {
+        matches!(self, Self::Alias(_))
+    }
+}
+
+impl FromStr for AddressOrAlias {
+    type Err = Error;
+
+    fn from_str(address_or_alias: &str) -> Result<Self> {
+        if address_or_alias.starts_with("tz1") {
+            Ok(Self::Address(address_or_alias.parse()?))
+        } else {
+            Ok(Self::Alias(address_or_alias.to_string()))
+        }
+    }
+}
 
 pub fn read_file_or_input(input_or_filename: String) -> String {
     // try and read the file
