@@ -1,13 +1,9 @@
-use std::ops::BitXor;
-
 use boa_engine::{
     js_string,
     object::{FunctionObjectBuilder, Object, ObjectInitializer},
     Context, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
-use bytes::Buf;
-use jstz_crypto::{hash::Blake2b, public_key_hash::PublicKeyHash};
 
 #[derive(Trace, Finalize)]
 struct RandomGen {
@@ -37,22 +33,10 @@ impl RandomGen {
 }
 
 pub struct RandomApi {
-    pub contract_address: PublicKeyHash,
-    pub operation_hash: Blake2b,
+    pub seed: u64,
 }
 
 impl RandomApi {
-    fn to_random_gen(&self) -> RandomGen {
-        let mut seed: u64 = 0;
-        for byte in self
-            .operation_hash
-            .as_array()
-            .chain(self.contract_address.as_bytes())
-        {
-            seed = seed.rotate_left(8).bitxor(byte as u64)
-        }
-        RandomGen { seed }
-    }
     fn random(gen: &JsValue) -> JsResult<JsValue> {
         Ok(RandomGen::from_js_value(gen)?.next())
     }
@@ -60,9 +44,10 @@ impl RandomApi {
 
 impl jstz_core::Api for RandomApi {
     fn init(self, context: &mut Context) {
-        let generator = ObjectInitializer::with_native(self.to_random_gen(), context)
-            .build()
-            .into();
+        let generator =
+            ObjectInitializer::with_native(RandomGen { seed: self.seed }, context)
+                .build()
+                .into();
         let random_method = FunctionObjectBuilder::new(
             context.realm(),
             NativeFunction::from_copy_closure_with_captures(

@@ -2,7 +2,7 @@ use clap::Subcommand;
 
 mod deposit;
 
-use crate::{config::Config, error::Result};
+use crate::{error::Result, utils::AddressOrAlias};
 
 #[derive(Subcommand)]
 pub enum Command {
@@ -13,15 +13,15 @@ pub enum Command {
         from: String,
         /// The L2 sandbox address or alias to deposit to.
         #[arg(short, long)]
-        to: String,
+        to: AddressOrAlias,
         /// The amount in ctez to transfer.
         #[arg(short, long)]
         amount: u64,
     },
 }
 
-pub fn exec(command: Command, cfg: &Config) -> Result<()> {
+pub fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Deposit { from, to, amount } => deposit::exec(from, to, amount, cfg),
+        Command::Deposit { from, to, amount } => deposit::exec(from, to, amount),
     }
 }
