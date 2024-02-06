@@ -249,48 +249,48 @@ async fn get_balance(account: Option<AddressOrAlias>) -> Result<()> {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Creates alias
-    Alias {
-        /// Alias
-        #[arg(value_name = "ALIAS")]
-        alias: String,
-        /// Address
-        #[arg(value_name = "ADDRESS")]
-        address: Address,
-    },
-    /// Creates account
+    /// 🌐 Creates a user account.
     Create {
-        /// User alias
+        /// User alias.
         #[arg(value_name = "ALIAS")]
         alias: String,
         /// User passphrase. If undefined, a random passphrase will be generated.
         #[arg(short, long)]
         passphrase: Option<String>,
     },
-    /// Deletes account
+    /// ❌ Deletes an account (user or deployment).
     Delete {
-        /// User alias
+        /// User or deployment alias to be deleted.
         #[arg(value_name = "ALIAS")]
         alias: String,
     },
-    /// Lists all accounts
+    /// 📋 Lists all accounts.
     #[clap(alias = "ls")]
     List {
-        /// Option for long format output
+        /// Flag for long format output.
         #[arg(short, long)]
         long: bool,
     },
-    /// Get account code
+    /// 🧑‍💻 Outputs the deployed code for an account.
     Code {
-        /// User address or alias
+        /// Deployment address or alias.
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
     },
-    /// Get account balance
+    /// 📈 Outputs the balance of an account.
     Balance {
-        /// User address or alias
+        /// Address or alias of the account (user or deployment).
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
+    },
+    /// 🔄 Creates alias for a deployed smart function.
+    Alias {
+        /// Alias of the deployment.
+        #[arg(value_name = "ALIAS")]
+        alias: String,
+        /// Address of the smart function.
+        #[arg(value_name = "ADDRESS")]
+        address: Address,
     },
 }
 
