@@ -506,7 +506,7 @@ pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
 
         let mut progress: u32 = 0;
 
-        let progress_bar = ProgressBar::new(MAX_PROGRESS as u64); // 12 is the maximum progress value
+        let progress_bar = ProgressBar::new(MAX_PROGRESS as u64);
         progress_bar.set_style(
             ProgressStyle::default_bar().template(
                 "{spinner:.green} [{bar:40.cyan/blue}] {pos:>7}/{len:7} {msg}",
