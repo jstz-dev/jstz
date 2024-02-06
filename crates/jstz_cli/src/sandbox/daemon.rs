@@ -1,4 +1,6 @@
 use anyhow::Result;
+use daemonize::Daemonize;
+use indicatif::{ProgressBar, ProgressStyle};
 use jstz_node::{
     run_node, DEFAULT_KERNEL_FILE_PATH, DEFAULT_ROLLUP_NODE_RPC_ADDR,
     DEFAULT_ROLLUP_RPC_PORT,
@@ -8,12 +10,14 @@ use jstz_rollup::{
     JstzRollup,
 };
 use octez::OctezThread;
+use regex::Regex;
 use std::{
     env,
-    fs::{self, File},
+    fs::{self, File, OpenOptions},
+    io::{self, BufRead, BufReader, Seek, SeekFrom},
     path::{Path, PathBuf},
-    process::Child,
-    thread::sleep,
+    process::{Child, Command, Stdio},
+    thread::{self, sleep},
     time::Duration,
 };
 
@@ -121,6 +125,10 @@ const SANDBOX_BOOTSTRAP_ACCOUNTS: [SandboxBootstrapAccount; 5] = [
 ];
 
 const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
+fn sandbox_daemon_log_path() -> Result<PathBuf> {
+    Ok(logs_dir()?.join("sandbox_daemon.log"))
+}
+
 const ACTIVATOR_ACCOUNT_SK: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
 
@@ -165,7 +173,13 @@ fn generate_identity(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
-fn init_node(cfg: &Config) -> Result<()> {
+const MAX_PROGRESS: u32 = 17;
+fn progress_step(progress: &mut u32) {
+    *progress += 1;
+    print!("({})", *progress);
+}
+
+fn init_node(progress: &mut u32, cfg: &Config) -> Result<()> {
     // 1. Initialize the octez-node configuration
     debug!("Initializing octez-node");
 
@@ -303,7 +317,7 @@ async fn run_jstz_node() -> Result<()> {
 
 fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)> {
     // 1. Init node
-    init_node(cfg)?;
+    init_node(progress, cfg)?;
 
     // 2. As a thread, start node
     let node = OctezThread::from_child(start_node(cfg)?);
@@ -339,7 +353,8 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     debug!("Bridge deployed at {}", bridge);
 
     // 6. Create an installer kernel
-    debug!("Creating installer kernel...");
+    progress_step(progress);
+    print!("Creating installer kernel...");
 
     let preimages_dir = TempDir::with_prefix("jstz_sandbox_preimages")?.into_path();
 
@@ -423,9 +438,6 @@ pub async fn main(cfg: &mut Config) -> Result<()> {
         octez_rollup_node_dir: TempDir::with_prefix("octez_rollup_node")?.into_path(),
     };
 
-    // Create logs directory
-    fs::create_dir_all(logs_dir()?)?;
-
     cfg.sandbox = Some(sandbox_cfg);
     debug!("Sandbox configured {:?}", cfg.sandbox);
 
@@ -467,5 +479,68 @@ pub async fn main(cfg: &mut Config) -> Result<()> {
 
     cfg.sandbox = None;
     cfg.save()?;
+    Ok(())
+}
+
+pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
+    if no_daemon {
+        run_sandbox(cfg).await?;
+    } else {
+        let path = sandbox_daemon_log_path()?;
+        let stdout_file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(path.clone())?;
+
+        let mut child = Command::new(std::env::current_exe()?)
+            .args(&["sandbox", "start", "--no-daemon"])
+            .stdout(Stdio::from(stdout_file))
+            .spawn()?;
+
+        let file = File::open(&path)?;
+        let mut reader = BufReader::new(file);
+        let mut buffer = String::new();
+
+        let regex = Regex::new(r"\((\d+)\)").unwrap();
+
+        let mut progress: u32 = 0;
+
+        let progress_bar = ProgressBar::new(MAX_PROGRESS as u64); // 12 is the maximum progress value
+        progress_bar.set_style(
+            ProgressStyle::default_bar().template(
+                "{spinner:.green} [{bar:40.cyan/blue}] {pos:>7}/{len:7} {msg}",
+            )?,
+        );
+
+        loop {
+            reader.seek(SeekFrom::Current(0))?;
+
+            while reader.read_line(&mut buffer)? > 0 {
+                if let Some(captures) = regex.captures(&buffer) {
+                    if let Some(matched) = captures.get(1) {
+                        if let Ok(num) = matched.as_str().parse::<u32>() {
+                            progress = num;
+                            progress_bar.set_position(progress.into());
+                        }
+                    }
+                }
+                buffer.clear();
+            }
+
+            if progress == MAX_PROGRESS {
+                progress_bar.finish_with_message("Sandbox started 🎉");
+                break;
+            }
+
+            if let Ok(Some(status)) = child.try_wait() {
+                progress_bar
+                    .finish_with_message(format!("Sandbox failed to start: {:}", status));
+                break;
+            }
+
+            thread::sleep(Duration::from_millis(1000));
+        }
+    }
     Ok(())
 }

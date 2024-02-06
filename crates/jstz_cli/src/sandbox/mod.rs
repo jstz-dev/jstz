@@ -1,3 +1,5 @@
+use std::fs::File;
+
 use anyhow::{anyhow, Ok, Result};
 use clap::Subcommand;
 use log::info;
@@ -5,6 +7,8 @@ use nix::{
     sys::signal::{kill, Signal},
     unistd::Pid,
 };
+use std::env;
+use std::process::Command;
 
 mod daemon;
 
@@ -17,7 +21,11 @@ use crate::{config::Config, error::bail_user_error};
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// 🎬 Starts the sandbox.
-    Start,
+    Start {
+        /// Do not daemonize the process.
+        #[clap(long, short, default_value = "false")]
+        no_daemon: bool,
+    },
     /// 🛑 Stops the sandbox.
     Stop,
 }
@@ -46,7 +54,7 @@ pub fn stop() -> Result<()> {
 
 pub async fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Start => start().await,
-        Command::Stop => stop(),
+        SandboxCommand::Start { no_daemon } => start(no_daemon).await,
+        SandboxCommand::Stop => stop(),
     }
 }
