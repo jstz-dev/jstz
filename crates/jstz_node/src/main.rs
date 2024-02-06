@@ -3,12 +3,6 @@ use std::path::PathBuf;
 use clap::Parser;
 use env_logger::Env;
 
-use crate::{
-    config::{
-        DEFAULT_KERNEL_FILE_PATH, DEFAULT_ROLLUP_NODE_RPC_ADDR, DEFAULT_ROLLUP_RPC_PORT,
-    },
-    node_runner::run_node,
-};
 pub use error::{Error, Result};
 
 mod config;

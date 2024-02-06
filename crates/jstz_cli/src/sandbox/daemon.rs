@@ -1,10 +1,4 @@
-use anyhow::Result;
-use daemonize::Daemonize;
 use indicatif::{ProgressBar, ProgressStyle};
-use jstz_node::{
-    run_node, DEFAULT_KERNEL_FILE_PATH, DEFAULT_ROLLUP_NODE_RPC_ADDR,
-    DEFAULT_ROLLUP_RPC_PORT,
-};
 use jstz_rollup::{
     deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
     JstzRollup,
@@ -14,25 +8,26 @@ use regex::Regex;
 use std::{
     env,
     fs::{self, File, OpenOptions},
-    io::{self, BufRead, BufReader, Seek, SeekFrom},
+    io::{self, BufRead, BufReader, Seek, Write},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     thread::{self, sleep},
     time::Duration,
 };
 
-use anyhow::Result;
 use console::style;
-use jstz_node::run_node;
-use jstz_rollup::{
-    deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
-    JstzRollup,
-};
-use log::{debug, info};
-use octez::OctezThread;
+use log::info;
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
 use tempfile::TempDir;
 use tokio::task;
+
+// Todo: @alanmarkoTrilitech - make it so that it behaves like a log and outputs to terminal when the env flag is set
+macro_rules! debug {
+    ($($arg:tt)*) => {
+        println!($($arg)*);
+        io::stdout().flush().unwrap();
+    };
+}
 
 use crate::{
     config::{jstz_home_dir, Config, SandboxConfig},
@@ -129,6 +124,10 @@ fn sandbox_daemon_log_path() -> Result<PathBuf> {
     Ok(logs_dir()?.join("sandbox_daemon.log"))
 }
 
+fn jstz_node_log_path() -> Result<PathBuf> {
+    Ok(logs_dir()?.join("jstz_node.log"))
+}
+
 const ACTIVATOR_ACCOUNT_SK: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
 
@@ -173,7 +172,7 @@ fn generate_identity(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
-const MAX_PROGRESS: u32 = 17;
+const MAX_PROGRESS: u32 = 16;
 fn progress_step(progress: &mut u32) {
     *progress += 1;
     print!("({})", *progress);
@@ -195,6 +194,7 @@ fn init_node(progress: &mut u32, cfg: &Config) -> Result<()> {
     debug!("\tInitialized octez-node configuration");
 
     // 2. Generate an identity
+    progress_step(progress);
     generate_identity(cfg)?;
 
     Ok(())
@@ -238,22 +238,25 @@ fn wait_for_node_to_initialize(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
-fn init_client(cfg: &Config) -> Result<()> {
+fn init_client(progress: &mut u32, cfg: &Config) -> Result<()> {
     // 1. Wait for the node to initialize
     wait_for_node_to_initialize(cfg)?;
 
     // 2. Wait for the node to be bootstrapped
+    progress_step(progress);
     debug!("Waiting for node to bootstrap...");
     cfg.octez_client_sandbox()?.wait_for_node_to_bootstrap()?;
     debug!(" done");
 
     // 3. Import activator and bootstrap accounts
+    progress_step(progress);
     debug!("Importing activator account...");
     cfg.octez_client_sandbox()?
         .import_secret_key(ACTIVATOR_ACCOUNT_ALIAS, ACTIVATOR_ACCOUNT_SK)?;
     debug!("done");
 
     // 4. Activate alpha
+    progress_step(progress);
     debug!("Activating alpha...");
     cfg.octez_client_sandbox()?.activate_protocol(
         "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
@@ -264,6 +267,7 @@ fn init_client(cfg: &Config) -> Result<()> {
     debug!(" done");
 
     // 5. Import bootstrap accounts
+    progress_step(progress);
     for (i, bootstrap_account) in SANDBOX_BOOTSTRAP_ACCOUNTS.iter().enumerate() {
         let name = format!("bootstrap{}", i + 1);
         cfg.octez_client_sandbox()?
@@ -315,19 +319,25 @@ async fn run_jstz_node() -> Result<()> {
     Ok(())
 }
 
-fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)> {
+fn start_sandbox(
+    progress: &mut u32,
+    cfg: &Config,
+) -> Result<(OctezThread, OctezThread, OctezThread)> {
     // 1. Init node
     init_node(progress, cfg)?;
 
     // 2. As a thread, start node
+    progress_step(progress);
     let node = OctezThread::from_child(start_node(cfg)?);
     debug!("Started octez-node");
 
     // 3. Init client
-    init_client(cfg)?;
+    progress_step(progress);
+    init_client(progress, cfg)?;
     debug!("Initialized octez-client");
 
     // 4. As a thread, start baking
+    progress_step(progress);
     let client_logs = File::create(client_log_path()?)?;
     let baker = OctezThread::new(cfg.clone(), move |cfg| {
         client_bake(cfg, &client_logs)?;
@@ -336,6 +346,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     debug!("Started baker (using octez-client)");
 
     // 5. Deploy bridge
+    progress_step(progress);
     debug!("Deploying bridge...");
 
     let ctez_address = deploy_ctez_contract(
@@ -343,6 +354,8 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
         OPERATOR_ADDRESS,
         ctez_bootstrap_accounts(),
     )?;
+
+    progress_step(progress);
 
     let bridge = BridgeContract::deploy(
         &cfg.octez_client_sandbox()?,
@@ -365,12 +378,14 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     );
 
     // 7. Originate the rollup
+    progress_step(progress);
     let rollup =
         JstzRollup::deploy(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &installer)?;
 
     debug!("`jstz_rollup` originated at {}", rollup);
 
     // 8. As a thread, start rollup node
+    progress_step(progress);
     debug!("Starting rollup node...");
 
     let logs_dir = logs_dir()?;
@@ -385,6 +400,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     debug!("Started octez-smart-rollup-node");
 
     // 9. Set the rollup address in the bridge
+    progress_step(progress);
     bridge.set_rollup(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &rollup)?;
     debug!("`jstz_bridge` `rollup` address set to {}", rollup);
 
@@ -414,20 +430,13 @@ fn format_sandbox_bootstrap_accounts() -> Table {
     table
 }
 
-pub async fn main(cfg: &mut Config) -> Result<()> {
+pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
+    let mut progress = 0;
+
     // 1. Check if sandbox is already running
     if cfg.sandbox.is_some() {
         bail_user_error!("The sandbox is already running!");
     }
-
-    // Print banner
-    info!("{}", style(SANDBOX_BANNER).bold());
-    info!(
-        "        {} {}",
-        env!("CARGO_PKG_VERSION"),
-        styles::url(env!("CARGO_PKG_REPOSITORY"))
-    );
-    info!("");
 
     // 1. Configure sandbox
     debug!("Configuring sandbox...");
@@ -442,36 +451,14 @@ pub async fn main(cfg: &mut Config) -> Result<()> {
     debug!("Sandbox configured {:?}", cfg.sandbox);
 
     // 2. Start sandbox
-    let (node, baker, rollup_node) = start_sandbox(cfg)?;
+    progress_step(&mut progress);
+    let (node, baker, rollup_node) = start_sandbox(&mut progress, cfg)?;
     debug!("Sandbox started 🎉");
 
     // 3. Save config
+    progress_step(&mut progress);
     debug!("Saving sandbox config");
     cfg.save()?;
-
-    info!(
-        "octez-node is listening on: {}",
-        styles::url(octez_node_endpoint())
-    );
-    info!(
-        "octez-smart-rollup-node is listening on: {}",
-        styles::url(octez_smart_rollup_endpoint())
-    );
-    info!(
-        "jstz-node is listening on: {}",
-        styles::url(jstz_node_endpoint())
-    );
-
-    info!("\nTezos bootstrap accounts:");
-
-    let mut sandbox_bootstrap_accounts = format_sandbox_bootstrap_accounts();
-    sandbox_bootstrap_accounts.set_format({
-        let mut format = *FORMAT_DEFAULT;
-        format.indent(2);
-        format
-    });
-
-    info!("{}", sandbox_bootstrap_accounts);
 
     // 4. Wait for the sandbox or jstz-node to shutdown (either by the user or by an error)
     run_jstz_node().await?;
@@ -486,15 +473,23 @@ pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
     if no_daemon {
         run_sandbox(cfg).await?;
     } else {
+        // Print banner
+        info!("{}", style(SANDBOX_BANNER).bold());
+        info!(
+            "        {} {}",
+            env!("CARGO_PKG_VERSION"),
+            styles::url(env!("CARGO_PKG_REPOSITORY"))
+        );
+        info!("");
+
         let path = sandbox_daemon_log_path()?;
         let stdout_file = OpenOptions::new()
             .create(true)
             .write(true)
             .truncate(true)
             .open(path.clone())?;
-
         let mut child = Command::new(std::env::current_exe()?)
-            .args(&["sandbox", "start", "--no-daemon"])
+            .args(["sandbox", "start", "--no-daemon"])
             .stdout(Stdio::from(stdout_file))
             .spawn()?;
 
@@ -506,7 +501,7 @@ pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
 
         let mut progress: u32 = 0;
 
-        let progress_bar = ProgressBar::new(MAX_PROGRESS as u64); // 12 is the maximum progress value
+        let progress_bar = ProgressBar::new(MAX_PROGRESS as u64);
         progress_bar.set_style(
             ProgressStyle::default_bar().template(
                 "{spinner:.green} [{bar:40.cyan/blue}] {pos:>7}/{len:7} {msg}",
@@ -514,7 +509,7 @@ pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
         );
 
         loop {
-            reader.seek(SeekFrom::Current(0))?;
+            reader.stream_position()?;
 
             while reader.read_line(&mut buffer)? > 0 {
                 if let Some(captures) = regex.captures(&buffer) {
@@ -539,8 +534,33 @@ pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
                 break;
             }
 
-            thread::sleep(Duration::from_millis(1000));
+            thread::sleep(Duration::from_millis(100));
         }
+
+        // Print sandbox info
+        info!(
+            "octez-node is listening on: {}",
+            styles::url(octez_node_endpoint())
+        );
+        info!(
+            "octez-smart-rollup-node is listening on: {}",
+            styles::url(octez_smart_rollup_endpoint())
+        );
+        info!(
+            "jstz-node is listening on: {}",
+            styles::url(jstz_node_endpoint())
+        );
+
+        info!("\nTezos bootstrap accounts:");
+
+        let mut sandbox_bootstrap_accounts = format_sandbox_bootstrap_accounts();
+        sandbox_bootstrap_accounts.set_format({
+            let mut format = *FORMAT_DEFAULT;
+            format.indent(2);
+            format
+        });
+
+        info!("{}", sandbox_bootstrap_accounts);
     }
     Ok(())
 }

@@ -1,5 +1,3 @@
-use std::fs::File;
-
 use anyhow::{anyhow, Ok, Result};
 use clap::Subcommand;
 use log::info;
@@ -7,8 +5,6 @@ use nix::{
     sys::signal::{kill, Signal},
     unistd::Pid,
 };
-use std::env;
-use std::process::Command;
 
 mod daemon;
 
@@ -30,10 +26,10 @@ pub enum Command {
     Stop,
 }
 
-pub async fn start() -> Result<()> {
+pub async fn start(no_daemon: bool) -> Result<()> {
     let mut cfg = Config::load()?;
 
-    daemon::main(&mut cfg).await?;
+    daemon::main(no_daemon, &mut cfg).await?;
     Ok(())
 }
 
@@ -54,7 +50,7 @@ pub fn stop() -> Result<()> {
 
 pub async fn exec(command: Command) -> Result<()> {
     match command {
-        SandboxCommand::Start { no_daemon } => start(no_daemon).await,
-        SandboxCommand::Stop => stop(),
+        Command::Start { no_daemon } => start(no_daemon).await,
+        Command::Stop => stop(),
     }
 }
