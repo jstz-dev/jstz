@@ -1,4 +1,4 @@
-use std::{fs::File, io};
+use std::{fs::File, io, path::PathBuf};
 
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use env_logger::{Builder, Env};
@@ -15,10 +15,10 @@ pub async fn run_node(
     rollup_node_rpc_port: u16,
     rollup_endpoint: Option<String>,
     kernel_file_path: String,
-    enable_logging: bool,
+    log_file: Option<PathBuf>,
 ) -> io::Result<()> {
-    if enable_logging {
-        let target = Box::new(File::create("log.txt").expect("Can't create file"));
+    if let Some(log_file) = log_file {
+        let target = Box::new(File::create(log_file).expect("Can't create file"));
         Builder::from_env(Env::default().default_filter_or("info"))
             .target(env_logger::Target::Pipe(target))
             .init();
