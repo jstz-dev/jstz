@@ -4,7 +4,7 @@ use actix_web::{
     HttpResponse, Responder, Scope,
 };
 use anyhow::anyhow;
-use jstz_proto::receipt::Receipt;
+use jstz_proto::{operation::SignedOperation, receipt::Receipt};
 use octez::OctezRollupClient;
 
 use crate::Result;
@@ -14,14 +14,12 @@ use super::Service;
 #[post("")]
 async fn inject(
     rollup_client: Data<OctezRollupClient>,
-    operation: web::Bytes,
+    operation: web::Json<SignedOperation>,
 ) -> Result<impl Responder> {
-    // FIXME: @johnyob
-    // The operation should be deserialized from JSON here and serialized to an internal format
-    // But it seems that there is a serde issue with JSON serialization + deserialization of BLS signatures
-    // So for now we just pass the raw bytes to the rollup node.
+    let encoded_operation = bincode::serialize(&operation)
+        .map_err(|_| anyhow!("Failed to serialize operation"))?;
 
-    rollup_client.batcher_injection([operation]).await?;
+    rollup_client.batcher_injection([encoded_operation]).await?;
 
     Ok(HttpResponse::Ok())
 }

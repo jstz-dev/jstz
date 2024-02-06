@@ -2101,7 +2101,6 @@ version = "0.1.0"
 dependencies = [
  "ansi_term",
  "anyhow",
- "bincode",
  "boa_engine",
  "boa_gc",
  "bs58",
