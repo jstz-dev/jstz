@@ -12,7 +12,7 @@ use regex::Regex;
 use std::{
     env,
     fs::{self, File, OpenOptions},
-    io::{BufRead, BufReader, Seek, Write},
+    io::{self, BufRead, BufReader, Seek, SeekFrom},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     thread::{self, sleep},
@@ -458,9 +458,6 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
         octez_node_dir: TempDir::with_prefix("octez_node")?.into_path(),
         octez_rollup_node_dir: TempDir::with_prefix("octez_rollup_node")?.into_path(),
     };
-
-    // Create logs directory
-    fs::create_dir_all(logs_dir()?)?;
 
     cfg.sandbox = Some(sandbox_cfg);
     debug!(log_file, "Sandbox configured {:?}", cfg.sandbox);
