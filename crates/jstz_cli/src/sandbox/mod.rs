@@ -12,9 +12,9 @@ use crate::{config::Config, error::bail_user_error};
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// Starts a sandbox.
+    /// 🎬 Starts the sandbox.
     Start,
-    /// Stops the sandbox.
+    /// 🛑 Stops the sandbox.
     Stop,
 }
 

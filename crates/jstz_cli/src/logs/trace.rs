@@ -6,19 +6,15 @@ use reqwest_eventsource::Event;
 
 use crate::{error::Result, utils::AddressOrAlias, Config};
 
-const DEFAULT_LOG_LOG_LEVEL: LogLevel = LogLevel::LOG;
+pub const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::LOG;
 
-pub async fn exec(
-    address_or_alias: AddressOrAlias,
-    log_level: Option<LogLevel>,
-) -> Result<()> {
+pub async fn exec(address_or_alias: AddressOrAlias, log_level: LogLevel) -> Result<()> {
     let cfg = Config::load()?;
 
     let address = address_or_alias.resolve(&cfg)?;
     debug!("resolved `address_or_alias` -> {:?}", address);
 
     let mut event_source = cfg.jstz_client()?.logs_stream(&address);
-    let log_level = log_level.unwrap_or(DEFAULT_LOG_LOG_LEVEL);
 
     while let Some(event) = event_source.next().await {
         match event {
