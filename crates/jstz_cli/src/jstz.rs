@@ -149,7 +149,7 @@ impl JstzClient {
         let response = self
             .client
             .post(&format!("{}/operations", self.endpoint))
-            .body(bincode::serialize(operation)?)
+            .json(operation)
             .send()
             .await?;
 
