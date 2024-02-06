@@ -1,10 +1,10 @@
 use bip39::{Language, Mnemonic, MnemonicType};
 use clap::Subcommand;
+use dialoguer::{Confirm, Input};
 use jstz_crypto::keypair_from_passphrase;
 use jstz_proto::context::account::Address;
-use log::{debug, info};
-use std::io;
-use std::io::Write;
+use log::{debug, info, warn};
+use std::collections::hash_map::Entry;
 
 use crate::{
     config::{Account, Config, SmartFunction, User},
@@ -86,28 +86,15 @@ fn delete_account(alias: String) -> Result<()> {
         bail_user_error!("The account '{}' does not exist.", alias);
     }
 
-    // Determine the confirmation message based on the login status. Use the name in the message.
-    let confirmation_message = if cfg.accounts.current_alias() == Some(&alias) {
-        format!(
-            "You are currently logged into the account {}. Are you sure you want to delete it? Please type the account name to confirm: ",
-            alias
-        )
-    } else {
-        format!(
-            "Are you sure you want to delete the account {}? Please type the account name to confirm: ",
-            alias
-        )
-    };
+    if cfg.accounts.current_alias() == Some(&alias) {
+        warn!("You are currently logged into the account: {}.", alias);
+    }
 
-    info!("{}", confirmation_message);
-    io::stdout().flush()?;
+    let confirmation_alias: String = Input::new().with_prompt(format!("Are you sure you want to delete the account {0}? Please type '{0}' to confirm", alias)).interact()?;
 
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
+    debug!("User input: {:?}", confirmation_alias);
 
-    debug!("User input: {:?}", input);
-
-    if !input.trim().eq(&alias) {
+    if confirmation_alias != alias {
         bail_user_error!("Account deletion aborted.");
     }
 
@@ -121,19 +108,47 @@ fn delete_account(alias: String) -> Result<()> {
 pub fn login(alias: String) -> Result<()> {
     let mut cfg = Config::load()?;
 
-    let account = cfg.accounts.get(&alias).ok_or(user_error!(
-        "Account '{}' not found. Please provide a alias or use `jstz account create`.",
-        alias
-    ))?;
-
-    debug!("Account found: {:?}", account);
-
-    if cfg.accounts.current_alias() == Some(&alias) {
-        bail_user_error!(
-            "You are already logged in to '{}'. Please logout first using `jstz logout`.",
-            alias
-        )
+    if cfg.accounts.current_alias().is_some()
+        && !Confirm::new()
+            .with_prompt(format!(
+                "You are already logged in. Do you want to logout and login in to {}?",
+                alias
+            ))
+            .default(true)
+            .interact()?
+    {
+        bail_user_error!("Login aborted");
     }
+
+    let account: &Account = match cfg.accounts.entry(alias.clone()) {
+        Entry::Occupied(entry) => entry.into_mut(),
+        Entry::Vacant(entry) => {
+            if !Confirm::new()
+                .with_prompt("Account not found. Do you want to create it?")
+                .interact()?
+            {
+                bail_user_error!("Login aborted");
+            }
+
+            let passphrase: String = Input::new()
+                .with_prompt("Enter the passphrase for the new account (or leave empty to generate a random one)")
+                .interact()?;
+
+            let passphrase = if passphrase.is_empty() {
+                let generated_passphrase = generate_passphrase();
+                info!("Generated passphrase: {}", generated_passphrase);
+                generated_passphrase
+            } else {
+                passphrase
+            };
+
+            let user = User::from_passphrase(passphrase)?;
+
+            entry.insert(user.into())
+        }
+    };
+
+    debug!("Account: {:?}", account);
 
     match account {
         Account::SmartFunction(_) => {
