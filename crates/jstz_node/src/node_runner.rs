@@ -1,7 +1,7 @@
-use std::io;
+use std::{fs::File, io};
 
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
-use env_logger::Env;
+use env_logger::{Builder, Env};
 use octez::OctezRollupClient;
 use tokio_util::sync::CancellationToken;
 
@@ -18,7 +18,10 @@ pub async fn run_node(
     enable_logging: bool,
 ) -> io::Result<()> {
     if enable_logging {
-        env_logger::init_from_env(Env::default().default_filter_or("info"));
+        let target = Box::new(File::create("log.txt").expect("Can't create file"));
+        Builder::from_env(Env::default().default_filter_or("info"))
+            .target(env_logger::Target::Pipe(target))
+            .init();
     }
 
     let rollup_endpoint = rollup_endpoint.unwrap_or(format!(
