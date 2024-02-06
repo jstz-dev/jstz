@@ -108,6 +108,10 @@ impl AccountConfig {
         self.accounts.insert(alias, account.into());
     }
 
+    pub fn entry(&mut self, alias: String) -> hash_map::Entry<String, Account> {
+        self.accounts.entry(alias)
+    }
+
     pub fn get(&self, alias: &str) -> Option<&Account> {
         self.accounts.get(alias)
     }
