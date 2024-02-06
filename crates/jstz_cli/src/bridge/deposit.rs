@@ -1,8 +1,17 @@
 use log::{debug, info};
 
-use crate::{config::Config, error::Result, utils::AddressOrAlias};
+use crate::{
+    config::{Config, NetworkName},
+    error::Result,
+    utils::AddressOrAlias,
+};
 
-pub fn exec(from: String, to: AddressOrAlias, amount: u64) -> Result<()> {
+pub fn exec(
+    from: String,
+    to: AddressOrAlias,
+    amount: u64,
+    network: Option<NetworkName>,
+) -> Result<()> {
     let cfg = Config::load()?;
 
     let to = to.resolve(&cfg)?;

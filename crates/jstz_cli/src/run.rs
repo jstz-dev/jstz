@@ -10,7 +10,7 @@ use log::{debug, info};
 use url::Url;
 
 use crate::{
-    config::Config,
+    config::{Config, NetworkName},
     error::{anyhow, bail_user_error, user_error, Result},
     term::styles,
     utils::{read_file_or_input_or_piped, AddressOrAlias},
@@ -23,6 +23,7 @@ pub async fn exec(
     http_method: String,
     gas_limit: u32,
     json_data: Option<String>,
+    network: Option<NetworkName>,
 ) -> Result<()> {
     let cfg = Config::load()?;
 

@@ -7,7 +7,7 @@ use log::{debug, info, warn};
 use std::collections::hash_map::Entry;
 
 use crate::{
-    config::{Account, Config, SmartFunction, User},
+    config::{Account, Config, NetworkName, SmartFunction, User},
     error::{bail_user_error, user_error, Result},
     utils::AddressOrAlias,
 };
@@ -231,8 +231,13 @@ fn list_accounts(long: bool) -> Result<()> {
     Ok(())
 }
 
-async fn get_code(account: Option<AddressOrAlias>) -> Result<()> {
+async fn get_code(
+    account: Option<AddressOrAlias>,
+    network: Option<NetworkName>,
+) -> Result<()> {
     let cfg = Config::load()?;
+
+    println!("Getting code.. {:?}.", network);
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
     debug!("resolved `account` -> {:?}", address);
@@ -248,7 +253,10 @@ async fn get_code(account: Option<AddressOrAlias>) -> Result<()> {
     Ok(())
 }
 
-async fn get_balance(account: Option<AddressOrAlias>) -> Result<()> {
+async fn get_balance(
+    account: Option<AddressOrAlias>,
+    network: Option<NetworkName>,
+) -> Result<()> {
     let cfg = Config::load()?;
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
@@ -290,12 +298,21 @@ pub enum Command {
         /// Smart function address or alias.
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
+        /// Network to use, as specified in the config file,
+        /// if not provided the default network will be used.
+        #[arg(short, long, default_value = None)]
+        network: Option<NetworkName>,
     },
     /// 📈 Outputs the balance of an account.
     Balance {
         /// Address or alias of the account (user or smart function).
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
+        /// Network to use as specified in the config file,
+        /// if not provided the default network will be used.
+        /// use `dev` for the local sandbox.
+        #[arg(short, long, default_value = None)]
+        network: Option<NetworkName>,
     },
     /// 🔄 Creates alias for a deployed smart function.
     Alias {
@@ -314,7 +331,7 @@ pub async fn exec(command: Command) -> Result<()> {
         Command::Create { alias, passphrase } => create_account(alias, passphrase),
         Command::Delete { alias } => delete_account(alias),
         Command::List { long } => list_accounts(long),
-        Command::Code { account } => get_code(account).await,
-        Command::Balance { account } => get_balance(account).await,
+        Command::Code { account, network } => get_code(account, network).await,
+        Command::Balance { account, network } => get_balance(account, network).await,
     }
 }

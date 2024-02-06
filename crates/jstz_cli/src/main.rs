@@ -15,7 +15,7 @@ mod sandbox;
 mod term;
 mod utils;
 
-use config::Config;
+use config::{Config, NetworkName};
 use error::Result;
 use log::debug;
 use run::DEFAULT_GAS_LIMIT;
@@ -49,6 +49,11 @@ enum Command {
         /// Name (or alias) of the function.
         #[arg(short, long, default_value = None)]
         name: Option<String>,
+        /// Network to use as specified in the config file,
+        /// if not provided the default network will be used.
+        /// use `dev` for the local sandbox.
+        #[arg(short, long, default_value = None)]
+        network: Option<NetworkName>,
     },
     /// 🏃 Send a request to a deployed smart function.
     Run {
@@ -64,6 +69,11 @@ enum Command {
         /// The JSON data in the request body.
         #[arg(name = "data", short, long, default_value = None)]
         json_data: Option<String>,
+        /// Network to use as specified in the config file,
+        /// if not provided the default network will be used.
+        /// use `dev` for the local sandbox.
+        #[arg(short, long, default_value = None)]
+        network: Option<NetworkName>,
     },
     /// ⚡️ Start a REPL session with jstz's JavaScript runtime.
     Repl {
@@ -97,13 +107,15 @@ async fn exec(command: Command) -> Result<()> {
             code,
             balance,
             name,
-        } => deploy::exec(code, balance, name).await,
+            network,
+        } => deploy::exec(code, balance, name, network).await,
         Command::Run {
             url,
             http_method,
             gas_limit,
             json_data,
-        } => run::exec(url, http_method, gas_limit, json_data).await,
+            network,
+        } => run::exec(url, http_method, gas_limit, json_data, network).await,
         Command::Repl { account } => repl::exec(account),
         Command::Logs(logs) => logs::exec(logs).await,
         Command::Login { alias } => account::login(alias),
