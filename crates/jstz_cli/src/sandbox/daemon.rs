@@ -1,5 +1,4 @@
 use anyhow::Result;
-use daemonize::Daemonize;
 use indicatif::{ProgressBar, ProgressStyle};
 use jstz_node::{
     run_node, DEFAULT_KERNEL_FILE_PATH, DEFAULT_ROLLUP_NODE_RPC_ADDR,
@@ -14,7 +13,7 @@ use regex::Regex;
 use std::{
     env,
     fs::{self, File, OpenOptions},
-    io::{self, BufRead, BufReader, Seek, SeekFrom},
+    io::{BufRead, BufReader, Seek},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     thread::{self, sleep},
@@ -127,6 +126,10 @@ const SANDBOX_BOOTSTRAP_ACCOUNTS: [SandboxBootstrapAccount; 5] = [
 const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
 fn sandbox_daemon_log_path() -> Result<PathBuf> {
     Ok(logs_dir()?.join("sandbox_daemon.log"))
+}
+
+fn jstz_node_log_path() -> Result<PathBuf> {
+    Ok(logs_dir()?.join("jstz_node.log"))
 }
 
 const ACTIVATOR_ACCOUNT_SK: &str =
@@ -494,7 +497,7 @@ pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
             .open(path.clone())?;
 
         let mut child = Command::new(std::env::current_exe()?)
-            .args(&["sandbox", "start", "--no-daemon"])
+            .args(["sandbox", "start", "--no-daemon"])
             .stdout(Stdio::from(stdout_file))
             .spawn()?;
 
@@ -514,7 +517,7 @@ pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
         );
 
         loop {
-            reader.seek(SeekFrom::Current(0))?;
+            reader.stream_position()?;
 
             while reader.read_line(&mut buffer)? > 0 {
                 if let Some(captures) = regex.captures(&buffer) {

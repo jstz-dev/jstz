@@ -1,5 +1,3 @@
-use std::fs::File;
-
 use anyhow::{anyhow, Ok, Result};
 use clap::Subcommand;
 use log::info;
@@ -7,8 +5,6 @@ use nix::{
     sys::signal::{kill, Signal},
     unistd::Pid,
 };
-use std::env;
-use std::process::Command;
 
 mod daemon;
 
