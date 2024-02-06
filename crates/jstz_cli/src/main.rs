@@ -4,6 +4,7 @@ mod account;
 mod bridge;
 mod config;
 mod deploy;
+mod docs;
 mod error;
 mod jstz;
 mod kv;
@@ -23,6 +24,8 @@ use utils::AddressOrAlias;
 #[derive(Debug, Parser)]
 #[command(name = "jstz", author = "TriliTech <contact@trili.tech>", version)]
 enum Command {
+    /// 📚 Open jstz's docs in your browser.
+    Docs,
     /// 🏝️ Start/stop with the jstz sandbox.
     #[command(subcommand)]
     Sandbox(sandbox::Command),
@@ -86,6 +89,7 @@ enum Command {
 
 async fn exec(command: Command) -> Result<()> {
     match command {
+        Command::Docs => docs::exec(),
         Command::Sandbox(sandbox_command) => sandbox::exec(sandbox_command).await,
         Command::Bridge(bridge_command) => bridge::exec(bridge_command),
         Command::Account(account_command) => account::exec(account_command).await,
