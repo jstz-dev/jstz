@@ -5,18 +5,16 @@ use crate::{utils::AddressOrAlias, Result};
 
 mod trace;
 
-use trace::DEFAULT_LOG_LEVEL;
-
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// 📜 Starts a log tracing session for a deployed smart function.
+    /// View logs
     Trace {
-        // The address or the alias of the deployed smart function.
+        // The address or the alias of the deployed smart function
         #[arg(value_name = "ALIAS|ADDRESS")]
         smart_function: AddressOrAlias,
-        // Optional log level to filter log stream.
-        #[arg(name = "level", short, long, ignore_case = true, default_value_t = DEFAULT_LOG_LEVEL)]
-        log_level: LogLevel,
+        // Optional log level to filter log stream
+        #[arg(name = "level", short, long, ignore_case = true)]
+        log_level: Option<LogLevel>,
     },
 }
 

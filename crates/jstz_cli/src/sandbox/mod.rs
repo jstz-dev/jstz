@@ -14,9 +14,9 @@ use crate::{
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// 🎬 Starts the sandbox.
+    /// Starts a sandbox.
     Start,
-    /// 🛑 Stops the sandbox.
+    /// Stops the sandbox.
     Stop,
 }
 

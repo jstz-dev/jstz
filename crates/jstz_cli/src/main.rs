@@ -21,33 +21,30 @@ use run::DEFAULT_GAS_LIMIT;
 use utils::AddressOrAlias;
 
 #[derive(Debug, Parser)]
-#[command(name = "jstz", author = "TriliTech <contact@trili.tech>", version)]
+#[command(author, version)]
 enum Command {
-    /// 🏝️ Interact with the jstz sandbox.
+    /// Commands related to the jstz sandbox.
     #[command(subcommand)]
     Sandbox(sandbox::Command),
-    /// 🌉 Interact with the jstz bridge.
+    /// Commands related to the jstz bridge
     #[command(subcommand)]
     Bridge(bridge::Command),
-    /// 🧑 Interact with jstz's accounts.
+    /// Commands related to the account management
     #[command(subcommand)]
     Account(account::Command),
-    /// 🔑 Interact with jstz's key-value store.
-    #[command(subcommand)]
-    Kv(kv::Command),
-    /// 🚀 Deploys a smart function to jstz.
+    /// Deploys a smart function
     Deploy {
         /// Function code.
-        #[arg(value_name = "CODE|PATH", default_value = None)]
+        #[arg(default_value = None)]
         code: Option<String>,
-        /// Initial balance of the function.
+        /// Initial balance
         #[arg(short, long, default_value_t = 0)]
         balance: u64,
-        /// Name (or alias) of the function.
+        /// Name
         #[arg(short, long, default_value = None)]
         name: Option<String>,
     },
-    /// 🏃 Send a request to a deployed smart function.
+    /// Run a smart function using a specified URL.
     Run {
         /// The URL containing the functions's address or alias.
         #[arg(value_name = "URL")]
@@ -62,26 +59,29 @@ enum Command {
         #[arg(name = "data", short, long, default_value = None)]
         json_data: Option<String>,
     },
-    /// ⚡️ Start a REPL session with jstz's JavaScript runtime.
+    /// Start a REPL session.
     Repl {
         /// Sets the address of the REPL environment.
-        #[arg(value_name = "ADDRESS|ALIAS", short, long)]
+        #[arg(short, long)]
         account: Option<AddressOrAlias>,
     },
-    /// 🪵 Interact with logs from deployed smart functions.
+    /// Commands related to the logs.
     #[command(subcommand)]
     Logs(logs::Command),
-    /// 🔓 Login to a jstz account.
+    /// Logs in to an account
     Login {
         /// User alias
         #[arg(value_name = "ALIAS")]
         alias: String,
     },
-    /// 🚪 Logout from the current jstz account.
+    /// Logs out of the current account
     Logout {},
-    /// 🤔 Display your account info.
+    /// Shows the current account
     #[command(name = "whoami")]
     WhoAmI {},
+    /// Commands realted to the KV store
+    #[command(subcommand)]
+    Kv(kv::Command),
 }
 
 async fn exec(command: Command) -> Result<()> {

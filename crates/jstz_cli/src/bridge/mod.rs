@@ -6,15 +6,15 @@ use crate::{error::Result, utils::AddressOrAlias};
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// 💰 Deposits from an existing Tezos L1 address to a jstz address.
+    /// Deposits from an existing L1 sandbox address to a L2 sandbox address.
     Deposit {
-        /// Tezos L1 address or alias to withdraw from (must be stored in octez-client's wallet).
+        /// The L1 sandbox address or alias to withdraw from.
         #[arg(short, long)]
         from: String,
-        /// jstz address or alias to deposit to.
+        /// The L2 sandbox address or alias to deposit to.
         #[arg(short, long)]
         to: AddressOrAlias,
-        /// The amount in CTEZ to transfer.
+        /// The amount in ctez to transfer.
         #[arg(short, long)]
         amount: u64,
     },
