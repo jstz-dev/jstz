@@ -29,7 +29,8 @@ impl Config {
     fn octez_client(&self) -> OctezClient {
         OctezClient {
             octez_client_bin: self.octez_client_bin.clone(),
-            octez_client_dir: self.octez_client_dir.clone(),
+            // TODO:
+            octez_client_dir: Some(self.octez_client_dir.clone()),
             endpoint: self.octez_node_endpoint.clone(),
             disable_disclaimer: true,
         }

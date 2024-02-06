@@ -5,7 +5,7 @@ use jstz_proto::{
 use log::{debug, info};
 
 use crate::{
-    config::{Config, SmartFunction},
+    config::{Config, NetworkName, SmartFunction},
     error::{bail, bail_user_error, user_error, Result},
     utils::read_file_or_input_or_piped,
 };
@@ -14,6 +14,7 @@ pub async fn exec(
     code: Option<String>,
     balance: u64,
     name: Option<String>,
+    network: Option<NetworkName>,
 ) -> Result<()> {
     let mut cfg = Config::load()?;
 

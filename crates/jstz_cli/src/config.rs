@@ -2,6 +2,7 @@ use std::{
     collections::{hash_map, HashMap},
     env, fs,
     path::PathBuf,
+    str::FromStr,
 };
 
 use derive_more::{From, TryInto};
@@ -184,6 +185,8 @@ pub struct Config {
     /// List of accounts
     #[serde(flatten)]
     pub accounts: AccountConfig,
+    /// Available networks
+    pub networks: NetworkConfig,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -196,6 +199,37 @@ pub struct SandboxConfig {
     pub octez_rollup_node_dir: PathBuf,
     /// Pid of the pid
     pub pid: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+pub enum NetworkName {
+    Custom(String),
+    // Dev network uses sandbox config
+    Dev,
+}
+
+impl FromStr for NetworkName {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        match s.to_lowercase().as_str() {
+            "dev" => Ok(NetworkName::Dev),
+            other => Ok(NetworkName::Custom(other.to_string())),
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct NetworkConfig {
+    // if None, the users have to specify the network in the command
+    default_network: Option<NetworkName>,
+    networks: HashMap<NetworkName, Network>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Network {
+    pub octez_node_rpc_endpoint: String,
+    pub jstz_node_endpoint: String,
 }
 
 pub const SANDBOX_OCTEZ_NODE_PORT: u16 = 18731;

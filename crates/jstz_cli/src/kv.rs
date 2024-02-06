@@ -2,12 +2,16 @@ use clap::Subcommand;
 use log::{debug, info};
 
 use crate::{
-    config::Config,
     error::{bail_user_error, Result},
+    config::{Config, NetworkName},
     utils::AddressOrAlias,
 };
 
-async fn get(account: Option<AddressOrAlias>, key: String) -> Result<()> {
+async fn get(
+    account: Option<AddressOrAlias>,
+    key: String,
+    network: Option<NetworkName>,
+) -> Result<()> {
     let cfg = Config::load()?;
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
@@ -24,7 +28,11 @@ async fn get(account: Option<AddressOrAlias>, key: String) -> Result<()> {
     Ok(())
 }
 
-async fn list(account: Option<AddressOrAlias>, key: Option<String>) -> Result<()> {
+async fn list(
+    account: Option<AddressOrAlias>,
+    key: Option<String>,
+    network: Option<NetworkName>,
+) -> Result<()> {
     let cfg = Config::load()?;
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
@@ -55,6 +63,11 @@ pub enum Command {
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
+        /// Network to use as specified in the config file,
+        /// if not provided the default network will be used.
+        /// use `dev` for the local sandbox.
+        #[arg(short, long, default_value = None)]
+        network: Option<NetworkName>,
     },
     /// List subkeys for a key
     List {
@@ -65,12 +78,25 @@ pub enum Command {
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
+        /// Network to use as specified in the config file,
+        /// if not provided the default network will be used.
+        /// use `dev` for the local sandbox.
+        #[arg(short, long, default_value = None)]
+        network: Option<NetworkName>,
     },
 }
 
 pub async fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Get { key, account } => get(account, key).await,
-        Command::List { key, account } => list(account, key).await,
+        Command::Get {
+            key,
+            account,
+            network,
+        } => get(account, key, network).await,
+        Command::List {
+            key,
+            account,
+            network,
+        } => list(account, key, network).await,
     }
 }
