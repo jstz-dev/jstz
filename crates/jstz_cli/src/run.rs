@@ -18,8 +18,9 @@ pub async fn exec(
     http_method: String,
     gas_limit: u32,
     json_data: Option<String>,
+    network: Option<String>,
 ) -> Result<()> {
-    let jstz_client = cfg.jstz_client()?;
+    let jstz_client = cfg.jstz_client(&network)?;
 
     // Resolve URL
     let mut url_object =
@@ -94,7 +95,7 @@ pub async fn exec(
     );
 
     // Send message
-    cfg.jstz_client()?.post_operation(&signed_op).await?;
+    jstz_client.post_operation(&signed_op).await?;
 
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 

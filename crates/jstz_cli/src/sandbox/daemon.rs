@@ -7,6 +7,8 @@ use std::{
     time::Duration,
 };
 
+use crate::config::{Config, SandboxConfig};
+use crate::consts::SANDBOX_OCTEZ_SMART_ROLLUP_PORT;
 use anyhow::Result;
 use jstz_rollup::{
     deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
@@ -14,8 +16,6 @@ use jstz_rollup::{
 };
 use octez::OctezThread;
 use tempfile::TempDir;
-
-use crate::config::{Config, SandboxConfig, SANDBOX_OCTEZ_SMART_ROLLUP_PORT};
 
 include!(concat!(env!("OUT_DIR"), "/sandbox_paths.rs"));
 
@@ -85,7 +85,7 @@ fn start_node(cfg: &Config) -> Result<Child> {
 
 fn is_node_running(cfg: &Config) -> Result<bool> {
     Ok(cfg
-        .octez_client()?
+        .octez_client_sandbox()?
         .rpc(&["get", "/chains/main/blocks/head/hash"])
         .is_ok())
 }
@@ -111,18 +111,18 @@ fn init_client(cfg: &Config) -> Result<()> {
 
     // 2. Wait for the node to be bootstrapped
     print!("Waiting for node to bootstrap...");
-    cfg.octez_client()?.wait_for_node_to_bootstrap()?;
+    cfg.octez_client_sandbox()?.wait_for_node_to_bootstrap()?;
     println!(" done");
 
     // 3. Import activator and bootstrap accounts
     print!("Importing activator account...");
-    cfg.octez_client()?
+    cfg.octez_client_sandbox()?
         .import_secret_key("activator", ACTIVATOR_ACCOUNT_SK)?;
     println!(" done");
 
     // 4. Activate alpha
     print!("Activating alpha...");
-    cfg.octez_client()?.activate_protocol(
+    cfg.octez_client_sandbox()?.activate_protocol(
         "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
         "1",
         "activator",
@@ -134,7 +134,7 @@ fn init_client(cfg: &Config) -> Result<()> {
     for (i, sk) in BOOTSTRAP_ACCOUNT_SKS.iter().enumerate() {
         let name = format!("bootstrap{}", i + 1);
         println!("Importing account {}:{}", name, sk);
-        cfg.octez_client()?.import_secret_key(&name, sk)?
+        cfg.octez_client_sandbox()?.import_secret_key(&name, sk)?
     }
 
     Ok(())
@@ -144,7 +144,7 @@ fn client_bake(cfg: &Config, log_file: &File) -> Result<()> {
     // SAFETY: When a baking fails, then we want to silently ignore the error and
     // try again later since the `client_bake` function is looped in the `OctezThread`.
     let _ = cfg
-        .octez_client()?
+        .octez_client_sandbox()?
         .bake(log_file, &["for", "--minimal-timestamp"]);
     Ok(())
 }
@@ -180,13 +180,16 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     }];
 
     let ctez_address = deploy_ctez_contract(
-        &cfg.octez_client()?,
+        &cfg.octez_client_sandbox()?,
         OPERATOR_ADDRESS,
         ctez_bootstrap_accounts.iter(),
     )?;
 
-    let bridge =
-        BridgeContract::deploy(&cfg.octez_client()?, OPERATOR_ADDRESS, &ctez_address)?;
+    let bridge = BridgeContract::deploy(
+        &cfg.octez_client_sandbox()?,
+        OPERATOR_ADDRESS,
+        &ctez_address,
+    )?;
 
     println!(" done");
     println!("\t`jstz_bridge` deployed at {}", bridge);
@@ -200,14 +203,15 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     println!("done");
 
     // 7. Originate the rollup
-    let rollup = JstzRollup::deploy(&cfg.octez_client()?, OPERATOR_ADDRESS, &installer)?;
+    let rollup =
+        JstzRollup::deploy(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &installer)?;
 
     println!("`jstz_rollup` originated at {}", rollup);
 
     // 8. As a thread, start rollup node
     print!("Starting rollup node...");
     let rollup_node = OctezThread::from_child(rollup.run(
-        &cfg.octez_rollup_node()?,
+        &cfg.octez_rollup_node_sandbox()?,
         OPERATOR_ADDRESS,
         &preimages_dir,
         &logs_dir()?,
@@ -217,7 +221,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     println!(" done");
 
     // 9. Set the rollup address in the bridge
-    bridge.set_rollup(&cfg.octez_client()?, OPERATOR_ADDRESS, &rollup)?;
+    bridge.set_rollup(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &rollup)?;
     println!("\t`jstz_bridge` `rollup` address set to {}", rollup);
 
     println!("Bridge deployed");

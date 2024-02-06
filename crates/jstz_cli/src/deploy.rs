@@ -15,6 +15,7 @@ pub async fn exec(
     contract_code: Option<String>,
     balance: u64,
     name: Option<String>,
+    network: Option<String>,
     cfg: &mut Config,
 ) -> Result<()> {
     // Check if account already exists
@@ -24,7 +25,7 @@ pub async fn exec(
         }
     }
 
-    let jstz_client = cfg.jstz_client()?;
+    let jstz_client = cfg.jstz_client(&network)?;
 
     let account = cfg.accounts.account_or_current_mut(self_address)?;
 
@@ -65,7 +66,7 @@ pub async fn exec(
     );
 
     // Send message to jstz
-    cfg.jstz_client()?.post_operation(&signed_op).await?;
+    jstz_client.post_operation(&signed_op).await?;
 
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 

@@ -16,6 +16,9 @@ pub enum Command {
         // Optional log level to filter log stream
         #[arg(name = "level", short, long, ignore_case = true)]
         log_level: Option<LogLevel>,
+        /// Network to use, defaults to `default_network`` specified in config file.
+        #[arg(short, long, default_value = None)]
+        network: Option<String>,
     },
 }
 
@@ -24,6 +27,7 @@ pub async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
         Command::Trace {
             smart_function,
             log_level,
-        } => trace::exec(smart_function, log_level, cfg).await,
+            network,
+        } => trace::exec(smart_function, log_level, network, cfg).await,
     }
 }

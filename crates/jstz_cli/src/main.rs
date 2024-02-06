@@ -4,6 +4,7 @@ use clap::Parser;
 mod account;
 mod bridge;
 mod config;
+mod consts;
 mod deploy;
 mod jstz;
 mod kv;
@@ -39,8 +40,11 @@ enum Command {
         #[arg(value_name = "function_code", default_value = None)]
         function_code: Option<String>,
         /// Name
-        #[arg(short, long, default_value = None)]
+        #[arg(long, default_value = None)]
         name: Option<String>,
+        /// Network to use, defaults to `default_network`` specified in config file.
+        #[arg(short, long, default_value = None)]
+        network: Option<String>,
     },
     /// Run a smart function using a specified URL.
     Run {
@@ -59,6 +63,9 @@ enum Command {
         /// The JSON data in the request body.
         #[arg(name = "data", short, long, default_value = None)]
         json_data: Option<String>,
+        /// Network to use, defaults to `default_network`` specified in config file.
+        #[arg(short, long, default_value = None)]
+        network: Option<String>,
     },
     /// Start a REPL session.
     Repl {
@@ -95,14 +102,27 @@ async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
             function_code,
             balance,
             name,
-        } => deploy::exec(self_address, function_code, balance, name, cfg).await,
+            network,
+        } => deploy::exec(self_address, function_code, balance, name, network, cfg).await,
         Command::Run {
             url,
             referrer,
             http_method,
             gas_limit,
             json_data,
-        } => run::exec(cfg, referrer, url, http_method, gas_limit, json_data).await,
+            network,
+        } => {
+            run::exec(
+                cfg,
+                referrer,
+                url,
+                http_method,
+                gas_limit,
+                json_data,
+                network,
+            )
+            .await
+        }
         Command::Repl { self_address } => repl::exec(self_address, cfg),
         Command::Logs(logs) => logs::exec(logs, cfg).await,
         Command::Login { alias } => account::login(alias, cfg),

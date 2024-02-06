@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fs,
-    io::{Error, ErrorKind},
+    io::{self, Error, ErrorKind},
     path::PathBuf,
 };
 
@@ -12,6 +12,10 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     account::account::{Account, AliasAccount},
+    consts::{
+        SANDBOX_JSTZ_NODE_ENDPOINT, SANDBOX_OCTEZ_NODE_ENDPOINT,
+        SANDBOX_OCTEZ_NODE_RPC_ENDPOINT, SANDBOX_OCTEZ_NODE_RPC_PORT,
+    },
     jstz::JstzClient,
 };
 
@@ -116,6 +120,39 @@ impl AccountConfig {
     }
 }
 
+const DEV_NETWORK: &str = "dev";
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct NetworkConfig {
+    pub default_network: String,
+    pub networks: HashMap<String, Network>,
+}
+
+impl Default for NetworkConfig {
+    fn default() -> Self {
+        let mut networks = HashMap::new();
+        networks.insert(DEV_NETWORK.to_string(), Network::default());
+        Self {
+            default_network: DEV_NETWORK.to_string(),
+            networks,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Network {
+    octez_node_rpc_endpoint: String,
+    pub jstz_node_endpoint: String,
+}
+
+impl Default for Network {
+    fn default() -> Self {
+        Self {
+            octez_node_rpc_endpoint: SANDBOX_OCTEZ_NODE_RPC_ENDPOINT.to_string(),
+            jstz_node_endpoint: SANDBOX_JSTZ_NODE_ENDPOINT.to_string(),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Config {
     /// Path to octez installation
@@ -124,9 +161,9 @@ pub struct Config {
     pub sandbox: Option<SandboxConfig>,
     /// List of accounts
     pub accounts: AccountConfig,
+    /// Avaiable Networks
+    pub networks: NetworkConfig,
 }
-
-pub const SANDBOX_OCTEZ_SMART_ROLLUP_PORT: u16 = 8932;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SandboxConfig {
@@ -140,8 +177,6 @@ pub struct SandboxConfig {
     pub octez_node_port: u16,
     /// The port of the octez RPC node
     pub octez_node_rpc_port: u16,
-    /// The port of the jstz node
-    pub jstz_node_port: u16,
     /// Pid of the pid
     pub pid: u32,
     private: (),
@@ -161,7 +196,6 @@ impl SandboxConfig {
             pid,
             octez_node_port: 18731,
             octez_node_rpc_port: 18730,
-            jstz_node_port: 8933,
             private: (),
         }
     }
@@ -182,14 +216,16 @@ impl Config {
             serde_json::from_str(&json)
                 .map_err(|e| Error::new(ErrorKind::InvalidData, e))?
         } else {
-            Config::default()
+            let default_cfg = Config::default();
+            default_cfg.save()?;
+            default_cfg
         };
 
         Ok(config)
     }
 
     /// Save the configuration to the file
-    pub fn save(&self) -> std::io::Result<()> {
+    pub fn save(&self) -> io::Result<()> {
         let path = Self::path();
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)?;
@@ -210,24 +246,37 @@ impl Config {
         &mut self.accounts
     }
 
-    pub fn octez_client(&self) -> Result<OctezClient> {
+    pub fn octez_client(&self, network: &Option<String>) -> Result<OctezClient> {
+        let sandbox = self.sandbox()?;
+        let network = self.network(network)?;
+
+        Ok(OctezClient {
+            octez_client_bin: Some(self.octez_path.join("octez-client")),
+            octez_client_dir: sandbox.octez_client_dir.clone(),
+            endpoint: network.octez_node_rpc_endpoint,
+            disable_disclaimer: true,
+        })
+    }
+
+    pub fn octez_client_sandbox(&self) -> Result<OctezClient> {
         let sandbox = self.sandbox()?;
 
         Ok(OctezClient {
             octez_client_bin: Some(self.octez_path.join("octez-client")),
             octez_client_dir: sandbox.octez_client_dir.clone(),
-            endpoint: format!("http://127.0.0.1:{}", sandbox.octez_node_rpc_port),
+            endpoint: SANDBOX_OCTEZ_NODE_ENDPOINT.to_string(),
             disable_disclaimer: true,
         })
     }
 
-    pub fn jstz_client(&self) -> Result<JstzClient> {
-        let sandbox = self.sandbox()?;
+    pub fn jstz_client(&self, network: &Option<String>) -> Result<JstzClient> {
+        let network = self.network(&network)?;
 
-        Ok(JstzClient::new(format!(
-            "http://127.0.0.1:{}",
-            sandbox.jstz_node_port
-        )))
+        Ok(JstzClient::new(network.jstz_node_endpoint))
+    }
+
+    pub fn jstz_client_sandbox(&self) -> Result<JstzClient> {
+        Ok(JstzClient::new(SANDBOX_JSTZ_NODE_ENDPOINT.to_string()))
     }
 
     pub fn octez_node(&self) -> Result<OctezNode> {
@@ -239,14 +288,40 @@ impl Config {
         })
     }
 
-    pub fn octez_rollup_node(&self) -> Result<OctezRollupNode> {
+    pub fn octez_rollup_node(&self, network: &Option<String>) -> Result<OctezRollupNode> {
+        let sandbox = self.sandbox()?;
+        let network = self.network(&network)?;
+
+        Ok(OctezRollupNode {
+            octez_rollup_node_bin: Some(self.octez_path.join("octez-smart-rollup-node")),
+            octez_rollup_node_dir: sandbox.octez_rollup_node_dir.clone(),
+            octez_client_dir: sandbox.octez_client_dir.clone(),
+            endpoint: network.octez_node_rpc_endpoint,
+        })
+    }
+
+    pub fn octez_rollup_node_sandbox(&self) -> Result<OctezRollupNode> {
         let sandbox = self.sandbox()?;
 
         Ok(OctezRollupNode {
             octez_rollup_node_bin: Some(self.octez_path.join("octez-smart-rollup-node")),
             octez_rollup_node_dir: sandbox.octez_rollup_node_dir.clone(),
             octez_client_dir: sandbox.octez_client_dir.clone(),
-            endpoint: format!("http://127.0.0.1:{}", sandbox.octez_node_rpc_port),
+            endpoint: SANDBOX_OCTEZ_NODE_RPC_ENDPOINT.to_string(),
         })
+    }
+
+    /// Returns the network, falls back to the default network if not provided.
+    pub fn network(&self, network: &Option<String>) -> Result<Network> {
+        let network = network.as_ref().unwrap_or(&self.networks.default_network);
+
+        if let Some(network) = self.networks.networks.get(network) {
+            return Ok(network.clone());
+        }
+
+        Err(anyhow!(
+            "Invalid network: {}, please check the config file",
+            network
+        ))
     }
 }

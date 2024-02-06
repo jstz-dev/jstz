@@ -161,8 +161,12 @@ fn list_accounts(long: bool, cfg: &mut Config) -> Result<()> {
     Ok(())
 }
 
-async fn get_code(account: Option<String>, cfg: &mut Config) -> Result<()> {
-    let jstz_client = cfg.jstz_client()?;
+async fn get_code(
+    account: Option<String>,
+    network: Option<String>,
+    cfg: &mut Config,
+) -> Result<()> {
+    let jstz_client = cfg.jstz_client(&network)?;
     let address = cfg.accounts.get_address_from(account)?;
 
     let code = jstz_client.get_code(address.as_str()).await?;
@@ -175,8 +179,12 @@ async fn get_code(account: Option<String>, cfg: &mut Config) -> Result<()> {
     Ok(())
 }
 
-async fn get_balance(account: Option<String>, cfg: &mut Config) -> Result<()> {
-    let jstz_client = cfg.jstz_client()?;
+async fn get_balance(
+    account: Option<String>,
+    network: Option<String>,
+    cfg: &mut Config,
+) -> Result<()> {
+    let jstz_client = cfg.jstz_client(&network)?;
     let address = cfg.accounts.get_address_from(account)?;
 
     let balance = jstz_client.get_balance(address.as_str()).await?;
@@ -224,12 +232,18 @@ pub enum Command {
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<String>,
+        /// Network to use, defaults to `default_network`` specified in config file.
+        #[arg(short, long, default_value = None)]
+        network: Option<String>,
     },
     /// Get account balance
     Balance {
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<String>,
+        /// Network to use, defaults to `default_network`` specified in config file.
+        #[arg(short, long, default_value = None)]
+        network: Option<String>,
     },
 }
 
@@ -239,7 +253,7 @@ pub async fn exec(command: Command, cfg: &mut Config) -> Result<()> {
         Command::Create { alias, passphrase } => create_account(passphrase, alias, cfg),
         Command::Delete { alias } => delete_account(alias, cfg),
         Command::List { long } => list_accounts(long, cfg),
-        Command::Code { account } => get_code(account, cfg).await,
-        Command::Balance { account } => get_balance(account, cfg).await,
+        Command::Code { account, network } => get_code(account, network, cfg).await,
+        Command::Balance { account, network } => get_balance(account, network, cfg).await,
     }
 }

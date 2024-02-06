@@ -10,14 +10,14 @@ const DEFAULT_LOG_LOG_LEVEL: LogLevel = LogLevel::LOG;
 pub async fn exec(
     address_or_alias: String,
     log_level: Option<LogLevel>,
+    network: Option<String>,
     cfg: &Config,
 ) -> Result<()> {
     let address = cfg.accounts.get_address(&address_or_alias)?;
-    let url = format!(
-        "http://127.0.0.1:{}/logs/{}/stream",
-        cfg.sandbox()?.jstz_node_port,
-        &address.to_base58()
-    );
+
+    let endpoint = &cfg.network(&network)?.jstz_node_endpoint;
+
+    let url = format!("{}/logs/{}/stream", endpoint, &address.to_base58());
 
     let mut event_source = EventSource::get(&url);
     let log_level = log_level.unwrap_or(DEFAULT_LOG_LOG_LEVEL);
