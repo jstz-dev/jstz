@@ -16,7 +16,7 @@ fn format(fmt: &mut fmt::Formatter, record: &log::Record<'_>) -> io::Result<()> 
 
 pub fn init_logger() {
     let env = Env::default()
-        .filter_or("JSTZ_LOG", "info")
+        .filter_or("JSTZ_LOG", "jstz=info")
         .write_style_or("JSTZ_LOG_STYLE", "auto");
 
     Builder::from_env(env).format(format).init();

@@ -16,21 +16,21 @@ impl BootstrapAccount {
     }
 }
 
-pub fn deploy_ctez_contract<'a, I>(
+pub fn deploy_ctez_contract(
     client: &OctezClient,
     operator_address: &str,
-    bootstrap_accounts: I,
-) -> Result<String>
-where
-    I: Iterator<Item = &'a BootstrapAccount>,
-{
+    mut bootstrap_accounts: Vec<BootstrapAccount>,
+) -> Result<String> {
+    bootstrap_accounts.sort();
+
     let init_storage = format!(
         "(Pair \"{}\" {{ {} }} )",
         operator_address,
         bootstrap_accounts
+            .iter()
             .map(BootstrapAccount::as_michelson_elt)
             .collect::<Vec<_>>()
-            .join(" ")
+            .join(";")
     );
 
     client.originate_contract("jstz_ctez", operator_address, CTEZ_CONTRACT, &init_storage)

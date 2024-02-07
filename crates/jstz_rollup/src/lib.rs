@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 pub use bridge::*;
 pub use rollup::JstzRollup;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct BootstrapAccount {
     pub address: String,
     pub amount: u64,
