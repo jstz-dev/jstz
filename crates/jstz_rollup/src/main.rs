@@ -317,7 +317,7 @@ fn deploy_bridge(
     };
 
     let ctez_address =
-        deploy_ctez_contract(&client, &operator.to_string(), bootstrap_accounts.iter())?;
+        deploy_ctez_contract(&client, &operator.to_string(), bootstrap_accounts)?;
 
     let bridge_address = BridgeContract::deploy(
         &client,
