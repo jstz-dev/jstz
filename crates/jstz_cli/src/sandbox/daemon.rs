@@ -20,8 +20,9 @@ use tokio::task;
 
 use crate::{
     config::{
-        Config, SandboxConfig, SANDBOX_JSTZ_NODE_PORT, SANDBOX_OCTEZ_NODE_PORT,
-        SANDBOX_OCTEZ_NODE_RPC_PORT, SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
+        jstz_home_dir, Config, SandboxConfig, SANDBOX_JSTZ_NODE_PORT,
+        SANDBOX_OCTEZ_NODE_PORT, SANDBOX_OCTEZ_NODE_RPC_PORT,
+        SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     },
     error::{bail_user_error, Result},
     term::styles,
@@ -127,6 +128,35 @@ fn ctez_bootstrap_accounts() -> Vec<BootstrapAccount> {
         .collect::<Vec<BootstrapAccount>>()
 }
 
+fn cached_identity_path() -> PathBuf {
+    jstz_home_dir().join("octez-node-identity.json")
+}
+
+fn octez_node_identity_path(cfg: &Config) -> Result<PathBuf> {
+    Ok(cfg.octez_node()?.octez_node_dir.join("identity.json"))
+}
+
+fn generate_identity(cfg: &Config) -> Result<()> {
+    let cached_identity_path = cached_identity_path();
+    let octez_node_identity_path = octez_node_identity_path(cfg)?;
+
+    if cached_identity_path.exists() {
+        debug!("Cached identity hit");
+        fs::copy(cached_identity_path, octez_node_identity_path)?;
+        return Ok(());
+    }
+
+    debug!("Cached identity miss");
+    debug!("Generating identity...");
+    cfg.octez_node()?.generate_identity()?;
+    debug!("Identity generated");
+
+    fs::copy(octez_node_identity_path, cached_identity_path)?;
+    debug!("Cached identity");
+
+    Ok(())
+}
+
 fn init_node(cfg: &Config) -> Result<()> {
     // 1. Initialize the octez-node configuration
     debug!("Initializing octez-node");
@@ -140,9 +170,8 @@ fn init_node(cfg: &Config) -> Result<()> {
     debug!("\tInitialized octez-node configuration");
 
     // 2. Generate an identity
-    debug!("Generating identity...");
-    cfg.octez_node()?.generate_identity()?;
-    debug!("done");
+    generate_identity(cfg)?;
+
     Ok(())
 }
 
