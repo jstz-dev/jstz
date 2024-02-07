@@ -3,6 +3,7 @@ use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Blake2b, public_key::PublicKey, signature::Signature};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
@@ -114,7 +115,7 @@ pub enum Content {
     RunContract(RunContract),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, ToSchema, PartialEq, Eq)]
 pub struct SignedOperation {
     pub public_key: PublicKey,
     signature: Signature,

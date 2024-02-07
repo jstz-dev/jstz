@@ -1,18 +1,7 @@
 use std::io;
 
-use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use clap::Parser;
 use env_logger::Env;
-use octez::OctezRollupClient;
-use services::{LogsService, Service};
-use tokio_util::sync::CancellationToken;
-
-use crate::services::{AccountsService, OperationsService};
-pub use error::{Error, Result};
-
-mod error;
-mod services;
-mod tailed_file;
 
 /// Endpoint defaults for the `octez-smart-rollup-node`
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
@@ -44,39 +33,21 @@ struct Args {
 }
 
 #[actix_web::main]
-async fn main() -> io::Result<()> {
-    let args = Args::parse();
-
+pub async fn main() -> io::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
+
+    let args = Args::parse();
 
     let rollup_endpoint = args.rollup_endpoint.unwrap_or(format!(
         "http://{}:{}",
         args.rollup_node_rpc_addr, args.rollup_node_rpc_port
     ));
 
-    let rollup_client = Data::new(OctezRollupClient::new(rollup_endpoint));
-
-    let cancellation_token = CancellationToken::new();
-
-    let (broadcaster, tail_file_handle) =
-        LogsService::init(args.kernel_file_path, &cancellation_token);
-
-    HttpServer::new(move || {
-        App::new()
-            .app_data(rollup_client.clone())
-            .configure(OperationsService::configure)
-            .configure(AccountsService::configure)
-            .app_data(Data::from(broadcaster.clone()))
-            .configure(LogsService::configure)
-            .wrap(Logger::default())
-    })
-    .bind((args.addr, args.port))?
-    .run()
-    .await?;
-
-    cancellation_token.cancel();
-
-    tail_file_handle.await.unwrap()?;
-
-    Ok(())
+    jstz_node::run(
+        &args.addr,
+        args.port,
+        &rollup_endpoint,
+        &args.kernel_file_path,
+    )
+    .await
 }

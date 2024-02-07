@@ -1,0 +1,57 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "jstz_node",
+    "description": "",
+    "contact": {
+      "name": "TriliTech",
+      "email": "contact@trili.tech"
+    },
+    "license": {
+      "name": ""
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "": {
+      "post": {
+        "tags": ["services::operations"],
+        "operationId": "inject",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedOperation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The operation has been injected"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SignedOperation": {
+        "type": "object",
+        "required": ["public_key", "signature", "inner"],
+        "properties": {
+          "inner": {
+            "$ref": "#/components/schemas/Operation"
+          },
+          "public_key": {
+            "$ref": "#/components/schemas/PublicKey"
+          },
+          "signature": {
+            "$ref": "#/components/schemas/Signature"
+          }
+        }
+      }
+    }
+  }
+}

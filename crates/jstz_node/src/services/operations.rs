@@ -11,6 +11,12 @@ use crate::Result;
 
 use super::Service;
 
+#[utoipa::path(
+    request_body = SignedOperation,
+    responses(
+        (status = 200, description = "The operation has been injected"),
+    )
+)]
 #[post("")]
 async fn inject(
     rollup_client: Data<OctezRollupClient>,

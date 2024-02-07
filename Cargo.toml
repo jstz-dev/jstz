@@ -26,9 +26,6 @@ jstz_api = { path = "crates/jstz_api" }
 jstz_kernel = { path = "crates/jstz_kernel" }
 jstz_proto = { path = "crates/jstz_proto" }
 jstz_crypto = { path = "crates/jstz_crypto" }
-jstz_node = { path = "crates/jstz_node" }
-jstz_cli = { path = "crates/jstz_cli" }
-jstz_wpt = { path = "crates/jstz_wpt" }
 octez = { path = "crates/octez" }
 jstz_rollup = { path = "crates/jstz_rollup" }
 
@@ -41,30 +38,7 @@ features = ["std", "crypto", "panic-hook", "data-encoding", "storage", "proto-al
 version = "0.2.2"
 features = ["proto-alpha"]
 
-[workspace.dependencies.tezos-smart-rollup-core]
-version = "0.2.2"
-
 [workspace.dependencies.tezos-smart-rollup-mock]
-version = "0.2.2"
-
-[workspace.dependencies.tezos-smart-rollup-encoding]
-version = "0.2.2"
-default-features = false
-features = ["alloc", "tezos-encoding", "crypto"]
-
-[workspace.dependencies.tezos-smart-rollup-entrypoint]
-version = "0.2.2"
-
-[workspace.dependencies.tezos-smart-rollup-debug]
-version = "0.2.2"
-
-[workspace.dependencies.tezos-smart-rollup-panic-hook]
-version = "0.2.2"
-
-[workspace.dependencies.tezos-smart-rollup-storage]
-version = "0.2.2"
-
-[workspace.dependencies.tezos-smart-rollup-installer-config]
 version = "0.2.2"
 
 [workspace.dependencies.tezos-smart-rollup-installer]

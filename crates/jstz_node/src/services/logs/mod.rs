@@ -1,27 +1,27 @@
-use crate::tailed_file::TailedFile;
+use std::{
+    io::{Error, ErrorKind::InvalidInput, Result},
+    sync::Arc,
+};
+
 use actix_web::{
     get,
-    web::{Data, Path, ServiceConfig},
+    web::{self, ServiceConfig},
     Responder, Scope,
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::js_logger::{LogRecord, LOG_PREFIX};
-
-use std::io::{Error, ErrorKind::InvalidInput, Result};
-use std::sync::Arc;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
-use self::broadcaster::Broadcaster;
-
-use super::Service;
-
 pub mod broadcaster;
+
+use crate::{services::Service, tailed_file::TailedFile};
+use broadcaster::Broadcaster;
 
 #[get("{address}/stream")]
 async fn stream_logs(
-    broadcaster: Data<Broadcaster>,
-    path: Path<String>,
+    broadcaster: web::Data<Broadcaster>,
+    path: web::Path<String>,
 ) -> Result<impl Responder> {
     let address = path.into_inner();
 
@@ -44,14 +44,17 @@ impl Service for LogsService {
 impl LogsService {
     // Initalise the LogService by spawning a future that reads and broadcasts the file
     pub fn init(
-        path: String,
+        path: &str,
         cancellation_token: &CancellationToken,
     ) -> (Arc<Broadcaster>, JoinHandle<Result<()>>) {
         let broadcaster = Broadcaster::create();
 
-        let tail_file_handle: JoinHandle<Result<()>> = actix_web::rt::spawn(
-            Self::tail_file(path, Arc::clone(&broadcaster), cancellation_token.clone()),
-        );
+        let tail_file_handle: JoinHandle<Result<()>> =
+            actix_web::rt::spawn(Self::tail_file(
+                path.to_string(),
+                Arc::clone(&broadcaster),
+                cancellation_token.clone(),
+            ));
 
         (broadcaster, tail_file_handle)
     }

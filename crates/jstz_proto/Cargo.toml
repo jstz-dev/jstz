@@ -19,6 +19,7 @@ jstz_api.workspace = true
 http = "1.0.0"
 http-serde = "2.0.0"
 either = "1.9.0"
+utoipa = "4.2.0"
 
 [dev-dependencies]
 tezos-smart-rollup-mock.workspace = true
