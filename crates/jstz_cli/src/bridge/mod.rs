@@ -18,7 +18,7 @@ pub enum Command {
         #[arg(short, long)]
         amount: u64,
         /// Specifies the network from the config file, defaulting to the configured default network.
-        ///  Use `dev` for the local sandbox.
+        /// Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },

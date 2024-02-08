@@ -18,7 +18,7 @@ pub enum Command {
         #[arg(name = "level", short, long, ignore_case = true)]
         log_level: Option<LogLevel>,
         /// Specifies the network from the config file, defaulting to the configured default network.
-        ///  Use `dev` for the local sandbox.
+        /// Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },

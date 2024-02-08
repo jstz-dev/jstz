@@ -196,7 +196,7 @@ fn start_node(cfg: &Config) -> Result<Child> {
 
 fn is_node_running(cfg: &Config) -> Result<bool> {
     Ok(cfg
-        .octez_client(&Some(NetworkName::Dev))?
+        .octez_client_sandbox()?
         .rpc(&["get", "/chains/main/blocks/head/hash"])
         .is_ok())
 }
@@ -221,7 +221,7 @@ fn init_client(cfg: &Config) -> Result<()> {
 
     // 2. Wait for the node to be bootstrapped
     debug!("Waiting for node to bootstrap...");
-    cfg.octez_client(&Some(NetworkName::Dev))?
+    cfg.octez_client_sandbox(&Some(NetworkName::Dev))?
         .wait_for_node_to_bootstrap()?;
     debug!(" done");
 
@@ -260,7 +260,7 @@ fn client_bake(cfg: &Config, log_file: &File) -> Result<()> {
     // SAFETY: When a baking fails, then we want to silently ignore the error and
     // try again later since the `client_bake` function is looped in the `OctezThread`.
     let _ = cfg
-        .octez_client(&Some(NetworkName::Dev))?
+        .octez_client_sandbox()?
         .bake(log_file, &["for", "--minimal-timestamp"]);
     Ok(())
 }
@@ -317,16 +317,14 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     // 5. Deploy bridge
     debug!("Deploying bridge...");
 
-    let dev_network = Some(NetworkName::Dev);
-
     let ctez_address = deploy_ctez_contract(
-        &cfg.octez_client(&dev_network)?,
+        &cfg.octez_client_sandbox()?,
         OPERATOR_ADDRESS,
         ctez_bootstrap_accounts(),
     )?;
 
     let bridge = BridgeContract::deploy(
-        &cfg.octez_client(&dev_network)?,
+        &cfg.octez_client_sandbox()?,
         OPERATOR_ADDRESS,
         &ctez_address,
     )?;
@@ -345,11 +343,8 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     );
 
     // 7. Originate the rollup
-    let rollup = JstzRollup::deploy(
-        &cfg.octez_client(&dev_network)?,
-        OPERATOR_ADDRESS,
-        &installer,
-    )?;
+    let rollup =
+        JstzRollup::deploy(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &installer)?;
 
     debug!("`jstz_rollup` originated at {}", rollup);
 
@@ -358,7 +353,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
 
     let logs_dir = logs_dir()?;
     let rollup_node = OctezThread::from_child(rollup.run(
-        &cfg.octez_rollup_node(&dev_network)?,
+        &cfg.octez_rollup_node_sandbox()?,
         OPERATOR_ADDRESS,
         &preimages_dir,
         &logs_dir,
@@ -368,7 +363,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     debug!("Started octez-smart-rollup-node");
 
     // 9. Set the rollup address in the bridge
-    bridge.set_rollup(&cfg.octez_client(&dev_network)?, OPERATOR_ADDRESS, &rollup)?;
+    bridge.set_rollup(&cfg.octez_client_sandbox(?, OPERATOR_ADDRESS, &rollup)?;
     debug!("`jstz_bridge` `rollup` address set to {}", rollup);
 
     Ok((node, baker, rollup_node))
