@@ -15,8 +15,8 @@ pub struct OctezRollupNode {
     pub octez_rollup_node_bin: Option<PathBuf>,
     /// Path to the octez-smart-rollup-node directory
     pub octez_rollup_node_dir: PathBuf,
-    /// Path to the octez-client directory
-    pub octez_client_dir: PathBuf,
+    /// If None, the default directory will be used (~/.tezos-client/)
+    pub octez_client_dir: Option<PathBuf>,
     /// RPC endpoint for the octez-node
     pub endpoint: String,
 }
@@ -27,12 +27,12 @@ impl OctezRollupNode {
             self.octez_rollup_node_bin.as_ref(),
             "octez-smart-rollup-node",
         ));
-        command.args([
-            "--base-dir",
-            self.octez_client_dir.to_str().expect("Invalid path"),
-            "--endpoint",
-            &self.endpoint,
-        ]);
+
+        command.args(["--endpoint", &self.endpoint]);
+
+        if let Some(path) = &self.octez_client_dir {
+            command.args(["--base-dir", path.to_str().expect("Invalid path")]);
+        }
 
         command
     }

@@ -19,7 +19,7 @@ const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "jstz_rollup_operator";
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
     octez_client_bin: Option<PathBuf>,
-    octez_client_dir: PathBuf,
+    octez_client_dir: Option<PathBuf>,
     octez_node_endpoint: String,
     octez_rollup_node_bin: Option<PathBuf>,
     octez_rollup_node_dir: PathBuf,
@@ -29,8 +29,7 @@ impl Config {
     fn octez_client(&self) -> OctezClient {
         OctezClient {
             octez_client_bin: self.octez_client_bin.clone(),
-            // TODO:
-            octez_client_dir: Some(self.octez_client_dir.clone()),
+            octez_client_dir: self.octez_client_dir.clone(),
             endpoint: self.octez_node_endpoint.clone(),
             disable_disclaimer: true,
         }
