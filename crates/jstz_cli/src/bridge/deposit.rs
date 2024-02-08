@@ -18,7 +18,7 @@ pub fn exec(
     debug!("resolved `to` -> {:?}", to);
 
     // 2. Execute the octez-client command
-    cfg.octez_client()?.call_contract(
+    cfg.octez_client(&network)?.call_contract(
         &from,
         "jstz_bridge",
         "deposit",

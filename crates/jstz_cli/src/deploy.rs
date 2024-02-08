@@ -33,7 +33,7 @@ pub async fn exec(
     }
 
     // 2. Construct operation
-    let jstz_client = cfg.jstz_client()?;
+    let jstz_client = cfg.jstz_client(&network)?;
 
     let nonce = jstz_client.get_nonce(&user.address).await?;
 

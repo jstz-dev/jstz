@@ -20,9 +20,8 @@ use tokio::task;
 
 use crate::{
     config::{
-        jstz_home_dir, Config, SandboxConfig, SANDBOX_JSTZ_NODE_PORT,
-        SANDBOX_OCTEZ_NODE_PORT, SANDBOX_OCTEZ_NODE_RPC_PORT,
-        SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
+        jstz_home_dir, Config, NetworkName, SandboxConfig, SANDBOX_OCTEZ_NODE_PORT,
+        SANDBOX_OCTEZ_NODE_RPC_PORT, SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     },
     error::{bail_user_error, Result},
     term::styles,
@@ -194,7 +193,7 @@ fn start_node(cfg: &Config) -> Result<Child> {
 
 fn is_node_running(cfg: &Config) -> Result<bool> {
     Ok(cfg
-        .octez_client()?
+        .octez_client(&Some(NetworkName::Dev))?
         .rpc(&["get", "/chains/main/blocks/head/hash"])
         .is_ok())
 }
@@ -219,28 +218,31 @@ fn init_client(cfg: &Config) -> Result<()> {
 
     // 2. Wait for the node to be bootstrapped
     debug!("Waiting for node to bootstrap...");
-    cfg.octez_client()?.wait_for_node_to_bootstrap()?;
-    debug!("Node bootstrapped");
+    cfg.octez_client(&Some(NetworkName::Dev))?
+        .wait_for_node_to_bootstrap()?;
+    debug!(" done");
 
     // 3. Import activator and bootstrap accounts
-    debug!("Importing activator account");
-    cfg.octez_client()?
-        .import_secret_key(ACTIVATOR_ACCOUNT_ALIAS, ACTIVATOR_ACCOUNT_SK)?;
+    debug!("Importing activator account...");
+    cfg.octez_client(&Some(NetworkName::Dev))?
+        .import_secret_key("activator", ACTIVATOR_ACCOUNT_SK)?;
+    debug!("done");
 
     // 4. Activate alpha
     debug!("Activating alpha...");
-    cfg.octez_client()?.activate_protocol(
-        "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
-        "1",
-        ACTIVATOR_ACCOUNT_ALIAS,
-        SANDBOX_PARAMS_PATH,
-    )?;
-    debug!("Protocol activated");
+    cfg.octez_client(&Some(NetworkName::Dev))?
+        .activate_protocol(
+            "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
+            "1",
+            "activator",
+            SANDBOX_PARAMS_PATH,
+        )?;
+    debug!(" done");
 
     // 5. Import bootstrap accounts
     for (i, bootstrap_account) in SANDBOX_BOOTSTRAP_ACCOUNTS.iter().enumerate() {
         let name = format!("bootstrap{}", i + 1);
-        cfg.octez_client()?
+        cfg.octez_client(&Some(NetworkName::Dev))?
             .import_secret_key(&name, bootstrap_account.secret)?;
         debug!(
             "Imported account {}. address: {}, secret: {}",
@@ -255,7 +257,7 @@ fn client_bake(cfg: &Config, log_file: &File) -> Result<()> {
     // SAFETY: When a baking fails, then we want to silently ignore the error and
     // try again later since the `client_bake` function is looped in the `OctezThread`.
     let _ = cfg
-        .octez_client()?
+        .octez_client(&Some(NetworkName::Dev))?
         .bake(log_file, &["for", "--minimal-timestamp"]);
     Ok(())
 }
@@ -312,14 +314,19 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     // 5. Deploy bridge
     debug!("Deploying bridge...");
 
+    let dev_network = Some(NetworkName::Dev);
+
     let ctez_address = deploy_ctez_contract(
-        &cfg.octez_client()?,
+        &cfg.octez_client(&dev_network)?,
         OPERATOR_ADDRESS,
         ctez_bootstrap_accounts(),
     )?;
 
-    let bridge =
-        BridgeContract::deploy(&cfg.octez_client()?, OPERATOR_ADDRESS, &ctez_address)?;
+    let bridge = BridgeContract::deploy(
+        &cfg.octez_client(&dev_network)?,
+        OPERATOR_ADDRESS,
+        &ctez_address,
+    )?;
 
     debug!("Bridge deployed at {}", bridge);
 
@@ -335,7 +342,11 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     );
 
     // 7. Originate the rollup
-    let rollup = JstzRollup::deploy(&cfg.octez_client()?, OPERATOR_ADDRESS, &installer)?;
+    let rollup = JstzRollup::deploy(
+        &cfg.octez_client(&dev_network)?,
+        OPERATOR_ADDRESS,
+        &installer,
+    )?;
 
     debug!("`jstz_rollup` originated at {}", rollup);
 
@@ -344,7 +355,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
 
     let logs_dir = logs_dir()?;
     let rollup_node = OctezThread::from_child(rollup.run(
-        &cfg.octez_rollup_node()?,
+        &cfg.octez_rollup_node(&dev_network)?,
         OPERATOR_ADDRESS,
         &preimages_dir,
         &logs_dir,
@@ -354,7 +365,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     debug!("Started octez-smart-rollup-node");
 
     // 9. Set the rollup address in the bridge
-    bridge.set_rollup(&cfg.octez_client()?, OPERATOR_ADDRESS, &rollup)?;
+    bridge.set_rollup(&cfg.octez_client(&dev_network)?, OPERATOR_ADDRESS, &rollup)?;
     debug!("`jstz_bridge` `rollup` address set to {}", rollup);
 
     Ok((node, baker, rollup_node))

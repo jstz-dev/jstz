@@ -17,7 +17,10 @@ async fn get(
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
     debug!("resolved `account` -> {:?}", address);
 
-    let value = cfg.jstz_client()?.get_value(&address, key.as_str()).await?;
+    let value = cfg
+        .jstz_client(&network)?
+        .get_value(&address, key.as_str())
+        .await?;
 
     // Print value
     match value {
@@ -38,7 +41,10 @@ async fn list(
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
     debug!("resolved `account` -> {:?}", address);
 
-    let value = cfg.jstz_client()?.get_subkey_list(&address, &key).await?;
+    let value = cfg
+        .jstz_client(&network)?
+        .get_subkey_list(&address, &key)
+        .await?;
 
     // Print list of values
     match value {
@@ -63,9 +69,8 @@ pub enum Command {
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
-        /// Network to use as specified in the config file,
-        /// if not provided the default network will be used.
-        /// use `dev` for the local sandbox.
+        /// Specifies the network from the config file, defaulting to the configured default network.
+        ///  Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
@@ -78,9 +83,8 @@ pub enum Command {
         /// User address or alias
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
-        /// Network to use as specified in the config file,
-        /// if not provided the default network will be used.
-        /// use `dev` for the local sandbox.
+        /// Specifies the network from the config file, defaulting to the configured default network.
+        ///  Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
