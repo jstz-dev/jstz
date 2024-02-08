@@ -16,7 +16,7 @@ jstz_api.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
 
-serde = "1.0.185"
+serde = "1.0.196"
 num-traits = "0.2.16"
 boa_engine = { version = "0.17.0", features = ["fuzz"] }
 http = "1.0.0"

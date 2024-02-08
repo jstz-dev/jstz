@@ -8,7 +8,7 @@ repository.workspace = true
 [dependencies]
 tezos_crypto_rs.workspace = true
 derive_more = "0.99.17"
-serde = "1.0.185"
+serde = "1.0.196"
 anyhow = "1.0.75"
 hex = "0.4.3"
 boa_gc = "0.17.0"

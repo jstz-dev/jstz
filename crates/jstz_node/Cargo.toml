@@ -22,7 +22,7 @@ jstz_api.workspace = true
 octez.workspace = true
 parking_lot = "0.12.1"
 reqwest = { version = "0.11.22", features = ["json"] }
-serde = { version = "1.0.183", features = ["derive"] }
+serde = { version = "1.0.196", features = ["derive"] }
 thiserror = "1.0.56"
 tokio = { version = "1.33.0", features = ["fs", "rt-multi-thread"] }
 tokio-stream = "0.1.14"
