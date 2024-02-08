@@ -18,6 +18,10 @@ use crate::{
     utils::AddressOrAlias,
 };
 
+use crate::sandbox::{
+    SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT,
+};
+
 pub fn jstz_home_dir() -> PathBuf {
     if let Ok(value) = env::var("JSTZ_HOME") {
         PathBuf::from(value)
@@ -251,11 +255,6 @@ struct Network {
     pub jstz_node_endpoint: String,
 }
 
-pub const SANDBOX_OCTEZ_NODE_PORT: u16 = 18731;
-pub const SANDBOX_OCTEZ_NODE_RPC_PORT: u16 = 18730;
-pub const SANDBOX_JSTZ_NODE_PORT: u16 = 8933;
-pub const SANDBOX_OCTEZ_SMART_ROLLUP_PORT: u16 = 8932;
-
 impl Config {
     /// Path to the configuration file
     pub fn path() -> PathBuf {
@@ -387,12 +386,12 @@ impl Config {
             }
             NetworkName::Dev => Ok(Network {
                 octez_node_rpc_endpoint: format!(
-                    "http://127.0.0.1:{}",
-                    SANDBOX_OCTEZ_NODE_RPC_PORT
+                    "http://{}:{}",
+                    SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT
                 ),
                 jstz_node_endpoint: format!(
-                    "http://127.0.0.1:{}",
-                    SANDBOX_JSTZ_NODE_PORT
+                    "http://{}:{}",
+                    SANDBOX_LOCAL_HOST_ADDR, SANDBOX_JSTZ_NODE_PORT,
                 ),
             }),
         }
