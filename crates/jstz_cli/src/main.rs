@@ -1,7 +1,9 @@
 use clap::Parser;
+use clap_complete::Shell;
 
 mod account;
 mod bridge;
+mod completions;
 mod config;
 mod deploy;
 mod docs;
@@ -38,6 +40,12 @@ enum Command {
     /// 🔑 Interact with jstz's key-value store.
     #[command(subcommand)]
     Kv(kv::Command),
+    /// 🐚 Generates shell completions.
+    Completions {
+        /// The shell to generate completions for
+        #[arg(long, short)]
+        shell: Shell,
+    },
     /// 🚀 Deploys a smart function to jstz.
     Deploy {
         /// Function code.
@@ -98,6 +106,7 @@ enum Command {
 async fn exec(command: Command) -> Result<()> {
     match command {
         Command::Docs => docs::exec(),
+        Command::Completions { shell } => completions::exec(shell),
         Command::Sandbox(sandbox_command) => sandbox::exec(sandbox_command).await,
         Command::Bridge(bridge_command) => bridge::exec(bridge_command),
         Command::Account(account_command) => account::exec(account_command).await,
