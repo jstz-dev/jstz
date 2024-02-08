@@ -8,6 +8,10 @@ use nix::{
 
 mod daemon;
 
+mod consts;
+
+pub use consts::*;
+
 use crate::{config::Config, error::bail_user_error};
 
 #[derive(Debug, Subcommand)]
