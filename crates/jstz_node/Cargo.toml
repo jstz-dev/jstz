@@ -14,7 +14,7 @@ anyhow = "1.0.75"
 bincode = "1.3.3"
 clap = { version = "^4.4", features = ["derive"] }
 env_logger = "0.10.0"
-futures-util = "0.3.29"
+futures-util = "0.3.30"
 hex = "0.4.3"
 jstz_proto.workspace = true
 jstz_crypto.workspace = true
