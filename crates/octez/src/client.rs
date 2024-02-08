@@ -15,8 +15,8 @@ pub struct OctezClient {
     /// Path to the octez-client binary
     /// If None, the binary will inside PATH will be used
     pub octez_client_bin: Option<PathBuf>,
-    /// Path to the octez-client directory
-    pub octez_client_dir: PathBuf,
+    /// If None, the default directory will be used (~/.tezos-client/)
+    pub octez_client_dir: Option<PathBuf>,
     /// RPC endpoint for the octez-node
     pub endpoint: String,
     /// Disable the disclaimer prompt
@@ -47,7 +47,7 @@ pub struct AliasInfo {
 impl OctezClient {
     pub fn new(
         octez_client_bin: Option<PathBuf>,
-        octez_client_dir: PathBuf,
+        octez_client_dir: Option<PathBuf>,
         endpoint: String,
         disable_disclaimer: bool,
     ) -> Self {
@@ -65,12 +65,11 @@ impl OctezClient {
             "octez-client",
         ));
 
-        command.args([
-            "--base-dir",
-            self.octez_client_dir.to_str().expect("Invalid path"),
-            "--endpoint",
-            &self.endpoint,
-        ]);
+        if let Some(path) = &self.octez_client_dir {
+            command.args(["--base-dir", path.to_str().expect("Invalid path")]);
+        }
+
+        command.args(["--endpoint", &self.endpoint]);
 
         if self.disable_disclaimer {
             command.env("TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER", "Y");

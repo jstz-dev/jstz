@@ -208,13 +208,11 @@ pub enum NetworkName {
     Dev,
 }
 
-const DEV_NETWORK: &str = "dev";
-
 impl fmt::Display for NetworkName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             NetworkName::Custom(name) => write!(f, "{}", name),
-            NetworkName::Dev => write!(f, DEV_NETWORK),
+            NetworkName::Dev => write!(f, "dev"),
         }
     }
 }
@@ -224,7 +222,7 @@ impl FromStr for NetworkName {
 
     fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
-            DEV_NETWORK => Ok(NetworkName::Dev),
+            "dev" => Ok(NetworkName::Dev),
             other => Ok(NetworkName::Custom(other.to_string())),
         }
     }
