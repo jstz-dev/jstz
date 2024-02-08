@@ -70,7 +70,7 @@ pub enum Command {
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
         /// Specifies the network from the config file, defaulting to the configured default network.
-        ///  Use `dev` for the local sandbox.
+        /// Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
@@ -84,7 +84,7 @@ pub enum Command {
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
         /// Specifies the network from the config file, defaulting to the configured default network.
-        ///  Use `dev` for the local sandbox.
+        /// Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },

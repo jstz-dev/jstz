@@ -261,13 +261,9 @@ async fn get_balance(
     let cfg = Config::load()?;
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
-<<<<<<< HEAD
     debug!("resolved `account` -> {:?}", address);
 
-    let balance = cfg.jstz_client()?.get_balance(&address).await?;
-=======
     let balance = cfg.jstz_client(&network)?.get_balance(&address).await?;
->>>>>>> 0bfa590 (feat: add support for network option/config)
 
     info!("Balance of {} is {} $CTEZ", address, balance);
 
@@ -304,7 +300,7 @@ pub enum Command {
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
         /// Specifies the network from the config file, defaulting to the configured default network.
-        ///  Use `dev` for the local sandbox.
+        /// Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
@@ -314,7 +310,7 @@ pub enum Command {
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
         account: Option<AddressOrAlias>,
         /// Specifies the network from the config file, defaulting to the configured default network.
-        ///  Use `dev` for the local sandbox.
+        /// Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },

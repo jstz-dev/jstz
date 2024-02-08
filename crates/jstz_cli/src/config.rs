@@ -319,6 +319,10 @@ impl Config {
         })
     }
 
+    pub fn octez_client_sandbox(&self) -> Result<OctezClient> {
+        self.octez_client(&Some(NetworkName::Dev))
+    }
+
     pub fn jstz_client(&self, network_name: &Option<NetworkName>) -> Result<JstzClient> {
         let network = self.network(network_name)?;
 
@@ -348,6 +352,10 @@ impl Config {
             octez_client_dir: self.octez_client_dir(network_name),
             endpoint: network.octez_node_rpc_endpoint,
         })
+    }
+
+    pub fn octez_rollup_node_sandbox(&self) -> Result<OctezRollupNode> {
+        self.octez_rollup_node(&Some(NetworkName::Dev))
     }
 
     fn octez_client_dir(&self, network_name: &Option<NetworkName>) -> Option<PathBuf> {
