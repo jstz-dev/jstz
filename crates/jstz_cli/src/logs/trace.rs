@@ -4,17 +4,22 @@ use jstz_proto::js_logger::LogRecord;
 use log::{debug, error, info};
 use reqwest_eventsource::Event;
 
-use crate::{error::Result, utils::AddressOrAlias, Config};
+use crate::{config::NetworkName, error::Result, utils::AddressOrAlias, Config};
 
 pub const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::LOG;
 
-pub async fn exec(address_or_alias: AddressOrAlias, log_level: LogLevel) -> Result<()> {
+pub async fn exec(
+    address_or_alias: AddressOrAlias,
+    log_level: Option<LogLevel>,
+    network: &Option<NetworkName>,
+) -> Result<()> {
     let cfg = Config::load()?;
 
     let address = address_or_alias.resolve(&cfg)?;
     debug!("resolved `address_or_alias` -> {:?}", address);
 
-    let mut event_source = cfg.jstz_client()?.logs_stream(&address);
+    let mut event_source = cfg.jstz_client(network)?.logs_stream(&address);
+    let log_level = log_level.unwrap_or(DEFAULT_LOG_LOG_LEVEL);
 
     while let Some(event) = event_source.next().await {
         match event {

@@ -1,6 +1,6 @@
 use std::{
     collections::{hash_map, HashMap},
-    env, fs,
+    env, fmt, fs,
     path::PathBuf,
     str::FromStr,
 };
@@ -10,7 +10,7 @@ use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
 use jstz_proto::context::account::Address;
 use log::debug;
 use octez::{OctezClient, OctezNode, OctezRollupNode};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::{
     error::{bail, user_error, Result},
@@ -201,11 +201,22 @@ pub struct SandboxConfig {
     pub pid: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NetworkName {
     Custom(String),
     // Dev network uses sandbox config
     Dev,
+}
+
+const DEV_NETWORK: &str = "dev";
+
+impl fmt::Display for NetworkName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NetworkName::Custom(name) => write!(f, "{}", name),
+            NetworkName::Dev => write!(f, DEV_NETWORK),
+        }
+    }
 }
 
 impl FromStr for NetworkName {
@@ -213,9 +224,19 @@ impl FromStr for NetworkName {
 
     fn from_str(s: &str) -> Result<Self> {
         match s.to_lowercase().as_str() {
-            "dev" => Ok(NetworkName::Dev),
+            DEV_NETWORK => Ok(NetworkName::Dev),
             other => Ok(NetworkName::Custom(other.to_string())),
         }
+    }
+}
+
+impl<'de> Deserialize<'de> for NetworkName {
+    fn deserialize<D>(deserializer: D) -> core::result::Result<NetworkName, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s: String = Deserialize::deserialize(deserializer)?;
+        NetworkName::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
 
@@ -223,7 +244,7 @@ impl FromStr for NetworkName {
 pub struct NetworkConfig {
     // if None, the users have to specify the network in the command
     default_network: Option<NetworkName>,
-    networks: HashMap<NetworkName, Network>,
+    networks: HashMap<String, Network>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -287,28 +308,24 @@ impl Config {
         ))
     }
 
-    pub fn octez_client(&self) -> Result<OctezClient> {
-        let sandbox = self.sandbox()?;
+    pub fn octez_client(
+        &self,
+        network_name: &Option<NetworkName>,
+    ) -> Result<OctezClient> {
+        let network = self.network(network_name)?;
 
         Ok(OctezClient {
             octez_client_bin: Some(self.octez_path.join("octez-client")),
-            octez_client_dir: sandbox.octez_client_dir.clone(),
-            endpoint: format!("http://127.0.0.1:{}", SANDBOX_OCTEZ_NODE_RPC_PORT),
+            octez_client_dir: self.octez_client_dir(network_name),
+            endpoint: network.octez_node_rpc_endpoint,
             disable_disclaimer: true,
         })
     }
 
-    pub fn jstz_client(&self) -> Result<JstzClient> {
-        // FIXME: Calling self.sandbox() here will raise an error if
-        // the sandbox isn't running (the desired behaviour).
-        //
-        // In future, with network configs, the result will be used.
-        let _ = self.sandbox()?;
+    pub fn jstz_client(&self, network_name: &Option<NetworkName>) -> Result<JstzClient> {
+        let network = self.network(network_name)?;
 
-        Ok(JstzClient::new(format!(
-            "http://127.0.0.1:{}",
-            SANDBOX_JSTZ_NODE_PORT
-        )))
+        Ok(JstzClient::new(network.jstz_node_endpoint.clone()))
     }
 
     pub fn octez_node(&self) -> Result<OctezNode> {
@@ -320,14 +337,66 @@ impl Config {
         })
     }
 
-    pub fn octez_rollup_node(&self) -> Result<OctezRollupNode> {
+    pub fn octez_rollup_node(
+        &self,
+        network_name: &Option<NetworkName>,
+    ) -> Result<OctezRollupNode> {
         let sandbox = self.sandbox()?;
+
+        let network = self.network(network_name)?;
 
         Ok(OctezRollupNode {
             octez_rollup_node_bin: Some(self.octez_path.join("octez-smart-rollup-node")),
             octez_rollup_node_dir: sandbox.octez_rollup_node_dir.clone(),
-            octez_client_dir: sandbox.octez_client_dir.clone(),
-            endpoint: format!("http://127.0.0.1:{}", SANDBOX_OCTEZ_NODE_RPC_PORT),
+            octez_client_dir: self.octez_client_dir(network_name),
+            endpoint: network.octez_node_rpc_endpoint,
         })
+    }
+
+    fn octez_client_dir(&self, network_name: &Option<NetworkName>) -> Option<PathBuf> {
+        match network_name {
+            Some(NetworkName::Dev) => {
+                let sandbox = self.sandbox().map_err(|e| println!("{}", e)).expect("msg");
+                Some(sandbox.octez_client_dir.clone())
+            }
+            _ => None,
+        }
+    }
+
+    fn network(&self, name: &Option<NetworkName>) -> Result<Network> {
+        let network = match name {
+            Some(name) => self.lookup_network(name),
+            None => {
+                let name = self.networks.default_network.as_ref().ok_or_else(||user_error!(
+                    "No default network found in the config file. Please specify the <NETWORK> option or set the default network in the config file."
+                ))?;
+
+                self.lookup_network(name)
+            }
+        };
+
+        Ok(network?.clone())
+    }
+
+    fn lookup_network(&self, name: &NetworkName) -> Result<Network> {
+        match name {
+            NetworkName::Custom(name) => {
+                let network = self.networks.networks.get(name).ok_or_else(|| {
+                    user_error!("Network '{}' not found in the config file.", name)
+                })?;
+
+                Ok(network.clone())
+            }
+            NetworkName::Dev => Ok(Network {
+                octez_node_rpc_endpoint: format!(
+                    "http://127.0.0.1:{}",
+                    SANDBOX_OCTEZ_NODE_RPC_PORT
+                ),
+                jstz_node_endpoint: format!(
+                    "http://127.0.0.1:{}",
+                    SANDBOX_JSTZ_NODE_PORT
+                ),
+            }),
+        }
     }
 }

@@ -46,12 +46,11 @@ enum Command {
         /// Initial balance of the function.
         #[arg(short, long, default_value_t = 0)]
         balance: u64,
-        /// Name (or alias) of the function.
-        #[arg(short, long, default_value = None)]
+        /// Name
+        #[arg(long, default_value = None)]
         name: Option<String>,
-        /// Network to use as specified in the config file,
-        /// if not provided the default network will be used.
-        /// use `dev` for the local sandbox.
+        /// Specifies the network from the config file, defaulting to the configured default network.
+        ///  Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
@@ -69,9 +68,8 @@ enum Command {
         /// The JSON data in the request body.
         #[arg(name = "data", short, long, default_value = None)]
         json_data: Option<String>,
-        /// Network to use as specified in the config file,
-        /// if not provided the default network will be used.
-        /// use `dev` for the local sandbox.
+        /// Specifies the network from the config file, defaulting to the configured default network.
+        ///  Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },

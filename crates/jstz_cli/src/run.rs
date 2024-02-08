@@ -32,7 +32,7 @@ pub async fn exec(
         "You are not logged in. Please run `jstz login`."
     ))?;
 
-    let jstz_client = cfg.jstz_client()?;
+    let jstz_client = cfg.jstz_client(&network)?;
 
     // 2. Resolve the URL
     let mut url_object = Url::parse(&url)
