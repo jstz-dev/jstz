@@ -15,8 +15,8 @@ pub enum Command {
         #[arg(value_name = "ALIAS|ADDRESS")]
         smart_function: AddressOrAlias,
         // Optional log level to filter log stream
-        #[arg(name = "level", short, long, ignore_case = true)]
-        log_level: Option<LogLevel>,
+        #[arg(name = "level", short, long, ignore_case = true, default_value_t = DEFAULT_LOG_LEVEL)]
+        log_level: LogLevel,
         /// Specifies the network from the config file, defaulting to the configured default network.
         /// Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]

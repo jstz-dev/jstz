@@ -241,10 +241,8 @@ async fn get_code(
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
     debug!("resolved `account` -> {:?}", address);
-    let code = cfg.jstz_client(&network)?.get_code(&address).await?;
-
     let code = cfg
-        .jstz_client()?
+        .jstz_client(&network)?
         .get_code(&address)
         .await?
         .ok_or(user_error!("No code found for account {}", address))?;
