@@ -10,7 +10,8 @@ use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
 use jstz_proto::context::account::Address;
 use log::debug;
 use octez::{OctezClient, OctezNode, OctezRollupNode};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 use crate::{
     error::{bail, user_error, Result},
@@ -205,7 +206,7 @@ pub struct SandboxConfig {
     pub pid: u32,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(SerializeDisplay, DeserializeFromStr, Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NetworkName {
     Custom(String),
     // Dev network uses sandbox config
@@ -232,24 +233,6 @@ impl FromStr for NetworkName {
     }
 }
 
-impl Serialize for NetworkName {
-    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        serializer.serialize_str(&self.to_string())
-    }
-}
-
-impl<'de> Deserialize<'de> for NetworkName {
-    fn deserialize<D>(deserializer: D) -> core::result::Result<NetworkName, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let s: String = Deserialize::deserialize(deserializer)?;
-        NetworkName::from_str(&s).map_err(serde::de::Error::custom)
-    }
-}
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct Network {
     pub octez_node_rpc_endpoint: String,
@@ -382,7 +365,7 @@ impl Config {
             Some(name) => self.lookup_network(name),
             None => {
                 let name = self.networks.default_network.as_ref().ok_or_else(||user_error!(
-                    "No default network found in the config file. Please specify the <NETWORK> option or set the default network in the config file."
+                    "No default network found in the config file. Please specify the `--network` flag or set the default network in the config file."
                 ))?;
 
                 self.lookup_network(name)

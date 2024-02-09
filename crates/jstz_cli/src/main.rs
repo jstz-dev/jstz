@@ -46,7 +46,7 @@ enum Command {
         /// Initial balance of the function.
         #[arg(short, long, default_value_t = 0)]
         balance: u64,
-        /// Name
+        /// Name (or alias) of the function.
         #[arg(long, default_value = None)]
         name: Option<String>,
         /// Specifies the network from the config file, defaulting to the configured default network.
