@@ -28,12 +28,10 @@ pub async fn run(
             .await
             .map_err(|e| io::Error::new(Other, e.to_string()))?;
 
-    let broadcaster_data = Data::new(broadcaster.clone());
-
     HttpServer::new(move || {
         App::new()
             .app_data(rollup_client.clone())
-            .app_data(broadcaster_data.clone())
+            .app_data(Data::from(broadcaster.clone()))
             .configure(OperationsService::configure)
             .configure(AccountsService::configure)
             .configure(LogsService::configure)
