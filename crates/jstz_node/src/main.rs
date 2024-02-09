@@ -33,7 +33,7 @@ struct Args {
     kernel_log_path: PathBuf,
 }
 
-#[tokio::main]
+#[actix_web::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
 
