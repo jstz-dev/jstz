@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use jstz_core::{host::HostRuntime, runtime::with_global_host};
+use jstz_core::{host::HostRuntime, runtime};
 use serde::{Deserialize, Serialize};
 
 use crate::context::account::Address;
@@ -42,8 +42,9 @@ pub fn log_request_start(contract_address: Address, request_id: String) {
         request_id,
     }
     .to_string();
-    with_global_host(|rt| {
-        rt.write_debug(&(REQUEST_START_PREFIX.to_string() + &request_log + "\n"));
+
+    runtime::with_js_hrt(|hrt| {
+        hrt.write_debug(&(REQUEST_START_PREFIX.to_string() + &request_log + "\n"));
     });
 }
 
@@ -53,7 +54,8 @@ pub fn log_request_end(contract_address: Address, request_id: String) {
         request_id,
     }
     .to_string();
-    with_global_host(|rt| {
-        rt.write_debug(&(REQUEST_END_PREFIX.to_string() + &request_log + "\n"));
+
+    runtime::with_js_hrt(|hrt| {
+        hrt.write_debug(&(REQUEST_END_PREFIX.to_string() + &request_log + "\n"));
     });
 }

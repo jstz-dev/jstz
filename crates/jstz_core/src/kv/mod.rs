@@ -12,7 +12,7 @@ use crate::error::Result;
 pub mod transaction;
 pub mod value;
 
-pub use transaction::{Entry, Transaction};
+pub use transaction::{Entry, JsTransaction, Transaction};
 pub use value::Value;
 
 /// A transactional key-value store using an optimistic concurrency control scheme.

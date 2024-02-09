@@ -50,6 +50,7 @@ thread_local! {
     /// Thread-local logger
     static CONSOLE_LOGGER: Cell<Option<&'static dyn JsLog>> = Cell::new(None)
 }
+
 pub fn set_js_logger(logger: &'static dyn JsLog) {
     CONSOLE_LOGGER.set(Some(logger));
 }

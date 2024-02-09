@@ -5,16 +5,7 @@ use boa_engine::{
     NativeFunction,
 };
 use jstz_api::{Kv, KvValue};
-use jstz_core::{host_defined, kv::Transaction, runtime};
-
-macro_rules! preamble {
-    ($args:ident, $context:ident, $tx:ident) => {
-        host_defined!($context, host_defined);
-        let mut $tx = host_defined
-            .get_mut::<Transaction>()
-            .expect("Curent transaction undefined");
-    };
-}
+use jstz_core::runtime;
 
 pub struct KvApi;
 
@@ -24,18 +15,17 @@ impl KvApi {
         args: &[JsValue],
         context: &mut Context,
     ) -> JsResult<JsValue> {
-        preamble!(args, context, tx);
         let account: String = args.get_or_undefined(0).try_js_into(context)?;
         let key: String = args.get_or_undefined(1).try_js_into(context)?;
 
         let kv = Kv::new(account);
 
-        let result = runtime::with_global_host(|rt| kv.get(rt.deref(), &mut tx, &key))?;
-
-        match result {
-            Some(value) => JsValue::from_json(&value.0, context),
-            None => Ok(JsValue::null()),
-        }
+        runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<JsValue> {
+            match kv.get(hrt.deref(), tx, &key)? {
+                Some(value) => JsValue::from_json(&value.0, context),
+                None => Ok(JsValue::null()),
+            }
+        })
     }
 
     fn set(
@@ -43,7 +33,6 @@ impl KvApi {
         args: &[JsValue],
         context: &mut Context,
     ) -> JsResult<JsValue> {
-        preamble!(args, context, tx);
         let account: String = args.get_or_undefined(0).try_js_into(context)?;
         let key: String = args.get_or_undefined(1).try_js_into(context)?;
 
@@ -51,7 +40,7 @@ impl KvApi {
 
         let kv = Kv::new(account);
 
-        kv.set(&mut tx, &key, value)?;
+        runtime::with_js_tx(|tx| kv.set(tx, &key, value))?;
 
         Ok(JsValue::undefined())
     }
@@ -61,13 +50,12 @@ impl KvApi {
         args: &[JsValue],
         context: &mut Context,
     ) -> JsResult<JsValue> {
-        preamble!(args, context, tx);
         let account: String = args.get_or_undefined(0).try_js_into(context)?;
         let key: String = args.get_or_undefined(1).try_js_into(context)?;
 
         let kv = Kv::new(account);
 
-        runtime::with_global_host(|hrt| kv.delete(hrt.deref(), &mut tx, &key))?;
+        runtime::with_js_tx(|tx| kv.delete(tx, &key))?;
 
         Ok(JsValue::undefined())
     }
@@ -77,13 +65,13 @@ impl KvApi {
         args: &[JsValue],
         context: &mut Context,
     ) -> JsResult<JsValue> {
-        preamble!(args, context, tx);
         let account: String = args.get_or_undefined(0).try_js_into(context)?;
         let key: String = args.get_or_undefined(1).try_js_into(context)?;
 
         let kv = Kv::new(account);
 
-        let result = runtime::with_global_host(|rt| kv.has(rt.deref(), &mut tx, &key))?;
+        let result =
+            runtime::with_js_hrt_and_tx(|hrt, tx| kv.has(hrt.deref(), tx, &key))?;
 
         Ok(result.into())
     }

@@ -1,10 +1,9 @@
 use std::{borrow::Cow, fmt::Write};
 
-use boa_engine::{js_string, JsResult, JsValue, Source};
+use boa_engine::{js_string, Context, JsResult, JsValue, Source};
 use jstz_api::{js_log::set_js_logger, stream::StreamApi};
 use jstz_core::{
     host::HostRuntime,
-    host_defined,
     kv::Transaction,
     runtime::{self, Runtime},
 };
@@ -121,14 +120,9 @@ pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     // 2. Setup runtime
     let mut rt = Runtime::new(DEFAULT_GAS_LIMIT)
         .map_err(|_| anyhow!("Failed to initialize jstz's JavaScript runtime."))?;
+    let mut tx = Transaction::default();
 
     set_js_logger(&PrettyLogger);
-    {
-        host_defined!(&mut rt, mut host_defined);
-
-        let tx = Transaction::new();
-        host_defined.insert(tx);
-    }
 
     let mut mock_hrt = MockHost::default();
     let realm = rt.realm().clone();
@@ -154,7 +148,8 @@ pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
                 // Add the line to history so you can use arrow keys to recall it
                 rl.add_history_entry(line.as_str())?;
 
-                evaluate(input, &mut rt, &mut mock_hrt);
+                let result = evaluate(input, &mut rt, &mut mock_hrt, &mut tx);
+                print_rt_result(result, &mut rt);
             }
             Err(ReadlineError::Interrupted) => {
                 info!("CTRL-C");
@@ -171,22 +166,14 @@ pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     }
 }
 
-fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static)) {
-    let rt_output = runtime::with_host_runtime(hrt, || -> JsResult<JsValue> {
-        let value = rt.eval(Source::from_bytes(input))?;
-        jstz_core::future::block_on(async {
-            rt.run_event_loop().await;
-            rt.resolve_value(&value).await
-        })
-    });
-
-    match rt_output {
+fn print_rt_result(result: JsResult<JsValue>, context: &mut Context<'_>) {
+    match result {
         Ok(res) => {
             if !res.is_undefined() {
                 info!(
                     "{}",
                     if res.is_callable() {
-                        res.to_string(rt.context())
+                        res.to_string(context)
                             .expect("Expected [[toString]] to be defined.")
                             .to_std_string_escaped()
                     } else {
@@ -195,9 +182,9 @@ fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static
                 );
             }
 
-            if rt
+            if context
                 .global_object()
-                .set(js_string!("_"), res, false, rt.context())
+                .set(js_string!("_"), res, false, context)
                 .is_err()
             {
                 warn!("Couldn't set '_' to REPL result.");
@@ -207,4 +194,19 @@ fn evaluate(input: &str, rt: &mut Runtime, hrt: &mut (impl HostRuntime + 'static
             error!("Uncaught {e}")
         }
     }
+}
+
+fn evaluate(
+    input: &str,
+    rt: &mut Runtime,
+    hrt: &mut (impl HostRuntime + 'static),
+    tx: &mut Transaction,
+) -> JsResult<JsValue> {
+    runtime::enter_js_host_context(hrt, tx, || {
+        let result = rt.eval(Source::from_bytes(input))?;
+        jstz_core::future::block_on(async {
+            rt.run_event_loop().await;
+            rt.resolve_value(&result).await
+        })
+    })
 }

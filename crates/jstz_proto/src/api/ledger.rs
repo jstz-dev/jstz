@@ -1,4 +1,4 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use boa_engine::{
     js_string,
@@ -9,8 +9,8 @@ use boa_engine::{
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
 use jstz_core::{
-    accessor, host::HostRuntime, host_defined, kv::Transaction, native::Accessor,
-    runtime, value::IntoJs,
+    accessor, host::HostRuntime, kv::Transaction, native::Accessor, runtime,
+    value::IntoJs,
 };
 
 use crate::{
@@ -104,41 +104,34 @@ impl LedgerApi {
     fn balance(
         _this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        _context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        runtime::with_global_host(|rt| {
-            host_defined!(context, host_defined);
+        let pkh = js_value_to_pkh(args.get_or_undefined(0))?;
 
-            let mut tx = host_defined.get_mut::<Transaction>().unwrap();
+        let balance = runtime::with_js_hrt_and_tx(|hrt, tx| {
+            Ledger::balance(hrt.deref(), tx, &pkh)
+        })?;
 
-            let pkh = js_value_to_pkh(args.get_or_undefined(0))?;
-
-            let balance = Ledger::balance(rt.deref(), tx.deref_mut(), &pkh)?;
-
-            Ok(balance.into())
-        })
+        Ok(balance.into())
     }
 
     fn transfer(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        _context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        runtime::with_global_host(|rt| {
-            host_defined!(context, host_defined);
-            let mut tx = host_defined.get_mut::<Transaction>().unwrap();
+        let ledger = Ledger::try_from_js(this)?;
+        let dst = js_value_to_pkh(args.get_or_undefined(0))?;
+        let amount = args
+            .get_or_undefined(1)
+            .as_number()
+            .ok_or_else(JsNativeError::typ)?;
 
-            let ledger = Ledger::try_from_js(this)?;
-            let dst = js_value_to_pkh(args.get_or_undefined(0))?;
-            let amount = args
-                .get_or_undefined(1)
-                .as_number()
-                .ok_or_else(JsNativeError::typ)?;
+        runtime::with_js_hrt_and_tx(|hrt, tx| {
+            ledger.transfer(hrt.deref(), tx, &dst, amount as Amount)
+        })?;
 
-            ledger.transfer(rt.deref(), tx.deref_mut(), &dst, amount as Amount)?;
-
-            Ok(JsValue::undefined())
-        })
+        Ok(JsValue::undefined())
     }
 }
 

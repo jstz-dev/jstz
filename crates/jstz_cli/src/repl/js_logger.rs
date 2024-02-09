@@ -1,6 +1,6 @@
 use boa_engine::Context;
 use jstz_api::js_log::{JsLog, LogData};
-use jstz_core::runtime::with_global_host;
+use jstz_core::runtime;
 use tezos_smart_rollup::prelude::debug_msg;
 
 pub(crate) struct PrettyLogger;
@@ -15,9 +15,10 @@ impl JsLog for PrettyLogger {
 
         let indent = 2 * groups_len;
         let symbol = level.symbol();
-        with_global_host(|rt| {
+
+        runtime::with_js_hrt(|hrt| {
             for line in text.lines() {
-                debug_msg!(rt, "[{symbol}] {:>indent$}{line}\n", "");
+                debug_msg!(hrt, "[{symbol}] {:>indent$}{line}\n", "");
             }
         });
     }
