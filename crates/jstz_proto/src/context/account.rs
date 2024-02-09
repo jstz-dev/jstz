@@ -196,8 +196,9 @@ mod test {
     #[test]
     fn test_zero_account_balance_for_new_accounts() -> Result<()> {
         let hrt = &mut MockHost::default();
+        let tx = &mut Transaction::default();
 
-        let tx = &mut Transaction::new();
+        tx.begin();
 
         let pkh = PublicKeyHash::from_base58("tz1XQjK1b3P72kMcHsoPhnAg3dvX1n8Ainty")
             .expect("Could not parse pkh");
@@ -209,7 +210,7 @@ mod test {
                 .amount
         };
         {
-            tx.commit::<Account>(hrt).expect("Could not commit tx");
+            tx.commit(hrt).expect("Could not commit tx");
         }
 
         // Assert

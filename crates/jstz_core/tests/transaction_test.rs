@@ -1,7 +1,5 @@
 #[cfg(test)]
 mod test {
-    use std::ops::Deref;
-    use std::{cell::RefCell, rc::Rc};
 
     use jstz_core::{error::Result, host::HostRuntime, kv, kv::transaction::Transaction};
     use jstz_crypto::keypair_from_passphrase;
@@ -44,59 +42,64 @@ mod test {
         assert_eq!(amt, expected);
     }
 
-    fn commit_transaction_mock(hrt: &mut MockHost, tx: &Rc<RefCell<Transaction>>) {
-        tx.deref()
-            .borrow_mut()
-            .commit::<Account>(hrt)
-            .expect("Could not commit tx");
-    }
-
     #[test]
     fn test_nested_transactions() -> Result<()> {
         let hrt = &mut MockHost::default();
-        let tx = Rc::new(RefCell::new(Transaction::new()));
+
+        let mut tx = Transaction::default();
+
+        // Transaction (tx0)
+
+        tx.begin();
+
         let pkh1 = get_random_public_key_hash("passphrase1");
         let pkh2 = get_random_public_key_hash("passphrase2");
 
-        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh1, 0);
-        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh2, 0);
+        verify_account_balance(hrt, &mut tx, &pkh1, 0);
+        verify_account_balance(hrt, &mut tx, &pkh2, 0);
 
-        let child_tx = Transaction::begin(Rc::clone(&tx));
+        // Transaction (tx1)
 
-        let _ = Account::deposit(hrt, &mut child_tx.deref().borrow_mut(), &pkh2, 25);
+        tx.begin();
 
-        verify_account_balance(hrt, &mut child_tx.deref().borrow_mut(), &pkh1, 0);
+        let _ = Account::deposit(hrt, &mut tx, &pkh2, 25);
 
-        verify_account_balance(hrt, &mut child_tx.deref().borrow_mut(), &pkh2, 25);
-        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh2, 0);
+        verify_account_balance(hrt, &mut tx, &pkh1, 0);
+        verify_account_balance(hrt, &mut tx, &pkh2, 25);
 
-        let grandchild_tx = Transaction::begin(Rc::clone(&child_tx));
+        // Transaction (tx2)
 
-        verify_account_balance(hrt, &mut grandchild_tx.deref().borrow_mut(), &pkh2, 25);
+        tx.begin();
 
-        let _ = Account::deposit(hrt, &mut grandchild_tx.deref().borrow_mut(), &pkh1, 57);
+        verify_account_balance(hrt, &mut tx, &pkh2, 25);
 
-        verify_account_balance(hrt, &mut grandchild_tx.deref().borrow_mut(), &pkh1, 57);
+        let _ = Account::deposit(hrt, &mut tx, &pkh1, 57);
 
-        commit_transaction_mock(hrt, &grandchild_tx);
+        verify_account_balance(hrt, &mut tx, &pkh1, 57);
 
-        verify_account_balance(hrt, &mut child_tx.deref().borrow_mut(), &pkh2, 25);
+        tx.commit(hrt).expect("Could not commit tx");
 
-        let _ = Account::deposit(hrt, &mut child_tx.deref().borrow_mut(), &pkh1, 57);
+        // Transaction (tx1)
 
-        verify_account_balance(hrt, &mut child_tx.deref().borrow_mut(), &pkh1, 2 * 57);
+        verify_account_balance(hrt, &mut tx, &pkh2, 25);
 
-        commit_transaction_mock(hrt, &child_tx);
+        let _ = Account::deposit(hrt, &mut tx, &pkh1, 57);
 
-        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh1, 2 * 57);
+        verify_account_balance(hrt, &mut tx, &pkh1, 2 * 57);
 
-        let _ = Account::deposit(hrt, &mut tx.deref().borrow_mut(), &pkh1, 57);
+        tx.commit(hrt).expect("Could not commit tx");
 
-        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh1, 3 * 57);
+        // Transaction (tx0)
 
-        commit_transaction_mock(hrt, &tx);
+        verify_account_balance(hrt, &mut tx, &pkh1, 2 * 57);
 
-        verify_account_balance(hrt, &mut tx.deref().borrow_mut(), &pkh1, 3 * 57);
+        let _ = Account::deposit(hrt, &mut tx, &pkh1, 57);
+
+        verify_account_balance(hrt, &mut tx, &pkh1, 3 * 57);
+
+        tx.commit(hrt).expect("Could not commit tx");
+
+        // Check storage
 
         assert_eq!(get_account_balance_from_storage(hrt, &pkh1), 3 * 57);
 

@@ -2,7 +2,17 @@ use boa_engine::{JsError, JsNativeError};
 use derive_more::{Display, Error, From};
 
 #[derive(Display, Debug, Error, From)]
+pub enum KvError {
+    DowncastFailed,
+    TransactionStackEmpty,
+    ExpectedLookupMapEntry,
+}
+
+#[derive(Display, Debug, Error, From)]
 pub enum Error {
+    KvError {
+        source: KvError,
+    },
     HostError {
         source: crate::host::HostError,
     },
@@ -20,6 +30,9 @@ pub enum Error {
 impl From<Error> for JsError {
     fn from(value: Error) -> Self {
         match value {
+            Error::KvError { source } => JsNativeError::eval()
+                .with_message(format!("KvError: {}", source))
+                .into(),
             Error::HostError { source } => JsNativeError::eval()
                 .with_message(format!("HostError: {}", source))
                 .into(),

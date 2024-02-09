@@ -3,21 +3,60 @@ use std::{
     collections::VecDeque,
     future::poll_fn,
     io::Read,
+    num::NonZeroU32,
     ops::{Deref, DerefMut},
     rc::Rc,
     task::Poll,
 };
 
 use boa_engine::{
-    builtins::promise::PromiseState, job::NativeJob, object::builtins::JsPromise,
+    builtins::promise::PromiseState,
+    context::HostHooks,
+    job::NativeJob,
+    object::builtins::{JsFunction, JsPromise},
     Context, JsError, JsNativeError, JsResult, JsValue, Source,
 };
+use getrandom::{register_custom_getrandom, Error as RandomError};
 
 use crate::{
     future,
-    host::{Host, HostRuntime},
+    host::{HostRuntime, JsHostRuntime},
+    kv::{JsTransaction, Transaction},
     realm::{Module, Realm},
 };
+
+struct Hooks;
+
+impl HostHooks for Hooks {
+    fn ensure_can_compile_strings(
+        &self,
+        _realm: boa_engine::realm::Realm,
+        _context: &mut Context<'_>,
+    ) -> JsResult<()> {
+        Err(JsNativeError::typ()
+            .with_message("eval calls not available")
+            .into())
+    }
+
+    fn has_source_text_available(
+        &self,
+        _function: &JsFunction,
+        _context: &mut Context<'_>,
+    ) -> bool {
+        false
+    }
+}
+
+pub const HOOKS: &'static dyn HostHooks = &Hooks;
+
+// custom getrandom
+const GETRANDOM_ERROR_CODE: u32 = RandomError::CUSTOM_START + 42;
+fn always_fail(_: &mut [u8]) -> std::result::Result<(), RandomError> {
+    let code = NonZeroU32::new(GETRANDOM_ERROR_CODE).unwrap();
+    Err(RandomError::from(code))
+}
+
+register_custom_getrandom!(always_fail);
 
 /// A 'pollable' job queue
 #[derive(Default, Debug)]
@@ -65,28 +104,71 @@ impl boa_engine::job::JobQueue for JobQueue {
 }
 
 thread_local! {
-    /// Thread-local host
-    static HOST: RefCell<Option<Host>> = RefCell::new(None)
+    /// Thread-local host context
+    static JS_HOST_RUNTIME: RefCell<Option<JsHostRuntime>> = RefCell::new(None);
+
+    /// Thread-local transaction
+    static JS_TRANSACTION: RefCell<Option<JsTransaction>> = RefCell::new(None);
 }
 
-pub fn with_host_runtime<F, R>(hrt: &mut (impl HostRuntime + 'static), f: F) -> R
+/// Enters a new host context, running the closure `f` with the new context
+pub fn enter_js_host_context<F, R>(
+    hrt: &mut (impl HostRuntime + 'static),
+    tx: &mut Transaction,
+    f: F,
+) -> R
 where
     F: FnOnce() -> R,
 {
-    HOST.with(|host| *host.borrow_mut() = Some(unsafe { Host::new(hrt) }));
+    JS_HOST_RUNTIME
+        .with(|js_hrt| *js_hrt.borrow_mut() = Some(unsafe { JsHostRuntime::new(hrt) }));
+
+    JS_TRANSACTION
+        .with(|js_tx| *js_tx.borrow_mut() = Some(unsafe { JsTransaction::new(tx) }));
 
     let result = f();
 
-    HOST.with(|host| *host.borrow_mut() = None);
+    JS_HOST_RUNTIME.with(|hrt| {
+        *hrt.borrow_mut() = None;
+    });
+
+    JS_TRANSACTION.with(|tx| {
+        *tx.borrow_mut() = None;
+    });
 
     result
 }
 
-pub fn with_global_host<F, R>(f: F) -> R
+/// Returns a reference to the host runtime in the current js host context
+pub fn with_js_hrt<F, R>(f: F) -> R
 where
-    F: FnOnce(&mut Host) -> R,
+    F: FnOnce(&mut JsHostRuntime) -> R,
 {
-    HOST.with(|host| f(host.borrow_mut().as_mut().expect("Host should be set")))
+    JS_HOST_RUNTIME.with(|hrt| {
+        f(hrt
+            .borrow_mut()
+            .as_mut()
+            .expect("`JS_HOST_RUNTIME` should be set"))
+    })
+}
+
+/// Returns a reference to the transaction in the current js host context
+pub fn with_js_tx<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut Transaction) -> R,
+{
+    JS_TRANSACTION.with(|tx| {
+        f(tx.borrow_mut()
+            .as_mut()
+            .expect("`JS_TRANSACTION` should be set"))
+    })
+}
+
+pub fn with_js_hrt_and_tx<F, R>(f: F) -> R
+where
+    F: FnOnce(&mut JsHostRuntime, &mut Transaction) -> R,
+{
+    with_js_hrt(|hrt| with_js_tx(|tx| f(hrt, tx)))
 }
 
 #[derive(Debug)]

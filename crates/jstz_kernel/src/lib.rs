@@ -1,5 +1,5 @@
 use jstz_core::kv::{Storage, Transaction};
-use jstz_proto::{context::account::Account, executor, Result};
+use jstz_proto::{executor, Result};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
     kernel_entry,
@@ -18,7 +18,8 @@ fn read_ticketer(rt: &impl Runtime) -> Option<ContractKt1Hash> {
 }
 
 fn handle_message(hrt: &mut (impl Runtime + 'static), message: Message) -> Result<()> {
-    let mut tx = Transaction::new();
+    let mut tx = Transaction::default();
+    tx.begin();
 
     match message {
         Message::Internal(external_operation) => {
@@ -32,7 +33,7 @@ fn handle_message(hrt: &mut (impl Runtime + 'static), message: Message) -> Resul
         }
     }
 
-    tx.commit::<Account>(hrt)?;
+    tx.commit(hrt)?;
     Ok(())
 }
 

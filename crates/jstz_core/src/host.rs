@@ -1,11 +1,4 @@
-use std::num::NonZeroU32;
-
-use boa_engine::{
-    context::HostHooks, object::builtins::JsFunction, realm::Realm, Context,
-    JsNativeError, JsResult,
-};
 use derive_more::Display;
-use getrandom::{register_custom_getrandom, Error as RandomError};
 use tezos_smart_rollup_host::{
     dal_parameters::RollupDalParameters,
     input,
@@ -437,11 +430,11 @@ mod erased_runtime {
     }
 }
 
-pub struct Host {
+pub struct JsHostRuntime {
     inner: &'static mut dyn erased_runtime::Runtime,
 }
 
-impl Host {
+impl JsHostRuntime {
     pub unsafe fn new(rt: &mut (impl Runtime + 'static)) -> Self {
         let rt_ptr: *mut dyn erased_runtime::Runtime = rt;
 
@@ -455,7 +448,7 @@ impl Host {
     }
 }
 
-impl HostRuntime for Host {
+impl HostRuntime for JsHostRuntime {
     fn write_output(&mut self, from: &[u8]) -> Result<(), HostError> {
         self.inner.write_output(from)
     }
@@ -594,36 +587,3 @@ impl HostRuntime for Host {
         self.inner.runtime_version()
     }
 }
-
-struct Hooks;
-
-impl HostHooks for Hooks {
-    fn ensure_can_compile_strings(
-        &self,
-        _realm: Realm,
-        _context: &mut Context<'_>,
-    ) -> JsResult<()> {
-        Err(JsNativeError::typ()
-            .with_message("eval calls not available")
-            .into())
-    }
-
-    fn has_source_text_available(
-        &self,
-        _function: &JsFunction,
-        _context: &mut Context<'_>,
-    ) -> bool {
-        false
-    }
-}
-
-pub const HOOKS: &'static dyn HostHooks = &Hooks;
-
-// custom getrandom
-const GETRANDOM_ERROR_CODE: u32 = RandomError::CUSTOM_START + 42;
-fn always_fail(_: &mut [u8]) -> std::result::Result<(), RandomError> {
-    let code = NonZeroU32::new(GETRANDOM_ERROR_CODE).unwrap();
-    Err(RandomError::from(code))
-}
-
-register_custom_getrandom!(always_fail);

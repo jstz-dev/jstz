@@ -16,11 +16,7 @@ use jstz_api::{
     js_log::set_js_logger,
 };
 use jstz_core::{
-    host::HostRuntime,
-    host_defined,
-    kv::Transaction,
-    native::JsNativeObject,
-    runtime::{self, with_global_host},
+    host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
     Module, Realm,
 };
 use tezos_smart_rollup::prelude::debug_msg;
@@ -156,13 +152,13 @@ impl Script {
     }
 
     pub fn load(
+        hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         address: &Address,
         context: &mut Context<'_>,
     ) -> Result<Self> {
-        let src = with_global_host(|hrt| {
-            Account::contract_code(hrt, tx, address)?.ok_or(Error::InvalidAddress)
-        })?;
+        let src =
+            Account::contract_code(hrt, tx, address)?.ok_or(Error::InvalidAddress)?;
 
         Ok(Self::parse(Source::from_bytes(&src), context)?)
     }
@@ -241,27 +237,27 @@ impl Script {
     ) -> JsResult<JsValue> {
         let context = &mut self.realm().context_handle(context);
 
-        // 1. Register `Transaction` object in `HostDefined`
-        // FIXME: `Kv` and `Transaction` should be externally provided
+        // 1. Begin a new transaction
+        runtime::with_js_tx(|tx| tx.begin());
+
+        // 2. Initialize host defined data
+
         {
             host_defined!(context, mut host_defined);
 
-            let tx = Transaction::new();
             let trace_data = TraceData {
                 contract_address: address.clone(),
                 operation_hash: operation_hash.clone(),
             };
 
-            host_defined.insert(tx);
             host_defined.insert(trace_data);
         }
-        set_js_logger(&JsonLogger);
 
-        // 2. Set logger
+        // 3. Set logger
         set_js_logger(&JsonLogger);
         log_request_start(address.clone(), operation_hash.to_string());
 
-        // 3. Invoke the script's handler
+        // 4. Invoke the script's handler
         let result =
             self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)?;
 
@@ -271,23 +267,17 @@ impl Script {
         // 4. Ensure that the transaction is committed
         on_success(
             result,
-            |value, context| {
-                host_defined!(context, mut host_defined);
-
-                runtime::with_global_host(|rt| {
-                    let mut tx = host_defined.remove::<Transaction>().expect(
-                        "Rust type `Transaction` should be defined in `HostDefined`",
-                    );
-
+            |value, _context| {
+                runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<()> {
                     let response = Response::try_from_js(value)?;
 
                     // If status code is 2xx, commit transaction
                     if response.ok() {
-                        tx.commit::<Account>(rt)
-                            .expect("Failed to commit transaction");
+                        tx.commit(hrt)?;
                     } else {
-                        tx.rollback();
+                        tx.rollback()?;
                     }
+
                     Ok(())
                 })
             },
@@ -297,14 +287,16 @@ impl Script {
 
     /// Loads, initializes and runs the script
     pub fn load_init_run(
-        tx: &mut Transaction,
         address: Address,
         operation_hash: OperationHash,
         request: &JsValue,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         // 1. Load script
-        let script = Script::load(tx, &address, context)?;
+
+        let script = runtime::with_js_hrt_and_tx(|hrt, tx| {
+            Script::load(hrt, tx, &address, context)
+        })?;
 
         // 2. Evaluate the script's module
         let script_promise = script.init(&address, &operation_hash, context)?;
@@ -315,7 +307,9 @@ impl Script {
                 FunctionObjectBuilder::new(context.realm(), unsafe {
                     NativeFunction::from_closure_with_captures(
                         |_, _, (address, operation_hash, script, request), context| {
-                            script.run(address, operation_hash, request, context)
+                            {
+                                script.run(address, operation_hash, request, context)
+                            }
                         },
                         (address, operation_hash, script, request.clone()),
                     )
@@ -365,6 +359,7 @@ pub mod run {
             body,
             gas_limit,
         } = run;
+
         // 1. Initialize runtime (with Web APIs to construct request)
         let rt = &mut jstz_core::Runtime::new(gas_limit)?;
         register_web_apis(&rt.realm().clone(), rt);
@@ -386,10 +381,9 @@ pub mod run {
         // 5. Run :)
         let result: JsValue = {
             let rt = &mut *rt;
-            runtime::with_host_runtime(hrt, || {
+            runtime::enter_js_host_context(hrt, tx, || {
                 jstz_core::future::block_on(async move {
                     let result = Script::load_init_run(
-                        tx,
                         address,
                         operation_hash,
                         request.inner(),

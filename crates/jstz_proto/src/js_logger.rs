@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use boa_engine::prelude::Context;
 pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
-use jstz_core::{host::HostRuntime, host_defined, runtime::with_global_host};
+use jstz_core::{host::HostRuntime, host_defined, runtime};
 use serde::Deserialize;
 use serde::Serialize;
 
@@ -59,8 +59,8 @@ pub(crate) struct JsonLogger;
 impl JsLog for JsonLogger {
     fn log(&self, log_data: LogData, context: &mut Context<'_>) {
         let log_record = LogRecord::new(log_data, context).to_string();
-        with_global_host(|rt| {
-            rt.write_debug(&(LOG_PREFIX.to_string() + &log_record + "\n"));
+        runtime::with_js_hrt(|hrt| {
+            hrt.write_debug(&(LOG_PREFIX.to_string() + &log_record + "\n"));
         });
     }
 }

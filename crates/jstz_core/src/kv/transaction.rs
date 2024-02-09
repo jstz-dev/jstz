@@ -1,19 +1,16 @@
 use std::{
     collections::{btree_map, BTreeMap, BTreeSet},
     marker::PhantomData,
-    ops::Deref,
+    mem,
 };
 
-use boa_gc::{empty_trace, Finalize, Trace};
+use derive_more::{Deref, DerefMut};
 use serde::de::DeserializeOwned;
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
 use super::value::{BoxedValue, Value};
 use super::Storage;
-use crate::error::Result;
-
-use std::cell::RefCell;
-use std::rc::Rc;
+use crate::error::{KvError, Result};
 
 /// A transaction is a 'lazy' snapshot of the persistent key-value store from
 /// the point in time when the transaction began. Modifications to new or old
@@ -21,8 +18,8 @@ use std::rc::Rc;
 /// transactions.
 ///
 /// Reads are cached for each transaction, optimizing repeated accesses to the
-/// same key. Writes are buffered in an in-memory `BTreeMap` until the
-/// transaction is successfully committed, at which point the buffer is flushed
+/// same key. Writes are buffered in using an in-memory representation until the
+/// root transaction is successfully committed, at which point the buffer is flushed
 /// to the persistent storage.
 ///
 /// Transactions offer ACID guarentees. The weakest property for these gaurentees
@@ -43,183 +40,269 @@ use std::rc::Rc;
 /// +---------------+
 /// ```
 ///
-/// Current implementation does NOT support concurrent transactions.
+/// NOTE: Current implementation does NOT support concurrent transactions
 
-#[must_use]
-#[derive(Debug)]
+/// A key is a path in durable storage
+pub type Key = OwnedPath;
+
+// A lookup map is a history of edits of a given key in order of least-recent to most-recent
+// This allows O(log n) lookups, and O(log n) commits / rollbacks (amortized by # of inserts / removals).
+#[derive(Debug, Default, Deref, DerefMut)]
+struct LookupMap(BTreeMap<Key, Vec<usize>>);
+
+#[derive(Debug, Default)]
 pub struct Transaction {
-    parent: Option<Rc<RefCell<Transaction>>>,
-    remove_set: BTreeSet<OwnedPath>,
-    snapshot: Snapshot,
+    // A stack of transactional snapshots
+    stack: Vec<Snapshot>,
+    lookup_map: LookupMap,
 }
 
-impl Finalize for Transaction {}
+#[derive(Debug, Clone, Deref, DerefMut)]
+struct SnapshotValue(BoxedValue);
 
-unsafe impl Trace for Transaction {
-    empty_trace!();
-}
-
-#[derive(Debug)]
-struct SnapshotEntry {
-    value: BoxedValue,
-}
-
-type Snapshot = BTreeMap<OwnedPath, SnapshotEntry>;
-
-impl SnapshotEntry {
-    fn ephemeral<V>(value: V) -> Self
-    where
-        V: Value,
-    {
-        Self {
-            value: BoxedValue::new(value),
-        }
+impl SnapshotValue {
+    pub fn new(value: impl Value) -> Self {
+        Self(BoxedValue::new(value))
     }
 
-    fn as_ref<V>(&self) -> &V
+    pub fn as_ref<V>(&self) -> Result<&V>
     where
         V: Value,
     {
-        self.value.as_any().downcast_ref().unwrap()
+        Ok(self
+            .as_any()
+            .downcast_ref()
+            .ok_or(KvError::DowncastFailed)?)
     }
 
-    fn as_mut<V>(&mut self) -> &mut V
+    pub fn as_mut<V>(&mut self) -> Result<&mut V>
     where
         V: Value,
     {
-        self.value.as_any_mut().downcast_mut().unwrap()
+        Ok(self
+            .as_any_mut()
+            .downcast_mut()
+            .ok_or(KvError::DowncastFailed)?)
     }
 
-    fn into_value<V>(self) -> V
+    pub fn into_value<V>(self) -> Result<V>
     where
         V: Value,
     {
-        let value = self.value.downcast().unwrap();
+        let value = self.0.downcast().map_err(|_| KvError::DowncastFailed)?;
         *value
     }
 }
 
-impl Clone for SnapshotEntry {
-    fn clone(&self) -> Self {
-        Self {
-            value: self.value.clone(),
+#[derive(Debug, Default)]
+struct Snapshot {
+    // INVARIANT: Set of keys in the edits are disjoint
+    // A map of 'insert' edits to be applied
+    insert_edits: BTreeMap<Key, SnapshotValue>,
+    // A set of 'remove' edits to be applied
+    remove_edits: BTreeSet<Key>,
+}
+
+impl Snapshot {
+    pub fn insert(&mut self, key: Key, value: SnapshotValue) {
+        self.remove_edits.remove(&key);
+        self.insert_edits.insert(key, value);
+    }
+
+    pub fn remove(&mut self, key: Key) {
+        self.insert_edits.remove(&key);
+        self.remove_edits.insert(key);
+    }
+
+    pub fn lookup(&self, key: &Key) -> Option<&SnapshotValue> {
+        if self.remove_edits.contains(key) {
+            return None;
         }
+
+        self.insert_edits.get(key)
+    }
+
+    pub fn lookup_mut(&mut self, key: &Key) -> Option<&mut SnapshotValue> {
+        if self.remove_edits.contains(key) {
+            return None;
+        }
+
+        self.insert_edits.get_mut(key)
+    }
+
+    pub fn contains_key(&self, key: &Key) -> bool {
+        self.insert_edits.contains_key(key) && !self.remove_edits.contains(key)
     }
 }
 
-impl Default for Transaction {
-    fn default() -> Self {
-        Self::new()
+impl LookupMap {
+    fn update(&mut self, key: Key, idx: usize) {
+        let key_history = self.entry(key).or_default();
+
+        match key_history.last() {
+            Some(&last_idx) if last_idx == idx => {
+                // The key was already looked up in the current context
+            }
+            _ => {
+                key_history.push(idx);
+            }
+        }
+    }
+
+    fn rollback(&mut self, key: &Key) -> Result<()> {
+        let is_history_empty = {
+            let history = self.get_mut(key).ok_or(KvError::ExpectedLookupMapEntry)?;
+
+            history.pop();
+            history.is_empty()
+        };
+
+        if is_history_empty {
+            self.remove(key);
+        }
+
+        Ok(())
     }
 }
 
 impl Transaction {
-    pub fn new() -> Self {
-        Self {
-            parent: None,
-            remove_set: BTreeSet::new(),
-            snapshot: BTreeMap::new(),
-        }
+    fn current_snapshot_idx(&self) -> usize {
+        self.stack.len().saturating_sub(1)
     }
 
-    fn lookup<V>(
+    fn update_lookup_map(&mut self, key: Key) {
+        self.lookup_map.update(key, self.current_snapshot_idx())
+    }
+
+    /// Return the current snapshot
+    fn current_snapshot(&mut self) -> Result<&mut Snapshot> {
+        Ok(self
+            .stack
+            .last_mut()
+            .ok_or(KvError::TransactionStackEmpty)?)
+    }
+
+    /// Insert a key-value pair into the current snapshot (as a 'insert' edit)
+    fn current_snapshot_insert(&mut self, key: Key, value: SnapshotValue) -> Result<()> {
+        self.update_lookup_map(key.clone());
+        self.current_snapshot()?.insert(key, value);
+        Ok(())
+    }
+
+    /// Lookup a key in the current snapshot
+    fn current_snapshot_lookup(&mut self, key: &Key) -> Result<Option<&SnapshotValue>> {
+        Ok(self.current_snapshot()?.lookup(key))
+    }
+
+    /// Lookup a key in the current snapshot
+    fn current_snapshot_lookup_mut(
         &mut self,
-        rt: &impl Runtime,
-        key: OwnedPath,
-    ) -> Result<Option<&mut SnapshotEntry>>
+        key: &Key,
+    ) -> Result<Option<&mut SnapshotValue>> {
+        Ok(self.current_snapshot()?.lookup_mut(key))
+    }
+
+    /// Remove a key from the current snapshot (as a 'remove' edit)
+    fn current_snapshot_remove(&mut self, key: Key) -> Result<()> {
+        self.update_lookup_map(key.clone());
+        self.current_snapshot()?.remove(key);
+        Ok(())
+    }
+
+    fn lookup<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&SnapshotValue>>
     where
         V: Value + DeserializeOwned,
     {
-        let first_entry = self.snapshot.entry(key.clone());
+        if let Some(&snapshot_idx) =
+            self.lookup_map.get(&key).and_then(|history| history.last())
+        {
+            let snapshot = &self.stack[snapshot_idx];
 
-        // Recursively lookup in parent if not found in current snapshot. If it is found in parent, insert into current snapshot.
-        match first_entry {
-            btree_map::Entry::Vacant(entry) => match &self.parent {
-                Some(parent) => {
-                    let parent = &mut parent.deref().borrow_mut();
-                    let parent_entry = parent.lookup::<V>(rt, key.clone())?;
-                    match parent_entry {
-                        Some(value) => {
-                            let snapshot_entry = entry.insert(value.clone());
-                            Ok(Some(snapshot_entry))
-                        }
-                        None => Ok(None),
-                    }
-                }
-                None => {
-                    if let Some(value) = Storage::get::<V>(rt, entry.key())? {
-                        let snapshot_entry =
-                            entry.insert(SnapshotEntry::ephemeral(value));
-                        return Ok(Some(snapshot_entry));
-                    }
+            return Ok(snapshot.lookup(&key));
+        }
 
-                    Ok(None)
-                }
-            },
-            btree_map::Entry::Occupied(entry) => {
-                let entry = entry.into_mut();
-                Ok(Some(entry))
+        if let Some(value) = Storage::get::<V>(rt, &key)? {
+            // TODO: This clone is probably not necessary
+            self.current_snapshot_insert(key.clone(), SnapshotValue::new(value))?;
+
+            self.current_snapshot_lookup(&key)
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn lookup_mut<V>(
+        &mut self,
+        rt: &impl Runtime,
+        key: Key,
+    ) -> Result<Option<&mut SnapshotValue>>
+    where
+        V: Value + DeserializeOwned,
+    {
+        if let Some(&snapshot_idx) =
+            self.lookup_map.get(&key).and_then(|history| history.last())
+        {
+            let snapshot = &self.stack[snapshot_idx];
+
+            if let Some(value) = snapshot.lookup(&key) {
+                self.current_snapshot_insert(key.clone(), value.clone())?;
+                self.current_snapshot_lookup_mut(&key)
+            } else {
+                Ok(None)
             }
+        } else if let Some(value) = Storage::get::<V>(rt, &key)? {
+            self.current_snapshot_insert(key.clone(), SnapshotValue::new(value))?;
+            self.current_snapshot_lookup_mut(&key)
+        } else {
+            Ok(None)
         }
     }
 
     /// Returns a reference to the value corresponding to the key in the
     /// key-value store if it exists.
-    pub fn get<V>(&mut self, rt: &impl Runtime, key: OwnedPath) -> Result<Option<&V>>
+    pub fn get<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&V>>
     where
         V: Value + DeserializeOwned,
     {
         self.lookup::<V>(rt, key)
-            .map(|entry_opt| entry_opt.map(|entry| entry.as_ref()))
+            .map(|entry_opt| entry_opt.map(|entry| entry.as_ref()).transpose())?
     }
 
     /// Returns a mutable reference to the value corresponding to the key in the
     /// key-value store if it exists.
-    pub fn get_mut<V>(
-        &mut self,
-        rt: &impl Runtime,
-        key: OwnedPath,
-    ) -> Result<Option<&mut V>>
+    pub fn get_mut<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&mut V>>
     where
         V: Value + DeserializeOwned,
     {
-        self.lookup::<V>(rt, key)
-            .map(|entry_opt| entry_opt.map(|entry| entry.as_mut()))
+        self.lookup_mut::<V>(rt, key)
+            .map(|entry_opt| entry_opt.map(|entry| entry.as_mut()).transpose())?
     }
 
     /// Returns `true` if the key-value store contains a key-value pair for the
     /// specified key.
-    pub fn contains_key(&self, rt: &impl Runtime, key: &OwnedPath) -> Result<bool> {
-        if self.snapshot.contains_key(key) {
-            Ok(true)
-        } else {
-            match &self.parent {
-                Some(parent) => parent.borrow().contains_key(rt, key),
-                None => Storage::contains_key(rt, key),
-            }
+    pub fn contains_key(&self, rt: &impl Runtime, key: &Key) -> Result<bool> {
+        if let Some(&context_idx) =
+            self.lookup_map.get(key).and_then(|history| history.last())
+        {
+            let context = &self.stack[context_idx];
+
+            return Ok(context.contains_key(key));
         }
+
+        Storage::contains_key(rt, key)
     }
 
     /// Insert a key-value pair into the key-value store.
-    pub fn insert<V>(&mut self, key: OwnedPath, value: V) -> Result<()>
+    pub fn insert<V>(&mut self, key: Key, value: V) -> Result<()>
     where
         V: Value,
     {
-        self.snapshot.insert(key, SnapshotEntry::ephemeral(value));
-        Ok(())
+        self.current_snapshot_insert(key, SnapshotValue::new(value))
     }
 
     /// Removes a key from the key-value store.
-    pub fn remove(&mut self, rt: &impl Runtime, key: &OwnedPath) -> Result<()> {
-        let key_exists = self.contains_key(rt, key)?;
-
-        self.snapshot.remove(key);
-
-        // Use the result after the immutable borrow ends
-        if key_exists {
-            self.remove_set.insert(key.clone());
-        }
-        Ok(())
+    pub fn remove(&mut self, key: Key) -> Result<()> {
+        self.current_snapshot_remove(key)
     }
 
     /// Returns the given key's corresponding entry in the transactional
@@ -227,74 +310,88 @@ impl Transaction {
     pub fn entry<'a, 'b, V>(
         &'a mut self,
         rt: &impl Runtime,
-        key: OwnedPath,
+        key: Key,
     ) -> Result<Entry<'b, V>>
     where
         V: Value + DeserializeOwned,
         'a: 'b,
     {
-        self.lookup::<V>(rt, key.clone())?;
+        // A mutable lookup ensures the key is in the current snapshot
+        self.lookup_mut::<V>(rt, key.clone())?;
 
-        match self.snapshot.entry(key) {
-            btree_map::Entry::Vacant(inner) => Ok(Entry::Vacant(VacantEntry::new(inner))),
-            btree_map::Entry::Occupied(inner) => Ok(Entry::Occupied(OccupiedEntry::new(
-                &mut self.remove_set,
+        let current_snapshot_idx = self.current_snapshot_idx();
+        // self.current_snapshot() inlined to avoid lifetime issue
+        let current_snapshot = self
+            .stack
+            .last_mut()
+            .ok_or(KvError::TransactionStackEmpty)?;
+
+        match current_snapshot.insert_edits.entry(key) {
+            btree_map::Entry::Vacant(inner) => Ok(Entry::vacant(
                 inner,
-            ))),
+                &mut self.lookup_map,
+                current_snapshot_idx,
+            )),
+            btree_map::Entry::Occupied(inner) => {
+                Ok(Entry::occupied(inner, &mut current_snapshot.remove_edits))
+            }
         }
     }
 
-    /// Begins a new transaction
-    pub fn begin(parent: Rc<RefCell<Transaction>>) -> Rc<RefCell<Transaction>> {
-        let child = Rc::new(RefCell::new(Transaction::new()));
-        child.deref().borrow_mut().parent = Some(parent);
-        Rc::clone(&child)
+    /// Begin a transaction.
+    pub fn begin(&mut self) {
+        self.stack.push(Snapshot::default())
     }
 
-    /// Commit a transaction. Returns `true` if the transaction
-    /// was successfully committed to the persistent key-value store.
-    pub fn commit<V>(&mut self, rt: &mut impl Runtime) -> Result<bool>
-    where
-        V: Value,
-    {
-        // Perform deletions
-        match &self.parent {
-            Some(parent) => {
-                for key in &self.remove_set.clone() {
-                    parent.deref().borrow_mut().snapshot.remove(key);
-                    parent.deref().borrow_mut().remove_set.insert(key.clone());
-                }
+    /// Commit a transaction.
+    pub fn commit(&mut self, rt: &mut impl Runtime) -> Result<()> {
+        let curr_ctxt = self.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
+
+        // Following the `.pop`, `prev_idx` is the index of prev_idx (if it exists)
+        let prev_idx = self.current_snapshot_idx();
+
+        if let Some(prev_ctxt) = self.stack.last_mut() {
+            // TODO: These clones are probably uncessary since the entry of btree will always be occupied.
+            for key in curr_ctxt.remove_edits {
+                self.lookup_map.update(key.clone(), prev_idx);
+                prev_ctxt.remove(key);
             }
-            None => {
-                for key in &self.remove_set.clone() {
-                    Storage::remove(rt, key)?;
-                }
+
+            for (key, value) in curr_ctxt.insert_edits {
+                self.lookup_map.update(key.clone(), prev_idx);
+                prev_ctxt.insert(key, value);
             }
+        } else {
+            for key in &curr_ctxt.remove_edits {
+                Storage::remove(rt, key)?
+            }
+
+            for (key, value) in curr_ctxt.insert_edits {
+                Storage::insert(rt, &key, value.0.as_ref())?
+            }
+
+            // Update lookup map
+            self.lookup_map.clear()
         }
 
-        let snapshot = self.snapshot.clone();
-
-        // Perform insertions
-        for (key, entry) in snapshot {
-            match &self.parent {
-                Some(parent) => {
-                    parent
-                        .deref()
-                        .borrow_mut()
-                        .insert(key, entry.into_value::<V>())?;
-                }
-                None => {
-                    Storage::insert(rt, &key, entry.value.deref().as_ref())?;
-                }
-            }
-        }
-
-        Ok(true)
+        Ok(())
     }
 
     /// Rollback a transaction.
-    pub fn rollback(self) {
-        drop(self);
+    pub fn rollback(&mut self) -> Result<()> {
+        let curr_ctxt = self.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
+
+        // SAFETY: The set of keys between removal edits and insertion edits are disjoint, meaning no
+        // `lookup_map` entries will be rolledback more than once
+        for key in &curr_ctxt.remove_edits {
+            self.lookup_map.rollback(key)?;
+        }
+
+        for key in curr_ctxt.insert_edits.keys() {
+            self.lookup_map.rollback(key)?
+        }
+
+        Ok(())
     }
 }
 
@@ -309,6 +406,30 @@ pub enum Entry<'a, V: 'a> {
 }
 
 impl<'a, V> Entry<'a, V> {
+    fn vacant(
+        inner: btree_map::VacantEntry<'a, Key, SnapshotValue>,
+        lookup_map: &'a mut LookupMap,
+        snapshot_idx: usize,
+    ) -> Self {
+        Entry::Vacant(VacantEntry {
+            inner,
+            lookup_map,
+            snapshot_idx,
+            _marker: PhantomData,
+        })
+    }
+
+    fn occupied(
+        inner: btree_map::OccupiedEntry<'a, Key, SnapshotValue>,
+        remove_edits: &'a mut BTreeSet<Key>,
+    ) -> Self {
+        Entry::Occupied(OccupiedEntry {
+            inner,
+            remove_edits,
+            _marker: PhantomData,
+        })
+    }
+
     pub fn or_insert_default(self) -> &'a mut V
     where
         V: Value + Default,
@@ -322,25 +443,21 @@ impl<'a, V> Entry<'a, V> {
 
 /// A view into a vacant entry in the transactional snapshot.
 pub struct VacantEntry<'a, V: 'a> {
-    inner: btree_map::VacantEntry<'a, OwnedPath, SnapshotEntry>,
+    inner: btree_map::VacantEntry<'a, Key, SnapshotValue>,
+    // Reference to lookup map (if we insert into the vacant entry)
+    lookup_map: &'a mut LookupMap,
+    snapshot_idx: usize,
     _marker: PhantomData<V>,
 }
 
 impl<'a, V: 'a> VacantEntry<'a, V> {
-    fn new(inner: btree_map::VacantEntry<'a, OwnedPath, SnapshotEntry>) -> Self {
-        Self {
-            inner,
-            _marker: PhantomData,
-        }
-    }
-
     /// Gets a reference to the key of the entry.
-    pub fn key(&self) -> &OwnedPath {
+    pub fn key(&self) -> &Key {
         self.inner.key()
     }
 
     /// Take ownership of the key.
-    pub fn into_key(self) -> OwnedPath {
+    pub fn into_key(self) -> Key {
         self.inner.into_key()
     }
 
@@ -350,46 +467,39 @@ impl<'a, V: 'a> VacantEntry<'a, V> {
     where
         V: Value,
     {
+        self.lookup_map
+            .update(self.key().clone(), self.snapshot_idx);
         self.inner
-            .insert(SnapshotEntry::ephemeral::<V>(value))
+            .insert(SnapshotValue::new(value))
             .as_mut()
+            .expect("Invalid type id invariant")
     }
 }
 
 /// A view into an occupied entry in the transactional snapshot.
 
 pub struct OccupiedEntry<'a, V: 'a> {
-    remove_set: &'a mut BTreeSet<OwnedPath>,
-    inner: btree_map::OccupiedEntry<'a, OwnedPath, SnapshotEntry>,
+    inner: btree_map::OccupiedEntry<'a, Key, SnapshotValue>,
+    // Reference to the set of keys to be removed from the current snapshot
+    remove_edits: &'a mut BTreeSet<Key>,
     _marker: PhantomData<V>,
 }
 
 impl<'a, V> OccupiedEntry<'a, V> {
-    fn new(
-        remove_set: &'a mut BTreeSet<OwnedPath>,
-        inner: btree_map::OccupiedEntry<'a, OwnedPath, SnapshotEntry>,
-    ) -> Self {
-        Self {
-            remove_set,
-            inner,
-            _marker: PhantomData,
-        }
-    }
-
     /// Gets a reference to the key in the entry.
-    pub fn key(&self) -> &OwnedPath {
+    pub fn key(&self) -> &Key {
         self.inner.key()
     }
 
     /// Takes the key-value pair out of the snapshot, returning ownership
     /// to the caller.
-    pub fn remove_entry(self) -> (OwnedPath, V)
+    pub fn remove_entry(self) -> (Key, V)
     where
         V: Value,
     {
         let (key, entry) = self.inner.remove_entry();
-        self.remove_set.insert(key.clone());
-        (key, entry.into_value())
+        self.remove_edits.insert(key.clone());
+        (key, entry.into_value().expect("Invalid type id invariant"))
     }
 
     /// Gets a reference to the value in the entry.
@@ -397,7 +507,10 @@ impl<'a, V> OccupiedEntry<'a, V> {
     where
         V: Value,
     {
-        self.inner.get().as_ref()
+        self.inner
+            .get()
+            .as_ref()
+            .expect("Invalid type id invariant")
     }
 
     /// Get a mutable reference to the value in the entry.
@@ -405,7 +518,10 @@ impl<'a, V> OccupiedEntry<'a, V> {
     where
         V: Value,
     {
-        self.inner.get_mut().as_mut()
+        self.inner
+            .get_mut()
+            .as_mut()
+            .expect("Invalid type id invariant")
     }
 
     /// Convert the entry into a mutable reference to its value.
@@ -413,7 +529,10 @@ impl<'a, V> OccupiedEntry<'a, V> {
     where
         V: Value,
     {
-        self.inner.into_mut().as_mut()
+        self.inner
+            .into_mut()
+            .as_mut()
+            .expect("Invalid type id invariant")
     }
 
     /// Sets the value of the entry and returns the entry's old value.
@@ -429,7 +548,28 @@ impl<'a, V> OccupiedEntry<'a, V> {
     where
         V: Value,
     {
-        self.remove_set.insert(self.key().clone());
-        self.inner.remove().into_value()
+        self.remove_edits.insert(self.key().clone());
+        self.inner
+            .remove()
+            .into_value()
+            .expect("Invalid type id invariant")
+    }
+}
+
+#[derive(Debug, Deref, DerefMut)]
+pub struct JsTransaction {
+    inner: &'static mut Transaction,
+}
+
+impl JsTransaction {
+    pub unsafe fn new(tx: &mut Transaction) -> Self {
+        // SAFETY
+        // From the pov of the `JsTransaction` struct, it is permitted to cast
+        // the `tx` reference to `'static` since the lifetime of `JsTransaction`
+        // is always shorter than the lifetime of `tx`
+
+        let rt: &'static mut Transaction = mem::transmute(tx);
+
+        Self { inner: rt }
     }
 }

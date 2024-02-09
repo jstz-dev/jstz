@@ -1,11 +1,11 @@
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 
 use boa_engine::{
     js_string, object::ObjectInitializer, property::Attribute, Context, JsArgs, JsError,
     JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, Trace};
-use jstz_core::{host::HostRuntime, host_defined, kv::Transaction, runtime, Result};
+use jstz_core::{host::HostRuntime, kv::Transaction, runtime, Result};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
@@ -60,13 +60,8 @@ impl Kv {
         tx.get::<KvValue>(hrt, self.key_path(key)?)
     }
 
-    pub fn delete(
-        &self,
-        hrt: &impl HostRuntime,
-        tx: &mut Transaction,
-        key: &str,
-    ) -> Result<()> {
-        tx.remove(hrt, &self.key_path(key)?)
+    pub fn delete(&self, tx: &mut Transaction, key: &str) -> Result<()> {
+        tx.remove(self.key_path(key)?)
     }
 
     pub fn has(
@@ -80,12 +75,7 @@ impl Kv {
 }
 
 macro_rules! preamble {
-    ($this:ident, $args:ident, $context:ident, $key:ident, $tx:ident) => {
-        host_defined!($context, host_defined);
-        let mut $tx = host_defined
-            .get_mut::<Transaction>()
-            .expect("Curent transaction undefined");
-
+    ($this:ident, $args:ident, $key:ident) => {
         let $this = $this
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Kv>())
@@ -115,44 +105,48 @@ impl KvApi {
     const NAME: &'static str = "Kv";
 
     fn set(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
-        preamble!(this, args, context, key, tx);
+        preamble!(this, args, key);
 
         let value = KvValue(args.get_or_undefined(1).to_json(context)?);
 
-        this.set(&mut tx, &key, value)?;
+        runtime::with_js_tx(|tx| this.set(tx, &key, value))?;
 
         Ok(JsValue::undefined())
     }
 
     fn get(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
-        preamble!(this, args, context, key, tx);
+        preamble!(this, args, key);
 
-        let result =
-            runtime::with_global_host(|rt| this.get(rt.deref(), tx.deref_mut(), &key))?;
-
-        match result {
-            Some(value) => JsValue::from_json(&value.0, context),
-            None => Ok(JsValue::null()),
-        }
+        runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<JsValue> {
+            match this.get(hrt.deref(), tx, &key)? {
+                Some(value) => JsValue::from_json(&value.0, context),
+                None => Ok(JsValue::null()),
+            }
+        })
     }
 
     fn delete(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context,
+        _context: &mut Context,
     ) -> JsResult<JsValue> {
-        preamble!(this, args, context, key, tx);
+        preamble!(this, args, key);
 
-        runtime::with_global_host(|hrt| this.delete(hrt.deref(), tx.deref_mut(), &key))?;
+        runtime::with_js_tx(|tx| this.delete(tx, &key))?;
 
         Ok(JsValue::undefined())
     }
 
-    fn has(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
-        preamble!(this, args, context, key, tx);
+    fn has(
+        this: &JsValue,
+        args: &[JsValue],
+        _context: &mut Context,
+    ) -> JsResult<JsValue> {
+        preamble!(this, args, key);
 
-        let result =
-            runtime::with_global_host(|hrt| this.has(hrt.deref(), &mut tx, &key))?;
+        let result = runtime::with_js_hrt(|hrt| {
+            runtime::with_js_tx(|tx| this.has(hrt.deref(), tx, &key))
+        })?;
 
         Ok(result.into())
     }

@@ -1,4 +1,4 @@
-use std::ops::DerefMut;
+use std::ops::Deref;
 
 use boa_engine::{
     js_string,
@@ -8,11 +8,7 @@ use boa_engine::{
 };
 use jstz_api::http::request::Request;
 use jstz_core::{
-    host::HostRuntime,
-    host_defined,
-    kv::Transaction,
-    native::JsNativeObject,
-    runtime::{self},
+    host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
     value::IntoJs,
 };
 
@@ -68,8 +64,8 @@ impl SmartFunction {
     ) -> Result<String> {
         // 1. Check if the contract has sufficient balance
         {
-            let balance =
-                Account::balance(hrt, tx, &self.address).expect("Could not get balance");
+            let balance = Account::balance(hrt, tx, &self.address)?;
+
             if balance < initial_balance {
                 return Err(Error::BalanceOverflow);
             }
@@ -93,7 +89,6 @@ impl SmartFunction {
 
     fn call(
         self_address: &Address,
-        tx: &mut Transaction,
         request: &JsNativeObject<Request>,
         operation_hash: OperationHash,
         context: &mut Context<'_>,
@@ -112,7 +107,7 @@ impl SmartFunction {
         headers::test_and_set_referrer(&request.deref(), self_address)?;
 
         // 3. Load, init and run!
-        Script::load_init_run(tx, address, operation_hash, request.inner(), context)
+        Script::load_init_run(address, operation_hash, request.inner(), context)
     }
 }
 
@@ -129,9 +124,6 @@ impl ContractApi {
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         host_defined!(context, host_defined);
-        let mut tx = host_defined
-            .get_mut::<Transaction>()
-            .expect("Curent transaction undefined");
         let trace_data = host_defined
             .get::<TraceData>()
             .expect("trace data undefined");
@@ -141,7 +133,6 @@ impl ContractApi {
 
         SmartFunction::call(
             address,
-            tx.deref_mut(),
             &request,
             trace_data.operation_hash.clone(),
             context,
@@ -162,10 +153,8 @@ impl ContractApi {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        host_defined!(context, host_defined);
-        let mut tx = host_defined.get_mut::<Transaction>().unwrap();
-
         let contract = SmartFunction::from_js_value(this)?;
+
         let contract_code: String = args
             .get(0)
             .ok_or_else(|| {
@@ -185,8 +174,13 @@ impl ContractApi {
 
         let promise = JsPromise::new(
             move |resolvers, context| {
-                let address = runtime::with_global_host(|rt| {
-                    contract.create(rt, &mut tx, contract_code, initial_balance as Amount)
+                let address = runtime::with_js_hrt_and_tx(|hrt, tx| {
+                    contract.create(
+                        hrt.deref(),
+                        tx,
+                        contract_code,
+                        initial_balance as Amount,
+                    )
                 })?;
 
                 resolvers.resolve.call(
