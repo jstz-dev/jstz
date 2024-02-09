@@ -19,36 +19,33 @@ use tempfile::TempDir;
 use tokio::task;
 
 use crate::{
-    config::{
-        jstz_home_dir, Config, NetworkName, SandboxConfig, SANDBOX_OCTEZ_NODE_PORT,
+    config::{jstz_home_dir, Config, SandboxConfig},
+    error::{bail_user_error, Result},
+    sandbox::{
+        SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_PORT,
         SANDBOX_OCTEZ_NODE_RPC_PORT, SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     },
-    error::{bail_user_error, Result},
     term::styles,
 };
-
-const SANDBOX_JSTZ_NODE_ADDR: &str = "127.0.0.1";
-const SANDBOX_OCTEZ_SMART_ROLLUP_ADDR: &str = "127.0.0.1";
-const SANDBOX_OCTEZ_NODE_ADDR: &str = "127.0.0.1";
 
 fn octez_node_endpoint() -> String {
     format!(
         "http://{}:{}",
-        SANDBOX_OCTEZ_NODE_ADDR, SANDBOX_OCTEZ_NODE_PORT
+        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_PORT
     )
 }
 
 fn octez_smart_rollup_endpoint() -> String {
     format!(
         "http://{}:{}",
-        SANDBOX_OCTEZ_SMART_ROLLUP_ADDR, SANDBOX_OCTEZ_SMART_ROLLUP_PORT
+        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_SMART_ROLLUP_PORT
     )
 }
 
 fn jstz_node_endpoint() -> String {
     format!(
         "http://{}:{}",
-        SANDBOX_JSTZ_NODE_ADDR, SANDBOX_JSTZ_NODE_PORT
+        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_JSTZ_NODE_PORT
     )
 }
 
@@ -221,31 +218,29 @@ fn init_client(cfg: &Config) -> Result<()> {
 
     // 2. Wait for the node to be bootstrapped
     debug!("Waiting for node to bootstrap...");
-    cfg.octez_client_sandbox(&Some(NetworkName::Dev))?
-        .wait_for_node_to_bootstrap()?;
+    cfg.octez_client_sandbox()?.wait_for_node_to_bootstrap()?;
     debug!(" done");
 
     // 3. Import activator and bootstrap accounts
     debug!("Importing activator account...");
-    cfg.octez_client(&Some(NetworkName::Dev))?
-        .import_secret_key("activator", ACTIVATOR_ACCOUNT_SK)?;
+    cfg.octez_client_sandbox()?
+        .import_secret_key(ACTIVATOR_ACCOUNT_ALIAS, ACTIVATOR_ACCOUNT_SK)?;
     debug!("done");
 
     // 4. Activate alpha
     debug!("Activating alpha...");
-    cfg.octez_client(&Some(NetworkName::Dev))?
-        .activate_protocol(
-            "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
-            "1",
-            "activator",
-            SANDBOX_PARAMS_PATH,
-        )?;
+    cfg.octez_client_sandbox()?.activate_protocol(
+        "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
+        "1",
+        "activator",
+        SANDBOX_PARAMS_PATH,
+    )?;
     debug!(" done");
 
     // 5. Import bootstrap accounts
     for (i, bootstrap_account) in SANDBOX_BOOTSTRAP_ACCOUNTS.iter().enumerate() {
         let name = format!("bootstrap{}", i + 1);
-        cfg.octez_client(&Some(NetworkName::Dev))?
+        cfg.octez_client_sandbox()?
             .import_secret_key(&name, bootstrap_account.secret)?;
         debug!(
             "Imported account {}. address: {}, secret: {}",
@@ -363,7 +358,7 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
     debug!("Started octez-smart-rollup-node");
 
     // 9. Set the rollup address in the bridge
-    bridge.set_rollup(&cfg.octez_client_sandbox(?, OPERATOR_ADDRESS, &rollup)?;
+    bridge.set_rollup(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &rollup)?;
     debug!("`jstz_bridge` `rollup` address set to {}", rollup);
 
     Ok((node, baker, rollup_node))

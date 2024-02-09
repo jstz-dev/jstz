@@ -14,7 +14,7 @@ pub enum Command {
         // The address or the alias of the deployed smart function.
         #[arg(value_name = "ALIAS|ADDRESS")]
         smart_function: AddressOrAlias,
-        // Optional log level to filter log stream
+        // Optional log level to filter log stream.
         #[arg(name = "level", short, long, ignore_case = true, default_value_t = DEFAULT_LOG_LEVEL)]
         log_level: LogLevel,
         /// Specifies the network from the config file, defaulting to the configured default network.

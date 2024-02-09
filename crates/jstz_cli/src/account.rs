@@ -237,7 +237,7 @@ async fn get_code(
 ) -> Result<()> {
     let cfg = Config::load()?;
 
-    println!("Getting code.. {:?}.", network);
+    debug!("Getting code.. {:?}.", network);
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
     debug!("resolved `account` -> {:?}", address);
