@@ -25,8 +25,7 @@ impl JstzClient {
     }
 
     pub fn logs_stream(&self, address: &Address) -> EventSource {
-        let url = format!("{}/accounts/{}/logs/stream", self.endpoint, address);
-
+        let url = format!("{}/logs/{}/stream", self.endpoint, address);
         EventSource::get(url)
     }
 
