@@ -260,6 +260,9 @@ fn client_bake(cfg: &Config, log_file: &File) -> Result<()> {
     Ok(())
 }
 
+/// Since actix_web uses a single-threaded runtime,
+/// the tasks spawned by `jstz_node` expect to run on the same thread.
+/// For more information, see: https://docs.rs/actix-rt/latest/actix_rt/
 async fn run_jstz_node() -> Result<()> {
     let local = task::LocalSet::new();
 
