@@ -10,7 +10,7 @@ pub const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::LOG;
 
 pub async fn exec(
     address_or_alias: AddressOrAlias,
-    log_level: Option<LogLevel>,
+    log_level: LogLevel,
     network: &Option<NetworkName>,
 ) -> Result<()> {
     let cfg = Config::load()?;
@@ -19,7 +19,6 @@ pub async fn exec(
     debug!("resolved `address_or_alias` -> {:?}", address);
 
     let mut event_source = cfg.jstz_client(network)?.logs_stream(&address);
-    let log_level = log_level.unwrap_or(DEFAULT_LOG_LOG_LEVEL);
 
     while let Some(event) = event_source.next().await {
         match event {

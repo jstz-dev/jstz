@@ -2,8 +2,8 @@ use clap::Subcommand;
 use log::{debug, info};
 
 use crate::{
-    error::{bail_user_error, Result},
     config::{Config, NetworkName},
+    error::{bail_user_error, Result},
     utils::AddressOrAlias,
 };
 

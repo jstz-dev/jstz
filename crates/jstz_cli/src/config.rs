@@ -205,7 +205,7 @@ pub struct SandboxConfig {
     pub pid: u32,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NetworkName {
     Custom(String),
     // Dev network uses sandbox config
@@ -232,6 +232,15 @@ impl FromStr for NetworkName {
     }
 }
 
+impl Serialize for NetworkName {
+    fn serialize<S>(&self, serializer: S) -> core::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
 impl<'de> Deserialize<'de> for NetworkName {
     fn deserialize<D>(deserializer: D) -> core::result::Result<NetworkName, D::Error>
     where
@@ -241,18 +250,17 @@ impl<'de> Deserialize<'de> for NetworkName {
         NetworkName::from_str(&s).map_err(serde::de::Error::custom)
     }
 }
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct Network {
+    pub octez_node_rpc_endpoint: String,
+    pub jstz_node_endpoint: String,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct NetworkConfig {
     // if None, the users have to specify the network in the command
     default_network: Option<NetworkName>,
     networks: HashMap<String, Network>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct Network {
-    pub octez_node_rpc_endpoint: String,
-    pub jstz_node_endpoint: String,
 }
 
 impl Config {
@@ -313,7 +321,7 @@ impl Config {
 
         Ok(OctezClient {
             octez_client_bin: Some(self.octez_path.join("octez-client")),
-            octez_client_dir: self.octez_client_dir(network_name),
+            octez_client_dir: self.octez_client_dir(network_name)?,
             endpoint: network.octez_node_rpc_endpoint,
             disable_disclaimer: true,
         })
@@ -349,7 +357,7 @@ impl Config {
         Ok(OctezRollupNode {
             octez_rollup_node_bin: Some(self.octez_path.join("octez-smart-rollup-node")),
             octez_rollup_node_dir: sandbox.octez_rollup_node_dir.clone(),
-            octez_client_dir: self.octez_client_dir(network_name),
+            octez_client_dir: self.octez_client_dir(network_name)?,
             endpoint: network.octez_node_rpc_endpoint,
         })
     }
@@ -358,14 +366,15 @@ impl Config {
         self.octez_rollup_node(&Some(NetworkName::Dev))
     }
 
-    fn octez_client_dir(&self, network_name: &Option<NetworkName>) -> Option<PathBuf> {
-        match network_name {
-            Some(NetworkName::Dev) => {
-                let sandbox = self.sandbox().map_err(|e| println!("{}", e)).expect("msg");
-                Some(sandbox.octez_client_dir.clone())
-            }
+    fn octez_client_dir(
+        &self,
+        network_name: &Option<NetworkName>,
+    ) -> Result<Option<PathBuf>> {
+        let sandbox = self.sandbox()?;
+        Ok(match network_name {
+            Some(NetworkName::Dev) => Some(sandbox.octez_client_dir.clone()),
             _ => None,
-        }
+        })
     }
 
     fn network(&self, name: &Option<NetworkName>) -> Result<Network> {
