@@ -6,7 +6,10 @@ use boa_engine::{
 };
 use boa_gc::{custom_trace, Finalize, Trace};
 use jstz_core::{
-    impl_into_js_from_into, js_fn::JsFn, native::JsNativeObject, value::IntoJs,
+    impl_into_js_from_into,
+    js_fn::{JsCallable, JsFn},
+    native::JsNativeObject,
+    value::IntoJs,
 };
 use std::str::FromStr;
 

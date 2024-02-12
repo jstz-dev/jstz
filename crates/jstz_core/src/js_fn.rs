@@ -46,7 +46,6 @@ impl<T0: IntoJs, T1: IntoJs, T2: IntoJs> IntoJsArgs for (T0, T1, T2) {
 
 /// A `JsFn<T, I, O>` is a `JsFunction` tagged with some Rust types used to handle the `TryFromJs` and `IntoJs` conversions automatically:
 /// - `T` is the type of the `this` parameter;
-/// - `N` is the arity;
 /// - `I` is a tuple `(I1, ..., IN)` that contains the types of the parameters;
 /// - `O` is the type of the output.
 #[derive(Debug)]
@@ -112,8 +111,12 @@ impl<T: IntoJs, I: IntoJsArgs, O: TryFromJs> TryFromJs for JsFn<T, I, O> {
     }
 }
 
-impl<T: IntoJs, I: IntoJsArgs, O: TryFromJs> JsFn<T, I, O> {
-    pub fn call(&self, this: T, inputs: I, context: &mut Context<'_>) -> JsResult<O> {
+pub trait JsCallable<T, I, O> {
+    fn call(&self, this: T, inputs: I, context: &mut Context<'_>) -> JsResult<O>;
+}
+
+impl<T: IntoJs, I: IntoJsArgs, O: TryFromJs> JsCallable<T, I, O> for JsFn<T, I, O> {
+    fn call(&self, this: T, inputs: I, context: &mut Context<'_>) -> JsResult<O> {
         let js_this = this.into_js(context);
         let js_args = inputs.into_js_args(context);
         self.deref()
