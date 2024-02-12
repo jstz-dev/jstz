@@ -7,7 +7,7 @@
 There are two ways to create a URL: either as an absolute URL or a relative URL.
 
 ```typescript
-let url: URL = new URL(`tezos://${my_contract.address}/entrypoint`);
+let url: URL = new URL(`tezos://${my_function.address}/entrypoint`);
 let url2: URL = new URL("../entrypoint_2", url.href);
 ```
 

@@ -9,11 +9,18 @@ export default (request) => {
   `;
 
   console.log(code);
-  const subcontractAddress = await Contract.create(code);
-  console.log("created", subcontractAddress);
+  const smartFunctionAddress = await SmartFunction.create(code);
+  console.log("created", smartFunctionAddress);
 
-  await Contract.call(
-    new Request(`tezos://${subcontractAddress}/`, {
+  await SmartFunction.call(
+    new Request(`tezos://${smartFunctionAddress}/`, {
+      method: "POST",
+      body: "Hello World",
+    }),
+  );
+
+  await fetch(
+    new Request(`tezos://${smartFunctionAddress}/`, {
       method: "POST",
       body: "Hello World",
     }),

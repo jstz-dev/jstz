@@ -5,7 +5,7 @@ async function handler(request: Request): Promise<Response> {
   try {
     switch (path) {
       case "/ping":
-        console.log("Hello from  subcontract 👋");
+        console.log("Hello from child smart function 👋");
         return new Response("Pong!");
 
       case "/transfer": {
@@ -20,7 +20,7 @@ async function handler(request: Request): Promise<Response> {
           },
         ];
 
-        return await Contract.call(
+        return await SmartFunction.call(
           new Request(`tezos://${target}/transfer`, {
             method: "POST",
             body: JSON.stringify(transfers),
@@ -41,7 +41,7 @@ async function handler(request: Request): Promise<Response> {
           token_id,
         }));
 
-        return await Contract.call(
+        return await SmartFunction.call(
           new Request(`tezos://${target}/update_operators`, {
             method: "PUT",
             body: JSON.stringify(body),

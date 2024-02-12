@@ -1,13 +1,13 @@
 import type { BalanceRequest, BalanceResponse, MintNew } from "../src/index";
 
-// NOTE: When updating actor contract, make sure to update the `ACTOR_CONTRACT_CODE` below
-const ACTOR_CONTRACT_CODE =
-  'async function u(c){let e=new URL(c.url),l=e.pathname;try{switch(l){case"/ping":return console.log("Hello from  subcontract \u{1F44B}"),new Response("Pong!");case"/transfer":{let t=e.searchParams.get("to"),a=+e.searchParams.get("token_id"),s=+e.searchParams.get("amount"),o=e.searchParams.get("fa2"),n=[{from:Ledger.selfAddress,transfers:[{to:t,token_id:a,amount:s}]}];return await Contract.call(new Request(`tezos://${o}/transfer`,{method:"POST",body:JSON.stringify(n)}))}case"/add_operator":{let t=e.searchParams.get("fa2"),a=JSON.parse(e.searchParams.get("tokens")),s=c.headers.get("Referer"),o=Ledger.selfAddress,n=a.map(d=>({operation:"add_operator",owner:o,operator:s,token_id:d}));return await Contract.call(new Request(`tezos://${t}/update_operators`,{method:"PUT",body:JSON.stringify(n)}))}default:let r=`Unrecognised entrypoint ${l}`;return console.error(r),new Response(r,{status:404})}}catch(r){return console.error(r),Response.error()}}var g=u;export{g as default};';
+// NOTE: When updating actor smart function, make sure to update the `ACTOR_FUNCTION_CODE` below
+const ACTOR_FUNCTION_CODE =
+  'async function u(c){let e=new URL(c.url),l=e.pathname;try{switch(l){case"/ping":return console.log("Hello from child smart function \u{1F44B}"),new Response("Pong!");case"/transfer":{let t=e.searchParams.get("to"),a=+e.searchParams.get("token_id"),s=+e.searchParams.get("amount"),o=e.searchParams.get("fa2"),n=[{from:Ledger.selfAddress,transfers:[{to:t,token_id:a,amount:s}]}];return await SmartFunction.call(new Request(`tezos://${o}/transfer`,{method:"POST",body:JSON.stringify(n)}))}case"/add_operator":{let t=e.searchParams.get("fa2"),a=JSON.parse(e.searchParams.get("tokens")),s=c.headers.get("Referer"),o=Ledger.selfAddress,n=a.map(d=>({operation:"add_operator",owner:o,operator:s,token_id:d}));return await SmartFunction.call(new Request(`tezos://${t}/update_operators`,{method:"PUT",body:JSON.stringify(n)}))}default:let r=`Unrecognised entrypoint ${l}`;return console.error(r),new Response(r,{status:404})}}catch(r){return console.error(r),Response.error()}}var g=u;export{g as default};';
 
 async function createActors(n: number): Promise<Address[]> {
   let promises = new Array(n)
     .fill(0)
-    .map(() => Contract.create(ACTOR_CONTRACT_CODE));
+    .map(() => SmartFunction.create(ACTOR_FUNCTION_CODE));
   return await Promise.all(promises);
 }
 
@@ -17,10 +17,10 @@ async function logBalances(fa2: Address, actor: Address[], tokens: number[]) {
     tokens.map((token_id) => ({ owner: actor, token_id })),
   );
 
-  // 2. Call the fa2 contract
+  // 2. Call the fa2 smart function
   let encodedRequests = TextEncoder.btoa(JSON.stringify(requests));
 
-  let response = await Contract.call(
+  let response = await SmartFunction.call(
     new Request(`tezos://${fa2}/balance_of?requests=${encodedRequests}`),
   );
 
@@ -41,7 +41,7 @@ async function addSelfAsOperator(
 ): Promise<Response[]> {
   // For each actor, add `Ledger.selfAddress` as an operator for each token in `fa2`
   let promises = actors.map((actor) =>
-    Contract.call(
+    SmartFunction.call(
       new Request(
         `tezos://${actor}/add_operator?fa2=${fa2}&tokens=${JSON.stringify(
           tokens,
@@ -56,7 +56,7 @@ async function mintTokens(
   fa2: Address,
   ...tokens: MintNew[]
 ): Promise<Response> {
-  return await Contract.call(
+  return await SmartFunction.call(
     new Request(`tezos://${fa2}/mint_new`, {
       method: "POST",
       body: JSON.stringify(tokens),
@@ -71,7 +71,7 @@ async function transfer(
   token_id: number,
   amount: number,
 ): Promise<Response> {
-  return await Contract.call(
+  return await SmartFunction.call(
     new Request(
       `tezos://${from}/transfer?fa2=${fa2}&to=${to}&token_id=${token_id}&amount=${amount}`,
     ),
@@ -94,7 +94,7 @@ async function steal(
   }));
 
   // 2. Attempt to transfer the tokens
-  return await Contract.call(
+  return await SmartFunction.call(
     new Request(`tezos://${fa2}/transfer`, {
       method: "POST",
       body: JSON.stringify(transfers),
@@ -135,7 +135,7 @@ async function runScenario(fa2: Address) {
     await log();
 
     console.log(
-      "Scenario contract is attempting to steal tokens from actors...",
+      "Scenario smart function is attempting to steal tokens from actors...",
     );
     try {
       await steal(
@@ -161,13 +161,13 @@ async function runScenario(fa2: Address) {
     }
 
     console.log(
-      "Scenario contract is being added as an operator for all tokens for all actors...",
+      "Scenario smart function is being added as an operator for all tokens for all actors...",
     );
     await addSelfAsOperator(fa2, actors, [1, 2]);
     console.log("Done!");
 
     console.info(
-      "Scenario contract is attempting to steal tokens from actors... (again)",
+      "Scenario smart function is attempting to steal tokens from actors... (again)",
     );
     await steal(
       fa2,
@@ -197,7 +197,7 @@ async function runScenario(fa2: Address) {
 async function handler(request: Request): Promise<Response> {
   let url = new URL(request.url);
   if (url.pathname == "/ping") {
-    console.log("Hello from runner contract 👋");
+    console.log("Hello from runner smart function 👋");
     return new Response("Pong");
   }
 

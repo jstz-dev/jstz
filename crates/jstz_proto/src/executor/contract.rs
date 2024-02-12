@@ -123,7 +123,7 @@ pub fn register_jstz_apis(
     );
     realm.register_api(
         api::ContractApi {
-            contract_address: address.clone(),
+            address: address.clone(),
         },
         context,
     );
@@ -157,12 +157,11 @@ impl Script {
 
     pub fn load(
         tx: &mut Transaction,
-        contract_address: &Address,
+        address: &Address,
         context: &mut Context<'_>,
     ) -> Result<Self> {
         let src = with_global_host(|hrt| {
-            Account::contract_code(hrt, tx, contract_address)?
-                .ok_or(Error::InvalidAddress)
+            Account::contract_code(hrt, tx, address)?.ok_or(Error::InvalidAddress)
         })?;
 
         Ok(Self::parse(Source::from_bytes(&src), context)?)
@@ -178,15 +177,15 @@ impl Script {
 
     fn register_apis(
         &self,
-        contract_address: &Address,
+        address: &Address,
         operation_hash: &OperationHash,
         context: &mut Context<'_>,
     ) {
         register_web_apis(self.realm(), context);
         register_jstz_apis(
             self.realm(),
-            contract_address,
-            compute_seed(contract_address, operation_hash),
+            address,
+            compute_seed(address, operation_hash),
             context,
         );
     }
@@ -195,11 +194,11 @@ impl Script {
     /// and evaluating the module of the script
     pub fn init(
         &self,
-        contract_address: &Address,
+        address: &Address,
         operation_hash: &OperationHash,
         context: &mut Context<'_>,
     ) -> JsResult<JsPromise> {
-        self.register_apis(contract_address, operation_hash, context);
+        self.register_apis(address, operation_hash, context);
 
         self.realm().eval_module(self, context)
     }
@@ -235,7 +234,7 @@ impl Script {
     /// Runs the script
     pub fn run(
         &self,
-        contract_address: &Address,
+        address: &Address,
         operation_hash: &OperationHash,
         request: &JsValue,
         context: &mut Context<'_>,
@@ -249,7 +248,7 @@ impl Script {
 
             let tx = Transaction::new();
             let trace_data = TraceData {
-                contract_address: contract_address.clone(),
+                contract_address: address.clone(),
                 operation_hash: operation_hash.clone(),
             };
 
@@ -260,14 +259,14 @@ impl Script {
 
         // 2. Set logger
         set_js_logger(&JsonLogger);
-        log_request_start(contract_address.clone(), operation_hash.to_string());
+        log_request_start(address.clone(), operation_hash.to_string());
 
         // 3. Invoke the script's handler
         let result =
             self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)?;
 
         // TODO: decode request and add more fields to the request (status, header etc).
-        log_request_end(contract_address.clone(), operation_hash.to_string());
+        log_request_end(address.clone(), operation_hash.to_string());
 
         // 4. Ensure that the transaction is committed
         on_success(
@@ -299,29 +298,26 @@ impl Script {
     /// Loads, initializes and runs the script
     pub fn load_init_run(
         tx: &mut Transaction,
-        contract_address: Address,
+        address: Address,
         operation_hash: OperationHash,
         request: &JsValue,
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         // 1. Load script
-        let script = Script::load(tx, &contract_address, context)?;
+        let script = Script::load(tx, &address, context)?;
 
         // 2. Evaluate the script's module
-        let script_promise = script.init(&contract_address, &operation_hash, context)?;
+        let script_promise = script.init(&address, &operation_hash, context)?;
 
         // 3. Once evaluated, call the script's handler
         let result = script_promise.then(
             Some(
                 FunctionObjectBuilder::new(context.realm(), unsafe {
                     NativeFunction::from_closure_with_captures(
-                        |_,
-                         _,
-                         (contract_address, operation_hash, script, request),
-                         context| {
-                            script.run(contract_address, operation_hash, request, context)
+                        |_, _, (address, operation_hash, script, request), context| {
+                            script.run(address, operation_hash, request, context)
                         },
-                        (contract_address, operation_hash, script, request.clone()),
+                        (address, operation_hash, script, request.clone()),
                     )
                 })
                 .build(),
