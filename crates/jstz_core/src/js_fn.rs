@@ -5,7 +5,7 @@ use boa_engine::{
 };
 use boa_gc::{custom_trace, Finalize, Trace};
 
-use crate::value::IntoJs;
+use crate::value::{IntoJs, JsUndefined};
 
 pub trait IntoJsArgs {
     type Target: AsRef<[JsValue]>;
@@ -122,5 +122,21 @@ impl<T: IntoJs, I: IntoJsArgs, O: TryFromJs> JsCallable<T, I, O> for JsFn<T, I, 
         self.deref()
             .call(&js_this, js_args.as_ref(), context)
             .and_then(|output| O::try_from_js(&output, context))
+    }
+}
+
+pub type JsFnWithoutThis<I, O> = JsFn<JsUndefined, I, O>;
+
+pub trait JsCallableWithoutThis<I, O> {
+    fn call_without_this(&self, inputs: I, context: &mut Context<'_>) -> JsResult<O>;
+}
+
+impl<I, O> JsCallableWithoutThis<I, O> for JsFnWithoutThis<I, O>
+where
+    I: IntoJsArgs,
+    O: TryFromJs,
+{
+    fn call_without_this(&self, inputs: I, context: &mut Context<'_>) -> JsResult<O> {
+        self.call(JsUndefined::Undefined, inputs, context)
     }
 }
