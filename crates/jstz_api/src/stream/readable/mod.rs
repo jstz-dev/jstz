@@ -1,10 +1,16 @@
+use crate::stream::{
+    queuing_strategy::{
+        high_water_mark::{ExtractHighWaterMark, HighWaterMark},
+        size::ExtractSizeAlgorithm,
+        QueuingStrategy,
+    },
+    readable::underlying_source::{ReadableStreamType, UnderlyingSource},
+};
 use boa_engine::{value::TryFromJs, Context, JsArgs, JsResult};
 use boa_gc::{custom_trace, Finalize, Trace};
 use jstz_core::native::{
     register_global_class, ClassBuilder, JsNativeObject, NativeClass,
 };
-
-use crate::stream::readable::underlying_source::UnderlyingSource;
 
 pub mod underlying_source;
 
@@ -38,9 +44,28 @@ impl NativeClass for ReadableStreamClass {
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance> {
         let underlying_source =
-            Option::<UnderlyingSource>::try_from_js(args.get_or_undefined(0), context)?;
-        let _ = underlying_source;
-        todo!()
+            Option::<UnderlyingSource>::try_from_js(args.get_or_undefined(0), context)?
+                .unwrap_or_else(|| todo!());
+        let queuing_strategy =
+            Option::<QueuingStrategy>::try_from_js(args.get_or_undefined(1), context)?
+                .unwrap_or_default();
+
+        // TODO Perform ! InitializeReadableStream(this).
+
+        if underlying_source.r#type == Some(ReadableStreamType::Bytes) {
+            // TODO If strategy["size"] exists, throw a RangeError exception.
+            let high_water_mark =
+                queuing_strategy.extract_high_water_mark(HighWaterMark::ZERO)?;
+            let _ = high_water_mark;
+            todo!("SetUpReadableByteStreamControllerFromUnderlyingSource")
+        } else {
+            // TODO Assert: underlyingSourceDict["type"] does not exist.
+            let size_algorithm = queuing_strategy.extract_size_algorithm();
+            let high_water_mark =
+                queuing_strategy.extract_high_water_mark(HighWaterMark::ONE)?;
+            let _ = (high_water_mark, size_algorithm);
+            todo!("SetUpReadableStreamDefaultControllerFromUnderlyingSource")
+        }
     }
 
     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
