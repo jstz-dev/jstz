@@ -1,4 +1,4 @@
-use super::{Line, QueryResponse};
+use super::{Line, LogQueryResponse, QueryResponse};
 use actix_web::web::block;
 use anyhow::{anyhow, Result};
 use jstz_proto::{
@@ -10,7 +10,6 @@ use rusqlite::{params, Params, Statement};
 
 pub type SqliteConnectionPool = Pool<SqliteConnectionManager>;
 pub type SqliteConnection = PooledConnection<r2d2_sqlite::SqliteConnectionManager>;
-type QueryResponseResult = Result<Vec<QueryResponse>>;
 
 const DB_PATH: &str = ".jstz/log.db";
 
@@ -94,7 +93,7 @@ impl Db {
         function_address: Address,
         limit: usize,
         offset: usize,
-    ) -> QueryResponseResult {
+    ) -> Result<QueryResponse> {
         let conn = self.connection().await?;
 
         let stmt = conn
@@ -107,7 +106,7 @@ impl Db {
         &self,
         function_address: Address,
         request_id: String,
-    ) -> QueryResponseResult {
+    ) -> Result<QueryResponse> {
         let conn = self.connection().await?;
 
         let stmt = conn
@@ -119,10 +118,10 @@ impl Db {
     fn collect_logs<P: Params>(
         mut stmt: Statement<'_>,
         params: P,
-    ) -> QueryResponseResult {
+    ) -> Result<QueryResponse> {
         let logs = stmt
             .query_map(params, |row| {
-                Ok(QueryResponse::Log {
+                Ok(LogQueryResponse::Log {
                     level: row.get(1)?,
                     content: row.get(2)?,
                     function_address: row.get(3)?,

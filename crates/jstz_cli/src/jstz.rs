@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use anyhow::{bail, Result};
 use jstz_api::KvValue;
+use jstz_node::logs::{QueryParams, QueryResponse};
 use jstz_proto::{
     context::account::{Address, Nonce},
     operation::{OperationHash, SignedOperation},
@@ -27,6 +28,37 @@ impl JstzClient {
     pub fn logs_stream(&self, address: &Address) -> EventSource {
         let url = format!("{}/logs/{}/stream", self.endpoint, address);
         EventSource::get(url)
+    }
+
+    pub async fn logs_persistnet(&self, params: QueryParams) -> Result<QueryResponse> {
+        let url = match params {
+            QueryParams::GetLogsByAddressAndRequestId(address, request_id) => format!(
+                "{}/logs/{}/persistent/requests/{}",
+                self.endpoint, address, request_id
+            ),
+            QueryParams::GetLogsByAddress(address, limit, offset) => {
+                let base_url =
+                    format!("{}/logs/{}/persistent/requests", self.endpoint, address);
+                match (limit, offset) {
+                    (Some(limit), Some(offset)) => {
+                        base_url + &format!("?limit={}&offset={}", limit, offset)
+                    }
+                    (Some(limit), _) => base_url + &format!("?limit={}", limit),
+                    (_, Some(offset)) => base_url + &format!("?offset={}", offset),
+                    _ => base_url,
+                }
+            }
+        };
+
+        let response = self.get(&url).await?;
+
+        match response.status() {
+            StatusCode::OK => {
+                let logs = response.json::<QueryResponse>().await?;
+                Ok(logs)
+            }
+            _ => bail!("Failed to get logs."),
+        }
     }
 
     pub async fn get_operation_receipt(

@@ -1,9 +1,10 @@
+use actix_web::web::ServiceConfig;
+
 mod accounts;
 pub mod logs;
 mod operations;
 
 pub use accounts::AccountsService;
-use actix_web::web::ServiceConfig;
 pub use logs::LogsService;
 pub use operations::OperationsService;
 

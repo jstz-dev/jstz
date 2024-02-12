@@ -42,7 +42,7 @@ async fn stream_logs(
 }
 
 #[derive(Deserialize, Debug)]
-pub struct Pagination {
+pub(crate) struct Pagination {
     limit: Option<usize>,
     offset: Option<usize>,
 }
@@ -58,16 +58,8 @@ async fn persistent_logs(
     let address = Address::from_base58(&address)?;
 
     let Pagination { limit, offset } = pagination.into_inner();
-    let result = query(
-        &db,
-        QueryParams::GetLogsByAddress(
-            address,
-            limit.unwrap_or(DEAULT_PAGINATION_LIMIT),
-            offset.unwrap_or(DEAULT_PAGINATION_OFFSET),
-        ),
-    )
-    .await?;
-
+    let result =
+        query(&db, QueryParams::GetLogsByAddress(address, limit, offset)).await?;
     Ok(HttpResponse::Ok().json(result))
 }
 
@@ -79,7 +71,7 @@ async fn persistent_logs_by_request_id(
     let (address, request_id) = path.into_inner();
 
     let address = Address::from_base58(&address)?;
-
+    // TODO: check if request_id is valid
     let result = query(
         &db,
         QueryParams::GetLogsByAddressAndRequestId(address, request_id),
@@ -200,12 +192,13 @@ impl LogsService {
 type Limit = usize;
 type Offset = usize;
 pub enum QueryParams {
-    GetLogsByAddress(Address, Limit, Offset),
+    GetLogsByAddress(Address, Option<Limit>, Option<Offset>),
+    // TODO: use OperationHash instead of string.
     GetLogsByAddressAndRequestId(Address, String),
 }
 
-#[derive(Serialize, Deserialize)]
-pub enum QueryResponse {
+#[derive(Serialize, Deserialize, Debug)]
+pub enum LogQueryResponse {
     Log {
         level: String,
         content: String,
@@ -213,11 +206,17 @@ pub enum QueryResponse {
         request_id: String,
     },
 }
+pub type QueryResponse = Vec<LogQueryResponse>;
 
-pub async fn query(db: &Db, param: QueryParams) -> Result<Vec<QueryResponse>> {
+pub(crate) async fn query(db: &Db, param: QueryParams) -> Result<QueryResponse> {
     match param {
-        QueryParams::GetLogsByAddress(addr, offset, limit) => {
-            db.logs_by_address(addr, offset, limit).await
+        QueryParams::GetLogsByAddress(addr, limit, offset) => {
+            db.logs_by_address(
+                addr,
+                limit.unwrap_or(DEAULT_PAGINATION_LIMIT),
+                offset.unwrap_or(DEAULT_PAGINATION_OFFSET),
+            )
+            .await
         }
         QueryParams::GetLogsByAddressAndRequestId(addr, request_id) => {
             db.logs_by_address_and_request_id(addr, request_id).await
