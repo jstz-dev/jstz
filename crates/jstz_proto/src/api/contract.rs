@@ -36,23 +36,25 @@ unsafe impl Trace for TraceData {
     empty_trace!();
 }
 
-struct Contract {
-    contract_address: Address,
+struct SmartFunction {
+    address: Address,
 }
-impl Finalize for Contract {}
+impl Finalize for SmartFunction {}
 
-unsafe impl Trace for Contract {
+unsafe impl Trace for SmartFunction {
     empty_trace!();
 }
 
-impl Contract {
+impl SmartFunction {
     fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
             .ok_or_else(|| {
                 JsNativeError::typ()
-                    .with_message("Failed to convert js value into rust type `Ledger`")
+                    .with_message(
+                        "Failed to convert js value into rust type `SmartFunction`",
+                    )
                     .into()
             })
     }
@@ -66,36 +68,31 @@ impl Contract {
     ) -> Result<String> {
         // 1. Check if the contract has sufficient balance
         {
-            let balance = Account::balance(hrt, tx, &self.contract_address)
-                .expect("Could not get balance");
+            let balance =
+                Account::balance(hrt, tx, &self.address).expect("Could not get balance");
             if balance < initial_balance {
                 return Err(Error::BalanceOverflow);
             }
         } // The mutable borrow of `tx` in `balance` is released here
 
         // 2. Deploy the contract
-        let address = Script::deploy(
-            hrt,
-            tx,
-            &self.contract_address,
-            contract_code,
-            initial_balance,
-        )?; // The mutable borrow of `tx` in `Script::deploy` is released here
+        let address =
+            Script::deploy(hrt, tx, &self.address, contract_code, initial_balance)?; // The mutable borrow of `tx` in `Script::deploy` is released here
 
         // 3. Increment nonce of current account
         {
-            let nonce = Account::nonce(hrt, tx, &self.contract_address)?;
+            let nonce = Account::nonce(hrt, tx, &self.address)?;
             nonce.increment();
         } // The mutable borrow of `tx` in `Account::nonce` is released here
 
         // 4. Transfer the balance to the contract
-        Account::transfer(hrt, tx, &self.contract_address, &address, initial_balance)?;
+        Account::transfer(hrt, tx, &self.address, &address, initial_balance)?;
 
         Ok(address.to_string())
     }
 
     fn call(
-        &self,
+        self_address: &Address,
         tx: &mut Transaction,
         request: &JsNativeObject<Request>,
         operation_hash: OperationHash,
@@ -112,7 +109,7 @@ impl Contract {
             })?;
 
         // 2. Set the referer of the request to the current contract address
-        headers::test_and_set_referrer(&request.deref(), &self.contract_address)?;
+        headers::test_and_set_referrer(&request.deref(), self_address)?;
 
         // 3. Load, init and run!
         Script::load_init_run(tx, address, operation_hash, request.inner(), context)
@@ -120,14 +117,14 @@ impl Contract {
 }
 
 pub struct ContractApi {
-    pub contract_address: Address,
+    pub address: Address,
 }
 
 impl ContractApi {
-    const NAME: &'static str = "Contract";
+    const NAME: &'static str = "SmartFunction";
 
-    fn call(
-        this: &JsValue,
+    fn fetch(
+        address: &Address,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
@@ -139,16 +136,25 @@ impl ContractApi {
             .get::<TraceData>()
             .expect("trace data undefined");
 
-        let contract = Contract::from_js_value(this)?;
         let request: JsNativeObject<Request> =
             args.get_or_undefined(0).clone().try_into()?;
 
-        contract.call(
+        SmartFunction::call(
+            address,
             tx.deref_mut(),
             &request,
             trace_data.operation_hash.clone(),
             context,
         )
+    }
+
+    fn call(
+        this: &JsValue,
+        args: &[JsValue],
+        context: &mut Context<'_>,
+    ) -> JsResult<JsValue> {
+        let smart_function = SmartFunction::from_js_value(this)?;
+        Self::fetch(&smart_function.address, args, context)
     }
 
     fn create(
@@ -159,7 +165,7 @@ impl ContractApi {
         host_defined!(context, host_defined);
         let mut tx = host_defined.get_mut::<Transaction>().unwrap();
 
-        let contract = Contract::from_js_value(this)?;
+        let contract = SmartFunction::from_js_value(this)?;
         let contract_code: String = args
             .get(0)
             .ok_or_else(|| {
@@ -200,8 +206,8 @@ impl ContractApi {
 impl jstz_core::Api for ContractApi {
     fn init(self, context: &mut Context<'_>) {
         let contract = ObjectInitializer::with_native(
-            Contract {
-                contract_address: self.contract_address,
+            SmartFunction {
+                address: self.address.clone(),
             },
             context,
         )
@@ -219,6 +225,19 @@ impl jstz_core::Api for ContractApi {
 
         context
             .register_global_property(js_string!(Self::NAME), contract, Attribute::all())
-            .expect("The contract object shouldn't exist yet")
+            .expect("The smart function object shouldn't exist yet");
+
+        context
+            .register_global_builtin_callable(
+                js_string!("fetch"),
+                2,
+                NativeFunction::from_copy_closure_with_captures(
+                    |_, args, this, ctx| Self::fetch(&this.address, args, ctx),
+                    SmartFunction {
+                        address: self.address,
+                    },
+                ),
+            )
+            .expect("The fetch function shouldn't exist yet");
     }
 }

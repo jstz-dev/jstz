@@ -193,9 +193,9 @@ declare interface Ledger {
 
 declare var Ledger: Ledger;
 
-declare interface Contract {
+declare interface SmartFunction {
   create(code: String): Promise<Address>;
   call(request: Request): Promise<Response>;
 }
 
-declare var Contract: Contract;
+declare var SmartFunction: SmartFunction;

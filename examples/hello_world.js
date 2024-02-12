@@ -1,4 +1,4 @@
-let contractCode = `
+let smartFunctionCode = `
 const handler = async (request) => {
     try {
         const message = await request.text()
@@ -6,7 +6,7 @@ const handler = async (request) => {
         console.log(\`My address is \${Ledger.selfAddress()}\`)
         const response = new Response("Success!");
         return response;
-    } catch (error) { console.error("subcontract error", error)
+    } catch (error) { console.error("child function error", error)
                       return Response.error(error)
                     }
 }
@@ -17,22 +17,22 @@ const handler = async () => {
   console.log(`My address is ${Ledger.selfAddress()}`);
 
   try {
-    const newContract = await Contract.create(contractCode);
-    console.log("created new contract with address", newContract);
-    const url = `tezos://sam.tez/myEndPoint`;
+    const newSmartFunction = await SmartFunction.create(smartFunctionCode);
+    console.log("created new smart function with address", newSmartFunction);
+    const url = `tezos://${newSmartFunction}/myEndPoint`;
     const request = new Request(url, {
       method: "POST",
-      body: "Hello from Subcontract 👋",
+      body: "Hello from child smart function 👋",
     });
 
-    const response = await Contract.call(newContract, request);
+    const response = await SmartFunction.call(request);
     console.log(await response.text());
   } catch (error) {
     console.error(error);
     return Response.error("😿");
   }
 
-  console.log("The root contract has control again!");
+  console.log("The root smart function has control again!");
   console.log(`And to confirm, my address is ${Ledger.selfAddress()}`);
   const response = new Response("😸");
   return response;

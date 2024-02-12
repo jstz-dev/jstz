@@ -118,7 +118,8 @@ pub async fn exec(
             run_contract.body,
         ),
 
-        _ => bail!("Expected a `DeployContract` receipt, but got something else."),
+        Ok(_) => bail!("Expected a `RunContract` receipt, but got something else."),
+        Err(err) => bail!("Contract failed with error {err:?}"),
     };
 
     info!("Status code: {}", status_code);

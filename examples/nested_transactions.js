@@ -20,10 +20,10 @@ async function handler() {
     `
       \`;
       console.log(nested_code2);
-      let subcontractAddress = await Contract.create(nested_code2);
+      let smartFunctionAddress = await SmartFunction.create(nested_code2);
 
-      await Contract.call(
-        new Request(\`tezos://\${subcontractAddress}/\`, {
+      await SmartFunction.call(
+        new Request(\`tezos://\${smartFunctionAddress}/\`, {
           method: \`POST\`,
           body: \`Hello World\`,
         }),
@@ -38,10 +38,10 @@ async function handler() {
   `;
 
   console.log(nested_code1);
-  const subcontractAddress = await Contract.create(nested_code1);
+  const smartFunctionAddress = await SmartFunction.create(nested_code1);
 
-  await Contract.call(
-    new Request(`tezos://${subcontractAddress}/`, {
+  await SmartFunction.call(
+    new Request(`tezos://${smartFunctionAddress}/`, {
       method: `POST`,
       body: `Hello World`,
     }),

@@ -1,19 +1,19 @@
-# 📜 Contract
+# 💡 SmartFunction
 
-The `Contract` namespace provides an API to create and call`jstz` smart functions.
-New smart functions can be created with the `Contract.create()` method
-and `Contract.call()` is used for calling other smart functions.
+The `SmartFunction` namespace provides an API to create and call`jstz` smart functions.
+New smart functions can be created with the `SmartFunction.create()` method
+and `SmartFunction.call()` is used for calling other smart functions.
 
-All operations on `Contract` are asynchronous.
+All operations on `SmartFunction` are asynchronous.
 
 ## Quick Start
 
-We may deploy a new smart function programatically by calling `Contract.create()` with a single `string` argument.
+We may deploy a new smart function programatically by calling `SmartFunction.create()` with a single `string` argument.
 The smart function code must be valid ECMAScript. TypeScript is not supported when deploying functions using
-`Contract.create`.
+`SmartFunction.create`.
 
 ```typescript
-const newContract = Contract.create(
+const newSmartFunction = SmartFunction.create(
   "export default handler () => new Response()",
 );
 ```
@@ -22,21 +22,21 @@ This will deploy a new smart function with the code `export default handler () =
 returning a _promise_ which will resolve to the address of the new function.
 
 Once a smart function is deployed we may call it from another smart function using the
-`Contract.call()` method. To call a smart function we create a new [Request](request.md) object with
+`SmartFunction.call()` method. To call a smart function we create a new [Request](request.md) object with
 scheme `tezos` and the address as the hostname.
 
 ```typescript
 async function handler(_: Request): Promise<Response> {
-  const newAddress = await Contract.create(
+  const newAddress = await SmartFunction.create(
     "export default handler () => new Response()",
   );
-  return Contract.call(new Request(`tezos://${newAddress}`));
+  return SmartFunction.call(new Request(`tezos://${newAddress}`));
 }
 ```
 
 ## Instance Methods
 
-### `Contract.call(request: Request): Promise<Response>`
+### `SmartFunction.call(request: Request): Promise<Response>`
 
 Calls a `jstz` smart function with the given request, returning a promise that resolves to an
 HTTP [`Response`](response.md) object.
@@ -45,7 +45,7 @@ HTTP [`Response`](response.md) object.
   The URL scheme _must_ be `tezos` and the host _must_ be the address of a deployed `jstz` smart function.
   The `Referer` header _must_ not be set.
 
-### `Contract.create(code : string): Promise<Address>`
+### `SmartFunction.create(code : string): Promise<Address>`
 
 Creates and deploys a new `jstz` smart function with the given code, returning a promise that resolves to the address of the newly deployed smart function.
 

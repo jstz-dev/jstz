@@ -123,7 +123,7 @@ jstz deploy --self-address <SELF_ADDRESS> --function-code <FUNCTION_CODE> --bala
 
 ### Options:
 
-- `--self-address (-s) <SELF_ADDRESS>`: Address used when deploying the contract.
+- `--self-address (-s) <SELF_ADDRESS>`: Address used when deploying the smart function.
 
 - `--function-code (-f) <FUNCTION_CODE>`: The code for the function being deployed.
 
@@ -159,7 +159,7 @@ jstz run [OPTIONS] <URL> <referrer>
 ### Example
 
 ```bash
-$ export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed contract examples/counter.js
+$ export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
 $ cargo run -- run "tezos://${counter}/"  tz4CNucLU82UYRcnkGvk1UWmVdVdj8AfDzvU
 $ cargo run -- run "tezos://${counter}/"  tz4CNucLU82UYRcnkGvk1UWmVdVdj8AfDzvU
 $ cargo run -- run "tezos://${counter}/"  tz4CNucLU82UYRcnkGvk1UWmVdVdj8AfDzvU
@@ -187,16 +187,16 @@ jstz repl [OPTIONS]
 
 ### Options:
 
-- `--self-address (-s) <SELF_ADDRESS>`: Address used when deploying the contract.
+- `--self-address (-s) <SELF_ADDRESS>`: Address used when deploying the smart function.
 
 ### Example
 
 ```bash
 $ jstz repl
 $ Using mock self-address tz4RepLRepLRepLRepLRepLRepLRepN7Cu8j.
-$ >> const subcontract1 = Contract.create(`export default (() => { return Response.json({ message: "hello world" }); });`)
-$ [📜] Contract created: tz4JGZp7XEojgrpnzL8UdTi3Kn4NaPRVQNwS
-$ >> const response = subcontract1.then(address => Contract.call(new Request(`tezos://${address}/`)))
+$ >> const childFunction1 = SmartFunction.create(`export default (() => { return Response.json({ message: "hello world" }); });`)
+$ [📜] Smart Function created: tz4JGZp7XEojgrpnzL8UdTi3Kn4NaPRVQNwS
+$ >> const response = child1.then(address => SmartFunction.call(new Request(`tezos://${address}/`)))
 $ Evaluating: "export default (() => { return Response.json({ message: \"hello world\" }); });"
 $ >> response.then(async response => console.log((await response.json()).message))
 $ [🪵] hello world

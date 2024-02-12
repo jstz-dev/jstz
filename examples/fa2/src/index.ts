@@ -217,7 +217,7 @@ async function handler(request: Request): Promise<Response> {
   try {
     switch (path) {
       case "/ping":
-        console.log("Hello from runner contract 👋");
+        console.log("Hello from runner smart function 👋");
         return new Response("Pong");
 
       case "/balance_of":
