@@ -5,7 +5,7 @@ use boa_engine::{
         JsMapIterator, JsPromise, JsProxy, JsRegExp, JsSet, JsSetIterator, JsTypedArray,
         JsUint16Array, JsUint32Array, JsUint8Array,
     },
-    Context, JsBigInt, JsObject, JsString, JsSymbol,
+    Context, JsBigInt, JsNativeError, JsObject, JsString, JsSymbol,
 };
 
 pub use boa_engine::value::*;
@@ -104,3 +104,33 @@ where
         JsArray::from_iter(values, context).into()
     }
 }
+
+/// A unit type that corresponds to an undefined JS value
+#[derive(Default)]
+pub enum JsUndefined {
+    #[default]
+    Undefined,
+}
+
+impl TryFromJs for JsUndefined {
+    fn try_from_js(
+        value: &JsValue,
+        _context: &mut Context<'_>,
+    ) -> boa_engine::prelude::JsResult<Self> {
+        if value.is_undefined() {
+            Ok(JsUndefined::Undefined)
+        } else {
+            Err(JsNativeError::typ()
+                .with_message(format!("Expected undefined but found {:?}", value))
+                .into())
+        }
+    }
+}
+
+impl From<JsUndefined> for JsValue {
+    fn from(_: JsUndefined) -> Self {
+        JsValue::undefined()
+    }
+}
+
+impl_into_js_from_into!(JsUndefined);
