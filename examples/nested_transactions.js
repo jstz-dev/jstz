@@ -4,7 +4,12 @@ async function handler() {
 
       let counter = Kv.get("Counter3");
       console.log("Counter 3: " + counter);
-      Kv.set("Counter3", counter+1);
+      if (counter === null) {
+        counter = 0;
+      } else {
+        counter++;
+      }
+      Kv.set("Counter3", counter);
       console.log("Hello World");
       const arg = request.text();
       console.log(arg);
@@ -30,7 +35,12 @@ async function handler() {
       );
       let counter = Kv.get("Counter2");
       console.log("Counter 2: " + counter);
-      Kv.set("Counter2", counter+1);
+      if (counter === null) {
+        counter = 0;
+      } else {
+        counter++;
+      }
+      Kv.set("Counter2", counter);
       const arg = request.text();
       console.log(arg);
       return new Response();
@@ -49,6 +59,7 @@ async function handler() {
 
   let counter = Kv.get("Counter1");
   console.log(`Counter 1: ${counter}`);
+
   if (counter === null) {
     counter = 0;
   } else {
