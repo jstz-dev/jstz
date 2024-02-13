@@ -37,7 +37,7 @@ impl ToString for Nonce {
 pub struct Account {
     pub nonce: Nonce,
     pub amount: Amount,
-    pub contract_code: Option<String>,
+    pub function_code: Option<String>,
 }
 
 const ACCOUNTS_PATH: RefPath = RefPath::assert_from(b"/jstz_account");
@@ -70,7 +70,7 @@ impl Account {
         match tx.entry::<Account>(hrt, Self::path(addr)?)? {
             Entry::Occupied(ntry) => {
                 let acc: &Self = ntry.get();
-                hrt.write_debug(&format!("📜 already exists: {:?}\n", acc.contract_code));
+                hrt.write_debug(&format!("📜 already exists: {:?}\n", acc.function_code));
                 Err(Error::InvalidAddress)
             }
             Entry::Vacant(entry) => {
@@ -89,24 +89,24 @@ impl Account {
         Ok(&mut account.nonce)
     }
 
-    pub fn contract_code<'a>(
+    pub fn function_code<'a>(
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         addr: &Address,
     ) -> Result<Option<&'a mut String>> {
         let account = Self::get_mut(hrt, tx, addr)?;
-        Ok(account.contract_code.as_mut())
+        Ok(account.function_code.as_mut())
     }
 
-    pub fn set_contract_code(
+    pub fn set_function_code(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
         addr: &Address,
-        contract_code: String,
+        function_code: String,
     ) -> Result<()> {
         let account = Self::get_mut(hrt, tx, addr)?;
 
-        account.contract_code = Some(contract_code);
+        account.function_code = Some(function_code);
         Ok(())
     }
 
@@ -149,12 +149,12 @@ impl Account {
         tx: &mut Transaction,
         addr: &Address,
         amount: Amount,
-        contract_code: Option<String>,
+        function_code: Option<String>,
     ) -> Result<()> {
         Self {
             nonce: Nonce::default(),
             amount,
-            contract_code,
+            function_code,
         }
         .try_insert(hrt, tx, addr)
     }

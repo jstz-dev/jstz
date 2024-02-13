@@ -1,7 +1,7 @@
 //! `jstz`'s implementation of JavaScript's `Headers` Web API Class.
 //!
 //! Represents response/request headers, allowing you to query them and take different
-//! actions depending on the results in `jstz` contracts.
+//! actions depending on the results in `jstz` smart functions
 //!
 //! FIXME: This is not spec compliant
 //!

@@ -24,12 +24,12 @@ impl Receipt {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DeployContract {
-    pub contract_address: Address,
+pub struct DeployFunction {
+    pub address: Address,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RunContract {
+pub struct RunFunction {
     pub body: HttpBody,
     #[serde(with = "http_serde::status_code")]
     pub status_code: StatusCode,
@@ -39,6 +39,6 @@ pub struct RunContract {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Content {
-    DeployContract(DeployContract),
-    RunContract(RunContract),
+    DeployFunction(DeployFunction),
+    RunFunction(RunFunction),
 }

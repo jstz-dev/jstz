@@ -3,7 +3,7 @@ use std::str::FromStr;
 use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
 use jstz_proto::{
-    operation::{Content as OperationContent, Operation, RunContract, SignedOperation},
+    operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
     receipt::Content as ReceiptContent,
 };
 use log::{debug, info};
@@ -79,7 +79,7 @@ pub async fn exec(
     let op = Operation {
         source: user.address.clone(),
         nonce,
-        content: OperationContent::RunContract(RunContract {
+        content: OperationContent::RunFunction(RunFunction {
             uri: url,
             method,
             headers: HeaderMap::default(),
@@ -112,14 +112,14 @@ pub async fn exec(
 
     debug!("Receipt: {:?}", receipt);
     let (status_code, headers, body) = match receipt.inner {
-        Ok(ReceiptContent::RunContract(run_contract)) => (
-            run_contract.status_code,
-            run_contract.headers,
-            run_contract.body,
+        Ok(ReceiptContent::RunFunction(run_function)) => (
+            run_function.status_code,
+            run_function.headers,
+            run_function.body,
         ),
 
-        Ok(_) => bail!("Expected a `RunContract` receipt, but got something else."),
-        Err(err) => bail!("Contract failed with error {err:?}"),
+        Ok(_) => bail!("Expected a `RunFunction` receipt, but got something else."),
+        Err(err) => bail!("SmartFunction failed with error {err:?}"),
     };
 
     info!("Status code: {}", status_code);

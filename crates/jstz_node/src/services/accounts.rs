@@ -55,7 +55,7 @@ async fn code(
         Some(value) => {
             bincode::deserialize::<Account>(&value)
                 .map_err(|_| anyhow!("Failed to deserialize account"))?
-                .contract_code
+                .function_code
         }
         None => return Ok(HttpResponse::NotFound().finish()),
     };

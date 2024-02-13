@@ -55,20 +55,20 @@ impl Operation {
             content,
         } = self;
         match content {
-            Content::DeployContract(DeployContract {
-                contract_code,
-                contract_credit,
+            Content::DeployFunction(DeployFunction {
+                function_code,
+                account_credit,
             }) => Blake2b::from(
                 format!(
                     "{}{}{}{}",
                     source,
                     nonce.to_string(),
-                    contract_code,
-                    contract_credit
+                    function_code,
+                    account_credit
                 )
                 .as_bytes(),
             ),
-            Content::RunContract(RunContract {
+            Content::RunFunction(RunFunction {
                 uri,
                 method,
                 headers,
@@ -91,13 +91,13 @@ impl Operation {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct DeployContract {
-    pub contract_code: String,
-    pub contract_credit: Amount,
+pub struct DeployFunction {
+    pub function_code: String,
+    pub account_credit: Amount,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-pub struct RunContract {
+pub struct RunFunction {
     #[serde(with = "http_serde::uri")]
     pub uri: Uri,
     #[serde(with = "http_serde::method")]
@@ -110,8 +110,8 @@ pub struct RunContract {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub enum Content {
-    DeployContract(DeployContract),
-    RunContract(RunContract),
+    DeployFunction(DeployFunction),
+    RunFunction(RunFunction),
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]

@@ -25,7 +25,7 @@ The transactions performed over the KV store offer ACID guarantees and serializa
 
 In each transaction, the repeated access to the same key is optimized through caching. Similarly, writes are buffered until the transaction is commited at which point it gets flushed to the persistent KV storage.
 
-`jstz` implements several `jstz`-specific APIs such as `Kv`, `Ledger`, and `Contract`. Additionally, `jstz` provides implementations for many web standard APIs in the `jstz_api` crate.
+`jstz` implements several `jstz`-specific APIs such as `Kv`, `Ledger`, and `SmartFunction`. Additionally, `jstz` provides implementations for many web standard APIs in the `jstz_api` crate.
 
 ## `jstz`-specific APIs
 
@@ -37,9 +37,9 @@ _Kv_ store is implemented on top of jstz\*core::kv. The API provides access to a
 
 A specialised type of the KV store is the Ledger that provides access to the balances of the L2 tez. Additionally it also stores so-called 'self address' - the address of the smart function itself. Similarly to the KV store, all operations on the ledger are synchronous and atomic, commited only if the request to the smart function succeeds.
 
-### Contract
+### SmartFunction
 
-<!-- TODO Contract -->
+<!-- TODO SmartFunction -->
 
 ## Standard APIs
 
@@ -148,7 +148,7 @@ This will initially run `octez-node` and initialize `octez-client`. Once the cli
 - [**`jstz_kernel`**](/jstz_kernel) - `jstz`'s smart rollup kernel, compiled to WASM.
 - [**`jstz_crypto`**](/jstz_crypto) - `jstz`'s crypto library. Primarily a wrapper around `tezos_crypto_rs`.
 - [**`jstz_proto`**](/jstz_proto) - `jstz`'s protocol: `jstz` specific runtime apis, storage context, execution of operations.
-- [**`jstz_cli`**](/jstz_cli) - `jstz`'s client CLI tool: used to create, call, and manage `jstz` contracts and accounts.
+- [**`jstz_cli`**](/jstz_cli) - `jstz`'s client CLI tool: used to create, call, and manage `jstz` smart functions and accounts.
 
 ### Testing ✅
 
