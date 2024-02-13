@@ -12,11 +12,11 @@ pub const REQUEST_END_PREFIX: &str = "[JSTZ:SMART_FUNCTION:REQUEST_END] ";
 #[serde(tag = "type")]
 pub enum RequestEvent {
     Start {
-        contract_address: Address,
+        address: Address,
         request_id: String,
     },
     End {
-        contract_address: Address,
+        address: Address,
         request_id: String,
         // TODO: Add more fields
     },
@@ -36,9 +36,9 @@ impl RequestEvent {
     }
 }
 
-pub fn log_request_start(contract_address: Address, request_id: String) {
+pub fn log_request_start(address: Address, request_id: String) {
     let request_log = RequestEvent::Start {
-        contract_address,
+        address,
         request_id,
     }
     .to_string();
@@ -48,9 +48,9 @@ pub fn log_request_start(contract_address: Address, request_id: String) {
     });
 }
 
-pub fn log_request_end(contract_address: Address, request_id: String) {
+pub fn log_request_end(address: Address, request_id: String) {
     let request_log = RequestEvent::End {
-        contract_address,
+        address,
         request_id,
     }
     .to_string();

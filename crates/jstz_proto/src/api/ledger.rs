@@ -23,7 +23,7 @@ use crate::{
 // Ledger.transfer(dst, amount)
 
 struct Ledger {
-    contract_address: Address,
+    address: Address,
 }
 
 impl Finalize for Ledger {}
@@ -34,7 +34,7 @@ unsafe impl Trace for Ledger {
 
 impl Ledger {
     fn self_address(&self) -> String {
-        self.contract_address.to_string()
+        self.address.to_string()
     }
 
     fn balance(
@@ -54,14 +54,14 @@ impl Ledger {
         dst: &Address,
         amount: Amount,
     ) -> Result<()> {
-        Account::transfer(rt, tx, &self.contract_address, dst, amount)?;
+        Account::transfer(rt, tx, &self.address, dst, amount)?;
 
         Ok(())
     }
 }
 
 pub struct LedgerApi {
-    pub contract_address: Address,
+    pub address: Address,
 }
 
 pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<Address> {
@@ -141,7 +141,7 @@ impl jstz_core::Api for LedgerApi {
 
         let ledger = ObjectInitializer::with_native(
             Ledger {
-                contract_address: self.contract_address,
+                address: self.address,
             },
             context,
         )

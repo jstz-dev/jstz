@@ -6,8 +6,8 @@ use crate::{
     Result,
 };
 
-pub mod contract;
 pub mod deposit;
+pub mod smart_function;
 
 fn execute_operation_inner(
     hrt: &mut (impl HostRuntime + 'static),
@@ -22,22 +22,23 @@ fn execute_operation_inner(
     match operation {
         Operation {
             source,
-            content: operation::Content::DeployContract(deployment),
+            content: operation::Content::DeployFunction(deployment),
             ..
         } => {
-            let result = contract::deploy::execute(hrt, tx, &source, deployment)?;
+            let result = smart_function::deploy::execute(hrt, tx, &source, deployment)?;
 
-            Ok(receipt::Content::DeployContract(result))
+            Ok(receipt::Content::DeployFunction(result))
         }
 
         Operation {
-            content: operation::Content::RunContract(run),
+            content: operation::Content::RunFunction(run),
             source,
             ..
         } => {
-            let result = contract::run::execute(hrt, tx, &source, run, operation_hash)?;
+            let result =
+                smart_function::run::execute(hrt, tx, &source, run, operation_hash)?;
 
-            Ok(receipt::Content::RunContract(result))
+            Ok(receipt::Content::RunFunction(result))
         }
     }
 }

@@ -14,7 +14,7 @@ use jstz_core::{
 
 use crate::{
     context::account::{Account, Address, Amount},
-    executor::contract::{headers, Script},
+    executor::smart_function::{headers, Script},
     operation::OperationHash,
     Error, Result,
 };
@@ -22,7 +22,7 @@ use crate::{
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
 pub struct TraceData {
-    pub contract_address: Address,
+    pub address: Address,
     pub operation_hash: OperationHash,
 }
 
@@ -59,10 +59,10 @@ impl SmartFunction {
         &self,
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        contract_code: String,
+        function_code: String,
         initial_balance: Amount,
     ) -> Result<String> {
-        // 1. Check if the contract has sufficient balance
+        // 1. Check if the associated account has sufficient balance
         {
             let balance = Account::balance(hrt, tx, &self.address)?;
 
@@ -71,9 +71,9 @@ impl SmartFunction {
             }
         } // The mutable borrow of `tx` in `balance` is released here
 
-        // 2. Deploy the contract
+        // 2. Deploy the smart function
         let address =
-            Script::deploy(hrt, tx, &self.address, contract_code, initial_balance)?; // The mutable borrow of `tx` in `Script::deploy` is released here
+            Script::deploy(hrt, tx, &self.address, function_code, initial_balance)?; // The mutable borrow of `tx` in `Script::deploy` is released here
 
         // 3. Increment nonce of current account
         {
@@ -81,7 +81,7 @@ impl SmartFunction {
             nonce.increment();
         } // The mutable borrow of `tx` in `Account::nonce` is released here
 
-        // 4. Transfer the balance to the contract
+        // 4. Transfer the balance to the associated account
         Account::transfer(hrt, tx, &self.address, &address, initial_balance)?;
 
         Ok(address.to_string())
@@ -103,7 +103,7 @@ impl SmartFunction {
                 JsError::from_native(JsNativeError::error().with_message("Invalid host"))
             })?;
 
-        // 2. Set the referer of the request to the current contract address
+        // 2. Set the referer of the request to the current smart function address
         headers::test_and_set_referrer(&request.deref(), self_address)?;
 
         // 3. Load, init and run!
@@ -111,11 +111,11 @@ impl SmartFunction {
     }
 }
 
-pub struct ContractApi {
+pub struct SmartFunctionApi {
     pub address: Address,
 }
 
-impl ContractApi {
+impl SmartFunctionApi {
     const NAME: &'static str = "SmartFunction";
 
     fn fetch(
@@ -153,9 +153,9 @@ impl ContractApi {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
-        let contract = SmartFunction::from_js_value(this)?;
+        let smart_function = SmartFunction::from_js_value(this)?;
 
-        let contract_code: String = args
+        let function_code: String = args
             .get(0)
             .ok_or_else(|| {
                 JsNativeError::typ()
@@ -175,10 +175,10 @@ impl ContractApi {
         let promise = JsPromise::new(
             move |resolvers, context| {
                 let address = runtime::with_js_hrt_and_tx(|hrt, tx| {
-                    contract.create(
+                    smart_function.create(
                         hrt.deref(),
                         tx,
-                        contract_code,
+                        function_code,
                         initial_balance as Amount,
                     )
                 })?;
@@ -197,9 +197,9 @@ impl ContractApi {
     }
 }
 
-impl jstz_core::Api for ContractApi {
+impl jstz_core::Api for SmartFunctionApi {
     fn init(self, context: &mut Context<'_>) {
-        let contract = ObjectInitializer::with_native(
+        let smart_function = ObjectInitializer::with_native(
             SmartFunction {
                 address: self.address.clone(),
             },
@@ -218,7 +218,11 @@ impl jstz_core::Api for ContractApi {
         .build();
 
         context
-            .register_global_property(js_string!(Self::NAME), contract, Attribute::all())
+            .register_global_property(
+                js_string!(Self::NAME),
+                smart_function,
+                Attribute::all(),
+            )
             .expect("The smart function object shouldn't exist yet");
 
         context

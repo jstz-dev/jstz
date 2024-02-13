@@ -62,7 +62,7 @@ impl AccountApi {
         let pkh = get_public_key_hash(account.as_str())?;
 
         runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<JsValue> {
-            match Account::contract_code(hrt.deref(), tx, &pkh)? {
+            match Account::function_code(hrt.deref(), tx, &pkh)? {
                 Some(value) => Ok(JsValue::String(value.to_string().into())),
                 None => Ok(JsValue::null()),
             }
@@ -80,7 +80,7 @@ impl AccountApi {
         let pkh = get_public_key_hash(account.as_str())?;
 
         runtime::with_js_hrt_and_tx(|hrt, tx| {
-            Account::set_contract_code(hrt.deref(), tx, &pkh, code)
+            Account::set_function_code(hrt.deref(), tx, &pkh, code)
         })?;
 
         Ok(JsValue::undefined())

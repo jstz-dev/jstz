@@ -7,7 +7,7 @@ use jstz_core::{
     kv::Transaction,
     runtime::{self, Runtime},
 };
-use jstz_proto::executor::contract::{register_jstz_apis, register_web_apis};
+use jstz_proto::executor::smart_function::{register_jstz_apis, register_web_apis};
 use log::{debug, error, info, warn};
 use rustyline::{
     completion::Completer, error::ReadlineError, highlight::Highlighter, hint::Hinter,

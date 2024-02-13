@@ -98,7 +98,7 @@ macro_rules! preamble {
 }
 
 pub struct KvApi {
-    pub contract_address: PublicKeyHash,
+    pub address: PublicKeyHash,
 }
 
 impl KvApi {
@@ -154,19 +154,17 @@ impl KvApi {
 
 impl jstz_core::Api for KvApi {
     fn init(self, context: &mut boa_engine::Context<'_>) {
-        let storage = ObjectInitializer::with_native(
-            Kv::new(self.contract_address.to_string()),
-            context,
-        )
-        .function(NativeFunction::from_fn_ptr(Self::set), js_string!("set"), 2)
-        .function(NativeFunction::from_fn_ptr(Self::get), js_string!("get"), 1)
-        .function(
-            NativeFunction::from_fn_ptr(Self::delete),
-            js_string!("delete"),
-            1,
-        )
-        .function(NativeFunction::from_fn_ptr(Self::has), js_string!("has"), 1)
-        .build();
+        let storage =
+            ObjectInitializer::with_native(Kv::new(self.address.to_string()), context)
+                .function(NativeFunction::from_fn_ptr(Self::set), js_string!("set"), 2)
+                .function(NativeFunction::from_fn_ptr(Self::get), js_string!("get"), 1)
+                .function(
+                    NativeFunction::from_fn_ptr(Self::delete),
+                    js_string!("delete"),
+                    1,
+                )
+                .function(NativeFunction::from_fn_ptr(Self::has), js_string!("has"), 1)
+                .build();
 
         context
             .register_global_property(js_string!(Self::NAME), storage, Attribute::all())

@@ -13,7 +13,7 @@ pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
 
 #[derive(Serialize, Deserialize)]
 pub struct LogRecord {
-    pub contract_address: Address,
+    pub address: Address,
     pub request_id: String,
     pub level: LogLevel,
     pub text: String,
@@ -42,7 +42,7 @@ impl LogRecord {
 
         let indent = 2 * groups_len;
         LogRecord {
-            contract_address: trace_data.contract_address.clone(),
+            address: trace_data.address.clone(),
             request_id: trace_data.operation_hash.to_string(),
             level,
             text: " ".repeat(indent) + &text,

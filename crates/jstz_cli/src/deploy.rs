@@ -1,5 +1,5 @@
 use jstz_proto::{
-    operation::{Content, DeployContract, Operation, SignedOperation},
+    operation::{Content, DeployFunction, Operation, SignedOperation},
     receipt::Content as ReceiptContent,
 };
 use log::{debug, info};
@@ -47,9 +47,9 @@ pub async fn exec(
     let op = Operation {
         source: user.address.clone(),
         nonce,
-        content: Content::DeployContract(DeployContract {
-            contract_code: code,
-            contract_credit: balance,
+        content: Content::DeployFunction(DeployFunction {
+            function_code: code,
+            account_credit: balance,
         }),
     };
 
@@ -76,9 +76,9 @@ pub async fn exec(
     debug!("Receipt: {:?}", receipt);
 
     let address = match receipt.inner {
-        Ok(ReceiptContent::DeployContract(deploy)) => deploy.contract_address,
+        Ok(ReceiptContent::DeployFunction(deploy)) => deploy.address,
         _ => {
-            bail!("Expected a `DeployContract` receipt, but got something else.")
+            bail!("Expected a `DeployFunction` receipt, but got something else.")
         }
     };
 

@@ -107,19 +107,19 @@ pub fn register_jstz_apis(
 ) {
     realm.register_api(
         jstz_api::KvApi {
-            contract_address: address.clone(),
+            address: address.clone(),
         },
         context,
     );
     realm.register_api(jstz_api::RandomApi { seed }, context);
     realm.register_api(
         api::LedgerApi {
-            contract_address: address.clone(),
+            address: address.clone(),
         },
         context,
     );
     realm.register_api(
-        api::ContractApi {
+        api::SmartFunctionApi {
             address: address.clone(),
         },
         context,
@@ -159,7 +159,7 @@ impl Script {
         context: &mut Context<'_>,
     ) -> Result<Self> {
         let src =
-            Account::contract_code(hrt, tx, address)?.ok_or(Error::InvalidAddress)?;
+            Account::function_code(hrt, tx, address)?.ok_or(Error::InvalidAddress)?;
 
         Ok(Self::parse(Source::from_bytes(&src), context)?)
     }
@@ -247,7 +247,7 @@ impl Script {
             host_defined!(context, mut host_defined);
 
             let trace_data = TraceData {
-                contract_address: address.clone(),
+                address: address.clone(),
                 operation_hash: operation_hash.clone(),
             };
 
@@ -350,10 +350,10 @@ pub mod run {
         hrt: &mut (impl HostRuntime + 'static),
         tx: &mut Transaction,
         source: &Address,
-        run: operation::RunContract,
+        run: operation::RunFunction,
         operation_hash: OperationHash,
-    ) -> Result<receipt::RunContract> {
-        let operation::RunContract {
+    ) -> Result<receipt::RunFunction> {
+        let operation::RunFunction {
             uri,
             method,
             headers,
@@ -408,7 +408,7 @@ pub mod run {
 
         let (http_parts, body) = Response::to_http_response(&response).into_parts();
 
-        Ok(receipt::RunContract {
+        Ok(receipt::RunFunction {
             body,
             status_code: http_parts.status,
             headers: http_parts.headers,
@@ -424,17 +424,15 @@ pub mod deploy {
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
         source: &Address,
-        deployment: operation::DeployContract,
-    ) -> Result<receipt::DeployContract> {
-        let operation::DeployContract {
-            contract_code,
-            contract_credit,
+        deployment: operation::DeployFunction,
+    ) -> Result<receipt::DeployFunction> {
+        let operation::DeployFunction {
+            function_code,
+            account_credit,
         } = deployment;
 
-        let address = Script::deploy(hrt, tx, source, contract_code, contract_credit)?;
+        let address = Script::deploy(hrt, tx, source, function_code, account_credit)?;
 
-        Ok(receipt::DeployContract {
-            contract_address: address,
-        })
+        Ok(receipt::DeployFunction { address })
     }
 }

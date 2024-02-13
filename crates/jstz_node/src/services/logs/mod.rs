@@ -160,7 +160,7 @@ impl LogsService {
                                     // Steram the log
                                     if let Line::Js(log) = line {
                                         broadcaster
-                                            .broadcast(&log.contract_address, &line_str[LOG_PREFIX.len()..])
+                                            .broadcast(&log.address, &line_str[LOG_PREFIX.len()..])
                                             .await;
                                     }
                             }

@@ -63,14 +63,14 @@ impl Db {
         match line {
             Line::Request(RequestEvent::Start {
                 request_id,
-                contract_address,
+                address,
             }) => connection.execute(
                 "INSERT INTO request (id, function_address) VALUES (?1, ?2)",
-                (request_id, contract_address.to_string()),
+                (request_id, address.to_string()),
             )?,
             Line::Js(LogRecord {
                 request_id,
-                contract_address,
+                address,
                 level,
                 text,
             }) => connection.execute(
@@ -78,7 +78,7 @@ impl Db {
                 (
                     level.to_string(),
                     text,
-                    contract_address.to_string(),
+                    address.to_string(),
                     request_id
                 ),
             )?,
