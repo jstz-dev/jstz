@@ -28,8 +28,7 @@ FROM alpine AS node
 RUN apk --no-cache add binutils bash libcrypto3 openssl musl hidapi gmp libev libffi libgmpxx
 ENV RUST_BACKTRACE=1
 ENV RUST_LOG=debug
-ARG OCTEZ_PROTO
-COPY --from=octez /usr/local/bin/octez-smart-rollup-node-${OCTEZ_PROTO} /usr/bin/octez-smart-rollup-node
+COPY --from=octez /usr/local/bin/octez-smart-rollup-node /usr/bin/octez-smart-rollup-node
 COPY --from=octez /usr/local/bin/octez-client /usr/bin/octez-client
 COPY --from=builder /target/release/jstz-rollup /usr/bin/jstz-rollup
 COPY --from=builder /root/installer /root/installer

@@ -28,7 +28,8 @@ run() {
     jstz-rollup run \
         --preimages "$installer_dir/preimages" \
         --rollup "$JSTZ_ROLLUP_ADDRESS" \
-        --logs "$LOGS_DIR"
+        --logs "$LOGS_DIR" \
+        --addr "0.0.0.0"
 }
 
 deploy() {

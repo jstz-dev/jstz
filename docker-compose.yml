@@ -2,20 +2,20 @@ version: "3"
 
 services:
   rollup:
+    image: jstz-rollup:latest
     build:
       context: .
       dockerfile: crates/jstz_rollup/Dockerfile
       args:
-        OCTEZ_TAG: v18.1
-        OCTEZ_PROTO: PtNairob
-        JSTZ_ROLLUP_BRIDGE_ADDRESS: KT1WVsN9Rd4v9EiZ9uunyrVAwDucKXqHv3Fy
+        OCTEZ_TAG: master_11051f14_20240217110401
+        JSTZ_ROLLUP_BRIDGE_ADDRESS: KT1LAzuUQ9ahaJKoffnVeZXKXknELPXsqcSv
     command: run
     restart: "no"
     environment:
-      NETWORK: nairobinet
+      NETWORK: dailynet-2024-02-19
       LOGS_DIR: /root/logs
       OPERATOR_SK: ${OPERATOR_SK}
-      JSTZ_ROLLUP_ADDRESS: sr1BUju1R7c5Hkiy4g7eaoijRX8Q5xjiVqoU
+      JSTZ_ROLLUP_ADDRESS: sr1K18FQWP81GFaB9r8pXAwh5d8n9rqaH4jJ
     ports:
       - 8932:8932
     networks:
@@ -24,10 +24,11 @@ services:
       - ./logs:/root/logs
 
   node:
+    image: jstz-node:latest
     build:
       context: .
       dockerfile: crates/jstz_node/Dockerfile
-    command: --rollup-endpoint http://rollup:8932 --kernel-file-path /root/logs/kernel.log
+    command: --rollup-endpoint http://rollup:8932 --kernel-log-path /root/logs/kernel.log --addr 0.0.0.0
     restart: always
     ports:
       - 8933:8933
