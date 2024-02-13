@@ -28,6 +28,6 @@ clap = { version = "^4.4", features = ["derive"] }
 anyhow = "1.0.75"
 expect-test = "1.4.1"
 jstz_wpt = { version = "0.1.0", path = "../jstz_wpt" }
-tokio = { version = "1.34.0", features = ["full"] }
+tokio = { version = "1.36.0", features = ["full"] }
 jstz_proto.workspace = true
 tezos-smart-rollup-mock = "0.2.2"
