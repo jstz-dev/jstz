@@ -1,4 +1,5 @@
 #![cfg(feature = "persistent-logging")]
+use std::fs;
 
 use super::{Line, QueryResponse};
 use actix_web::web::block;
@@ -28,6 +29,13 @@ impl Db {
         let db_path = dirs::home_dir()
             .expect("failed to get home directory")
             .join(DB_PATH);
+
+        if let Some(parent) = db_path.parent() {
+            if !parent.exists() {
+                fs::create_dir_all(parent)?;
+            }
+        }
+
         let manager = SqliteConnectionManager::file(db_path);
         let pool = SqliteConnectionPool::new(manager)?;
 
