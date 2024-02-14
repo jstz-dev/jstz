@@ -19,10 +19,10 @@ use tokio_util::sync::CancellationToken;
 
 pub mod broadcaster;
 
-#[cfg(feature = "persistent-log")]
+#[cfg(feature = "persistent-logging")]
 mod db;
 
-#[cfg(not(feature = "persistent-log"))]
+#[cfg(not(feature = "persistent-logging"))]
 mod db {
     #[derive(Clone)]
     pub struct Db {}
@@ -35,7 +35,7 @@ mod db {
 
 use self::{broadcaster::Broadcaster, db::Db};
 
-#[cfg(feature = "persistent-log")]
+#[cfg(feature = "persistent-logging")]
 mod persistent_logging {
     pub use crate::{Error, Result};
     pub use actix_web::{web::Query, HttpResponse};
@@ -121,7 +121,7 @@ mod persistent_logging {
         .map_err(Error::InternalError)
     }
 }
-#[cfg(feature = "persistent-log")]
+#[cfg(feature = "persistent-logging")]
 use persistent_logging::*;
 
 #[get("{address}/stream")]
@@ -144,10 +144,10 @@ impl Service for LogsService {
     fn configure(cfg: &mut ServiceConfig) {
         let scope = Scope::new("/logs").service(stream_logs);
 
-        #[cfg(not(feature = "persistent-log"))]
+        #[cfg(not(feature = "persistent-logging"))]
         cfg.service(scope);
 
-        #[cfg(feature = "persistent-log")]
+        #[cfg(feature = "persistent-logging")]
         {
             let scope = scope
                 .service(persistent_logs)
@@ -207,7 +207,7 @@ impl LogsService {
                         if let Ok(Some(line_str)) = current_line {
                             if let Some(line) = Self::parse_line(&line_str) {
 
-                                #[cfg(feature = "persistent-log")]
+                                #[cfg(feature = "persistent-logging")]
                                 {
                                     let _ = db.flush(&line).await.map_err(|e|
                                         {

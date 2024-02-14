@@ -78,4 +78,4 @@ fmt-check: fmt-nix-check fmt-rust-check fmt-js-check
 # So in order to lint the CLI we need to build the kernel
 .PHONY: lint
 lint: build-cli-kernel
-	@cargo clippy -- --no-deps -D warnings -A clippy::let_underscore_future -A clippy::module_inception -A clippy::op_ref -A clippy::manual_strip -A clippy::missing_safety_doc -A clippy::slow_vector_initialization -A clippy::empty_loop -A clippy::expect-fun-call
+	@cargo clippy -- --no-deps -D warnings -A clippy::let_underscore_future -A clippy::module_inception -A clippy::op_ref -A clippy::manual_strip -A clippy::missing_safety_doc -A clippy::slow_vector_initialization -A clippy::empty_loop -A clippy::collapsible-match

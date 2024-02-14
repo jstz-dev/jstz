@@ -1,4 +1,4 @@
-#![cfg(feature = "persistent-log")]
+#![cfg(feature = "persistent-logging")]
 
 use super::{Line, QueryResponse};
 use actix_web::web::block;

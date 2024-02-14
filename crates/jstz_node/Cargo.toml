@@ -39,4 +39,4 @@ name = "jstz-node"
 path = "src/main.rs"
 
 [features]
-persistent-log = ["dep:r2d2", "dep:r2d2_sqlite", "dep:rusqlite"]
+persistent-logging = ["dep:r2d2", "dep:r2d2_sqlite", "dep:rusqlite"]
