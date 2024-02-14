@@ -1,31 +1,128 @@
-use crate::{tailed_file::TailedFile, Error, Result};
+use crate::tailed_file::TailedFile;
 use actix_web::{
     get,
-    web::{Data, Path, Query, ServiceConfig},
-    HttpResponse, Responder, Scope,
+    web::{Data, Path, ServiceConfig},
+    Responder, Scope,
 };
 
+use super::Service;
 use anyhow;
 use jstz_proto::context::account::Address;
 use jstz_proto::{
     js_logger::{LogRecord, LOG_PREFIX},
     request_logger::{RequestEvent, REQUEST_END_PREFIX, REQUEST_START_PREFIX},
 };
-use serde::{Deserialize, Serialize};
 use std::io::ErrorKind::InvalidInput;
 use std::sync::Arc;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
-use super::Service;
-
 pub mod broadcaster;
+
+#[cfg(feature = "persistent-log")]
 mod db;
+
+#[cfg(not(feature = "persistent-log"))]
+mod db {
+    #[derive(Clone)]
+    pub struct Db {}
+    impl Db {
+        pub async fn init() -> anyhow::Result<Self> {
+            Ok(Db {})
+        }
+    }
+}
 
 use self::{broadcaster::Broadcaster, db::Db};
 
-const DEAULT_PAGINATION_LIMIT: usize = 100;
-const DEAULT_PAGINATION_OFFSET: usize = 0;
+#[cfg(feature = "persistent-log")]
+mod persistent_logging {
+    pub use crate::{Error, Result};
+    pub use actix_web::{web::Query, HttpResponse};
+    pub use serde::{Deserialize, Serialize};
+    pub const DEAULT_PAGINATION_LIMIT: usize = 100;
+    pub const DEAULT_PAGINATION_OFFSET: usize = 0;
+    use super::{get, Address, Data, Db, Path};
+    #[derive(Deserialize, Debug)]
+    pub struct Pagination {
+        limit: Option<usize>,
+        offset: Option<usize>,
+    }
+
+    #[get("{address}/persistent/requests")]
+    pub async fn persistent_logs(
+        pagination: Query<Pagination>,
+        db: Data<Db>,
+        path: Path<String>,
+    ) -> Result<HttpResponse> {
+        let address = path.into_inner();
+
+        let address = Address::from_base58(&address)?;
+
+        let Pagination { limit, offset } = pagination.into_inner();
+        let result = query(
+            &db,
+            QueryParams::GetLogsByAddress(
+                address,
+                limit.unwrap_or(DEAULT_PAGINATION_LIMIT),
+                offset.unwrap_or(DEAULT_PAGINATION_OFFSET),
+            ),
+        )
+        .await?;
+
+        Ok(HttpResponse::Ok().json(result))
+    }
+
+    #[get("{address}/persistent/requests/{request_id}")]
+    pub async fn persistent_logs_by_request_id(
+        db: Data<Db>,
+        path: Path<(String, String)>,
+    ) -> Result<HttpResponse> {
+        let (address, request_id) = path.into_inner();
+
+        let address = Address::from_base58(&address)?;
+
+        let result = query(
+            &db,
+            QueryParams::GetLogsByAddressAndRequestId(address, request_id),
+        )
+        .await?;
+
+        Ok(HttpResponse::Ok().json(result))
+    }
+
+    #[derive(Serialize, Deserialize)]
+    pub enum QueryResponse {
+        Log {
+            level: String,
+            content: String,
+            function_address: String,
+            request_id: String,
+        },
+    }
+
+    /// Queries the log database.
+    pub type Limit = usize;
+    pub type Offset = usize;
+    pub enum QueryParams {
+        GetLogsByAddress(Address, Limit, Offset),
+        GetLogsByAddressAndRequestId(Address, String),
+    }
+
+    pub async fn query(db: &Db, param: QueryParams) -> Result<Vec<QueryResponse>> {
+        match param {
+            QueryParams::GetLogsByAddress(addr, offset, limit) => {
+                db.logs_by_address(addr, offset, limit).await
+            }
+            QueryParams::GetLogsByAddressAndRequestId(addr, request_id) => {
+                db.logs_by_address_and_request_id(addr, request_id).await
+            }
+        }
+        .map_err(Error::InternalError)
+    }
+}
+#[cfg(feature = "persistent-log")]
+use persistent_logging::*;
 
 #[get("{address}/stream")]
 async fn stream_logs(
@@ -41,64 +138,22 @@ async fn stream_logs(
     Ok(broadcaster.new_client(address).await)
 }
 
-#[derive(Deserialize, Debug)]
-pub struct Pagination {
-    limit: Option<usize>,
-    offset: Option<usize>,
-}
-
-#[get("{address}/persistent/requests")]
-async fn persistent_logs(
-    pagination: Query<Pagination>,
-    db: Data<Db>,
-    path: Path<String>,
-) -> Result<HttpResponse> {
-    let address = path.into_inner();
-
-    let address = Address::from_base58(&address)?;
-
-    let Pagination { limit, offset } = pagination.into_inner();
-    let result = query(
-        &db,
-        QueryParams::GetLogsByAddress(
-            address,
-            limit.unwrap_or(DEAULT_PAGINATION_LIMIT),
-            offset.unwrap_or(DEAULT_PAGINATION_OFFSET),
-        ),
-    )
-    .await?;
-
-    Ok(HttpResponse::Ok().json(result))
-}
-
-#[get("{address}/persistent/requests/{request_id}")]
-async fn persistent_logs_by_request_id(
-    db: Data<Db>,
-    path: Path<(String, String)>,
-) -> Result<HttpResponse> {
-    let (address, request_id) = path.into_inner();
-
-    let address = Address::from_base58(&address)?;
-
-    let result = query(
-        &db,
-        QueryParams::GetLogsByAddressAndRequestId(address, request_id),
-    )
-    .await?;
-
-    Ok(HttpResponse::Ok().json(result))
-}
-
 pub struct LogsService;
 
 impl Service for LogsService {
     fn configure(cfg: &mut ServiceConfig) {
-        let scope = Scope::new("/logs")
-            .service(stream_logs)
-            .service(persistent_logs)
-            .service(persistent_logs_by_request_id);
+        let scope = Scope::new("/logs").service(stream_logs);
 
+        #[cfg(not(feature = "persistent-log"))]
         cfg.service(scope);
+
+        #[cfg(feature = "persistent-log")]
+        {
+            let scope = scope
+                .service(persistent_logs)
+                .service(persistent_logs_by_request_id);
+            cfg.service(scope);
+        }
     }
 }
 
@@ -141,7 +196,7 @@ impl LogsService {
     async fn tail_file(
         file: TailedFile,
         broadcaster: Arc<Broadcaster>,
-        db: Db,
+        #[allow(unused_variables)] db: Db,
         cancellation_token: CancellationToken,
     ) -> JoinHandle<std::io::Result<()>> {
         actix_web::rt::spawn(async move {
@@ -151,18 +206,23 @@ impl LogsService {
                     current_line = lines.next_line() => {
                         if let Ok(Some(line_str)) = current_line {
                             if let Some(line) = Self::parse_line(&line_str) {
+
+                                #[cfg(feature = "persistent-log")]
+                                {
                                     let _ = db.flush(&line).await.map_err(|e|
                                         {
                                             log::warn!("Failed to flush log to database: {:?}", e.to_string());
                                         }
                                     );
+                                }
 
-                                    // Steram the log
-                                    if let Line::Js(log) = line {
-                                        broadcaster
-                                            .broadcast(&log.address, &line_str[LOG_PREFIX.len()..])
-                                            .await;
-                                    }
+                                // Steram the log
+                                #[allow(clippy::collapsible-match)]
+                                if let Line::Js(log) = line {
+                                    broadcaster
+                                        .broadcast(&log.address, &line_str[LOG_PREFIX.len()..])
+                                        .await;
+                                }
                             }
                         }
                     },
@@ -194,34 +254,4 @@ impl LogsService {
 
         None
     }
-}
-
-/// Queries the log database.
-type Limit = usize;
-type Offset = usize;
-pub enum QueryParams {
-    GetLogsByAddress(Address, Limit, Offset),
-    GetLogsByAddressAndRequestId(Address, String),
-}
-
-#[derive(Serialize, Deserialize)]
-pub enum QueryResponse {
-    Log {
-        level: String,
-        content: String,
-        function_address: String,
-        request_id: String,
-    },
-}
-
-pub async fn query(db: &Db, param: QueryParams) -> Result<Vec<QueryResponse>> {
-    match param {
-        QueryParams::GetLogsByAddress(addr, offset, limit) => {
-            db.logs_by_address(addr, offset, limit).await
-        }
-        QueryParams::GetLogsByAddressAndRequestId(addr, request_id) => {
-            db.logs_by_address_and_request_id(addr, request_id).await
-        }
-    }
-    .map_err(Error::InternalError)
 }

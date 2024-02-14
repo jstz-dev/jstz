@@ -23,7 +23,7 @@ pub async fn run(
 
     let cancellation_token = CancellationToken::new();
 
-    let (broadcaster, _db, tail_file_handle) =
+    let (broadcaster, db, tail_file_handle) =
         LogsService::init(kernel_log_path, &cancellation_token)
             .await
             .map_err(|e| io::Error::new(Other, e.to_string()))?;
@@ -32,6 +32,7 @@ pub async fn run(
         App::new()
             .app_data(rollup_client.clone())
             .app_data(Data::from(broadcaster.clone()))
+            .app_data(Data::new(db.clone()))
             .configure(OperationsService::configure)
             .configure(AccountsService::configure)
             .configure(LogsService::configure)
