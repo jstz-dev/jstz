@@ -15,7 +15,7 @@ jstz_proto.workspace = true
 jstz_core.workspace = true
 jstz_api.workspace = true
 jstz_rollup.workspace = true
-jstz_node = { path = "../jstz_node"}
+jstz_node.workspace = true
 octez.workspace = true
 clap = { version = "^4.4", features = ["derive"] }
 serde = { version = "1.0", features = ["derive"] }
