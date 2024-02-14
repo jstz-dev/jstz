@@ -26,7 +26,7 @@ jstz_api = { path = "crates/jstz_api" }
 jstz_kernel = { path = "crates/jstz_kernel" }
 jstz_proto = { path = "crates/jstz_proto" }
 jstz_crypto = { path = "crates/jstz_crypto" }
-jstz_node = { path = "crates/jstz_node" }
+jstz_node = { path = "crates/jstz_node"}
 jstz_cli = { path = "crates/jstz_cli" }
 jstz_wpt = { path = "crates/jstz_wpt" }
 octez = { path = "crates/octez" }

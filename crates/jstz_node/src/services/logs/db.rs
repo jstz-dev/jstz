@@ -1,3 +1,5 @@
+#![cfg(feature = "persistent-log")]
+
 use super::{Line, QueryResponse};
 use actix_web::web::block;
 use anyhow::{anyhow, Result};
