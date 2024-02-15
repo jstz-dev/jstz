@@ -51,17 +51,15 @@ crossterm = "0.27"
 ansi_term = "0.12.1"
 console = "0.15.8"
 futures = "0.3"
-<<<<<<< HEAD
 env_logger = "0.11.1"
 log = "0.4.20"
 dialoguer = "0.11.0"
 prettytable = "0.10.0"
 serde_with = { version = "3.6.1", features = ["macros"] }
 clap_complete = "4.4.10"
-=======
 regex = "1"
 indicatif = "0.17.0"
->>>>>>> eb276f9 (feat(cli): daemonize sandbox)
+simplelog = "0.11"
 
 [[bin]]
 name = "jstz"
