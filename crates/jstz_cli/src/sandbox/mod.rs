@@ -1,10 +1,9 @@
 use std::{thread, time::Duration};
 
-use anyhow::{anyhow, Ok, Result};
+use anyhow::{Ok, Result};
 use clap::Subcommand;
 use log::info;
 use nix::{
-    errno::Errno,
     sys::signal::{kill, Signal},
     unistd::Pid,
 };
@@ -22,7 +21,7 @@ pub enum Command {
     /// 🎬 Starts the sandbox.
     Start {
         /// Do not daemonize the process.
-        #[clap(long, short, default_value = "false")]
+        #[clap(long, short, default_value = "false", hide = true)]
         no_daemon: bool,
     },
     /// 🛑 Stops the sandbox.
