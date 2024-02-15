@@ -438,15 +438,6 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
         bail_user_error!("The sandbox is already running!");
     }
 
-    // Print banner
-    info!("{}", style(SANDBOX_BANNER).bold());
-    info!(
-        "        {} {}",
-        env!("CARGO_PKG_VERSION"),
-        styles::url(env!("CARGO_PKG_REPOSITORY"))
-    );
-    info!("");
-
     // 1. Configure sandbox
     debug!("Configuring sandbox...");
     let sandbox_cfg = SandboxConfig {
@@ -469,32 +460,6 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
     debug!("Saving sandbox config");
     cfg.save()?;
 
-    thread::sleep(Duration::from_millis(400));
-
-    info!(
-        "octez-node is listening on: {}",
-        styles::url(octez_node_endpoint())
-    );
-    info!(
-        "octez-smart-rollup-node is listening on: {}",
-        styles::url(octez_smart_rollup_endpoint())
-    );
-    info!(
-        "jstz-node is listening on: {}",
-        styles::url(jstz_node_endpoint())
-    );
-
-    info!("\nTezos bootstrap accounts:");
-
-    let mut sandbox_bootstrap_accounts = format_sandbox_bootstrap_accounts();
-    sandbox_bootstrap_accounts.set_format({
-        let mut format = *FORMAT_DEFAULT;
-        format.indent(2);
-        format
-    });
-
-    info!("{}", sandbox_bootstrap_accounts);
-
     // 4. Wait for the sandbox or jstz-node to shutdown (either by the user or by an error)
     run_jstz_node().await?;
     OctezThread::join(vec![baker, rollup_node, node])?;
@@ -508,6 +473,15 @@ pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
     if no_daemon {
         run_sandbox(cfg).await?;
     } else {
+        // Print banner
+        info!("{}", style(SANDBOX_BANNER).bold());
+        info!(
+            "        {} {}",
+            env!("CARGO_PKG_VERSION"),
+            styles::url(env!("CARGO_PKG_REPOSITORY"))
+        );
+        info!("");
+
         let path = sandbox_daemon_log_path()?;
         let stdout_file = OpenOptions::new()
             .create(true)
@@ -562,6 +536,31 @@ pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
 
             thread::sleep(Duration::from_millis(100));
         }
+
+        // Print sandbox info
+        info!(
+            "octez-node is listening on: {}",
+            styles::url(octez_node_endpoint())
+        );
+        info!(
+            "octez-smart-rollup-node is listening on: {}",
+            styles::url(octez_smart_rollup_endpoint())
+        );
+        info!(
+            "jstz-node is listening on: {}",
+            styles::url(jstz_node_endpoint())
+        );
+
+        info!("\nTezos bootstrap accounts:");
+
+        let mut sandbox_bootstrap_accounts = format_sandbox_bootstrap_accounts();
+        sandbox_bootstrap_accounts.set_format({
+            let mut format = *FORMAT_DEFAULT;
+            format.indent(2);
+            format
+        });
+
+        info!("{}", sandbox_bootstrap_accounts);
     }
     Ok(())
 }
