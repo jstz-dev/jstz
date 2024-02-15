@@ -26,26 +26,6 @@ use utils::AddressOrAlias;
 #[derive(Debug, Parser)]
 #[command(name = "jstz", author = "TriliTech <contact@trili.tech>", version)]
 enum Command {
-    /// 📚 Open jstz's docs in your browser.
-    Docs,
-    /// 🏝️ Start/stop with the jstz sandbox.
-    #[command(subcommand)]
-    Sandbox(sandbox::Command),
-    /// 🌉 Move CTEZ between L1 and jstz with the jstz bridge.
-    #[command(subcommand)]
-    Bridge(bridge::Command),
-    /// 🧑 Manage jstz accounts.
-    #[command(subcommand)]
-    Account(account::Command),
-    /// 🔑 Interact with jstz's key-value store.
-    #[command(subcommand)]
-    Kv(kv::Command),
-    /// 🐚 Generates shell completions.
-    Completions {
-        /// The shell to generate completions for
-        #[arg(long, short)]
-        shell: Shell,
-    },
     /// 🚀 Deploys a smart function to jstz.
     Deploy {
         /// Function code.
@@ -81,15 +61,30 @@ enum Command {
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
+    /// 🌉 Move CTEZ between L1 and jstz with the jstz bridge.
+    #[command(subcommand)]
+    Bridge(bridge::Command),
+
+    /// 🏝️ Start/stop with the jstz sandbox.
+    #[command(subcommand)]
+    Sandbox(sandbox::Command),
     /// ⚡️ Start a REPL session with jstz's JavaScript runtime.
     Repl {
         /// Sets the address of the REPL environment.
         #[arg(value_name = "ADDRESS|ALIAS", short, long)]
         account: Option<AddressOrAlias>,
     },
+
     /// 🪵 Explore logs from deployed smart functions.
     #[command(subcommand)]
     Logs(logs::Command),
+    /// 🔑 Interact with jstz's key-value store.
+    #[command(subcommand)]
+    Kv(kv::Command),
+
+    /// 🧑 Manage jstz accounts.
+    #[command(subcommand)]
+    Account(account::Command),
     /// 🔓 Login to a jstz account.
     Login {
         /// User alias
@@ -101,6 +96,16 @@ enum Command {
     /// 🤔 Display your account info.
     #[command(name = "whoami")]
     WhoAmI {},
+
+    /// 📚 Open jstz's docs in your browser.
+    Docs,
+
+    /// 🐚 Generates shell completions.
+    Completions {
+        /// The shell to generate completions for
+        #[arg(long, short)]
+        shell: Shell,
+    },
 }
 
 async fn exec(command: Command) -> Result<()> {
