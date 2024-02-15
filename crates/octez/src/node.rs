@@ -39,7 +39,7 @@ impl OctezNode {
             self.octez_node_dir.to_str().expect("Invalid path"),
             "--net-addr",
             http_endpoint,
-            "--rpc-addr",
+            "--local-rpc-addr", // TODO: @alanmarkoTrilitech --local-rpc-addr is not present in future versions of octez-node
             rpc_endpoint,
             "--connections",
             num_connections.to_string().as_str(),
@@ -62,6 +62,7 @@ impl OctezNode {
                 "run",
                 "--data-dir",
                 self.octez_node_dir.to_str().expect("Invalid path"),
+                "--singleprocess",
             ])
             .args(options)
             .stdout(Stdio::from(log_file.try_clone()?))
