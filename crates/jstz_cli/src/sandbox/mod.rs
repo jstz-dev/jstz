@@ -1,7 +1,10 @@
+use std::{thread, time::Duration};
+
 use anyhow::{anyhow, Ok, Result};
 use clap::Subcommand;
 use log::info;
 use nix::{
+    errno::Errno,
     sys::signal::{kill, Signal},
     unistd::Pid,
 };
@@ -33,6 +36,28 @@ pub async fn start(no_daemon: bool) -> Result<()> {
     Ok(())
 }
 
+fn wait_for_termination(pid: Pid) -> Result<()> {
+    loop {
+        let result: nix::Result<()> = kill(pid, Signal::SIGTERM);
+        match result {
+            // Sending 0 as the signal just checks for the process existence
+            core::result::Result::Ok(_) => {
+                // Process exists, continue waiting
+                thread::sleep(Duration::from_millis(100));
+            }
+            Err(nix::Error::ESRCH) => {
+                // No such process, it has terminated
+                break;
+            }
+            Err(e) => {
+                // An unexpected error occurred
+                bail_user_error!("Failed to kill the sandbox process: {:?}", e)
+            }
+        }
+    }
+    Ok(())
+}
+
 pub fn stop() -> Result<()> {
     let cfg = Config::load()?;
 
@@ -41,6 +66,8 @@ pub fn stop() -> Result<()> {
             info!("Stopping the sandbox...");
             let pid = Pid::from_raw(sandbox_cfg.pid as i32);
             kill(pid, Signal::SIGTERM)?;
+
+            wait_for_termination(pid)?;
 
             Ok(())
         }
