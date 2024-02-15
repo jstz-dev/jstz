@@ -47,9 +47,3 @@ pub async fn run(
 
     Ok(())
 }
-
-pub mod config;
-mod node_runner;
-pub use config::{
-    DEFAULT_KERNEL_FILE_PATH, DEFAULT_ROLLUP_NODE_RPC_ADDR, DEFAULT_ROLLUP_RPC_PORT,
-};

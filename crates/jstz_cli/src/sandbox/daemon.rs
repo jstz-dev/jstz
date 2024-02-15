@@ -124,10 +124,6 @@ fn sandbox_daemon_log_path() -> Result<PathBuf> {
     Ok(logs_dir()?.join("sandbox_daemon.log"))
 }
 
-fn jstz_node_log_path() -> Result<PathBuf> {
-    Ok(logs_dir()?.join("jstz_node.log"))
-}
-
 const ACTIVATOR_ACCOUNT_SK: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
 
@@ -446,6 +442,9 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
         octez_node_dir: TempDir::with_prefix("octez_node")?.into_path(),
         octez_rollup_node_dir: TempDir::with_prefix("octez_rollup_node")?.into_path(),
     };
+
+    // Create logs directory
+    fs::create_dir_all(logs_dir()?)?;
 
     cfg.sandbox = Some(sandbox_cfg);
     debug!("Sandbox configured {:?}", cfg.sandbox);
