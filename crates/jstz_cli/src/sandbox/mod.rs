@@ -26,6 +26,8 @@ pub enum Command {
     },
     /// 🛑 Stops the sandbox.
     Stop,
+    /// 🔄 Restarts the sandbox.
+    Restart,
 }
 
 pub async fn start(no_daemon: bool) -> Result<()> {
@@ -57,12 +59,14 @@ fn wait_for_termination(pid: Pid) -> Result<()> {
     Ok(())
 }
 
-pub fn stop() -> Result<()> {
+pub fn stop(restart: bool) -> Result<()> {
     let cfg = Config::load()?;
 
     match cfg.sandbox {
         Some(sandbox_cfg) => {
-            info!("Stopping the sandbox...");
+            if !restart {
+                info!("Stopping the sandbox...");
+            }
             let pid = Pid::from_raw(sandbox_cfg.pid as i32);
             kill(pid, Signal::SIGTERM)?;
 
@@ -70,13 +74,25 @@ pub fn stop() -> Result<()> {
 
             Ok(())
         }
-        None => bail_user_error!("The sandbox is not running!"),
+        None => {
+            if !restart {
+                bail_user_error!("The sandbox is not running!")
+            } else {
+                Ok(())
+            }
+        }
     }
+}
+
+pub async fn restart() -> Result<()> {
+    stop(true)?;
+    start(false).await
 }
 
 pub async fn exec(command: Command) -> Result<()> {
     match command {
         Command::Start { no_daemon } => start(no_daemon).await,
-        Command::Stop => stop(),
+        Command::Stop => stop(false),
+        Command::Restart => restart().await,
     }
 }
