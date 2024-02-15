@@ -7,6 +7,7 @@ use log::{debug, info};
 use crate::{
     config::{Config, NetworkName, SmartFunction},
     error::{bail, bail_user_error, user_error, Result},
+    term::styles,
     utils::read_file_or_input_or_piped,
 };
 
@@ -64,9 +65,15 @@ pub async fn exec(
 
     debug!("Signed operation: {:?}", signed_op);
 
-    info!(
+    debug!(
         "Signed operation: {}",
         serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?
+    );
+
+    // Show message saying that the smart function is being deployed from <source>
+    println!(
+        "Deploying smart function from {} to the network...",
+        user.address
     );
 
     // 3. Send operation to jstz-node
@@ -82,7 +89,13 @@ pub async fn exec(
         }
     };
 
-    println!("Smart function deployed at address: {}", address);
+    info!("Smart function deployed at address: {}", address);
+
+    // Show message showing how to run the smart function
+    info!(
+        "You can now run the smart function using the following command: `{}`",
+        styles::url(format!("jstz run tezos://{}/<args>", address))
+    );
 
     // 4. Save smart function account (if named)
     if let Some(name) = name {
