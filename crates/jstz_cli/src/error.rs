@@ -1,6 +1,6 @@
 use std::fmt::{self, Debug};
 
-use crate::term::styles::url;
+use crate::term::styles::{url, ErrorPrefix};
 
 #[derive(Debug)]
 pub struct UserError {
@@ -19,10 +19,11 @@ pub type Error = anyhow::Error;
 
 pub fn print(err: &Error) {
     if let Some(user_error) = err.downcast_ref::<UserError>() {
-        eprintln!("{}", user_error);
+        eprintln!("{} {}", ErrorPrefix, user_error);
     } else {
         eprintln!(
-            "{}\n\nIf you think this is a bug then please create an issue at {}.",
+            "{} {}\n\nIf you think this is a bug then please create an issue at {}.",
+            ErrorPrefix,
             err,
             url("https://github.com/trilitech/jstz/issues/new/choose")
         );
