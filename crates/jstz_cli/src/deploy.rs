@@ -77,8 +77,11 @@ pub async fn exec(
 
     let address = match receipt.inner {
         Ok(ReceiptContent::DeployFunction(deploy)) => deploy.address,
-        _ => {
+        Ok(_) => {
             bail!("Expected a `DeployFunction` receipt, but got something else.")
+        }
+        Err(err) => {
+            bail_user_error!("Failed to deploy smart function with error {err:?}.")
         }
     };
 

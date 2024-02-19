@@ -117,9 +117,9 @@ pub async fn exec(
             run_function.headers,
             run_function.body,
         ),
-
         Ok(_) => bail!("Expected a `RunFunction` receipt, but got something else."),
-        Err(err) => bail!("SmartFunction failed with error {err:?}"),
+
+        Err(err) => bail_user_error!("{err}"),
     };
 
     info!("Status code: {}", status_code);
