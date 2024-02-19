@@ -65,7 +65,7 @@ enum Command {
     #[command(subcommand)]
     Bridge(bridge::Command),
 
-    /// 🏝️ Start/stop with the jstz sandbox.
+    /// 🏝️  Start/Stop/Restart the local jstz sandbox.
     #[command(subcommand)]
     Sandbox(sandbox::Command),
     /// ⚡️ Start a REPL session with jstz's JavaScript runtime.
@@ -75,7 +75,7 @@ enum Command {
         account: Option<AddressOrAlias>,
     },
 
-    /// 🪵 Explore logs from deployed smart functions.
+    /// 🪵  Explore logs from deployed smart functions.
     #[command(subcommand)]
     Logs(logs::Command),
     /// 🔑 Interact with jstz's key-value store.
@@ -99,7 +99,6 @@ enum Command {
 
     /// 📚 Open jstz's docs in your browser.
     Docs,
-
     /// 🐚 Generates shell completions.
     Completions {
         /// The shell to generate completions for
@@ -137,9 +136,49 @@ async fn exec(command: Command) -> Result<()> {
     }
 }
 
+fn print_custom_help() {
+    let custom_help_message = "\
+Usage: jstz <COMMAND>
+
+Commands:
+  deploy       🚀 Deploys a smart function to jstz
+  run          🏃 Send a request to a deployed smart function
+  bridge       🌉 Move CTEZ between L1 and jstz with the jstz bridge
+
+  sandbox      🏝️  Start/Stop/Restart the local jstz sandbox
+  repl         ⚡️ Start a REPL session with jstz's JavaScript runtime
+
+  logs         🪵  Explore logs from deployed smart functions
+  kv           🔑 Interact with jstz's key-value store
+
+  account      🧑 Manage jstz accounts
+  login        🔓 Login to a jstz account
+  logout       🚪 Logout from the current jstz account
+  whoami       🤔 Display your account info
+  
+  docs         📚 Open jstz's docs in your browser
+  completions  🐚 Generates shell completions
+  help         Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version";
+    println!("{}", custom_help_message);
+}
+
 #[tokio::main]
 async fn main() {
     term::init_logger();
+
+    let args: Vec<String> = std::env::args().collect();
+    if (args.contains(&"--help".to_string())
+        || args.contains(&"-h".to_string())
+        || args.contains(&"help".to_string()))
+        && args.len() == 2
+    {
+        print_custom_help();
+        return;
+    }
 
     let command = Command::parse();
 
