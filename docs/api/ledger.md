@@ -11,7 +11,7 @@ All operations on `Ledger` are synchronous and atomic, committed if the request 
 We can obtain the balance of an account using `Ledger.balance()`:
 
 ```typescript
-const alice: Address = "tz4abc...";
+const alice: Address = "tz1abc...";
 console.log(Ledger.balance(alice)); // 0
 ```
 
@@ -33,7 +33,7 @@ console.log(Ledger.balance(Ledger.selfAddress)); // 0
 
 ### `type Address = string`
 
-An address is a string of 36 characters, starting with `tz4`.
+An address is a string of 36 characters, starting with `tz1`.
 
 ## Instance Properties
 

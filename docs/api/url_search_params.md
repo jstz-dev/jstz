@@ -7,7 +7,7 @@
 ```typescript
 // Parse query string from URL
 let url = new URL("https://example.com?foo=1&bar=2");
-let params = new UrlSearchParams(url.search);
+let params = new URLSearchParams(url.search);
 
 // Add a new parameter
 params.append("baz", 3);
@@ -18,95 +18,72 @@ params.delete("bar");
 
 ## Constructor
 
-### `new UrlSearchParams(init?: [string, string][] | Record<string, string> | string)`
+### `new URLSearchParams(init?: [string, string][] | Record<string, string> | string): URLSearchParams`
 
-Creates a new instance of `UrlSearchParams` with the provided key-value pairs.
+Creates a new instance of `URLSearchParams` with the provided key-value pairs. The `init` parameter can be one of the following:
 
-- **init**:
-  One of:
-  - An array of key-value pairs. Each pair is an array where the first element is the key (Name) and the second is the value.
-  - A record of string keys and string values.
-  - A string, which will be parsed from application/x-www-form-urlencoded format. A leading '?' character is ignored.
+- An array of key-value pairs. Each pair is an array where the first element is the key (Name) and the second is the value.
+- A record of `string` keys and `string` values.
+- A `string`, which will be parsed from [`application/x-www-form-urlencoded`](https://url.spec.whatwg.org/#application/x-www-form-urlencoded) format. The leading '?' character is ignored.
 
 ## Instance Properties
 
-### `readonly size: number`
+### `readonly URLSearchParams.size: number`
 
-- **Returns**: The number of search parameters present.
+Returns the number of search parameters present.
 
 ## Instance Methods
 
-### `append(name: string, value: string): void`
+### `URLSearchParams.append(name: string, value: string): void`
 
-Appends a specified key/value pair as a new search parameter.
+Appends a specified name-value pair as a new search parameter.
 
-- **name**: The name of the search parameter.
-- **value**: The value of the search parameter.
-
-### `delete(name: string, value?: string): void`
+### `URLSearchParams.delete(name: string, value?: string): void`
 
 Removes search parameters that match the given name. If a value is provided, only parameters with that name-value pair are removed.
 
-- **name**: The name of the search parameter to be removed.
-- **value** (optional): The specific value of the search parameter to be removed.
+### `URLSearchParams.get(name: string): string | null`
 
-### `get(name: string): string | null`
+Returns the first value associated with the given search parameter `name` or `null` if not found.
 
-Returns the first value associated with the given search parameter.
+### `URLSearchParams.getAll(name: string): string[]`
 
-- **name**: The name of the search parameter.
+Returns all the values associated with a given search parameter `name`.
 
-- **Returns**: The value associated with the given search parameter or `null` if not found.
-
-### `getAll(name: string): string[]`
-
-Returns all the values associated with a given search parameter.
-
-- **name**: The name of the search parameter.
-
-- **Returns**: An array of values associated with the given search parameter.
-
-### `has(name: string, value?: string): boolean`
+### `URLSearchParams.has(name: string, value?: string): boolean`
 
 Determines whether the `UrlSearchParams` object has a certain parameter, optionally with a specific value.
 
-- **name**: The name of the parameter you want to check for.
-- **value** (optional): The value of the parameter you want to check for.
-- **Returns**: `true` if the parameter, or parameter-value pair, exists. Otherwise, returns `false`.
-
-### `set(name: string, value: string): void`
+### `URLSearchParams.set(name: string, value: string): void`
 
 Sets the value associated with a given parameter. If there are several matching parameters, it updates the first and removes the others.
 
-- **name**: The name of the parameter you want to set or update.
-- **value**: The new value for the parameter.
+If the parameter does not exist, this method will append the name-value pair.
 
-If the parameter does not exist, this method will append the parameter-value pair.
+### `URLSearchParams.sort(): void`
 
-### `sort(): void`
+Sorts all name-value pairs in the `UrlSearchParams` object by their names. The sorting is done by comparing the code units of the names. The relative order between pairs with equal names is preserved.
 
-Sorts all key/value pairs in the `UrlSearchParams` object by their keys. The sorting is done by comparing the code units of the keys. The relative order between pairs with equal names is preserved.
-
-### `toString(): string`
+### `URLSearchParams.toString(): string`
 
 Returns a query string suitable for use in a URL.
 
-### `[Symbol.iterator](): Iterator<[string, string]>`
+### `URLSearchParams[Symbol.iterator](): Iterator<[string, string]>`
 
-Returns an iterator over the list of header name/value pairs. This makes Headers instances [iterable](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterable_protocol).
+Returns an iterator over the list of search parameter name-value pairs. This makes `URLSearchParams` instances [iterable](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterable_protocol).
 
-### `entries(): Iterator<[string, string]>`
+### `URLSearchParams.entries(): Iterator<[string, string]>`
 
-Returns an iterator over the list of header name/value pairs.
+Returns an iterator over the list of search parameter name-value pairs.
 
-### `keys(): Iterator<string>`
+### `URLSearchParams.keys(): Iterator<string>`
 
-Returns an iterator over the header names.
+Returns an iterator over the search parameter names.
 
-### `values(): Iterator<string>`
+### `URLSearchParams.values(): Iterator<string>`
 
-Returns an iterator over the header values.
+Returns an iterator over the search parameter values.
 
-### `forEach(callback: (value: string, name: string, headers: Headers) => void): void`
+### `URLSearchParams.forEach(callback: (value: string, name: string, parent: URLSearchParams) => void): void`
 
-Calls the callback for each header. Note that the header value is the first callback argument, while the header name is the second argument.
+Calls the callback for each search parameter. Note that the search parameter value is the _first_ callback argument, while the name is the second argument.

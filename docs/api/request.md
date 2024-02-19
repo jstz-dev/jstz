@@ -11,7 +11,7 @@
 ### `new Request(input: Request)`
 
 ::: danger
-**Spec deviation**: The `referrer` is copied from the given request. Additionally the `mode` conversion is not supported.
+**Spec deviation**: The `referer` is copied from the given request. Additionally the `mode` conversion is not supported.
 :::
 
 Constructs a new `Request` object as a copy of the given request.
