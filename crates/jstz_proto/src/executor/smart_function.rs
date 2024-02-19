@@ -260,30 +260,36 @@ impl Script {
 
         // 4. Invoke the script's handler
         let result =
-            self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)?;
+            self.invoke_handler(&JsValue::undefined(), &[request.clone()], context);
 
         // TODO: decode request and add more fields to the request (status, header etc).
         log_request_end(address.clone(), operation_hash.to_string());
 
         // 4. Ensure that the transaction is committed
-        on_success(
-            result,
-            |value, _context| {
-                runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<()> {
-                    let response = Response::try_from_js(value)?;
+        match result {
+            Ok(result) => on_success(
+                result,
+                |value, _context| {
+                    runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<()> {
+                        let response = Response::try_from_js(value)?;
 
-                    // If status code is 2xx, commit transaction
-                    if response.ok() {
-                        tx.commit(hrt)?;
-                    } else {
-                        tx.rollback()?;
-                    }
+                        // If status code is 2xx, commit transaction
+                        if response.ok() {
+                            tx.commit(hrt)?;
+                        } else {
+                            tx.rollback()?;
+                        }
 
-                    Ok(())
-                })
-            },
-            context,
-        )
+                        Ok(())
+                    })
+                },
+                context,
+            ),
+            Err(err) => {
+                runtime::with_js_tx(|tx| tx.rollback())?;
+                Err(err)
+            }
+        }
     }
 
     /// Loads, initializes and runs the script
