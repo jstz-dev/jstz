@@ -41,13 +41,13 @@ async function handler(_: Request): Promise<Response> {
 Calls a `jstz` smart function with the given request, returning a promise that resolves to an
 HTTP [`Response`](response.md) object.
 
-- **request**: An HTTP [`Request`](request.md) object.
-  The URL scheme _must_ be `tezos` and the host _must_ be the address of a deployed `jstz` smart function.
-  The `Referer` header _must_ not be set.
+The `request` parameter is a HTTP [`Request`](request.md) object.
+The URL scheme _must_ be `tezos` and the host _must_ be the address of a deployed `jstz` smart function.
+The `Referer` header _must_ not be set.
 
 ### `SmartFunction.create(code : string): Promise<Address>`
 
 Creates and deploys a new `jstz` smart function with the given code, returning a promise that resolves to the address of the newly deployed smart function.
 
-- **code**: A `string` containing an ECMAscript module.
-  The module _must_ define a default export of type `(request: Request) => Response | Promise<Response>`.
+The `code` must be a `string` containing an ECMAscript module.
+The module _must_ define a default export of type `(request: Request) => Response | Promise<Response>`.

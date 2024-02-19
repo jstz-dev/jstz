@@ -11,14 +11,16 @@ running on Tezos's smart optimistic rollups, some APIs are not available (e.g. `
 
 - [`console`](./console.md)
 - [Encoding API](./encoding.md)
+  - [`TextEncoder`](./text_encoder.md)
+  - [`TextDecoder`](./text_decoder.md)
 - Fetch API:
   - [`Headers`](./headers.md)
   - [`Request`](./request.md)
   - [`Response`](./response.md)
 - URL API:
   - [`URL`](./url.md)
-  - [`URLPattern`](./url_pattern.md)
   - [`URLSearchParams`](./url_search_params.md)
+- [`URLPattern`](./url_pattern.md)
 
 ## `jstz`-specific APIs
 
