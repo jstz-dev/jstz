@@ -7,6 +7,7 @@ use jstz_proto::{
     receipt::Content as ReceiptContent,
 };
 use log::{debug, info};
+use spinners::{Spinner, Spinners};
 use url::Url;
 
 use crate::{
@@ -102,9 +103,12 @@ pub async fn exec(
     debug!("Signed operation: {:?}", signed_op);
 
     // 4. Send message to jstz node
-    info!(
-        "Running function at {}...",
-        styles::url(&url_object.to_string())
+    let mut spinner = Spinner::new(
+        Spinners::BoxBounce2,
+        format!(
+            "Running function at {} ",
+            styles::url(&url_object.to_string())
+        ),
     );
 
     jstz_client.post_operation(&signed_op).await?;
@@ -121,6 +125,9 @@ pub async fn exec(
         Ok(_) => bail!("Expected a `RunFunction` receipt, but got something else."),
         Err(err) => bail!("SmartFunction failed with error {err:?}"),
     };
+
+    spinner.stop();
+    println!();
 
     info!("Status code: {}", status_code);
     info!("Headers: {:?}", headers);
