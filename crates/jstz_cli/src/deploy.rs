@@ -9,6 +9,8 @@ use log::{debug, info};
 use crate::{
     config::{Config, NetworkName, SmartFunction},
     error::{bail, bail_user_error, user_error, Result},
+    sandbox::daemon,
+    term::styles,
     utils::read_file_or_input_or_piped,
 };
 
@@ -22,6 +24,18 @@ pub async fn exec(
     const MAX_CODE_LENGTH: usize = 3915;
 
     let mut cfg = Config::load()?;
+
+    // Load sandbox if network is Dev and not already loaded
+    if let Some(NetworkName::Dev) = network {
+        if !cfg.sandbox.is_some() {
+            daemon::main(true, false, &mut cfg).await?;
+            info!(
+                "Use `{}` to start from a clear sandbox state.",
+                styles::command("jstz sandbox restart --detach")
+            );
+            cfg = Config::load()?;
+        }
+    }
 
     let (_, user) = cfg.accounts.current_user().ok_or(user_error!(
         "You are not logged in. Please run `jstz login`."
@@ -76,9 +90,10 @@ pub async fn exec(
 
     debug!("Signed operation: {:?}", signed_op);
 
-    info!(
-        "Signed operation: {}",
-        serde_json::to_string_pretty(&serde_json::to_value(&signed_op)?)?
+    // Show message saying that the smart function is being deployed from <source>
+    println!(
+        "Deploying smart function from {} to the network...",
+        user.address
     );
 
     // 3. Send operation to jstz-node
@@ -97,7 +112,14 @@ pub async fn exec(
         }
     };
 
-    println!("Smart function deployed at address: {}", address);
+    info!("Smart function deployed at address: {}", address);
+
+    // Show message showing how to run the smart function
+    info!(
+        "Run with `{}{}`",
+        styles::command("jstz run "),
+        styles::url(format!("tezos://{}/<args>", address))
+    );
 
     // 4. Save smart function account (if named)
     if let Some(name) = name {
