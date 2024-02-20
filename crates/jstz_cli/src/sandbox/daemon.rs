@@ -3,14 +3,20 @@ use jstz_rollup::{
     deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
     JstzRollup,
 };
+use nix::{
+    sys::signal::{kill, Signal},
+    unistd::Pid,
+};
 use octez::OctezThread;
 use regex::Regex;
+use signal_hook::consts::signal::{SIGINT, SIGTERM};
+use signal_hook::iterator::Signals;
 use std::{
     env,
     fs::{self, File, OpenOptions},
     io::{self, BufRead, BufReader, Seek, Write},
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
+    process::{self, Child, Command, Stdio},
     thread::{self, sleep},
     time::Duration,
 };
@@ -168,6 +174,7 @@ fn generate_identity(cfg: &Config) -> Result<()> {
     Ok(())
 }
 
+// Number of sandbox steps - calls to `progress_step` - to complete
 const MAX_PROGRESS: u32 = 16;
 fn progress_step(progress: &mut u32) {
     *progress += 1;
@@ -468,98 +475,184 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
     Ok(())
 }
 
-pub async fn main(no_daemon: bool, cfg: &mut Config) -> Result<()> {
-    if no_daemon {
-        run_sandbox(cfg).await?;
-    } else {
-        // Print banner
-        info!("{}", style(SANDBOX_BANNER).bold());
-        info!(
-            "        {} {}",
-            env!("CARGO_PKG_VERSION"),
-            styles::url(env!("CARGO_PKG_REPOSITORY"))
-        );
-        info!("");
+fn print_banner() -> Result<()> {
+    info!("{}", style(SANDBOX_BANNER).bold());
+    info!(
+        "        {} {}",
+        env!("CARGO_PKG_VERSION"),
+        styles::url(env!("CARGO_PKG_REPOSITORY"))
+    );
+    info!("");
+    Ok(())
+}
 
-        let path = sandbox_daemon_log_path()?;
-        let stdout_file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(path.clone())?;
-        let mut child = Command::new(std::env::current_exe()?)
-            .args(["sandbox", "start", "--no-daemon"])
-            .stdout(Stdio::from(stdout_file))
-            .spawn()?;
+fn start_background_process() -> Result<Child> {
+    let path = sandbox_daemon_log_path()?;
+    let stdout_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path.clone())?;
+    let child = Command::new(std::env::current_exe()?)
+        .args(["sandbox", "start", "--background"])
+        .stdout(Stdio::from(stdout_file))
+        .spawn()?;
 
-        let file = File::open(&path)?;
-        let mut reader = BufReader::new(file);
-        let mut buffer = String::new();
+    Ok(child)
+}
 
-        let regex = Regex::new(r"\((\d+)\)").unwrap();
+fn run_progress_bar(child: &mut Child, message: String) -> Result<()> {
+    let file = File::open(&sandbox_daemon_log_path()?)?;
+    let mut reader = BufReader::new(file);
+    let mut buffer = String::new();
 
-        let mut progress: u32 = 0;
+    let regex = Regex::new(r"\((\d+)\)").unwrap();
 
-        let progress_bar = ProgressBar::new(MAX_PROGRESS as u64);
-        progress_bar.set_style(
-            ProgressStyle::default_bar().template(
-                "{spinner:.green} [{bar:40.cyan/blue}] {pos:>7}/{len:7} {msg}",
-            )?,
-        );
+    let mut progress: u32 = 0;
 
-        loop {
-            reader.stream_position()?;
+    let progress_bar = ProgressBar::new(MAX_PROGRESS as u64);
+    progress_bar.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{bar:40.cyan/blue}] {pos:>7}/{len:7} {msg}")?,
+    );
 
-            while reader.read_line(&mut buffer)? > 0 {
-                if let Some(captures) = regex.captures(&buffer) {
-                    if let Some(matched) = captures.get(1) {
-                        if let Ok(num) = matched.as_str().parse::<u32>() {
-                            progress = num;
-                            progress_bar.set_position(progress.into());
-                        }
+    loop {
+        reader.stream_position()?;
+
+        while reader.read_line(&mut buffer)? > 0 {
+            if let Some(captures) = regex.captures(&buffer) {
+                if let Some(matched) = captures.get(1) {
+                    if let Ok(num) = matched.as_str().parse::<u32>() {
+                        progress = num;
+                        progress_bar.set_position(progress.into());
                     }
                 }
-                buffer.clear();
             }
-
-            if progress == MAX_PROGRESS {
-                progress_bar.finish_with_message("Sandbox started 🎉");
-                break;
-            }
-
-            if let Ok(Some(status)) = child.try_wait() {
-                progress_bar
-                    .finish_with_message(format!("Sandbox failed to start: {:}", status));
-                break;
-            }
-
-            thread::sleep(Duration::from_millis(100));
+            buffer.clear();
         }
 
-        // Print sandbox info
-        info!(
-            "octez-node is listening on: {}",
-            styles::url(octez_node_endpoint())
-        );
-        info!(
-            "octez-smart-rollup-node is listening on: {}",
-            styles::url(octez_smart_rollup_endpoint())
-        );
-        info!(
-            "jstz-node is listening on: {}",
-            styles::url(jstz_node_endpoint())
-        );
+        if progress == MAX_PROGRESS {
+            progress_bar.finish_with_message(message);
+            break;
+        }
 
-        info!("\nTezos bootstrap accounts:");
+        if let Ok(Some(status)) = child.try_wait() {
+            progress_bar
+                .finish_with_message(format!("Sandbox failed to start: {:}", status));
+            bail_user_error!("Sandbox failed to start: {:}", status);
+        }
 
-        let mut sandbox_bootstrap_accounts = format_sandbox_bootstrap_accounts();
-        sandbox_bootstrap_accounts.set_format({
-            let mut format = *FORMAT_DEFAULT;
-            format.indent(2);
-            format
-        });
+        thread::sleep(Duration::from_millis(100));
+    }
 
-        info!("{}", sandbox_bootstrap_accounts);
+    Ok(())
+}
+
+fn print_sandbox_info() -> Result<()> {
+    // Print sandbox info
+    info!(
+        "octez-node is listening on: {}",
+        styles::url(octez_node_endpoint())
+    );
+    info!(
+        "octez-smart-rollup-node is listening on: {}",
+        styles::url(octez_smart_rollup_endpoint())
+    );
+    info!(
+        "jstz-node is listening on: {}",
+        styles::url(jstz_node_endpoint())
+    );
+
+    info!("\nTezos bootstrap accounts:");
+
+    let mut sandbox_bootstrap_accounts = format_sandbox_bootstrap_accounts();
+    sandbox_bootstrap_accounts.set_format({
+        let mut format = *FORMAT_DEFAULT;
+        format.indent(2);
+        format
+    });
+
+    info!("{}", sandbox_bootstrap_accounts);
+
+    Ok(())
+}
+
+fn wait_for_termination(pid: Pid) -> Result<()> {
+    loop {
+        let result: nix::Result<()> = kill(pid, Signal::SIGTERM);
+        match result {
+            // Sending 0 as the signal just checks for the process existence
+            core::result::Result::Ok(_) => {
+                // Process exists, continue waiting
+                thread::sleep(Duration::from_millis(100));
+            }
+            Err(nix::Error::ESRCH) => {
+                // No such process, it has terminated
+                break;
+            }
+            Err(e) => {
+                // An unexpected error occurred
+                bail_user_error!("Failed to kill the sandbox process: {:?}", e)
+            }
+        }
+    }
+    Ok(())
+}
+
+pub fn stop_sandbox(with_start: bool) -> Result<()> {
+    let cfg = Config::load()?;
+
+    match cfg.sandbox {
+        Some(sandbox_cfg) => {
+            info!("Stopping the sandbox...");
+            let pid = Pid::from_raw(sandbox_cfg.pid as i32);
+            kill(pid, Signal::SIGTERM)?;
+
+            wait_for_termination(pid)?;
+
+            Ok(())
+        }
+        None => {
+            if with_start {
+                bail_user_error!("Failed to stop the sandbox.")
+            } else {
+                bail_user_error!("The sandbox is not running!")
+            }
+        }
+    }
+}
+
+pub async fn main(detach: bool, background: bool, cfg: &mut Config) -> Result<()> {
+    if background {
+        run_sandbox(cfg).await?;
+        return Ok(());
+    }
+
+    if detach {
+        let mut child = start_background_process()?;
+        run_progress_bar(
+            &mut child,
+            "Sandbox is running in background 🎉".to_string(),
+        )?;
+    } else {
+        print_banner()?;
+
+        let mut child = start_background_process()?;
+        run_progress_bar(&mut child, "Sandbox started 🎉".to_string())?;
+
+        print_sandbox_info()?;
+
+        let mut signals = Signals::new(&[SIGINT, SIGTERM])?;
+
+        for signal in signals.forever() {
+            match signal {
+                SIGINT | SIGTERM => {
+                    stop_sandbox(true)?;
+                    process::exit(0);
+                }
+                _ => unreachable!(),
+            }
+        }
     }
     Ok(())
 }

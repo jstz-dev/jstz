@@ -1,6 +1,8 @@
 const KEY = "counter";
 
 const handler = () => {
+  let a = [];
+  a[1].foo();
   let counter = Kv.get(KEY);
   console.log(`Counter: ${counter}`);
   if (counter === null) {
