@@ -1,12 +1,5 @@
-use std::{thread, time::Duration};
-
 use anyhow::{Ok, Result};
 use clap::Subcommand;
-use log::info;
-use nix::{
-    sys::signal::{kill, Signal},
-    unistd::Pid,
-};
 
 mod daemon;
 
@@ -14,7 +7,7 @@ mod consts;
 
 pub use consts::*;
 
-use crate::{config::Config, error::bail_user_error};
+use crate::config::Config;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
