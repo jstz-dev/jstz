@@ -12,7 +12,7 @@ export default (request) => {
   const smartFunctionAddress = await SmartFunction.create(code);
   console.log("created", smartFunctionAddress);
 
-  await SmartFunction.call(
+  await fetch(
     new Request(`tezos://${smartFunctionAddress}/`, {
       method: "POST",
       body: "Hello World",

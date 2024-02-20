@@ -224,7 +224,7 @@ async function handler(request: Request): Promise<Response> {
         if (request.method === "GET") {
           let balanceOf = {
             requests: JSON.parse(
-              TextEncoder.atob(url.searchParams.get("requests") as string),
+              atob(url.searchParams.get("requests") as string),
             ),
           };
           if (isBalanceOf(balanceOf)) {

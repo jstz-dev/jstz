@@ -18,9 +18,9 @@ async function logBalances(fa2: Address, actor: Address[], tokens: number[]) {
   );
 
   // 2. Call the fa2 smart function
-  let encodedRequests = TextEncoder.btoa(JSON.stringify(requests));
+  let encodedRequests = btoa(JSON.stringify(requests));
 
-  let response = await SmartFunction.call(
+  let response = await fetch(
     new Request(`tezos://${fa2}/balance_of?requests=${encodedRequests}`),
   );
 
@@ -41,7 +41,7 @@ async function addSelfAsOperator(
 ): Promise<Response[]> {
   // For each actor, add `Ledger.selfAddress` as an operator for each token in `fa2`
   let promises = actors.map((actor) =>
-    SmartFunction.call(
+    fetch(
       new Request(
         `tezos://${actor}/add_operator?fa2=${fa2}&tokens=${JSON.stringify(
           tokens,
@@ -56,7 +56,7 @@ async function mintTokens(
   fa2: Address,
   ...tokens: MintNew[]
 ): Promise<Response> {
-  return await SmartFunction.call(
+  return await fetch(
     new Request(`tezos://${fa2}/mint_new`, {
       method: "POST",
       body: JSON.stringify(tokens),
@@ -71,7 +71,7 @@ async function transfer(
   token_id: number,
   amount: number,
 ): Promise<Response> {
-  return await SmartFunction.call(
+  return await fetch(
     new Request(
       `tezos://${from}/transfer?fa2=${fa2}&to=${to}&token_id=${token_id}&amount=${amount}`,
     ),
@@ -94,7 +94,7 @@ async function steal(
   }));
 
   // 2. Attempt to transfer the tokens
-  return await SmartFunction.call(
+  return await fetch(
     new Request(`tezos://${fa2}/transfer`, {
       method: "POST",
       body: JSON.stringify(transfers),

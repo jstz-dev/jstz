@@ -1,6 +1,6 @@
 function handler(request) {
   try {
-    console.log(`Hello from ${Ledger.selfAddress()} 👋`);
+    console.log(`Hello from ${Ledger.selfAddress} 👋`);
     console.log("Method: ", request.method);
     console.log("Referer:", request.headers.get("Referer"));
     console.log("Url:", request.url);
