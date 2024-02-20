@@ -473,6 +473,7 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
     progress_step(&mut log_file, &mut progress);
     debug!(log_file, "Saving sandbox config");
     cfg.save()?;
+    println!("saved it {:?}", cfg.sandbox);
 
     // 4. Wait for the sandbox or jstz-node to shutdown (either by the user or by an error)
     run_jstz_node(cfg).await?;

@@ -1,7 +1,7 @@
 use anyhow::{Ok, Result};
 use clap::Subcommand;
 
-mod daemon;
+pub mod daemon;
 
 mod consts;
 
