@@ -48,7 +48,7 @@ const handler = () => {
     myHeaders.append("Accept-Encoding", "deflate");
     myHeaders.append("Accept-Encoding", "gzip");
     console.log(
-      `Actual: ${myHeaders.get("Accept-Encoding")}, Expected: [deflate, gzip]`,
+      `Actual: ${myHeaders.get("Accept-Encoding")}, Expected: deflate, gzip`,
     );
   }
 

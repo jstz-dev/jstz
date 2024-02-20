@@ -3,8 +3,8 @@
 This is a simple FA2 smart function that allows users to:
 
 - Mint new tokens 🪙
-- Transfer tokens between `tz4` accounts 🤝
-- Get the token balance of a `tz4` account 💰
+- Transfer tokens between `tz1` accounts 🤝
+- Get the token balance of a `tz1` account 💰
 - Manage operators 🧑‍🤝‍🧑
 
 Our implementation follows the TZIP-12 [specification](https://tzip.tezosagora.org/proposal/tzip-12/) with the following deviations:
@@ -25,9 +25,8 @@ npm run build
 To deploy the smart function, run:
 
 ```sh
-cargo run -- start sandbox
-tz4=tz492MCfwp9V961DhNGmKzD642uhU8j6H5nB
-cargo run -- deploy --self-address $tz4 --balance 0 --function-code "$(cat dist/index.js)"
+jstz sandbox start
+jstz deploy dist/index.js
 ```
 
 ## Demo
@@ -49,8 +48,8 @@ To deploy and run, execute:
 
 ```sh
 npm run build:test
-fa2=tz4...
-cargo run -- deploy --self-address $tz4 --balance 0 --function-code "$(cat dist/test/index.js)"
-scenario=tz4...
-cargo run -- run "tezos://$scenario/?fa2=$fa2" $tz4
+fa2=tz1...
+jstz deploy dist/test/index.js
+scenario=tz1...
+jstz run "tezos://$scenario/?fa2=$fa2"
 ```

@@ -1,4 +1,15 @@
-declare interface URLSearchParams {
+declare interface PairIterable<K, V> {
+  keys(): IterableIterator<K>;
+  values(): IterableIterator<V>;
+  entries(): IterableIterator<[K, V]>;
+  [Symbol.iterator](): IterableIterator<[K, V]>;
+  forEach(
+    callback: (value: V, key: K, parent: this) => void,
+    thisArg?: any,
+  ): void;
+}
+
+declare interface URLSearchParams extends PairIterable<string, string> {
   append(name: string, value: string): void;
   delete(name: string, value?: string): void;
   getAll(name: string): string[];
@@ -105,12 +116,13 @@ declare type HeadersInit =
   | Record<string, string>
   | Headers;
 
-declare interface Headers {
+declare interface Headers extends PairIterable<string, string> {
   append(name: string, value: string): void;
   delete(name: string): void;
-  get(name: string): string | string[] | null;
+  get(name: string): string | null;
   has(name: string): boolean;
   set(name: string, value: string): void;
+  getSetCookie(): string[];
 }
 
 declare var Headers: {
@@ -199,6 +211,48 @@ declare interface SmartFunction {
 }
 
 declare var SmartFunction: SmartFunction;
+
+declare function fetch(request: Request): Promise<Response>;
+
+declare function atob(s: string): string;
+declare function btoa(s: string): string;
+
+declare interface TextDecoderOptions {
+  fatal?: boolean;
+  ignoreBOM?: boolean;
+}
+
+declare interface TextDecodeOptions {
+  stream?: boolean;
+}
+
+declare interface TextDecoder {
+  readonly encoding: string;
+  readonly fatal: boolean;
+  readonly ignoreBOM: boolean;
+  decode(input?: BufferSource, options?: TextDecodeOptions): string;
+}
+
+declare var TextDecoder: {
+  readonly prototype: TextDecoder;
+  new (label?: string, options?: TextDecoderOptions): TextDecoder;
+};
+
+declare interface TextEncoderEncodeIntoResult {
+  read: number;
+  written: number;
+}
+
+declare interface TextEncoder {
+  readonly encoding: "utf-8";
+  encode(input?: string): Uint8Array;
+  encodeInto(input: string, dest: Uint8Array): TextEncoderEncodeIntoResult;
+}
+
+declare var TextEncoder: {
+  readonly prototype: TextEncoder;
+  new (): TextEncoder;
+};
 
 declare type BlobPart = BufferSource | Blob | string;
 

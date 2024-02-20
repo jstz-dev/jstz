@@ -25,7 +25,7 @@ const handler = async () => {
       body: "Hello from child smart function 👋",
     });
 
-    const response = await SmartFunction.call(request);
+    const response = await fetch(request);
     console.log(await response.text());
   } catch (error) {
     console.error(error);

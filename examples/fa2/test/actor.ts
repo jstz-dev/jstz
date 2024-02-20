@@ -41,7 +41,7 @@ async function handler(request: Request): Promise<Response> {
           token_id,
         }));
 
-        return await SmartFunction.call(
+        return await fetch(
           new Request(`tezos://${target}/update_operators`, {
             method: "PUT",
             body: JSON.stringify(body),

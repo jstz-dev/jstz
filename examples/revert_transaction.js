@@ -1,25 +1,39 @@
-const ADDR_1 = "tz492MCfwp9V961DhNGmKzD642uhU8j6H5nB";
-const ADDR_2 = "tz4FENGt5zkiGaHPm1ya4MgLomgkL1k7Dy7q";
-const handler = async () => {
-  console.log("Hello");
-  const otherAddress = Ledger.selfAddress() == ADDR_1 ? ADDR_2 : ADDR_1;
+const code = `
+  export default (req) => {
+    const url = new URL(req.url);
+    const path = url.pathname;
+    
+    switch (path) {
+      case '/':
+        Kv.set('key', 'Hello World');
+        break;
+      case '/delete':
+        Kv.delete('key');
+        throw 'Ha ha ha I deleted the key and threw an error';
+      case '/log':
+        console.log(Kv.get('key'));
+        break;
+    }
 
-  await SmartFunction.call(
-    otherAddress,
-    "export default () => Kv.set('key', 'Hello World')",
-  );
+    return new Response();
+  }
+`;
+
+const handler = async () => {
+  console.log("Hello from JS 👋");
+
+  const addr = await SmartFunction.create(code);
+
+  await fetch(new Request(`tezos://${addr}/`));
   try {
-    await SmartFunction.call(
-      otherAddress,
-      "export default () => { Kv.delete('key') ; throw 'Ha ha ha I deleted your key and threw an error' }",
-    );
+    await fetch(new Request(`tezos://${addr}/delete`));
   } catch (error) {
     console.error("Caught: ", error);
   }
-  await SmartFunction.call(
-    otherAddress,
-    "export default () => console.log(Kv.get('key'))",
-  );
+
+  await fetch(new Request(`tezos://${addr}/log`));
+
+  return new Response();
 };
 
 export default handler;
