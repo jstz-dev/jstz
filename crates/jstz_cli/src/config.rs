@@ -252,6 +252,11 @@ impl Config {
         jstz_home_dir().join("config.json")
     }
 
+    pub fn reload(&mut self) -> Result<()> {
+        *self = Self::load()?;
+        Ok(())
+    }
+
     /// Load the configuration from the file
     pub fn load() -> Result<Self> {
         let path = Self::path();
