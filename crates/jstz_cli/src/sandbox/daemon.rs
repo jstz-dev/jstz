@@ -12,7 +12,7 @@ use regex::Regex;
 use std::{
     env,
     fs::{self, File, OpenOptions},
-    io::{self, BufRead, BufReader, Seek, SeekFrom},
+    io::{BufRead, BufReader, Seek, Write},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     thread::{self, sleep},
@@ -607,12 +607,14 @@ fn wait_for_termination(pid: Pid) -> Result<()> {
     Ok(())
 }
 
-pub fn stop_sandbox(with_start: bool) -> Result<()> {
+pub fn stop_sandbox(restart: bool) -> Result<()> {
     let cfg = Config::load()?;
 
     match cfg.sandbox {
         Some(sandbox_cfg) => {
-            info!("Stopping the sandbox...");
+            if !restart {
+                info!("Stopping the sandbox...");
+            }
             let pid = Pid::from_raw(sandbox_cfg.pid as i32);
             kill(pid, Signal::SIGTERM)?;
 
@@ -621,10 +623,10 @@ pub fn stop_sandbox(with_start: bool) -> Result<()> {
             Ok(())
         }
         None => {
-            if with_start {
-                bail_user_error!("Failed to stop the sandbox.")
-            } else {
+            if !restart {
                 bail_user_error!("The sandbox is not running!")
+            } else {
+                Ok(())
             }
         }
     }

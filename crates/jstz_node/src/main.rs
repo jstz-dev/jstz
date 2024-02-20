@@ -5,11 +5,7 @@ use env_logger::Env;
 
 pub use error::{Error, Result};
 
-mod config;
 mod error;
-mod node_runner;
-mod services;
-mod tailed_file;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
