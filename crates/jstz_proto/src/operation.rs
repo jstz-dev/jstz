@@ -5,7 +5,7 @@ use jstz_crypto::{hash::Blake2b, public_key::PublicKey, signature::Signature};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    context::account::{Account, Address, Amount, Nonce},
+    context::account::{Account, Address, Amount, Nonce, ParsedCode},
     Error, Result,
 };
 
@@ -92,7 +92,7 @@ impl Operation {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
 pub struct DeployFunction {
-    pub function_code: String,
+    pub function_code: ParsedCode,
     pub account_credit: Amount,
 }
 

@@ -1,4 +1,6 @@
+use boa_engine::JsError;
 use jstz_proto::{
+    context::account::ParsedCode,
     operation::{Content, DeployFunction, Operation, SignedOperation},
     receipt::Content as ReceiptContent,
 };
@@ -44,6 +46,9 @@ pub async fn exec(
 
     debug!("Code: {}", code);
 
+    let code: ParsedCode = code
+        .try_into()
+        .map_err(|err: JsError| user_error!("{err}"))?;
     let op = Operation {
         source: user.address.clone(),
         nonce,
