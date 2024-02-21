@@ -2,7 +2,7 @@
 //!
 //! A few things to keep in mind:
 //!
-//! - The queuing strategy given to a stream constructor can be either builtin one (i.e. an instance of `CoutQueuingStrategy` or `ByteLengthQueuingStrategy`)
+//! - The queuing strategy given to a stream constructor can be either builtin one (i.e. an instance of `CountQueuingStrategy` or `ByteLengthQueuingStrategy`)
 //!   or a custom one (i.e. anything else).
 //!
 //! - While builtin queuing strategies always have a `highWaterMark` property, custom queuing strategies may not.
