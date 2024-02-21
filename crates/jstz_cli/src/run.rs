@@ -52,8 +52,6 @@ pub async fn exec(
     let address_or_alias = AddressOrAlias::from_str(host)?;
 
     if address_or_alias.is_alias() {
-        info!("Resolving host '{}'...", host);
-
         let address = address_or_alias.resolve(&cfg)?;
 
         info!("Resolved host '{}' to '{}'.", host, address);
