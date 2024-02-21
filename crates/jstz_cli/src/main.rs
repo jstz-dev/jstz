@@ -80,6 +80,9 @@ enum Command {
         ///  Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
+        /// Flag for logging.
+        #[arg(short, long)]
+        trace: bool,
     },
     /// ⚡️ Start a REPL session with jstz's JavaScript runtime.
     Repl {
@@ -122,7 +125,8 @@ async fn exec(command: Command) -> Result<()> {
             gas_limit,
             json_data,
             network,
-        } => run::exec(url, http_method, gas_limit, json_data, network).await,
+            trace,
+        } => run::exec(url, http_method, gas_limit, json_data, network, trace).await,
         Command::Repl { account } => repl::exec(account),
         Command::Logs(logs) => logs::exec(logs).await,
         Command::Login { alias } => account::login(alias),

@@ -5,7 +5,8 @@ use crate::{config::NetworkName, utils::AddressOrAlias, Result};
 
 mod trace;
 
-use trace::DEFAULT_LOG_LEVEL;
+pub use trace::exec_trace;
+pub use trace::DEFAULT_LOG_LEVEL;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {

@@ -2183,6 +2183,7 @@ dependencies = [
  "tezos_crypto_rs",
  "tiny-bip39",
  "tokio",
+ "tokio-util",
  "url",
 ]
 

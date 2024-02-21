@@ -1,18 +1,23 @@
 use std::str::FromStr;
 
+use crate::logs::{exec_trace, DEFAULT_LOG_LEVEL};
 use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
+use jstz_proto::context::account::Address;
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
     receipt::Content as ReceiptContent,
 };
 use log::{debug, info};
 use spinners::{Spinner, Spinners};
+use tokio::sync::mpsc;
 use url::Url;
 
+use crate::error::bail_user_error;
+use crate::jstz::JstzClient;
 use crate::{
     config::{Config, NetworkName},
-    error::{anyhow, bail_user_error, user_error, Result},
+    error::{anyhow, user_error, Result},
     term::styles,
     utils::{read_file_or_input_or_piped, AddressOrAlias},
 };
@@ -25,6 +30,7 @@ pub async fn exec(
     gas_limit: u32,
     json_data: Option<String>,
     network: Option<NetworkName>,
+    trace: bool,
 ) -> Result<()> {
     let cfg = Config::load()?;
 
@@ -39,22 +45,22 @@ pub async fn exec(
     let mut url_object = Url::parse(&url)
         .map_err(|_| user_error!("Invalid URL {}.", styles::url(&url)))?;
 
-    if let Some(host) = url_object.host_str() {
-        let address_or_alias = AddressOrAlias::from_str(host)?;
+    let host = url_object
+        .host_str()
+        .ok_or(user_error!("URL {} requires a host.", styles::url(&url)))?;
 
-        if address_or_alias.is_alias() {
-            info!("Resolving host '{}'...", host);
+    let address_or_alias = AddressOrAlias::from_str(host)?;
 
-            let address = address_or_alias.resolve(&cfg)?;
+    if address_or_alias.is_alias() {
+        info!("Resolving host '{}'...", host);
 
-            info!("Resolved host '{}' to '{}'.", host, address);
+        let address = address_or_alias.resolve(&cfg)?;
 
-            url_object
-                .set_host(Some(&address.to_string()))
-                .map_err(|_| anyhow!("Failed to set host"))?;
-        }
-    } else {
-        bail_user_error!("URL {} requires a host.", styles::url(&url));
+        info!("Resolved host '{}' to '{}'.", host, address);
+
+        url_object
+            .set_host(Some(&address.to_string()))
+            .map_err(|_| anyhow!("Failed to set host"))?;
     }
 
     debug!("Resolved URL: {}", url_object.to_string());
@@ -103,13 +109,18 @@ pub async fn exec(
     debug!("Signed operation: {:?}", signed_op);
 
     // 4. Send message to jstz node
-    let mut spinner = Spinner::new(
-        Spinners::BoxBounce2,
-        format!(
-            "Running function at {} ",
-            styles::url(&url_object.to_string())
-        ),
+    println!(
+        "Running function at {} ",
+        styles::url(&url_object.to_string())
     );
+
+    let mut spinner = Spinner::new(Spinners::BoxBounce2, "".into());
+    if trace {
+        spinner.stop();
+        println!();
+        let address = address_or_alias.resolve(&cfg)?;
+        spawn_trace(&address, &jstz_client).await?;
+    }
 
     jstz_client.post_operation(&signed_op).await?;
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
@@ -138,4 +149,28 @@ pub async fn exec(
     cfg.save()?;
 
     Ok(())
+}
+
+async fn spawn_trace(address: &Address, jstz_client: &JstzClient) -> Result<()> {
+    let event_source = jstz_client.logs_stream(address);
+    // need to use mpsc instead of oneshot because of the loop
+    let (tx, mut rx) = mpsc::channel::<()>(1);
+
+    tokio::spawn(async move {
+        let _ = exec_trace(event_source, DEFAULT_LOG_LEVEL, || async {
+            let _ = tx.send(()).await;
+        })
+        .await;
+    });
+
+    match rx.recv().await {
+        Some(_) => {
+            info!(
+                "Connected to trace smart function {:?}",
+                address.to_base58()
+            );
+            Ok(())
+        }
+        None => bail!("Failed to start trace."),
+    }
 }
