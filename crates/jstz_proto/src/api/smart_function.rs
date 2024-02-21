@@ -13,7 +13,7 @@ use jstz_core::{
 };
 
 use crate::{
-    context::account::{Account, Address, Amount},
+    context::account::{Account, Address, Amount, ParsedCode},
     executor::smart_function::{headers, Script},
     operation::OperationHash,
     Error, Result,
@@ -59,7 +59,7 @@ impl SmartFunction {
         &self,
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        function_code: String,
+        function_code: ParsedCode,
         initial_balance: Amount,
     ) -> Result<String> {
         // 1. Check if the associated account has sufficient balance
@@ -162,6 +162,7 @@ impl SmartFunctionApi {
                     .with_message("Expected at least 1 argument but 0 provided")
             })?
             .try_js_into(context)?;
+        let parsed_code: ParsedCode = function_code.try_into()?;
 
         let initial_balance = match args.get(1) {
             None => 0,
@@ -178,7 +179,7 @@ impl SmartFunctionApi {
                     smart_function.create(
                         hrt.deref(),
                         tx,
-                        function_code,
+                        parsed_code,
                         initial_balance as Amount,
                     )
                 })?;

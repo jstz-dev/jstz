@@ -1,6 +1,10 @@
-use std::fmt::Debug;
+use std::{
+    fmt::{self, Display},
+    result,
+};
 
 use crate::error::{Error, Result};
+use boa_engine::{Context, JsError, JsResult, Module, Source};
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
@@ -33,11 +37,34 @@ impl ToString for Nonce {
     }
 }
 
+/// Invariant: if code is present it parses successfully
+#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedCode(String);
+impl From<ParsedCode> for String {
+    fn from(ParsedCode(code): ParsedCode) -> Self {
+        code
+    }
+}
+impl Display for ParsedCode {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> result::Result<(), fmt::Error> {
+        Display::fmt(&self.0, formatter)
+    }
+}
+impl TryFrom<String> for ParsedCode {
+    type Error = JsError;
+    fn try_from(code: String) -> JsResult<Self> {
+        let src = Source::from_bytes(code.as_bytes());
+        let mut context = Context::default();
+        Module::parse(src, None, &mut context)?;
+        Ok(Self(code))
+    }
+}
+
 #[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct Account {
     pub nonce: Nonce,
     pub amount: Amount,
-    pub function_code: Option<String>,
+    pub function_code: Option<ParsedCode>,
 }
 
 const ACCOUNTS_PATH: RefPath = RefPath::assert_from(b"/jstz_account");
@@ -53,11 +80,11 @@ impl Account {
         hrt: &impl HostRuntime,
         tx: &'b mut Transaction,
         addr: &Address,
-    ) -> Result<&'b mut Account>
+    ) -> Result<&'b mut Self>
     where
         'a: 'b,
     {
-        let account_entry = tx.entry::<Account>(hrt, Self::path(addr)?)?;
+        let account_entry = tx.entry::<Self>(hrt, Self::path(addr)?)?;
         Ok(account_entry.or_insert_default())
     }
 
@@ -67,7 +94,7 @@ impl Account {
         tx: &mut Transaction,
         addr: &Address,
     ) -> Result<()> {
-        match tx.entry::<Account>(hrt, Self::path(addr)?)? {
+        match tx.entry::<Self>(hrt, Self::path(addr)?)? {
             Entry::Occupied(ntry) => {
                 let acc: &Self = ntry.get();
                 hrt.write_debug(&format!("📜 already exists: {:?}\n", acc.function_code));
@@ -95,7 +122,8 @@ impl Account {
         addr: &Address,
     ) -> Result<Option<&'a mut String>> {
         let account = Self::get_mut(hrt, tx, addr)?;
-        Ok(account.function_code.as_mut())
+        let function_code = account.function_code.as_mut().map(|code| &mut code.0);
+        Ok(function_code)
     }
 
     pub fn set_function_code(
@@ -106,7 +134,7 @@ impl Account {
     ) -> Result<()> {
         let account = Self::get_mut(hrt, tx, addr)?;
 
-        account.function_code = Some(function_code);
+        account.function_code = Some(function_code.try_into()?);
         Ok(())
     }
 
@@ -149,7 +177,7 @@ impl Account {
         tx: &mut Transaction,
         addr: &Address,
         amount: Amount,
-        function_code: Option<String>,
+        function_code: Option<ParsedCode>,
     ) -> Result<()> {
         Self {
             nonce: Nonce::default(),
