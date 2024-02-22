@@ -16,6 +16,7 @@ bincode = "1.3.3"
 erased-serde = "0.4.2"
 serde = { version = "1.0.196", features = ["derive"] }
 jstz_crypto.workspace = true
+chrono = { version = "0.4.34", default-features = false, features = ["std"] }
 
 [dev-dependencies]
 anyhow = "1.0.75"

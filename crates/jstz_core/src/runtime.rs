@@ -16,6 +16,7 @@ use boa_engine::{
     object::builtins::{JsFunction, JsPromise},
     Context, JsError, JsNativeError, JsResult, JsValue, Source,
 };
+use chrono::{DateTime, FixedOffset, LocalResult, NaiveDateTime};
 use getrandom::{register_custom_getrandom, Error as RandomError};
 
 use crate::{
@@ -24,6 +25,9 @@ use crate::{
     kv::{JsTransaction, Transaction},
     realm::{Module, Realm},
 };
+
+// This is the unix timestamp for date 31-07-2023 10:50:26 -- the date of the first commit
+const UTC_NOW: i64 = 1690797026;
 
 struct Hooks;
 
@@ -44,6 +48,22 @@ impl HostHooks for Hooks {
         _context: &mut Context<'_>,
     ) -> bool {
         false
+    }
+
+    fn utc_now(&self) -> NaiveDateTime {
+        NaiveDateTime::from_timestamp_opt(UTC_NOW, 0)
+            .expect("Failed to create `NaiveDateTime` from `UTC_NOW`")
+    }
+
+    fn local_from_utc(&self, utc: NaiveDateTime) -> DateTime<FixedOffset> {
+        DateTime::from_naive_utc_and_offset(utc, FixedOffset::east_opt(0).unwrap())
+    }
+
+    fn local_from_naive_local(
+        &self,
+        _local: NaiveDateTime,
+    ) -> LocalResult<DateTime<FixedOffset>> {
+        LocalResult::None
     }
 }
 
@@ -202,10 +222,10 @@ impl<'host> Runtime<'host> {
         // 2. Initialize context with job queue
         // NB: At this point, the context contains a 'default' realm
         let mut context = Context::builder()
+            .host_hooks(HOOKS)
             .job_queue(job_queue.clone() as Rc<dyn boa_engine::job::JobQueue>)
             .instructions_remaining(gas_limit)
-            .build()
-            .unwrap();
+            .build()?;
 
         // 3. Initialize specialized realm
         let realm = Realm::new(&mut context)?;
