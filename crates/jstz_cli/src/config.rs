@@ -67,7 +67,9 @@ pub struct SmartFunction {
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct AccountConfig {
+    #[serde(skip_serializing_if = "Option::is_none")]
     current_alias: Option<String>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     accounts: HashMap<String, Account>,
 }
 
@@ -139,6 +141,9 @@ impl AccountConfig {
             inner: self.accounts.iter(),
         }
     }
+    pub fn is_empty(&self) -> bool {
+        self.accounts.is_empty() && self.current_alias.is_none()
+    }
 }
 
 impl AddressOrAlias {
@@ -188,14 +193,16 @@ impl<'a> Iterator for AccountsIter<'a> {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Config {
     /// Path to octez installation
-    pub octez_path: PathBuf,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub octez_path: Option<PathBuf>,
     /// Sandbox config (None if sandbox is not running)
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<SandboxConfig>,
     /// List of accounts
-    #[serde(flatten)]
+    #[serde(default, flatten, skip_serializing_if = "AccountConfig::is_empty")]
     pub accounts: AccountConfig,
     /// Available networks
-    #[serde(flatten)]
+    #[serde(default, flatten, skip_serializing_if = "NetworkConfig::is_empty")]
     pub networks: NetworkConfig,
     /// Sandbox logs dir
     pub sandbox_logs_dir: Option<PathBuf>,
@@ -252,7 +259,11 @@ pub struct NetworkConfig {
     default_network: Option<NetworkName>,
     networks: HashMap<String, Network>,
 }
-
+impl NetworkConfig {
+    pub fn is_empty(&self) -> bool {
+        self.default_network.is_none() && self.networks.is_empty()
+    }
+}
 impl Config {
     /// Path to the configuration file
     pub fn path() -> PathBuf {
@@ -321,7 +332,10 @@ impl Config {
         let network = self.network(network_name)?;
 
         Ok(OctezClient {
-            octez_client_bin: Some(self.octez_path.join("octez-client")),
+            octez_client_bin: self
+                .octez_path
+                .as_ref()
+                .map(|path| path.join("octez-client")),
             octez_client_dir: self.octez_client_dir(network_name)?,
             endpoint: network.octez_node_rpc_endpoint,
             disable_disclaimer: true,
@@ -342,7 +356,7 @@ impl Config {
         let sandbox = self.sandbox()?;
 
         Ok(OctezNode {
-            octez_node_bin: Some(self.octez_path.join("octez-node")),
+            octez_node_bin: self.octez_path.as_ref().map(|path| path.join("octez-node")),
             octez_node_dir: sandbox.octez_node_dir.clone(),
         })
     }
@@ -356,7 +370,10 @@ impl Config {
         let network = self.network(network_name)?;
 
         Ok(OctezRollupNode {
-            octez_rollup_node_bin: Some(self.octez_path.join("octez-smart-rollup-node")),
+            octez_rollup_node_bin: self
+                .octez_path
+                .as_ref()
+                .map(|path| path.join("octez-smart-rollup-node")),
             octez_rollup_node_dir: sandbox.octez_rollup_node_dir.clone(),
             octez_client_dir: self.octez_client_dir(network_name)?,
             endpoint: network.octez_node_rpc_endpoint,
