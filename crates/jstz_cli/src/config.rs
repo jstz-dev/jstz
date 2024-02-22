@@ -33,6 +33,10 @@ pub fn jstz_home_dir() -> PathBuf {
     }
 }
 
+pub fn default_sandbox_logs_dir() -> PathBuf {
+    jstz_home_dir().join("sandbox-logs")
+}
+
 // Represents a collection of accounts: users or smart functions
 #[derive(Serialize, Deserialize, Debug, Clone, From, TryInto)]
 pub enum Account {
@@ -191,7 +195,10 @@ pub struct Config {
     #[serde(flatten)]
     pub accounts: AccountConfig,
     /// Available networks
+    #[serde(flatten)]
     pub networks: NetworkConfig,
+    /// Sandbox logs dir
+    pub sandbox_logs_dir: Option<PathBuf>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -293,6 +300,12 @@ impl Config {
         fs::write(&path, json)?;
 
         Ok(())
+    }
+
+    pub fn sandbox_logs_dir(&self) -> PathBuf {
+        self.sandbox_logs_dir
+            .clone()
+            .unwrap_or(default_sandbox_logs_dir())
     }
 
     pub fn sandbox(&self) -> Result<&SandboxConfig> {
