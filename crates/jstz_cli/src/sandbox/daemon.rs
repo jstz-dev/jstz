@@ -66,16 +66,12 @@ fn jstz_node_endpoint() -> String {
 
 include!(concat!(env!("OUT_DIR"), "/sandbox_paths.rs"));
 
-fn logs_dir() -> Result<PathBuf> {
-    Ok(env::current_dir()?.join("logs"))
+fn node_log_path(cfg: &Config) -> PathBuf {
+    cfg.sandbox_logs_dir().join("node.log")
 }
 
-fn node_log_path() -> Result<PathBuf> {
-    Ok(logs_dir()?.join("node.log"))
-}
-
-fn client_log_path() -> Result<PathBuf> {
-    Ok(logs_dir()?.join("client.log"))
+fn client_log_path(cfg: &Config) -> PathBuf {
+    cfg.sandbox_logs_dir().join("client.log")
 }
 
 const SANDBOX_BANNER: &str = r#"
@@ -124,8 +120,8 @@ const SANDBOX_BOOTSTRAP_ACCOUNTS: [SandboxBootstrapAccount; 5] = [
 ];
 
 const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
-fn sandbox_daemon_log_path() -> Result<PathBuf> {
-    Ok(logs_dir()?.join("sandbox_daemon.log"))
+fn sandbox_daemon_log_path(cfg: &Config) -> PathBuf {
+    cfg.sandbox_logs_dir().join("sandbox_daemon.log")
 }
 
 const ACTIVATOR_ACCOUNT_SK: &str =
@@ -203,7 +199,7 @@ fn init_node(log_file: &mut File, progress: &mut u32, cfg: &Config) -> Result<()
 
 fn start_node(cfg: &Config) -> Result<Child> {
     // Run the octez-node in sandbox mode
-    let log_file = File::create(node_log_path()?)?;
+    let log_file = File::create(node_log_path(cfg))?;
 
     cfg.octez_node()?.run(
         &log_file,
@@ -297,13 +293,15 @@ fn client_bake(cfg: &Config, log_file: &File) -> Result<()> {
 /// Since actix_web uses a single-threaded runtime,
 /// the tasks spawned by `jstz_node` expect to run on the same thread.
 /// For more information, see: https://docs.rs/actix-rt/latest/actix_rt/
-async fn run_jstz_node() -> Result<()> {
+async fn run_jstz_node(cfg: &Config) -> Result<()> {
     let local = task::LocalSet::new();
 
+    let log_path = sandbox_daemon_log_path(cfg);
+    let kernel_log_path = cfg.sandbox_logs_dir().join("kernel.log");
+
     local
-        .run_until(async {
-            task::spawn_local(async {
-                let log_path = sandbox_daemon_log_path()?;
+        .run_until(async move {
+            task::spawn_local(async move {
                 let mut log_file = OpenOptions::new()
                     .create(true)
                     .write(true)
@@ -318,7 +316,7 @@ async fn run_jstz_node() -> Result<()> {
                         "http://{}:{}",
                         SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_SMART_ROLLUP_PORT
                     ),
-                    &logs_dir()?.join("kernel.log"),
+                    &kernel_log_path,
                 )
                 .await
             })
@@ -349,7 +347,7 @@ fn start_sandbox(
 
     // 4. As a thread, start baking
     progress_step(log_file, progress);
-    let client_logs = File::create(client_log_path()?)?;
+    let client_logs = File::create(client_log_path(cfg))?;
     let baker = OctezThread::new(cfg.clone(), move |cfg| {
         client_bake(cfg, &client_logs)?;
         Ok(())
@@ -399,7 +397,7 @@ fn start_sandbox(
     progress_step(log_file, progress);
     debug!(log_file, "Starting rollup node...");
 
-    let logs_dir = logs_dir()?;
+    let logs_dir = cfg.sandbox_logs_dir();
     let rollup_node = OctezThread::from_child(rollup.run(
         &cfg.octez_rollup_node_sandbox()?,
         OPERATOR_ADDRESS,
@@ -443,9 +441,9 @@ fn format_sandbox_bootstrap_accounts() -> Table {
 
 pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
     // Create logs directory
-    fs::create_dir_all(logs_dir()?)?;
+    fs::create_dir_all(cfg.sandbox_logs_dir())?;
 
-    let log_path = sandbox_daemon_log_path()?;
+    let log_path = sandbox_daemon_log_path(cfg);
     let mut log_file = OpenOptions::new()
         .create(true)
         .write(true)
@@ -477,7 +475,7 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
     cfg.save()?;
 
     // 4. Wait for the sandbox or jstz-node to shutdown (either by the user or by an error)
-    run_jstz_node().await?;
+    run_jstz_node(cfg).await?;
     OctezThread::join(vec![baker, rollup_node, node])?;
 
     cfg.sandbox = None;
@@ -495,8 +493,8 @@ fn print_banner() {
     info!("");
 }
 
-fn start_background_process() -> Result<Child> {
-    let path = sandbox_daemon_log_path()?;
+fn start_background_process(cfg: &Config) -> Result<Child> {
+    let path = sandbox_daemon_log_path(cfg);
     let stdout_file = OpenOptions::new()
         .create(true)
         .write(true)
@@ -510,12 +508,12 @@ fn start_background_process() -> Result<Child> {
     Ok(child)
 }
 
-fn run_progress_bar(mut child: Option<Child>) -> Result<()> {
+fn run_progress_bar(cfg: &Config, mut child: Option<Child>) -> Result<()> {
     let file = OpenOptions::new()
         .read(true)
         .write(true)
         .create(true)
-        .open(&sandbox_daemon_log_path()?)?;
+        .open(&sandbox_daemon_log_path(cfg))?;
     let mut reader = BufReader::new(file);
     let mut buffer = String::new();
 
@@ -648,8 +646,8 @@ pub async fn main(detach: bool, background: bool, cfg: &mut Config) -> Result<()
     }
 
     if detach {
-        let child = start_background_process()?;
-        run_progress_bar(Some(child))?;
+        let child = start_background_process(cfg)?;
+        run_progress_bar(cfg, Some(child))?;
 
         // Reload the config to get the pid of the sandbox
         cfg.reload()?;
@@ -659,15 +657,19 @@ pub async fn main(detach: bool, background: bool, cfg: &mut Config) -> Result<()
             term::styles::command("jstz sandbox stop").bold()
         );
     } else {
-        let handle = thread::spawn(|| -> Result<()> {
-            print_banner();
+        let handle = {
+            // Clone config to move into the thread
+            let cfg = cfg.clone();
+            thread::spawn(move || -> Result<()> {
+                print_banner();
 
-            run_progress_bar(None)?;
+                run_progress_bar(&cfg, None)?;
 
-            print_sandbox_info();
+                print_sandbox_info();
 
-            Ok(())
-        });
+                Ok(())
+            })
+        };
 
         run_sandbox(cfg).await?;
 
