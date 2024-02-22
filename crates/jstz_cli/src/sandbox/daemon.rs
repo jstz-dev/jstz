@@ -9,6 +9,7 @@ use nix::{
 };
 use octez::OctezThread;
 use regex::Regex;
+use std::io::Write;
 use std::{
     env,
     fs::{self, File, OpenOptions},
@@ -441,6 +442,9 @@ fn format_sandbox_bootstrap_accounts() -> Table {
 }
 
 pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
+    // Create logs directory
+    fs::create_dir_all(logs_dir()?)?;
+
     let log_path = sandbox_daemon_log_path()?;
     let mut log_file = OpenOptions::new()
         .create(true)
@@ -507,7 +511,11 @@ fn start_background_process() -> Result<Child> {
 }
 
 fn run_progress_bar(mut child: Option<Child>) -> Result<()> {
-    let file = File::open(&sandbox_daemon_log_path()?)?;
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(&sandbox_daemon_log_path()?)?;
     let mut reader = BufReader::new(file);
     let mut buffer = String::new();
 
@@ -604,12 +612,14 @@ fn wait_for_termination(pid: Pid) -> Result<()> {
     Ok(())
 }
 
-pub fn stop_sandbox(with_start: bool) -> Result<()> {
+pub fn stop_sandbox(restart: bool) -> Result<()> {
     let cfg = Config::load()?;
 
     match cfg.sandbox {
         Some(sandbox_cfg) => {
-            info!("Stopping the sandbox...");
+            if !restart {
+                info!("Stopping the sandbox...");
+            }
             let pid = Pid::from_raw(sandbox_cfg.pid as i32);
             kill(pid, Signal::SIGTERM)?;
 
@@ -618,10 +628,10 @@ pub fn stop_sandbox(with_start: bool) -> Result<()> {
             Ok(())
         }
         None => {
-            if with_start {
-                bail_user_error!("Failed to stop the sandbox.")
-            } else {
+            if !restart {
                 bail_user_error!("The sandbox is not running!")
+            } else {
+                Ok(())
             }
         }
     }
