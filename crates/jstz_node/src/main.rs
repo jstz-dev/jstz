@@ -5,9 +5,7 @@ use env_logger::Env;
 
 pub use error::{Error, Result};
 
-mod config;
 mod error;
-mod node_runner;
 mod services;
 mod tailed_file;
 
