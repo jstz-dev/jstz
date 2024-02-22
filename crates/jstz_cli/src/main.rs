@@ -28,7 +28,7 @@ use utils::AddressOrAlias;
 enum Command {
     /// 📚 Open jstz's docs in your browser.
     Docs,
-    /// 🏝️ Start/stop with the jstz sandbox.
+    /// 🏝️ Start/stop/restart the jstz sandbox.
     #[command(subcommand)]
     Sandbox(sandbox::Command),
     /// 🌉 Move CTEZ between L1 and jstz with the jstz bridge.
