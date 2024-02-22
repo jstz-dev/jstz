@@ -1,4 +1,5 @@
 use boa_engine::JsError;
+use dialoguer::Confirm;
 use dialoguer::Input;
 use jstz_proto::{
     context::account::ParsedCode,
@@ -13,7 +14,7 @@ use crate::{
     error::{bail, bail_user_error, user_error, Result},
     sandbox::daemon,
     term::styles,
-    utils::{get_file_name_from_path, read_file_or_input_or_piped},
+    utils::read_file_or_input_or_piped,
 };
 
 pub async fn exec(
@@ -32,30 +33,34 @@ pub async fn exec(
         || (network.is_none() && cfg.networks.default_network == Some(NetworkName::Dev)))
         && cfg.sandbox.is_none()
     {
-        daemon::main(true, false, &mut cfg).await?;
-        info!(
-            "Use `{}` to start from a clear sandbox state.\n",
-            styles::command("jstz sandbox restart --detach")
-        );
-        cfg = Config::load()?;
+        info!("No sandbox is currently running.");
+
+        let proceed = Confirm::new()
+            .with_prompt(format!("Start the sandbox in daemon mode now? Tip: Use '{}' for an interactive session instead.", styles::command("jstz sandbox start")))
+            .default(true)
+            .interact()?;
+
+        if proceed {
+            // User confirmed, start the sandbox
+            daemon::main(true, false, &mut cfg).await?;
+            info!(
+                "Use `{}` to start from a clear sandbox state.\n",
+                styles::command("jstz sandbox restart --detach")
+            );
+        } else {
+            bail_user_error!(
+                "Please start the sandbox before deploying a smart function to dev network."
+            );
+        }
     }
 
     // Get the current user and check if we are logged in
-    let (user_name, user) = {
-        if cfg.accounts.current_user().is_none() {
-            let account_alias: String = Input::new()
-                    .with_prompt("You are not logged in. Please type the account name that you want to log into or create as new")
-                    .interact()?;
-
-            account::login(account_alias)?;
-            println!();
-
-            cfg = Config::load()?;
-        }
-        cfg.accounts.current_user().ok_or(user_error!(
-            "Failed to setup the account. Please try `jstz login`."
-        ))?
-    };
+    account::login_quick()?;
+    cfg = Config::load()?;
+    let (user_name, user) = cfg.accounts.current_user().ok_or(user_error!(
+        "Failed to setup the account. Please try `{}`.",
+        styles::command("jstz login")
+    ))?;
 
     // 1. Check if smart function account already exists
     if let Some(name) = &name {
@@ -123,37 +128,10 @@ pub async fn exec(
         }
     };
 
-    // Create name if not provided
-    let sf_name = if let Some(name) = name {
-        name
-    } else {
-        let sf_name = {
-            let mut name = "sf".to_string();
-            let mut original_name = "sf".to_string();
-
-            if let Some(file_name) = get_file_name_from_path(code_path.as_str()) {
-                name = file_name.clone();
-                original_name = file_name;
-            }
-
-            let mut i = 2;
-            while cfg.accounts.contains(&name) {
-                name = format!("{}_{}", original_name, i);
-                i += 1;
-            }
-            name
-        };
-
-        sf_name
-    };
-
     info!(
-        "Smart function deployed by {} at address: {}={}",
-        user_name, sf_name, address
+        "Smart function deployed by {} at address: {}",
+        user_name, address
     );
-
-    cfg.accounts
-        .insert(sf_name.clone(), SmartFunction { address });
 
     // Show message showing how to run the smart function
     // TODO: add --trace flag
@@ -164,9 +142,13 @@ pub async fn exec(
     info!(
         "Run with `{}{}{}`",
         styles::command("jstz run "),
-        styles::url(format!("tezos://{}/<args>", sf_name)),
+        styles::url(format!("tezos://{}/<args>", address)),
         styles::command(network_flag)
     );
+
+    if let Some(name) = name {
+        cfg.accounts.insert(name, SmartFunction { address });
+    }
 
     cfg.save()?;
 

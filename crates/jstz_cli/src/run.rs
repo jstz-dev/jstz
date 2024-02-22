@@ -16,6 +16,7 @@ use url::Url;
 use crate::error::bail_user_error;
 use crate::jstz::JstzClient;
 use crate::{
+    account,
     config::{Config, NetworkName},
     error::{anyhow, user_error, Result},
     term::styles,
@@ -32,11 +33,12 @@ pub async fn exec(
     network: Option<NetworkName>,
     trace: bool,
 ) -> Result<()> {
-    let cfg = Config::load()?;
-
     // 1. Get the current user (checking if we are logged in)
+    account::login_quick()?;
+    let cfg = Config::load()?;
     let (_, user) = cfg.accounts.current_user().ok_or(user_error!(
-        "You are not logged in. Please run `jstz login`."
+        "Failed to setup the account. Please try `{}`.",
+        styles::command("jstz login")
     ))?;
 
     let jstz_client = cfg.jstz_client(&network)?;

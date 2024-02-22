@@ -168,6 +168,19 @@ pub fn login(alias: String) -> Result<()> {
     }
 }
 
+pub fn login_quick() -> Result<()> {
+    let cfg = Config::load()?;
+    if cfg.accounts.current_user().is_none() {
+        let account_alias: String = Input::new()
+                .with_prompt("You are not logged in. Please type the account name that you want to log into or create as new")
+                .interact()?;
+
+        login(account_alias)?;
+        println!();
+    }
+    Ok(())
+}
+
 pub fn logout() -> Result<()> {
     let mut cfg = Config::load()?;
 
