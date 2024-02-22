@@ -39,7 +39,7 @@ impl OctezNode {
             self.octez_node_dir.to_str().expect("Invalid path"),
             "--net-addr",
             http_endpoint,
-            "--local-rpc-addr", // TODO: @alanmarkoTrilitech --local-rpc-addr is not present in future versions of octez-node
+            "--rpc-addr",
             rpc_endpoint,
             "--connections",
             num_connections.to_string().as_str(),
