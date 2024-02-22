@@ -13,7 +13,7 @@ use std::io::Write;
 use std::{
     env,
     fs::{self, File, OpenOptions},
-    io::{self, BufRead, BufReader, Seek, SeekFrom},
+    io::{BufRead, BufReader, Seek},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     thread::{self, sleep},
