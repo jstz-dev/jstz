@@ -26,27 +26,7 @@ use utils::AddressOrAlias;
 #[derive(Debug, Parser)]
 #[command(name = "jstz", author = "TriliTech <contact@trili.tech>", version)]
 enum Command {
-    /// 📚 Open jstz's docs in your browser.
-    Docs,
-    /// 🏝️ Start/stop/restart the jstz sandbox.
-    #[command(subcommand)]
-    Sandbox(sandbox::Command),
-    /// 🌉 Move CTEZ between L1 and jstz with the jstz bridge.
-    #[command(subcommand)]
-    Bridge(bridge::Command),
-    /// 🧑 Manage jstz accounts.
-    #[command(subcommand)]
-    Account(account::Command),
-    /// 🔑 Interact with jstz's key-value store.
-    #[command(subcommand)]
-    Kv(kv::Command),
-    /// 🐚 Generates shell completions.
-    Completions {
-        /// The shell to generate completions for
-        #[arg(long, short)]
-        shell: Shell,
-    },
-    /// 🚀 Deploys a smart function to jstz.
+    /// 🚀 Deploys a smart function to jstz
     Deploy {
         /// Function code.
         #[arg(value_name = "CODE|PATH", default_value = None)]
@@ -62,7 +42,7 @@ enum Command {
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
-    /// 🏃 Send a request to a deployed smart function.
+    /// 🏃 Send a request to a deployed smart function
     Run {
         /// The URL containing the functions's address or alias.
         #[arg(value_name = "URL")]
@@ -81,26 +61,50 @@ enum Command {
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
-    /// ⚡️ Start a REPL session with jstz's JavaScript runtime.
+    /// 🌉 Move CTEZ between L1 and jstz with the jstz bridge {n}
+    #[command(subcommand)]
+    Bridge(bridge::Command),
+
+    /// 🏝️  Start/Stop/Restart the local jstz sandbox
+    #[command(subcommand)]
+    Sandbox(sandbox::Command),
+    /// ⚡️ Start a REPL session with jstz's JavaScript runtime {n}
     Repl {
         /// Sets the address of the REPL environment.
         #[arg(value_name = "ADDRESS|ALIAS", short, long)]
         account: Option<AddressOrAlias>,
     },
-    /// 🪵 Explore logs from deployed smart functions.
+
+    /// 🪵  Explore logs from deployed smart functions
     #[command(subcommand)]
     Logs(logs::Command),
-    /// 🔓 Login to a jstz account.
+    /// 🔑 Interact with jstz's key-value store {n}
+    #[command(subcommand)]
+    Kv(kv::Command),
+
+    /// 🧑 Manage jstz accounts
+    #[command(subcommand)]
+    Account(account::Command),
+    /// 🔓 Login to a jstz account
     Login {
         /// User alias
         #[arg(value_name = "ALIAS")]
         alias: String,
     },
-    /// 🚪 Logout from the current jstz account.
+    /// 🚪 Logout from the current jstz account
     Logout {},
-    /// 🤔 Display your account info.
+    /// 🤔 Display your account info {n}
     #[command(name = "whoami")]
     WhoAmI {},
+
+    /// 📚 Open jstz's docs in your browser
+    Docs,
+    /// 🐚 Generates shell completions {n}
+    Completions {
+        /// The shell to generate completions for
+        #[arg(long, short)]
+        shell: Shell,
+    },
 }
 
 async fn exec(command: Command) -> Result<()> {
