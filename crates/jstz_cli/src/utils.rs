@@ -66,15 +66,3 @@ pub fn read_file_or_input_or_piped(
         }
     }
 }
-
-// Function to get name of the file from string. If not a file returns None. Eg. /path/to/myfile.txt -> myfile
-pub fn get_file_name_from_path(path: &str) -> Option<String> {
-    let path = std::path::Path::new(path);
-    if path.is_file() {
-        let file_name = path.file_name().unwrap().to_str().unwrap();
-        let file_name = file_name.split('.').next().unwrap();
-        Some(file_name.to_string())
-    } else {
-        None
-    }
-}
