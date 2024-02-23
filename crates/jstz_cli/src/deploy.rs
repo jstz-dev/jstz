@@ -1,6 +1,5 @@
 use boa_engine::JsError;
 use dialoguer::Confirm;
-use dialoguer::Input;
 use jstz_proto::{
     context::account::ParsedCode,
     operation::{Content, DeployFunction, Operation, SignedOperation},
@@ -27,12 +26,8 @@ pub async fn exec(
     const MAX_CODE_LENGTH: usize = 3915;
 
     let mut cfg = Config::load()?;
-
-    // Load sandbox if network is Dev or it is None and cfg network is dev, and sandbox is not already loaded
-    if (network == Some(NetworkName::Dev)
-        || (network.is_none() && cfg.networks.default_network == Some(NetworkName::Dev)))
-        && cfg.sandbox.is_none()
-    {
+    // Load sandbox if the selected network is Dev and sandbox is not already loaded
+    if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {
         info!("No sandbox is currently running.");
 
         let proceed = Confirm::new()
@@ -55,8 +50,8 @@ pub async fn exec(
     }
 
     // Get the current user and check if we are logged in
-    account::login_quick()?;
-    cfg = Config::load()?;
+    account::login_quick(&mut cfg)?;
+    cfg.reload()?;
     let (user_name, user) = cfg.accounts.current_user().ok_or(user_error!(
         "Failed to setup the account. Please try `{}`.",
         styles::command("jstz login")

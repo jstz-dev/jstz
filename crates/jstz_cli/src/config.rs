@@ -406,6 +406,15 @@ impl Config {
         Ok(network?.clone())
     }
 
+    pub fn network_name(&self, name: &Option<NetworkName>) -> Result<NetworkName> {
+        match name {
+            Some(name) => Ok(name.clone()),
+            None => self.networks.default_network.clone().ok_or_else(|| {
+                user_error!("No default network found in the config file. Please specify the `--network` flag or set the default network in the config file.")
+            }),
+        }
+    }
+
     fn lookup_network(&self, name: &NetworkName) -> Result<Network> {
         match name {
             NetworkName::Custom(name) => {

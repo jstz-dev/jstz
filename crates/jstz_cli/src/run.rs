@@ -34,8 +34,8 @@ pub async fn exec(
     trace: bool,
 ) -> Result<()> {
     // 1. Get the current user (checking if we are logged in)
-    account::login_quick()?;
-    let cfg = Config::load()?;
+    let mut cfg = Config::load()?;
+    account::login_quick(&mut cfg)?;
     let (_, user) = cfg.accounts.current_user().ok_or(user_error!(
         "Failed to setup the account. Please try `{}`.",
         styles::command("jstz login")

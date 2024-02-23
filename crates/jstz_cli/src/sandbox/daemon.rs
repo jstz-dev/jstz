@@ -478,7 +478,7 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
     run_jstz_node(cfg).await?;
     OctezThread::join(vec![baker, rollup_node, node])?;
 
-    let mut cfg = Config::load()?;
+    cfg.reload()?;
     cfg.sandbox = None;
     cfg.save()?;
     Ok(())
