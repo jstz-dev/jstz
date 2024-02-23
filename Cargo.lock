@@ -2101,7 +2101,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_api"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
@@ -2117,7 +2117,6 @@ dependencies = [
  "http 1.0.0",
  "jstz_core",
  "jstz_crypto",
- "jstz_proto",
  "jstz_wpt",
  "serde",
  "serde_json",
@@ -2130,7 +2129,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_cli"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2189,7 +2188,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_core"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -2202,7 +2201,6 @@ dependencies = [
  "getrandom",
  "jstz_crypto",
  "jstz_proto",
- "jstz_wpt",
  "serde",
  "tezos-smart-rollup",
  "tezos-smart-rollup-host",
@@ -2212,7 +2210,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_crypto"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "boa_gc",
@@ -2226,7 +2224,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_kernel"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "bincode",
  "boa_engine",
@@ -2244,7 +2242,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_node"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "actix-web",
  "actix-web-lab",
@@ -2275,7 +2273,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_proto"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "boa_engine",
  "boa_gc",
@@ -2295,7 +2293,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_rollup"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "bincode",
@@ -2316,7 +2314,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_wpt"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -2696,7 +2694,7 @@ dependencies = [
 
 [[package]]
 name = "octez"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "hex",

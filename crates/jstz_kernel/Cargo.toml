@@ -4,6 +4,11 @@ authors.workspace = true
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description.workspace = true
 
 [lib]
 crate-type = ["cdylib", "lib"]
