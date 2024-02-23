@@ -23,7 +23,7 @@ use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     api::{self, TraceData},
-    context::account::{Account, Address, Amount},
+    context::account::{Account, Address, Amount, ParsedCode},
     operation::OperationHash,
     request_logger::{log_request_end, log_request_start},
     Error, Result,
@@ -205,7 +205,7 @@ impl Script {
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
         source: &Address,
-        code: String,
+        code: ParsedCode,
         balance: Amount,
     ) -> Result<Address> {
         let nonce = Account::nonce(hrt, tx, source)?;

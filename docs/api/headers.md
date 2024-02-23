@@ -29,11 +29,11 @@ console.log(authHeader); // "Bearer 123456789"
 
 ## Referer
 
-The `Referer` header is a special header that is automatically set by `jstz` when it makes a request. The value of the `Referer` header is the `tz4` address of the smart function (or account) that made the request.
+The `Referer` header is a special header that is automatically set by `jstz` when it makes a request. The value of the `Referer` header is the `tz1` address of the smart function (or account) that made the request.
 
 ```typescript
 async function handler(request: Request): Promise<Response> {
-    const referer = request.headers.get("Referer"); // "tz4..."
+    const referer = request.headers.get("Referer"); // "tz1..."
     ...
 }
 ```
@@ -75,14 +75,22 @@ Returns a boolean stating whether a `Headers` object contains a certain header.
 
 Sets a new value for an existing header inside a `Headers` object, or adds the header if it does not already exist.
 
-## Known spec compliance problems
+### `Headers[Symbol.iterator](): Iterator<[string, string]>`
 
-- Headers should be iterable
-- Headers constructor should accept undefined and null
-- Headers constructor should treat iterables as sequences and should not have special behavior for Headers instances
-- Headers constructor, append, and set should normalize values (removing leading/trailing whitespace)
-- Headers constructor, append, and set should convert values to strings
-- Headers sequence constructor should throw when sequence elements aren't pairs
-- Some invalid header names and values are accepted
-- Some valid header values are not accepted
-- There are probably spec problems related to header security checks when used w/ Request
+Returns an iterator over the list of header name/value pairs. This makes Headers instances [iterable](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Iteration_protocols#the_iterable_protocol).
+
+### `Headers.entries(): Iterator<[string, string]>`
+
+Returns an iterator over the list of header name/value pairs.
+
+### `Headers.keys(): Iterator<string>`
+
+Returns an iterator over the header names.
+
+### `Headers.values(): Iterator<string>`
+
+Returns an iterator over the header values.
+
+### `Headers.forEach(callback: (value: string, name: string, parent: Headers) => void): void`
+
+Calls the callback for each header. Note that the header value is the first callback argument, while the header name is the second argument.

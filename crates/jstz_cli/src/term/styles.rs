@@ -33,3 +33,7 @@ impl Display for WarningPrefix {
 pub fn url<D>(msg: D) -> StyledObject<D> {
     style(msg).blue().bold()
 }
+
+pub fn command<D>(msg: D) -> StyledObject<D> {
+    style(msg).cyan().bold()
+}

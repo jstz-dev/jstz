@@ -3,7 +3,6 @@ use std::path::PathBuf;
 use clap::Parser;
 use env_logger::Env;
 
-// Defaults for `octez-smart-rollup-node`
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
 const DEFAULT_KERNEL_LOG_PATH: &str = "logs/kernel.log";

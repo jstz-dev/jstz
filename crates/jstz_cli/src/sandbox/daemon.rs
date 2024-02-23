@@ -1,31 +1,46 @@
-use std::{
-    env,
-    fs::{self, File},
-    path::{Path, PathBuf},
-    process::Child,
-    thread::sleep,
-    time::Duration,
-};
-
-use console::style;
+use indicatif::{ProgressBar, ProgressStyle};
 use jstz_rollup::{
     deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
     JstzRollup,
 };
-use log::{debug, info};
+use nix::{
+    sys::signal::{kill, Signal},
+    unistd::Pid,
+};
 use octez::OctezThread;
+use regex::Regex;
+use std::io::Write;
+use std::{
+    env,
+    fs::{self, File, OpenOptions},
+    io::{BufRead, BufReader, Seek},
+    path::{Path, PathBuf},
+    process::{Child, Command, Stdio},
+    thread::{self, sleep},
+    time::Duration,
+};
+
+use console::style;
+use log::info;
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
 use tempfile::TempDir;
 use tokio::task;
 
+macro_rules! debug {
+    ($file:expr, $($arg:tt)*) => {
+        writeln!($file, $($arg)*).expect("Failed to write to log file");
+        $file.flush().expect("Failed to flush log file");
+    };
+}
+
 use crate::{
     config::{jstz_home_dir, Config, SandboxConfig},
-    error::{bail_user_error, Result},
+    error::{anyhow, bail_user_error, Result},
     sandbox::{
         SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_PORT,
         SANDBOX_OCTEZ_NODE_RPC_PORT, SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     },
-    term::styles,
+    term::{self, styles},
 };
 
 fn octez_node_endpoint() -> String {
@@ -109,6 +124,10 @@ const SANDBOX_BOOTSTRAP_ACCOUNTS: [SandboxBootstrapAccount; 5] = [
 ];
 
 const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
+fn sandbox_daemon_log_path() -> Result<PathBuf> {
+    Ok(logs_dir()?.join("sandbox_daemon.log"))
+}
+
 const ACTIVATOR_ACCOUNT_SK: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
 
@@ -132,30 +151,37 @@ fn octez_node_identity_path(cfg: &Config) -> Result<PathBuf> {
     Ok(cfg.octez_node()?.octez_node_dir.join("identity.json"))
 }
 
-fn generate_identity(cfg: &Config) -> Result<()> {
+fn generate_identity(log_file: &mut File, cfg: &Config) -> Result<()> {
     let cached_identity_path = cached_identity_path();
     let octez_node_identity_path = octez_node_identity_path(cfg)?;
 
     if cached_identity_path.exists() {
-        debug!("Cached identity hit");
+        debug!(log_file, "Cached identity hit");
         fs::copy(cached_identity_path, octez_node_identity_path)?;
         return Ok(());
     }
 
-    debug!("Cached identity miss");
-    debug!("Generating identity...");
+    debug!(log_file, "Cached identity miss");
+    debug!(log_file, "Generating identity...");
     cfg.octez_node()?.generate_identity()?;
-    debug!("Identity generated");
+    debug!(log_file, "Identity generated");
 
     fs::copy(octez_node_identity_path, cached_identity_path)?;
-    debug!("Cached identity");
+    debug!(log_file, "Cached identity");
 
     Ok(())
 }
 
-fn init_node(cfg: &Config) -> Result<()> {
+// Number of sandbox steps - calls to `progress_step` - to complete
+const MAX_PROGRESS: u32 = 16;
+fn progress_step(log_file: &mut File, progress: &mut u32) {
+    *progress += 1;
+    debug!(log_file, "({})", progress);
+}
+
+fn init_node(log_file: &mut File, progress: &mut u32, cfg: &Config) -> Result<()> {
     // 1. Initialize the octez-node configuration
-    debug!("Initializing octez-node");
+    debug!(log_file, "Initializing octez-node");
 
     cfg.octez_node()?.config_init(
         "sandbox",
@@ -166,10 +192,11 @@ fn init_node(cfg: &Config) -> Result<()> {
         ),
         0,
     )?;
-    debug!("\tInitialized octez-node configuration");
+    debug!(log_file, "\tInitialized octez-node configuration");
 
     // 2. Generate an identity
-    generate_identity(cfg)?;
+    progress_step(log_file, progress);
+    generate_identity(log_file, cfg)?;
 
     Ok(())
 }
@@ -198,53 +225,60 @@ fn is_node_running(cfg: &Config) -> Result<bool> {
         .is_ok())
 }
 
-fn wait_for_node_to_initialize(cfg: &Config) -> Result<()> {
+fn wait_for_node_to_initialize(log_file: &mut File, cfg: &Config) -> Result<()> {
     if is_node_running(cfg)? {
         return Ok(());
     }
 
-    debug!("Waiting for node to initialize...");
+    debug!(log_file, "Waiting for node to initialize...");
     while !is_node_running(cfg)? {
         sleep(Duration::from_secs(1));
     }
 
-    debug!("Node initialized");
+    debug!(log_file, "Node initialized");
     Ok(())
 }
 
-fn init_client(cfg: &Config) -> Result<()> {
+fn init_client(log_file: &mut File, progress: &mut u32, cfg: &Config) -> Result<()> {
     // 1. Wait for the node to initialize
-    wait_for_node_to_initialize(cfg)?;
+    wait_for_node_to_initialize(log_file, cfg)?;
 
     // 2. Wait for the node to be bootstrapped
-    debug!("Waiting for node to bootstrap...");
+    progress_step(log_file, progress);
+    debug!(log_file, "Waiting for node to bootstrap...");
     cfg.octez_client_sandbox()?.wait_for_node_to_bootstrap()?;
-    debug!(" done");
+    debug!(log_file, " done");
 
     // 3. Import activator and bootstrap accounts
-    debug!("Importing activator account...");
+    progress_step(log_file, progress);
+    debug!(log_file, "Importing activator account...");
     cfg.octez_client_sandbox()?
         .import_secret_key(ACTIVATOR_ACCOUNT_ALIAS, ACTIVATOR_ACCOUNT_SK)?;
-    debug!("done");
+    debug!(log_file, "done");
 
     // 4. Activate alpha
-    debug!("Activating alpha...");
+    progress_step(log_file, progress);
+    debug!(log_file, "Activating alpha...");
     cfg.octez_client_sandbox()?.activate_protocol(
         "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
         "1",
         "activator",
         SANDBOX_PARAMS_PATH,
     )?;
-    debug!(" done");
+    debug!(log_file, " done");
 
     // 5. Import bootstrap accounts
+    progress_step(log_file, progress);
     for (i, bootstrap_account) in SANDBOX_BOOTSTRAP_ACCOUNTS.iter().enumerate() {
         let name = format!("bootstrap{}", i + 1);
         cfg.octez_client_sandbox()?
             .import_secret_key(&name, bootstrap_account.secret)?;
         debug!(
+            log_file,
             "Imported account {}. address: {}, secret: {}",
-            name, bootstrap_account.address, bootstrap_account.secret
+            name,
+            bootstrap_account.address,
+            bootstrap_account.secret
         );
     }
 
@@ -269,7 +303,13 @@ async fn run_jstz_node() -> Result<()> {
     local
         .run_until(async {
             task::spawn_local(async {
-                debug!("Jstz node started 🎉");
+                let log_path = sandbox_daemon_log_path()?;
+                let mut log_file = OpenOptions::new()
+                    .create(true)
+                    .write(true)
+                    .append(true)
+                    .open(log_path.clone())?;
+                debug!(log_file, "Jstz node started 🎉");
 
                 jstz_node::run(
                     SANDBOX_LOCAL_HOST_ADDR,
@@ -289,28 +329,36 @@ async fn run_jstz_node() -> Result<()> {
     Ok(())
 }
 
-fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)> {
+fn start_sandbox(
+    log_file: &mut File,
+    progress: &mut u32,
+    cfg: &Config,
+) -> Result<(OctezThread, OctezThread, OctezThread)> {
     // 1. Init node
-    init_node(cfg)?;
+    init_node(log_file, progress, cfg)?;
 
     // 2. As a thread, start node
+    progress_step(log_file, progress);
     let node = OctezThread::from_child(start_node(cfg)?);
-    debug!("Started octez-node");
+    debug!(log_file, "Started octez-node");
 
     // 3. Init client
-    init_client(cfg)?;
-    debug!("Initialized octez-client");
+    progress_step(log_file, progress);
+    init_client(log_file, progress, cfg)?;
+    debug!(log_file, "Initialized octez-client");
 
     // 4. As a thread, start baking
+    progress_step(log_file, progress);
     let client_logs = File::create(client_log_path()?)?;
     let baker = OctezThread::new(cfg.clone(), move |cfg| {
         client_bake(cfg, &client_logs)?;
         Ok(())
     });
-    debug!("Started baker (using octez-client)");
+    debug!(log_file, "Started baker (using octez-client)");
 
     // 5. Deploy bridge
-    debug!("Deploying bridge...");
+    progress_step(log_file, progress);
+    debug!(log_file, "Deploying bridge...");
 
     let ctez_address = deploy_ctez_contract(
         &cfg.octez_client_sandbox()?,
@@ -318,33 +366,38 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
         ctez_bootstrap_accounts(),
     )?;
 
+    progress_step(log_file, progress);
+
     let bridge = BridgeContract::deploy(
         &cfg.octez_client_sandbox()?,
         OPERATOR_ADDRESS,
         &ctez_address,
     )?;
 
-    debug!("Bridge deployed at {}", bridge);
+    debug!(log_file, "Bridge deployed at {}", bridge);
 
     // 6. Create an installer kernel
-    debug!("Creating installer kernel...");
+    progress_step(log_file, progress);
+    debug!(log_file, "Creating installer kernel...");
 
     let preimages_dir = TempDir::with_prefix("jstz_sandbox_preimages")?.into_path();
 
     let installer = make_installer(Path::new(JSTZ_KERNEL_PATH), &preimages_dir, &bridge)?;
     debug!(
-        "Installer kernel created with preimages at {:?}",
-        preimages_dir
+        log_file,
+        "Installer kernel created with preimages at {:?}", preimages_dir
     );
 
     // 7. Originate the rollup
+    progress_step(log_file, progress);
     let rollup =
         JstzRollup::deploy(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &installer)?;
 
-    debug!("`jstz_rollup` originated at {}", rollup);
+    debug!(log_file, "`jstz_rollup` originated at {}", rollup);
 
     // 8. As a thread, start rollup node
-    debug!("Starting rollup node...");
+    progress_step(log_file, progress);
+    debug!(log_file, "Starting rollup node...");
 
     let logs_dir = logs_dir()?;
     let rollup_node = OctezThread::from_child(rollup.run(
@@ -355,11 +408,12 @@ fn start_sandbox(cfg: &Config) -> Result<(OctezThread, OctezThread, OctezThread)
         SANDBOX_LOCAL_HOST_ADDR,
         SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     )?);
-    debug!("Started octez-smart-rollup-node");
+    debug!(log_file, "Started octez-smart-rollup-node");
 
     // 9. Set the rollup address in the bridge
+    progress_step(log_file, progress);
     bridge.set_rollup(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &rollup)?;
-    debug!("`jstz_bridge` `rollup` address set to {}", rollup);
+    debug!(log_file, "`jstz_bridge` `rollup` address set to {}", rollup);
 
     Ok((node, baker, rollup_node))
 }
@@ -387,23 +441,21 @@ fn format_sandbox_bootstrap_accounts() -> Table {
     table
 }
 
-pub async fn main(cfg: &mut Config) -> Result<()> {
-    // 1. Check if sandbox is already running
-    if cfg.sandbox.is_some() {
-        bail_user_error!("The sandbox is already running!");
-    }
+pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
+    // Create logs directory
+    fs::create_dir_all(logs_dir()?)?;
 
-    // Print banner
-    info!("{}", style(SANDBOX_BANNER).bold());
-    info!(
-        "        {} {}",
-        env!("CARGO_PKG_VERSION"),
-        styles::url(env!("CARGO_PKG_REPOSITORY"))
-    );
-    info!("");
+    let log_path = sandbox_daemon_log_path()?;
+    let mut log_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(log_path.clone())?;
+
+    let mut progress = 0;
 
     // 1. Configure sandbox
-    debug!("Configuring sandbox...");
+    debug!(log_file, "Configuring sandbox...");
     let sandbox_cfg = SandboxConfig {
         pid: std::process::id(),
         octez_client_dir: TempDir::with_prefix("octez_client")?.into_path(),
@@ -411,20 +463,108 @@ pub async fn main(cfg: &mut Config) -> Result<()> {
         octez_rollup_node_dir: TempDir::with_prefix("octez_rollup_node")?.into_path(),
     };
 
-    // Create logs directory
-    fs::create_dir_all(logs_dir()?)?;
-
     cfg.sandbox = Some(sandbox_cfg);
-    debug!("Sandbox configured {:?}", cfg.sandbox);
+    debug!(log_file, "Sandbox configured {:?}", cfg.sandbox);
 
     // 2. Start sandbox
-    let (node, baker, rollup_node) = start_sandbox(cfg)?;
-    debug!("Sandbox started 🎉");
+    progress_step(&mut log_file, &mut progress);
+    let (node, baker, rollup_node) = start_sandbox(&mut log_file, &mut progress, cfg)?;
+    debug!(log_file, "Sandbox started 🎉");
 
     // 3. Save config
-    debug!("Saving sandbox config");
+    progress_step(&mut log_file, &mut progress);
+    debug!(log_file, "Saving sandbox config");
     cfg.save()?;
 
+    // 4. Wait for the sandbox or jstz-node to shutdown (either by the user or by an error)
+    run_jstz_node().await?;
+    OctezThread::join(vec![baker, rollup_node, node])?;
+
+    cfg.sandbox = None;
+    cfg.save()?;
+    Ok(())
+}
+
+fn print_banner() {
+    info!("{}", style(SANDBOX_BANNER).bold());
+    info!(
+        "        {} {}",
+        env!("CARGO_PKG_VERSION"),
+        styles::url(env!("CARGO_PKG_REPOSITORY"))
+    );
+    info!("");
+}
+
+fn start_background_process() -> Result<Child> {
+    let path = sandbox_daemon_log_path()?;
+    let stdout_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(path.clone())?;
+    let child = Command::new(std::env::current_exe()?)
+        .args(["sandbox", "start", "--background"])
+        .stdout(Stdio::from(stdout_file))
+        .spawn()?;
+
+    Ok(child)
+}
+
+fn run_progress_bar(mut child: Option<Child>) -> Result<()> {
+    let file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open(&sandbox_daemon_log_path()?)?;
+    let mut reader = BufReader::new(file);
+    let mut buffer = String::new();
+
+    let regex = Regex::new(r"\((\d+)\)")?;
+
+    let mut progress: u32 = 0;
+
+    let progress_bar = ProgressBar::new(MAX_PROGRESS as u64);
+    progress_bar.set_style(
+        ProgressStyle::default_bar()
+            .template("{spinner:.green} [{bar:40.cyan/blue}] {pos:>7}/{len:7} {msg}")?,
+    );
+
+    loop {
+        reader.stream_position()?;
+
+        while reader.read_line(&mut buffer)? > 0 {
+            if let Some(captures) = regex.captures(&buffer) {
+                if let Some(matched) = captures.get(1) {
+                    if let Ok(num) = matched.as_str().parse::<u32>() {
+                        progress = num;
+                        progress_bar.set_position(progress.into());
+                    }
+                }
+            }
+            buffer.clear();
+        }
+
+        if progress == MAX_PROGRESS {
+            progress_bar.finish_and_clear();
+            break;
+        }
+
+        if let Some(child) = child.as_mut() {
+            if let Ok(Some(status)) = child.try_wait() {
+                progress_bar.finish_and_clear();
+
+                bail_user_error!("Sandbox failed to start: {:}", status);
+            }
+        }
+
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    Ok(())
+}
+
+fn print_sandbox_info() {
+    // Print sandbox info
     info!(
         "octez-node is listening on: {}",
         styles::url(octez_node_endpoint())
@@ -448,12 +588,92 @@ pub async fn main(cfg: &mut Config) -> Result<()> {
     });
 
     info!("{}", sandbox_bootstrap_accounts);
+}
 
-    // 4. Wait for the sandbox or jstz-node to shutdown (either by the user or by an error)
-    run_jstz_node().await?;
-    OctezThread::join(vec![baker, rollup_node, node])?;
+fn wait_for_termination(pid: Pid) -> Result<()> {
+    loop {
+        let result: nix::Result<()> = kill(pid, Signal::SIGTERM);
+        match result {
+            // Sending 0 as the signal just checks for the process existence
+            core::result::Result::Ok(_) => {
+                // Process exists, continue waiting
+                thread::sleep(Duration::from_millis(100));
+            }
+            Err(nix::Error::ESRCH) => {
+                // No such process, it has terminated
+                break;
+            }
+            Err(e) => {
+                // An unexpected error occurred
+                bail_user_error!("Failed to kill the sandbox process: {:?}", e)
+            }
+        }
+    }
+    Ok(())
+}
 
-    cfg.sandbox = None;
-    cfg.save()?;
+pub fn stop_sandbox(restart: bool) -> Result<()> {
+    let cfg = Config::load()?;
+
+    match cfg.sandbox {
+        Some(sandbox_cfg) => {
+            if !restart {
+                info!("Stopping the sandbox...");
+            }
+            let pid = Pid::from_raw(sandbox_cfg.pid as i32);
+            kill(pid, Signal::SIGTERM)?;
+
+            wait_for_termination(pid)?;
+
+            Ok(())
+        }
+        None => {
+            if !restart {
+                bail_user_error!("The sandbox is not running!")
+            } else {
+                Ok(())
+            }
+        }
+    }
+}
+
+pub async fn main(detach: bool, background: bool, cfg: &mut Config) -> Result<()> {
+    if background {
+        run_sandbox(cfg).await?;
+        return Ok(());
+    }
+
+    if cfg.sandbox.is_some() {
+        bail_user_error!("The sandbox is already running!");
+    }
+
+    if detach {
+        let child = start_background_process()?;
+        run_progress_bar(Some(child))?;
+
+        // Reload the config to get the pid of the sandbox
+        cfg.reload()?;
+        info!(
+            "Sandbox pid: {}.   Use `{}` to stop the sandbox background process.",
+            cfg.sandbox()?.pid,
+            term::styles::command("jstz sandbox stop").bold()
+        );
+    } else {
+        let handle = thread::spawn(|| -> Result<()> {
+            print_banner();
+
+            run_progress_bar(None)?;
+
+            print_sandbox_info();
+
+            Ok(())
+        });
+
+        run_sandbox(cfg).await?;
+
+        handle
+            .join()
+            .map_err(|_| anyhow!("Failed to join sandbox progress bar thread"))??;
+    }
     Ok(())
 }

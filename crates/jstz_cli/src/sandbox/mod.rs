@@ -1,10 +1,5 @@
 use anyhow::{Ok, Result};
 use clap::Subcommand;
-use log::info;
-use nix::{
-    sys::signal::{kill, Signal},
-    unistd::Pid,
-};
 
 mod daemon;
 
@@ -12,41 +7,50 @@ mod consts;
 
 pub use consts::*;
 
-use crate::{config::Config, error::bail_user_error};
+use crate::config::Config;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
     /// 🎬 Starts the sandbox.
-    Start,
+    Start {
+        /// Detach the process to run in the background.
+        #[clap(long, short, default_value = "false")]
+        detach: bool,
+        /// Run the sandbox in the background without showing any output.
+        #[clap(long, short, default_value = "false", hide = true)]
+        background: bool,
+    },
     /// 🛑 Stops the sandbox.
     Stop,
+    /// 🔄 Restarts the sandbox.
+    Restart {
+        /// Detach the process to run in the background.
+        #[clap(long, short, default_value = "false")]
+        detach: bool,
+    },
 }
 
-pub async fn start() -> Result<()> {
+pub async fn start(detach: bool, background: bool) -> Result<()> {
     let mut cfg = Config::load()?;
 
-    daemon::main(&mut cfg).await?;
+    daemon::main(detach, background, &mut cfg).await?;
     Ok(())
 }
 
 pub fn stop() -> Result<()> {
-    let cfg = Config::load()?;
+    daemon::stop_sandbox(false)?;
+    Ok(())
+}
 
-    match cfg.sandbox {
-        Some(sandbox_cfg) => {
-            info!("Stopping the sandbox...");
-            let pid = Pid::from_raw(sandbox_cfg.pid as i32);
-            kill(pid, Signal::SIGTERM)?;
-
-            Ok(())
-        }
-        None => bail_user_error!("The sandbox is not running!"),
-    }
+pub async fn restart(detach: bool) -> Result<()> {
+    daemon::stop_sandbox(true)?;
+    start(detach, false).await
 }
 
 pub async fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Start => start().await,
+        Command::Start { detach, background } => start(detach, background).await,
         Command::Stop => stop(),
+        Command::Restart { detach } => restart(detach).await,
     }
 }

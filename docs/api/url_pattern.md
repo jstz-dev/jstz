@@ -49,35 +49,35 @@ declare type URLPatternInput = string | URLPatternInit;
 
 ## Instance Properties
 
-### `readonly protocol: string`
+### `readonly URLPattern.protocol: string`
 
 The pattern used to match the protocol part of a URL.
 
-### `readonly username: string`
+### `readonly URLPattern.username: string`
 
 The pattern used to match the username part of a URL.
 
-### `readonly password: string`
+### `readonly URLPattern.password: string`
 
 The pattern used to match the password part of a URL.
 
-### `readonly hostname: string`
+### `readonly URLPattern.hostname: string`
 
 The pattern used to match the hostname part of a URL.
 
-### `readonly port: string`
+### `readonly URLPattern.port: string`
 
 The pattern used to match the port part of a URL.
 
-### `readonly pathname: string`
+### `readonly URLPattern.pathname: string`
 
 The pattern used to match the pathname part of a URL.
 
-### `readonly search: string`
+### `readonly URLPattern.search: string`
 
 The pattern used to match the search part of a URL.
 
-### `readonly hash: string`
+### `readonly URLPattern.hash: string`
 
 The pattern used to match the fragment part of a URL.
 
@@ -108,4 +108,4 @@ declare interface URLPatternResult {
 }
 ```
 
-Returns either an object containing the results of matching the URL to the pattern, or null if the URL does not match the pattern. The input is a URL or object of URL parts.
+Returns either an object containing the results of matching the URL to the pattern, or `null` if the URL does not match the pattern. The input is a URL or object of URL parts.
