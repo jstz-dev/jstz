@@ -46,7 +46,8 @@ pub async fn exec(
 
     let code = read_file_or_input_or_piped(code)?
         .ok_or(user_error!("No function code supplied. Please provide a filename or pipe the file contents into stdin."))?;
-    if code.len() > MAX_CODE_LENGTH {
+
+    if code.bytes().len() > MAX_CODE_LENGTH {
         bail_user_error!("The data availability layer is not yet available. Smart functions are currently restricted to {MAX_CODE_LENGTH} bytes");
     }
 

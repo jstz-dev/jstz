@@ -68,7 +68,7 @@ export default (request) => {
   console.log("I wish I'd learned about for loops");
   console.log("I wish I'd learned about for loops");
   console.log("I wish I'd learned about for loops");
-  console.log("Finished!");
+  console.log("Done 🥳");
   return new Response()
 }
   `;
