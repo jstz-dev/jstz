@@ -114,10 +114,13 @@ pub async fn exec(
         styles::url(&url_object.to_string())
     );
 
-    let mut spinner = Spinner::new(Spinners::BoxBounce2, "".into());
+    let mut spinner = if trace {
+        None
+    } else {
+        Some(Spinner::new(Spinners::BoxBounce2, "".into()))
+    };
+
     if trace {
-        spinner.stop();
-        println!();
         let address = address_or_alias.resolve(&cfg)?;
         spawn_trace(&address, &jstz_client).await?;
     }
@@ -137,10 +140,12 @@ pub async fn exec(
         Err(err) => bail_user_error!("{err}"),
     };
 
-    spinner.stop();
-    println!();
+    if let Some(spinner) = spinner.as_mut() {
+        spinner.stop_with_symbol(&format!("Status code: {}", status_code));
+    } else {
+        info!("Status code: {}", status_code);
+    }
 
-    info!("Status code: {}", status_code);
     info!("Headers: {:?}", headers);
     if let Some(body) = body {
         info!("Body: {}", String::from_utf8_lossy(&body));
