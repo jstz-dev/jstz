@@ -1,5 +1,4 @@
 use boa_engine::JsError;
-use dialoguer::Confirm;
 use jstz_proto::{
     context::account::ParsedCode,
     operation::{Content, DeployFunction, Operation, SignedOperation},
@@ -11,7 +10,6 @@ use crate::{
     account,
     config::{Config, NetworkName, SmartFunction},
     error::{bail, bail_user_error, user_error, Result},
-    sandbox::daemon,
     term::styles,
     utils::read_file_or_input_or_piped,
 };
@@ -28,25 +26,11 @@ pub async fn exec(
     let mut cfg = Config::load()?;
     // Load sandbox if the selected network is Dev and sandbox is not already loaded
     if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {
-        info!("No sandbox is currently running.");
-
-        let proceed = Confirm::new()
-            .with_prompt(format!("Start the sandbox in daemon mode now? Tip: Use '{}' for an interactive session instead.", styles::command("jstz sandbox start")))
-            .default(true)
-            .interact()?;
-
-        if proceed {
-            // User confirmed, start the sandbox
-            daemon::main(true, false, &mut cfg).await?;
-            info!(
-                "Use `{}` to start from a clear sandbox state.\n",
-                styles::command("jstz sandbox restart --detach")
-            );
-        } else {
-            bail_user_error!(
-                "Please start the sandbox before deploying a smart function to dev network."
-            );
-        }
+        bail_user_error!(
+            "No sandbox is currently running. Run {} for an interactive session or {} to run in the background.",
+            styles::command("jstz sandbox start"),
+            styles::command("jstz sandbox start --detach")
+        );
     }
 
     // Get the current user and check if we are logged in
