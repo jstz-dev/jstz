@@ -129,6 +129,8 @@ jstz deploy --self-address <SELF_ADDRESS> --function-code <FUNCTION_CODE> --bala
 
 - `--balance (-b) <BALANCE>`: Specifies the initial balance for the function.
 
+- `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
+
 ### Example
 
 ```bash
@@ -152,21 +154,27 @@ jstz run [OPTIONS] <URL> <referrer>
 
 ### Options:
 
+- `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
+
 - `--request (-r) <request>`: Specifies the HTTP method used in the request. Default is `GET`.
 
 - `--data (-d) <data>`: Defines the JSON data to be included in the request body.
+
+- `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
+
+- `--trace (-t)`: Flag to show the logs of the function.
 
 ### Example
 
 ```bash
 $ export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
-$ cargo run -- run "tezos://${counter}/"  tz4CNucLU82UYRcnkGvk1UWmVdVdj8AfDzvU
-$ cargo run -- run "tezos://${counter}/"  tz4CNucLU82UYRcnkGvk1UWmVdVdj8AfDzvU
-$ cargo run -- run "tezos://${counter}/"  tz4CNucLU82UYRcnkGvk1UWmVdVdj8AfDzvU
-$ cargo run -- run "tezos://${counter}/"  tz4CNucLU82UYRcnkGvk1UWmVdVdj8AfDzvU
+$ cargo run -- run --trace "tezos://${counter}/"
+$ cargo run -- run --trace "tezos://${counter}/"
+$ cargo run -- run --trace "tezos://${counter}/"
+$ cargo run -- run --trace "tezos://${counter}/"
 ```
 
-In the logs, you should be able to see an output of the counter smart function looking like this:
+You should be able to see an output of the counter smart function looking like this:
 
 ```
 [🪵] Counter: null
@@ -204,14 +212,46 @@ $ [object Promise]
 $ >> exit
 ```
 
+:::
+
+## Logs
+
+Explore logs from deployed smart functions. The full output of the log can also be checked from the logs/kernel.log file.
+
+### Usage:
+
+```bash
+jstz logs trace [OPTIONS] <ALIAS|ADDRESS>
+```
+
+### Arguments:
+
+- `<ALIAS|ADDRESS>`: The function's address or alias.
+
+### Options:
+
+- `--level (-l) <level>`: Specifies the level of log. Default is `log`.
+
+- `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
+
+### Example
+
+```bash
+$ export logging=tz1VEJLogF4PArzDq6pvWDhw8WjTMgCwsB93 # Address of the previously deployed smart function examples/logs.js
+$ cargo run -- logs trace "${logging}"
+```
+
+In a new termninal, run the counter function and you will see the following output:
+
+```bash
+[🪵]: log
+[🪵]: debug
+[🟢]: info
+[🟠]: warn
+[🔴]: error
+[🔴]: Assertion failed
+```
+
 ::: tip
 
 Remember, the `-h` or `--help` flag can always be used after any command or subcommand to receive more detailed information about its usage. This guide is a brief overview, and the `help` command will provide the most current and detailed instructions.
-
-:::
-
-# Logs
-
-In order to see the output logs of the above commands, you should check the logs/kernel.log file.
-We provide `scripts/commands/view-console.sh` script through which conveniently shows the tail of most relevant parts of the log file.
-Alternatively you can use tools like `tail` or `grep` for lookup in the logs.
