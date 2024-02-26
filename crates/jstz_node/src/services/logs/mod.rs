@@ -217,7 +217,7 @@ impl LogsService {
                                 }
 
                                 // Steram the log
-                                #[allow(clippy::collapsible-match)]
+                                #[allow(clippy::collapsible_match)]
                                 if let Line::Js(log) = line {
                                     broadcaster
                                         .broadcast(&log.address, &line_str[LOG_PREFIX.len()..])
