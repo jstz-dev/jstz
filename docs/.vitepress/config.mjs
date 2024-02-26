@@ -26,7 +26,7 @@ export default defineConfig({
         text: "Getting Started",
         items: [
           { text: "Installation", link: "/installation" },
-          { text: "First Steps", link: "/first_steps" },
+          { text: "Quick Start", link: "/quick_start" },
           { text: "CLI", link: "/cli" },
           { text: "Asset Bridge", link: "/bridge" },
         ],
