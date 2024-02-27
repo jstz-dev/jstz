@@ -141,9 +141,6 @@ impl AccountConfig {
             inner: self.accounts.iter(),
         }
     }
-    pub fn is_empty(&self) -> bool {
-        self.accounts.is_empty() && self.current_alias.is_none()
-    }
 }
 
 impl AddressOrAlias {
@@ -199,12 +196,13 @@ pub struct Config {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<SandboxConfig>,
     /// List of accounts
-    #[serde(default, flatten, skip_serializing_if = "AccountConfig::is_empty")]
+    #[serde(flatten)]
     pub accounts: AccountConfig,
     /// Available networks
-    #[serde(default, flatten, skip_serializing_if = "NetworkConfig::is_empty")]
+    #[serde(flatten)]
     pub networks: NetworkConfig,
     /// Sandbox logs dir
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub sandbox_logs_dir: Option<PathBuf>,
 }
 
@@ -256,14 +254,12 @@ struct Network {
 #[derive(Serialize, Deserialize, Debug, Clone, Default)]
 pub struct NetworkConfig {
     // if None, the users have to specify the network in the command
+    #[serde(skip_serializing_if = "Option::is_none")]
     default_network: Option<NetworkName>,
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
     networks: HashMap<String, Network>,
 }
-impl NetworkConfig {
-    pub fn is_empty(&self) -> bool {
-        self.default_network.is_none() && self.networks.is_empty()
-    }
-}
+
 impl Config {
     /// Path to the configuration file
     pub fn path() -> PathBuf {
