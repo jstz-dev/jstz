@@ -292,7 +292,7 @@ pub enum Command {
         #[arg(short, long)]
         long: bool,
     },
-    /// 🧑‍💻 Outputs the deployed code for an account.
+    /// 💻 Outputs the deployed code for an account.
     Code {
         /// Smart function address or alias.
         #[arg(short, long, value_name = "ALIAS|ADDRESS")]
