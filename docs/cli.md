@@ -18,11 +18,15 @@ This guide will instruct through how to use the command line interface for `jstz
 
 :::
 
-# Setup config
+# Config
 
-In order to run `jstz` cli, you need to create a setup file in `~/.jstz/config.json` that looks as follows:
+<!-- In order to run `jstz` cli, you need to create a setup file in `~/.jstz/config.json` that looks as follows: -->
 
-```json
+::: danger
+⚠️ Under construction ⚠️
+:::
+
+<!-- ```json
 {
   "jstz_path": "<path_to_jstz>",
   "octez_path": "<path_to_octez>",
@@ -30,12 +34,18 @@ In order to run `jstz` cli, you need to create a setup file in `~/.jstz/config.j
   "octez_node_rpc_port": <octez_node_rpc_port_number>, # typically 18730
   "sandbox": null
 }
-```
+``` -->
 
-In the file, you should set your path to `jstz` and `octez` and also set the port numbers.
-Once the sandbox gets started with the `sandbox start` command, the `"sandbox"` property will contain the information about its run.
+<!-- In the file, you should set your path to `jstz` and `octez` and also set the port numbers.
+Once the sandbox gets started with the `sandbox start` command, the `"sandbox"` property will contain the information about its run. -->
 
 # Commands
+
+::: tip
+
+Remember, the `-h` or `--help` flag can always be used after any command or subcommand to receive more detailed information about its usage. This guide is a brief overview, and the `help` command will provide the most current and detailed instructions.
+
+:::
 
 ## Sandbox
 
@@ -54,6 +64,7 @@ The sandbox commands are responsible for managing the `jstz` sandbox environment
 ```bash
 jstz sandbox start [OPTIONS]
 jstz sandbox restart [OPTIONS]
+jstz sandbox stop
 ```
 
 ### Options:
@@ -76,7 +87,7 @@ Bridge commands facilitate the interaction between L1 and L2.
 
 ### Commands:
 
-- `deposit`: Transfer assets between an L1 sandbox address and an L2 sandbox address.
+- `deposit`: Deposits CTEZ from an existing Tezos L1 address to a jstz address.
 
 ### Usage:
 
@@ -86,18 +97,18 @@ jstz bridge deposit [OPTIONS]
 
 ### Options:
 
-- `--from (-f) <ALIAS|ADDRESS>`: The L1 sandbox address or alias to withdraw from.
+- `--from (-f) <ALIAS|ADDRESS>`: Tezos L1 address or alias to withdraw from (must be stored in octez-client's wallet).
 
-- `--to (-t) <ALIAS|ADDRESS>`: The L2 sandbox address or alias to deposit to.
+- `--to (-t) <ALIAS|ADDRESS>`: jstz address or alias to deposit to.
 
-- `--amount (-a) <INTEGER>`: The quantity in ctez to transfer.
+- `--amount (-a) <INTEGER>`: The amount in CTEZ to transfer.
 
 - `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
 
 ### Example:
 
 ```bash
-$ jstz bridge deposit --from tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU --to tz4N7y3T2e2dfCyHB1Ama68jnt3Fps7Ufu6d --amount 57
+$ jstz bridge deposit --from tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU --to tz1iA2Mu65WR3enRHEx9HDfBNRNTecwoz263 --amount 57
 ```
 
 ## Deploy
@@ -125,7 +136,7 @@ jstz deploy [OPTIONS] [CODE|PATH]
 ### Example
 
 ```bash
-$ jstz deploy "$(cat examples/counter.js)" --name my_counter --balance 42
+$ jstz deploy examples/counter.js --name my_counter --balance 42
 ```
 
 ## Run
@@ -158,10 +169,10 @@ jstz run [OPTIONS] <URL>
 
 ```bash
 $ export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
-$ cargo run -- run --trace "tezos://${counter}/"
-$ cargo run -- run --trace "tezos://${counter}/"
-$ cargo run -- run --trace "tezos://${counter}/"
-$ cargo run -- run --trace "tezos://${counter}/"
+$ jstz run --trace "tezos://${counter}/"
+$ jstz run --trace "tezos://${counter}/"
+$ jstz run --trace "tezos://${counter}/"
+$ jstz run --trace "tezos://${counter}/"
 ```
 
 You should be able to see an output of the counter smart function looking like this:
@@ -197,8 +208,6 @@ $ [🪵] hey
 $ >> exit
 ```
 
-:::
-
 ## Logs
 
 Explore logs from deployed smart functions. The full output of a smart function can also be checked with --trace flag when running it.
@@ -227,7 +236,7 @@ jstz logs trace [OPTIONS] <ALIAS|ADDRESS>
 
 ```bash
 $ jstz deploy examples/logs.js --name my_function
-$ cargo run -- logs trace my_function
+$ jstz logs trace my_function
 ```
 
 In a new termninal, run the counter function and you will see the following output:
@@ -240,7 +249,3 @@ In a new termninal, run the counter function and you will see the following outp
 [🔴]: error
 [🔴]: Assertion failed
 ```
-
-::: tip
-
-Remember, the `-h` or `--help` flag can always be used after any command or subcommand to receive more detailed information about its usage. This guide is a brief overview, and the `help` command will provide the most current and detailed instructions.
