@@ -47,39 +47,26 @@ The sandbox commands are responsible for managing the `jstz` sandbox environment
 
 - `stop`: Shuts down the sandbox environment.
 
+- `restart`: Restarts the sandbox.
+
+### Usage:
+
+```bash
+jstz sandbox start [OPTIONS]
+jstz sandbox restart [OPTIONS]
+```
+
+### Options:
+
+- `--detach (-d)`: Detach the process to run in the background.
+
 ### Example:
 
 ```bash
-# Terminal #1:
-$ jstz sandbox start
-$
-$ Configuring sandbox... done
-$ Initializing octez-node configuration... done
-$ Generating identity... done
-$ Starting node... done
-$ Waiting for node to initialize.... done
-$ Waiting for node to bootstrap... done
-$ Importing activator account... done
-$ Activating alpha... done
-$ Importing account bootstrap1:unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh
-$ Importing account bootstrap2:unencrypted:edsk39qAm1fiMjgmPkw1EgQYkMzkJezLNewd7PLNHTkr6w9XA2zdfo
-$ Importing account bootstrap3:unencrypted:edsk4ArLQgBTLWG5FJmnGnT689VKoqhXwmDPBuGx3z4cvwU9MmrPZZ
-$ Importing account bootstrap4:unencrypted:edsk2uqQB9AY4FvioK2YMdfmyMrer5R8mGFyuaLLFfSRo8EoyNdht3
-$ Importing account bootstrap5:unencrypted:edsk4QLrcijEffxV31gGdN2HU7UpyJjA8drFoNcmnB28n89YjPNRFm
-$ Client initialized
-$ Starting baker... done
-$ Deploying bridge...
-$         `jstz_bridge` deployed at KT1Qc6k3U3EYmQBEZfB58zt69wk5PFzy4XXM
-$ Creating installer kernel...done
-$ `jstz_rollup` originated at sr1UXVmFED596weKjgPCN8GgWhRrfDGMPxH9
-$ Starting rollup node... done
-$         `jstz_bridge` `rollup` address set to sr1UXVmFED596weKjgPCN8GgWhRrfDGMPxH9
-$ Bridge deployed
-$ Sandbox started 🎉
-$ Saving sandbox config
+$ jstz sandbox start -d
 
-# Terminal #2:
-$ # Work with the sandbox ...
+$ jstz sandbox restart -d
+
 $ jstz sandbox stop
 ```
 
@@ -94,16 +81,18 @@ Bridge commands facilitate the interaction between L1 and L2.
 ### Usage:
 
 ```bash
-jstz bridge deposit --from <TZ1_ADDRESS> --to <TZ4_ADDRESS> --amount <AMOUNT>
+jstz bridge deposit [OPTIONS]
 ```
 
 ### Options:
 
-- `--from (-f) <TZ1_ADDRESS>`: The L1 sandbox address or alias to withdraw from.
+- `--from (-f) <ALIAS|ADDRESS>`: The L1 sandbox address or alias to withdraw from.
 
-- `--to (-t) <TZ4_ADDRESS>`: The L2 sandbox address or alias to deposit to.
+- `--to (-t) <ALIAS|ADDRESS>`: The L2 sandbox address or alias to deposit to.
 
 - `--amount (-a) <INTEGER>`: The quantity in ctez to transfer.
+
+- `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
 
 ### Example:
 
@@ -118,23 +107,25 @@ This command allows users to deploy smart functions.
 ### Usage:
 
 ```bash
-jstz deploy --self-address <SELF_ADDRESS> --function-code <FUNCTION_CODE> --balance <BALANCE>
+jstz deploy [OPTIONS] [CODE|PATH]
 ```
+
+### Arguments:
+
+- `[CODE|PATH]`: Function code or the file path to the function code.
 
 ### Options:
 
-- `--self-address (-s) <SELF_ADDRESS>`: Address used when deploying the smart function.
-
-- `--function-code (-f) <FUNCTION_CODE>`: The code for the function being deployed.
-
 - `--balance (-b) <BALANCE>`: Specifies the initial balance for the function.
+
+- `--name <NAME>`: Name (or alias) of the function.
 
 - `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
 
 ### Example
 
 ```bash
-$ jstz deploy --self-address tz4CNucLU82UYRcnkGvk1UWmVdVdj8AfDzvU --function-code "$(cat examples/counter.js)" --balance 42
+$ jstz deploy "$(cat examples/counter.js)" --name my_counter --balance 42
 ```
 
 ## Run
@@ -144,13 +135,12 @@ Execute a smart function using a specified URL.
 ### Usage:
 
 ```bash
-jstz run [OPTIONS] <URL> <referrer>
+jstz run [OPTIONS] <URL>
 ```
 
 ### Arguments:
 
 - `<URL>`: The URL containing the function's address or alias.
-- `<referrer>`: The address of the entity calling the function.
 
 ### Options:
 
@@ -195,20 +185,15 @@ jstz repl [OPTIONS]
 
 ### Options:
 
-- `--self-address (-s) <SELF_ADDRESS>`: Address used when deploying the smart function.
+- `--account (-a) <ADDRESS|ALIAS>`: Sets the address of the REPL environment.
 
 ### Example
 
 ```bash
 $ jstz repl
-$ Using mock self-address tz4RepLRepLRepLRepLRepLRepLRepN7Cu8j.
-$ >> const childFunction1 = SmartFunction.create(`export default (() => { return Response.json({ message: "hello world" }); });`)
-$ [📜] Smart Function created: tz4JGZp7XEojgrpnzL8UdTi3Kn4NaPRVQNwS
-$ >> const response = child1.then(address => SmartFunction.call(new Request(`tezos://${address}/`)))
-$ Evaluating: "export default (() => { return Response.json({ message: \"hello world\" }); });"
-$ >> response.then(async response => console.log((await response.json()).message))
-$ [🪵] hello world
-$ [object Promise]
+$ >> const foo = () => {console.log("hey")};
+$ >> foo()
+$ [🪵] hey
 $ >> exit
 ```
 
@@ -216,7 +201,11 @@ $ >> exit
 
 ## Logs
 
-Explore logs from deployed smart functions. The full output of the log can also be checked from the logs/kernel.log file.
+Explore logs from deployed smart functions. The full output of a smart function can also be checked with --trace flag when running it.
+
+### Commands:
+
+- `trace`: Trace the logs from the function that is running.
 
 ### Usage:
 
@@ -237,8 +226,8 @@ jstz logs trace [OPTIONS] <ALIAS|ADDRESS>
 ### Example
 
 ```bash
-$ export logging=tz1VEJLogF4PArzDq6pvWDhw8WjTMgCwsB93 # Address of the previously deployed smart function examples/logs.js
-$ cargo run -- logs trace "${logging}"
+$ jstz deploy examples/logs.js --name my_function
+$ cargo run -- logs trace my_function
 ```
 
 In a new termninal, run the counter function and you will see the following output:
