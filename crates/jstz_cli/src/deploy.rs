@@ -27,9 +27,8 @@ pub async fn exec(
     // Load sandbox if the selected network is Dev and sandbox is not already loaded
     if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {
         bail_user_error!(
-            "No sandbox is currently running. Run {} for an interactive session or {} to run in the background.",
-            styles::command("jstz sandbox start"),
-            styles::command("jstz sandbox start --detach")
+            "No sandbox is currently running. Please run {}.",
+            styles::command("jstz sandbox start")
         );
     }
 
@@ -37,7 +36,7 @@ pub async fn exec(
     account::login_quick(&mut cfg)?;
     cfg.reload()?;
     let (user_name, user) = cfg.accounts.current_user().ok_or(user_error!(
-        "Failed to setup the account. Please try `{}`.",
+        "Failed to setup the account. Please run `{}`.",
         styles::command("jstz login")
     ))?;
 
@@ -120,7 +119,7 @@ pub async fn exec(
     info!(
         "Run with `{}{}{}`",
         styles::command("jstz run "),
-        styles::url(format!("tezos://{}/<args>", address)),
+        styles::url(format!("tezos://{}/", address)),
         styles::command(network_flag)
     );
 
