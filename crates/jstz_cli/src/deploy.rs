@@ -58,13 +58,12 @@ pub async fn exec(
 
     debug!("Nonce: {:?}", nonce);
 
-    let code = read_file_or_input_or_piped(code_op.clone())?
+    let code = read_file_or_input_or_piped(code_op)?
         .ok_or(user_error!("No function code supplied. Please provide a filename or pipe the file contents into stdin."))?;
 
     if code.bytes().len() > MAX_CODE_LENGTH {
         bail_user_error!("The data availability layer is not yet available. Smart functions are currently restricted to {MAX_CODE_LENGTH} bytes");
     }
-    let code_path = code_op.clone().unwrap_or_default();
 
     debug!("Code: {}", code);
 
