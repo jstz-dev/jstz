@@ -127,7 +127,7 @@ Once built, we can deploy the smart function to the local sandbox:
 
 ```sh
 jstz sandbox start -d
-jstz deploy examples/get-tez/dist/index.js
+jstz deploy dist/index.js
 ```
 
 <details>
@@ -137,7 +137,7 @@ jstz deploy examples/get-tez/dist/index.js
 Sandbox pid: 2132. Use `jstz sandbox stop` to stop the sandbox background process.
 Use `jstz sandbox restart --detach` to start from a clear sandbox state.
 
-$ jstz deploy examples/request_tez.js
+$ jstz deploy dist/index.js
 You are not logged in. Please type the account name that you want to log into or create as new: alan
 Logged in to account alan with address tz1N8BsvfrSjGdomFi5V9RwwYLasgD8s4pxF
 
