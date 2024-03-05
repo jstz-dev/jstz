@@ -26,7 +26,7 @@ use derive_more::Deref;
 use http::{header::Entry, HeaderMap, HeaderName, HeaderValue};
 use jstz_core::{
     iterators::{PairIterable, PairIterableMethods, PairIteratorClass, PairValue},
-    native::{register_global_class, ClassBuilder, JsNativeObject, NativeClass},
+    native::{register_global_class, ClassBuilder, NativeClass},
     value::IntoJs,
 };
 #[derive(Default, Clone, Deref)]
@@ -558,8 +558,8 @@ impl NativeClass for HeadersClass {
 
     const NAME: &'static str = "Headers";
 
-    fn constructor(
-        _this: &JsNativeObject<Headers>,
+    fn data_constructor(
+        _target: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Headers> {

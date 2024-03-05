@@ -38,13 +38,6 @@ impl<T: NativeObject> JsNativeObject<T> {
         value.as_object().map_or(false, JsObject::is::<T>)
     }
 
-    fn from_value_unchecked(value: JsValue) -> Self {
-        Self {
-            inner: value,
-            _phantom: PhantomData,
-        }
-    }
-
     pub fn new_with_proto<C, P>(
         prototype: P,
         native_object: T,
@@ -402,11 +395,11 @@ impl<'ctx, 'host> ClassBuilder<'ctx, 'host> {
 }
 
 fn raw_constructor<T: NativeClass>(
-    this: &JsValue,
+    target: &JsValue,
     args: &[JsValue],
     context: &mut Context<'_>,
 ) -> JsResult<JsValue> {
-    if this.is_undefined() {
+    if target.is_undefined() {
         return Err(JsNativeError::typ()
             .with_message(format!(
                 "cannot call constructor of native class `{}` without new",
@@ -415,7 +408,7 @@ fn raw_constructor<T: NativeClass>(
             .into());
     }
 
-    let prototype = this
+    let prototype = target
         .as_object()
         .map(|obj| {
             obj.get(PROTOTYPE, context)
@@ -424,13 +417,12 @@ fn raw_constructor<T: NativeClass>(
         .transpose()?
         .flatten();
 
-    let native_object = T::constructor(
-        &JsNativeObject::from_value_unchecked(this.clone()),
-        args,
-        context,
-    )?;
+    let native_object = T::data_constructor(target, args, context)?;
+
     let object =
         JsNativeObject::new_with_proto::<T, _>(prototype, native_object, context)?;
+
+    T::object_constructor(&object, args, context)?;
 
     Ok(object.inner.clone())
 }
@@ -455,12 +447,25 @@ pub trait NativeClass {
     /// The attributes the class will be bound with, default is `writable`, `enumerable`, `configurable`.
     const ATTRIBUTES: Attribute = Attribute::all();
 
-    /// The constructor of the class.
-    fn constructor(
-        this: &JsNativeObject<Self::Instance>,
+    /// Creates the internal data for an instance of this class.
+    fn data_constructor(
+        target: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance>;
+
+    /// Initializes the properties of the constructed object for an instance of this class.
+    ///
+    /// Useful for initial additional properties in the constructed object that aren't part of the
+    /// Rust internal data value that rely on the `this` or `args` -- e.g. when you need to create
+    /// a cycle between native objects. For example usage, see `jstz_api::url::Url::object_constructor`.
+    fn object_constructor(
+        _this: &JsNativeObject<Self::Instance>,
+        _args: &[JsValue],
+        _context: &mut Context<'_>,
+    ) -> JsResult<()> {
+        Ok(())
+    }
 
     /// Initializes the internals and the methods of the class.
     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()>;

@@ -22,7 +22,9 @@ use boa_engine::{
 use boa_gc::{Finalize, GcRefMut, Trace};
 use jstz_core::{
     accessor,
-    native::{register_global_class, Accessor, JsNativeObject, NativeClass},
+    native::{
+        register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
+    },
     value::IntoJs,
 };
 
@@ -237,11 +239,11 @@ impl NativeClass for FileClass {
 
     const NAME: &'static str = "File";
 
-    fn constructor(
-        _this: &jstz_core::native::JsNativeObject<Self::Instance>,
-        args: &[boa_engine::prelude::JsValue],
-        context: &mut boa_engine::prelude::Context<'_>,
-    ) -> boa_engine::prelude::JsResult<Self::Instance> {
+    fn data_constructor(
+        _target: &JsValue,
+        args: &[JsValue],
+        context: &mut Context<'_>,
+    ) -> JsResult<Self::Instance> {
         let blob_parts: BlobParts = args.get_or_undefined(0).try_js_into(context)?;
         let file_name: String = args.get_or_undefined(1).try_js_into(context)?;
         let options: Option<FilePropertyBag> =
@@ -250,9 +252,7 @@ impl NativeClass for FileClass {
         File::new(blob_parts, file_name, &options, context)
     }
 
-    fn init(
-        class: &mut jstz_core::native::ClassBuilder<'_, '_>,
-    ) -> boa_engine::prelude::JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
         let name = Self::name(class.context());
         let last_modified = Self::last_modified(class.context());
         let size = Self::size(class.context());

@@ -15,7 +15,7 @@ use boa_gc::{Finalize, GcRefMut, Trace};
 use jstz_core::{
     accessor,
     js_fn::JsCallableWithoutThis,
-    native::{Accessor, ClassBuilder, JsNativeObject, NativeClass},
+    native::{Accessor, ClassBuilder, NativeClass},
 };
 
 /// [Streams Standard - § 7.1.][https://streams.spec.whatwg.org/#qs-api]
@@ -166,9 +166,9 @@ macro_rules! define_builtin_queuing_strategy_class(
 
             const NAME: &'static str = $struct_name_as_str;
 
-            fn constructor(
-                _this: &JsNativeObject<Self::Instance>,
-                args: &[boa_engine::JsValue],
+            fn data_constructor(
+                _target: &JsValue,
+                args: &[JsValue],
                 context: &mut Context<'_>,
             ) -> JsResult<Self::Instance> {
                 let init: QueuingStrategyInit = args

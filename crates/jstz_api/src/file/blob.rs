@@ -23,7 +23,9 @@ use boa_engine::{
 use boa_gc::{Finalize, GcRefMut, Trace};
 use jstz_core::{
     accessor,
-    native::{register_global_class, Accessor, JsNativeObject, NativeClass},
+    native::{
+        register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
+    },
     value::IntoJs,
 };
 use std::cmp::{max, min};
@@ -472,11 +474,11 @@ impl NativeClass for BlobClass {
 
     const NAME: &'static str = "Blob";
 
-    fn constructor(
-        _this: &jstz_core::native::JsNativeObject<Self::Instance>,
-        args: &[boa_engine::prelude::JsValue],
-        context: &mut boa_engine::prelude::Context<'_>,
-    ) -> boa_engine::prelude::JsResult<Self::Instance> {
+    fn data_constructor(
+        _target: &JsValue,
+        args: &[JsValue],
+        context: &mut Context<'_>,
+    ) -> JsResult<Self::Instance> {
         let blob_parts: Option<BlobParts> =
             args.get_or_undefined(0).try_js_into(context)?;
         let options: Option<BlobPropertyBag> =
@@ -485,9 +487,7 @@ impl NativeClass for BlobClass {
         Blob::new(blob_parts, options, context)
     }
 
-    fn init(
-        class: &mut jstz_core::native::ClassBuilder<'_, '_>,
-    ) -> boa_engine::prelude::JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
         let size = Self::size(class.context());
         let type_ = Self::type_(class.context());
 

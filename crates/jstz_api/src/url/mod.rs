@@ -71,7 +71,6 @@ impl Url {
     ///
     /// [spec] https://url.spec.whatwg.org/#dom-url-url
     pub fn new(
-        this: &JsNativeObject<Self>,
         url: String,
         base: Option<String>,
         context: &mut Context<'_>,
@@ -95,9 +94,6 @@ impl Url {
                 context,
             )?,
         };
-
-        // 7. Set `url`’s query object’s URL object to `url`.
-        url.search_params.deref_mut().set_url(this);
 
         Ok(url)
     }
@@ -448,15 +444,26 @@ impl NativeClass for UrlClass {
 
     const NAME: &'static str = "URL";
 
-    fn constructor(
-        this: &JsNativeObject<Url>,
+    fn data_constructor(
+        _target: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Url> {
         let url: String = args.get_or_undefined(0).try_js_into(context)?;
         let base: Option<String> = args.get_or_undefined(1).try_js_into(context)?;
 
-        Url::new(this, url, base, context)
+        Url::new(url, base, context)
+    }
+
+    fn object_constructor(
+        this: &JsNativeObject<Self::Instance>,
+        _args: &[JsValue],
+        _context: &mut Context<'_>,
+    ) -> JsResult<()> {
+        // 7. Set `this`’s query object’s URL object to `this`.
+        this.deref_mut().search_params.deref_mut().set_url(this);
+
+        Ok(())
     }
 
     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {

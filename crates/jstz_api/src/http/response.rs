@@ -529,9 +529,9 @@ impl NativeClass for ResponseClass {
 
     const NAME: &'static str = "Response";
 
-    fn constructor(
-        _this: &JsNativeObject<Self::Instance>,
-        args: &[boa_engine::JsValue],
+    fn data_constructor(
+        _target: &JsValue,
+        args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance> {
         let body: BodyWithType = match args.get(0) {
