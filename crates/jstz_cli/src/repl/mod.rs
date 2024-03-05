@@ -121,6 +121,7 @@ pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     let mut rt = Runtime::new(DEFAULT_GAS_LIMIT)
         .map_err(|_| anyhow!("Failed to initialize jstz's JavaScript runtime."))?;
     let mut tx = Transaction::default();
+    tx.begin();
 
     set_js_logger(&PrettyLogger);
 
