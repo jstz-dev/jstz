@@ -9,7 +9,7 @@ use log::{debug, info};
 use crate::{
     account,
     config::{Config, NetworkName, SmartFunction},
-    error::{bail, bail_user_error, user_error, Result},
+    error::{anyhow, bail, bail_user_error, user_error, Result},
     term::styles,
     utils::read_file_or_input_or_piped,
 };
@@ -35,7 +35,7 @@ pub async fn exec(
     // Get the current user and check if we are logged in
     account::login_quick(&mut cfg)?;
     cfg.reload()?;
-    let (user_name, user) = cfg.accounts.current_user().ok_or(user_error!(
+    let (user_name, user) = cfg.accounts.current_user().ok_or(anyhow!(
         "Failed to setup the account. Please run `{}`.",
         styles::command("jstz login")
     ))?;
