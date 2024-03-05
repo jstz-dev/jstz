@@ -50,33 +50,57 @@ pub mod headers {
     }
 }
 
-fn on_success(
-    value: JsValue,
-    f: fn(&JsValue, &mut Context<'_>) -> JsResult<()>,
+// Applies on_fullfilled or on_rejected based on either an error was raised or not.
+// If the value is a promise, then we apply the on_fulfilled and on_rejected to the promise.
+fn try_apply_to_value_or_promise(
+    value_or_promise: JsResult<JsValue>,
+    on_fulfilled: fn(&JsValue, &mut Context<'_>) -> JsResult<()>,
+    on_rejected: fn(&mut Context<'_>) -> JsResult<()>,
     context: &mut Context<'_>,
 ) -> JsResult<JsValue> {
-    match value.as_promise() {
-        Some(promise) => {
-            let promise = JsPromise::from_object(promise.clone()).unwrap();
-            let result = promise.then(
-                Some(
-                    FunctionObjectBuilder::new(context.realm(), unsafe {
-                        NativeFunction::from_closure(move |_, args, context| {
-                            let value = args.get_or_undefined(0).clone();
-                            let _ = f(&value, context);
-                            Ok(value)
+    match value_or_promise {
+        Ok(value) => match value.as_promise() {
+            Some(promise) => {
+                let promise = JsPromise::from_object(promise.clone()).unwrap();
+                let result = promise.then(
+                    Some(
+                        FunctionObjectBuilder::new(context.realm(), unsafe {
+                            NativeFunction::from_closure(
+                                move |_, args, context| -> JsResult<JsValue> {
+                                    let value = args.get_or_undefined(0).clone();
+                                    on_fulfilled(&value, context)?;
+                                    Ok(value)
+                                },
+                            )
                         })
-                    })
-                    .build(),
-                ),
-                None,
-                context,
-            )?;
-            Ok(result.into())
-        }
-        None => {
-            f(&value, context)?;
-            Ok(value)
+                        .build(),
+                    ),
+                    Some(
+                        FunctionObjectBuilder::new(context.realm(), unsafe {
+                            NativeFunction::from_closure(
+                                move |_, args, context| -> JsResult<JsValue> {
+                                    let reason = JsError::from_opaque(
+                                        args.get_or_undefined(0).clone(),
+                                    );
+                                    on_rejected(context)?;
+                                    Err(reason)
+                                },
+                            )
+                        })
+                        .build(),
+                    ),
+                    context,
+                )?;
+                Ok(result.into())
+            }
+            None => {
+                on_fulfilled(&value, context)?;
+                Ok(value)
+            }
+        },
+        Err(err) => {
+            on_rejected(context)?;
+            Err(err)
         }
     }
 }
@@ -266,30 +290,25 @@ impl Script {
         log_request_end(address.clone(), operation_hash.to_string());
 
         // 4. Ensure that the transaction is committed
-        match result {
-            Ok(result) => on_success(
-                result,
-                |value, _context| {
-                    runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<()> {
-                        let response = Response::try_from_js(value)?;
+        try_apply_to_value_or_promise(
+            result,
+            |value, _context| {
+                runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<()> {
+                    let response = Response::try_from_js(value)?;
 
-                        // If status code is 2xx, commit transaction
-                        if response.ok() {
-                            tx.commit(hrt)?;
-                        } else {
-                            tx.rollback()?;
-                        }
+                    // If status code is 2xx, commit transaction
+                    if response.ok() {
+                        tx.commit(hrt)?;
+                    } else {
+                        tx.rollback()?;
+                    }
 
-                        Ok(())
-                    })
-                },
-                context,
-            ),
-            Err(err) => {
-                runtime::with_js_tx(|tx| tx.rollback())?;
-                Err(err)
-            }
-        }
+                    Ok(())
+                })
+            },
+            |_context| Ok(runtime::with_js_tx(|tx| tx.rollback())?),
+            context,
+        )
     }
 
     /// Loads, initializes and runs the script
@@ -408,6 +427,12 @@ pub mod run {
                 err.into()
             }
         })?;
+
+        debug_msg!(
+            hrt,
+            "🚀 Smart function executed successfully with value: {:?}\n",
+            result
+        );
 
         // 6. Serialize response
         let response = Response::try_from_js(&result)?;
