@@ -19,7 +19,8 @@ const handler = async (request) => {
     await fetch(new Request(`tezos://${Ledger.selfAddress}/?n=${n - 1}`));
   }
 
-  return new Response();
+  // Cause an error at the most nested level
+  return n == 0 ? Response.error() : new Response();
 };
 
 export default handler;
