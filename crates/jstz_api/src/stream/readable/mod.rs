@@ -6,11 +6,9 @@ use crate::stream::{
     },
     readable::underlying_source::{ReadableStreamType, UnderlyingSource},
 };
-use boa_engine::{value::TryFromJs, Context, JsArgs, JsResult};
+use boa_engine::{value::TryFromJs, Context, JsArgs, JsResult, JsValue};
 use boa_gc::{custom_trace, Finalize, Trace};
-use jstz_core::native::{
-    register_global_class, ClassBuilder, JsNativeObject, NativeClass,
-};
+use jstz_core::native::{register_global_class, ClassBuilder, NativeClass};
 
 pub mod underlying_source;
 
@@ -38,9 +36,9 @@ impl NativeClass for ReadableStreamClass {
 
     const NAME: &'static str = "ReadableStream";
 
-    fn constructor(
-        _this: &JsNativeObject<Self::Instance>,
-        args: &[boa_engine::JsValue],
+    fn data_constructor(
+        _target: &JsValue,
+        args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance> {
         let underlying_source =

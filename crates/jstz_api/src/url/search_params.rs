@@ -460,8 +460,8 @@ impl NativeClass for UrlSearchParamsClass {
 
     const NAME: &'static str = "URLSearchParams";
 
-    fn constructor(
-        _this: &JsNativeObject<UrlSearchParams>,
+    fn data_constructor(
+        _target: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<UrlSearchParams> {
