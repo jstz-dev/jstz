@@ -32,6 +32,15 @@ impl FromStr for AddressOrAlias {
     }
 }
 
+impl ToString for AddressOrAlias {
+    fn to_string(&self) -> String {
+        match self {
+            Self::Address(address) => address.to_string(),
+            Self::Alias(alias) => alias.to_string(),
+        }
+    }
+}
+
 pub fn read_file_or_input(input_or_filename: String) -> String {
     // try and read the file
     fs::read_to_string(&input_or_filename)
