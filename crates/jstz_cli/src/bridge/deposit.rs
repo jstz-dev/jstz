@@ -4,6 +4,7 @@ use crate::{
     config::{Config, NetworkName},
     error::{bail_user_error, Result},
     sandbox::SANDBOX_BOOTSTRAP_ACCOUNTS,
+    term::styles,
     utils::AddressOrAlias,
 };
 
@@ -15,21 +16,16 @@ pub fn exec(
 ) -> Result<()> {
     let cfg = Config::load()?;
 
+    // Check network
+    if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {
+        bail_user_error!(
+            "No sandbox is currently running. Please run {}.",
+            styles::command("jstz sandbox start")
+        );
+    }
+
     let to_pkh = to.resolve(&cfg)?;
     debug!("resolved `to` -> {:?}", to_pkh);
-
-    // Check if the `from` account is a bootstrap account alias. If so convert it to the address.
-    let mut from_resolved = from.clone();
-    if let Some(bootstrap_account) = SANDBOX_BOOTSTRAP_ACCOUNTS
-        .iter()
-        .find(|account| account.address == from_resolved)
-    {
-        info!(
-            "Resolved `from` account '{}' to '{}'.",
-            from, bootstrap_account.address
-        );
-        from_resolved = bootstrap_account.address.to_string();
-    }
 
     // Check if trying to deposit to a bootsrap account.
     if let Some(bootstrap_account) = SANDBOX_BOOTSTRAP_ACCOUNTS
@@ -44,7 +40,7 @@ pub fn exec(
 
     // Execute the octez-client command
     if let Err(_) = cfg.octez_client(&network)?.call_contract(
-        &from_resolved,
+        &from,
         "jstz_bridge",
         "deposit",
         &format!(

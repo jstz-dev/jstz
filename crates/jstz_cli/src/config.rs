@@ -327,6 +327,8 @@ impl Config {
     ) -> Result<OctezClient> {
         let network = self.network(network_name)?;
 
+        println!("network: {:?}", network);
+
         Ok(OctezClient {
             octez_client_bin: self
                 .octez_path
@@ -398,6 +400,8 @@ impl Config {
                 let name = self.networks.default_network.as_ref().ok_or_else(||user_error!(
                     "No default network found in the config file. Please specify the `--network` flag or set the default network in the config file."
                 ))?;
+
+                println!("name: {:?}", name);
 
                 self.lookup_network(name)
             }
