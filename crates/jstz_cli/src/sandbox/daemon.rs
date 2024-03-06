@@ -37,10 +37,15 @@ use crate::{
     config::{jstz_home_dir, Config, SandboxConfig},
     error::{anyhow, bail_user_error, Result},
     sandbox::{
-        SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_PORT,
-        SANDBOX_OCTEZ_NODE_RPC_PORT, SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
+        SANDBOX_BOOTSTRAP_ACCOUNTS, SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR,
+        SANDBOX_OCTEZ_NODE_PORT, SANDBOX_OCTEZ_NODE_RPC_PORT,
+        SANDBOX_OCTEZ_SMART_ROLLUP_PORT,
     },
     term::{self, styles},
+};
+
+use super::{
+    SANDBOX_BOOTSTRAP_ACCOUNT_CTEZ_AMOUNT, SANDBOX_BOOTSTRAP_ACCOUNT_XTZ_AMOUNT,
 };
 
 fn octez_node_endpoint() -> String {
@@ -89,35 +94,10 @@ const SANDBOX_BANNER: &str = r#"
         /______________\
 "#;
 
-struct SandboxBootstrapAccount<'a> {
-    address: &'a str,
-    secret: &'a str,
+pub struct SandboxBootstrapAccount<'a> {
+    pub address: &'a str,
+    pub secret: &'a str,
 }
-
-const SANDBOX_BOOTSTRAP_ACCOUNT_XTZ_AMOUNT: u64 = 4000000000000;
-const SANDBOX_BOOTSTRAP_ACCOUNT_CTEZ_AMOUNT: u64 = 100000000000;
-const SANDBOX_BOOTSTRAP_ACCOUNTS: [SandboxBootstrapAccount; 5] = [
-    SandboxBootstrapAccount {
-        address: "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx",
-        secret: "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
-    },
-    SandboxBootstrapAccount {
-        address: "tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN",
-        secret: "unencrypted:edsk39qAm1fiMjgmPkw1EgQYkMzkJezLNewd7PLNHTkr6w9XA2zdfo",
-    },
-    SandboxBootstrapAccount {
-        address: "tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU",
-        secret: "unencrypted:edsk4ArLQgBTLWG5FJmnGnT689VKoqhXwmDPBuGx3z4cvwU9MmrPZZ",
-    },
-    SandboxBootstrapAccount {
-        address: "tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv",
-        secret: "unencrypted:edsk2uqQB9AY4FvioK2YMdfmyMrer5R8mGFyuaLLFfSRo8EoyNdht3",
-    },
-    SandboxBootstrapAccount {
-        address: "tz1ddb9NMYHZi5UzPdzTZMYQQZoMub195zgv",
-        secret: "unencrypted:edsk4QLrcijEffxV31gGdN2HU7UpyJjA8drFoNcmnB28n89YjPNRFm",
-    },
-];
 
 const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
 fn sandbox_daemon_log_path(cfg: &Config) -> PathBuf {
