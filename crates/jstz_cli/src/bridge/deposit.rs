@@ -39,16 +39,20 @@ pub fn exec(
     }
 
     // Execute the octez-client command
-    if let Err(_) = cfg.octez_client(&network)?.call_contract(
-        &from,
-        "jstz_bridge",
-        "deposit",
-        &format!(
-            "(Pair {} 0x{})",
-            amount,
-            hex::encode_upper(to_pkh.as_bytes())
-        ),
-    ) {
+    if cfg
+        .octez_client(&network)?
+        .call_contract(
+            &from,
+            "jstz_bridge",
+            "deposit",
+            &format!(
+                "(Pair {} 0x{})",
+                amount,
+                hex::encode_upper(to_pkh.as_bytes())
+            ),
+        )
+        .is_err()
+    {
         bail_user_error!("Failed to deposit CTEZ. Please check whether the addresses and network are correct.");
     }
 
