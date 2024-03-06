@@ -4,9 +4,10 @@ const handler = async () => {
     const myOptions = { status: 420 };
     const myResponse = new Response("Hello World", myOptions);
 
+    console.assert(!myResponse.bodyUsed);
     const myText = await myResponse.text();
+    console.assert(myResponse.bodyUsed);
     console.log(`Actual: ${myText}, Expected: Hello World`);
-
     console.log(`Actual: ${myResponse.status}, Expected: 420`);
   }
 
@@ -30,6 +31,12 @@ const handler = async () => {
     const jsonResponse = Response.json({ my: "data" });
     const resJson = await jsonResponse.json();
     console.log(`Actual: ${resJson.my}, Expected: "data"`);
+  }
+
+  // Redirect
+  {
+    const myResponse = Response.redirect(`tezos://${Ledger.selfAddress}`);
+    console.log(myResponse.url);
   }
 
   return new Response();
