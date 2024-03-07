@@ -83,7 +83,7 @@ impl Highlighter for JsHighlighter {
         Cow::Owned(self.highlight(line))
     }
 
-    fn highlight_char(&self, _line: &str, _pos: usize) -> bool {
+    fn highlight_char(&self, _line: &str, _pos: usize, _forced: bool) -> bool {
         true
     }
 }
