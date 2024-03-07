@@ -7,15 +7,11 @@ services:
       context: .
       dockerfile: crates/jstz_rollup/Dockerfile
       args:
-        OCTEZ_TAG: master_11051f14_20240217110401
-        JSTZ_ROLLUP_BRIDGE_ADDRESS: KT1LAzuUQ9ahaJKoffnVeZXKXknELPXsqcSv
+        - OCTEZ_TAG
     command: run
     restart: "no"
-    environment:
-      NETWORK: dailynet-2024-02-19
-      LOGS_DIR: /root/logs
-      OPERATOR_SK: ${OPERATOR_SK}
-      JSTZ_ROLLUP_ADDRESS: sr1K18FQWP81GFaB9r8pXAwh5d8n9rqaH4jJ
+    env_file:
+      - .env
     ports:
       - 8932:8932
     networks:
