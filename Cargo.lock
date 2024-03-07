@@ -528,7 +528,7 @@ dependencies = [
 [[package]]
 name = "boa_ast"
 version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#41b24d59549faaec36d076a18546c9c323e93b5e"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
 dependencies = [
  "arbitrary",
  "bitflags 2.4.1",
@@ -542,7 +542,7 @@ dependencies = [
 [[package]]
 name = "boa_engine"
 version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#41b24d59549faaec36d076a18546c9c323e93b5e"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
 dependencies = [
  "bitflags 2.4.1",
  "boa_ast",
@@ -580,7 +580,7 @@ dependencies = [
 [[package]]
 name = "boa_gc"
 version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#41b24d59549faaec36d076a18546c9c323e93b5e"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
 dependencies = [
  "boa_macros",
  "boa_profiler",
@@ -591,7 +591,7 @@ dependencies = [
 [[package]]
 name = "boa_interner"
 version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#41b24d59549faaec36d076a18546c9c323e93b5e"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
 dependencies = [
  "arbitrary",
  "boa_gc",
@@ -607,7 +607,7 @@ dependencies = [
 [[package]]
 name = "boa_macros"
 version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#41b24d59549faaec36d076a18546c9c323e93b5e"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -618,7 +618,7 @@ dependencies = [
 [[package]]
 name = "boa_parser"
 version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#41b24d59549faaec36d076a18546c9c323e93b5e"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
 dependencies = [
  "bitflags 2.4.1",
  "boa_ast",
@@ -636,7 +636,7 @@ dependencies = [
 [[package]]
 name = "boa_profiler"
 version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?branch=sam.finch@/context/expose-instruction-count#41b24d59549faaec36d076a18546c9c323e93b5e"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
 
 [[package]]
 name = "brotli"
