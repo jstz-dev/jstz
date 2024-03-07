@@ -7,8 +7,8 @@ RUN apk --no-cache add musl-dev libcrypto3 openssl-dev clang make
 ENV OPENSSL_DIR=/usr
 WORKDIR /
 COPY . .
-RUN cargo build --package jstz_kernel --target wasm32-unknown-unknown
-RUN cp target/wasm32-unknown-unknown/debug/jstz_kernel.wasm crates/jstz_cli/jstz_kernel.wasm
+ARG KERNEL_PATH
+COPY $KERNEL_PATH crates/jstz_cli/jstz_kernel.wasm
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --package jstz_cli
 
 FROM alpine AS cli
