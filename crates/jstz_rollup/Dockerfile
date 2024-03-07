@@ -14,12 +14,7 @@ COPY . .
 # https://github.com/rust-lang/rust/pull/58575#issuecomment-496026747
 RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --package jstz_rollup --release
 # Build jstz kernel
-ARG JSTZ_ROLLUP_BRIDGE_ADDRESS
 RUN CC=clang cargo build --package jstz_kernel --release --target wasm32-unknown-unknown
-RUN /target/release/jstz-rollup make-installer \
-    --kernel /target/wasm32-unknown-unknown/release/jstz_kernel.wasm \
-    --bridge "$JSTZ_ROLLUP_BRIDGE_ADDRESS" \
-    --output /root/installer
 
 FROM alpine AS node
 # libcrypto3, openssl, and musl are needed for jstz-rollup binary
@@ -31,7 +26,7 @@ ENV RUST_LOG=debug
 COPY --from=octez /usr/local/bin/octez-smart-rollup-node /usr/bin/octez-smart-rollup-node
 COPY --from=octez /usr/local/bin/octez-client /usr/bin/octez-client
 COPY --from=builder /target/release/jstz-rollup /usr/bin/jstz-rollup
-COPY --from=builder /root/installer /root/installer
+COPY --from=builder /target/wasm32-unknown-unknown/release/jstz_kernel.wasm /root/jstz_kernel.wasm
 COPY ./crates/jstz_rollup/entrypoint.sh ./entrypoint.sh
 RUN chmod +x entrypoint.sh
 ENTRYPOINT [ "./entrypoint.sh" ]
