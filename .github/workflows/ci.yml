@@ -1,15 +1,9 @@
-name: Continuous Integration & Deployment
+name: Continuous Integration
 
 on:
   pull_request:
   push:
     branches: [main]
-
-env:
-  DOCKER_REGISTRY: ghcr.io
-  DOCKER_IMAGE_BASE: trilitech
-  NETWORK: nairobinet
-  JSTZ_ROLLUP_BRIDGE_ADDRESS: KT1WVsN9Rd4v9EiZ9uunyrVAwDucKXqHv3Fy
 
 jobs:
   commitlint:
@@ -132,3 +126,11 @@ jobs:
 
       - name: Build
         run: nix build -j auto
+
+  build-docker:
+    name: Build (Docker)
+    needs: [build-rust, build-sdk, build-docs]
+    uses: ./.github/workflows/docker.yml
+    with:
+      # NOTE: When updating octez, make sure to update the tag here
+      octez-tag: "master_c23fc413_20240305233712"
