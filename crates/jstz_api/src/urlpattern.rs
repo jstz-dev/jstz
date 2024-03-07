@@ -92,7 +92,6 @@ impl UrlPattern {
     // nor in `urlpattern` crate. There is an open PR for supporting it in
     // `urlpattern`: https://github.com/denoland/rust-urlpattern/pull/34
     pub fn new(
-        _this: &JsNativeObject<Self>,
         input: UrlPatternInput,
         base_url: Option<String>,
         _context: &mut Context<'_>,
@@ -483,8 +482,8 @@ impl NativeClass for UrlPatternClass {
 
     const NAME: &'static str = "URLPattern";
 
-    fn constructor(
-        this: &JsNativeObject<UrlPattern>,
+    fn data_constructor(
+        _target: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<UrlPattern> {
@@ -494,7 +493,7 @@ impl NativeClass for UrlPatternClass {
         };
         let base_url: Option<String> = args.get_or_undefined(1).try_js_into(context)?;
 
-        UrlPattern::new(this, input, base_url, context)
+        UrlPattern::new(input, base_url, context)
     }
 
     fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {

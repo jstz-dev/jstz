@@ -385,8 +385,8 @@ impl Config {
         network_name: &Option<NetworkName>,
     ) -> Result<Option<PathBuf>> {
         let sandbox = self.sandbox()?;
-        Ok(match network_name {
-            Some(NetworkName::Dev) => Some(sandbox.octez_client_dir.clone()),
+        Ok(match self.network_name(network_name)? {
+            NetworkName::Dev => Some(sandbox.octez_client_dir.clone()),
             _ => None,
         })
     }

@@ -449,8 +449,8 @@ impl NativeClass for RequestClass {
 
     const NAME: &'static str = "Request";
 
-    fn constructor(
-        _this: &JsNativeObject<Self::Instance>,
+    fn data_constructor(
+        _target: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance> {

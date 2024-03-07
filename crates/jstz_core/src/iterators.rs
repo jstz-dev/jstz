@@ -424,8 +424,8 @@ impl<T: PairIteratorClass> NativeClass for T {
     // instantiated by jstz
     const LENGTH: usize = 2;
 
-    fn constructor(
-        _this: &JsNativeObject<Self::Instance>,
+    fn data_constructor(
+        _target: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance> {

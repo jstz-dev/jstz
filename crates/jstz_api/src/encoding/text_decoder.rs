@@ -8,9 +8,7 @@ use boa_gc::{Finalize, GcRefMut, Trace};
 use encoding_rs::{Decoder, DecoderResult, Encoding};
 use jstz_core::{
     accessor,
-    native::{
-        register_global_class, Accessor, ClassBuilder, JsNativeObject, NativeClass,
-    },
+    native::{register_global_class, Accessor, ClassBuilder, NativeClass},
     value::{IntoJs, TryFromJs},
 };
 
@@ -329,8 +327,8 @@ impl NativeClass for TextDecoderClass {
 
     const NAME: &'static str = "TextDecoder";
 
-    fn constructor(
-        _this: &JsNativeObject<TextDecoder>,
+    fn data_constructor(
+        _target: &JsValue,
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<TextDecoder> {

@@ -85,8 +85,8 @@ impl NativeClass for TextEncoderEncodeIntoResult {
 
     const NAME: &'static str = "TextEncoderEncodeIntoResult";
 
-    fn constructor(
-        _this: &JsNativeObject<TextEncoderEncodeIntoResult>,
+    fn data_constructor(
+        _target: &JsValue,
         _args: &[JsValue],
         _: &mut Context<'_>,
     ) -> JsResult<TextEncoderEncodeIntoResult> {
@@ -255,8 +255,8 @@ impl NativeClass for TextEncoderClass {
 
     const NAME: &'static str = "TextEncoder";
 
-    fn constructor(
-        _this: &JsNativeObject<TextEncoder>,
+    fn data_constructor(
+        _target: &JsValue,
         _args: &[JsValue],
         _: &mut Context<'_>,
     ) -> JsResult<TextEncoder> {
