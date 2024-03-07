@@ -11,7 +11,9 @@ mkdir -p "$JSTZ_ROLLUP_OCTEZ_ROLLUP_NODE_DIR"
 # JSTZ_ROLLUP_OCTEZ_NODE_ENDPOINT is used in the jstz-rollup command
 export JSTZ_ROLLUP_OCTEZ_NODE_ENDPOINT="https://rpc.$NETWORK.teztnets.com/"
 
+kernel_path="root/jstz_kernel.wasm"
 installer_dir="root/installer"
+logs_dir="root/logs"
 
 if [ ! -f "$JSTZ_ROLLUP_OCTEZ_CLIENT_DIR/secret_keys" ]; then
     echo "Importing operator secret key..."
@@ -22,20 +24,45 @@ if [ ! -f "$JSTZ_ROLLUP_OCTEZ_CLIENT_DIR/secret_keys" ]; then
     jstz-rollup operator import-keys --secret-key "$OPERATOR_SK"
 fi
 
+make-installer() {
+    jstz-rollup make-installer \
+        --kernel "$kernel_path" \
+        --bridge "$JSTZ_ROLLUP_BRIDGE_ADDRESS" \
+        --output "$installer_dir"
+}
+
+deploy-bridge() {
+    jstz-rollup deploy-bridge \
+        --operator "$OPERATOR_ADDRESS"
+}
+
+deploy-installer() {
+    jstz-rollup deploy-installer \
+        --installer "$installer_dir/installer.wasm" \
+        --bridge "$JSTZ_ROLLUP_BRIDGE_ADDRESS"
+}
 
 run() {
-    mkdir -p "$LOGS_DIR"
+    if [ -z "$(ls -A $installer_dir)" ]; then
+        make-installer
+    fi
+
+    mkdir -p "$logs_dir"
     jstz-rollup run \
         --preimages "$installer_dir/preimages" \
         --rollup "$JSTZ_ROLLUP_ADDRESS" \
-        --logs "$LOGS_DIR" \
+        --logs "$logs_dir" \
         --addr "0.0.0.0"
 }
 
 deploy() {
-    jstz-rollup deploy-installer \
-        --installer "$installer_dir/installer.wasm" \
-        --bridge "$JSTZ_ROLLUP_BRIDGE_ADDRESS"
+    JSTZ_ROLLUP_BRIDGE_ADDRESS=$(deploy-bridge | grep -oE 'KT1[a-zA-Z0-9]{33}' | uniq | tr -d '\n')
+    echo "Bridge address: $JSTZ_ROLLUP_BRIDGE_ADDRESS"
+
+    jstz-rollup deploy \
+        --kernel "$kernel_path" \
+        --bridge "$JSTZ_ROLLUP_BRIDGE_ADDRESS" \
+        --output "$installer_dir"
 }
 
 main() {
@@ -49,6 +76,15 @@ main() {
         "deploy")
             deploy
             ;;
+        "deploy-bridge")
+            deploy-bridge
+            ;;
+        "deploy-installer")
+            deploy-installer
+            ;;
+        "make-installer")
+            make-installer
+            ;;
         *)
             cat <<EOF
 Usage: $0 <COMMAND>
@@ -56,6 +92,9 @@ Usage: $0 <COMMAND>
 Commands: 
     run 
     deploy
+    deploy-bridge
+    deploy-installer
+    make-installer
 EOF
             exit 1
             ;;
