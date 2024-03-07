@@ -1,12 +1,20 @@
 # 📦 Installing `jstz`
 
-Currently, `jstz` can only be installed by building from sources using [Rust](https://www.rust-lang.org/).
-
 ## Download and Install
 
 ::: danger
-⚠️ Under construction ⚠️
+⚠️ `jstz` is only available on Unix-based systems. ⚠️
 :::
+
+Ensure `docker` is installed on your system. If not, please follow [this guide](https://docs.docker.com/get-docker/).
+To download and install `jstz`, run the following command in your terminal:
+
+```sh
+source <(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/trilitech/jstz/main/scripts/install-jstz-cli.sh)
+```
+
+Congratulations! 🎉 `jstz` is now installed and configured on your system.
+You are now ready to [write your first smart function](./quick_start.md) 🚀.
 
 ## Building from Source
 
