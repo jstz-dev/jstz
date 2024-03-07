@@ -63,16 +63,17 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_BASE }}/${{ matrix.image }}
+          sep-tags: " "
       - # Extract tags for jstz
-        run: echo "tag=${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
+        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
         id: jstz-cli-tag
         if: matrix.image == 'jstz-cli'
       - # Extract tags for jstz-node
-        run: echo "tag=${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
+        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
         id: jstz-node-tag
         if: matrix.image == 'jstz-node'
       - # Extract tags for jstz-rollup
-        run: echo "tag=${{ steps.meta.outputs.tags }}" >> $GITHUB_OUTPUT
+        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
         id: jstz-rollup-tag
         if: matrix.image == 'jstz-rollup'
       - name: Build and push Docker image
