@@ -7,8 +7,9 @@ RUN apk --no-cache add musl-dev libcrypto3 openssl-dev clang make
 ENV OPENSSL_DIR=/usr
 WORKDIR /
 COPY . .
-RUN make build-cli-kernel
-RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --package jstz_cli --release
+RUN cargo build --package jstz_kernel --target wasm32-unknown-unknown
+RUN cp target/wasm32-unknown-unknown/debug/jstz_kernel.wasm crates/jstz_cli/jstz_kernel.wasm
+RUN RUSTFLAGS='-C target-feature=-crt-static' cargo build --package jstz_cli
 
 FROM alpine AS cli
 # libcrypto3, openssl, and musl are needed for jstz-rollup binary
@@ -18,5 +19,5 @@ RUN apk --no-cache add binutils bash libcrypto3 openssl musl hidapi gmp libev li
 COPY --from=octez /usr/local/bin/octez-smart-rollup-node /usr/bin/octez-smart-rollup-node
 COPY --from=octez /usr/local/bin/octez-node /usr/bin/octez-node
 COPY --from=octez /usr/local/bin/octez-client /usr/bin/octez-client
-COPY --from=builder /target/release/jstz /usr/bin/jstz
+COPY --from=builder /target/debug/jstz /usr/bin/jstz
 ENTRYPOINT [ "/usr/bin/jstz" ]
