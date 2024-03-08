@@ -29,7 +29,7 @@ enum Command {
     /// 🚀 Deploys a smart function to jstz
     Deploy {
         /// Function code.
-        #[arg(value_name = "CODE|PATH", default_value = None)]
+        #[arg(value_name = "CODE|PATH", default_value = None, value_hint = clap::ValueHint::FilePath)]
         code: Option<String>,
         /// Initial balance of the function.
         #[arg(short, long, default_value_t = 0)]
@@ -54,7 +54,7 @@ enum Command {
         #[arg(name = "request", short, long, default_value = "GET")]
         http_method: String,
         /// The JSON data in the request body.
-        #[arg(name = "data", short, long, default_value = None)]
+        #[arg(name = "data", short, long, default_value = None, value_hint = clap::ValueHint::FilePath)]
         json_data: Option<String>,
         /// Specifies the network from the config file, defaulting to the configured default network.
         ///  Use `dev` for the local sandbox.
