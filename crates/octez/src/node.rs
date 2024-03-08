@@ -56,8 +56,9 @@ impl OctezNode {
     }
 
     pub fn run(&self, log_file: &File, options: &[&str]) -> Result<Child> {
-        Ok(self
-            .command()
+        let mut command = self.command();
+
+        command
             .args([
                 "run",
                 "--data-dir",
@@ -66,7 +67,8 @@ impl OctezNode {
             ])
             .args(options)
             .stdout(Stdio::from(log_file.try_clone()?))
-            .stderr(Stdio::from(log_file.try_clone()?))
-            .spawn()?)
+            .stderr(Stdio::from(log_file.try_clone()?));
+
+        Ok(command.spawn()?)
     }
 }

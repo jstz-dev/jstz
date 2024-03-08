@@ -8,6 +8,7 @@ services:
       dockerfile: crates/jstz_rollup/Dockerfile
       args:
         - OCTEZ_TAG
+        - KERNEL_PATH
     command: run
     restart: "no"
     env_file:

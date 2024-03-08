@@ -1,10 +1,19 @@
 use std::process::{Command, Stdio};
 
+use in_container::in_container;
 use log::info;
 
 use crate::{error::Result, term::styles};
 
 pub fn open_browser(url: &str) -> Result<()> {
+    if in_container() {
+        info!(
+            "Opening a link in your default browser is not supported in this environment: {}",
+            styles::url(url)
+        );
+        return Ok(());
+    }
+
     // TODO: Support Windows
     if cfg!(target_os = "linux") {
         let linux_cmd = format!(r#"xdg-open "{}""#, url);
