@@ -14,13 +14,14 @@ use std::{
     env,
     fs::{self, File, OpenOptions},
     io::{BufRead, BufReader, Seek},
-    path::{Path, PathBuf},
+    path::PathBuf,
     process::{Child, Command, Stdio},
     thread::{self, sleep},
     time::Duration,
 };
 
 use console::style;
+use in_container::in_container;
 use log::info;
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
 use tempfile::TempDir;
@@ -189,7 +190,9 @@ fn start_node(cfg: &Config) -> Result<Child> {
             "--network",
             "sandbox",
             "--sandbox",
-            SANDBOX_PATH,
+            sandbox_path().to_str().expect("Invalid path"),
+            "--history-mode",
+            "archive",
         ],
     )
 }
@@ -239,7 +242,7 @@ fn init_client(log_file: &mut File, progress: &mut u32, cfg: &Config) -> Result<
         "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
         "1",
         "activator",
-        SANDBOX_PARAMS_PATH,
+        sandbox_params_path().to_str().expect("Invalid path"),
     )?;
     debug!(log_file, " done");
 
@@ -360,7 +363,7 @@ fn start_sandbox(
 
     let preimages_dir = TempDir::with_prefix("jstz_sandbox_preimages")?.into_path();
 
-    let installer = make_installer(Path::new(JSTZ_KERNEL_PATH), &preimages_dir, &bridge)?;
+    let installer = make_installer(&jstz_kernel_path(), &preimages_dir, &bridge)?;
     debug!(
         log_file,
         "Installer kernel created with preimages at {:?}", preimages_dir
@@ -574,7 +577,7 @@ fn wait_for_termination(pid: Pid) -> Result<()> {
         let result: nix::Result<()> = kill(pid, Signal::SIGTERM);
         match result {
             // Sending 0 as the signal just checks for the process existence
-            core::result::Result::Ok(_) => {
+            Ok(_) => {
                 // Process exists, continue waiting
                 thread::sleep(Duration::from_millis(100));
             }
@@ -592,6 +595,10 @@ fn wait_for_termination(pid: Pid) -> Result<()> {
 }
 
 pub fn stop_sandbox(restart: bool) -> Result<()> {
+    if in_container() {
+        bail_user_error!("Stopping the sandbox is not supported in this environment. Please run CTRL+C to stop the sandbox.");
+    }
+
     let cfg = Config::load()?;
 
     match cfg.sandbox {
@@ -627,6 +634,10 @@ pub async fn main(detach: bool, background: bool, cfg: &mut Config) -> Result<()
     }
 
     if detach {
+        if in_container() {
+            bail_user_error!("Detaching from the terminal is not supported in this environment. Please run `jstz sandbox start` without the `--detach` flag.");
+        }
+
         let child = start_background_process(cfg)?;
         run_progress_bar(cfg, Some(child))?;
 

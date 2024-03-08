@@ -16,13 +16,26 @@ const SANDBOX_PARAMS_PATH: &str = "./sandbox-params.json";
 
 const SANDBOX_PATH: &str = "./sandbox.json";
 
-fn generate_path_getter_code(name: &str, path: &Path) -> String {
+fn generate_path_getter_code(out_dir: &Path, name: &str, file: &str) -> String {
+    let name_upper = name.to_uppercase();
     format!(
         r#"
         const {}_PATH: &str = "{}";
+
+        fn {}_path() -> PathBuf {{
+            let path = PathBuf::from({}_PATH);
+            if path.exists() {{
+                path
+            }} else {{
+                PathBuf::from("/usr/share/jstz/{}")
+            }}
+        }}
         "#,
+        &name_upper,
+        out_dir.join(file).to_str().expect("Invalid path"),
         name,
-        path.to_str().expect("Invalid path")
+        &name_upper,
+        file
     )
 }
 
@@ -30,16 +43,21 @@ fn generate_code(out_dir: &Path) {
     let mut code = String::new();
 
     code.push_str(&generate_path_getter_code(
-        "JSTZ_KERNEL",
-        &out_dir.join("jstz_kernel.wasm"),
+        out_dir,
+        "jstz_kernel",
+        "jstz_kernel.wasm",
     ));
+
     code.push_str(&generate_path_getter_code(
-        "SANDBOX_PARAMS",
-        &out_dir.join("sandbox-params.json"),
+        out_dir,
+        "sandbox_params",
+        "sandbox-params.json",
     ));
+
     code.push_str(&generate_path_getter_code(
-        "SANDBOX",
-        &out_dir.join("sandbox.json"),
+        out_dir,
+        "sandbox",
+        "sandbox.json",
     ));
 
     fs::write(out_dir.join("sandbox_paths.rs"), code).expect("Failed to write paths.rs");

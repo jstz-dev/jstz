@@ -58,6 +58,11 @@ jobs:
           registry: ${{ env.DOCKER_REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download jstz-kernel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: jstz-kernel
+          path: jstz_kernel
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v3
@@ -84,6 +89,7 @@ jobs:
           push: true
           build-args: |
             OCTEZ_TAG=${{ inputs.octez-tag }}
+            KERNEL_PATH=jstz_kernel/jstz_kernel.wasm
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: ${{ steps.meta.outputs.tags }}
