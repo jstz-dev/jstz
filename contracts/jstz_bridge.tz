@@ -1,22 +1,27 @@
 { parameter
-    (or (pair %deposit (nat %amount) (bytes %tz4_address)) (address %set_rollup)) ;
-  storage (pair (address %ctez_contract) (option %rollup address)) ;
+    (or (address %set_rollup) (pair %deposit (bytes %jstz_address) (nat %amount))) ;
+  storage (pair (option %rollup address) (address %ctez_contract)) ;
   code { UNPAIR ;
          IF_LEFT
+           { SOME ; UPDATE 1 ; NIL operation }
            { SENDER ;
              SELF_ADDRESS ;
              DUP 4 ;
-             CAR ;
-             CONTRACT %transfer (pair (address %from) (address %to) (nat %value)) ;
-             IF_NONE { PUSH string "option is None" ; FAILWITH } {} ;
-             DUP 5 ;
              CDR ;
+             CONTRACT %transfer (pair (address %from) (address %to) (nat %value)) ;
+             PUSH string "Expected ctez contract to have entrypoint %transfer" ;
+             SWAP ;
+             IF_NONE { FAILWITH } { SWAP ; DROP } ;
+             DUP 5 ;
+             CAR ;
              IF_NONE
                { PUSH string "jstz rollup address was not set" ; FAILWITH }
                { CONTRACT (pair bytes (ticket unit)) ;
-                 IF_NONE { PUSH string "option is None" ; FAILWITH } {} } ;
+                 PUSH string "Expected rollup to exist" ;
+                 SWAP ;
+                 IF_NONE { FAILWITH } { SWAP ; DROP } } ;
              DUP 5 ;
-             CAR ;
+             CDR ;
              UNIT ;
              TICKET ;
              IF_NONE { PUSH string "Amount must be > 0" ; FAILWITH } {} ;
@@ -24,13 +29,13 @@
              PUSH mutez 0 ;
              DIG 2 ;
              DUP 7 ;
-             CDR ;
+             CAR ;
              PAIR ;
              TRANSFER_TOKENS ;
              SWAP ;
              PUSH mutez 0 ;
              DIG 5 ;
-             CAR ;
+             CDR ;
              DIG 4 ;
              DIG 5 ;
              PAIR 3 ;
@@ -40,7 +45,6 @@
              DIG 3 ;
              CONS ;
              DIG 2 ;
-             CONS }
-           { SOME ; UPDATE 2 ; NIL operation } ;
+             CONS } ;
          PAIR } }
 
