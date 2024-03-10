@@ -46,9 +46,9 @@ pub fn exec(
             "jstz_bridge",
             "deposit",
             &format!(
-                "(Pair {} 0x{})",
+                "(Pair 0x{} {})",
+                hex::encode_upper(to_pkh.as_bytes()),
                 amount,
-                hex::encode_upper(to_pkh.as_bytes())
             ),
         )
         .is_err()

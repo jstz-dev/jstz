@@ -60,14 +60,11 @@ module Jstz_ctez = struct
     set_balance s address (f (get_balance s address))
 
   [@entry] let mint (mint : mint) (s : storage) : return = 
-    if Tezos.get_sender () <> s.admin
-    then failwith "Only `admin` can mint tokens"
-    else
-      let s =
-        let balance = get_balance s mint.target in
-        set_balance s mint.target (Balance.add_delta balance mint.quantity)
-      in 
-      [], s
+    let s =
+      let balance = get_balance s mint.target in
+      set_balance s mint.target (Balance.add_delta balance mint.quantity)
+    in 
+    [], s
 
   [@entry] let transfer (transfer : transfer) (s : storage) : return = 
     let s = 

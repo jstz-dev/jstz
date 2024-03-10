@@ -6,7 +6,7 @@ module Jstz_bridge = struct
     }
 
   type deposit = 
-    { tz4_address : bytes
+    { jstz_address : bytes
     ; amount : nat
     }
 
@@ -25,12 +25,12 @@ module Jstz_bridge = struct
       let self = Tezos.get_self_address () in
       let ctez_contract : fa12_transfer contract =
         Tezos.get_entrypoint_opt "%transfer" s.ctez_contract
-        |> Option.unopt 
+        |> Option.value_exn "Expected ctez contract to have entrypoint %transfer"
       in
       let jstz_rollup : rollup_type contract =
         match s.rollup with
         | None -> failwith "jstz rollup address was not set"
-        | Some rollup -> Tezos.get_contract_opt rollup |> Option.unopt 
+        | Some rollup -> Tezos.get_contract_opt rollup |> Option.value_exn "Expected rollup to exist"
       in
       let ticket =
         match Tezos.create_ticket () deposit.amount with
@@ -38,7 +38,7 @@ module Jstz_bridge = struct
         | None -> failwith "Amount must be > 0" 
       in
       let jstz_deposit =
-        Tezos.transaction (deposit.tz4_address, ticket) 0mutez jstz_rollup 
+        Tezos.transaction (deposit.jstz_address, ticket) 0mutez jstz_rollup 
       in
       let ctez_transfer = 
         Tezos.transaction 
