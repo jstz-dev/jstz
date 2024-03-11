@@ -66,7 +66,7 @@ EOF
             cat 1>&2 << EOF
 Unsupported shell: $shell. 
 Please manually add the alias to your shell's configuration file.
-    alias jstz='docker run -v "\$HOME/.jstz:/root/.jstz" -v "\$PWD:\$PWD" -it ghcr.io/trilitech/jstz-cli:$JSTZ_VERSION'
+    $shell_alias
 EOF
             exit 1
     esac
