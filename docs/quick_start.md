@@ -252,7 +252,7 @@ jstz bridge deposit --from bootstrap1 --to tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W 
 After a succesful deployment, you will be able to run the smart function with the provided command to run your smart function similarly to the following:
 
 ```sh
-jstz run tezos://tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W/ --data '{"message":"Please, give me some tez."}
+jstz run tezos://tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W/ --data '{"message":"Please, give me some tez."}'
 ```
 
 <details>
