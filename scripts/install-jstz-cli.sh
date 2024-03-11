@@ -3,6 +3,7 @@
 { # this ensures the entire script is downloaded
 
 version="v0.1.0-alpha.0"
+network="weeklynet-2024-03-06"
 container="ghcr.io/trilitech/jstz-cli:$version"
 jstz_home="$HOME/.jstz"
 
@@ -38,7 +39,13 @@ jstz_configure() {
         mkdir -p "$jstz_home"
         cat >"$jstz_home/config.json" << EOF
 {
-  "default_network": "dev"
+  "default_network": "dev",
+  "networks": {
+    "weeklynet": {
+      "octez_node_rpc_endpoint": "http://rpc.$network.teztnets.com",
+      "jstz_node_endpoint": "http://34.39.12.211:8933"
+    }
+  }
 }
 EOF
 
