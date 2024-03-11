@@ -7,9 +7,12 @@ use jstz_proto::{
     operation::{OperationHash, SignedOperation},
     receipt::Receipt,
 };
+use log::debug;
 use reqwest::StatusCode;
 use reqwest_eventsource::EventSource;
 use tokio::time::sleep;
+
+use crate::error::bail_user_error;
 
 pub struct JstzClient {
     endpoint: String,
@@ -54,6 +57,8 @@ impl JstzClient {
         let response = self
             .get(&format!("{}/accounts/{}/nonce", self.endpoint, address))
             .await?;
+
+        debug!("Response: {:?}", response);
 
         match response.status() {
             StatusCode::OK => {
@@ -147,13 +152,22 @@ impl JstzClient {
         &self,
         hash: &OperationHash,
     ) -> Result<Receipt> {
+        // 30 seconds before timeout
+        const MAX_RETIRES: u32 = 150;
+        let mut retries: u32 = 0;
+
         loop {
+            if retries >= MAX_RETIRES {
+                bail_user_error!("Timeout waiting for operation receipt");
+            }
+
             if let Some(receipt) = self.get_operation_receipt(hash).await? {
                 return Ok(receipt);
             }
 
             // tokio sleep
             sleep(Duration::from_millis(200)).await;
+            retries += 1;
         }
     }
 

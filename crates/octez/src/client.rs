@@ -238,6 +238,19 @@ impl OctezClient {
         ]))
     }
 
+    fn wait_for_operation(&self, operation: &str) -> Result<()> {
+        run_command(self.command().args([
+            "wait",
+            "for",
+            operation,
+            "to",
+            "be",
+            "included",
+            "--confirmations",
+            "2",
+        ]))
+    }
+
     /// Originate a smart rollup
     pub fn originate_rollup(
         &self,
@@ -267,6 +280,10 @@ impl OctezClient {
             "999",
             "--force",
         ]))?;
+
+        let operation = regex_extract(r"Operation hash is '(o[^\s]+)'", &output)?;
+
+        self.wait_for_operation(&operation)?;
 
         regex_extract(r"Address: (sr1[^\s]+)", &output)
     }

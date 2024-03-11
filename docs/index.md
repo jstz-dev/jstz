@@ -17,4 +17,4 @@ with a great developer experience. It is built on [Boa](https://boajs.dev/) and 
 - 📚 **Easy to Learn**: `jstz` is built with the developer in mind.
 - ⚡️ **Fully-local**: test and develop your smart functions locally with a local sandbox.
 
-<VPButton href="/first_steps" size="big" theme="alt" text="Get Started!" style="border-radius:4px;text-decoration:none" />
+<VPButton href="/quick_start" size="big" theme="alt" text="Get Started!" style="border-radius:4px;text-decoration:none" />

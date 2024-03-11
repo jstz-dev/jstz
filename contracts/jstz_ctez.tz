@@ -1,49 +1,24 @@
 { parameter
-    (or (pair %mint (int %quantity) (address %target))
-        (pair %transfer (address %from) (address %to) (nat %value))) ;
-  storage (pair (address %admin) (big_map %tokens address nat)) ;
+    (or (pair %transfer (address %from) (address %to) (nat %value))
+        (pair %mint (int %quantity) (address %target))) ;
+  storage (pair (big_map %tokens address nat) (address %admin)) ;
   code { LAMBDA
-           (pair (pair address (big_map address nat)) address)
+           (pair (pair (big_map address nat) address) address)
            nat
-           { UNPAIR ; CDR ; SWAP ; GET ; IF_NONE { PUSH nat 0 } {} } ;
+           { UNPAIR ; CAR ; SWAP ; GET ; IF_NONE { PUSH nat 0 } {} } ;
          LAMBDA
-           (pair (pair address (big_map address nat)) address nat)
-           (pair address (big_map address nat))
+           (pair (pair (big_map address nat) address) address nat)
+           (pair (big_map address nat) address)
            { UNPAIR 3 ;
              PUSH nat 0 ;
              DUP 4 ;
              COMPARE ;
              EQ ;
              IF { SWAP ; DIG 2 ; DROP 2 }
-                { DUP ; CDR ; DIG 3 ; SOME ; DIG 3 ; UPDATE ; UPDATE 2 } } ;
+                { DUP ; CAR ; DIG 3 ; SOME ; DIG 3 ; UPDATE ; UPDATE 1 } } ;
          DIG 2 ;
          UNPAIR ;
          IF_LEFT
-           { DUP 2 ;
-             CAR ;
-             SENDER ;
-             COMPARE ;
-             NEQ ;
-             IF { DROP 4 ; PUSH string "Only `admin` can mint tokens" ; FAILWITH }
-                { DUP ;
-                  CDR ;
-                  DUP 3 ;
-                  PAIR ;
-                  DIG 4 ;
-                  SWAP ;
-                  EXEC ;
-                  DUP 2 ;
-                  CAR ;
-                  ADD ;
-                  ISNAT ;
-                  IF_NONE { PUSH string "Balance underflow" ; FAILWITH } {} ;
-                  SWAP ;
-                  CDR ;
-                  DIG 2 ;
-                  PAIR 3 ;
-                  EXEC ;
-                  NIL operation ;
-                  PAIR } }
            { DUP ;
              CAR ;
              DUP 3 ;
@@ -78,7 +53,24 @@
              GET 3 ;
              DIG 2 ;
              PAIR 3 ;
+             EXEC }
+           { DUP ;
+             CDR ;
+             DUP 3 ;
+             PAIR ;
+             DIG 4 ;
+             SWAP ;
              EXEC ;
-             NIL operation ;
-             PAIR } } }
+             DUP 2 ;
+             CAR ;
+             ADD ;
+             ISNAT ;
+             IF_NONE { PUSH string "Balance underflow" ; FAILWITH } {} ;
+             SWAP ;
+             CDR ;
+             DIG 2 ;
+             PAIR 3 ;
+             EXEC } ;
+         NIL operation ;
+         PAIR } }
 

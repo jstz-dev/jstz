@@ -16,21 +16,26 @@ members = [
 
 [workspace.package]
 edition = "2021"
-version = "0.1.0"
+version = "0.1.0-alpha.0"
 authors = ["TriliTech <contact@trili.tech>"]
 repository = "https://github.com/trilitech/jstz"
+homepage = "https://github.com/trilitech/jstz"
+documentation = "https://trilitech.github.io/jstz/"
+readme = "README.md"
+license-file = "LICENSE"
+description = "JavaScript server runtime for Tezos Smart Rollups"
 
 [workspace.dependencies]
-jstz_core = { path = "crates/jstz_core" }
-jstz_api = { path = "crates/jstz_api" }
-jstz_kernel = { path = "crates/jstz_kernel" }
-jstz_proto = { path = "crates/jstz_proto" }
-jstz_crypto = { path = "crates/jstz_crypto" }
-jstz_node = { path = "crates/jstz_node" }
-jstz_cli = { path = "crates/jstz_cli" }
-jstz_wpt = { path = "crates/jstz_wpt" }
-octez = { path = "crates/octez" }
-jstz_rollup = { path = "crates/jstz_rollup" }
+jstz_core = { version = "0.1.0-alpha.0", path = "crates/jstz_core" }
+jstz_api = { version = "0.1.0-alpha.0", path = "crates/jstz_api" }
+jstz_kernel = { version = "0.1.0-alpha.0", path = "crates/jstz_kernel" }
+jstz_proto = { version = "0.1.0-alpha.0", path = "crates/jstz_proto" }
+jstz_crypto = { version = "0.1.0-alpha.0", path = "crates/jstz_crypto" }
+jstz_node = { version = "0.1.0-alpha.0", path = "crates/jstz_node" }
+jstz_cli = { version = "0.1.0-alpha.0", path = "crates/jstz_cli" }
+jstz_wpt = { version = "0.1.0-alpha.0", path = "crates/jstz_wpt" }
+octez = { version = "0.1.0-alpha.0", path = "crates/octez" }
+jstz_rollup = { version = "0.1.0-alpha.0", path = "crates/jstz_rollup" }
 
 [workspace.dependencies.tezos-smart-rollup]
 version = "0.2.2"

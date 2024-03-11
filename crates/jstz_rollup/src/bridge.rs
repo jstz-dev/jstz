@@ -24,13 +24,13 @@ pub fn deploy_ctez_contract(
     bootstrap_accounts.sort();
 
     let init_storage = format!(
-        "(Pair \"{}\" {{ {} }} )",
-        operator_address,
+        "(Pair {{ {} }} \"{}\" )",
         bootstrap_accounts
             .iter()
             .map(BootstrapAccount::as_michelson_elt)
             .collect::<Vec<_>>()
-            .join(";")
+            .join(";"),
+        operator_address,
     );
 
     client.originate_contract("jstz_ctez", operator_address, CTEZ_CONTRACT, &init_storage)
@@ -57,7 +57,7 @@ impl BridgeContract {
         operator: &str,
         ctez_address: &str,
     ) -> Result<Self> {
-        let init_storage = format!("(Pair \"{}\" None)", ctez_address);
+        let init_storage = format!("(Pair None \"{}\" )", ctez_address);
 
         let bridge_address = client.originate_contract(
             "jstz_bridge",

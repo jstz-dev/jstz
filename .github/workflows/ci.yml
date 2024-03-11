@@ -1,15 +1,10 @@
-name: Continuous Integration & Deployment
+name: Continuous Integration
 
 on:
   pull_request:
   push:
     branches: [main]
-
-env:
-  DOCKER_REGISTRY: ghcr.io
-  DOCKER_IMAGE_BASE: trilitech
-  NETWORK: nairobinet
-  JSTZ_ROLLUP_BRIDGE_ADDRESS: KT1WVsN9Rd4v9EiZ9uunyrVAwDucKXqHv3Fy
+    tags: ["v*"]
 
 jobs:
   commitlint:
@@ -50,6 +45,13 @@ jobs:
 
       - name: Build kernel
         run: make build-kernel
+
+      - name: Upload kernel
+        id: upload-kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: jstz-kernel
+          path: target/wasm32-unknown-unknown/release/jstz_kernel.wasm
 
       - name: Lint
         run: make lint
@@ -132,3 +134,13 @@ jobs:
 
       - name: Build
         run: nix build -j auto
+
+  build-docker:
+    # Only build Docker images for tags
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    name: Build (Docker)
+    needs: [build-rust, build-sdk, build-docs]
+    uses: ./.github/workflows/docker.yml
+    with:
+      # NOTE: When updating octez, make sure to update the tag here
+      octez-tag: "master_c23fc413_20240305233712"

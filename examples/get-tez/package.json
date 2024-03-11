@@ -3,7 +3,7 @@
   "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
   "private": true,
   "version": "0.0.0",
-  "main": "fa2.ts",
+  "main": "index.ts",
   "dependencies": {
     "@tezos/jstz": "^0.0.0"
   },

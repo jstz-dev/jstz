@@ -1,0 +1,103 @@
+name: Deploy jstz to a Tezos teztnet
+
+on:
+  workflow_call:
+    inputs:
+      network:
+        description: "The teztnet selected for deployment"
+        type: string
+
+jobs:
+  download-teztnet-config:
+    name: Download details of the network from teztnets.com
+    runs-on: ubuntu-latest
+    outputs:
+      network: ${{ steps.network.outputs.NETWORK }}
+      octez-tag: ${{ steps.octez-tag.outputs.OCTEZ_TAG }}
+    steps:
+      - name: Download network config
+        run: |
+          curl -s https://teztnets.com/teztnets.json | \
+            jq -r 'to_entries[] | select(.value.human_name | test("${{ github.event.inputs.network }}"; "i")) >> \ 
+            network.json
+
+      - name: Extract NETWORK
+        id: network
+        run: |
+          NETWORK=$(jq -r '.key' network.json | tr -d '\n')
+          echo "NETWORK=${NETWORK}" >> $GITHUB_ENV
+
+      - name: Extract OCTEZ_TAG
+        id: octez-tag
+        run: |
+          OCTEZ_TAG=$(jq -r '.value.octez_tag' network.json | \
+            grep -oP "master_[0-9a-f]{8}_[0-9a-f]{14}" | \
+            uniq | \
+            tr -d '\n')
+          echo "OCTEZ_TAG=${OCTEZ_TAG}" >> $GITHUB_ENV
+
+  fund-operator:
+    name: Fund operator
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install get-tez
+        run: npm install @tacoinfra/get-tez
+      - run: |
+          npx @tacoinfra/get-tez ${{ secrets.JSTZ_ROLLUP_OPERATOR_ADDRESS }} \
+            --amount 10100 \
+            --network ${{ github.event.inputs.network }}
+
+  build-kernel:
+    name: Build (Kernel)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2.7.1
+      - name: Rust setup
+        run: rustup show active-toolchain
+      - name: Build kernel
+        run: make build-kernel
+      - name: Upload kernel
+        id: upload-kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: jstz_kernel
+          path: target/wasm32-unknown-unknown/release/jstz_kernel.wasm
+
+  build-docker:
+    name: Build (Docker)
+    uses: ./.github/workflows/docker.yml
+    needs: [download-teztnet-config, build-kernel]
+    with:
+      octez-tag: "${{ needs.download-teztnet-config.outputs.octez-tag }}"
+
+  deploy-rollup:
+    name: Deploy jstz rollup
+    needs: [download-teztnet-config, fund-operator, build-docker]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy rollup
+        run: |
+          ROLLUP_ADDRESS=$(docker run -v "/var/run/docker.sock":"/var/run/docker.sock" \
+            -e NETWORK=${{ needs.download-teztnet-config.outputs.network }} -e OPERATOR_SK=${{ secrets.JSTZ_ROLLUP_OPERATOR_SK }} \
+            ${{ needs.build-docker.outputs.jstz-rollup }} \
+            deploy |
+            grep -oE "sr1[a-zA-Z0-9]{33}" | 
+            uniq | 
+            tr -d '\n')
+          echo "ROLLUP_ADDRESS=${ROLLUP_ADDRESS}" >> $GITHUB_ENV
+
+      - name: Create GitHub deployment
+        uses: altinukshini/deployment-action@releases/v1
+        id: deployment
+        with:
+          token: "${{ github.token }}"
+          environment: ${{ github.event.inputs.network }}
+
+      - name: Update deployment status
+        uses: altinukshini/deployment-status@releases/v1
+        with:
+          token: "${{ github.token }}"
+          state: "success"
+          environment_url: https://${{ needs.download-teztnet-config.outputs.network }}.tzkt.io/${{ env.ROLLUP_ADDRESS }}
+          deployment_id: ${{ steps.deployment.outputs.deployment_id }}

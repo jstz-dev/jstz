@@ -4,6 +4,11 @@ authors.workspace = true
 version.workspace = true
 edition.workspace = true
 repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description.workspace = true
 
 [dependencies]
 base64 = "0.21.7"
@@ -27,7 +32,6 @@ clap = { version = "^4.4", features = ["derive"] }
 [dev-dependencies]
 anyhow = "1.0.75"
 expect-test = "1.4.1"
-jstz_wpt = { version = "0.1.0", path = "../jstz_wpt" }
+jstz_wpt.workspace = true
 tokio = { version = "1.36.0", features = ["full"] }
-jstz_proto.workspace = true
 tezos-smart-rollup-mock = "0.2.2"

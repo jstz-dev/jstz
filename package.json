@@ -7,7 +7,8 @@
   "workspaces": [
     "packages/*",
     "examples/fa2",
-    "examples/hello-world"
+    "examples/hello-world",
+    "examples/get-tez"
   ],
   "scripts": {
     "commitlint": "commitlint --from HEAD~1 --to HEAD --verbose",

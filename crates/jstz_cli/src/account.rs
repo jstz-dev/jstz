@@ -231,8 +231,8 @@ fn list_accounts(long: bool) -> Result<()> {
                     info!("  Secret Key: {}", secret_key.to_string());
                 }
                 Account::SmartFunction(SmartFunction { address, .. }) => {
-                    println!("  Type: Smart Function");
-                    println!("  Address: {}", address);
+                    info!("  Type: Smart Function");
+                    info!("  Address: {}", address);
                 }
             }
         } else {
