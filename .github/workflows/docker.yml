@@ -89,7 +89,7 @@ jobs:
           push: true
           build-args: |
             OCTEZ_TAG=${{ inputs.octez-tag }}
-            KERNEL_PATH=jstz_kernel/jstz_kernel.wasm
+            KERNEL_PATH=./jstz_kernel/jstz_kernel.wasm
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: ${{ steps.meta.outputs.tags }}

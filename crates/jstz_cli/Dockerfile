@@ -21,7 +21,7 @@ COPY --from=octez /usr/local/bin/octez-client /usr/bin/octez-client
 COPY --from=octez /usr/share/zcash-params /root/.zcash-params
 # Copy the jstz binary & dependencies
 COPY --from=builder /target/debug/jstz /usr/bin/jstz
-COPY $KERNEL_PATH /usr/share/jstz/jstz_kernel.wasm
+COPY --from=builder /crates/jstz_cli/jstz_kernel.wasm /usr/share/jstz/jstz_kernel.wasm
 COPY --from=builder /crates/jstz_cli/sandbox-params.json /usr/share/jstz/sandbox-params.json
 COPY --from=builder /crates/jstz_cli/sandbox.json /usr/share/jstz/sandbox.json
 ENTRYPOINT [ "/usr/bin/jstz" ]
