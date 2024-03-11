@@ -2,7 +2,7 @@
 
 This guide will instruct you in writing and deploying your first _smart function_ in under 10 minutes.
 
-It assumes that you have already [installed `jstz`](installation.md) and have a basic familiarity with [JavaScript](https://www.youtube.com/watch?v=lkIFF4maKMU).
+It assumes that you have already [installed `jstz`](installation.md) and have a basic familiarity with [JavaScript](https://www.youtube.com/watch?v=lkIFF4maKMU) and have `npm` (`>= 9.6.7`) installed.
 
 ## What is jstz?
 
@@ -11,7 +11,13 @@ It assumes that you have already [installed `jstz`](installation.md) and have a 
 With `jstz` you can deploy so called _smart functions_ which are operating similarly to cloud functions, while running on Tezos L2 and
 providing additional security and blockchain-specific functionality typical for smart contracts.
 
-## 1) Your First Smart Function
+## 1. Your First Smart Function
+
+First we will clone the `jstz` repository and navigate to the `get-tez` example:
+
+```sh
+git clone https://github.com/trilitech/jstz.git && cd jstz/examples/get-tez
+```
 
 In this example, the smart function provides a way to send a tez to the requester if asked politely.
 It takes a HTTP `Request` object with a message and returns a `Response` object informing whether the request succeeded.
@@ -115,27 +121,83 @@ In addition to several [standard Web APIs](./api/index.md#web-platform-apis), `j
   Smart functions can invoke other smart functions using `fetch`, similiar to network requests in JavaScript.
   Additionally, new smart functions can be deployed by a smart function using the [`SmartFunction`](./api/smart_function.md) API.
 
-## 2) Deploying your Smart Function
+## 2. Deploying your Smart Function
 
-First we must compile our TypeScript code to JavaScript using:
+First we must install the dependencies for our smart function and start the local sandbox.
+
+```sh
+npm install
+jstz sandbox start
+```
+
+<details>
+<summary>Output</summary>
+<pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
+<code style="color: #FFF;">$ npm install
+up to date, audited 282 packages in 562ms
+
+42 packages are looking for funding
+run `npm fund` for details
+
+found 0 vulnerabilities
+
+$ jstz sandbox start
+
+           __________
+           \  jstz  /
+            )______(
+            |""""""|_.-._,.---------.,_.-._
+            |      | | |               | | ''-.
+            |      |_| |_             _| |_..-'
+            |______| '-' `'---------'` '-'
+            )""""""(
+           /________\
+           `'------'`
+         .------------.
+        /______________\
+
+        0.1.0-alpha.0 https://github.com/trilitech/jstz
+
+octez-node is listening on: http://127.0.0.1:18731
+octez-smart-rollup-node is listening on: http://127.0.0.1:8932
+jstz-node is listening on: http://127.0.0.1:8933
+
+Tezos bootstrap accounts:
++---------------------------------------------------+---------------+--------------+
+| Address | XTZ Balance | CTEZ Balance |
++===================================================+===============+==============+
+| (bootstrap1) tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx | 4000000000000 | 100000000000 |
++---------------------------------------------------+---------------+--------------+
+| (bootstrap2) tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN | 4000000000000 | 100000000000 |
++---------------------------------------------------+---------------+--------------+
+| (bootstrap3) tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU | 4000000000000 | 100000000000 |
++---------------------------------------------------+---------------+--------------+
+| (bootstrap4) tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv | 4000000000000 | 100000000000 |
++---------------------------------------------------+---------------+--------------+
+| (bootstrap5) tz1ddb9NMYHZi5UzPdzTZMYQQZoMub195zgv | 4000000000000 | 100000000000 |
++---------------------------------------------------+---------------+--------------+
+
+</code>
+</pre>
+</details>
+
+Now, in a new terminal, we can compile our TypeScript code to JavaScript using and deploy it using:
 
 ```sh
 npm run build
-```
-
-Once built, we can deploy the smart function to the local sandbox:
-
-```sh
-jstz sandbox start -d
 jstz deploy dist/index.js
 ```
 
 <details>
 <summary>Output</summary>
 <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
-<code style="color: #FFF;">$ jstz sandbox start --detach
-Sandbox pid: 2132. Use `jstz sandbox stop` to stop the sandbox background process.
-Use `jstz sandbox restart --detach` to start from a clear sandbox state.
+<code style="color: #FFF;">$ npm run build
+> @tezos/get-tez@0.0.0 build
+> esbuild index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js
+
+dist/index.js 777b
+
+⚡ Done in 10ms
 
 $ jstz deploy dist/index.js
 You are not logged in. Please type the account name that you want to log into or create as new: alan
@@ -155,6 +217,8 @@ Since this is your first deployment, you need to:
    The `jstz sandbox start` command starts the local sandbox. Press `Ctrl+C` to stop the sandbox.
 
    ::: tip
+   **(Only for non-Docker users)**
+
    The `--detach` (`-d`) flag starts the sandbox in the background, allowing you to continue working in the same terminal.
    The sandbox can be stopped or reset using `jstz sandbox stop` or `jstz sandbox restart`.
    :::
@@ -183,7 +247,7 @@ Within the sandbox environment, there are pre-funded L1 accounts `bootstrap1` th
 jstz bridge deposit --from bootstrap1 --to tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W --amount 10000000
 ```
 
-## 3) Running and debugging your Smart Function
+## 3. Running and debugging your Smart Function
 
 After a succesful deployment, you will be able to run the smart function with the provided command to run your smart function similarly to the following:
 
@@ -207,7 +271,7 @@ Body: Thank you for your polite request. You received 1 tez!
 Congratulations! 🎉 You have now successfully deployed and crafted an HTTP request to run your first smart function.
 
 ::: tip  
-To deploy and interact with your function on networks beyond the sandbox, like `dailynet` or `weeklynet`, use the `--network` (`-n`) flag.
+To deploy and interact with your function on networks beyond the sandbox, like `weeklynet`, use the `--network` (`-n`) flag.
 :::
 
 For debugging, `jstz` provides the following tools:
