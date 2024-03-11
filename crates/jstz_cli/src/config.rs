@@ -343,6 +343,10 @@ impl Config {
     }
 
     pub fn jstz_client(&self, network_name: &Option<NetworkName>) -> Result<JstzClient> {
+        if let Some(NetworkName::Dev) = network_name {
+            self.sandbox()?;
+        };
+
         let network = self.network(network_name)?;
 
         Ok(JstzClient::new(network.jstz_node_endpoint.clone()))
