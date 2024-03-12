@@ -35,7 +35,10 @@ jstz_configure() {
 
     mkdir -p "$jstz_home"
     
-    cat >"$jstz_home/config.json" << EOF
+    config_file="$jstz_home/config.json"
+    temp_file=$(mktemp)
+
+    cat >"$temp_file" << EOF
 {
   "default_network": "dev",
   "networks": {
@@ -47,7 +50,25 @@ jstz_configure() {
 }
 EOF
 
-    echo "Configuration updated."
+    if [ -f "$config_file" ]; then
+        if ! cmp -s "$config_file" "$temp_file"; then
+            echo "Configuration differs. Creating a backup..."
+            backup_file="${config_file}.bak"
+            cp "$config_file" "$backup_file"
+            echo "Backup created at $backup_file"
+
+            cp "$temp_file" "$config_file"
+            echo "Configuration updated."
+        else
+            echo "Configuration unchanged. No update needed."
+        fi
+    else
+        mv "$temp_file" "$config_file"
+        echo "Configuration created."
+    fi
+
+    # Cleanup the temporary file if it still exists
+    [ -f "$temp_file" ] && rm "$temp_file"
 
     echo "Configuring \`jstz\` alias..."
 
