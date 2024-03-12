@@ -18,23 +18,22 @@ jobs:
       - name: Download network config
         run: |
           curl -s https://teztnets.com/teztnets.json | \
-            jq -r 'to_entries[] | select(.value.human_name | test("${{ github.event.inputs.network }}"; "i")) >> \ 
-            network.json
+            jq -r "to_entries[] | select(.value.human_name | test(\"${{ inputs.network }}\"; \"i\"))" > network.json
 
       - name: Extract NETWORK
         id: network
         run: |
-          NETWORK=$(jq -r '.key' network.json | tr -d '\n')
-          echo "NETWORK=${NETWORK}" >> $GITHUB_ENV
+          NETWORK=$(jq -r ".key" network.json | tr -d '\n')
+          echo "NETWORK=${NETWORK}" >> $GITHUB_OUTPUT
 
       - name: Extract OCTEZ_TAG
         id: octez-tag
         run: |
-          OCTEZ_TAG=$(jq -r '.value.octez_tag' network.json | \
-            grep -oP "master_[0-9a-f]{8}_[0-9a-f]{14}" | \
+          OCTEZ_TAG=$(jq -r ".value.docker_build" network.json | \
+            grep -oE "master_[0-9a-f]{8}_[0-9a-f]{14}" | \
             uniq | \
-            tr -d '\n')
-          echo "OCTEZ_TAG=${OCTEZ_TAG}" >> $GITHUB_ENV
+            tr -d "\n")
+          echo "OCTEZ_TAG=${OCTEZ_TAG}" >> $GITHUB_OUTPUT
 
   fund-operator:
     name: Fund operator
@@ -43,9 +42,9 @@ jobs:
       - name: Install get-tez
         run: npm install @tacoinfra/get-tez
       - run: |
-          npx @tacoinfra/get-tez ${{ secrets.JSTZ_ROLLUP_OPERATOR_ADDRESS }} \
+          npx @tacoinfra/get-tez "${{ secrets.JSTZ_ROLLUP_OPERATOR_ADDRESS }}" \
             --amount 10100 \
-            --network ${{ github.event.inputs.network }}
+            --network "${{ inputs.network }}"
 
   build-kernel:
     name: Build (Kernel)
@@ -61,7 +60,7 @@ jobs:
         id: upload-kernel
         uses: actions/upload-artifact@v4
         with:
-          name: jstz_kernel
+          name: jstz-kernel
           path: target/wasm32-unknown-unknown/release/jstz_kernel.wasm
 
   build-docker:
@@ -78,21 +77,23 @@ jobs:
     steps:
       - name: Deploy rollup
         run: |
-          ROLLUP_ADDRESS=$(docker run -v "/var/run/docker.sock":"/var/run/docker.sock" \
-            -e NETWORK=${{ needs.download-teztnet-config.outputs.network }} -e OPERATOR_SK=${{ secrets.JSTZ_ROLLUP_OPERATOR_SK }} \
+          OUTPUT=$(docker run -v "/var/run/docker.sock":"/var/run/docker.sock" \
+            -e NETWORK="${{ needs.download-teztnet-config.outputs.network }}" \
+            -e OPERATOR_SK="${{ secrets.JSTZ_ROLLUP_OPERATOR_SK }}" \
+            -e OPERATOR_ADDRESS="${{ secrets.JSTZ_ROLLUP_OPERATOR_ADDRESS }}" \
             ${{ needs.build-docker.outputs.jstz-rollup }} \
-            deploy |
-            grep -oE "sr1[a-zA-Z0-9]{33}" | 
-            uniq | 
-            tr -d '\n')
+            deploy)
+          ROLLUP_ADDRESS=$(echo "$OUTPUT" | grep -oE "sr1[a-zA-Z0-9]{33}" | uniq | tr -d "\n")
+          BRIDGE_ADDRESS=$(echo "$OUTPUT" | grep -oE "KT1[a-zA-Z0-9]{33}" | uniq | tr -d "\n")
           echo "ROLLUP_ADDRESS=${ROLLUP_ADDRESS}" >> $GITHUB_ENV
+          echo "BRIDGE_ADDRESS=${BRIDGE_ADDRESS}" >> $GITHUB_ENV
 
       - name: Create GitHub deployment
         uses: altinukshini/deployment-action@releases/v1
         id: deployment
         with:
           token: "${{ github.token }}"
-          environment: ${{ github.event.inputs.network }}
+          environment: ${{ inputs.network }}
 
       - name: Update deployment status
         uses: altinukshini/deployment-status@releases/v1
@@ -101,3 +102,6 @@ jobs:
           state: "success"
           environment_url: https://${{ needs.download-teztnet-config.outputs.network }}.tzkt.io/${{ env.ROLLUP_ADDRESS }}
           deployment_id: ${{ steps.deployment.outputs.deployment_id }}
+          description: |
+            Rollup address: ${{ env.ROLLUP_ADDRESS }}
+            Bridge address: ${{ env.BRIDGE_ADDRESS }}
