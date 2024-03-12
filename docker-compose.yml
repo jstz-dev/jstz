@@ -2,13 +2,7 @@ version: "3"
 
 services:
   rollup:
-    image: jstz-rollup:latest
-    build:
-      context: .
-      dockerfile: crates/jstz_rollup/Dockerfile
-      args:
-        - OCTEZ_TAG
-        - KERNEL_PATH
+    image: ${DOCKER_REGISTRY}jstz-rollup:${JSTZ_TAG}
     command: run
     restart: "no"
     env_file:
@@ -18,23 +12,28 @@ services:
     networks:
       - internal
     volumes:
-      - ./logs:/root/logs
+      - logs:/root/logs
 
   node:
-    image: jstz-node:latest
-    build:
-      context: .
-      dockerfile: crates/jstz_node/Dockerfile
-    command: --rollup-endpoint http://rollup:8932 --kernel-log-path /root/logs/kernel.log --addr 0.0.0.0
+    image: ${DOCKER_REGISTRY}jstz-node:${JSTZ_TAG}
+    # Modify the jstz-node to automatically create the kernel.log file if it beats the rollup to starting
+    entrypoint: /bin/sh
+    command: >
+      -c "mkdir -p /roots/logs &&
+          touch /roots/logs/kernel.log &&
+          usr/bin/jstz-node --rollup-endpoint http://rollup:8932 --kernel-log-path /root/logs/kernel.log --addr 0.0.0.0"
     restart: always
     ports:
       - 8933:8933
     networks:
       - internal
     volumes:
-      - ./logs:/root/logs
+      - logs:/root/logs
     depends_on:
       - rollup
 
 networks:
   internal:
+
+volumes:
+  logs:
