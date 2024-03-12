@@ -10,11 +10,9 @@ use std::{
 };
 
 use boa_engine::{
-    builtins::promise::PromiseState,
-    context::HostHooks,
-    job::NativeJob,
-    object::builtins::{JsFunction, JsPromise},
-    Context, JsError, JsNativeError, JsResult, JsValue, Source,
+    builtins::promise::PromiseState, context::HostHooks, job::NativeJob,
+    object::builtins::JsPromise, Context, JsError, JsNativeError, JsResult, JsValue,
+    Source,
 };
 use chrono::{DateTime, FixedOffset, LocalResult, NaiveDateTime};
 use getrandom::{register_custom_getrandom, Error as RandomError};
@@ -32,23 +30,23 @@ const UTC_NOW: i64 = 1690797026;
 struct Hooks;
 
 impl HostHooks for Hooks {
-    fn ensure_can_compile_strings(
-        &self,
-        _realm: boa_engine::realm::Realm,
-        _context: &mut Context<'_>,
-    ) -> JsResult<()> {
-        Err(JsNativeError::typ()
-            .with_message("eval calls not available")
-            .into())
-    }
+    // fn ensure_can_compile_strings(
+    //     &self,
+    //     _realm: boa_engine::realm::Realm,
+    //     _context: &mut Context<'_>,
+    // ) -> JsResult<()> {
+    //     Err(JsNativeError::typ()
+    //         .with_message("eval calls not available")
+    //         .into())
+    // }
 
-    fn has_source_text_available(
-        &self,
-        _function: &JsFunction,
-        _context: &mut Context<'_>,
-    ) -> bool {
-        false
-    }
+    // fn has_source_text_available(
+    //     &self,
+    //     _function: &JsFunction,
+    //     _context: &mut Context<'_>,
+    // ) -> bool {
+    //     false
+    // }
 
     fn utc_now(&self) -> NaiveDateTime {
         NaiveDateTime::from_timestamp_opt(UTC_NOW, 0)
