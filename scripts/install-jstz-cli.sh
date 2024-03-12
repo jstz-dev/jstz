@@ -90,7 +90,7 @@ EOF
     esac
 
     if grep -q "alias jstz=" "$shellrc"; then
-        sed -i '' "/alias jstz=/c\\
+        sed -i'' -e "/alias jstz=/c\\
 $shell_alias" "$shellrc"
         echo "Alias updated in $shellrc."
     else
