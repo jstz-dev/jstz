@@ -61,7 +61,7 @@ jobs:
         id: upload-kernel
         uses: actions/upload-artifact@v4
         with:
-          name: jstz_kernel
+          name: jstz-kernel
           path: target/wasm32-unknown-unknown/release/jstz_kernel.wasm
 
   build-docker:
@@ -79,7 +79,9 @@ jobs:
       - name: Deploy rollup
         run: |
           ROLLUP_ADDRESS=$(docker run -v "/var/run/docker.sock":"/var/run/docker.sock" \
-            -e NETWORK=${{ needs.download-teztnet-config.outputs.network }} -e OPERATOR_SK=${{ secrets.JSTZ_ROLLUP_OPERATOR_SK }} \
+            -e NETWORK=${{ needs.download-teztnet-config.outputs.network }} \
+            -e OPERATOR_SK=${{ secrets.JSTZ_ROLLUP_OPERATOR_SK }} \
+            -e OPERATOR_ADDRESS=${{ secrets.JSTZ_ROLLUP_OPERATOR_ADDRESS }} \
             ${{ needs.build-docker.outputs.jstz-rollup }} \
             deploy |
             grep -oE "sr1[a-zA-Z0-9]{33}" | 
