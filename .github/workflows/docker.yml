@@ -82,7 +82,7 @@ jobs:
         id: jstz-rollup-tag
         if: matrix.image == 'jstz-rollup'
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5.1.0
+        uses: docker/build-push-action@v5.2.0
         with:
           context: .
           file: ${{ matrix.dockerfile }}
