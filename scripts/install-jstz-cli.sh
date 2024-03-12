@@ -31,13 +31,11 @@ jstz_download() {
 }
 
 jstz_configure() {
-    if [ -d "$jstz_home" ]; then
-        echo "Configuration already exists. Skipping..."
-    else
-        echo -n "Configuring jstz..."
+    echo -n "Configuring jstz..."
 
-        mkdir -p "$jstz_home"
-        cat >"$jstz_home/config.json" << EOF
+    mkdir -p "$jstz_home"
+    
+    cat >"$jstz_home/config.json" << EOF
 {
   "default_network": "dev",
   "networks": {
@@ -49,8 +47,7 @@ jstz_configure() {
 }
 EOF
 
-        echo "done"
-    fi
+    echo "Configuration updated."
 
     echo "Configuring \`jstz\` alias..."
 
