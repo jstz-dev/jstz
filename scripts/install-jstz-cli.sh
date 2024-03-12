@@ -71,20 +71,20 @@ EOF
             exit 1
     esac
 
-    # Check if the alias already exists to avoid duplicates
-    if ! grep -q "alias jstz=" "$shellrc"; then
-        # Append the alias to the shell configuration file
+    if grep -q "alias jstz=" "$shellrc"; then
+        sed -i '' "/alias jstz=/c\\
+$shell_alias" "$shellrc"
+        echo "Alias updated in $shellrc."
+    else
         echo "$shell_alias" >> "$shellrc"
         echo "Alias added to $shellrc."
-
-        # shellcheck disable=SC1090 
-        # `$shellrc`` can only be determined at runtime, so we need to disable the warning.
-        # 
-        # Reload the shell configuration file to apply the changes 
-        . "$shellrc"
-    else
-        echo "Alias already exists in $shellrc. Skipping..."
     fi
+
+    # shellcheck disable=SC1090
+    # `$shellrc` can only be determined at runtime, so we need to disable the warning.
+    # 
+    # Reload the shell configuration file to apply the changes 
+    . "$shellrc"
 }
 
 do_install() {
