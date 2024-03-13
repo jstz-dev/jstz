@@ -46,27 +46,10 @@ jobs:
             --amount 10100 \
             --network "${{ inputs.network }}"
 
-  build-kernel:
-    name: Build (Kernel)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2.7.1
-      - name: Rust setup
-        run: rustup show active-toolchain
-      - name: Build kernel
-        run: make build-kernel
-      - name: Upload kernel
-        id: upload-kernel
-        uses: actions/upload-artifact@v4
-        with:
-          name: jstz-kernel
-          path: target/wasm32-unknown-unknown/release/jstz_kernel.wasm
-
   build-docker:
     name: Build (Docker)
     uses: ./.github/workflows/docker.yml
-    needs: [download-teztnet-config, build-kernel]
+    needs: [download-teztnet-config]
     with:
       octez-tag: "${{ needs.download-teztnet-config.outputs.octez-tag }}"
 
