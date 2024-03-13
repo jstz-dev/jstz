@@ -9,5 +9,6 @@ jobs:
   deploy:
     name: Deploy to weeklynet
     uses: ./.github/workflows/deploy-teztnet.yml
+    secrets: inherit
     with:
       network: weeklynet

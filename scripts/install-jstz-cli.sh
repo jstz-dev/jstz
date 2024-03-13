@@ -2,8 +2,8 @@
 
 { # this ensures the entire script is downloaded
 
-version="v0.1.0-alpha.0"
-network="weeklynet-2024-03-06"
+version="20240313"
+network="weeklynet-2024-03-13"
 container="ghcr.io/trilitech/jstz-cli:$version"
 jstz_home="$HOME/.jstz"
 
@@ -31,13 +31,14 @@ jstz_download() {
 }
 
 jstz_configure() {
-    if [ -d "$jstz_home" ]; then
-        echo "Configuration already exists. Skipping..."
-    else
-        echo -n "Configuring jstz..."
+    echo -n "Configuring jstz..."
 
-        mkdir -p "$jstz_home"
-        cat >"$jstz_home/config.json" << EOF
+    mkdir -p "$jstz_home"
+    
+    config_file="$jstz_home/config.json"
+    temp_file=$(mktemp)
+
+    cat >"$temp_file" << EOF
 {
   "default_network": "dev",
   "networks": {
@@ -49,8 +50,25 @@ jstz_configure() {
 }
 EOF
 
-        echo "done"
+    if [ -f "$config_file" ]; then
+        if ! cmp -s "$config_file" "$temp_file"; then
+            echo "Configuration differs. Creating a backup..."
+            backup_file="${config_file}.bak"
+            cp "$config_file" "$backup_file"
+            echo "Backup created at $backup_file"
+
+            cp "$temp_file" "$config_file"
+            echo "Configuration updated."
+        else
+            echo "Configuration unchanged. No update needed."
+        fi
+    else
+        mv "$temp_file" "$config_file"
+        echo "Configuration created."
     fi
+
+    # Cleanup the temporary file if it still exists
+    [ -f "$temp_file" ] && rm "$temp_file"
 
     echo "Configuring \`jstz\` alias..."
 
@@ -72,7 +90,7 @@ EOF
     esac
 
     if grep -q "alias jstz=" "$shellrc"; then
-        sed -i '' "/alias jstz=/c\\
+        sed -i'' -e "/alias jstz=/c\\
 $shell_alias" "$shellrc"
         echo "Alias updated in $shellrc."
     else

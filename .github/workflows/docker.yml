@@ -1,6 +1,14 @@
 name: Build docker image for subsequent jobs
 
 on:
+  # For manually rebuilding the images
+  workflow_dispatch:
+    inputs:
+      octez-tag:
+        description: "tezos/tezos docker tag to be used"
+        required: true
+        type: string
+
   workflow_call:
     inputs:
       octez-tag:
@@ -23,8 +31,26 @@ env:
   DOCKER_IMAGE_BASE: trilitech
 
 jobs:
+  build-kernel:
+    name: Build (Kernel)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2.7.1
+      - name: Rust setup
+        run: rustup show active-toolchain
+      - name: Build kernel
+        run: make build-kernel
+      - name: Upload kernel
+        id: upload-kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: jstz-kernel
+          path: target/wasm32-unknown-unknown/release/jstz_kernel.wasm
+
   build-docker:
     name: Build (Docker)
+    needs: [build-kernel]
     runs-on:
       group: jstz
     permissions:
@@ -68,7 +94,9 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_BASE }}/${{ matrix.image }}
-          sep-tags: " "
+          tags: |
+            type=ref,event=tag
+            {{date 'YYYYMMDD'}}
       - # Extract tags for jstz
         run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
         id: jstz-cli-tag
