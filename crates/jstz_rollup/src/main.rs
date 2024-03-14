@@ -10,7 +10,7 @@ use figment::{
 use jstz_rollup::{
     deploy_ctez_contract, rollup, BootstrapAccount, BridgeContract, JstzRollup,
 };
-use octez::{OctezClient, OctezRollupNode, OctezThread};
+use octez::{OctezClient, OctezRollupNode, OctezSetup, OctezThread};
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::{ContractKt1Hash, ContractTz1Hash, SmartRollupHash};
 
@@ -18,17 +18,16 @@ const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "jstz_rollup_operator";
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Config {
-    octez_client_bin: Option<PathBuf>,
+    octez_setup: Option<OctezSetup>,
     octez_client_dir: Option<PathBuf>,
     octez_node_endpoint: String,
-    octez_rollup_node_bin: Option<PathBuf>,
     octez_rollup_node_dir: PathBuf,
 }
 
 impl Config {
     fn octez_client(&self) -> OctezClient {
         OctezClient {
-            octez_client_bin: self.octez_client_bin.clone(),
+            octez_setup: self.octez_setup.clone(),
             octez_client_dir: self.octez_client_dir.clone(),
             endpoint: self.octez_node_endpoint.clone(),
             disable_disclaimer: true,
@@ -37,7 +36,7 @@ impl Config {
 
     fn octez_rollup_node(&self) -> OctezRollupNode {
         OctezRollupNode {
-            octez_rollup_node_bin: self.octez_rollup_node_bin.clone(),
+            octez_setup: self.octez_setup.clone(),
             octez_rollup_node_dir: self.octez_rollup_node_dir.clone(),
             octez_client_dir: self.octez_client_dir.clone(),
             endpoint: self.octez_node_endpoint.clone(),

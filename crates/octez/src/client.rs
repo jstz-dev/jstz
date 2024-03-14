@@ -8,13 +8,12 @@ use anyhow::{anyhow, Result};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 
-use crate::{path_or_default, run_command, run_command_with_output};
+use crate::{run_command, run_command_with_output, OctezSetup};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OctezClient {
-    /// Path to the octez-client binary
-    /// If None, the binary will inside PATH will be used
-    pub octez_client_bin: Option<PathBuf>,
+    /// /// Setup for Octez client (process path or Docker container)
+    pub octez_setup: Option<OctezSetup>,
     /// If None, the default directory will be used (~/.tezos-client/)
     pub octez_client_dir: Option<PathBuf>,
     /// RPC endpoint for the octez-node
@@ -46,25 +45,63 @@ pub struct AliasInfo {
 
 impl OctezClient {
     pub fn new(
-        octez_client_bin: Option<PathBuf>,
+        octez_setup: Option<OctezSetup>,
         octez_client_dir: Option<PathBuf>,
         endpoint: String,
         disable_disclaimer: bool,
     ) -> Self {
         Self {
-            octez_client_bin,
+            octez_setup,
             octez_client_dir,
             endpoint,
             disable_disclaimer,
         }
     }
 
-    fn command(&self) -> Command {
-        let mut command = Command::new(path_or_default(
-            self.octez_client_bin.as_ref(),
-            "octez-client",
-        ));
+    fn command(&self, mounts: &[String]) -> Command {
+        match &self.octez_setup {
+            Some(OctezSetup::Process(path)) => {
+                let bin_path = path.join("octez-client");
+                let mut command = Command::new(bin_path);
+                self.configure_command(&mut command);
+                command
+            }
+            Some(OctezSetup::Docker(container_name)) => {
+                let mut cmd = Command::new("docker");
 
+                let mut args = vec![
+                    "run".to_string(),
+                    "--network=host".to_string(),
+                    "--entrypoint=/usr/local/bin/octez-client".to_string(),
+                    "-v".to_string(),
+                    "/var:/var".to_string(),
+                    "-v".to_string(),
+                    "/tmp:/tmp".to_string(),
+                ];
+
+                // Iterate over the host paths to mount, using fixed container paths
+                for path in mounts {
+                    args.push("-v".to_string());
+                    args.push(format!("{}:{}", path, path));
+                }
+
+                args.push(container_name.to_string());
+
+                cmd.args(args);
+
+                self.configure_command(&mut cmd);
+                cmd
+            }
+            None => {
+                let mut command = Command::new("octez-client");
+                self.configure_command(&mut command);
+                command
+            }
+        }
+    }
+
+    /// Configures the command with common arguments.
+    fn configure_command(&self, command: &mut Command) {
         if let Some(path) = &self.octez_client_dir {
             command.args(["--base-dir", path.to_str().expect("Invalid path")]);
         }
@@ -74,13 +111,11 @@ impl OctezClient {
         if self.disable_disclaimer {
             command.env("TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER", "Y");
         }
-
-        command
     }
 
     /// Generate a new key with the given `alias`
     pub fn gen_keys(&self, alias: &str) -> Result<()> {
-        run_command(self.command().args(["gen", "keys", alias, "--force"]))
+        run_command(self.command(&[]).args(["gen", "keys", alias, "--force"]))
     }
 
     /// Originate a Michelson smart contract with the given `name` using account `source`
@@ -92,7 +127,7 @@ impl OctezClient {
         script: &str,
         storage: &str,
     ) -> Result<String> {
-        let output = run_command_with_output(self.command().args([
+        let output = run_command_with_output(self.command(&[]).args([
             "originate",
             "contract",
             name,
@@ -109,6 +144,8 @@ impl OctezClient {
             "--force",
         ]))?;
 
+        println!("{}", output);
+
         regex_extract(r"New contract (KT1[^\s]+) originated\.", &output)
     }
 
@@ -120,7 +157,7 @@ impl OctezClient {
         entrypoint: &str,
         parameter: &str,
     ) -> Result<()> {
-        run_command(self.command().args([
+        run_command(self.command(&[]).args([
             "transfer",
             "0",
             "from",
@@ -142,7 +179,7 @@ impl OctezClient {
         source: &str,
         message: T,
     ) -> Result<()> {
-        run_command(self.command().args([
+        run_command(self.command(&[]).args([
             "send",
             "smart",
             "rollup",
@@ -154,19 +191,25 @@ impl OctezClient {
     }
 
     /// Run arbitrary RPC command
-    pub fn rpc(&self, options: &[&str]) -> Result<String> {
-        run_command_with_output(self.command().arg("rpc").args(options))
+    pub fn rpc(
+        &self,
+        _sandbox_host_address: &str,
+        _sandbox_port: u16,
+        options: &[&str],
+    ) -> Result<String> {
+        println!("rpc");
+        run_command_with_output(self.command(&[]).args(["rpc"]).args(options))
     }
 
     /// Blocks until the node is bootstrapped
     pub fn wait_for_node_to_bootstrap(&self) -> Result<()> {
-        run_command(self.command().arg("bootstrapped"))
+        run_command(self.command(&[]).arg("bootstrapped"))
     }
 
     /// Forge and inject block (bake) using the delegate's rights
     pub fn bake(&self, log_file: &File, options: &[&str]) -> Result<String> {
         run_command_with_output(
-            self.command()
+            self.command(&[])
                 .arg("bake")
                 .stdout(Stdio::from(log_file.try_clone()?))
                 .stderr(Stdio::from(log_file.try_clone()?))
@@ -177,13 +220,13 @@ impl OctezClient {
     /// Import a secret key `sk` with the given `name`
     pub fn import_secret_key(&self, name: &str, sk: &str) -> Result<()> {
         run_command(
-            self.command()
+            self.command(&[])
                 .args(["import", "secret", "key", name, sk, "--force"]),
         )
     }
 
     pub fn alias_info(&self, alias: &str) -> Result<AliasInfo> {
-        let output = run_command_with_output(self.command().args([
+        let output = run_command_with_output(self.command(&[]).args([
             "show",
             "address",
             alias,
@@ -204,7 +247,7 @@ impl OctezClient {
     /// Retrieve the info of an account with the given `alias`
     pub fn balance(&self, account: &str) -> Result<u64> {
         let output = run_command_with_output(
-            self.command().args(["get", "balance", "for", account]),
+            self.command(&[]).args(["get", "balance", "for", account]),
         )?;
 
         let output = regex_extract(r"(\d+|\d*\.\d+) ꜩ", &output)?;
@@ -219,8 +262,9 @@ impl OctezClient {
         fitness: &str,
         key: &str,
         parameters_file: &str,
+        sandbox_params_path: &str,
     ) -> Result<()> {
-        run_command(self.command().args([
+        run_command(self.command(&[sandbox_params_path.to_string()]).args([
             "-block",
             "genesis",
             "activate",
@@ -239,7 +283,7 @@ impl OctezClient {
     }
 
     fn wait_for_operation(&self, operation: &str) -> Result<()> {
-        run_command(self.command().args([
+        run_command(self.command(&[]).args([
             "wait",
             "for",
             operation,
@@ -260,7 +304,7 @@ impl OctezClient {
         r#type: &str,
         kernel: &str,
     ) -> Result<String> {
-        let output = run_command_with_output(self.command().args([
+        let output = run_command_with_output(self.command(&[]).args([
             "originate",
             "smart",
             "rollup",

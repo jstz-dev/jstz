@@ -54,6 +54,7 @@ impl JstzClient {
     }
 
     pub async fn get_nonce(&self, address: &Address) -> Result<Nonce> {
+        println!("Endpoint: {}", self.endpoint);
         let response = self
             .get(&format!("{}/accounts/{}/nonce", self.endpoint, address))
             .await?;
@@ -67,7 +68,7 @@ impl JstzClient {
             }
             StatusCode::NOT_FOUND => Ok(Nonce::default()),
             // For any other status, return a generic error
-            _ => bail!("Failed to get nonce"),
+            _ => bail!("Failed to get nonce here"),
         }
     }
 

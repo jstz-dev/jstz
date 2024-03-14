@@ -26,9 +26,13 @@ async fn nonce(
     rollup_client: Data<OctezRollupClient>,
     path: Path<String>,
 ) -> Result<impl Responder> {
+    println!("Getting nonce WOOHOOHOOO");
+
     let key = format!("/jstz_account/{}", path.into_inner());
 
+    println!("Key: {}", key);
     let value = rollup_client.get_value(&key).await?;
+    println!("Value: {:?}", value);
 
     let nonce = match value {
         Some(value) => {
