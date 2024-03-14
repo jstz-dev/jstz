@@ -89,6 +89,14 @@ EOF
             exit 1
     esac
 
+    if ! [ -w "$shellrc" ]; then
+        echo "Warning: $shellrc is not writable. Please manually add the following alias to your shell's configuration file:"
+        echo "$shell_alias"
+
+        echo "Once you have added the alias, run the following command to reload the configuration file in your default shell:"
+        echo "    source $shellrc"
+    fi
+
     if grep -q "alias jstz=" "$shellrc"; then
         sed -i'' -e "/alias jstz=/c\\
 $shell_alias" "$shellrc"
