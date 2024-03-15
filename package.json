@@ -23,7 +23,7 @@
     "@tezos/jstz-types": "^0.0.0"
   },
   "devDependencies": {
-    "@commitlint/cli": "^18.6.1",
+    "@commitlint/cli": "^19.2.0",
     "@commitlint/config-conventional": "^18.6.2",
     "esbuild": "^0.20.1",
     "prettier": "^3.2.5",
