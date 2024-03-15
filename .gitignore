@@ -41,3 +41,4 @@ node_modules/
 
 # Required by the CLI
 crates/jstz_cli/jstz_kernel.wasm
+.vercel

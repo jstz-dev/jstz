@@ -9,6 +9,14 @@ pub enum Signature {
 }
 
 impl Signature {
+    pub fn to_base58(&self) -> String {
+        match self {
+            Signature::Ed25519(sig) => sig.to_base58_check(),
+        }
+    }
+}
+
+impl Signature {
     pub fn verify(&self, public_key: &PublicKey, message: &[u8]) -> Result<()> {
         match (self, public_key) {
             (Signature::Ed25519(sig), PublicKey::Ed25519(pk)) => {

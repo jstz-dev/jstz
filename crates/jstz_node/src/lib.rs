@@ -1,7 +1,7 @@
 use std::io::{self, ErrorKind::Other};
-
 use std::path::Path;
 
+use actix_cors::Cors;
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
 use octez::OctezRollupClient;
 use tokio_util::sync::CancellationToken;
@@ -29,6 +29,8 @@ pub async fn run(
             .map_err(|e| io::Error::new(Other, e.to_string()))?;
 
     HttpServer::new(move || {
+        let cors = Cors::permissive();
+
         App::new()
             .app_data(rollup_client.clone())
             .app_data(Data::from(broadcaster.clone()))
@@ -37,6 +39,7 @@ pub async fn run(
             .configure(AccountsService::configure)
             .configure(LogsService::configure)
             .wrap(Logger::default())
+            .wrap(cors)
     })
     .bind((addr, port))?
     .run()
