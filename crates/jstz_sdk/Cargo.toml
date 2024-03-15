@@ -1,0 +1,15 @@
+[package]
+name = "jstz_sdk"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+jstz_crypto.workspace = true
+jstz_proto.workspace = true
+serde-wasm-bindgen = "0.6.5"
+wasm-bindgen = "0.2.92"
