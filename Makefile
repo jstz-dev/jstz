@@ -30,6 +30,10 @@ build-deps:
 build-dev-deps: build-deps
 	@rustup component add rustfmt clippy
 
+.PHONY: build-sdk-wasm-pkg
+build-sdk-wasm-pkg:
+	@cd crates/jstz_sdk && wasm-pack build --target bundler --release
+
 .PHONY: test
 test:
 	@cargo test
