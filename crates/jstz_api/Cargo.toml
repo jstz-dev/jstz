@@ -27,7 +27,7 @@ url = "2.4.1"
 urlpattern = "0.2.0"
 encoding_rs = "0.8.33"
 fastrand = "2.0.1"
-clap = { version = "^4.4", features = ["derive"] }
+clap = { version = "^4.5", features = ["derive"] }
 
 [dev-dependencies]
 anyhow = "1.0.75"
