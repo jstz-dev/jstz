@@ -37,7 +37,7 @@ export default async function (request) {
 
   // Pay taxes on the gift by calling a nested smart function.
   let response = await fetch(
-    new Request(`tezos://tz1ZYCJg2mTNtfGZVEoGjEMVg16eVspJsZhi/`, {
+    new Request(`tezos://tz1coZprAPigHYAjDxnxvyzQscdrpBy5EBgq/`, {
       method: `POST`,
       body: `{ "amount": 1000000, "address": "${requester_address}"}`,
     }),
