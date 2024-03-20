@@ -65,6 +65,8 @@ impl OctezRollupNode {
                 addr,
                 "--rpc-port",
                 &port.to_string(),
+                "--acl-override",
+                "allow-all",
             ])
             .args(options)
             .spawn()?)
