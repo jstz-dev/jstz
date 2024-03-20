@@ -2,8 +2,8 @@
 
 { # this ensures the entire script is downloaded
 
-version="20240313"
-network="weeklynet-2024-03-13"
+version="20240320"
+network="weeklynet-2024-03-20"
 container="ghcr.io/trilitech/jstz-cli:$version"
 jstz_home="$HOME/.jstz"
 
