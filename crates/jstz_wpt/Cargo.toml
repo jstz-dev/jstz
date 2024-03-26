@@ -15,7 +15,7 @@ include = ["config.json", "hosts", "manifest.json", "src"]
 
 [dependencies]
 anyhow = "1.0.75"
-clap = { version = "^4.4", features = ["derive"] }
+clap = { version = "^4.5", features = ["derive"] }
 ctrlc = "3.4.2"
 nix = { version = "0.27.1", features = ["signal"] }
 regex = "1.10.3"
