@@ -30,7 +30,7 @@ fastrand = "2.0.1"
 clap = { version = "^4.4", features = ["derive"] }
 
 [dev-dependencies]
-anyhow = "1.0.75"
+anyhow = "1.0.82"
 expect-test = "1.4.1"
 jstz_wpt.workspace = true
 tokio = { version = "1.36.0", features = ["full"] }
