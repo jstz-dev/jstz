@@ -124,7 +124,7 @@ You can start the sandbox with:
 
 ```sh
 make build-cli-kernel
-cargo run --bin jstz -- sandbox start
+PATH=.:$PATH cargo run --bin jstz -- sandbox start
 ```
 
 This will initially run `octez-node` and initialize `octez-client`. Once the client is initialized, the `jstz_kernel` and `jstz_bridge` is originated, a `octez-smart-rollup-node` and `jstz-node` is spun up.

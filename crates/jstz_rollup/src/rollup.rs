@@ -111,6 +111,13 @@ impl JstzRollup {
         )?;
 
         // 2. Run the rollup node (configuring the kernel log file)
+        let kernel_log = logs_dir.join("kernel.log");
+        // ensure the log exists
+        let _ = fs::File::options()
+            .append(true)
+            .create(true)
+            .open(&kernel_log)?;
+
         rollup_node.run(
             addr,
             port,
@@ -120,7 +127,7 @@ impl JstzRollup {
             &[
                 "--log-kernel-debug",
                 "--log-kernel-debug-file",
-                logs_dir.join("kernel.log").to_str().expect("Invalid path"),
+                kernel_log.to_str().expect("Invalid path"),
             ],
         )
     }
