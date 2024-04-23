@@ -519,7 +519,6 @@ fn run_progress_bar(cfg: &Config, mut child: Option<Child>) -> Result<()> {
                 if let Some(matched) = captures.get(1) {
                     if let Ok(num) = matched.as_str().parse::<u32>() {
                         progress = num;
-                        progress_bar.set_position(progress.into());
                     }
                 }
             }
@@ -539,6 +538,7 @@ fn run_progress_bar(cfg: &Config, mut child: Option<Child>) -> Result<()> {
             }
         }
 
+        progress_bar.set_position(progress.into());
         thread::sleep(Duration::from_millis(100));
     }
 
