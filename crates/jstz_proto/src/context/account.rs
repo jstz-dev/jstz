@@ -1,5 +1,5 @@
 use std::{
-    fmt::{self, Display},
+    fmt::{self, Display, Formatter},
     result,
 };
 
@@ -31,9 +31,9 @@ impl Nonce {
     }
 }
 
-impl ToString for Nonce {
-    fn to_string(&self) -> String {
-        self.0.to_string()
+impl Display for Nonce {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        self.0.fmt(f)
     }
 }
 

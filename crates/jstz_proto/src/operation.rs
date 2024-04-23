@@ -59,14 +59,8 @@ impl Operation {
                 function_code,
                 account_credit,
             }) => Blake2b::from(
-                format!(
-                    "{}{}{}{}",
-                    source,
-                    nonce.to_string(),
-                    function_code,
-                    account_credit
-                )
-                .as_bytes(),
+                format!("{}{}{}{}", source, nonce, function_code, account_credit)
+                    .as_bytes(),
             ),
             Content::RunFunction(RunFunction {
                 uri,
@@ -77,12 +71,7 @@ impl Operation {
             }) => Blake2b::from(
                 format!(
                     "{}{}{}{}{:?}{:?}",
-                    source,
-                    nonce.to_string(),
-                    uri,
-                    method,
-                    headers,
-                    body
+                    source, nonce, uri, method, headers, body
                 )
                 .as_bytes(),
             ),
