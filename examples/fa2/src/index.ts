@@ -114,6 +114,10 @@ function registerKey(tokenId: TokenId): string {
   return `token/${tokenId}`;
 }
 function registerToken(tokenId: TokenId): void {
+  const key = registerKey(tokenId);
+  if (Kv.get(key)) {
+    throw "FA2_TOKEN_ID_EXISTS";
+  }
   Kv.set(registerKey(tokenId), true);
 }
 function assertRegistered(tokenId: TokenId): void {
@@ -199,6 +203,7 @@ function performUpdateOperator(referer: Address, update: UpdateOperator) {
 }
 function performBalanceRequest(request: BalanceRequest): BalanceResponse {
   const balance = getBalance(request.owner, request.token_id);
+  console.log(`${request.owner} has ${balance} of token ${request.token_id}`);
   return { request, balance };
 }
 function performBalanceOf(balanceOf: BalanceOf): BalanceResponse[] {
