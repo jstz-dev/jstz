@@ -239,7 +239,7 @@ fn init_client(log_file: &mut File, progress: &mut u32, cfg: &Config) -> Result<
     progress_step(log_file, progress);
     debug!(log_file, "Activating alpha...");
     cfg.octez_client_sandbox()?.activate_protocol(
-        "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
+        "ProxfordYmVfjWnRcgjWH36fW6PArwqykTFzotUxRs6gmTcZDuH",
         "1",
         "activator",
         sandbox_params_path().to_str().expect("Invalid path"),
