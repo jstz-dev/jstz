@@ -428,8 +428,7 @@ pub mod run {
 
         debug_msg!(
             hrt,
-            "🚀 Smart function executed successfully with value: {:?}\n",
-            result
+            "🚀 Smart function executed successfully with value: {:?} (in {:?} instructions)\n", result, gas_limit - rt.instructions_remaining()
         );
 
         // 6. Serialize response
