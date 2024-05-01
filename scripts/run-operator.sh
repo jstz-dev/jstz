@@ -82,8 +82,14 @@ jstz_deploy() {
 
     jstz_configure_env
 
-    echo "Pulling latest images from GHCR"
-    docker-compose --context "$1" pull
+
+    if [ "$1" = "remote" ]
+    then
+        echo "Pulling latest images from GHCR"
+        docker-compose --context "$1" pull
+    else
+        echo "Context is not remote. Skipping pull."
+    fi
 
     echo "Deploying rollup..."
 
@@ -94,7 +100,7 @@ jstz_deploy() {
     operator_sk=${OPERATOR_SK:?Unset OPERATOR_SK in .env}
     operator_address=${OPERATOR_ADDRESS:?Unset OPERATOR_ADDRESS in .env}
     jstz_tag=${JSTZ_TAG:?Unset JSTZ_TAG in .env}
-    docker_registry=${DOCKER_REGISTRY:?Unset DOCKER_REGISTRY in .env}
+    docker_registry=${DOCKER_REGISTRY}
 
     output=$(docker --context "$1" run -v /var/run/docker.sock:/var/run/docker.sock \
         -e NETWORK="$network" -e OPERATOR_SK="$operator_sk" -e OPERATOR_ADDRESS="$operator_address" \
@@ -128,8 +134,13 @@ jstz_start() {
     echo "Stopping current containers (if running)"
     docker-compose --context "$1" down
 
-    echo "Pulling latest images from GHCR"
-    docker-compose --context "$1" pull
+    if [ "$1" = "remote" ]
+    then
+        echo "Pulling latest images from GHCR"
+        docker-compose --context "$1" pull
+    else
+        echo "Context is not remote. Skipping pull."
+    fi
 
     echo "Spinning up containers"
     docker-compose --context "$1" up -d
