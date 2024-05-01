@@ -29,6 +29,14 @@ make-installer() {
         --kernel "$kernel_path" \
         --bridge "$JSTZ_ROLLUP_BRIDGE_ADDRESS" \
         --output "$installer_dir"
+    
+    # Check the exit status of the last command
+    if [ $? -eq 0 ]; then
+        echo "Installer created successfully in $installer_dir."
+    else
+        echo "Failed to create installer. Please check the parameters and try again."
+        exit 1
+    fi
 }
 
 deploy-bridge() {
@@ -48,11 +56,21 @@ run() {
     fi
 
     mkdir -p "$logs_dir"
+
     jstz-rollup run \
         --preimages "$installer_dir/preimages" \
         --rollup "$JSTZ_ROLLUP_ADDRESS" \
         --logs "$logs_dir" \
         --addr "0.0.0.0"
+    
+    exit_status=$?
+
+    if [ $exit_status -eq 0 ]; then
+        echo "jstz-rollup node started successfully."
+    else
+        echo "Failed to start jstz-rollup node. Exit status: $exit_status"
+        exit $exit_status
+    fi
 }
 
 deploy() {
@@ -62,7 +80,8 @@ deploy() {
     jstz-rollup deploy \
         --kernel "$kernel_path" \
         --bridge "$JSTZ_ROLLUP_BRIDGE_ADDRESS" \
-        --output "$installer_dir"
+        --output "$installer_dir" \
+        --operator "$OPERATOR_ADDRESS"
 }
 
 main() {
