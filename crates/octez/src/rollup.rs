@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
+use tezos_smart_rollup_encoding::smart_rollup::SmartRollupAddress;
 
 use crate::path_or_default;
 
@@ -181,6 +182,29 @@ impl OctezRollupClient {
                     error
                 )),
             }
+        } else {
+            Err(anyhow!("Unhandled response status: {}", res.status()))
+        }
+    }
+
+    pub async fn get_rollup_address(&self) -> Result<SmartRollupAddress> {
+        let res = self
+            .client
+            .get(format!("{}/global/smart_rollup_address", self.endpoint))
+            .send()
+            .await?;
+
+        if res.status() == 200 {
+            let text = res.text().await?;
+            let address_string = text.trim_matches(|c| c == '\n' || c == '\"');
+            let address =
+                SmartRollupAddress::from_b58check(address_string).map_err(|_| {
+                    anyhow!(
+                        "Failed to parse rollup address from string: {}",
+                        address_string
+                    )
+                })?;
+            Ok(address)
         } else {
             Err(anyhow!("Unhandled response status: {}", res.status()))
         }

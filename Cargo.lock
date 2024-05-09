@@ -2330,6 +2330,7 @@ dependencies = [
  "actix-web",
  "actix-web-lab",
  "anyhow",
+ "base64 0.13.1",
  "bincode",
  "clap 4.4.18",
  "dirs",
@@ -2348,6 +2349,10 @@ dependencies = [
  "rusqlite",
  "serde",
  "serde_json",
+ "tezos-smart-rollup",
+ "tezos-smart-rollup-encoding",
+ "tezos_crypto_rs",
+ "tezos_data_encoding",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -2796,6 +2801,7 @@ dependencies = [
  "serde",
  "serde_json",
  "signal-hook",
+ "tezos-smart-rollup-encoding",
 ]
 
 [[package]]
