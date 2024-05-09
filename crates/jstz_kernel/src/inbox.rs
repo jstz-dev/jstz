@@ -3,6 +3,7 @@ use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperatio
 use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::ContractKt1Hash;
+use tezos_smart_rollup::inbox::ExternalMessageFrame;
 use tezos_smart_rollup::{
     inbox::{InboxMessage, InternalInboxMessage, Transfer},
     michelson::{ticket::UnitTicket, MichelsonBytes, MichelsonPair},
@@ -84,7 +85,6 @@ pub fn read_message(
     let _ = rt.mark_for_reboot();
 
     let (_, message) = InboxMessage::<RollupType>::parse(input.as_ref()).ok()?;
-    debug_msg!(rt, "Message: {message:?}\n");
 
     match message {
         InboxMessage::Internal(InternalInboxMessage::StartOfLevel) => {
@@ -114,10 +114,32 @@ pub fn read_message(
         InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
             read_transfer(rt, transfer, ticketer)
         }
-        InboxMessage::External(bytes) => match read_external_message(rt, bytes) {
-            Some(msg) => Some(Message::External(msg)),
-            None => {
-                debug_msg!(rt, "Failed to parse external message\n");
+        InboxMessage::External(bytes) => match ExternalMessageFrame::parse(bytes) {
+            Ok(frame) => match frame {
+                ExternalMessageFrame::Targetted { address, contents } => {
+                    let metadata = rt.reveal_metadata();
+                    let rollup_address = metadata.address();
+                    if &rollup_address != address.hash() {
+                        debug_msg!(
+                            rt,
+                            "Skipping message: External message targets another rollup. Expected: {}. Found: {}\n",
+                            rollup_address,
+                            address.hash()
+                        );
+                        None
+                    } else {
+                        match read_external_message(rt, contents) {
+                            Some(msg) => Some(Message::External(msg)),
+                            None => {
+                                debug_msg!(rt, "Failed to parse the external message\n");
+                                None
+                            }
+                        }
+                    }
+                }
+            },
+            Err(_) => {
+                debug_msg!(rt, "Failed to parse the external message frame\n");
                 None
             }
         },
