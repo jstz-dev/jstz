@@ -23,7 +23,9 @@ use crate::{
     utils::{read_file_or_input_or_piped, AddressOrAlias},
 };
 
-pub const DEFAULT_GAS_LIMIT: u32 = 100_000;
+// This was measured by running the benchmark.js,
+// where the FA2 transfer function was called 1000 times.
+pub const DEFAULT_GAS_LIMIT: u32 = 550000;
 
 pub async fn exec(
     url: String,
