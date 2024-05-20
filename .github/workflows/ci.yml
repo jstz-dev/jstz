@@ -50,6 +50,9 @@ jobs:
       - name: Lint
         run: make lint
 
+      - name: Prevent blst
+        run: sh -c '[ -z "$(cargo tree | grep blst)" ]'
+
       - name: Build all packages
         run: cargo build
 
