@@ -26,7 +26,7 @@ jstz_crypto.workspace = true
 jstz_api.workspace = true
 octez.workspace = true
 parking_lot = "0.12.1"
-reqwest = { version = "0.11.24", features = ["json"] }
+reqwest.workspace = true
 serde = { version = "1.0.196", features = ["derive"] }
 thiserror = "1.0.56"
 tokio = { version = "1.36.0", features = ["fs", "rt-multi-thread"] }

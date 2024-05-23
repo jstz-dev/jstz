@@ -56,12 +56,11 @@ jobs:
       - name: Rust setup
         run: rustup toolchain add 1.73.0 --profile minimal
 
-      - name: Install musl-tools & openssl (Linux)
+      - name: Install musl-tools (Linux)
         if: matrix.build == 'linux'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y musl-tools pkg-config libssl-dev
-          export OPENSSL_DIR=/usr/include/openssl
+          sudo apt-get install -y musl-tools
 
       - name: Install p7zip (macOS)
         if: matrix.build == 'macos'

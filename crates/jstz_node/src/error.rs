@@ -1,6 +1,5 @@
-use actix_web::{HttpResponse, ResponseError};
+use actix_web::{http::StatusCode, HttpResponse, ResponseError};
 use jstz_crypto::Error as CryptoError;
-use reqwest::StatusCode;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
