@@ -39,6 +39,7 @@ jobs:
   build-cli:
     name: Build (CLI)
     runs-on: ${{ matrix.os }}
+    needs: [build-kernel]
     strategy:
       matrix:
         build: [linux, macos]
