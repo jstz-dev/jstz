@@ -60,7 +60,7 @@ jobs:
         if: matrix.build == 'linux'
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y musl-tools libssl-dev
+          sudo apt-get install -y musl-tools openssl libssl-dev
 
       - name: Build p7zip (macOS)
         if: matrix.build == 'macos'
