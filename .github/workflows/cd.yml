@@ -1,0 +1,94 @@
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+name: Release
+
+env:
+  RELEASE_BIN: jstz
+  RELEASE_DIR: artifacts
+
+  LINUX_TARGET: x86_64-unknown-linux-musl
+  MACOS_x86_TARGET: x86_64-apple-darwin
+  # FIXME: Add support for building for Apple Silicon (currently we rely on Rosetta 2 for this)
+  # MACOS_ARM_TARGET: aarch64-apple-darwin
+
+jobs:
+  build-kernel:
+    name: Build (Kernel)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2.7.1
+      - name: Rust setup
+        # FIXME: Once rustup adds a command to install a toolchain from rust-toolchain.toml, we can remove this.
+        run: rustup toolchain add 1.73.0 --profile minimal
+
+      - name: Build kernel
+        run: make build-kernel
+      - name: Upload kernel
+        id: upload-kernel
+        uses: actions/upload-artifact@v4
+        with:
+          name: jstz-kernel
+          path: target/wasm32-unknown-unknown/release/jstz_kernel.wasm
+
+  build-cli:
+    name: Build (CLI)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [linux, macos]
+        include:
+          - build: linux
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+          - build: macos
+            os: macos-latest
+            target: x86_64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Swatinem/rust-cache@v2.7.1
+      - name: Rust setup
+        run: rustup toolchain add 1.73.0 --profile minimal
+
+      - name: Install musl-tools (Linux)
+        if: matrix.build == 'linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y musl-tools
+
+      - name: Build p7zip (macOS)
+        if: matrix.build == 'macos'
+        run: |
+          brew install p7zip
+
+      - name: Download jstz-kernel artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: jstz-kernel
+          path: jstz_kernel
+
+      - name: Build
+        run: |
+          cp ./jstz_kernel/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
+          rustup target add ${{ matrix.target }}
+          cargo build --package jstz_cli --release --target ${{ matrix.target }}
+
+      - name: Create artifact directory
+        run: |
+          mkdir ${{ env.RELEASE_DIR }}
+          mkdir dist
+
+      - name: Create tarball
+        run: |
+          mv ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_DIR }} ./dist/${{ env.RELEASE_BIN }}
+          7z a --tar -so -an ./dist | 7z a -si ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ matrix.build }}-${{ matrix.target }}.tar.gz
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.build }}
+          path: ${{ env.RELEASE_DIR }}

@@ -35,8 +35,11 @@ jobs:
 
   build-rust:
     name: Build (Cargo)
-    runs-on: ubuntu-latest
     needs: [commitlint, fmt]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: Swatinem/rust-cache@v2.7.1

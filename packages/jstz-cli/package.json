@@ -1,0 +1,20 @@
+{
+  "name": "@tezos/jstz-cli",
+  "description": "Command-line interface for jstz",
+  "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
+  "version": "0.0.0",
+  "main": "binary.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trilitech/jstz"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/trilitech/jstz/issues"
+  },
+  "homepage": "https://trilitech.github.io/jstz/",
+  "dependencies": {
+    "binary-install": "^1.1.0",
+    "table": "^6.8.2"
+  }
+}
