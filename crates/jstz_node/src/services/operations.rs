@@ -6,6 +6,8 @@ use actix_web::{
 use anyhow::anyhow;
 use jstz_proto::{operation::SignedOperation, receipt::Receipt};
 use octez::OctezRollupClient;
+use tezos_data_encoding::enc::BinWriter;
+use tezos_smart_rollup::inbox::ExternalMessageFrame;
 
 use crate::Result;
 
@@ -19,7 +21,19 @@ async fn inject(
     let encoded_operation = bincode::serialize(&operation)
         .map_err(|_| anyhow!("Failed to serialize operation"))?;
 
-    rollup_client.batcher_injection([encoded_operation]).await?;
+    let address = rollup_client.get_rollup_address().await?;
+
+    let message_frame = ExternalMessageFrame::Targetted {
+        address,
+        contents: encoded_operation,
+    };
+
+    let mut binary_contents = Vec::new();
+    message_frame
+        .bin_write(&mut binary_contents)
+        .map_err(|_| anyhow!("Failed to write binary frame"))?;
+
+    rollup_client.batcher_injection([binary_contents]).await?;
 
     Ok(HttpResponse::Ok())
 }
