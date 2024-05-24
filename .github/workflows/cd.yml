@@ -86,7 +86,7 @@ jobs:
 
       - name: Create tarball
         run: |
-          mv ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_DIR }} ./dist/${{ env.RELEASE_BIN }}
+          mv ./target/${{ matrix.target }}/release/${{ env.RELEASE_BIN }} ./dist/${{ env.RELEASE_BIN }}
           7z a --tar -so -an ./dist | 7z a -si ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-${{ matrix.build }}-${{ matrix.target }}.tar.gz
 
       - name: Upload artifact
