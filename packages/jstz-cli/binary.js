@@ -3,7 +3,8 @@ const { table } = require("table");
 const os = require("os");
 const { join } = require("path");
 
-const { version, name, repository } = require("./package.json");
+const { version, repository } = require("./package.json");
+const NAME = "jstz";
 
 const SUPPORTED_PLATFORMS = [
   { os: "darwin", arch: "x64", target: "x86_64-unknown-linux-musl" },
@@ -42,9 +43,9 @@ const getPlatform = () => {
 
 const getBinary = () => {
   const platform = getPlatform();
-  const url = `${repository.url}/releases/download/v${version}/${name}-${platform.os}-${platform.target}.tar.gz`;
+  const url = `${repository.url}/releases/download/v${version}/${NAME}-${platform.os}-${platform.target}.tar.gz`;
 
-  return new Binary(platformMetadata.BINARY_NAME, url, version, {
+  return new Binary(NAME, url, version, {
     installDirectory: join(__dirname, "node_modules", ".bin"),
   });
 };
