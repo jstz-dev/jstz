@@ -123,7 +123,7 @@ impl boa_engine::job::JobQueue for JobQueue {
 
 thread_local! {
     /// Thread-local host context
-    static JS_HOST_RUNTIME: RefCell<Option<JsHostRuntime>> = RefCell::new(None);
+    static JS_HOST_RUNTIME: RefCell<Option<JsHostRuntime<'static>>> = RefCell::new(None);
 
     /// Thread-local transaction
     static JS_TRANSACTION: RefCell<Option<JsTransaction>> = RefCell::new(None);
@@ -131,7 +131,7 @@ thread_local! {
 
 /// Enters a new host context, running the closure `f` with the new context
 pub fn enter_js_host_context<F, R>(
-    hrt: &mut (impl HostRuntime + 'static),
+    hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     f: F,
 ) -> R
@@ -160,7 +160,7 @@ where
 /// Returns a reference to the host runtime in the current js host context
 pub fn with_js_hrt<F, R>(f: F) -> R
 where
-    F: FnOnce(&mut JsHostRuntime) -> R,
+    F: FnOnce(&mut JsHostRuntime<'static>) -> R,
 {
     JS_HOST_RUNTIME.with(|hrt| {
         f(hrt
@@ -184,7 +184,7 @@ where
 
 pub fn with_js_hrt_and_tx<F, R>(f: F) -> R
 where
-    F: FnOnce(&mut JsHostRuntime, &mut Transaction) -> R,
+    F: FnOnce(&mut JsHostRuntime<'static>, &mut Transaction) -> R,
 {
     with_js_hrt(|hrt| with_js_tx(|tx| f(hrt, tx)))
 }
@@ -241,7 +241,7 @@ impl<'host> Runtime<'host> {
     ///
     /// Returns the module instance and the module promise. Implementors must manually
     /// call `Runtime::run_event_loop` or poll/resolve the promise to drive the
-    /// module's evaluation.  
+    /// module's evaluation.
     pub fn eval_module(&mut self, module: &Module) -> JsResult<JsPromise> {
         self.realm.eval_module(module, &mut self.context)
     }

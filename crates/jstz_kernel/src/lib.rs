@@ -17,7 +17,7 @@ fn read_ticketer(rt: &impl Runtime) -> Option<ContractKt1Hash> {
     Storage::get(rt, &TICKETER).ok()?
 }
 
-fn handle_message(hrt: &mut (impl Runtime + 'static), message: Message) -> Result<()> {
+fn handle_message(hrt: &mut impl Runtime, message: Message) -> Result<()> {
     let mut tx = Transaction::default();
     tx.begin();
 
@@ -38,7 +38,7 @@ fn handle_message(hrt: &mut (impl Runtime + 'static), message: Message) -> Resul
 }
 
 // kernel entry
-pub fn entry(rt: &mut (impl Runtime + 'static)) {
+pub fn entry(rt: &mut impl Runtime) {
     let ticketer = read_ticketer(rt);
 
     if let Some(message) = read_message(rt, ticketer.as_ref()) {
