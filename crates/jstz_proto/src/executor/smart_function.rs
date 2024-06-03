@@ -370,7 +370,7 @@ pub mod run {
     }
 
     pub fn execute(
-        hrt: &mut (impl HostRuntime + 'static),
+        hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         source: &Address,
         run: operation::RunFunction,

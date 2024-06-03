@@ -430,25 +430,27 @@ mod erased_runtime {
     }
 }
 
-pub struct JsHostRuntime {
-    inner: &'static mut dyn erased_runtime::Runtime,
+pub struct JsHostRuntime<'a> {
+    inner: &'a mut dyn erased_runtime::Runtime,
 }
 
-impl JsHostRuntime {
-    pub unsafe fn new(rt: &mut (impl Runtime + 'static)) -> Self {
+impl<'a> JsHostRuntime<'a> {
+    pub unsafe fn new<R: Runtime>(rt: &'a mut R) -> JsHostRuntime<'static> {
         let rt_ptr: *mut dyn erased_runtime::Runtime = rt;
 
         // SAFETY
         // From the pov of the `Host` struct, it is permitted to cast
         // the `rt` reference to `'static` since the lifetime of `Host`
         // is always shorter than the lifetime of `rt`
-        let rt: &'static mut dyn erased_runtime::Runtime = &mut *rt_ptr;
+        let rt: &'a mut dyn erased_runtime::Runtime = &mut *rt_ptr;
 
-        Self { inner: rt }
+        let jhr: Self = Self { inner: rt };
+
+        unsafe { std::mem::transmute(jhr) }
     }
 }
 
-impl HostRuntime for JsHostRuntime {
+impl<'a: 'static> HostRuntime for JsHostRuntime<'a> {
     fn write_output(&mut self, from: &[u8]) -> Result<(), HostError> {
         self.inner.write_output(from)
     }
