@@ -10,7 +10,7 @@ pub mod deposit;
 pub mod smart_function;
 
 fn execute_operation_inner(
-    hrt: &mut (impl HostRuntime + 'static),
+    hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     signed_operation: SignedOperation,
 ) -> Result<receipt::Content> {
@@ -54,7 +54,7 @@ pub fn execute_external_operation(
 }
 
 pub fn execute_operation(
-    hrt: &mut (impl HostRuntime + 'static),
+    hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     signed_operation: SignedOperation,
 ) -> Receipt {
