@@ -1,0 +1,23 @@
+{
+  "name": "@jstz-dev/url_shortener",
+  "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
+  "private": true,
+  "version": "0.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "@jstz-dev/jstz": "^0.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.1"
+  },
+  "scripts": {
+    "build": "esbuild index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js"
+  },
+  "keywords": [
+    "tezos",
+    "blockchain"
+  ],
+  "author": "Beata Lipska",
+  "license": "MIT",
+  "description": "This project demonstrates how to create a URL shortener using the Jstz framework, which allows deploying smart functions on Tezos Smart Rollups."
+}
