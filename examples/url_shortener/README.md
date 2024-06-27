@@ -43,8 +43,6 @@ This project uses the JSTZ framework to create a smart function that shortens UR
 Create the `index.ts` file with the following content:
 
 ```typescript
-import { Kv } from "jstz";
-
 type UrlMapping = {
   url: string;
 };
@@ -76,7 +74,7 @@ const handler = async (request: Request): Promise<Response> => {
     const { originalUrl } = await request.json();
     const shortCode = await shortenUrl(originalUrl);
     return new Response(
-      JSON.stringify({ shortUrl: `${url.origin}/${shortCode}` }),
+      JSON.stringify({ shortUrl: `tezos://${url.host}/${shortCode}` }),
       {
         headers: { "Content-Type": "application/json" },
       },
@@ -84,8 +82,9 @@ const handler = async (request: Request): Promise<Response> => {
   } else {
     const shortCode = path.slice(1);
     const originalUrl = getOriginalUrl(shortCode);
+
     if (originalUrl) {
-      return new Response(null, {
+      return new Response(new ArrayBuffer(0), {
         status: 301,
         headers: { Location: originalUrl },
       });
