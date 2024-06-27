@@ -1,0 +1,29 @@
+[package]
+name = "jstz_proto"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description.workspace = true
+
+[dependencies]
+derive_more = "0.99.17"
+erased-serde = "0.4.2"
+serde = "1.0.196"
+jstz_core.workspace = true
+jstz_crypto.workspace = true
+serde_json = "1.0.105"
+boa_engine = { version = "0.17.0", features = ["fuzz"] }
+boa_gc = "0.17.0"
+tezos-smart-rollup = { workspace = true, default-features = false}
+jstz_api.workspace = true
+http = "1.0.0"
+http-serde = "2.0.0"
+either = "1.9.0"
+
+[dev-dependencies]
+tezos-smart-rollup-mock.workspace = true

@@ -1,0 +1,100 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/jstz_core",
+    "crates/jstz_api",
+    "crates/jstz_proto",
+    "crates/jstz_crypto",
+    "crates/jstz_kernel",
+    "crates/jstz_cli",
+    "crates/jstz_node",
+    "crates/jstz_wpt",
+    "crates/octez",
+    "crates/jstz_rollup",
+    "crates/jstz_sdk",
+]
+
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0-alpha.0"
+authors = ["TriliTech <contact@trili.tech>"]
+repository = "https://github.com/trilitech/jstz"
+homepage = "https://github.com/trilitech/jstz"
+documentation = "https://trilitech.github.io/jstz/"
+readme = "README.md"
+license-file = "LICENSE"
+description = "JavaScript server runtime for Tezos Smart Rollups"
+
+[workspace.dependencies]
+jstz_core = { version = "0.1.0-alpha.0", path = "crates/jstz_core" }
+jstz_api = { version = "0.1.0-alpha.0", path = "crates/jstz_api" }
+jstz_kernel = { version = "0.1.0-alpha.0", path = "crates/jstz_kernel" }
+jstz_proto = { version = "0.1.0-alpha.0", path = "crates/jstz_proto" }
+jstz_crypto = { version = "0.1.0-alpha.0", path = "crates/jstz_crypto" }
+jstz_node = { version = "0.1.0-alpha.0", path = "crates/jstz_node" }
+jstz_cli = { version = "0.1.0-alpha.0", path = "crates/jstz_cli" }
+jstz_wpt = { version = "0.1.0-alpha.0", path = "crates/jstz_wpt" }
+octez = { version = "0.1.0-alpha.0", path = "crates/octez" }
+jstz_rollup = { version = "0.1.0-alpha.0", path = "crates/jstz_rollup" }
+jstz_sdk = { version = "0.1.0-alpha.0", path = "crates/jstz_sdk" }
+
+[workspace.dependencies.tezos-smart-rollup]
+version = "0.2.2"
+default-features = false
+features = ["std", "crypto", "panic-hook", "data-encoding", "storage", "proto-alpha"]
+
+[workspace.dependencies.tezos-smart-rollup-host]
+version = "0.2.2"
+features = ["proto-alpha"]
+
+[workspace.dependencies.tezos-smart-rollup-core]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-mock]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-encoding]
+version = "0.2.2"
+default-features = false
+features = ["alloc", "tezos-encoding", "crypto"]
+
+[workspace.dependencies.tezos-smart-rollup-entrypoint]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-debug]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-panic-hook]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-storage]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-installer-config]
+version = "0.2.2"
+
+[workspace.dependencies.tezos-smart-rollup-installer]
+version = "0.2.2"
+
+[workspace.dependencies.tezos_crypto_rs]
+version = "0.5.2"
+default-features = false
+
+[patch.crates-io]
+tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git" }
+tezos-smart-rollup-host = { git = "https://gitlab.com/tezos/tezos.git" }
+tezos-smart-rollup-core = { git = "https://gitlab.com/tezos/tezos.git" }
+tezos-smart-rollup-mock = { git = "https://gitlab.com/tezos/tezos.git" }
+tezos-smart-rollup-encoding = { git = "https://gitlab.com/tezos/tezos.git" }
+tezos-smart-rollup-entrypoint = { git = "https://gitlab.com/tezos/tezos.git" }
+tezos-smart-rollup-debug = { git = "https://gitlab.com/tezos/tezos.git" }
+tezos-smart-rollup-panic-hook = { git = "https://gitlab.com/tezos/tezos.git" }
+tezos-smart-rollup-storage = { git = "https://gitlab.com/tezos/tezos.git" }
+boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
+boa_engine = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
+boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
+boa_interner = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
+boa_macros = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
+boa_parser = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
+boa_profiler = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }

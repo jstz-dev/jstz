@@ -1,0 +1,14 @@
+name: Deploy Weeklynet
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * 3" # Runs at 1am every Wednesday
+
+jobs:
+  deploy:
+    name: Deploy to weeklynet
+    uses: ./.github/workflows/deploy-teztnet.yml
+    secrets: inherit
+    with:
+      network: weeklynet

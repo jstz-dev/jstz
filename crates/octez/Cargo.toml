@@ -1,0 +1,23 @@
+[package]
+name = "octez"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description = "Bindings to Octez (Tezos) binaries"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.75"
+hex = "0.4.3"
+regex = "1.10.3"
+reqwest = { version = "0.11.24", features = ["json"] }
+serde = { version = "1.0.196", features = ["derive"] }
+serde_json = "1.0.108"
+signal-hook = "0.3.17"
+tezos-smart-rollup-encoding.workspace = true

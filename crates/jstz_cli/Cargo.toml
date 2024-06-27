@@ -1,0 +1,74 @@
+[package]
+name = "jstz_cli"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description = "👨‍⚖️ jstz CLI"
+include = ["jstz_kernel.wasm", "sandbox-params.json", "sandbox.json", "src"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+jstz_kernel.workspace = true
+jstz_crypto.workspace = true
+jstz_proto.workspace = true
+jstz_core.workspace = true
+jstz_api.workspace = true
+jstz_rollup.workspace = true
+jstz_node.workspace = true
+octez.workspace = true
+clap = { version = "^4.4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bs58 = "0.5"
+hex = "0.4"
+dirs = "3.0"
+nix = { version = "^0.27.1", features = ["process", "signal"] }
+http = "1.0.0"
+fs_extra = "1.2"
+anyhow = "1.0.75"
+daemonize = "0.5.0"
+tempfile = "3.10.0"
+signal-hook = "0.3.17"
+boa_engine = { version = "0.17.0", features = ["fuzz"] }
+rustyline = "12.0.0"
+tezos-smart-rollup.workspace = true
+tezos-smart-rollup-mock.workspace = true
+serde_yaml = "0.9"
+tezos_crypto_rs.workspace = true
+sha2 = "0.10"
+rand = "0.8"
+tiny-bip39 = "1.0.0"
+reqwest = { version = "0.11.24", features = ["json"] }
+tokio = { version = "1.36.0", features = ["full"] }
+derive_more = "0.99.17"
+url = "2.2.2"
+boa_gc = "0.17.0"
+reqwest-eventsource = "0.5.0"
+futures-util = "0.3.30"
+syntect = "4.6.0"
+crossterm = "0.27"
+ansi_term = "0.12.1"
+console = "0.15.8"
+futures = "0.3"
+env_logger = "0.11.1"
+log = "0.4.20"
+dialoguer = "0.11.0"
+prettytable = "0.10.0"
+serde_with = { version = "3.6.1", features = ["macros"] }
+clap_complete = "4.4.10"
+spinners = "4.1.1"
+regex = "1"
+indicatif = "0.17.0"
+simplelog = "0.11"
+tokio-util = "0.7.10"
+in-container = "^1"
+
+[[bin]]
+name = "jstz"
+path = "src/main.rs"

@@ -1,0 +1,14 @@
+# Ignore git and node_modules:
+**/.git
+**/node_modules
+
+# Ignore artifacts:
+**/dist
+
+# Ignore wpt submodule
+**/wpt
+**/manifest.json
+**/wptreport.json
+
+# Lock files
+**/*.lock

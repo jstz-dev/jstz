@@ -1,0 +1,23 @@
+[package]
+name = "jstz_crypto"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description.workspace = true
+
+[dependencies]
+tezos_crypto_rs.workspace = true
+derive_more = "0.99.17"
+serde = "1.0.196"
+anyhow = "1.0.75"
+hex = "0.4.3"
+boa_gc = "0.17.0"
+serde_json = "1.0.107"
+
+[dev-dependencies]
+proptest = "1.1"

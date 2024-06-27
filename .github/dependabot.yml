@@ -1,0 +1,92 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/npm)"
+  - package-ecosystem: npm
+    directory: examples/fa2
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/npm)"
+  - package-ecosystem: npm
+    directory: examples/hello-world
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/npm)"
+  - package-ecosystem: npm
+    directory: packages/jstz-types
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/npm)"
+  - package-ecosystem: npm
+    directory: packages/jstz
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/npm)"
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/actions)"
+  - package-ecosystem: cargo
+    directory: /
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/cargo)"
+  - package-ecosystem: cargo
+    directory: crates/jstz_cli
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/cargo)"
+  - package-ecosystem: cargo
+    directory: crates/jstz_core
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/cargo)"
+  - package-ecosystem: cargo
+    directory: crates/jstz_crypto
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/cargo)"
+  - package-ecosystem: cargo
+    directory: crates/jstz_proto
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/cargo)"
+  - package-ecosystem: cargo
+    directory: crates/jstz_kernel
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/cargo)"
+  - package-ecosystem: cargo
+    directory: crates/jstz_node
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/cargo)"
+  - package-ecosystem: cargo
+    directory: crates/jstz_api
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/cargo)"
+  - package-ecosystem: cargo
+    directory: crates/jstz_wpt
+    schedule:
+      interval: daily
+    commit-message:
+      prefix: "chore(deps/cargo)"
