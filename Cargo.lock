@@ -80,7 +80,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e01ed3140b2f8d422c68afa1ed2e85d996ea619c988ac834d255db32138655cb"
 dependencies = [
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -193,7 +193,7 @@ dependencies = [
  "actix-router",
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -242,7 +242,7 @@ checksum = "9aa0b287c8de4a76b691f29dbb5451e8dd5b79d777eaf87350c9b0cbfdb5e968"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -410,7 +410,7 @@ checksum = "a66537f1bb974b254c98ed142ff995236e81b9d0fe4db0575f46612cb15eb0f9"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -624,7 +624,7 @@ source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefine
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
  "synstructure 0.13.0",
 ]
 
@@ -827,7 +827,7 @@ dependencies = [
  "heck 0.4.1",
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -1048,7 +1048,7 @@ checksum = "f46882e17999c6cc590af592290432be3bce0428cb0d5f8b6715e4dc7b383eb3"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -1081,7 +1081,7 @@ dependencies = [
  "proc-macro2",
  "quote",
  "strsim",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -1092,7 +1092,7 @@ checksum = "1d1545d67a2149e1d93b7e5c7752dce5a7426eb5d1357ddcfd89336b94444f77"
 dependencies = [
  "darling_core",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -1132,7 +1132,7 @@ checksum = "67e77553c4162a157adbf834ebae5b415acbecbeafc7a74b0e886657506a7611"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -1187,7 +1187,16 @@ version = "3.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "30baa043103c9d0c2a57cf537cc2f35623889dc0d405e6c3cccfadbc81c71309"
 dependencies = [
- "dirs-sys",
+ "dirs-sys 0.3.7",
+]
+
+[[package]]
+name = "dirs"
+version = "5.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "44c45a9d03d6676652bcb5e724c7e988de1acad23a711b5217ab9cbecbec2225"
+dependencies = [
+ "dirs-sys 0.4.1",
 ]
 
 [[package]]
@@ -1212,6 +1221,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs-sys"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "520f05a5cbd335fae5a99ff7a6ab8627577660ee5cfd6a94a6a929b52ff0321c"
+dependencies = [
+ "libc",
+ "option-ext",
+ "redox_users",
+ "windows-sys 0.48.0",
+]
+
+[[package]]
 name = "dirs-sys-next"
 version = "0.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1230,7 +1251,7 @@ checksum = "487585f4d0c6655fe74905e2504d8ad6908e4db67f744eb140876906c2f3175d"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -1603,7 +1624,7 @@ checksum = "87750cf4b7a4c0625b1529e4c543c2182106e4dedc60a2a6455e00d212c489ac"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -2043,7 +2064,7 @@ checksum = "2060258edfcfe32ca7058849bf0f146cb5c59aadbedf480333c0d0002f97bc99"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -2224,7 +2245,7 @@ dependencies = [
  "daemonize",
  "derive_more",
  "dialoguer",
- "dirs",
+ "dirs 3.0.2",
  "env_logger",
  "fs_extra",
  "futures",
@@ -2261,7 +2282,7 @@ dependencies = [
  "tempfile",
  "tezos-smart-rollup",
  "tezos-smart-rollup-mock",
- "tezos_crypto_rs",
+ "tezos_crypto_rs 0.6.0",
  "tiny-bip39",
  "tokio",
  "tokio-util",
@@ -2301,7 +2322,7 @@ dependencies = [
  "proptest",
  "serde",
  "serde_json",
- "tezos_crypto_rs",
+ "tezos_crypto_rs 0.6.0",
 ]
 
 [[package]]
@@ -2319,7 +2340,7 @@ dependencies = [
  "num-traits",
  "serde",
  "tezos-smart-rollup",
- "tezos_crypto_rs",
+ "tezos_crypto_rs 0.6.0",
 ]
 
 [[package]]
@@ -2333,7 +2354,7 @@ dependencies = [
  "base64 0.13.1",
  "bincode",
  "clap 4.4.18",
- "dirs",
+ "dirs 3.0.2",
  "env_logger",
  "futures-util",
  "hex",
@@ -2351,8 +2372,8 @@ dependencies = [
  "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-encoding",
- "tezos_crypto_rs",
- "tezos_data_encoding",
+ "tezos_crypto_rs 0.6.0",
+ "tezos_data_encoding 0.6.0",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -2387,7 +2408,7 @@ dependencies = [
  "bincode",
  "clap 4.4.18",
  "derive_more",
- "dirs",
+ "dirs 3.0.2",
  "figment",
  "fs_extra",
  "hex",
@@ -2397,7 +2418,7 @@ dependencies = [
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-installer",
  "tezos-smart-rollup-installer-config",
- "tezos_crypto_rs",
+ "tezos_crypto_rs 0.6.0",
 ]
 
 [[package]]
@@ -2767,7 +2788,7 @@ dependencies = [
  "proc-macro-crate",
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -2856,7 +2877,7 @@ checksum = "a948666b637a0f465e8564c73e89d4dde00d72d4d473cc972f390fc3dcee7d9c"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -2876,6 +2897,12 @@ dependencies = [
  "pkg-config",
  "vcpkg",
 ]
+
+[[package]]
+name = "option-ext"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
 
 [[package]]
 name = "os_str_bytes"
@@ -2977,7 +3004,7 @@ dependencies = [
  "proc-macro2",
  "proc-macro2-diagnostics",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -3016,7 +3043,7 @@ dependencies = [
  "phf_shared",
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -3140,9 +3167,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.76"
+version = "1.0.86"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95fc56cda0b5c3325f5fbbd7ff9fda9e02bb00bb3dac51252d2f1bfa1cb8cc8c"
+checksum = "5e719e8df665df0d1c8fbfd238015744736151d4445ec0836b8e628aae103b77"
 dependencies = [
  "unicode-ident",
 ]
@@ -3155,7 +3182,7 @@ checksum = "af066a9c399a26e020ada66a034357a868728e72cd426f3adcd35f80d88d88c8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
  "version_check",
  "yansi",
 ]
@@ -3197,9 +3224,9 @@ dependencies = [
 
 [[package]]
 name = "quote"
-version = "1.0.35"
+version = "1.0.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "291ec9ab5efd934aaf503a6466c5d5251535d108ee747472c3977cc5acc868ef"
+checksum = "0fa76aaf39101c457836aec0ce2316dbdc3ab723cdda1c6bd4e6ad4208acaca7"
 dependencies = [
  "proc-macro2",
 ]
@@ -3691,7 +3718,7 @@ checksum = "33c85360c95e7d137454dc81d9a4ed2b8efd8fbe19cee57357b32b9771fccb67"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -3757,7 +3784,7 @@ dependencies = [
  "darling",
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -3813,6 +3840,15 @@ name = "shell-words"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
+
+[[package]]
+name = "shellexpand"
+version = "3.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "da03fa3b94cc19e3ebfc88c4229c49d8f08cdbd1228870a45f0ffdf84988e14b"
+dependencies = [
+ "dirs 5.0.1",
+]
 
 [[package]]
 name = "signal-hook"
@@ -4012,9 +4048,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "2.0.48"
+version = "2.0.68"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0f3531638e407dfc0814761abb7c00a5b54992b849452a0646b7f65c9f770f3f"
+checksum = "901fa70d88b9d6c98022e23b4136f9f3e54e4662c3bc1bd1d84a42a9a0f0c1e9"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4047,7 +4083,7 @@ checksum = "285ba80e733fac80aa4270fbcdf83772a79b80aa35c97075320abfee4a915b06"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
  "unicode-xid",
 ]
 
@@ -4165,29 +4201,31 @@ checksum = "23d434d3f8967a09480fb04132ebe0a3e088c173e6d0ee7897abbdf4eab0f8b9"
 [[package]]
 name = "tezos-smart-rollup"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 dependencies = [
  "hermit",
+ "hex",
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
  "tezos-smart-rollup-encoding",
  "tezos-smart-rollup-entrypoint",
  "tezos-smart-rollup-host",
+ "tezos-smart-rollup-macros",
  "tezos-smart-rollup-mock",
  "tezos-smart-rollup-storage",
- "tezos_crypto_rs",
- "tezos_data_encoding",
+ "tezos_crypto_rs 0.6.0",
+ "tezos_data_encoding 0.6.0",
 ]
 
 [[package]]
 name = "tezos-smart-rollup-constants"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 
 [[package]]
 name = "tezos-smart-rollup-core"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 dependencies = [
  "tezos-smart-rollup-constants",
 ]
@@ -4195,7 +4233,7 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-debug"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-host",
@@ -4204,18 +4242,18 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-encoding"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 dependencies = [
  "hex",
  "nom",
- "num-bigint 0.3.3",
+ "num-bigint 0.4.4",
  "num-traits",
+ "paste",
  "regex",
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-host",
- "tezos_crypto_rs",
- "tezos_data_encoding",
- "tezos_data_encoding_derive",
+ "tezos_crypto_rs 0.6.0",
+ "tezos_data_encoding 0.6.0",
  "thiserror",
  "time",
 ]
@@ -4223,8 +4261,9 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-entrypoint"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 dependencies = [
+ "cfg-if",
  "dlmalloc",
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
@@ -4235,11 +4274,11 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-host"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 dependencies = [
  "tezos-smart-rollup-core",
- "tezos_crypto_rs",
- "tezos_data_encoding",
+ "tezos_crypto_rs 0.6.0",
+ "tezos_data_encoding 0.6.0",
  "thiserror",
 ]
 
@@ -4255,7 +4294,7 @@ dependencies = [
  "tezos-smart-rollup-encoding",
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-installer-config",
- "tezos_data_encoding",
+ "tezos_data_encoding 0.5.2",
  "thiserror",
  "wasm-gen",
 ]
@@ -4273,28 +4312,39 @@ dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-encoding",
  "tezos-smart-rollup-host",
- "tezos_crypto_rs",
- "tezos_data_encoding",
+ "tezos_crypto_rs 0.5.2",
+ "tezos_data_encoding 0.5.2",
  "thiserror",
+]
+
+[[package]]
+name = "tezos-smart-rollup-macros"
+version = "0.2.2"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
+dependencies = [
+ "proc-macro-error",
+ "quote",
+ "shellexpand",
+ "syn 2.0.68",
 ]
 
 [[package]]
 name = "tezos-smart-rollup-mock"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 dependencies = [
  "hex",
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-encoding",
  "tezos-smart-rollup-host",
- "tezos_crypto_rs",
- "tezos_data_encoding",
+ "tezos_crypto_rs 0.6.0",
+ "tezos_data_encoding 0.6.0",
 ]
 
 [[package]]
 name = "tezos-smart-rollup-panic-hook"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 dependencies = [
  "tezos-smart-rollup-core",
 ]
@@ -4302,7 +4352,7 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-storage"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#391c1f573b989ff8988d313b49b75310ea4f33ce"
+source = "git+https://gitlab.com/tezos/tezos.git#048424a9f80d0c516bbf7c3c84307bd488128493"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
@@ -4336,6 +4386,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "tezos_crypto_rs"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8954f27b00228b1fc669cddfa0e604a40adc5ee443002d3d31abdea0b911fcb6"
+dependencies = [
+ "anyhow",
+ "bs58",
+ "byteorder 1.5.0",
+ "cryptoxide",
+ "ed25519-dalek",
+ "hex",
+ "libsecp256k1",
+ "nom",
+ "num-bigint 0.4.4",
+ "num-traits",
+ "p256",
+ "rand 0.7.3",
+ "serde",
+ "strum 0.20.0",
+ "strum_macros 0.20.1",
+ "tezos_data_encoding 0.6.0",
+ "thiserror",
+ "zeroize",
+]
+
+[[package]]
 name = "tezos_data_encoding"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4349,8 +4425,26 @@ dependencies = [
  "num-bigint 0.3.3",
  "num-traits",
  "serde",
- "tezos_crypto_rs",
- "tezos_data_encoding_derive",
+ "tezos_crypto_rs 0.5.2",
+ "tezos_data_encoding_derive 0.5.2",
+ "thiserror",
+]
+
+[[package]]
+name = "tezos_data_encoding"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1fff433d41c778d27df21b91e766e182b05d9a7c1331e1156ee081273d704a4"
+dependencies = [
+ "bit-vec",
+ "bitvec",
+ "hex",
+ "lazy_static",
+ "nom",
+ "num-bigint 0.4.4",
+ "num-traits",
+ "serde",
+ "tezos_data_encoding_derive 0.6.0",
  "thiserror",
 ]
 
@@ -4359,6 +4453,20 @@ name = "tezos_data_encoding_derive"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "82e0c104555ce4d8c790567d725dc49f519d721e114202e38e851c1ac5769f08"
+dependencies = [
+ "lazy_static",
+ "once_cell",
+ "parse-display",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "tezos_data_encoding_derive"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f614c81c10c1ac47fdb792ce23e928591fca685d534260e073f83bc5d5f080e0"
 dependencies = [
  "lazy_static",
  "once_cell",
@@ -4391,7 +4499,7 @@ checksum = "fa0faa943b50f3db30a20aa7e265dbc66076993efed8463e8de414e5d06d3471"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -4500,7 +4608,7 @@ checksum = "5b8a1e28f2deaa14e508979454cb3a223b10b938b45af148bc0986de36f1923b"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -4581,7 +4689,7 @@ checksum = "34704c8d6ebcbc939824180af020566b01a7c01f80641264eba0999f6c2b6be7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -4847,7 +4955,7 @@ dependencies = [
  "once_cell",
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
  "wasm-bindgen-shared",
 ]
 
@@ -4881,7 +4989,7 @@ checksum = "e94f17b526d0a461a191c78ea52bbce64071ed5c04c9ffe424dcb38f74171bb7"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
@@ -5216,7 +5324,7 @@ checksum = "9e6936f0cce458098a201c245a11bef556c6a0181129c7034d10d76d1ec3a2b8"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
  "synstructure 0.13.0",
 ]
 
@@ -5237,7 +5345,7 @@ checksum = "b3c129550b3e6de3fd0ba67ba5c81818f9805e58b8d7fee80a3a59d2c9fc601a"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -5257,7 +5365,7 @@ checksum = "e6a647510471d372f2e6c2e6b7219e44d8c574d24fdc11c610a61455782f18c3"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
  "synstructure 0.13.0",
 ]
 
@@ -5278,7 +5386,7 @@ checksum = "ce36e65b0d2999d2aafac989fb249189a141aee1f53c612c1f37d72631959f69"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]
@@ -5300,7 +5408,7 @@ checksum = "7b4e5997cbf58990550ef1f0e5124a05e47e1ebd33a84af25739be6031a62c20"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.48",
+ "syn 2.0.68",
 ]
 
 [[package]]

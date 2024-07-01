@@ -5,7 +5,7 @@ use crate::{public_key::PublicKey, Error, Result};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Signature {
-    Ed25519(tezos_crypto_rs::hash::Signature),
+    Ed25519(tezos_crypto_rs::hash::Ed25519Signature),
 }
 
 impl Signature {

@@ -23,15 +23,14 @@ impl Debug for SecretKey {
 
 impl SecretKey {
     pub fn to_base58(&self) -> String {
-        let SecretKey::Ed25519(SecretKeyEd25519(sk)) = self;
-        let sk = SeedEd25519(sk.clone());
+        let Self::Ed25519(sk) = self;
         sk.to_base58_check()
     }
 
     pub fn from_base58(data: &str) -> Result<Self> {
-        let SeedEd25519(sk) = SeedEd25519::from_base58_check(data)?;
+        let sk = SecretKeyEd25519::from_base58_check(data)?;
 
-        Ok(SecretKey::Ed25519(SecretKeyEd25519(sk)))
+        Ok(SecretKey::Ed25519(sk))
     }
 
     pub fn sign(&self, message: impl AsRef<[u8]>) -> Result<Signature> {
@@ -53,14 +52,16 @@ enum SecretKeySerde {
 
 impl From<SecretKey> for SecretKeySerde {
     fn from(s: SecretKey) -> Self {
-        let SecretKey::Ed25519(SecretKeyEd25519(sk)) = s;
-        Self::Ed25519(SeedEd25519(sk))
+        let SecretKey::Ed25519(sk) = s;
+        let sk: Vec<u8> = sk.into();
+        Self::Ed25519(SeedEd25519::try_from(sk).unwrap())
     }
 }
 
 impl From<SecretKeySerde> for SecretKey {
     fn from(s: SecretKeySerde) -> Self {
-        let SecretKeySerde::Ed25519(SeedEd25519(sk)) = s;
-        Self::Ed25519(SecretKeyEd25519(sk))
+        let SecretKeySerde::Ed25519(sk) = s;
+        let sk: Vec<u8> = sk.into();
+        Self::Ed25519(SecretKeyEd25519::try_from(sk).unwrap())
     }
 }

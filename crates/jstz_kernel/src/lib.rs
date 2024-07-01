@@ -2,7 +2,7 @@ use jstz_core::kv::{Storage, Transaction};
 use jstz_proto::{executor, Result};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
-    kernel_entry,
+    entrypoint,
     prelude::{debug_msg, Runtime},
     storage::path::RefPath,
 };
@@ -38,6 +38,7 @@ fn handle_message(hrt: &mut impl Runtime, message: Message) -> Result<()> {
 }
 
 // kernel entry
+#[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
     let ticketer = read_ticketer(rt);
 
@@ -46,5 +47,3 @@ pub fn entry(rt: &mut impl Runtime) {
             .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
     }
 }
-
-kernel_entry!(entry);
