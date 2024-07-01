@@ -27,7 +27,7 @@ impl ToString for Blake2b {
 
 impl<'a> From<&'a [u8]> for Blake2b {
     fn from(data: &'a [u8]) -> Self {
-        let digest = tezos_crypto_rs::blake2b::digest_256(data).unwrap();
+        let digest = tezos_crypto_rs::blake2b::digest_256(data);
         Self(digest.try_into().unwrap())
     }
 }

@@ -50,7 +50,7 @@ impl PublicKeyHash {
 
     pub fn as_bytes(&self) -> &[u8] {
         let PublicKeyHash::Tz1(tz1) = self;
-        &tz1.0
+        tz1.as_ref()
     }
     pub fn digest(data: &[u8]) -> Result<Self> {
         let out_len = ContractTz1Hash::hash_size();
@@ -70,7 +70,7 @@ impl TryFrom<&PublicKey> for PublicKeyHash {
 
     fn try_from(pk: &PublicKey) -> Result<Self> {
         let PublicKey::Ed25519(key) = pk;
-        let tz1 = key.pk_hash()?;
+        let tz1 = key.pk_hash();
         Ok(PublicKeyHash::Tz1(tz1))
     }
 }
