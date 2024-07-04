@@ -1,5 +1,6 @@
 use crate::sandbox::daemon::SandboxBootstrapAccount;
 
+pub const SANDBOX_LOCAL_HOST_LISTENING_ADDR: &str = "0.0.0.0";
 pub const SANDBOX_LOCAL_HOST_ADDR: &str = "127.0.0.1";
 pub const SANDBOX_OCTEZ_NODE_PORT: u16 = 18731;
 pub const SANDBOX_OCTEZ_NODE_RPC_PORT: u16 = 18730;

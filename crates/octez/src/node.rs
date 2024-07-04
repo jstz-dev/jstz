@@ -7,20 +7,30 @@ use std::{
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::{path_or_default, run_command};
+use crate::{run_command, OctezSetup};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OctezNode {
     /// Path to the octez-node binary
     /// If None, the binary will inside PATH will be used
-    pub octez_node_bin: Option<PathBuf>,
+    pub octez_setup: Option<OctezSetup>,
     /// Path to the octez-node directory
     pub octez_node_dir: PathBuf,
 }
 
+const BINARY_NAME: &str = "octez-node";
+
+fn default_command() -> Command {
+    Command::new(BINARY_NAME)
+}
+
 impl OctezNode {
-    fn command(&self) -> Command {
-        Command::new(path_or_default(self.octez_node_bin.as_ref(), "octez-node"))
+    /// Create a command based on the octez setup configuration
+    fn command(&self, mounts: &[&str]) -> Command {
+        self.octez_setup
+            .as_ref()
+            .map(|setup| setup.command(BINARY_NAME, mounts))
+            .unwrap_or_else(default_command)
     }
 
     pub fn config_init(
@@ -29,8 +39,9 @@ impl OctezNode {
         http_endpoint: &str,
         rpc_endpoint: &str,
         num_connections: u32,
+        sandbox_params_path: &str,
     ) -> Result<()> {
-        run_command(self.command().args([
+        run_command(self.command(&[sandbox_params_path]).args([
             "config",
             "init",
             "--network",
@@ -41,13 +52,15 @@ impl OctezNode {
             http_endpoint,
             "--rpc-addr",
             rpc_endpoint,
+            "--allow-all-rpc",
+            rpc_endpoint,
             "--connections",
             num_connections.to_string().as_str(),
         ]))
     }
 
     pub fn generate_identity(&self) -> Result<()> {
-        run_command(self.command().args([
+        run_command(self.command(&[]).args([
             "identity",
             "generate",
             "--data-dir",
@@ -55,8 +68,14 @@ impl OctezNode {
         ]))
     }
 
-    pub fn run(&self, log_file: &File, options: &[&str]) -> Result<Child> {
-        let mut command = self.command();
+    pub fn run(
+        &self,
+        log_file: &File,
+        options: &[&str],
+        sandbox_params_path: &str,
+        sandbox_path: &str,
+    ) -> Result<Child> {
+        let mut command = self.command(&[sandbox_params_path, sandbox_path]);
 
         command
             .args([

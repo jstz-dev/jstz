@@ -7,12 +7,12 @@ use std::{
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::path_or_default;
+use crate::OctezSetup;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OctezRollupNode {
-    /// Path to the octez-smart-rollup-node binary
-    pub octez_rollup_node_bin: Option<PathBuf>,
+    /// Setup for Octez smart rollup node (process path or Docker container)
+    pub octez_setup: Option<OctezSetup>,
     /// Path to the octez-smart-rollup-node directory
     pub octez_rollup_node_dir: PathBuf,
     /// If None, the default directory will be used (~/.tezos-client/)
@@ -21,12 +21,19 @@ pub struct OctezRollupNode {
     pub endpoint: String,
 }
 
+const BINARY_NAME: &str = "octez-smart-rollup-node";
+
+fn default_command() -> Command {
+    Command::new(BINARY_NAME)
+}
+
 impl OctezRollupNode {
     fn command(&self) -> Command {
-        let mut command = Command::new(path_or_default(
-            self.octez_rollup_node_bin.as_ref(),
-            "octez-smart-rollup-node",
-        ));
+        let mut command = self
+            .octez_setup
+            .as_ref()
+            .map(|setup| setup.command(BINARY_NAME, &[] as &[&str]))
+            .unwrap_or_else(default_command);
 
         command.args(["--endpoint", &self.endpoint]);
 
