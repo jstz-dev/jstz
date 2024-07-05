@@ -16,7 +16,7 @@ providing additional security and blockchain-specific functionality typical for 
 First we will clone the `jstz` repository and navigate to the `get-tez` example:
 
 ```sh
-git clone https://github.com/trilitech/jstz.git && cd jstz/examples/get-tez
+git clone https://github.com/jstz-dev/jstz.git && cd jstz/examples/get-tez
 ```
 
 In this example, the smart function provides a way to send a tez to the requester if asked politely.
@@ -156,7 +156,7 @@ $ jstz sandbox start
          .------------.
         /______________\
 
-        0.1.0-alpha.0 https://github.com/trilitech/jstz
+        0.1.0-alpha.0 https://github.com/jstz-dev/jstz
 
 octez-node is listening on: http://127.0.0.1:18731
 octez-smart-rollup-node is listening on: http://127.0.0.1:8932

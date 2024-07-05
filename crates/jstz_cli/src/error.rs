@@ -25,7 +25,7 @@ pub fn print(err: &Error) {
             "{} {}\n\nIf you think this is a bug then please create an issue at {}.",
             ErrorPrefix,
             err,
-            url("https://github.com/trilitech/jstz/issues/new/choose")
+            url("https://github.com/jstz-dev/jstz/issues/new/choose")
         );
     }
 }
