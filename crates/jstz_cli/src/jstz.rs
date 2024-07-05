@@ -81,6 +81,9 @@ impl JstzClient {
                 let code = response.json::<Option<String>>().await?;
                 Ok(code)
             }
+            StatusCode::NOT_FOUND => {
+                bail!("Account '{}' not found", address.to_base58())
+            }
             // For any other status, return a generic error
             _ => bail!("Failed to get the code"),
         }
@@ -95,6 +98,9 @@ impl JstzClient {
             StatusCode::OK => {
                 let balance = response.json::<u64>().await?;
                 Ok(balance)
+            }
+            StatusCode::NOT_FOUND => {
+                bail!("Account '{}' not found", address.to_base58())
             }
             _ => bail!("Failed to get the balance"),
         }
