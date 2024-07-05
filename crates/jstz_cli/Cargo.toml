@@ -10,6 +10,7 @@ readme.workspace = true
 license-file.workspace = true
 description = "👨‍⚖️ jstz CLI"
 include = ["jstz_kernel.wasm", "sandbox-params.json", "sandbox.json", "src"]
+default-run = "jstz"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
