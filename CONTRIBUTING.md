@@ -94,17 +94,11 @@ make build
 
 You can locate the resulting build artifact at `/target/wasm32-unknown-unknown/release/jstz_kernel.wasm`.
 
-To build the installer for `jstz`, execute the following:
-
-```sh
-make build-installer
-```
-
 ### Running `jstz` locally ⚙️
 
 #### Installing Octez 🐙
 
-Our sandbox network uses a custom distribution of Octez found [here](https://gitlab.com/tezos/tezos/-/tree/6c0621760ddce94afeff3484d9e8a650d8535f25). See the [Octez docs](https://tezos.gitlab.io/introduction/howtoget.html?highlight=building#compiling-with-make) for instructions on building Octez from source.
+An Octez distribution of version >= v20 is required to run our sandbox network. The easiest way to get Octez is by [downloading the static binaries](https://tezos.gitlab.io/introduction/howtoget.html#getting-static-binaries) or [installing the binaries](https://tezos.gitlab.io/introduction/howtoget.html#installing-binaries) for your system if it is supported. Otherwise, see the [Octez docs](https://tezos.gitlab.io/introduction/howtoget.html#setting-up-the-development-environment-from-scratch) for instructions on building Octez from source.
 
 Alternative, with Nix, execute the following:
 
@@ -112,8 +106,6 @@ Alternative, with Nix, execute the following:
 # Clone Octez
 git clone git@gitlab.com:tezos/tezos.git
 cd tezos
-# Checkout custom distribution
-git checkout ole@next-gen@floats
 # Build using Nix
 nix-build -j auto
 ```
@@ -214,7 +206,7 @@ To make sure your pull request is easy to review:
   Consider installing our pre-commit hook using
 
   ```sh
-  ./scripts/install-pre-commit-hook.sh
+  ./scripts/install-hooks.sh
   ```
 
 - **Document your code**. Write documentation for your changes, either as comments or as a markdown file in `/docs`.
