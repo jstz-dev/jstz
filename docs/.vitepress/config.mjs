@@ -53,7 +53,7 @@ export default defineConfig({
     ],
 
     socialLinks: [
-      { icon: "github", link: "https://github.com/trilitech/jstz/" },
+      { icon: "github", link: "https://github.com/jstz-dev/jstz/" },
     ],
   },
 });

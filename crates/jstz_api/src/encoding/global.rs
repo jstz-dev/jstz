@@ -35,7 +35,7 @@ impl GlobalApi {
             .get_or_undefined(0)
             .as_string()
             .ok_or_else(|| JsNativeError::typ().with_message("expected string"))?;
-        // TODO: https://github.com/trilitech/jstz/pull/197#discussion_r1413836707
+        // TODO: https://github.com/jstz-dev/jstz/pull/197#discussion_r1413836707
         // let data: JsString = args.get_or_undefined(0).try_js_into(context);
         let result = Global::atob(data)?;
         Ok(result.into())
@@ -45,7 +45,7 @@ impl GlobalApi {
             .get_or_undefined(0)
             .as_string()
             .ok_or_else(|| JsNativeError::typ().with_message("expected string"))?;
-        // TODO: https://github.com/trilitech/jstz/pull/197#discussion_r1413836707
+        // TODO: https://github.com/jstz-dev/jstz/pull/197#discussion_r1413836707
         let result = Global::btoa(data)?;
         Ok(result.into())
     }

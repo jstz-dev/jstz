@@ -10,7 +10,7 @@ Ensure `docker` is installed on your system. If not, please follow [this guide](
 To download and install `jstz`, run the following command in your terminal:
 
 ```sh
-source <(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/trilitech/jstz/main/scripts/install-jstz-cli.sh)
+source <(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/jstz-dev/jstz/main/scripts/install-jstz-cli.sh)
 ```
 
 Congratulations! 🎉 `jstz` is now installed and configured on your system.
@@ -23,7 +23,7 @@ Below are instruction on how to build `jstz` from source. Additionally, this sec
 ### Cloning the Repository
 
 ```sh
-git clone https://github.com/trilitech/jstz.git
+git clone https://github.com/jstz-dev/jstz.git
 ```
 
 ### Prerequisites 📋
