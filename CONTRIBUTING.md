@@ -15,7 +15,7 @@ It provides a simple interface through which one can deploy smart functions and 
 
 Since smart rollups must compile to WASM, `jstz` needs to use a JavaScript engine that compiles to WASM - the assembly used for writing Smart Rollups. Therefore `jstz` is built on _Boa_ - a Javascript engine written in Rust.
 
-In the jstz_core crates, `jstz` uses Boa and enables Rust types to be passed around as JavaScript objects. This allows implementation and registration of various APIs written in Rust and their usage as if they were native Javascript objects.
+In the `jstz_core` crates, `jstz` uses Boa and enables Rust types to be passed around as JavaScript objects. This allows implementation and registration of various APIs written in Rust and their usage as if they were native Javascript objects.
 
 When writing smart functions, we need a way to store data across different calls of the functions. Therefore, `jstz` _smart functions_ implement a persistent key-value store used for storing and retrieval of arbitrary JSON blobs. This store can be accessed through a global _Kv_ object.
 
