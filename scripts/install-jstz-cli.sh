@@ -2,8 +2,11 @@
 
 { # this ensures the entire script is downloaded
 
-version="20240320"
-network="weeklynet-2024-03-20"
+version="20240703"
+network="ghostnet"
+# FIXME: https://app.asana.com/0/1205770721173533/1207698416028745/f
+# Update the container URL to point to jstz-dev instead of trilitech 
+# (once the runners have been transferred)
 container="ghcr.io/trilitech/jstz-cli:$version"
 jstz_home="$HOME/.jstz"
 
@@ -48,7 +51,7 @@ jstz_configure() {
   "networks": {
     "weeklynet": {
       "octez_node_rpc_endpoint": "http://rpc.$network.teztnets.com",
-      "jstz_node_endpoint": "http://34.39.12.211:8933"
+      "jstz_node_endpoint": "http://34.147.156.46:8933"
     }
   }
 }
