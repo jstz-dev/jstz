@@ -52,7 +52,7 @@ use super::{
 fn octez_node_endpoint() -> String {
     format!(
         "http://{}:{}",
-        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_PORT
+        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT
     )
 }
 
