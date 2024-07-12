@@ -18,8 +18,7 @@ See [installing Octez](/CONTRIBUTING.md#installing-octez-🐙) for installing th
 ```sh
 # Make a javascript file
 echo "export default (() => new Response('hello world'))" > index.js
-# Start the sandbox
-make build-installer
+
 cargo run -- sandbox start
 # Deploy smart function
 cargo run -- deploy index.js --name example

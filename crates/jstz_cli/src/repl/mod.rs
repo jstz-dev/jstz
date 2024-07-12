@@ -71,7 +71,9 @@ impl JsHighlighter {
 
     fn highlight(&self, input: &str) -> String {
         let mut h = HighlightLines::new(&self.syntax, &self.theme);
-        let ranges: Vec<(Style, &str)> = h.highlight(input, &self.ss);
+        let ranges: Vec<(Style, &str)> = h
+            .highlight_line(input, &self.ss)
+            .expect("Failed to highlight line");
         self.apply_foreground_only(&ranges)
     }
 }
@@ -81,7 +83,7 @@ impl Highlighter for JsHighlighter {
         Cow::Owned(self.highlight(line))
     }
 
-    fn highlight_char(&self, _line: &str, _pos: usize) -> bool {
+    fn highlight_char(&self, _line: &str, _pos: usize, _forced: bool) -> bool {
         true
     }
 }

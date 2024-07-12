@@ -535,8 +535,8 @@ impl NativeClass for ResponseClass {
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance> {
         let body: BodyWithType = match args.get(0) {
+            None | Some(JsValue::Undefined | JsValue::Null) => BodyWithType::default(),
             Some(value) => value.try_js_into(context)?,
-            None => Default::default(),
         };
 
         let options: ResponseOptions = match args.get(1) {

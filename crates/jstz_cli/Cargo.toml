@@ -10,6 +10,7 @@ readme.workspace = true
 license-file.workspace = true
 description = "👨‍⚖️ jstz CLI"
 include = ["jstz_kernel.wasm", "sandbox-params.json", "sandbox.json", "src"]
+default-run = "jstz"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -31,12 +32,12 @@ dirs = "3.0"
 nix = { version = "^0.27.1", features = ["process", "signal"] }
 http = "1.0.0"
 fs_extra = "1.2"
-anyhow = "1.0.75"
+anyhow = "1.0.82"
 daemonize = "0.5.0"
 tempfile = "3.10.0"
 signal-hook = "0.3.17"
 boa_engine = { version = "0.17.0", features = ["fuzz"] }
-rustyline = "12.0.0"
+rustyline = "14.0.0"
 tezos-smart-rollup.workspace = true
 tezos-smart-rollup-mock.workspace = true
 serde_yaml = "0.9"
@@ -51,7 +52,7 @@ url = "2.2.2"
 boa_gc = "0.17.0"
 reqwest-eventsource = "0.5.0"
 futures-util = "0.3.30"
-syntect = "4.6.0"
+syntect = "5.2.0"
 crossterm = "0.27"
 ansi_term = "0.12.1"
 console = "0.15.8"
