@@ -1,0 +1,56 @@
+{ parameter
+    (or (ticket %callback (pair nat (option bytes)))
+        (pair %deposit (address %jstz_address) (address %l2_address))) ;
+  storage
+    (pair (address %exchanger)
+          (option %deposit_request (pair (address %jstz_address) (address %l2_address)))) ;
+  code { UNPAIR ;
+         IF_LEFT
+           { SWAP ;
+             UNPAIR ;
+             SWAP ;
+             IF_NONE { PUSH string "Callback on non-locked deposit" ; FAILWITH } {} ;
+             UNPAIR ;
+             CONTRACT (pair address (ticket (pair nat (option bytes)))) ;
+             IF_NONE { PUSH string "Invalid rollup address" ; FAILWITH } {} ;
+             PUSH mutez 0 ;
+             DIG 4 ;
+             DIG 3 ;
+             PAIR ;
+             TRANSFER_TOKENS ;
+             NONE (pair address address) ;
+             DIG 2 ;
+             PAIR ;
+             NIL operation ;
+             DIG 2 ;
+             CONS ;
+             PAIR }
+           { SWAP ;
+             UNPAIR ;
+             SWAP ;
+             IF_NONE {} { DROP ; PUSH string "Deposit locked" ; FAILWITH } ;
+             AMOUNT ;
+             PUSH mutez 0 ;
+             DUP 2 ;
+             COMPARE ;
+             LE ;
+             IF { DROP 3 ;
+                  PUSH string "Invalid deposit amount: Deposit amount must be greater than 0." ;
+                  FAILWITH }
+                { SELF %callback ;
+                  ADDRESS ;
+                  DUP 3 ;
+                  CONTRACT %mint address ;
+                  IF_NONE
+                    { DROP 4 ; PUSH string "Invalid tez ticket contract" ; FAILWITH }
+                    { DUG 2 ;
+                      TRANSFER_TOKENS ;
+                      DIG 2 ;
+                      SOME ;
+                      DIG 2 ;
+                      PAIR ;
+                      NIL operation ;
+                      DIG 2 ;
+                      CONS ;
+                      PAIR } } } } }
+
