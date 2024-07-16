@@ -7,8 +7,10 @@ build: build-cli-kernel
 
 .PHONY: build-bridge
 build-bridge:
-	@ligo compile contract contracts/jstz_bridge.mligo \
-		--module "Jstz_bridge" > contracts/jstz_bridge.tz
+	@ligo compile contract --no-warn contracts/jstz_bridge.mligo \
+		--module "Jstz_bridge" > contracts/jstz_bridge.tz 
+	@ligo compile contract contracts/jstz_native_bridge.mligo > contracts/jstz_native_bridge.tz
+	@ligo compile contract --no-warn contracts/exchanger.mligo > contracts/exchanger.tz
 
 .PHONY: build-kernel
 build-kernel:
