@@ -372,7 +372,6 @@ fn deploy(
     println!("Deploying rollup...");
 
     let rollup_address = JstzRollup::deploy(&client, &operator.to_string(), &installer)?;
-    // bridge.set_rollup(&client, &operator.to_string(), &rollup_address)?;
 
     println!("\tAddress: {}", rollup_address);
 
