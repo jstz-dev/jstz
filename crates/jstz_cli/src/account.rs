@@ -274,8 +274,9 @@ async fn get_balance(
     debug!("resolved `account` -> {:?}", address);
 
     let balance = cfg.jstz_client(&network)?.get_balance(&address).await?;
+    let tez_balance = balance as f64 / u64::pow(10, 6) as f64;
 
-    info!("Balance of {} is {} $CTEZ", address, balance);
+    info!("Balance of {} is {}ꜩ", address, tez_balance);
 
     Ok(())
 }
