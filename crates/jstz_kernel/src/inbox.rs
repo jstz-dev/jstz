@@ -4,9 +4,13 @@ use num_traits::ToPrimitive;
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
+use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
+use tezos_smart_rollup::michelson::{
+    MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption,
+};
 use tezos_smart_rollup::{
     inbox::{InboxMessage, InternalInboxMessage, Transfer},
-    michelson::{ticket::UnitTicket, MichelsonBytes, MichelsonPair},
+    michelson::MichelsonPair,
     prelude::{debug_msg, Runtime},
     types::Contract,
 };
@@ -21,54 +25,59 @@ pub enum Message {
 }
 
 // reciever, ticket
-type RollupType = MichelsonPair<MichelsonBytes, UnitTicket>;
+pub type RollupType = MichelsonPair<MichelsonContract, FA2_1Ticket>;
+
+const NATIVE_TICKET_ID: u32 = 0_u32;
+const NATIVE_TICKET_CONTENT: MichelsonOption<MichelsonBytes> = MichelsonOption(None);
+
+fn is_valid_native_deposit(
+    rt: &mut impl Runtime,
+    ticket: &FA2_1Ticket,
+    native_ticketer: &ContractKt1Hash,
+) -> bool {
+    let creator = ticket.creator();
+    let contents = ticket.contents();
+    match &creator.0 {
+        Contract::Originated(kt1) if kt1 == native_ticketer => (),
+        _ => {
+            debug_msg!(rt, "Deposit ignored because of different ticketer");
+            return false;
+        }
+    };
+
+    let native_ticket_id = MichelsonNat::from(NATIVE_TICKET_ID);
+    if contents.0 != native_ticket_id {
+        debug_msg!(rt, "Deposit ignored because of different ticket id");
+        return false;
+    }
+
+    if contents.1 != NATIVE_TICKET_CONTENT {
+        debug_msg!(rt, "Deposit ignored because of different ticket content");
+        return false;
+    }
+
+    true
+}
 
 fn read_transfer(
     rt: &mut impl Runtime,
     transfer: Transfer<RollupType>,
-    ticketer: Option<&ContractKt1Hash>,
+    ticketer: &ContractKt1Hash,
 ) -> Option<Message> {
     debug_msg!(rt, "Internal message: transfer\n");
 
-    let ticketer = match ticketer {
-        Some(ticketer) => ticketer,
-        None => {
-            debug_msg!(
-                rt,
-                "Deposit ignored because of different smart rollup address"
-            );
-            return None;
-        }
-    };
-
-    if transfer.destination.hash().as_ref() != &rt.reveal_metadata().raw_rollup_address {
-        debug_msg!(
-            rt,
-            "Deposit ignored because of different smart rollup address"
-        );
-        return None;
-    };
-
     let ticket = transfer.payload.1;
 
-    match &ticket.creator().0 {
-        Contract::Originated(kt1) if kt1 == ticketer => (),
-        _ => {
-            debug_msg!(rt, "Deposit ignored because of different ticketer");
-            return None;
-        }
+    if is_valid_native_deposit(rt, &ticket, ticketer) {
+        let amount = ticket.amount().to_u64()?;
+        let pkh = transfer.payload.0 .0.to_b58check();
+        let reciever = PublicKeyHash::from_base58(&pkh).ok()?;
+        let content = Deposit { amount, reciever };
+        debug_msg!(rt, "Deposit: {content:?}\n");
+        Some(Message::Internal(InternalMessage::Deposit(content)))
+    } else {
+        None
     }
-
-    let amount = ticket.amount().to_u64()?;
-
-    let pkh_bytes = transfer.payload.0 .0;
-    let reciever = PublicKeyHash::from_slice(&pkh_bytes).ok()?;
-
-    let content = Deposit { amount, reciever };
-
-    debug_msg!(rt, "Deposit: {content:?}\n");
-
-    Some(Message::Internal(InternalMessage::Deposit(content)))
 }
 
 fn read_external_message(rt: &mut impl Runtime, bytes: &[u8]) -> Option<ExternalMessage> {
@@ -77,10 +86,7 @@ fn read_external_message(rt: &mut impl Runtime, bytes: &[u8]) -> Option<External
     Some(msg)
 }
 
-pub fn read_message(
-    rt: &mut impl Runtime,
-    ticketer: Option<&ContractKt1Hash>,
-) -> Option<Message> {
+pub fn read_message(rt: &mut impl Runtime, ticketer: ContractKt1Hash) -> Option<Message> {
     let input = rt.read_input().ok()??;
     let _ = rt.mark_for_reboot();
 
@@ -112,7 +118,16 @@ pub fn read_message(
             None
         }
         InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
-            read_transfer(rt, transfer, ticketer)
+            if transfer.destination.hash().as_ref()
+                != &rt.reveal_metadata().raw_rollup_address
+            {
+                debug_msg!(
+                    rt,
+                    "Internal message ignored because of different smart rollup address"
+                );
+                return None;
+            };
+            read_transfer(rt, transfer, &ticketer)
         }
         InboxMessage::External(bytes) => match ExternalMessageFrame::parse(bytes) {
             Ok(frame) => match frame {
@@ -121,7 +136,7 @@ pub fn read_message(
                     let rollup_address = metadata.address();
                     if &rollup_address != address.hash() {
                         debug_msg!(
-                            rt,
+                          rt,
                             "Skipping message: External message targets another rollup. Expected: {}. Found: {}\n",
                             rollup_address,
                             address.hash()

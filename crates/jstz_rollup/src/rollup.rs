@@ -21,6 +21,7 @@ use tezos_smart_rollup_installer_config::binary::owned::{
 use crate::BridgeContract;
 
 const TICKETER_PATH: RefPath = RefPath::assert_from(b"/ticketer");
+const ROLLUP_MICHELSON_TYPE: &str = "(pair bytes (ticket (pair nat (option bytes))))";
 
 pub fn make_installer(
     kernel_file: &Path,
@@ -78,7 +79,7 @@ impl JstzRollup {
             operator,
             "jstz_rollup",
             "wasm_2_0_0",
-            "(pair bytes (ticket unit))",
+            ROLLUP_MICHELSON_TYPE,
             &hex::encode(installer),
         )?;
 
