@@ -398,9 +398,9 @@ fn run(
         &addr,
         port,
     )?;
-    let thread = OctezThread::from_child(child);
+    let mut thread = OctezThread::from_child(child);
 
-    OctezThread::join(vec![thread])?;
+    OctezThread::join(&mut vec![&mut thread])?;
 
     Ok(())
 }

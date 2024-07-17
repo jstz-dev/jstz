@@ -13,7 +13,7 @@ use signal_hook::{
 
 pub struct OctezThread {
     shutdown_tx: Sender<()>,
-    thread_handle: JoinHandle<Result<()>>,
+    thread_handle: Option<JoinHandle<Result<()>>>,
 }
 
 impl OctezThread {
@@ -40,7 +40,7 @@ impl OctezThread {
 
         Self {
             shutdown_tx,
-            thread_handle,
+            thread_handle: Some(thread_handle),
         }
     }
 
@@ -66,26 +66,23 @@ impl OctezThread {
 
         Self {
             shutdown_tx,
-            thread_handle,
+            thread_handle: Some(thread_handle),
         }
     }
 
-    pub fn is_running(&self) -> bool {
-        !self.thread_handle.is_finished()
+    fn is_running(&self) -> bool {
+        self.thread_handle.is_some()
     }
 
-    pub fn shutdown(self) -> Result<()> {
-        self.shutdown_tx.send(())?;
-        match self.thread_handle.join() {
-            Ok(result) => result?,
-            Err(_) => {
-                // thread panicked
-            }
-        };
+    pub fn shutdown(&mut self) -> Result<()> {
+        if let Some(handle) = self.thread_handle.take() {
+            self.shutdown_tx.send(())?;
+            handle.join().unwrap().unwrap()
+        }
         Ok(())
     }
 
-    pub fn join(threads: Vec<Self>) -> Result<()> {
+    pub fn join(threads: &mut Vec<&mut Self>) -> Result<()> {
         let mut signals = Signals::new([SIGINT, SIGTERM])?;
 
         // Loop until 1 of the threads fails
@@ -109,11 +106,15 @@ impl OctezThread {
 
         // Shutdown all running threads
         for thread in threads {
-            if thread.is_running() {
-                thread.shutdown()?;
-            }
+            thread.shutdown()?;
         }
 
         Ok(())
+    }
+}
+
+impl Drop for OctezThread {
+    fn drop(&mut self) {
+        self.shutdown().unwrap();
     }
 }
