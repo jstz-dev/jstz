@@ -11,7 +11,7 @@ use crate::inbox::{read_message, Message};
 
 pub mod inbox;
 
-const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
+pub const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
 
 fn read_ticketer(rt: &impl Runtime) -> Option<ContractKt1Hash> {
     Storage::get(rt, &TICKETER).ok()?
@@ -40,9 +40,9 @@ fn handle_message(hrt: &mut impl Runtime, message: Message) -> Result<()> {
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
-    let ticketer = read_ticketer(rt);
+    let ticketer = read_ticketer(rt).expect("Ticketer not found");
 
-    if let Some(message) = read_message(rt, ticketer.as_ref()) {
+    if let Some(message) = read_message(rt, ticketer) {
         handle_message(rt, message)
             .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
     }
