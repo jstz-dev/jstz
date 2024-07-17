@@ -8,7 +8,7 @@ use figment::{
     Figment,
 };
 use jstz_rollup::{
-    deploy_ctez_contract, rollup, BootstrapAccount, BridgeContract, JstzRollup,
+    deploy_ctez_contract, rollup, BootstrapAccount, BridgeContract, Exchanger, JstzRollup,
 };
 use octez::{OctezClient, OctezRollupNode, OctezThread};
 use serde::{Deserialize, Serialize};
@@ -285,14 +285,15 @@ fn import_keys(cfg: &Config, alias: Option<String>, secret_key: &str) -> Result<
 
 fn make_installer(
     kernel: PathBuf,
-    bridge: ContractKt1Hash,
+    exchanger: ContractKt1Hash,
     output: PathBuf,
 ) -> Result<()> {
-    let bridge = BridgeContract::from(bridge);
+    let exchanger = Exchanger::from(exchanger);
 
     print!("Building installer...");
 
-    let installer = rollup::make_installer(&kernel, &output.join("preimages"), &bridge)?;
+    let installer =
+        rollup::make_installer(&kernel, &output.join("preimages"), &exchanger)?;
     fs::write(output.join("installer.wasm"), installer)?;
 
     println!(" done");
@@ -353,16 +354,17 @@ fn deploy(
     cfg: &Config,
     operator: Option<Tz1AddressOrAlias>,
     kernel: PathBuf,
-    bridge: ContractKt1Hash,
+    exchanger: ContractKt1Hash,
     output: PathBuf,
 ) -> Result<()> {
     let client = cfg.octez_client();
     let operator = Operator::try_from(operator)?;
-    let bridge = BridgeContract::from(bridge);
+    let exchanger = Exchanger::from(exchanger);
 
     print!("Building installer...");
 
-    let installer = rollup::make_installer(&kernel, &output.join("preimages"), &bridge)?;
+    let installer =
+        rollup::make_installer(&kernel, &output.join("preimages"), &exchanger)?;
     fs::write(output.join("installer.wasm"), &installer)?;
 
     println!(" done");
@@ -370,7 +372,7 @@ fn deploy(
     println!("Deploying rollup...");
 
     let rollup_address = JstzRollup::deploy(&client, &operator.to_string(), &installer)?;
-    bridge.set_rollup(&client, &operator.to_string(), &rollup_address)?;
+    // bridge.set_rollup(&client, &operator.to_string(), &rollup_address)?;
 
     println!("\tAddress: {}", rollup_address);
 
