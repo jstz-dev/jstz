@@ -1,8 +1,5 @@
 use indicatif::{ProgressBar, ProgressStyle};
-use jstz_rollup::{
-    deploy_ctez_contract, rollup::make_installer, BootstrapAccount, BridgeContract,
-    JstzRollup,
-};
+use jstz_rollup::{rollup::make_installer, Exchanger, JstzRollup, NativeBridge};
 use nix::{
     sys::signal::{kill, Signal},
     unistd::Pid,
@@ -47,9 +44,7 @@ use crate::{
     term::{self, styles},
 };
 
-use super::{
-    SANDBOX_BOOTSTRAP_ACCOUNT_CTEZ_AMOUNT, SANDBOX_BOOTSTRAP_ACCOUNT_XTZ_AMOUNT,
-};
+use super::SANDBOX_BOOTSTRAP_ACCOUNT_XTZ_AMOUNT;
 
 fn octez_node_endpoint() -> String {
     format!(
@@ -219,16 +214,6 @@ const ACTIVATOR_ACCOUNT_SK: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
 
 const OPERATOR_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx"; // bootstrap1
-
-fn ctez_bootstrap_accounts() -> Vec<BootstrapAccount> {
-    SANDBOX_BOOTSTRAP_ACCOUNTS
-        .iter()
-        .map(|account| BootstrapAccount {
-            address: account.address.to_string(),
-            amount: SANDBOX_BOOTSTRAP_ACCOUNT_CTEZ_AMOUNT,
-        })
-        .collect::<Vec<BootstrapAccount>>()
-}
 
 fn cached_identity_path() -> PathBuf {
     jstz_home_dir().join("octez-node-identity.json")
@@ -455,20 +440,14 @@ fn start_sandbox(
     // 5. Deploy bridge
     progress_step(log_file, progress);
     debug!(log_file, "Deploying bridge...");
+    let client = cfg.octez_client_sandbox()?;
 
-    let ctez_address = deploy_ctez_contract(
-        &cfg.octez_client_sandbox()?,
-        OPERATOR_ADDRESS,
-        ctez_bootstrap_accounts(),
-    )?;
+    let exchanger = Exchanger::deploy(&client, OPERATOR_ADDRESS)?;
+    debug!(log_file, "Exchanger deployed at {}", exchanger);
 
     progress_step(log_file, progress);
 
-    let bridge = BridgeContract::deploy(
-        &cfg.octez_client_sandbox()?,
-        OPERATOR_ADDRESS,
-        &ctez_address,
-    )?;
+    let bridge = NativeBridge::deploy(&client, OPERATOR_ADDRESS, &exchanger)?;
 
     debug!(log_file, "Bridge deployed at {}", bridge);
 
@@ -478,7 +457,7 @@ fn start_sandbox(
 
     let preimages_dir = TempDir::with_prefix("jstz_sandbox_preimages")?.into_path();
 
-    let installer = make_installer(&jstz_kernel_path(), &preimages_dir, &bridge)?;
+    let installer = make_installer(&jstz_kernel_path(), &preimages_dir, &exchanger)?;
     debug!(
         log_file,
         "Installer kernel created with preimages at {:?}", preimages_dir
@@ -508,7 +487,6 @@ fn start_sandbox(
 
     // 9. Set the rollup address in the bridge
     progress_step(log_file, progress);
-    bridge.set_rollup(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &rollup)?;
     debug!(log_file, "`jstz_bridge` `rollup` address set to {}", rollup);
 
     Ok(sandbox)
@@ -519,7 +497,6 @@ fn format_sandbox_bootstrap_accounts() -> Table {
     table.set_titles(Row::new(vec![
         Cell::new("Address"),
         Cell::new("XTZ Balance"),
-        Cell::new("CTEZ Balance"),
     ]));
 
     for (i, bootstrap_account) in SANDBOX_BOOTSTRAP_ACCOUNTS.iter().enumerate() {
@@ -530,7 +507,6 @@ fn format_sandbox_bootstrap_accounts() -> Table {
                 bootstrap_account.address
             )),
             Cell::new(&SANDBOX_BOOTSTRAP_ACCOUNT_XTZ_AMOUNT.to_string()),
-            Cell::new(&SANDBOX_BOOTSTRAP_ACCOUNT_CTEZ_AMOUNT.to_string()),
         ]));
     }
 

@@ -18,15 +18,15 @@ use tezos_smart_rollup_installer_config::binary::owned::{
     OwnedBytes, OwnedConfigInstruction, OwnedConfigProgram,
 };
 
-use crate::BridgeContract;
+use crate::Exchanger;
 
 const TICKETER_PATH: RefPath = RefPath::assert_from(b"/ticketer");
-const ROLLUP_MICHELSON_TYPE: &str = "(pair bytes (ticket (pair nat (option bytes))))";
+const ROLLUP_MICHELSON_TYPE: &str = "(pair address (ticket (pair nat (option bytes))))";
 
 pub fn make_installer(
     kernel_file: &Path,
     preimages_dir: &Path,
-    bridge_contract: &BridgeContract,
+    exchanger: &Exchanger,
 ) -> Result<Vec<u8>> {
     let root_hash = preimages::content_to_preimages(kernel_file, preimages_dir)?;
 
@@ -43,7 +43,7 @@ pub fn make_installer(
         // 2. Set `jstz` ticketer as the bridge contract address
         OwnedConfigInstruction::set_instr(
             OwnedBytes(bincode::serialize(&ContractKt1Hash::from_base58_check(
-                bridge_contract,
+                exchanger,
             )?)?),
             OwnedPath::from(TICKETER_PATH),
         ),
