@@ -18,19 +18,17 @@ See [installing Octez](/CONTRIBUTING.md#installing-octez-🐙) for installing th
 ```sh
 # Make a javascript file
 echo "export default (() => new Response('hello world'))" > index.js
-
-cargo run -- sandbox start
+# Start the sandbox (as a daemon)
+jstz sandbox start -d
 # Deploy smart function
-cargo run -- deploy index.js --name example
+jstz deploy index.js --name example
 # Send request to smart function
-cargo run -- run tezos://example/
+jstz run tezos://example/
 ```
 
 ## Documentation
 
-<!-- TODO: Host documentation using github pages -->
-
-For the latest `jstz` documentation, [click here]().
+For the latest `jstz` documentation, [click here](https://jstz-dev.github.io/jstz/).
 
 ## Contributing
 
