@@ -47,3 +47,44 @@ pub fn entry(rt: &mut impl Runtime) {
             .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
     }
 }
+
+#[cfg(test)]
+mod test {
+
+    use jstz_core::kv::Transaction;
+    use jstz_mock::mock::{JstzMockHost, MockNativeDeposit};
+    use jstz_proto::context::account::Account;
+    use tezos_smart_rollup::types::{Contract, PublicKeyHash};
+
+    use crate::{entry, read_ticketer};
+
+    #[test]
+    fn read_ticketer_succeeds() {
+        let mut host = JstzMockHost::default();
+        let ticketer = read_ticketer(host.rt()).unwrap();
+        let expected_tickter = host.get_ticketer();
+        assert_eq!(ticketer, expected_tickter)
+    }
+
+    #[test]
+    fn native_deposit_succeeds() {
+        let mut host = JstzMockHost::default();
+        let deposit = MockNativeDeposit::default();
+        host.add_deposit_message(&deposit);
+        host.rt().run_level(entry);
+        let tx = &mut Transaction::default();
+        tx.begin();
+        match deposit.receiver {
+            Contract::Implicit(PublicKeyHash::Ed25519(tz1)) => {
+                let amount = Account::balance(
+                    host.rt(),
+                    tx,
+                    &jstz_crypto::public_key_hash::PublicKeyHash::Tz1(tz1),
+                )
+                .unwrap();
+                assert_eq!(amount, 100);
+            }
+            _ => panic!("Unexpected receiver"),
+        }
+    }
+}

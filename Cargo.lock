@@ -2336,6 +2336,7 @@ dependencies = [
  "jstz_api",
  "jstz_core",
  "jstz_crypto",
+ "jstz_mock",
  "jstz_proto",
  "num-traits",
  "serde",
