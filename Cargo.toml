@@ -12,6 +12,7 @@ members = [
     "crates/octez",
     "crates/jstz_rollup",
     "crates/jstz_sdk",
+    "crates/jstz_mock"
 ]
 
 
@@ -38,6 +39,7 @@ jstz_wpt = { version = "0.1.0-alpha.0", path = "crates/jstz_wpt" }
 octez = { version = "0.1.0-alpha.0", path = "crates/octez" }
 jstz_rollup = { version = "0.1.0-alpha.0", path = "crates/jstz_rollup" }
 jstz_sdk = { version = "0.1.0-alpha.0", path = "crates/jstz_sdk" }
+jstz_mock = { version = "0.1.0-alpha.0", path = "crates/jstz_mock" }
 
 [workspace.dependencies.tezos-smart-rollup]
 version = "0.2.2"

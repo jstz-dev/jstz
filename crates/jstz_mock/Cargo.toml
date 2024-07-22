@@ -1,0 +1,12 @@
+[package]
+name = "jstz_mock"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+tezos-smart-rollup.workspace = true
+tezos-smart-rollup-mock.workspace = true 
+tezos_crypto_rs.workspace = true
+jstz_core.workspace = true

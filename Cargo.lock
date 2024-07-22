@@ -2344,6 +2344,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "jstz_mock"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "jstz_core",
+ "tezos-smart-rollup",
+ "tezos-smart-rollup-mock",
+ "tezos_crypto_rs 0.6.0",
+]
+
+[[package]]
 name = "jstz_node"
 version = "0.1.0-alpha.0"
 dependencies = [
