@@ -160,3 +160,87 @@ pub fn read_message(rt: &mut impl Runtime, ticketer: ContractKt1Hash) -> Option<
         },
     }
 }
+
+#[cfg(test)]
+mod test {
+    use jstz_mock::mock::{JstzMockHost, MockNativeDeposit};
+    use jstz_proto::operation::external;
+    use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
+    use tezos_smart_rollup::types::SmartRollupAddress;
+
+    use super::{read_message, InternalMessage, Message};
+
+    #[test]
+    fn read_message_ignored_on_different_smart_rollup_address() {
+        let mut host = JstzMockHost::new(true);
+        let alternative_smart_rollup_address =
+            SmartRollupAddress::from_b58check("sr1Ghq66tYK9y3r8CC1Tf8i8m5nxh8nTvZEf")
+                .unwrap();
+        let deposit = MockNativeDeposit {
+            smart_rollup: Some(alternative_smart_rollup_address),
+            ..MockNativeDeposit::default()
+        };
+        host.add_deposit_message(&deposit);
+        let ticketer = host.get_ticketer();
+        let result = read_message(host.rt(), ticketer);
+        assert_eq!(result, None)
+    }
+
+    #[test]
+    fn read_message_native_deposit_succeeds() {
+        let mut host = JstzMockHost::new(true);
+        let deposit = MockNativeDeposit::default();
+        let ticketer = host.get_ticketer();
+        host.add_deposit_message(&deposit);
+        if let Message::Internal(InternalMessage::Deposit(external::Deposit {
+            amount,
+            reciever,
+        })) =
+            read_message(host.rt(), ticketer).expect("Expected message but non received")
+        {
+            assert_eq!(amount, 100);
+            assert_eq!(reciever.to_base58(), deposit.receiver.to_b58check())
+        } else {
+            panic!("Expected deposit message")
+        }
+    }
+
+    #[test]
+    fn read_message_native_deposit_ignored_different_ticketer() {
+        let mut host = JstzMockHost::new(true);
+        let ticketer = host.get_ticketer();
+        let deposit = MockNativeDeposit {
+            ticketer: ContractKt1Hash::from_b58check(
+                "KT1KRj5VMNmhxobTJBPq7u2kacqbxu9Cntx6",
+            )
+            .unwrap(),
+            ..MockNativeDeposit::default()
+        };
+        host.add_deposit_message(&deposit);
+        assert_eq!(read_message(host.rt(), ticketer), None);
+    }
+
+    #[test]
+    fn read_message_native_deposit_ignored_different_ticket_id() {
+        let mut host = JstzMockHost::new(true);
+        let ticketer = host.get_ticketer();
+        let deposit = MockNativeDeposit {
+            ticket_content: (1, None),
+            ..MockNativeDeposit::default()
+        };
+        host.add_deposit_message(&deposit);
+        assert_eq!(read_message(host.rt(), ticketer), None);
+    }
+
+    #[test]
+    fn read_message_native_deposit_ignored_different_ticket_value() {
+        let mut host = JstzMockHost::new(true);
+        let ticketer = host.get_ticketer();
+        let deposit = MockNativeDeposit {
+            ticket_content: (0, Some(b"1234".to_vec())),
+            ..MockNativeDeposit::default()
+        };
+        host.add_deposit_message(&deposit);
+        assert_eq!(read_message(host.rt(), ticketer), None);
+    }
+}
