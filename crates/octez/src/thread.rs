@@ -70,14 +70,18 @@ impl OctezThread {
         }
     }
 
-    fn is_running(&self) -> bool {
-        self.thread_handle.is_some()
+    pub fn is_running(&self) -> bool {
+        if let Some(thread_handle) = &self.thread_handle {
+            !thread_handle.is_finished()
+        } else {
+            false
+        }
     }
 
     pub fn shutdown(&mut self) -> Result<()> {
-        if let Some(handle) = self.thread_handle.take() {
-            self.shutdown_tx.send(())?;
-            handle.join().unwrap().unwrap()
+        if self.is_running() {
+            let _ = self.shutdown_tx.send(());
+            self.thread_handle.take().unwrap().join().unwrap()?;
         }
         Ok(())
     }

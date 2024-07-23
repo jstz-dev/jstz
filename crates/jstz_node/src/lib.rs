@@ -1,5 +1,5 @@
 use std::io::{self, ErrorKind::Other};
-use std::path::Path;
+use std::path::PathBuf;
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};
@@ -16,15 +16,15 @@ pub use services::{AccountsService, LogsService, OperationsService, Service};
 pub async fn run(
     addr: &str,
     port: u16,
-    rollup_endpoint: &str,
-    kernel_log_path: &Path,
+    rollup_endpoint: String,
+    kernel_log_path: PathBuf,
 ) -> anyhow::Result<()> {
     let rollup_client = Data::new(OctezRollupClient::new(rollup_endpoint.to_string()));
 
     let cancellation_token = CancellationToken::new();
 
     let (broadcaster, db, tail_file_handle) =
-        LogsService::init(kernel_log_path, &cancellation_token)
+        LogsService::init(&kernel_log_path, &cancellation_token)
             .await
             .map_err(|e| io::Error::new(Other, e.to_string()))?;
 
