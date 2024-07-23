@@ -1,3 +1,4 @@
+use futures::Future;
 use indicatif::{ProgressBar, ProgressStyle};
 use jstz_rollup::{rollup::make_installer, Exchanger, JstzRollup, NativeBridge};
 use nix::{
@@ -6,6 +7,10 @@ use nix::{
 };
 use octez::OctezThread;
 use regex::Regex;
+use signal_hook::{
+    consts::{SIGINT, SIGTERM},
+    iterator::Signals,
+};
 use std::io::Write;
 use std::{
     cell::RefCell,
@@ -24,7 +29,7 @@ use in_container::in_container;
 use log::info;
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
 use tempfile::TempDir;
-use tokio::task;
+use tokio::task::{self, JoinHandle};
 
 macro_rules! debug {
     ($file:expr, $($arg:tt)*) => {
@@ -103,6 +108,8 @@ pub struct Sandbox {
     octez_node: Option<OctezThread>,
     octez_baker: Option<OctezThread>,
     rollup_node: Option<OctezThread>,
+    jstz_node: Option<JoinHandle<Result<()>>>,
+    task_set: task::LocalSet,
 }
 
 impl Sandbox {
@@ -113,10 +120,12 @@ impl Sandbox {
             octez_node: None,
             octez_baker: None,
             rollup_node: None,
+            jstz_node: None,
+            task_set: task::LocalSet::new(),
         }
     }
 
-    fn shutdown(&mut self) -> Result<()> {
+    pub fn shutdown(&mut self) -> Result<()> {
         if let Some(mut t) = self.rollup_node.take() {
             t.shutdown()?;
         }
@@ -126,7 +135,88 @@ impl Sandbox {
         if let Some(mut n) = self.octez_node.take() {
             n.shutdown()?;
         }
+        if let Some(j) = self.jstz_node.take() {
+            j.abort();
+        }
+
         self.remove_sandbox_from_config()?;
+        Ok(())
+    }
+
+    pub async fn join(mut self) -> Result<()> {
+        let mut threads: Vec<OctezThread> = Vec::new();
+        let mut jstz_node = Option::None;
+        if let Some(n) = self.octez_node.take() {
+            threads.push(n);
+        }
+
+        if let Some(jn) = self.jstz_node.take() {
+            jstz_node = Some(jn);
+        }
+
+        if let Some(b) = self.octez_baker.take() {
+            threads.push(b)
+        }
+
+        if let Some(r) = self.rollup_node.take() {
+            threads.push(r)
+        }
+
+        let mut signals = Signals::new([SIGINT, SIGTERM])?;
+
+        // Loop to notify when either the octez binaries or jstz node is not running
+        // or if SIGINT/SIGTERM was received. This ensures that all processes are
+        // shutdown when any process is shutdown.
+        self.task_set
+            .run_until(async move {
+                task::spawn_local(async move {
+                    'main_loop: loop {
+                        for thread in threads.iter() {
+                            if !thread.is_running() {
+                                info!(
+                                    "Octez or Baker node is not running . Shutting down..",
+                                );
+                                break 'main_loop;
+                            }
+                        }
+
+                        if let Some(jn) = &jstz_node {
+                            if jn.is_finished() {
+                                info!("Jstz node not running. Shutting down..",);
+                                break 'main_loop;
+                            }
+                        }
+
+                        for signal in signals.pending() {
+                            match signal {
+                                SIGINT | SIGTERM => {
+                                    info!(
+                                        "Received signal {:?}, shutting down...",
+                                        signal
+                                    );
+                                    break 'main_loop;
+                                }
+                                _ => unreachable!(),
+                            }
+                        }
+                    }
+
+                    for mut thread in threads {
+                        let _ = thread.shutdown();
+                    }
+
+                    if let Some(jn) = &jstz_node {
+                        if !jn.is_finished() {
+                            jn.abort()
+                        }
+                    }
+                })
+                .await
+            })
+            .await?;
+
+        self.remove_sandbox_from_config()?;
+
         Ok(())
     }
 
@@ -135,23 +225,6 @@ impl Sandbox {
         config.reload()?;
         config.sandbox = None;
         config.save()
-    }
-
-    pub fn join(&mut self) -> Result<()> {
-        let mut threads: Vec<&mut OctezThread> = Vec::new();
-        if let Some(n) = &mut self.octez_node {
-            threads.push(n);
-        }
-
-        if let Some(b) = &mut self.octez_baker {
-            threads.push(b)
-        }
-
-        if let Some(r) = &mut self.rollup_node {
-            threads.push(r)
-        }
-
-        OctezThread::join(&mut threads)
     }
 
     pub fn set_octez_node(&mut self, octez_node: OctezThread) -> Result<()> {
@@ -188,6 +261,24 @@ impl Sandbox {
             }
             None => {
                 self.rollup_node = Some(rollup_node);
+                Ok(())
+            }
+        }
+    }
+
+    pub fn set_jstz_node(
+        &mut self,
+        jstz_node: impl Future<Output = Result<()>> + 'static,
+    ) -> Result<()> {
+        match self.jstz_node {
+            Some(_) => {
+                debug!(self.log_file.borrow_mut(), "Error: jstz node already set");
+                panic!();
+            }
+            None => {
+                // Run the jstz node in task LocalSet
+                let jstz_node = self.task_set.spawn_local(jstz_node);
+                self.jstz_node = Some(jstz_node);
                 Ok(())
             }
         }
@@ -371,38 +462,25 @@ fn client_bake(cfg: &Config, log_file: &File) -> Result<()> {
 /// Since actix_web uses a single-threaded runtime,
 /// the tasks spawned by `jstz_node` expect to run on the same thread.
 /// For more information, see: https://docs.rs/actix-rt/latest/actix_rt/
-async fn run_jstz_node(cfg: &Config) -> Result<()> {
-    let local = task::LocalSet::new();
-
+fn spawn_jstz_node(cfg: &Config) -> Result<impl Future<Output = Result<()>> + 'static> {
     let log_path = sandbox_daemon_log_path(cfg);
     let kernel_log_path = cfg.sandbox_logs_dir().join("kernel.log");
+    let mut log_file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(true)
+        .open(log_path.clone())?;
+    debug!(log_file, "Jstz node started 🎉");
 
-    local
-        .run_until(async move {
-            task::spawn_local(async move {
-                let mut log_file = OpenOptions::new()
-                    .create(true)
-                    .write(true)
-                    .append(true)
-                    .open(log_path.clone())?;
-                debug!(log_file, "Jstz node started 🎉");
-
-                jstz_node::run(
-                    SANDBOX_LOCAL_HOST_ADDR,
-                    SANDBOX_JSTZ_NODE_PORT,
-                    &format!(
-                        "http://{}:{}",
-                        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_SMART_ROLLUP_PORT
-                    ),
-                    &kernel_log_path,
-                )
-                .await
-            })
-            .await
-        })
-        .await??;
-
-    Ok(())
+    Ok(jstz_node::run(
+        SANDBOX_LOCAL_HOST_ADDR,
+        SANDBOX_JSTZ_NODE_PORT,
+        format!(
+            "http://{}:{}",
+            SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_SMART_ROLLUP_PORT
+        ),
+        kernel_log_path,
+    ))
 }
 
 fn start_sandbox(
@@ -549,8 +627,9 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
     debug!(log_file, "Saving sandbox config");
     cfg.save()?;
     // 4. Wait for the sandbox or jstz-node to shutdown (either by the user or by an error)
-    run_jstz_node(cfg).await?;
-    sandbox.join()?;
+    let jstz = spawn_jstz_node(cfg)?;
+    sandbox.set_jstz_node(jstz)?;
+    sandbox.join().await?;
     Ok(())
 }
 

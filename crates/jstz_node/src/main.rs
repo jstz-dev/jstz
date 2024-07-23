@@ -43,11 +43,5 @@ async fn main() -> anyhow::Result<()> {
         args.rollup_node_rpc_addr, args.rollup_node_rpc_port
     ));
 
-    jstz_node::run(
-        &args.addr,
-        args.port,
-        &rollup_endpoint,
-        &args.kernel_log_path,
-    )
-    .await
+    jstz_node::run(&args.addr, args.port, rollup_endpoint, args.kernel_log_path).await
 }
