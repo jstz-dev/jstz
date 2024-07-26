@@ -27,3 +27,4 @@ either = "1.9.0"
 
 [dev-dependencies]
 tezos-smart-rollup-mock.workspace = true
+jstz_mock.workspace = true

@@ -10,3 +10,4 @@ tezos-smart-rollup.workspace = true
 tezos-smart-rollup-mock.workspace = true 
 tezos_crypto_rs.workspace = true
 jstz_core.workspace = true
+jstz_crypto.workspace = true
