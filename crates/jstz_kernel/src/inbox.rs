@@ -5,7 +5,7 @@ use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
 use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
 use tezos_smart_rollup::michelson::{
-    MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption,
+    MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
 };
 use tezos_smart_rollup::{
     inbox::{InboxMessage, InternalInboxMessage, Transfer},
@@ -23,8 +23,14 @@ pub enum Message {
     Internal(InternalMessage),
 }
 
-// reciever, ticket
-pub type RollupType = MichelsonPair<MichelsonContract, FA2_1Ticket>;
+pub type MichelsonNativeDeposit = MichelsonPair<MichelsonContract, FA2_1Ticket>;
+
+pub type MichelsonFaDeposit = MichelsonPair<
+    MichelsonContract,
+    MichelsonPair<MichelsonOption<MichelsonContract>, FA2_1Ticket>,
+>;
+
+pub type RollupType = MichelsonOr<MichelsonNativeDeposit, MichelsonFaDeposit>;
 
 const NATIVE_TICKET_ID: u32 = 0_u32;
 const NATIVE_TICKET_CONTENT: MichelsonOption<MichelsonBytes> = MichelsonOption(None);
@@ -65,17 +71,25 @@ fn read_transfer(
 ) -> Option<Message> {
     debug_msg!(rt, "Internal message: transfer\n");
 
-    let ticket = transfer.payload.1;
+    match transfer.payload {
+        MichelsonOr::Left(tez_ticket) => {
+            let ticket = tez_ticket.1;
 
-    if is_valid_native_deposit(rt, &ticket, ticketer) {
-        let amount = ticket.amount().to_u64()?;
-        let pkh = transfer.payload.0 .0.to_b58check();
-        let reciever = PublicKeyHash::from_base58(&pkh).ok()?;
-        let content = Deposit { amount, reciever };
-        debug_msg!(rt, "Deposit: {content:?}\n");
-        Some(Message::Internal(InternalMessage::Deposit(content)))
-    } else {
-        None
+            if is_valid_native_deposit(rt, &ticket, ticketer) {
+                let amount = ticket.amount().to_u64()?;
+                let pkh = tez_ticket.0 .0.to_b58check();
+                let reciever = PublicKeyHash::from_base58(&pkh).ok()?;
+                let content = Deposit { amount, reciever };
+                debug_msg!(rt, "Deposit: {content:?}\n");
+                Some(Message::Internal(InternalMessage::Deposit(content)))
+            } else {
+                None
+            }
+        }
+        MichelsonOr::Right(_) => {
+            debug_msg!(rt, "Ignoring non-native deposit");
+            None
+        }
     }
 }
 
