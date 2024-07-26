@@ -1,16 +1,25 @@
 use boa_engine::{JsError, JsNativeError};
 use derive_more::{Display, Error, From};
 
+use crate::context::ticket_table;
+
 #[derive(Display, Debug, Error, From)]
 pub enum Error {
-    CoreError { source: jstz_core::Error },
-    CryptoError { source: jstz_crypto::Error },
+    CoreError {
+        source: jstz_core::Error,
+    },
+    CryptoError {
+        source: jstz_crypto::Error,
+    },
     BalanceOverflow,
     InvalidNonce,
     InvalidAddress,
     RefererShouldNotBeSet,
     GasLimitExceeded,
     InvalidHttpRequest,
+    TicketTableError {
+        source: ticket_table::TicketTableError,
+    },
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -38,6 +47,9 @@ impl From<Error> for JsError {
                 .into(),
             Error::InvalidHttpRequest => JsNativeError::eval()
                 .with_message("InvalidHttpRequest")
+                .into(),
+            Error::TicketTableError { source } => JsNativeError::eval()
+                .with_message(format!("TicketTableError: {}", source))
                 .into(),
         }
     }

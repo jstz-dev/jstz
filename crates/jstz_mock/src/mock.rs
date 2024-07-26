@@ -1,6 +1,7 @@
 use std::io::empty;
 
 use jstz_core::{host::HostRuntime, kv::Storage};
+use jstz_crypto::hash::Blake2b;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
     michelson::{
@@ -108,4 +109,16 @@ impl Default for MockNativeDeposit {
             smart_rollup: None,
         }
     }
+}
+
+pub fn account1() -> jstz_crypto::public_key_hash::PublicKeyHash {
+    jstz_crypto::public_key_hash::PublicKeyHash::from_base58(
+        "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx",
+    )
+    .unwrap()
+}
+
+pub fn ticket_hash1() -> Blake2b {
+    let data = vec![b'0', b'0', b'0'];
+    Blake2b::from(&data)
 }

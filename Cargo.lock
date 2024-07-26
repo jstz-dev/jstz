@@ -2349,6 +2349,7 @@ name = "jstz_mock"
 version = "0.1.0-alpha.0"
 dependencies = [
  "jstz_core",
+ "jstz_crypto",
  "tezos-smart-rollup",
  "tezos-smart-rollup-mock",
  "tezos_crypto_rs 0.6.0",
@@ -2405,6 +2406,7 @@ dependencies = [
  "jstz_api",
  "jstz_core",
  "jstz_crypto",
+ "jstz_mock",
  "serde",
  "serde_json",
  "tezos-smart-rollup",
