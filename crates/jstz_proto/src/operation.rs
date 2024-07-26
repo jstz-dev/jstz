@@ -133,6 +133,8 @@ impl SignedOperation {
 }
 
 pub mod external {
+    use tezos_smart_rollup::michelson::ticket::TicketHash;
+
     use super::*;
 
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
@@ -140,9 +142,44 @@ pub mod external {
         pub amount: Amount,
         pub reciever: Address,
     }
+
+    #[derive(Debug, PartialEq, Eq)]
+    pub struct FaDeposit {
+        // Inbox message id is unique to each message and
+        // suitable as a nonce
+        pub inbox_id: u32,
+        // Amount to deposit
+        pub amount: Amount,
+        // Final deposit receiver address
+        pub receiver: Address,
+        // Optional proxy contract
+        pub proxy_smart_function: Option<Address>,
+        // Ticket hash
+        pub ticket_hash: TicketHash,
+    }
+
+    impl FaDeposit {
+        fn json(&self) -> serde_json::Value {
+            serde_json::json!({
+                "receiver": self.receiver,
+                "amount": self.amount,
+                "ticketHash": self.ticket_hash.to_string(),
+            })
+        }
+
+        pub fn to_http_body(&self) -> HttpBody {
+            let body = self.json();
+            Some(String::as_bytes(&body.to_string()).to_vec())
+        }
+
+        pub fn hash(&self) -> OperationHash {
+            let seed = self.inbox_id.to_be_bytes();
+            Blake2b::from(seed.as_slice())
+        }
+    }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum ExternalOperation {
     Deposit(external::Deposit),
 }
