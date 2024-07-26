@@ -2,7 +2,10 @@ use http::{HeaderMap, StatusCode};
 use jstz_api::http::body::HttpBody;
 use serde::{Deserialize, Serialize};
 
-use crate::{context::account::Address, operation::OperationHash, Result};
+use crate::{
+    context::account::Address, executor::fa_deposit::FaDepositReceiptContent,
+    operation::OperationHash, Result,
+};
 
 pub type ReceiptResult<T> = std::result::Result<T, String>;
 
@@ -41,4 +44,5 @@ pub struct RunFunction {
 pub enum Content {
     DeployFunction(DeployFunction),
     RunFunction(RunFunction),
+    FaDeposit(FaDepositReceiptContent),
 }

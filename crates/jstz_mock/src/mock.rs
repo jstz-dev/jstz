@@ -1,12 +1,12 @@
 use std::io::empty;
 
 use jstz_core::{host::HostRuntime, kv::Storage};
-use jstz_crypto::hash::Blake2b;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
     michelson::{
-        ticket::{FA2_1Ticket, Ticket},
+        ticket::{FA2_1Ticket, Ticket, TicketHash, UnitTicket},
         MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonPair,
+        MichelsonUnit,
     },
     storage::path::RefPath,
     types::{Contract, PublicKeyHash, SmartRollupAddress},
@@ -118,7 +118,19 @@ pub fn account1() -> jstz_crypto::public_key_hash::PublicKeyHash {
     .unwrap()
 }
 
-pub fn ticket_hash1() -> Blake2b {
-    let data = vec![b'0', b'0', b'0'];
-    Blake2b::from(&data)
+pub fn account2() -> jstz_crypto::public_key_hash::PublicKeyHash {
+    jstz_crypto::public_key_hash::PublicKeyHash::from_base58(
+        "tz1QcqnzZ8pa6VuE4MSeMjsJkiW94wNrPbgX",
+    )
+    .unwrap()
+}
+
+pub fn ticket_hash1() -> TicketHash {
+    let ticket = UnitTicket::new(
+        Contract::from_b58check("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap(),
+        MichelsonUnit,
+        10,
+    )
+    .unwrap();
+    ticket.hash().unwrap()
 }

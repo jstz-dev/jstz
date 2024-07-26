@@ -1,9 +1,10 @@
 use crate::error::Result;
 use derive_more::{Display, Error, From};
 use jstz_core::kv::{Entry, Transaction};
-use jstz_crypto::{hash::Blake2b, public_key_hash::PublicKeyHash};
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use tezos_smart_rollup::{
     host::Runtime,
+    michelson::ticket::TicketHash,
     storage::path::{self, OwnedPath, RefPath},
 };
 
@@ -21,9 +22,8 @@ const TICKET_TABLE_PATH: RefPath = RefPath::assert_from(b"/ticket_table");
 pub struct TicketTable;
 
 impl TicketTable {
-    fn path(ticket_hash: &Blake2b, owner: &PublicKeyHash) -> Result<OwnedPath> {
-        let ticket_hash_path =
-            OwnedPath::try_from(format!("/{}", ticket_hash.to_string()))?;
+    fn path(ticket_hash: &TicketHash, owner: &PublicKeyHash) -> Result<OwnedPath> {
+        let ticket_hash_path = OwnedPath::try_from(format!("/{}", ticket_hash))?;
         let owner_path = OwnedPath::try_from(format!("/{}", owner))?;
 
         Ok(path::concat(
@@ -36,7 +36,7 @@ impl TicketTable {
         rt: &mut impl Runtime,
         tx: &mut Transaction,
         owner: &PublicKeyHash,
-        ticket_hash: &Blake2b,
+        ticket_hash: &TicketHash,
     ) -> Result<Amount> {
         let path = Self::path(ticket_hash, owner)?;
         let result = tx.get::<Amount>(rt, path)?;
@@ -50,7 +50,7 @@ impl TicketTable {
         rt: &mut impl Runtime,
         tx: &mut Transaction,
         owner: &PublicKeyHash,
-        ticket_hash: &Blake2b,
+        ticket_hash: &TicketHash,
         amount: Amount, // TODO: check if its the correct size
     ) -> Result<Amount> {
         let path = Self::path(ticket_hash, owner)?;
@@ -74,7 +74,7 @@ impl TicketTable {
         rt: &mut impl Runtime,
         tx: &mut Transaction,
         owner: &PublicKeyHash,
-        ticket_hash: &Blake2b,
+        ticket_hash: &TicketHash,
         amount: u64,
     ) -> Result<Amount> {
         let path = Self::path(ticket_hash, owner)?;
@@ -104,8 +104,8 @@ mod test {
         let ticket_hash = mock::ticket_hash1();
         let owner = mock::account1();
         let result = TicketTable::path(&ticket_hash, &owner).unwrap();
-        let expectecd = "/ticket_table/4f3b771750d60ed12c38f5f80683fb53b37e3da02dd7381454add8f1dbd2ee60/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
-        assert_eq!(expectecd, result.to_string());
+        let expected = "/ticket_table/4db276d5f50bc2ad959b0f08bb34fbdf4fbe4bf95a689ffb9e922038430840d7/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
+        assert_eq!(expected, result.to_string());
     }
 
     #[test]
