@@ -118,6 +118,13 @@ pub fn account1() -> jstz_crypto::public_key_hash::PublicKeyHash {
     .unwrap()
 }
 
+pub fn account2() -> jstz_crypto::public_key_hash::PublicKeyHash {
+    jstz_crypto::public_key_hash::PublicKeyHash::from_base58(
+        "tz1QcqnzZ8pa6VuE4MSeMjsJkiW94wNrPbgX",
+    )
+    .unwrap()
+}
+
 pub fn ticket_hash1() -> Blake2b {
     let data = vec![b'0', b'0', b'0'];
     Blake2b::from(&data)

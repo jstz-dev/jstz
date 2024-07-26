@@ -1,7 +1,7 @@
 use boa_engine::{JsError, JsNativeError};
 use derive_more::{Display, Error, From};
 
-use crate::context::ticket_table;
+use crate::{context::ticket_table, executor::fa_deposit};
 
 #[derive(Display, Debug, Error, From)]
 pub enum Error {
@@ -19,6 +19,9 @@ pub enum Error {
     InvalidHttpRequest,
     TicketTableError {
         source: ticket_table::TicketTableError,
+    },
+    FaDepositError {
+        source: fa_deposit::FaDepositError,
     },
 }
 pub type Result<T> = std::result::Result<T, Error>;
@@ -50,6 +53,9 @@ impl From<Error> for JsError {
                 .into(),
             Error::TicketTableError { source } => JsNativeError::eval()
                 .with_message(format!("TicketTableError: {}", source))
+                .into(),
+            Error::FaDepositError { source } => JsNativeError::eval()
+                .with_message(format!("FaDepositError: {}", source))
                 .into(),
         }
     }

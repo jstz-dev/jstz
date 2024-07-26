@@ -140,6 +140,45 @@ pub mod external {
         pub amount: Amount,
         pub reciever: Address,
     }
+
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+    pub struct FaDeposit {
+        // Inbox message id is unique to each message and
+        // suitable as a nonce
+        pub inbox_id: u32,
+        // Amount to deposit
+        pub amount: Amount,
+        // Final deposit receiver address
+        pub receiver: Address,
+        // Optional proxy contract
+        pub proxy_smart_function: Option<Address>,
+        // Ticket hash
+        // Note: Can't use TicketHash (which is a typesafe wrapper around
+        // Blake2b) because it's not Serializable. Type needs to derive Serializable
+        // because it will be a child of ExternalOperation which derives Serializable.
+        // TODO: Revisit if Operation/ExternalOperation needs to be Serialiazable.
+        pub ticket_hash: Blake2b,
+    }
+
+    impl FaDeposit {
+        fn json(&self) -> serde_json::Value {
+            serde_json::json!({
+                "receiver": self.receiver,
+                "amount": self.amount,
+                "ticketHash": self.ticket_hash,
+            })
+        }
+
+        pub fn to_http_body(&self) -> HttpBody {
+            let body = self.json();
+            Some(String::as_bytes(&body.to_string()).to_vec())
+        }
+
+        pub fn hash(&self) -> OperationHash {
+            let seed = self.inbox_id.to_be_bytes();
+            Blake2b::from(seed.as_slice())
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]

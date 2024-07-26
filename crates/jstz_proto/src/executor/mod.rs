@@ -7,6 +7,7 @@ use crate::{
 };
 
 pub mod deposit;
+pub mod fa_deposit;
 pub mod smart_function;
 
 fn execute_operation_inner(
