@@ -1,18 +1,9 @@
-use jstz_crypto::{hash::Blake2b, public_key_hash::PublicKeyHash};
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::operation::external::FaDeposit;
 use jstz_proto::{context::account::Address, Result};
 use num_traits::ToPrimitive;
-use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::michelson::{ticket::FA2_1Ticket, MichelsonContract};
 use tezos_smart_rollup::types::{Contract, PublicKeyHash as TezosPublicKeyHash};
-
-// FIXME: This should return the result instead
-pub fn ticket_hash(ticket: &FA2_1Ticket) -> Blake2b {
-    let mut bytes = Vec::new();
-    ticket.creator().bin_write(&mut bytes).unwrap();
-    ticket.contents().bin_write(&mut bytes).unwrap(); // FIXME: limit how large the content can be
-    Blake2b::from(&bytes)
-}
 
 pub fn try_parse_contract(contract: &Contract) -> Result<Address> {
     match contract {
@@ -33,8 +24,11 @@ pub fn try_parse_fa_deposit(
     let proxy_smart_function = (proxy_contract)
         .map(|c| try_parse_contract(&c.0))
         .transpose()?;
-    let amount = ticket.amount().to_u64().unwrap();
-    let ticket_hash = ticket_hash(&ticket);
+    let amount = ticket
+        .amount()
+        .to_u64()
+        .ok_or(jstz_proto::Error::TicketAmountTooLarge)?;
+    let ticket_hash = ticket.hash()?;
     Ok(FaDeposit {
         inbox_id,
         amount,
@@ -46,7 +40,7 @@ pub fn try_parse_fa_deposit(
 
 #[cfg(test)]
 mod test {
-    use jstz_crypto::hash::Blake2b;
+
     use jstz_proto::operation::external::FaDeposit;
     use tezos_smart_rollup::{
         michelson::{
@@ -89,7 +83,7 @@ mod test {
             amount,
             receiver: jstz_mock::account1(),
             proxy_smart_function: Some(jstz_mock::account2()),
-            ticket_hash: Blake2b::try_parse(ticket_hash.to_string()).unwrap(),
+            ticket_hash,
         };
         assert_eq!(expected, fa_deposit)
     }

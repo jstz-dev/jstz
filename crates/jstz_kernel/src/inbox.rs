@@ -14,6 +14,8 @@ use tezos_smart_rollup::{
     types::Contract,
 };
 
+use crate::parsing::try_parse_fa_deposit;
+
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = ExternalOperation;
 
@@ -68,6 +70,7 @@ fn read_transfer(
     rt: &mut impl Runtime,
     transfer: Transfer<RollupType>,
     ticketer: &ContractKt1Hash,
+    inbox_id: u32,
 ) -> Option<Message> {
     debug_msg!(rt, "Internal message: transfer\n");
 
@@ -78,17 +81,25 @@ fn read_transfer(
             if is_valid_native_deposit(rt, &ticket, ticketer) {
                 let amount = ticket.amount().to_u64()?;
                 let pkh = tez_ticket.0 .0.to_b58check();
-                let reciever = PublicKeyHash::from_base58(&pkh).ok()?;
-                let content = Deposit { amount, reciever };
+                let receiver = PublicKeyHash::from_base58(&pkh).ok()?;
+                let content = Deposit {
+                    inbox_id,
+                    amount,
+                    receiver,
+                };
                 debug_msg!(rt, "Deposit: {content:?}\n");
                 Some(Message::Internal(InternalMessage::Deposit(content)))
             } else {
                 None
             }
         }
-        MichelsonOr::Right(_) => {
-            debug_msg!(rt, "Ignoring non-native deposit");
-            None
+        MichelsonOr::Right(fa_ticket) => {
+            let ticket = fa_ticket.1 .1;
+            let receiver = fa_ticket.0;
+            let proxy = fa_ticket.1 .0 .0;
+            let fa_deposit =
+                try_parse_fa_deposit(inbox_id, ticket, receiver, proxy).ok()?;
+            Some(Message::Internal(InternalMessage::FaDeposit(fa_deposit)))
         }
     }
 }
@@ -140,7 +151,7 @@ pub fn read_message(rt: &mut impl Runtime, ticketer: ContractKt1Hash) -> Option<
                 );
                 return None;
             };
-            read_transfer(rt, transfer, &ticketer)
+            read_transfer(rt, transfer, &ticketer, input.id)
         }
         InboxMessage::External(bytes) => match ExternalMessageFrame::parse(bytes) {
             Ok(frame) => match frame {
@@ -176,8 +187,9 @@ pub fn read_message(rt: &mut impl Runtime, ticketer: ContractKt1Hash) -> Option<
 
 #[cfg(test)]
 mod test {
-    use jstz_mock::host::JstzMockHost;
+    use jstz_crypto::public_key_hash::PublicKeyHash;
     use jstz_mock::message::native_deposit::MockNativeDeposit;
+    use jstz_mock::{host::JstzMockHost, message::fa_deposit::MockFaDeposit};
     use jstz_proto::operation::external;
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
     use tezos_smart_rollup::types::SmartRollupAddress;
@@ -208,12 +220,13 @@ mod test {
         host.add_internal_message(&deposit);
         if let Message::Internal(InternalMessage::Deposit(external::Deposit {
             amount,
-            reciever,
+            receiver,
+            ..
         })) =
             read_message(host.rt(), ticketer).expect("Expected message but non received")
         {
             assert_eq!(amount, 100);
-            assert_eq!(reciever.to_base58(), deposit.receiver.to_b58check())
+            assert_eq!(receiver.to_base58(), deposit.receiver.to_b58check())
         } else {
             panic!("Expected deposit message")
         }
@@ -256,5 +269,30 @@ mod test {
         };
         host.add_internal_message(&deposit);
         assert_eq!(read_message(host.rt(), ticketer), None);
+    }
+
+    #[test]
+    fn read_message_fa_deposit_succeeds() {
+        let mut host = JstzMockHost::new(true);
+        let fa_deposit = MockFaDeposit::default();
+        let ticketer = host.get_ticketer();
+        host.add_internal_message(&fa_deposit);
+
+        if let Message::Internal(InternalMessage::FaDeposit(external::FaDeposit {
+            amount,
+            receiver,
+            proxy_smart_function,
+            ..
+        })) = read_message(host.rt(), ticketer).expect("Expected FA message")
+        {
+            assert_eq!(300, amount);
+            assert_eq!(fa_deposit.receiver.to_b58check(), receiver.to_base58());
+            assert_eq!(
+                Some(PublicKeyHash::from_base58(&jstz_mock::host::MOCK_PROXY).unwrap()),
+                proxy_smart_function
+            );
+        } else {
+            panic!("Expected deposit message")
+        }
     }
 }
