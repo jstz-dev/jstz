@@ -44,5 +44,6 @@ pub struct RunFunction {
 pub enum Content {
     DeployFunction(DeployFunction),
     RunFunction(RunFunction),
+    Deposit,
     FaDeposit(FaDepositReceiptContent),
 }

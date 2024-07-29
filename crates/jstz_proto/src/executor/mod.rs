@@ -48,9 +48,12 @@ pub fn execute_external_operation(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     external_operation: ExternalOperation,
-) -> Result<()> {
+) -> Receipt {
     match external_operation {
         ExternalOperation::Deposit(deposit) => deposit::execute(hrt, tx, deposit),
+        ExternalOperation::FaDeposit(fa_deposit) => {
+            fa_deposit::execute(hrt, tx, fa_deposit)
+        }
     }
 }
 

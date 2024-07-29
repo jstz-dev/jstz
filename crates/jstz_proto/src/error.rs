@@ -1,5 +1,6 @@
 use boa_engine::{JsError, JsNativeError};
 use derive_more::{Display, Error, From};
+use tezos_smart_rollup::michelson::ticket::TicketHashError;
 
 use crate::{context::ticket_table, executor::fa_deposit};
 
@@ -23,6 +24,8 @@ pub enum Error {
     FaDepositError {
         source: fa_deposit::FaDepositError,
     },
+    TicketHashError(TicketHashError),
+    TicketAmountTooLarge,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -56,6 +59,12 @@ impl From<Error> for JsError {
                 .into(),
             Error::FaDepositError { source } => JsNativeError::eval()
                 .with_message(format!("FaDepositError: {}", source))
+                .into(),
+            Error::TicketHashError(inner) => JsNativeError::eval()
+                .with_message(format!("{}", inner))
+                .into(),
+            Error::TicketAmountTooLarge => JsNativeError::eval()
+                .with_message("TicketAmountTooLarge")
                 .into(),
         }
     }

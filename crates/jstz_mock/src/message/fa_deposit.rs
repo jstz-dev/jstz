@@ -1,7 +1,9 @@
-use jstz_crypto::hash::Blake2b;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
-    michelson::{MichelsonContract, MichelsonOption, MichelsonOr, MichelsonPair},
+    michelson::{
+        ticket::TicketHash, MichelsonContract, MichelsonOption, MichelsonOr,
+        MichelsonPair,
+    },
     types::{Contract, PublicKeyHash, SmartRollupAddress},
 };
 
@@ -50,15 +52,14 @@ impl Default for MockFaDeposit {
 }
 
 impl MockFaDeposit {
-    pub fn ticket_hash(&self) -> Blake2b {
+    pub fn ticket_hash(&self) -> TicketHash {
         let ticket = parse_ticket(
             self.ticketer.clone(),
             self.ticket_amount,
             self.ticket_content.clone(),
         );
 
-        let hash = ticket.hash().unwrap();
-        Blake2b::try_parse(hash.to_string()).unwrap()
+        ticket.hash().unwrap()
     }
 }
 

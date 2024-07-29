@@ -26,6 +26,7 @@ num-traits.workspace = true
 serde.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
+tezos_data_encoding = "0.6.0"
 
 [dev-dependencies]
 jstz_mock = { path = "../jstz_mock" }
