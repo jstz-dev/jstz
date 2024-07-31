@@ -192,7 +192,7 @@ jstz deploy dist/index.js
 <summary>Output</summary>
 <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
 <code style="color: #FFF;">$ npm run build
-> @tezos/get-tez@0.0.0 build
+> @jstz-dev/get-tez@0.0.0 build
 > esbuild index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js
 
 dist/index.js 777b

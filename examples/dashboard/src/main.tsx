@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Jstz, User } from "@tezos/jstz-sdk";
+import { Jstz, User } from "@jstz-dev/sdk";
 
 const DEFAULT_ENDPOINT = "localhost:8933";
 

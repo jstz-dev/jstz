@@ -1,11 +1,11 @@
 {
-  "name": "@tezos/get-tez",
+  "name": "@jstz-dev/get-tez",
   "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
   "private": true,
   "version": "0.0.0",
   "main": "index.ts",
   "dependencies": {
-    "@tezos/jstz": "^0.0.0"
+    "@jstz-dev/jstz": "^0.0.0"
   },
   "devDependencies": {
     "esbuild": "^0.20.2"
