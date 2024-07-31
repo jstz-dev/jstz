@@ -1,6 +1,10 @@
 {
-  "name": "@tezos/jstz-types",
+  "name": "@jstz-dev/types",
   "description": "TypeScript typings for jstz 👨‍⚖️",
   "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
-  "version": "0.0.0"
+  "version": "0.0.0",
+  "types": "index.d.ts",
+  "files": [
+    "index.d.ts"
+  ]
 }

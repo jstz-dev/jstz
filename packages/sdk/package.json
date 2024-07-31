@@ -1,5 +1,5 @@
 {
-  "name": "@tezos/jstz-sdk",
+  "name": "@jstz-dev/sdk",
   "description": "TypeScript dApp SDK for jstz 👨‍⚖️",
   "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
   "version": "0.0.0",
