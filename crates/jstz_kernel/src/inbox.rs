@@ -176,7 +176,8 @@ pub fn read_message(rt: &mut impl Runtime, ticketer: ContractKt1Hash) -> Option<
 
 #[cfg(test)]
 mod test {
-    use jstz_mock::mock::{JstzMockHost, MockNativeDeposit};
+    use jstz_mock::host::JstzMockHost;
+    use jstz_mock::message::native_deposit::MockNativeDeposit;
     use jstz_proto::operation::external;
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
     use tezos_smart_rollup::types::SmartRollupAddress;
@@ -193,7 +194,7 @@ mod test {
             smart_rollup: Some(alternative_smart_rollup_address),
             ..MockNativeDeposit::default()
         };
-        host.add_deposit_message(&deposit);
+        host.add_internal_message(&deposit);
         let ticketer = host.get_ticketer();
         let result = read_message(host.rt(), ticketer);
         assert_eq!(result, None)
@@ -204,7 +205,7 @@ mod test {
         let mut host = JstzMockHost::new(true);
         let deposit = MockNativeDeposit::default();
         let ticketer = host.get_ticketer();
-        host.add_deposit_message(&deposit);
+        host.add_internal_message(&deposit);
         if let Message::Internal(InternalMessage::Deposit(external::Deposit {
             amount,
             reciever,
@@ -229,7 +230,7 @@ mod test {
             .unwrap(),
             ..MockNativeDeposit::default()
         };
-        host.add_deposit_message(&deposit);
+        host.add_internal_message(&deposit);
         assert_eq!(read_message(host.rt(), ticketer), None);
     }
 
@@ -241,7 +242,7 @@ mod test {
             ticket_content: (1, None),
             ..MockNativeDeposit::default()
         };
-        host.add_deposit_message(&deposit);
+        host.add_internal_message(&deposit);
         assert_eq!(read_message(host.rt(), ticketer), None);
     }
 
@@ -253,7 +254,7 @@ mod test {
             ticket_content: (0, Some(b"1234".to_vec())),
             ..MockNativeDeposit::default()
         };
-        host.add_deposit_message(&deposit);
+        host.add_internal_message(&deposit);
         assert_eq!(read_message(host.rt(), ticketer), None);
     }
 }
