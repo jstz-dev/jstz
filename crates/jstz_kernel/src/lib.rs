@@ -52,7 +52,7 @@ pub fn entry(rt: &mut impl Runtime) {
 mod test {
 
     use jstz_core::kv::Transaction;
-    use jstz_mock::mock::{JstzMockHost, MockNativeDeposit};
+    use jstz_mock::{host::JstzMockHost, message::native_deposit::MockNativeDeposit};
     use jstz_proto::context::account::Account;
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
 
@@ -70,7 +70,7 @@ mod test {
     fn native_deposit_succeeds() {
         let mut host = JstzMockHost::default();
         let deposit = MockNativeDeposit::default();
-        host.add_deposit_message(&deposit);
+        host.add_internal_message(&deposit);
         host.rt().run_level(entry);
         let tx = &mut Transaction::default();
         tx.begin();

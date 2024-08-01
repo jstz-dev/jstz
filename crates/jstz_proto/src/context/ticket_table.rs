@@ -96,13 +96,13 @@ impl TicketTable {
 mod test {
     use super::TicketTable;
     use jstz_core::kv::Transaction;
-    use jstz_mock::mock::{self, JstzMockHost};
+    use jstz_mock::host::JstzMockHost;
     use tezos_smart_rollup_mock::MockHost;
 
     #[test]
     fn path_format() {
-        let ticket_hash = mock::ticket_hash1();
-        let owner = mock::account1();
+        let ticket_hash = jstz_mock::ticket_hash1();
+        let owner = jstz_mock::account1();
         let result = TicketTable::path(&ticket_hash, &owner).unwrap();
         let expected = "/ticket_table/4db276d5f50bc2ad959b0f08bb34fbdf4fbe4bf95a689ffb9e922038430840d7/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
         assert_eq!(expected, result.to_string());
@@ -114,8 +114,8 @@ mod test {
         let mut tx = Transaction::default();
 
         tx.begin();
-        let owner = mock::account1();
-        let ticket_hash = mock::ticket_hash1();
+        let owner = jstz_mock::account1();
+        let ticket_hash = jstz_mock::ticket_hash1();
         let amount = 100;
         TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
         let balance =
@@ -136,8 +136,8 @@ mod test {
         let mut tx = Transaction::default();
 
         tx.begin();
-        let owner = mock::account1();
-        let ticket_hash = mock::ticket_hash1();
+        let owner = jstz_mock::account1();
+        let ticket_hash = jstz_mock::ticket_hash1();
         let amount = u64::MAX;
         TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
         let err = TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, 1)
@@ -151,8 +151,8 @@ mod test {
         let mut tx = Transaction::default();
 
         tx.begin();
-        let owner = mock::account1();
-        let ticket_hash = mock::ticket_hash1();
+        let owner = jstz_mock::account1();
+        let ticket_hash = jstz_mock::ticket_hash1();
         let amount = 100;
         TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
         let another_amount = 70;
@@ -169,8 +169,8 @@ mod test {
         let mut tx = Transaction::default();
 
         tx.begin();
-        let owner = mock::account1();
-        let ticket_hash = mock::ticket_hash1();
+        let owner = jstz_mock::account1();
+        let ticket_hash = jstz_mock::ticket_hash1();
         let amount = 100;
         let err = TicketTable::sub(host.rt(), &mut tx, &owner, &ticket_hash, amount)
             .expect_err("Expected error");
@@ -184,8 +184,8 @@ mod test {
     fn update_tickets_in_succession() {
         let mut rt = MockHost::default();
         let mut tx = Transaction::default();
-        let owner = mock::account1();
-        let ticket_hash = mock::ticket_hash1();
+        let owner = jstz_mock::account1();
+        let ticket_hash = jstz_mock::ticket_hash1();
 
         let add_100 = 100;
         let sub_30 = 30;

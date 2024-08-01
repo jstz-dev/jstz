@@ -1,4 +1,8 @@
+use std::array::TryFromSliceError;
+
 use boa_gc::{empty_trace, Finalize, Trace};
+use derive_more::{Display, Error};
+use hex::FromHexError;
 use serde::{Deserialize, Serialize};
 #[derive(
     Debug,
@@ -49,4 +53,20 @@ impl Blake2b {
     pub fn as_array(&self) -> &[u8; 32] {
         &self.0
     }
+
+    // Deserialises a hex encoded Blake2b hash string
+    pub fn try_parse(hex_encode: String) -> Result<Self, Blake2bError> {
+        let data = hex::decode(hex_encode).map_err(Blake2bError::DecodeError)?;
+        let data: [u8; 32] = data
+            .as_slice()
+            .try_into()
+            .map_err(Blake2bError::InvalidLength)?;
+        Ok(Self(data))
+    }
+}
+
+#[derive(Debug, Error, Display)]
+pub enum Blake2bError {
+    DecodeError(FromHexError),
+    InvalidLength(TryFromSliceError),
 }

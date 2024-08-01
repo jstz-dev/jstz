@@ -166,7 +166,6 @@ mod test {
 
     use jstz_core::kv::Transaction;
     use jstz_crypto::public_key_hash::PublicKeyHash;
-    use jstz_mock::mock;
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
@@ -179,9 +178,9 @@ mod test {
         FaDeposit {
             inbox_id: 34,
             amount: 42,
-            receiver: mock::account2(),
+            receiver: jstz_mock::account2(),
             proxy_smart_function: proxy,
-            ticket_hash: mock::ticket_hash1(),
+            ticket_hash: jstz_mock::ticket_hash1(),
         }
     }
 
@@ -265,7 +264,7 @@ mod test {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
         let mut tx = Transaction::default();
-        let source = mock::account1();
+        let source = jstz_mock::account1();
         let code = r#"
         export default (request) => {
             const url = new URL(request.url)
@@ -313,7 +312,7 @@ mod test {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
         let mut tx = Transaction::default();
-        let source = mock::account1();
+        let source = jstz_mock::account1();
         let code = r#"
         export default (request) => {
             const url = new URL(request.url)
@@ -366,7 +365,7 @@ mod test {
         host.set_debug_handler(empty());
         let mut tx = Transaction::default();
         tx.begin();
-        let source = mock::account1();
+        let source = jstz_mock::account1();
         let code = r#"
         export default (request) => {
             const url = new URL(request.url)
