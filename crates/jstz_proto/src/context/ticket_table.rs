@@ -1,6 +1,6 @@
 use crate::error::Result;
 use derive_more::{Display, Error, From};
-use jstz_core::kv::Transaction;
+use jstz_core::kv::{Entry, Transaction};
 use jstz_crypto::{hash::Blake2b, public_key_hash::PublicKeyHash};
 use tezos_smart_rollup::{
     host::Runtime,
@@ -21,58 +21,72 @@ const TICKET_TABLE_PATH: RefPath = RefPath::assert_from(b"/ticket_table");
 pub struct TicketTable;
 
 impl TicketTable {
-    fn path(suffix: &OwnedPath) -> Result<OwnedPath> {
-        Ok(path::concat(&TICKET_TABLE_PATH, suffix)?)
+    fn path(ticket_hash: &Blake2b, owner: &PublicKeyHash) -> Result<OwnedPath> {
+        let ticket_hash_path =
+            OwnedPath::try_from(format!("/{}", ticket_hash.to_string()))?;
+        let owner_path = OwnedPath::try_from(format!("/{}", owner))?;
+
+        Ok(path::concat(
+            &TICKET_TABLE_PATH,
+            &path::concat(&ticket_hash_path, &owner_path)?,
+        )?)
     }
 
-    pub fn balance_add(
+    pub fn get_balance(
+        rt: &mut impl Runtime,
+        tx: &mut Transaction,
+        owner: &PublicKeyHash,
+        ticket_hash: &Blake2b,
+    ) -> Result<Amount> {
+        let path = Self::path(ticket_hash, owner)?;
+        let result = tx.get::<Amount>(rt, path)?;
+        match result {
+            Some(balance) => Ok(*balance),
+            None => Ok(0),
+        }
+    }
+
+    pub fn add(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
         owner: &PublicKeyHash,
         ticket_hash: &Blake2b,
         amount: Amount, // TODO: check if its the correct size
     ) -> Result<Amount> {
-        let ticket_hash_path =
-            OwnedPath::try_from(format!("/{}", ticket_hash.to_string()))?;
-        let owner_path = OwnedPath::try_from(format!("/{}", owner))?;
-        let path = Self::path(&path::concat(&ticket_hash_path, &owner_path)?)?;
-
-        match tx.get::<Amount>(rt, path.clone())? {
-            None => {
-                tx.insert(path, amount)?;
+        let path = Self::path(ticket_hash, owner)?;
+        match tx.entry::<Amount>(rt, path)? {
+            Entry::Vacant(vacant_entry) => {
+                vacant_entry.insert(amount);
                 Ok(amount)
             }
-            Some(balance) => {
+            Entry::Occupied(mut occupied) => {
+                let balance = occupied.get_mut();
                 let checked_balance = balance
                     .checked_add(amount)
                     .ok_or(crate::error::Error::BalanceOverflow)?;
-                tx.insert(path, checked_balance)?;
+                *balance = checked_balance;
                 Ok(checked_balance)
             }
         }
     }
 
-    pub fn balance_sub(
+    pub fn sub(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
         owner: &PublicKeyHash,
         ticket_hash: &Blake2b,
         amount: u64,
     ) -> Result<Amount> {
-        let ticket_hash_path =
-            OwnedPath::try_from(format!("/{}", ticket_hash.to_string()))?;
-        let owner_path = OwnedPath::try_from(format!("/{}", owner))?;
-        let path = Self::path(&path::concat(&ticket_hash_path, &owner_path)?)?;
-
-        match tx.get::<Amount>(rt, path.clone())? {
-            None => Err(TicketTableError::AccountNotFound)?,
-            Some(balance) => {
+        let path = Self::path(ticket_hash, owner)?;
+        match tx.entry::<Amount>(rt, path)? {
+            Entry::Vacant(_) => Err(TicketTableError::AccountNotFound)?,
+            Entry::Occupied(mut occupied) => {
+                let balance = occupied.get_mut();
                 if *balance < amount {
                     return Err(TicketTableError::InsufficientFunds)?;
                 }
-                let final_balance = balance - amount;
-                tx.insert(path, final_balance)?;
-                Ok(final_balance)
+                *balance -= amount;
+                Ok(*balance)
             }
         }
     }
@@ -80,26 +94,18 @@ impl TicketTable {
 
 #[cfg(test)]
 mod test {
-    use jstz_core::kv::{Storage, Transaction};
-    use jstz_crypto::{hash::Blake2b, public_key_hash::PublicKeyHash};
+    use super::TicketTable;
+    use jstz_core::kv::Transaction;
     use jstz_mock::mock::{self, JstzMockHost};
-    use tezos_smart_rollup::{host::Runtime, storage::path::OwnedPath};
     use tezos_smart_rollup_mock::MockHost;
 
-    use super::TicketTable;
-
-    fn get_ticket_value(
-        rt: &mut impl Runtime,
-        ticket_hash: &Blake2b,
-        owner: &PublicKeyHash,
-    ) -> Option<u64> {
-        let path = TicketTable::path(
-            &OwnedPath::try_from(format!("/{}/{}", ticket_hash.to_string(), owner))
-                .unwrap(),
-        )
-        .unwrap();
-
-        Storage::get::<u64>(rt, &path).unwrap()
+    #[test]
+    fn path_format() {
+        let ticket_hash = mock::ticket_hash1();
+        let owner = mock::account1();
+        let result = TicketTable::path(&ticket_hash, &owner).unwrap();
+        let expectecd = "/ticket_table/4f3b771750d60ed12c38f5f80683fb53b37e3da02dd7381454add8f1dbd2ee60/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
+        assert_eq!(expectecd, result.to_string());
     }
 
     #[test]
@@ -111,24 +117,16 @@ mod test {
         let owner = mock::account1();
         let ticket_hash = mock::ticket_hash1();
         let amount = 100;
-        TicketTable::balance_add(host.rt(), &mut tx, &owner, &ticket_hash, amount)
-            .unwrap();
-        tx.commit(host.rt()).unwrap();
-        let balance = get_ticket_value(host.rt(), &ticket_hash, &owner).unwrap();
+        TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
+        let balance =
+            TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash).unwrap();
         assert_eq!(100, balance);
 
-        tx.begin();
         let another_amount = 50;
-        TicketTable::balance_add(
-            host.rt(),
-            &mut tx,
-            &owner,
-            &ticket_hash,
-            another_amount,
-        )
-        .unwrap();
-        tx.commit(host.rt()).unwrap();
-        let balance = get_ticket_value(host.rt(), &ticket_hash, &owner).unwrap();
+        TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, another_amount)
+            .unwrap();
+        let balance =
+            TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash).unwrap();
         assert_eq!(150, balance);
     }
 
@@ -141,9 +139,8 @@ mod test {
         let owner = mock::account1();
         let ticket_hash = mock::ticket_hash1();
         let amount = u64::MAX;
-        TicketTable::balance_add(host.rt(), &mut tx, &owner, &ticket_hash, amount)
-            .unwrap();
-        let err = TicketTable::balance_add(host.rt(), &mut tx, &owner, &ticket_hash, 1)
+        TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
+        let err = TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, 1)
             .expect_err("Expected error");
         assert_eq!("BalanceOverflow", err.to_string());
     }
@@ -157,19 +154,12 @@ mod test {
         let owner = mock::account1();
         let ticket_hash = mock::ticket_hash1();
         let amount = 100;
-        TicketTable::balance_add(host.rt(), &mut tx, &owner, &ticket_hash, amount)
-            .unwrap();
+        TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
         let another_amount = 70;
-        TicketTable::balance_sub(
-            host.rt(),
-            &mut tx,
-            &owner,
-            &ticket_hash,
-            another_amount,
-        )
-        .unwrap();
-        tx.commit(host.rt()).unwrap();
-        let balance = get_ticket_value(host.rt(), &ticket_hash, &owner).unwrap();
+        TicketTable::sub(host.rt(), &mut tx, &owner, &ticket_hash, another_amount)
+            .unwrap();
+        let balance =
+            TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash).unwrap();
         assert_eq!(30, balance);
     }
 
@@ -182,12 +172,12 @@ mod test {
         let owner = mock::account1();
         let ticket_hash = mock::ticket_hash1();
         let amount = 100;
-        let err =
-            TicketTable::balance_sub(host.rt(), &mut tx, &owner, &ticket_hash, amount)
-                .expect_err("Expected error");
+        let err = TicketTable::sub(host.rt(), &mut tx, &owner, &ticket_hash, amount)
+            .expect_err("Expected error");
         assert_eq!(err.to_string(), "AccountNotFound");
-        let balance = get_ticket_value(host.rt(), &ticket_hash, &owner);
-        assert_eq!(None, balance);
+        let balance =
+            TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash).unwrap();
+        assert_eq!(0, balance);
     }
 
     #[test]
@@ -204,18 +194,19 @@ mod test {
         let add_60 = 60;
 
         tx.begin();
-        TicketTable::balance_add(&mut rt, &mut tx, &owner, &ticket_hash, add_100)
-            .unwrap();
+        TicketTable::add(&mut rt, &mut tx, &owner, &ticket_hash, add_100).unwrap();
         tx.commit(&mut rt).unwrap();
         tx.begin();
-        TicketTable::balance_sub(&mut rt, &mut tx, &owner, &ticket_hash, sub_30).unwrap();
-        TicketTable::balance_add(&mut rt, &mut tx, &owner, &ticket_hash, add_25).unwrap();
+        TicketTable::sub(&mut rt, &mut tx, &owner, &ticket_hash, sub_30).unwrap();
+        TicketTable::add(&mut rt, &mut tx, &owner, &ticket_hash, add_25).unwrap();
         tx.begin();
-        TicketTable::balance_sub(&mut rt, &mut tx, &owner, &ticket_hash, sub_25).unwrap();
-        TicketTable::balance_add(&mut rt, &mut tx, &owner, &ticket_hash, add_60).unwrap();
+        TicketTable::sub(&mut rt, &mut tx, &owner, &ticket_hash, sub_25).unwrap();
+        TicketTable::add(&mut rt, &mut tx, &owner, &ticket_hash, add_60).unwrap();
         tx.commit(&mut rt).unwrap();
         tx.commit(&mut rt).unwrap();
-        let result = get_ticket_value(&mut rt, &ticket_hash, &owner).unwrap();
+        tx.begin();
+        let result =
+            TicketTable::get_balance(&mut rt, &mut tx, &owner, &ticket_hash).unwrap();
         assert_eq!(130, result)
     }
 }
