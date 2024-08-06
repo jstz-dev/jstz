@@ -8,8 +8,8 @@
    https://gitlab.com/tezos/tezos/-/blob/master/etherlink/tezos_contracts/evm_bridge.mligo
 *)
 
-#include "./ticket_type.mligo"
-#include "./jstz_type.mligo"
+#include "./common/ticket_type.mligo"
+#include "./common/jstz_type.mligo"
 
 module Tezos = Tezos.Next
 
