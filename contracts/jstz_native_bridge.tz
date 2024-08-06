@@ -11,12 +11,18 @@
              SWAP ;
              IF_NONE { PUSH string "Callback on non-locked deposit" ; FAILWITH } {} ;
              UNPAIR ;
-             CONTRACT (pair address (ticket (pair nat (option bytes)))) ;
+             CONTRACT
+               (or (pair %deposit_ticket address (ticket (pair nat (option bytes))))
+                   (pair %deposit_fa_ticket
+                      (address %receiver)
+                      (option %proxy address)
+                      (ticket %ticket (pair nat (option bytes))))) ;
              IF_NONE { PUSH string "Invalid rollup address" ; FAILWITH } {} ;
              PUSH mutez 0 ;
              DIG 4 ;
              DIG 3 ;
              PAIR ;
+             LEFT (pair address (option address) (ticket (pair nat (option bytes)))) ;
              TRANSFER_TOKENS ;
              NONE (pair address address) ;
              DIG 2 ;

@@ -16,14 +16,16 @@ type normalized_deposit = address * address * (nat * bytes option) * nat
 module Mock_jstz_smart_rollup = struct 
   type storage = normalized_deposit list
 
-  let normalized_deposit (deposit: jstz): normalized_deposit = 
-    let (Deposit_ticket (addr, ticket)) = deposit in
+  let normalized_deposit addr ticket: normalized_deposit = 
     let ((ticketer, (content, amount)), _) = Tezos.Next.Ticket.read ticket in
     (addr, ticketer, content, amount)
 
   [@entry]
   let main (param: jstz) (storage: storage) : operation list * storage  = 
-    let deposit = normalized_deposit param in
+  match param with
+  | Deposit_fa_ticket { receiver =  _; proxy = _ ; ticket = _ } ->  [], storage
+  | Deposit_ticket (a, t) -> 
+    let deposit = normalized_deposit a t in
     [], deposit :: storage 
 
 end
@@ -46,11 +48,10 @@ let setup_contracts_and_request () =
   let bridge = 
     Test.Next.Originate.contract 
       (contract_of Jstz_native_bridge) 
-      { exchanger; deposit_request = None } 
-      0tez 
-    in
+      { exchanger; deposit_request = None} 
+      0tez in
   let jstz_rollup = Test.Next.Originate.contract (contract_of Mock_jstz_smart_rollup) [] 0tez in
-  let l2_address = Test.Next.Account.bob () in
+  let l2_address =  Test.Next.Account.bob() in
   let deposit_request = {
     jstz_address = (Test.Next.Typed_address.to_address jstz_rollup.taddr);
     l2_address;
