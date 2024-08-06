@@ -6,8 +6,8 @@
 #import "../jstz_native_bridge.mligo" "Jstz_native_bridge"
 #import "../exchanger.mligo" "Exchanger"
 
-#include "../ticket_type.mligo"
-#include "../jstz_type.mligo"
+#include "../common/ticket_type.mligo"
+#include "../common/jstz_type.mligo"
 
 type normalized_deposit = address * address * (nat * bytes option) * nat
 

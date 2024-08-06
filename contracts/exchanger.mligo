@@ -8,7 +8,7 @@
     https://gitlab.com/tezos/tezos/-/blob/master/etherlink/tezos_contracts/exchanger.mligo 
 *)
 
-#include "./ticket_type.mligo"
+#include "./common/ticket_type.mligo"
 
 type storage = unit
 
