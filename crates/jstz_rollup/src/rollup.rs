@@ -21,7 +21,7 @@ use tezos_smart_rollup_installer_config::binary::owned::{
 use crate::Exchanger;
 
 const TICKETER_PATH: RefPath = RefPath::assert_from(b"/ticketer");
-const ROLLUP_MICHELSON_TYPE: &str = "(pair address (ticket (pair nat (option bytes))))";
+const ROLLUP_MICHELSON_TYPE: &str = "or (pair address (ticket (pair nat (option bytes)))) (pair address (option address) (ticket (pair nat (option bytes))))";
 
 pub fn make_installer(
     kernel_file: &Path,
