@@ -55,6 +55,13 @@ test-int:
 # be moved to an inline-test in the `jstz_core` crate to avoid this.  
 	@cargo test --test "*"
 
+.PHONY: cov 
+cov:
+# TODO(https://linear.app/tezos/issue/JSTZ-47): 
+# This will only generate a coverage report for unit tests. We should add coverage 
+# for integration tests as well.
+	@cargo llvm-cov --lib --bins --html --open 
+
 .PHONY: check
 check: lint fmt
 
