@@ -17,7 +17,7 @@
         system: let
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [(import rust-overlay)];
+            overlays = [(import ./nix/overlay.nix) (import rust-overlay)];
           };
 
           makeFrameworkFlags = frameworks:
@@ -94,8 +94,12 @@
             buildInputs = with pkgs;
               [
                 llvmPackages_16.clangNoLibc
-                (rust-bin.stable."1.73.0".default.override {
+                # FIXME(https://linear.app/tezos/issue/JSTZ-48):
+                # This is almost a copy of rust-toolchain.toml We should find a way to
+                # share this configuration.
+                (pkgs.rust-bin.stable."1.73.0".default.override {
                   targets = ["wasm32-unknown-unknown"];
+                  extensions = ["rustfmt" "clippy" "llvm-tools-preview"];
                 })
                 rust-analyzer
                 wabt
@@ -109,6 +113,9 @@
                 jq
 
                 sqlite
+
+                # Code coverage
+                cargo-llvm-cov
               ]
               ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
           };
