@@ -1,3 +1,5 @@
+CLI_KERNEL_PATH := crates/jstz_cli/jstz_kernel.wasm
+
 .PHONY: all
 all: test build check
 
@@ -101,9 +103,8 @@ fmt: fmt-nix fmt-rust fmt-js
 .PHONY: fmt-check
 fmt-check: fmt-nix-check fmt-rust-check fmt-js-check
 
-# FIXME: 
-# Clippy builds the CLI since the CLI must expand the macro containing the bytes of the `jstz_kernel.wasm` file. 
-# So in order to lint the CLI we need to build the kernel
 .PHONY: lint
-lint: build-cli-kernel
+lint:
+	@touch $(CLI_KERNEL_PATH)
 	@cargo clippy -- --no-deps -D warnings -A clippy::let_underscore_future -A clippy::module_inception -A clippy::op_ref -A clippy::manual_strip -A clippy::missing_safety_doc -A clippy::slow_vector_initialization -A clippy::empty_loop -A clippy::collapsible-match
+	@rm -f $(CLI_KERNEL_PATH)
