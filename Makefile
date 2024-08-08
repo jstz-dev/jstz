@@ -37,8 +37,23 @@ build-sdk-wasm-pkg:
 	@cd crates/jstz_sdk && wasm-pack build --target bundler --release
 
 .PHONY: test
-test:
-	@cargo test
+test: test-unit test-int
+
+.PHONY: test-unit
+test-unit:
+# --lib only runs unit tests in library crates
+# --bins only runs unit tests in binary crates
+	@cargo test --lib --bins 
+
+.PHONY: test-int
+test-int:
+# --test only runs a specified integration test (a test in /tests).
+#        the glob pattern is used to match all integration tests
+# 
+# FIXME(https://linear.app/tezos/issue/JSTZ-46): 
+# Currently this runs the test for `test_nested_transactions`. This test should 
+# be moved to an inline-test in the `jstz_core` crate to avoid this.  
+	@cargo test --test "*"
 
 .PHONY: check
 check: lint fmt
