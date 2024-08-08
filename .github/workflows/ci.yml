@@ -45,7 +45,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2.7.1
       - name: Rust setup
         # FIXME: Once rustup adds a command to install a toolchain from rust-toolchain.toml, we can remove this.
-        run: rustup toolchain add 1.73.0 --profile minimal
+        run: rustup toolchain add 1.73.0 --profile minimal --component llvm-tools-preview
+      - uses: taiki-e/install-action@cargo-llvm-cov
 
       - name: Lint
         run: make lint
@@ -58,8 +59,16 @@ jobs:
         # (to avoid building both a release and a debug profile in CI).
         run: PROFILE=dev make build
 
-      - name: Run unit tests
-        run: make test-unit
+      - name: Run unit tests (and generate coverage)
+        run: make ci-cov
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4.2.0
+        with:
+          files: codecov.json
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   build-docs:
     name: Build Documentation

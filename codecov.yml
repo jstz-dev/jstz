@@ -1,0 +1,22 @@
+# Configures a simple CI comment (instead of the more verbose default)
+comment:
+  layout: "header, files, footer"
+  hide_project_coverage: false
+
+# Configures coverage checks -- both patch and project-wide checks
+# can drop by 5% before failing the CI build.
+#
+# Note: duplication required since the `default_rules` do not support
+# the `target`, `threshold`, or `if_ci_failed` fields.
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 5%
+        if_ci_failed: success
+    patch:
+      default:
+        target: auto
+        threshold: 5%
+        if_ci_failed: success
