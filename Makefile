@@ -1,3 +1,16 @@
+# In some situations we might want to override the default profile (release) (e.g. in CI)
+PROFILE ?= release
+PROFILE_OPT := --profile $(PROFILE)
+
+# Frustratingly, for the dev profile, /target/debug is used. For all other profiles, 
+# /target/$(PROFILE) is used. This is a workaround to ensure that the correct target
+# directory is used for the dev profile.
+ifeq ($(PROFILE), dev)
+	PROFILE_TARGET_DIR := debug
+else
+	PROFILE_TARGET_DIR := $(PROFILE)
+endif
+
 CLI_KERNEL_PATH := crates/jstz_cli/jstz_kernel.wasm
 
 .PHONY: all
@@ -5,7 +18,7 @@ all: test build check
 
 .PHONY: build
 build: build-cli-kernel
-	@cargo build --release
+	@cargo build $(PROFILE_OPT)
 
 .PHONY: build-bridge
 build-bridge:
@@ -16,15 +29,15 @@ build-bridge:
 
 .PHONY: build-kernel
 build-kernel:
-	@cargo build --package jstz_kernel --target wasm32-unknown-unknown --release
+	@cargo build --package jstz_kernel --target wasm32-unknown-unknown $(PROFILE_OPT)
 
 .PHONY: build-cli-kernel
 build-cli-kernel: build-kernel
-	@cp target/wasm32-unknown-unknown/release/jstz_kernel.wasm crates/jstz_cli/jstz_kernel.wasm
+	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(CLI_KERNEL_PATH)
 
 .PHONY: build-cli
 build-cli: build-cli-kernel
-	@cargo build --package jstz_cli --release
+	@cargo build --package jstz_cli $(PROFILE_OPT)
 
 .PHONY: build-deps
 build-deps:

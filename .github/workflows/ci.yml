@@ -47,9 +47,6 @@ jobs:
         # FIXME: Once rustup adds a command to install a toolchain from rust-toolchain.toml, we can remove this.
         run: rustup toolchain add 1.73.0 --profile minimal
 
-      - name: Build kernel
-        run: make build-kernel
-
       - name: Lint
         run: make lint
 
@@ -57,7 +54,9 @@ jobs:
         run: sh -c '[ -z "$(cargo tree | grep blst)" ]'
 
       - name: Build all packages
-        run: make build
+        # PROFILE=dev is used to build the dev profile, which is used for testing
+        # (to avoid building both a release and a debug profile in CI).
+        run: PROFILE=dev make build
 
       - name: Run unit tests
         run: make test-unit
