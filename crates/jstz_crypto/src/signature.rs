@@ -20,7 +20,7 @@ impl Signature {
     pub fn verify(&self, public_key: &PublicKey, message: &[u8]) -> Result<()> {
         match (self, public_key) {
             (Signature::Ed25519(sig), PublicKey::Ed25519(pk)) => {
-                let result = pk.verify_signature(sig, message).unwrap();
+                let result = pk.verify_signature(sig, message)?;
                 if result {
                     Ok(())
                 } else {
