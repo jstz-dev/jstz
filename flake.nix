@@ -2,12 +2,18 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
+
+    # Rust support
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         flake-utils.follows = "flake-utils";
       };
+    };
+    crane = {
+      url = "github:ipetkov/crane";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
   };
 
@@ -19,18 +25,6 @@
             inherit system;
             overlays = [(import ./nix/overlay.nix) (import rust-overlay)];
           };
-
-          makeFrameworkFlags = frameworks:
-            pkgs.lib.concatStringsSep " " (
-              pkgs.lib.concatMap
-              (
-                framework: [
-                  "-F${pkgs.darwin.apple_sdk.frameworks.${framework}}/Library/Frameworks"
-                  "-framework ${framework}"
-                ]
-              )
-              frameworks
-            );
 
           clangNoArch =
             if pkgs.stdenv.isDarwin
@@ -49,22 +43,13 @@
               })
             else pkgs.clang;
 
-          jstz = pkgs.callPackage ./nix/jstz.nix {makeFrameworkFlags = makeFrameworkFlags;};
+          rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
+          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain;};
         in {
-          packages = {
-            inherit (jstz) jstz_core jstz_api jstz_crypto jstz_proto jstz_kernel jstz_cli js_jstz js_jstz-types;
-            default = jstz.jstz_kernel;
-          };
+          packages = crates.packages // {default = self.packages.${system}.jstz_kernel;};
 
           # Rust dev environment
           devShells.default = pkgs.mkShell {
-            NIX_LDFLAGS = pkgs.lib.optional pkgs.stdenv.isDarwin (
-              makeFrameworkFlags [
-                "Security"
-                "SystemConfiguration"
-              ]
-            );
-
             CC = "clang";
 
             # This tells the 'cc' Rust crate to build using this C compiler when
@@ -94,13 +79,7 @@
             buildInputs = with pkgs;
               [
                 llvmPackages_16.clangNoLibc
-                # FIXME(https://linear.app/tezos/issue/JSTZ-48):
-                # This is almost a copy of rust-toolchain.toml We should find a way to
-                # share this configuration.
-                (pkgs.rust-bin.stable."1.73.0".default.override {
-                  targets = ["wasm32-unknown-unknown"];
-                  extensions = ["rustfmt" "clippy" "llvm-tools-preview"];
-                })
+                rust-toolchain
                 rust-analyzer
                 wabt
                 cargo-sort
@@ -110,15 +89,13 @@
 
                 alejandra
 
-                python311Packages.base58
-                jq
-
                 sqlite
 
                 # Code coverage
                 cargo-llvm-cov
               ]
-              ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
+              ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev]
+              ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
           };
         }
       );
