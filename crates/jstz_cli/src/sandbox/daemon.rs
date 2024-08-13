@@ -199,6 +199,9 @@ impl Sandbox {
                                 _ => unreachable!(),
                             }
                         }
+
+                        // yield point
+                        tokio::time::sleep(Duration::from_millis(100)).await;
                     }
 
                     for mut thread in threads {
