@@ -26,6 +26,8 @@ build-bridge:
 		--module "Jstz_bridge" > contracts/jstz_bridge.tz 
 	@ligo compile contract contracts/jstz_native_bridge.mligo > contracts/jstz_native_bridge.tz
 	@ligo compile contract --no-warn contracts/exchanger.mligo > contracts/exchanger.tz
+	@ligo compile contract --no-warn contracts/jstz_fa_bridge.mligo > contracts/jstz_fa_bridge.tz
+	@ligo compile contract --no-warn contracts/examples/fa_ticketer/fa_ticketer.mligo > contracts/examples/fa_ticketer/fa_ticketer.tz
 
 .PHONY: build-kernel
 build-kernel:
