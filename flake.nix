@@ -15,6 +15,14 @@
       url = "github:ipetkov/crane";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # NPM support
+    # FIXME(https://linear.app/tezos/issue/JSTZ-70)
+    # This is a temporary workaround for the ENOTCACHED error in the Nixpkgs buildNpmPackage derivation
+    npm-buildpackage = {
+      url = "github:serokell/nix-npm-buildpackage";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs:
@@ -23,7 +31,7 @@
         system: let
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [(import ./nix/overlay.nix) (import rust-overlay)];
+            overlays = [(import ./nix/overlay.nix) (import rust-overlay) npm-buildpackage.overlays.default];
           };
 
           clangNoArch =
@@ -45,8 +53,9 @@
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
           crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain;};
+          js-packages = pkgs.callPackage ./nix/js-packages.nix {};
         in {
-          packages = crates.packages // {default = self.packages.${system}.jstz_kernel;};
+          packages = crates.packages // js-packages.packages // {default = self.packages.${system}.jstz_kernel;};
 
           # Rust dev environment
           devShells.default = pkgs.mkShell {
@@ -65,8 +74,12 @@
             shellHook = with pkgs;
               lib.strings.concatLines
               ([
+                  # FIXME(https://linear.app/tezos/issue/JSTZ-70)
+                  # npm-buildpackage does not support version 3 package-lock.json files
+                  # We need to use version 2 until it does or find a workaround the ENOTCACHED error
+                  # in the Nixpkgs buildNpmPackage derivation.
                   ''
-                    npm install
+                    npm install --lockfile-version 2
                     export PATH="$PWD/node_modules/.bin/:$PATH"
                   ''
                 ]
