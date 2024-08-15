@@ -382,7 +382,7 @@ mod test {
             .unwrap();
 
         let outbox_queue_snapshot = SnapshotOutboxQueue(vec![]);
-        flush(&mut host, &mut &mut persistent_queue, outbox_queue_snapshot).unwrap();
+        flush(&mut host, &mut persistent_queue, outbox_queue_snapshot).unwrap();
 
         let level = host.run_level(|_| {});
         let outbox = host.outbox_at(level);
@@ -408,18 +408,14 @@ mod test {
             PublicKeyHash::digest(b"account4").unwrap(),
         ];
 
-        for i in 0..2 {
+        for account in accounts.iter().take(2) {
             persistent_queue
-                .queue_message(&mut host, make_withdrawal(&accounts[i]).into())
+                .queue_message(&mut host, make_withdrawal(account).into())
                 .unwrap();
         }
 
-        let outbox_queue_snapshot = SnapshotOutboxQueue(
-            accounts[2..]
-                .iter()
-                .map(|acc| make_withdrawal(acc))
-                .collect(),
-        );
+        let outbox_queue_snapshot =
+            SnapshotOutboxQueue(accounts[2..].iter().map(make_withdrawal).collect());
 
         flush(&mut host, &mut persistent_queue, outbox_queue_snapshot).unwrap();
 

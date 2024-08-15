@@ -227,7 +227,7 @@ impl FileClass {
         let end: Option<i64> = args.get_or_undefined(1).try_js_into(context)?;
         let content_type: Option<String> =
             args.get_or_undefined(2).try_js_into(context)?;
-        let blob = file.blob.slice(start, end, content_type);
+        let blob = file.slice(start, end, content_type);
         let blob = JsNativeObject::new::<BlobClass>(blob, context)?;
 
         Ok(blob.to_inner())

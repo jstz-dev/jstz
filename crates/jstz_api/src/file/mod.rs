@@ -1,16 +1,16 @@
 use boa_engine::Context;
 
 use self::blob::BlobApi;
-use self::file::FileApi as innerFileApi;
+use self::imp::FileApi as ImpFileApi;
 
-pub mod blob;
-pub mod file;
+mod blob;
+mod imp;
 
 pub struct FileApi;
 
 impl jstz_core::Api for FileApi {
     fn init(self, context: &mut Context<'_>) {
         BlobApi.init(context);
-        innerFileApi.init(context);
+        ImpFileApi.init(context);
     }
 }

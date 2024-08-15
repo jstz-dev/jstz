@@ -435,14 +435,14 @@ pub struct JsHostRuntime<'a> {
 }
 
 impl<'a> JsHostRuntime<'a> {
-    pub unsafe fn new<R: Runtime>(rt: &'a mut R) -> JsHostRuntime<'static> {
+    pub fn new<R: Runtime>(rt: &'a mut R) -> JsHostRuntime<'static> {
         let rt_ptr: *mut dyn erased_runtime::Runtime = rt;
 
         // SAFETY
         // From the pov of the `Host` struct, it is permitted to cast
         // the `rt` reference to `'static` since the lifetime of `Host`
         // is always shorter than the lifetime of `rt`
-        let rt: &'a mut dyn erased_runtime::Runtime = &mut *rt_ptr;
+        let rt: &'a mut dyn erased_runtime::Runtime = unsafe { &mut *rt_ptr };
 
         let jhr: Self = Self { inner: rt };
 

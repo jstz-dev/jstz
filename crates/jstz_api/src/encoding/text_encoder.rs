@@ -135,14 +135,14 @@ impl TextEncoder {
         let mut encoder = UTF_8.new_encoder();
 
         // 3.1. Allocate a buffer with suffient space for the result
-        let mut buffer: Vec<u8> = Vec::with_capacity(
+        let mut buffer: Vec<u8> = vec![
+            0;
             encoder
                 .max_buffer_length_from_utf16_if_no_unmappables(input.len())
                 .ok_or_else(|| {
                     JsNativeError::eval().with_message("Input too large for buffer")
-                })?,
-        );
-        buffer.resize(buffer.capacity(), 0);
+                })?
+        ];
 
         // 3.2. Encode the input into the buffer using `encoding_rs`
         let (_result, _read, written, has_error) =

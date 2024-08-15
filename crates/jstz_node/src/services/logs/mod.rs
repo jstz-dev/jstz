@@ -205,6 +205,10 @@ impl LogsService {
                 tokio::select! {
                     current_line = lines.next_line() => {
                         if let Ok(Some(line_str)) = current_line {
+                            // CLIPPY
+                            // The collapsible-match lint gives a false positive for this line since
+                            // it doesn't consider the line below (guarded by the 'persistent-logging' feature flag)
+                            #[allow(clippy::collapsible_match)]
                             if let Some(line) = Self::parse_line(&line_str) {
 
                                 #[cfg(feature = "persistent-logging")]
@@ -237,18 +241,16 @@ impl LogsService {
     }
 
     fn parse_line(line: &str) -> Option<Line> {
-        if line.starts_with(LOG_PREFIX) {
-            return LogRecord::try_from_string(&line[LOG_PREFIX.len()..]).map(Line::Js);
+        if let Some(log) = line.strip_prefix(LOG_PREFIX) {
+            return LogRecord::try_from_string(log).map(Line::Js);
         }
 
-        if line.starts_with(REQUEST_START_PREFIX) {
-            return RequestEvent::try_from_string(&line[REQUEST_START_PREFIX.len()..])
-                .map(Line::Request);
+        if let Some(request) = line.strip_prefix(REQUEST_START_PREFIX) {
+            return RequestEvent::try_from_string(request).map(Line::Request);
         }
 
-        if line.starts_with(REQUEST_END_PREFIX) {
-            return RequestEvent::try_from_string(&line[REQUEST_END_PREFIX.len()..])
-                .map(Line::Request);
+        if let Some(request) = line.strip_prefix(REQUEST_END_PREFIX) {
+            return RequestEvent::try_from_string(request).map(Line::Request);
         }
 
         None
