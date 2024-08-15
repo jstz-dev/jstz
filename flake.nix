@@ -56,6 +56,7 @@
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
         in {
           packages = crates.packages // js-packages.packages // {default = self.packages.${system}.jstz_kernel;};
+          checks = crates.checks;
 
           # Rust dev environment
           devShells.default = pkgs.mkShell {
@@ -96,6 +97,7 @@
                 rust-analyzer
                 wabt
                 cargo-sort
+                cargo-nextest
 
                 nodejs
                 prefetch-npm-deps
