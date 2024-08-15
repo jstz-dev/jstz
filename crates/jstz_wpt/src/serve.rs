@@ -1,4 +1,4 @@
-use std::{borrow::Cow, future::IntoFuture, process::Child};
+use std::{borrow::Cow, future::IntoFuture, sync::Arc};
 
 use anyhow::Result;
 use nix::{
@@ -6,6 +6,7 @@ use nix::{
     unistd::Pid,
 };
 use tl::Bytes;
+use tokio::{process::Child, sync::Mutex};
 use url::Url;
 
 use crate::{
@@ -52,8 +53,28 @@ impl Bundle {
 /// after running `wpt serve` in the wpt directory.
 ///
 /// To stop the server, simply drop [`WptServe`] or call [`WptServe::kill`].
+#[derive(Clone)]
 pub struct WptServe {
-    pub(crate) process: Child,
+    process: Arc<Mutex<Child>>,
+    pid: i32,
+}
+
+impl WptServe {
+    pub(crate) fn new(process: Child) -> Result<Self> {
+        if let Some(pid) = process.id() {
+            Ok(Self {
+                process: Arc::new(Mutex::new(process)),
+                pid: pid as i32,
+            })
+        } else {
+            Err(anyhow::anyhow!("Failed to get process id"))
+        }
+    }
+
+    pub async fn wait(&mut self) -> Result<()> {
+        self.process.lock().await.wait().await?;
+        Ok(())
+    }
 }
 
 impl Drop for WptServe {
@@ -66,9 +87,8 @@ pub type WptTestRunner<'a, R> = fn(&'a WptServe, TestToRun) -> R;
 
 impl WptServe {
     /// Kill the wpt server
-    pub fn kill(&mut self) -> Result<()> {
-        let _ = signal::kill(Pid::from_raw(self.process.id() as i32), SIGINT);
-        self.process.wait()?;
+    pub fn kill(&self) -> Result<()> {
+        let _ = signal::kill(Pid::from_raw(self.pid), SIGINT);
 
         Ok(())
     }

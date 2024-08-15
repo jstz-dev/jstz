@@ -596,13 +596,12 @@ pub struct JsTransaction {
 }
 
 impl JsTransaction {
-    pub unsafe fn new(tx: &mut Transaction) -> Self {
+    pub fn new(tx: &mut Transaction) -> Self {
         // SAFETY
         // From the pov of the `JsTransaction` struct, it is permitted to cast
         // the `tx` reference to `'static` since the lifetime of `JsTransaction`
         // is always shorter than the lifetime of `tx`
-
-        let rt: &'static mut Transaction = mem::transmute(tx);
+        let rt: &'static mut Transaction = unsafe { mem::transmute(tx) };
 
         Self { inner: rt }
     }
@@ -671,7 +670,7 @@ mod test {
             .queue_outbox_message(
                 &mut host,
                 make_withdrawal(
-                    &PublicKeyHash::digest(format!("failure account").as_bytes())
+                    &PublicKeyHash::digest("failure account".to_string().as_bytes())
                         .unwrap(),
                 ),
             )
@@ -771,9 +770,9 @@ mod test {
         assert_eq!(100, outbox.len());
         assert_eq!(20, tx.persistent_outbox.len(&mut host).unwrap());
 
-        for i in 0..100 {
+        for (i, outbox_message) in outbox.iter().enumerate() {
             let (_, message) =
-                OutboxMessageFull::<OutboxMessage>::nom_read(outbox[i].as_slice())
+                OutboxMessageFull::<OutboxMessage>::nom_read(outbox_message.as_slice())
                     .unwrap();
 
             assert_eq!(
@@ -794,9 +793,9 @@ mod test {
         assert_eq!(20, outbox.len());
         assert_eq!(0, tx.persistent_outbox.len(&mut host).unwrap());
 
-        for i in 0..20 {
+        for (i, outbox_message) in outbox.iter().enumerate().take(20) {
             let (_, message) =
-                OutboxMessageFull::<OutboxMessage>::nom_read(outbox[i].as_slice())
+                OutboxMessageFull::<OutboxMessage>::nom_read(outbox_message.as_slice())
                     .unwrap();
 
             assert_eq!(

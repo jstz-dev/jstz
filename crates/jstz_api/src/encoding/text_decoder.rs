@@ -213,14 +213,14 @@ impl TextDecoder {
         })?;
 
         //  4. Let output be the I/O queue of scalar values <<end-of-queue>>.
-        let mut output: Vec<u16> = Vec::with_capacity(
+        let mut output: Vec<u16> = vec![
+            0;
             self.decoder
                 .max_utf16_buffer_length(input.len())
                 .ok_or_else(|| {
                     JsNativeError::eval().with_message("Input too large for buffer")
-                })?,
-        );
-        output.resize(output.capacity(), 0);
+                })?
+        ];
 
         //  5. While true:
         //    1. Let item be the result of reading from this's I/O queue.

@@ -138,11 +138,9 @@ pub fn enter_js_host_context<F, R>(
 where
     F: FnOnce() -> R,
 {
-    JS_HOST_RUNTIME
-        .with(|js_hrt| *js_hrt.borrow_mut() = Some(unsafe { JsHostRuntime::new(hrt) }));
+    JS_HOST_RUNTIME.with(|js_hrt| *js_hrt.borrow_mut() = Some(JsHostRuntime::new(hrt)));
 
-    JS_TRANSACTION
-        .with(|js_tx| *js_tx.borrow_mut() = Some(unsafe { JsTransaction::new(tx) }));
+    JS_TRANSACTION.with(|js_tx| *js_tx.borrow_mut() = Some(JsTransaction::new(tx)));
 
     let result = f();
 

@@ -101,14 +101,14 @@ mod test {
     fn entry_fa_deposit_succeeds_with_proxy() {
         let mut host = JstzMockHost::default();
 
-        let mut tx = &mut Transaction::default();
+        let tx = &mut Transaction::default();
         tx.begin();
         let parsed_code =
             ParsedCode::try_from(jstz_mock::host::MOCK_PROXY_FUNCTION.to_string())
                 .unwrap();
         let proxy = crate::executor::smart_function::Script::deploy(
             host.rt(),
-            &mut tx,
+            tx,
             &jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
                 .unwrap(),
             parsed_code,
@@ -134,7 +134,7 @@ mod test {
                 assert_eq!(300, proxy_balance);
                 let receiver_balance = TicketTable::get_balance(
                     host.rt(),
-                    &mut tx,
+                    tx,
                     &try_parse_contract(&deposit.receiver).unwrap(),
                     &ticket_hash,
                 )

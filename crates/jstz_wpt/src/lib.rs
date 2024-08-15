@@ -6,15 +6,10 @@ pub use manifest::*;
 pub use report::*;
 pub use serve::*;
 
-use std::{
-    ffi::OsStr,
-    fs,
-    path::PathBuf,
-    process::{Child, Command, Stdio},
-    time::Duration,
-};
+use std::{ffi::OsStr, fs, path::PathBuf, process::Stdio, time::Duration};
 
 use anyhow::Result;
+use tokio::process::{Child, Command};
 
 pub(crate) fn root_dir() -> Result<PathBuf> {
     Ok(PathBuf::from(env!("CARGO_MANIFEST_DIR")))
@@ -70,7 +65,7 @@ impl Diagnosis {
 }
 
 impl Wpt {
-    pub fn doctor() -> Result<Diagnosis> {
+    pub async fn doctor() -> Result<Diagnosis> {
         let python_installed = {
             let python_version = run_python(
                 ["--version"],
@@ -79,7 +74,8 @@ impl Wpt {
                     ..Default::default()
                 },
             )?
-            .wait_with_output()?;
+            .wait_with_output()
+            .await?;
 
             python_version.status.success()
                 && python_version.stdout.starts_with(b"Python 3")
@@ -103,8 +99,8 @@ impl Wpt {
         })
     }
 
-    pub fn new() -> Result<Self> {
-        let dianosis = Self::doctor()?;
+    pub async fn new() -> Result<Self> {
+        let dianosis = Self::doctor().await?;
         if !dianosis.is_healthy() {
             return Err(anyhow::anyhow!(
                 "Environment is not configured correctly for WPT"
@@ -114,7 +110,7 @@ impl Wpt {
         Ok(Self { _private: () })
     }
 
-    pub fn hosts(&self) -> Result<String> {
+    pub async fn hosts(&self) -> Result<String> {
         let args = [WPT_CMD, "make-hosts-file"];
 
         let output = run_python(
@@ -124,7 +120,8 @@ impl Wpt {
                 ..Default::default()
             },
         )?
-        .wait_with_output()?;
+        .wait_with_output()
+        .await?;
 
         if !output.status.success() {
             return Err(anyhow::anyhow!("Failed to update wpt hosts"));
@@ -135,8 +132,8 @@ impl Wpt {
         Ok(hosts)
     }
 
-    pub fn update_hosts(&self) -> Result<()> {
-        let hosts = self.hosts()?;
+    pub async fn update_hosts(&self) -> Result<()> {
+        let hosts = self.hosts().await?;
         fs::write(root_dir()?.join("hosts"), hosts)?;
 
         Ok(())
@@ -147,7 +144,7 @@ impl Wpt {
         Ok(hosts)
     }
 
-    pub fn update_manifest(&self, rebuild: bool) -> Result<()> {
+    pub async fn update_manifest(&self, rebuild: bool) -> Result<()> {
         let args = [
             WPT_CMD,
             "manifest",
@@ -158,7 +155,7 @@ impl Wpt {
             if rebuild { "--rebuild" } else { "" },
         ];
 
-        let status = run_python(args, Default::default())?.wait()?;
+        let status = run_python(args, Default::default())?.wait().await?;
         if !status.success() {
             return Err(anyhow::anyhow!("Failed to generate wpt manifest"));
         }
@@ -190,8 +187,8 @@ impl Wpt {
         loop {
             // If we waited more than 10 seconds, give up
             if attempts > 10 {
-                child.kill()?;
-                child.wait()?;
+                child.kill().await?;
+                child.wait().await?;
                 return Err(anyhow::anyhow!("Failed to start wpt server"));
             }
 
@@ -204,6 +201,6 @@ impl Wpt {
             }
         }
 
-        Ok(WptServe { process: child })
+        WptServe::new(child)
     }
 }

@@ -325,7 +325,7 @@ async fn test_wpt() -> Result<()> {
     )?;
 
     let report = {
-        let wpt = Wpt::new()?;
+        let wpt = Wpt::new().await?;
 
         let manifest = Wpt::read_manifest()?;
 

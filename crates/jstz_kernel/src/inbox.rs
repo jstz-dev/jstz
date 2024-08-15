@@ -143,7 +143,7 @@ pub fn read_message(rt: &mut impl Runtime, ticketer: ContractKt1Hash) -> Option<
         }
         InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
             if transfer.destination.hash().as_ref()
-                != &rt.reveal_metadata().raw_rollup_address
+                != rt.reveal_metadata().raw_rollup_address
             {
                 debug_msg!(
                     rt,
@@ -288,7 +288,7 @@ mod test {
             assert_eq!(300, amount);
             assert_eq!(fa_deposit.receiver.to_b58check(), receiver.to_base58());
             assert_eq!(
-                Some(PublicKeyHash::from_base58(&jstz_mock::host::MOCK_PROXY).unwrap()),
+                Some(PublicKeyHash::from_base58(jstz_mock::host::MOCK_PROXY).unwrap()),
                 proxy_smart_function
             );
         } else {

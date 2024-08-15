@@ -10,8 +10,7 @@ mod test {
     fn get_random_public_key_hash(passphrase: &str) -> PublicKeyHash {
         let (_, pk) =
             keypair_from_passphrase(passphrase).expect("Failed to generate keypair");
-        return PublicKeyHash::try_from(&pk)
-            .expect("Failed to generate public key hash.");
+        PublicKeyHash::try_from(&pk).expect("Failed to generate public key hash.")
     }
 
     fn get_account_balance_from_storage(
@@ -20,7 +19,7 @@ mod test {
     ) -> u64 {
         let account = match kv::Storage::get::<Account>(
             hrt,
-            &Account::path(&pkh).expect("Could not get path"),
+            &Account::path(pkh).expect("Could not get path"),
         )
         .expect("Could not find the account")
         {
@@ -37,7 +36,7 @@ mod test {
         pkh: &PublicKeyHash,
         expected: u64,
     ) {
-        let amt = Account::balance(hrt, tx, &pkh).expect("Could not get balance");
+        let amt = Account::balance(hrt, tx, pkh).expect("Could not get balance");
 
         assert_eq!(amt, expected);
     }
