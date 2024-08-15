@@ -11,22 +11,22 @@ license-file.workspace = true
 description.workspace = true
 
 [dependencies]
-boa_engine = { version = "0.17.0", features = ["fuzz"] }
-boa_gc = "0.17.0"
+bincode.workspace = true
+boa_engine.workspace = true 
+boa_gc.workspace = true
+chrono.workspace = true
+derive_more.workspace = true
+erased-serde.workspace = true
+getrandom.workspace = true
+jstz_crypto = { path = "../jstz_crypto" }
+serde.workspace = true
 tezos-smart-rollup-host.workspace = true
 tezos-smart-rollup.workspace = true
-getrandom = { version = "0.2.12", features = ["custom"] }
-derive_more = "0.99.17"
-bincode = "1.3.3"
-erased-serde = "0.4.2"
-serde = { version = "1.0.196", features = ["derive"] }
-jstz_crypto.workspace = true
-chrono = { version = "0.4.34", default-features = false, features = ["std"] }
 
 [dev-dependencies]
-anyhow = "1.0.82"
-expect-test = "1.4.1"
-tokio = { version = "1.36.0", features = ["full"] }
-jstz_proto.workspace = true
-jstz_crypto.workspace = true
+anyhow.workspace = true 
+expect-test.workspace = true
+jstz_crypto = { path = "../jstz_crypto" }
+jstz_proto = { path = "../jstz_proto" }
 tezos-smart-rollup-mock.workspace = true
+tokio.workspace = true

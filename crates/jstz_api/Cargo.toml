@@ -11,27 +11,27 @@ license-file.workspace = true
 description.workspace = true
 
 [dependencies]
-base64 = "0.21.7"
-boa_engine = "0.17.0"
-boa_gc = "0.17.0"
-bytes = "1.4.0"
-derive_more = "0.99.17"
-form_urlencoded = "1.2.0"
-http = "1.0.0"
-jstz_core.workspace = true
-jstz_crypto.workspace = true
-serde = "1.0.196"
-serde_json = "1.0.107"
+base64.workspace = true
+boa_engine.workspace = true 
+boa_gc.workspace = true
+bytes.workspace = true
+clap.workspace = true
+derive_more.workspace = true
+encoding_rs.workspace = true
+fastrand.workspace = true
+form_urlencoded.workspace = true
+http.workspace = true
+jstz_core = { path = "../jstz_core" }
+jstz_crypto = { path = "../jstz_crypto" }
+serde.workspace = true 
+serde_json.workspace = true
 tezos-smart-rollup.workspace = true
-url = "2.4.1"
-urlpattern = "0.2.0"
-encoding_rs = "0.8.33"
-fastrand = "2.0.1"
-clap = { version = "^4.4", features = ["derive"] }
+url.workspace = true
+urlpattern.workspace = true
 
 [dev-dependencies]
-anyhow = "1.0.82"
-expect-test = "1.4.1"
-jstz_wpt.workspace = true
-tokio = { version = "1.36.0", features = ["full"] }
-tezos-smart-rollup-mock = "0.2.2"
+anyhow.workspace = true
+expect-test.workspace = true
+jstz_wpt = { path = "../jstz_wpt" }
+tezos-smart-rollup-mock.workspace = true
+tokio.workspace = true
