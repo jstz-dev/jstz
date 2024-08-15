@@ -9,7 +9,7 @@ repository.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
-jstz_crypto.workspace = true
-jstz_proto.workspace = true
-serde-wasm-bindgen = "0.6.5"
-wasm-bindgen = "0.2.92"
+jstz_crypto = { path = "../jstz_crypto" }
+jstz_proto = { path = "../jstz_proto" }
+serde-wasm-bindgen.workspace = true
+wasm-bindgen.workspace = true

@@ -6,8 +6,8 @@ edition.workspace = true
 repository.workspace = true
 
 [dependencies]
-tezos-smart-rollup.workspace = true
+jstz_core = { path = "../jstz_core" }
+jstz_crypto = { path = "../jstz_crypto" }
 tezos-smart-rollup-mock.workspace = true 
+tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
-jstz_core.workspace = true
-jstz_crypto.workspace = true

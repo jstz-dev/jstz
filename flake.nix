@@ -103,6 +103,7 @@
                 })
                 rust-analyzer
                 wabt
+                cargo-sort
 
                 nodejs
                 prefetch-npm-deps

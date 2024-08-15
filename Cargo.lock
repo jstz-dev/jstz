@@ -2363,7 +2363,7 @@ dependencies = [
  "actix-web",
  "actix-web-lab",
  "anyhow",
- "base64 0.13.1",
+ "base64 0.21.7",
  "bincode",
  "clap 4.4.18",
  "dirs 3.0.2",

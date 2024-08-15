@@ -11,20 +11,20 @@ license-file.workspace = true
 description.workspace = true
 
 [dependencies]
-derive_more = "0.99.17"
-erased-serde = "0.4.2"
-serde = "1.0.196"
-jstz_core.workspace = true
-jstz_crypto.workspace = true
-serde_json = "1.0.105"
-boa_engine = { version = "0.17.0", features = ["fuzz"] }
-boa_gc = "0.17.0"
-tezos-smart-rollup = { workspace = true, default-features = false}
-jstz_api.workspace = true
-http = "1.0.0"
-http-serde = "2.0.0"
-either = "1.9.0"
+boa_engine.workspace = true
+boa_gc.workspace = true
+derive_more.workspace = true
+either.workspace = true
+erased-serde.workspace = true
+http-serde.workspace = true
+http.workspace = true
+jstz_api = { path = "../jstz_api" }
+jstz_core = { path = "../jstz_core" }
+jstz_crypto = { path = "../jstz_crypto" }
+serde.workspace = true
+serde_json.workspace = true
+tezos-smart-rollup.workspace = true
 
 [dev-dependencies]
+jstz_mock = { path = "../jstz_mock" }
 tezos-smart-rollup-mock.workspace = true
-jstz_mock.workspace = true
