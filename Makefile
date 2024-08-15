@@ -121,7 +121,7 @@ fmt-check: fmt-nix-check fmt-rust-check fmt-js-check
 .PHONY: lint
 lint:
 	@touch $(CLI_KERNEL_PATH)
-	@cargo clippy -- --no-deps -D warnings -A clippy::let_underscore_future -A clippy::module_inception -A clippy::op_ref -A clippy::manual_strip -A clippy::missing_safety_doc -A clippy::slow_vector_initialization -A clippy::empty_loop -A clippy::collapsible-match
+	@cargo clippy --all-targets -- --deny warnings
 	@rm -f $(CLI_KERNEL_PATH)
 
 .PHONY: ci-cov 

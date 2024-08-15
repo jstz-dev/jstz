@@ -126,10 +126,13 @@ in {
         cargoLlvmCovExtraArgs = "--bins --lib --codecov --output-path $out";
       });
 
+    cargo-clippy = craneLib.cargoClippy (commonWorkspace
+      // {
+        cargoArtifacts = cargoDeps;
+        cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+      });
+
     # TODO(https://linear.app/tezos/issue/JSTZ-44)
     # Run the integration tests
-
-    # TODO(https://linear.app/tezos/issue/JSTZ-65)
-    # Run cargo clippy on the workspace
   };
 }
