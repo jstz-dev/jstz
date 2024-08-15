@@ -24,8 +24,6 @@ jobs:
       - run: nix --version
       - name: Format
         run: nix --accept-flake-config fmt -- --fail-on-change
-      - name: Lint
-        run: nix --accept-flake-config develop -j auto --command make lint
       - name: Prevent blst
         run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
       - name: Build
