@@ -2,6 +2,10 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
+    treefmt = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Rust support
     rust-overlay = {
@@ -54,9 +58,28 @@
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
           crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain;};
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
+
+          fmt = treefmt.lib.evalModule pkgs {
+            projectRootFile = "flake.nix";
+
+            programs.rustfmt.enable = true;
+            programs.alejandra.enable = true;
+            programs.prettier.enable = true;
+            programs.shfmt.enable = true;
+
+            # TODO(https://linear.app/tezos/issue/JSTZ-64)
+            # Configure shellcheck for shell scripts
+            # programs.shellcheck.enable = true;
+
+            # TODO(https://linear.app/tezos/issue/JSTZ-63)
+            # Configure formatter for LIGO contracts
+            settings.global.excludes = ["target" "result" "node_modules/**" ".github" ".direnv" "contracts/**" "Dockerfile" "*.toml"];
+          };
         in {
           packages = crates.packages // js-packages.packages // {default = self.packages.${system}.jstz_kernel;};
-          checks = crates.checks;
+          checks = crates.checks // {formatting = fmt.config.build.check self;};
+
+          formatter = fmt.config.build.wrapper;
 
           # Rust dev environment
           devShells.default = pkgs.mkShell {

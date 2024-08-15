@@ -20,7 +20,7 @@ You can use 'git diff' to see the changes made by 'make fmt'.
 If your git index originally contained some unstaged files, they have 
 been stashed. Run 'git stash pop' to retrieve them.
 EOF
-    exit 1
+  exit 1
 fi
 
 # Pop the stash if we stashed earlier (if there were no formatting changes)
