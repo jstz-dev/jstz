@@ -58,6 +58,8 @@
       '';
     };
 
+  workspace = craneLib.cargoBuild commonWorkspace;
+
   # Build a crate in the workspace
   crate = pname:
     craneLib.buildPackage (commonWorkspace
@@ -103,6 +105,31 @@ in {
     octez = crate "octez";
 
     # Special target to build all crates in the workspace
-    all = craneLib.cargoBuild commonWorkspace;
+    all = workspace;
+  };
+
+  checks = {
+    # Build the workspace as part of `nix flake check`
+    cargo-build = workspace;
+
+    cargo-test-unit = craneLib.cargoNextest (commonWorkspace
+      // {
+        cargoArtifacts = cargoDeps;
+        # Run the unit tests
+        cargoNextestExtraArg = "--bins --lib";
+      });
+
+    cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
+      // {
+        cargoArtifacts = cargoDeps;
+        # Generate coverage reports for codecov
+        cargoLlvmCovExtraArgs = "--bins --lib --codecov --output-path $out";
+      });
+
+    # TODO(https://linear.app/tezos/issue/JSTZ-44)
+    # Run the integration tests
+
+    # TODO(https://linear.app/tezos/issue/JSTZ-65)
+    # Run cargo clippy on the workspace
   };
 }

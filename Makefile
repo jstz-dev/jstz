@@ -60,7 +60,7 @@ test: test-unit test-int
 test-unit:
 # --lib only runs unit tests in library crates
 # --bins only runs unit tests in binary crates
-	@cargo test --lib --bins 
+	@cargo nextest run --lib --bins 
 
 .PHONY: test-int
 test-int:
@@ -70,7 +70,7 @@ test-int:
 # FIXME(https://linear.app/tezos/issue/JSTZ-46): 
 # Currently this runs the test for `test_nested_transactions`. This test should 
 # be moved to an inline-test in the `jstz_core` crate to avoid this.  
-	@cargo test --test "*"
+	@cargo nextest run --test "*"
 
 .PHONY: cov 
 cov:
