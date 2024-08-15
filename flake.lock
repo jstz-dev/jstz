@@ -79,7 +79,8 @@
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
         "npm-buildpackage": "npm-buildpackage",
-        "rust-overlay": "rust-overlay"
+        "rust-overlay": "rust-overlay",
+        "treefmt": "treefmt"
       }
     },
     "rust-overlay": {
@@ -117,6 +118,26 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "treefmt": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1723656612,
+        "narHash": "sha256-6Sx+/VhRPLR+kRf6rnNUFMQ66DUz1DMYajixYUe+CUU=",
+        "owner": "numtide",
+        "repo": "treefmt-nix",
+        "rev": "4a6d7dccf80a1aa2d04cfaa88d9e5511542a2486",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "treefmt-nix",
         "type": "github"
       }
     }
