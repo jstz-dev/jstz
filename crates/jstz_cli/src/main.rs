@@ -64,7 +64,7 @@ enum Command {
         #[arg(short, long)]
         trace: bool,
     },
-    /// 🌉 Move CTEZ between L1 and jstz with the jstz bridge {n}
+    /// 🌉 Move XTZ between L1 and jstz with the jstz bridge {n}
     #[command(subcommand)]
     Bridge(bridge::Command),
 

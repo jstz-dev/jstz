@@ -494,6 +494,7 @@ fn start_sandbox(
     let config = Rc::new(RefCell::new(cfg.clone()));
     let logs = Rc::new(RefCell::new(log_file.try_clone()?));
     let mut sandbox = Sandbox::new(config, logs);
+
     // 1. Init node
     init_node(log_file, progress, cfg)?;
 
@@ -518,21 +519,12 @@ fn start_sandbox(
     sandbox.set_baker(baker)?;
     debug!(log_file, "Started baker (using octez-client)");
 
-    // 5. Deploy bridge
-    progress_step(log_file, progress);
-    debug!(log_file, "Deploying bridge...");
+    // 4.1 Deploy the XTZ ticket exchanger
     let client = cfg.octez_client_sandbox()?;
-
     let exchanger = Exchanger::deploy(&client, OPERATOR_ADDRESS)?;
     debug!(log_file, "Exchanger deployed at {}", exchanger);
 
-    progress_step(log_file, progress);
-
-    let bridge = NativeBridge::deploy(&client, OPERATOR_ADDRESS, &exchanger)?;
-
-    debug!(log_file, "Bridge deployed at {}", bridge);
-
-    // 6. Create an installer kernel
+    // 5. Create an installer kernel
     progress_step(log_file, progress);
     debug!(log_file, "Creating installer kernel...");
 
@@ -544,13 +536,13 @@ fn start_sandbox(
         "Installer kernel created with preimages at {:?}", preimages_dir
     );
 
-    // 7. Originate the rollup
+    // 6. Originate the rollup
     progress_step(log_file, progress);
     let rollup =
         JstzRollup::deploy(&cfg.octez_client_sandbox()?, OPERATOR_ADDRESS, &installer)?;
     debug!(log_file, "`jstz_rollup` originated at {}", rollup);
 
-    // 8. As a thread, start rollup node
+    // 7. As a thread, start rollup node
     progress_step(log_file, progress);
     debug!(log_file, "Starting rollup node...");
 
@@ -565,6 +557,16 @@ fn start_sandbox(
     )?);
     sandbox.set_rollup_node(rollup_node)?;
     debug!(log_file, "Started octez-smart-rollup-node");
+
+    // 8. Deploy bridge
+    progress_step(log_file, progress);
+    debug!(log_file, "Deploying bridge...");
+
+    progress_step(log_file, progress);
+
+    let bridge = NativeBridge::deploy(&client, OPERATOR_ADDRESS, &exchanger, &rollup)?;
+
+    debug!(log_file, "Bridge deployed at {}", bridge);
 
     // 9. Set the rollup address in the bridge
     progress_step(log_file, progress);

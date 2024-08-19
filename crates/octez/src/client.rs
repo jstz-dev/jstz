@@ -119,10 +119,11 @@ impl OctezClient {
         to: &str,
         entrypoint: &str,
         parameter: &str,
+        amount: u64,
     ) -> Result<()> {
         run_command(self.command().args([
             "transfer",
-            "0",
+            &format!("{}", amount),
             "from",
             from,
             "to",
