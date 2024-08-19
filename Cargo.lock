@@ -2304,10 +2304,12 @@ dependencies = [
  "getrandom",
  "jstz_crypto",
  "jstz_proto",
+ "nom",
  "serde",
  "tezos-smart-rollup",
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-mock",
+ "tezos_data_encoding 0.6.0",
  "tokio",
 ]
 
