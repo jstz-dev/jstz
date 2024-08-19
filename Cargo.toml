@@ -67,6 +67,7 @@ in-container = "^1"
 indicatif = "0.17.0"
 log = "0.4.20"
 nix = { version = "^0.27.1", features = ["process", "signal"] }
+nom = "7.1.3"
 num-traits = "0.2.16"
 parking_lot = "0.12.1"
 prettytable = "0.10.0"
