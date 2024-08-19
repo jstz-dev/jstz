@@ -6,7 +6,7 @@ use crate::{config::NetworkName, error::Result, utils::AddressOrAlias};
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    /// 💰 Deposits CTEZ from an existing Tezos L1 address to a jstz address.
+    /// 💰 Deposits XTZ from an existing Tezos L1 address to a jstz address.
     Deposit {
         /// Tezos L1 address or alias to withdraw from (must be stored in octez-client's wallet).
         #[arg(short, long)]
@@ -14,7 +14,7 @@ pub enum Command {
         /// jstz address or alias to deposit to.
         #[arg(short, long)]
         to: AddressOrAlias,
-        /// The amount in CTEZ to transfer.
+        /// The amount in XTZ to transfer.
         #[arg(short, long)]
         amount: u64,
         /// Specifies the network from the config file, defaulting to the configured default network.

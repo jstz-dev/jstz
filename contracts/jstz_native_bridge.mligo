@@ -13,9 +13,8 @@
 
 module Tezos = Tezos.Next
 
-type deposit_request = 
-  { jstz_address: address (* Jstz rollup address. *)
-  ; l2_address: address  
+type deposit_request = {
+    l2_address: address  
     (* L2 address - supports tz1, tz2, tz3, tz4, kt1 *)
     (* TODO: https://linear.app/tezos/issue/JSTZ-34
        Add check for supported addresses
@@ -24,6 +23,7 @@ type deposit_request =
 
 type storage = 
   { exchanger: address (* Address of exchanger contract minting tez tickets. *)
+  ; jstz_address: address  (* Jstz rollup address. *)
   ; deposit_request: deposit_request option; (* Address of L2 depositee *) 
   }
 
@@ -39,7 +39,8 @@ type return = operation list * storage
    Throws if [exchanger] contract does not have %mint entrypoint. This is a fatal bug.
 *)
 [@entry]
-let deposit (request: deposit_request) ({exchanger; deposit_request}: storage) : return =
+let deposit (request: deposit_request) (s: storage) : return =
+  let { exchanger; jstz_address = _; deposit_request } = s in
   let () = 
     match deposit_request with
     | None -> ()
@@ -54,7 +55,7 @@ let deposit (request: deposit_request) ({exchanger; deposit_request}: storage) :
     | None -> failwith "Invalid tez ticket contract"
     | Some contract ->
       let mint = Tezos.Operation.transaction callback amount contract in
-      let callback_storage = { exchanger; deposit_request = Some request } in
+      let callback_storage = { s with deposit_request = Some request } in
       [ mint ], callback_storage
 
 (* [callback ticket {exchanger; deposit_request}] sends a [Deposit_Ticket] 
@@ -65,13 +66,14 @@ let deposit (request: deposit_request) ({exchanger; deposit_request}: storage) :
    [deposit_request] is unset at the end of the function.
 *)
 [@entry]
-let callback (ticket: tez_ticket) ({exchanger; deposit_request}: storage) : return =
+let callback (ticket: tez_ticket) (s: storage) : return =
+let { exchanger = _ ; jstz_address; deposit_request } = s in
   let deposit_request =
     match deposit_request with
     | None -> failwith "Callback on non-locked deposit"
     | Some r -> r
   in
-  let { jstz_address; l2_address } = deposit_request in
+  let { l2_address } = deposit_request in
   let jstz_address: jstz contract =
     Tezos.get_contract_with_error jstz_address "Invalid rollup address"
   in
@@ -81,5 +83,5 @@ let callback (ticket: tez_ticket) ({exchanger; deposit_request}: storage) : retu
       0mutez
       jstz_address
   in
-  let reset_storage = { exchanger; deposit_request = None } in
+  let reset_storage = { s with deposit_request = None } in
   [ deposit ], reset_storage

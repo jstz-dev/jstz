@@ -25,7 +25,6 @@ pub fn exec(
     }
 
     let to_pkh = to.resolve(&cfg)?;
-    debug!("resolved `to` -> {:?}", to_pkh);
 
     // Check if trying to deposit to a bootsrap account.
     if let Some(bootstrap_account) = SANDBOX_BOOTSTRAP_ACCOUNTS
@@ -37,27 +36,26 @@ pub fn exec(
             bootstrap_account.address
         );
     }
+    let pkh = to_pkh.to_base58();
+    debug!("resolved `to` -> {}", &pkh);
 
     // Execute the octez-client command
     if cfg
         .octez_client(&network)?
         .call_contract(
             &from,
-            "jstz_bridge",
+            "jstz_native_bridge",
             "deposit",
-            &format!(
-                "(Pair 0x{} {})",
-                hex::encode_upper(to_pkh.as_bytes()),
-                amount,
-            ),
+            &format!("\"{}\"", &pkh),
+            amount,
         )
         .is_err()
     {
-        bail_user_error!("Failed to deposit CTEZ. Please check whether the addresses and network are correct.");
+        bail_user_error!("Failed to deposit XTZ. Please check whether the addresses and network are correct.");
     }
 
     info!(
-        "Deposited {} CTEZ from {} to {}",
+        "Deposited {} XTZ from {} to {}",
         amount,
         from,
         to.to_string()

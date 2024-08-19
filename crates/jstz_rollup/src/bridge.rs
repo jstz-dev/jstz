@@ -70,8 +70,10 @@ impl NativeBridge {
         client: &OctezClient,
         operator: &str,
         exchanger: &Exchanger,
+        rollup_address: &str,
     ) -> Result<NativeBridge> {
-        let storage_init = format!("(Pair \"{}\" None)", exchanger.0);
+        let storage_init =
+            format!("(Pair \"{}\" \"{}\" None)", exchanger.0, rollup_address);
         client
             .originate_contract(
                 "jstz_native_bridge",
@@ -133,6 +135,7 @@ impl BridgeContract {
             &self.0,
             "set_rollup",
             &format!("\"{}\"", rollup_address),
+            0,
         )
     }
 }
