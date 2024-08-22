@@ -13,11 +13,16 @@ pub enum Error {
         source: jstz_crypto::Error,
     },
     BalanceOverflow,
+    InsufficientFunds,
     InvalidNonce,
     InvalidAddress,
     RefererShouldNotBeSet,
     GasLimitExceeded,
+    UnsupportedPath,
+    InvalidHost,
     InvalidHttpRequest,
+    InvalidHttpRequestBody,
+    InvalidHttpRequestMethod,
     TicketTableError {
         source: ticket_table::TicketTableError,
     },
@@ -39,6 +44,9 @@ impl From<Error> for JsError {
             Error::BalanceOverflow => {
                 JsNativeError::eval().with_message("BalanceOverflow").into()
             }
+            Error::InsufficientFunds => JsNativeError::eval()
+                .with_message("InsufficientFunds")
+                .into(),
             Error::InvalidNonce => {
                 JsNativeError::eval().with_message("InvalidNonce").into()
             }
@@ -54,6 +62,18 @@ impl From<Error> for JsError {
             Error::InvalidHttpRequest => JsNativeError::eval()
                 .with_message("InvalidHttpRequest")
                 .into(),
+            Error::InvalidHttpRequestBody => JsNativeError::eval()
+                .with_message("InvalidHttpRequestBody")
+                .into(),
+            Error::InvalidHttpRequestMethod => JsNativeError::eval()
+                .with_message("InvalidHttpRequestMethod")
+                .into(),
+            Error::InvalidHost => {
+                JsNativeError::eval().with_message("InvalidHost").into()
+            }
+            Error::UnsupportedPath => {
+                JsNativeError::eval().with_message("UnsupportedPath").into()
+            }
             Error::TicketTableError { source } => JsNativeError::eval()
                 .with_message(format!("TicketTableError: {}", source))
                 .into(),

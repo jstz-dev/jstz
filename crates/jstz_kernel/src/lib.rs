@@ -18,25 +18,26 @@ fn read_ticketer(rt: &impl Runtime) -> Option<ContractKt1Hash> {
     Storage::get(rt, &TICKETER).ok()?
 }
 
-fn handle_message(hrt: &mut impl Runtime, message: Message) -> Result<()> {
-    let mut tx = Transaction::default();
-    tx.begin();
-
+fn handle_message(
+    hrt: &mut impl Runtime,
+    message: Message,
+    ticketer: &ContractKt1Hash,
+    tx: &mut Transaction,
+) -> Result<()> {
     match message {
         Message::Internal(external_operation) => {
             let receipt =
-                executor::execute_external_operation(hrt, &mut tx, external_operation);
-            receipt.write(hrt, &mut tx)?
+                executor::execute_external_operation(hrt, tx, external_operation);
+            receipt.write(hrt, tx)?
         }
         Message::External(signed_operation) => {
             debug_msg!(hrt, "External operation: {signed_operation:?}\n");
-            let receipt = executor::execute_operation(hrt, &mut tx, signed_operation);
+            let receipt =
+                executor::execute_operation(hrt, tx, signed_operation, ticketer);
             debug_msg!(hrt, "Receipt: {receipt:?}\n");
-            receipt.write(hrt, &mut tx)?
+            receipt.write(hrt, tx)?
         }
     }
-
-    tx.commit(hrt)?;
     Ok(())
 }
 
@@ -44,10 +45,14 @@ fn handle_message(hrt: &mut impl Runtime, message: Message) -> Result<()> {
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
     let ticketer = read_ticketer(rt).expect("Ticketer not found");
-
-    if let Some(message) = read_message(rt, ticketer) {
-        handle_message(rt, message)
+    let mut tx = Transaction::default();
+    tx.begin();
+    if let Some(message) = read_message(rt, &ticketer) {
+        handle_message(rt, message, &ticketer, &mut tx)
             .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
+    }
+    if let Err(commit_error) = tx.commit(rt) {
+        debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");
     }
 }
 

@@ -444,6 +444,218 @@ pub mod run {
     }
 }
 
+pub mod jstz_run {
+    use tezos_crypto_rs::hash::ContractKt1Hash;
+
+    use super::*;
+    use crate::{
+        executor::{withdraw::Withdrawal, JSTZ_HOST},
+        operation, receipt,
+    };
+
+    const WITHDRAW_PATH: &str = "/withdraw";
+
+    fn validate_withdraw_request(run: operation::RunFunction) -> Result<Withdrawal> {
+        let method = run
+            .method
+            .as_str()
+            .parse::<http::Method>()
+            .map_err(|_| Error::InvalidHttpRequestMethod)?;
+
+        if method != http::Method::POST {
+            return Err(Error::InvalidHttpRequestMethod);
+        }
+
+        let body = match run.body {
+            Some(body) => body,
+            None => Err(Error::InvalidHttpRequestBody)?,
+        };
+
+        let withdrawal: Withdrawal = serde_json::from_str(
+            String::from_utf8(body)
+                .map_err(|_| Error::InvalidHttpRequestBody)?
+                .as_str(),
+        )
+        .map_err(|_| Error::InvalidHttpRequestBody)?;
+
+        Ok(withdrawal)
+    }
+
+    pub fn execute(
+        hrt: &mut impl HostRuntime,
+        tx: &mut Transaction,
+        source: &Address,
+        run: operation::RunFunction,
+        ticketer: &ContractKt1Hash,
+    ) -> Result<receipt::RunFunction> {
+        if run.uri.host() != Some(JSTZ_HOST) {
+            return Err(Error::InvalidHost);
+        }
+        match run.uri.path() {
+            WITHDRAW_PATH => {
+                // TODO: https://linear.app/tezos/issue/JSTZ-77/check-gas-limit-when-performing-native-withdraws
+                // Check gas limit
+                let withdrawal = validate_withdraw_request(run)?;
+                crate::executor::withdraw::execute_withdraw(
+                    hrt, tx, source, withdrawal, ticketer,
+                )?;
+                let receipt = receipt::RunFunction {
+                    body: None,
+                    status_code: http::StatusCode::OK,
+                    headers: http::HeaderMap::new(),
+                };
+                Ok(receipt)
+            }
+            _ => Err(Error::UnsupportedPath),
+        }
+    }
+
+    #[cfg(test)]
+    mod test {
+        use http::{header, HeaderMap, Method, Uri};
+        use jstz_core::kv::Transaction;
+        use serde_json::json;
+        use tezos_crypto_rs::hash::ContractKt1Hash;
+        use tezos_smart_rollup_mock::MockHost;
+
+        use crate::{
+            executor::smart_function::jstz_run::Account, operation::RunFunction, Error,
+        };
+
+        use super::execute;
+
+        fn withdraw_request() -> RunFunction {
+            RunFunction {
+                uri: Uri::try_from("tezos://jstz/withdraw").unwrap(),
+                method: Method::POST,
+                headers: HeaderMap::from_iter([(
+                    header::CONTENT_TYPE,
+                    "application/json".try_into().unwrap(),
+                )]),
+                body: Some(
+                    json!({
+                        "amount": 10,
+                        "receiver": {
+                            "Tz1": jstz_mock::account2().to_base58().to_string()
+                        },
+                    })
+                    .to_string()
+                    .as_bytes()
+                    .to_vec(),
+                ),
+                gas_limit: 10,
+            }
+        }
+
+        #[test]
+        fn execute_fails_on_invalid_host() {
+            let mut host = MockHost::default();
+            let mut tx = Transaction::default();
+            let source = jstz_mock::account1();
+            let req = RunFunction {
+                uri: Uri::try_from("tezos://example.com/withdraw").unwrap(),
+                ..withdraw_request()
+            };
+            let ticketer =
+                ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
+                    .unwrap();
+            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            assert!(matches!(result, Err(super::Error::InvalidHost)));
+        }
+
+        #[test]
+        fn execute_fails_on_unsupported_path() {
+            let mut host = MockHost::default();
+            let mut tx = Transaction::default();
+            let source = jstz_mock::account1();
+            let req = RunFunction {
+                uri: Uri::try_from("tezos://jstz/blahblah").unwrap(),
+                ..withdraw_request()
+            };
+            let ticketer =
+                ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
+                    .unwrap();
+            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            assert!(matches!(result, Err(super::Error::UnsupportedPath)));
+        }
+
+        #[test]
+        fn execute_wthdraw_fails_on_invalid_request_method() {
+            let mut host = MockHost::default();
+            let mut tx = Transaction::default();
+            let source = jstz_mock::account1();
+            let req = RunFunction {
+                method: Method::GET,
+                ..withdraw_request()
+            };
+            let ticketer =
+                ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
+                    .unwrap();
+            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            assert!(matches!(
+                result,
+                Err(super::Error::InvalidHttpRequestMethod)
+            ));
+        }
+
+        #[test]
+        fn execute_wthdraw_fails_on_invalid_request_body() {
+            let mut host = MockHost::default();
+            let mut tx = Transaction::default();
+            let source = jstz_mock::account1();
+            let req = RunFunction {
+                body: Some(
+                    json!({
+                        "amount": 10,
+                        "not_receiver": jstz_mock::account2().to_base58()
+                    })
+                    .to_string()
+                    .as_bytes()
+                    .to_vec(),
+                ),
+                ..withdraw_request()
+            };
+            let ticketer =
+                ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
+                    .unwrap();
+            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            assert!(matches!(result, Err(Error::InvalidHttpRequestBody)));
+
+            let req = RunFunction {
+                body: None,
+                ..withdraw_request()
+            };
+            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            assert!(matches!(result, Err(Error::InvalidHttpRequestBody)));
+        }
+
+        #[test]
+        fn execute_withdraw_succeeds() {
+            let mut host = MockHost::default();
+            let mut tx = Transaction::default();
+            let source = jstz_mock::account1();
+
+            tx.begin();
+            Account::add_balance(&mut host, &mut tx, &source, 10).unwrap();
+            tx.commit(&mut host).unwrap();
+
+            let req = withdraw_request();
+            let ticketer =
+                ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
+                    .unwrap();
+
+            execute(&mut host, &mut tx, &source, req, &ticketer)
+                .expect("Withdraw should not fail");
+
+            tx.begin();
+            assert_eq!(0, Account::balance(&host, &mut tx, &source).unwrap());
+
+            let level = host.run_level(|_| {});
+            assert_eq!(1, host.outbox_at(level).len());
+        }
+    }
+}
+
 pub mod deploy {
     use super::*;
     use crate::{operation, receipt};

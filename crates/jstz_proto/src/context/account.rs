@@ -164,6 +164,20 @@ impl Account {
         Ok(())
     }
 
+    pub fn sub_balance(
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        addr: &Address,
+        amount: Amount,
+    ) -> Result<()> {
+        let account = Self::get_mut(hrt, tx, addr)?;
+        if account.amount < amount {
+            return Err(Error::InsufficientFunds)?;
+        }
+        account.amount -= amount;
+        Ok(())
+    }
+
     pub fn set_balance(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
@@ -249,5 +263,25 @@ mod test {
         assert_eq!(amt, 0);
 
         Ok(())
+    }
+
+    #[test]
+    fn test_sub_balance() {
+        let hrt = &mut MockHost::default();
+        let tx = &mut Transaction::default();
+
+        tx.begin();
+
+        let pkh = PublicKeyHash::from_base58("tz1XQjK1b3P72kMcHsoPhnAg3dvX1n8Ainty")
+            .expect("Could not parse pkh");
+
+        Account::create(hrt, tx, &pkh, 10, None).unwrap();
+        Account::sub_balance(hrt, tx, &pkh, 10).unwrap();
+
+        assert_eq!(0, Account::balance(hrt, tx, &pkh).unwrap());
+
+        let result = Account::sub_balance(hrt, tx, &pkh, 11);
+
+        assert!(matches!(result, Err(Error::InsufficientFunds)));
     }
 }
