@@ -1,4 +1,5 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
+use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::{
     operation::{self, ExternalOperation, Operation, SignedOperation},
@@ -9,11 +10,15 @@ use crate::{
 pub mod deposit;
 pub mod fa_deposit;
 pub mod smart_function;
+pub mod withdraw;
+
+const JSTZ_HOST: &str = "jstz";
 
 fn execute_operation_inner(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     signed_operation: SignedOperation,
+    ticketer: &ContractKt1Hash,
 ) -> Result<receipt::Content> {
     let operation = signed_operation.verify()?;
     let operation_hash = operation.hash();
@@ -36,9 +41,12 @@ fn execute_operation_inner(
             source,
             ..
         } => {
-            let result =
-                smart_function::run::execute(hrt, tx, &source, run, operation_hash)?;
-
+            let result = match run.uri.host() {
+                Some(JSTZ_HOST) => {
+                    smart_function::jstz_run::execute(hrt, tx, &source, run, ticketer)?
+                }
+                _ => smart_function::run::execute(hrt, tx, &source, run, operation_hash)?,
+            };
             Ok(receipt::Content::RunFunction(result))
         }
     }
@@ -61,8 +69,9 @@ pub fn execute_operation(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     signed_operation: SignedOperation,
+    ticketer: &ContractKt1Hash,
 ) -> Receipt {
     let hash = signed_operation.hash();
-    let inner = execute_operation_inner(hrt, tx, signed_operation);
+    let inner = execute_operation_inner(hrt, tx, signed_operation, ticketer);
     Receipt::new(hash, inner)
 }

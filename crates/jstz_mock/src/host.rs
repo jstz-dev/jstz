@@ -67,7 +67,7 @@ impl JstzMockHost {
         self.0.add_transfer(payload, &metadata)
     }
 
-    pub fn get_ticketer(&mut self) -> ContractKt1Hash {
+    pub fn get_ticketer(&self) -> ContractKt1Hash {
         ContractKt1Hash::from_base58_check(NATIVE_TICKETER).unwrap()
     }
 

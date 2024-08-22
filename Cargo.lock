@@ -2414,6 +2414,7 @@ dependencies = [
  "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-mock",
+ "tezos_crypto_rs 0.6.0",
 ]
 
 [[package]]
