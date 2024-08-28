@@ -150,6 +150,10 @@ pub fn execute(
     tx: &mut Transaction,
     deposit: FaDeposit,
 ) -> Receipt {
+    // FIXME: If The result fails due to overflow, we need to push an fa
+    // withdraw message to the outbox of the equivalent ticket and send
+    // it back to the sender. In practice, the bridge should check that
+    // the amount is valid.
     let content = execute_inner(rt, tx, &deposit)
         .expect("Unreachable: Failed to execute fa deposit!\n");
     let operation_hash = deposit.hash();

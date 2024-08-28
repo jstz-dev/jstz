@@ -62,7 +62,7 @@ mod test {
 
         tx.begin();
 
-        let _ = Account::deposit(hrt, &mut tx, &pkh2, 25);
+        let _ = Account::add_balance(hrt, &mut tx, &pkh2, 25);
 
         verify_account_balance(hrt, &mut tx, &pkh1, 0);
         verify_account_balance(hrt, &mut tx, &pkh2, 25);
@@ -73,7 +73,7 @@ mod test {
 
         verify_account_balance(hrt, &mut tx, &pkh2, 25);
 
-        let _ = Account::deposit(hrt, &mut tx, &pkh1, 57);
+        let _ = Account::add_balance(hrt, &mut tx, &pkh1, 57);
 
         verify_account_balance(hrt, &mut tx, &pkh1, 57);
 
@@ -83,7 +83,7 @@ mod test {
 
         verify_account_balance(hrt, &mut tx, &pkh2, 25);
 
-        let _ = Account::deposit(hrt, &mut tx, &pkh1, 57);
+        let _ = Account::add_balance(hrt, &mut tx, &pkh1, 57);
 
         verify_account_balance(hrt, &mut tx, &pkh1, 2 * 57);
 
@@ -93,7 +93,7 @@ mod test {
 
         verify_account_balance(hrt, &mut tx, &pkh1, 2 * 57);
 
-        let _ = Account::deposit(hrt, &mut tx, &pkh1, 57);
+        let _ = Account::add_balance(hrt, &mut tx, &pkh1, 57);
 
         verify_account_balance(hrt, &mut tx, &pkh1, 3 * 57);
 

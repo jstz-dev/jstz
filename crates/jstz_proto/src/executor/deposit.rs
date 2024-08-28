@@ -12,7 +12,10 @@ pub fn execute(
         amount, receiver, ..
     } = deposit;
 
-    let result = Account::deposit(hrt, tx, &receiver, amount);
+    // FIXME: If The result fails due to overflow, we need to push an tez
+    // withdraw message to the outbox. In practice, the bridge should check
+    // that the amount is valid.
+    let result = Account::add_balance(hrt, tx, &receiver, amount);
     let hash = Blake2b::from(deposit.inbox_id.to_be_bytes().as_slice());
     Receipt::new(hash, result.map(|_| crate::receipt::Content::Deposit))
 }

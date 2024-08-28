@@ -444,6 +444,71 @@ pub mod run {
     }
 }
 
+pub mod jstz_run {
+    use tezos_crypto_rs::hash::ContractKt1Hash;
+
+    use super::*;
+    use crate::{
+        executor::withdraw::Withdrawal,
+        operation::{self},
+        receipt,
+    };
+
+    const WITHDRAW_PATH: &str = "/withdraw";
+
+    fn validate_withdraw(run: operation::RunFunction) -> Result<Withdrawal> {
+        let method = run
+            .method
+            .as_str()
+            .parse::<http::Method>()
+            .map_err(|_| Error::InvalidHttpRequest)?;
+
+        if method != http::Method::POST {
+            return Err(Error::InvalidHttpRequest);
+        }
+
+        let body = match run.body {
+            Some(body) => body,
+            None => Err(Error::ExpectedHttpRequestBody)?,
+        };
+
+        let withdrawal: Withdrawal = serde_json::from_str(
+            String::from_utf8(body)
+                .map_err(|_| Error::InvalidHttpRequestBody)?
+                .as_str(),
+        )
+        .map_err(|_| Error::InvalidHttpRequestBody)?;
+
+        Ok(withdrawal)
+    }
+
+    pub fn execute(
+        hrt: &mut impl HostRuntime,
+        tx: &mut Transaction,
+        source: &Address,
+        run: operation::RunFunction,
+        ticketer: &ContractKt1Hash,
+    ) -> Result<receipt::RunFunction> {
+        match run.uri.path() {
+            WITHDRAW_PATH => {
+                // TODO: https://linear.app/tezos/issue/JSTZ-77/check-gas-limit-when-performing-native-withdraws
+                // Constant check gas limit
+                let withdrawal = validate_withdraw(run)?;
+                crate::executor::withdraw::native_withdraw(
+                    hrt, tx, source, withdrawal, ticketer,
+                )?;
+                let receipt = receipt::RunFunction {
+                    body: None,
+                    status_code: http::StatusCode::OK,
+                    headers: http::HeaderMap::new(),
+                };
+                Ok(receipt)
+            }
+            _ => Err(Error::InvalidHttpRequest),
+        }
+    }
+}
+
 pub mod deploy {
     use super::*;
     use crate::{operation, receipt};

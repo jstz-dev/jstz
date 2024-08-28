@@ -175,7 +175,7 @@ impl OutboxQueue {
                 }) => {
                     self.rollup_outbox_queue
                         .queue_message(host, message)
-                        .unwrap();
+                        .unwrap(); // FIXME: handle error
                     break;
                 }
                 Err(e) => {
@@ -184,7 +184,7 @@ impl OutboxQueue {
                     debug_msg!(host, "Error while writing message to outbox: {:?}", e);
                     self.rollup_outbox_queue
                         .queue_message(host, message)
-                        .unwrap();
+                        .unwrap(); // FIXME: handle error
                     break;
                 }
             }
@@ -194,14 +194,17 @@ impl OutboxQueue {
         for message in tezos_outbox_messages {
             self.rollup_outbox_queue
                 .queue_message(host, message)
-                .expect("Should always be able to queue message");
+                .expect("Should always be able to queue message"); // FIXME: handle error
         }
 
+        if flushed_count > 0 {
+            debug_msg!(host, "Flushing outbox queue ({})\n", flushed_count);
+        }
         // 4. Finally, update the counter outbox messages
         self.meta.queue_len -= flushed_count as u32;
         self.meta
             .write_meta(host)
-            .expect("Should always be able to write OutboxQueueMeta");
+            .expect("Should always be able to write OutboxQueueMeta"); // FIXME: handle error
         flushed_count
     }
 }
@@ -310,6 +313,8 @@ mod test {
 
         let level = host.run_level(|_| {});
         let outbox = host.outbox_at(level);
+
+        assert_eq!(2, outbox.len());
 
         for (i, message) in outbox.iter().enumerate() {
             let (_, message) =

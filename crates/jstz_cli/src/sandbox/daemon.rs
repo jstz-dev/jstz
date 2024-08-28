@@ -201,7 +201,7 @@ impl Sandbox {
                         }
 
                         // yield point
-                        tokio::time::sleep(Duration::from_millis(100)).await;
+                        tokio::time::sleep(Duration::from_millis(200)).await;
                     }
 
                     for mut thread in threads {

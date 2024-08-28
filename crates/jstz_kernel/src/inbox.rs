@@ -110,7 +110,10 @@ fn read_external_message(rt: &mut impl Runtime, bytes: &[u8]) -> Option<External
     Some(msg)
 }
 
-pub fn read_message(rt: &mut impl Runtime, ticketer: ContractKt1Hash) -> Option<Message> {
+pub fn read_message(
+    rt: &mut impl Runtime,
+    ticketer: &ContractKt1Hash,
+) -> Option<Message> {
     let input = rt.read_input().ok()??;
     let _ = rt.mark_for_reboot();
 
@@ -120,7 +123,7 @@ pub fn read_message(rt: &mut impl Runtime, ticketer: ContractKt1Hash) -> Option<
         InboxMessage::Internal(InternalInboxMessage::StartOfLevel) => {
             // Start of level message pushed by the Layer 1 at the
             // beginning of eavh level.
-            debug_msg!(rt, "Internal message: start of level\n");
+            debug_msg!(rt, "Internal message: start of level {}\n", input.level);
             None
         }
         InboxMessage::Internal(InternalInboxMessage::InfoPerLevel(info)) => {
@@ -151,7 +154,7 @@ pub fn read_message(rt: &mut impl Runtime, ticketer: ContractKt1Hash) -> Option<
                 );
                 return None;
             };
-            read_transfer(rt, transfer, &ticketer, input.id)
+            read_transfer(rt, transfer, ticketer, input.id)
         }
         InboxMessage::External(bytes) => match ExternalMessageFrame::parse(bytes) {
             Ok(frame) => match frame {
@@ -208,7 +211,7 @@ mod test {
         };
         host.add_internal_message(&deposit);
         let ticketer = host.get_ticketer();
-        let result = read_message(host.rt(), ticketer);
+        let result = read_message(host.rt(), &ticketer);
         assert_eq!(result, None)
     }
 
@@ -223,7 +226,7 @@ mod test {
             receiver,
             ..
         })) =
-            read_message(host.rt(), ticketer).expect("Expected message but non received")
+            read_message(host.rt(), &ticketer).expect("Expected message but non received")
         {
             assert_eq!(amount, 100);
             assert_eq!(receiver.to_base58(), deposit.receiver.to_b58check())
@@ -244,7 +247,7 @@ mod test {
             ..MockNativeDeposit::default()
         };
         host.add_internal_message(&deposit);
-        assert_eq!(read_message(host.rt(), ticketer), None);
+        assert_eq!(read_message(host.rt(), &ticketer), None);
     }
 
     #[test]
@@ -256,7 +259,7 @@ mod test {
             ..MockNativeDeposit::default()
         };
         host.add_internal_message(&deposit);
-        assert_eq!(read_message(host.rt(), ticketer), None);
+        assert_eq!(read_message(host.rt(), &ticketer), None);
     }
 
     #[test]
@@ -268,7 +271,7 @@ mod test {
             ..MockNativeDeposit::default()
         };
         host.add_internal_message(&deposit);
-        assert_eq!(read_message(host.rt(), ticketer), None);
+        assert_eq!(read_message(host.rt(), &ticketer), None);
     }
 
     #[test]
@@ -283,7 +286,7 @@ mod test {
             receiver,
             proxy_smart_function,
             ..
-        })) = read_message(host.rt(), ticketer).expect("Expected FA message")
+        })) = read_message(host.rt(), &ticketer).expect("Expected FA message")
         {
             assert_eq!(300, amount);
             assert_eq!(fa_deposit.receiver.to_b58check(), receiver.to_base58());

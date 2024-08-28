@@ -14,12 +14,6 @@ pub enum AddressOrAlias {
     Alias(String),
 }
 
-impl AddressOrAlias {
-    pub fn is_alias(&self) -> bool {
-        matches!(self, Self::Alias(_))
-    }
-}
-
 impl FromStr for AddressOrAlias {
     type Err = Error;
 
