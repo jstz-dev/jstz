@@ -12,7 +12,7 @@ pub mod fa_deposit;
 pub mod smart_function;
 pub mod withdraw;
 
-const JSTZ_HOST: &str = "jstz";
+pub const JSTZ_HOST: &str = "jstz";
 
 fn execute_operation_inner(
     hrt: &mut impl HostRuntime,

@@ -40,7 +40,10 @@
   "delay_increment_per_round": "1",
   "consensus_committee_size": 256,
   "consensus_threshold": 0,
-  "minimal_participation_ratio": { "numerator": 2, "denominator": 3 },
+  "minimal_participation_ratio": {
+    "numerator": 2,
+    "denominator": 3
+  },
   "limit_of_delegation_over_baking": 19,
   "percentage_of_frozen_deposits_slashed_per_double_baking": 500,
   "percentage_of_frozen_deposits_slashed_per_double_attestation": 5000,
@@ -62,18 +65,20 @@
   },
   "smart_rollup_arith_pvm_enable": false,
   "smart_rollup_origination_size": 6314,
-  "smart_rollup_challenge_window_in_blocks": 120960,
+  "smart_rollup_challenge_window_in_blocks": 1,
   "smart_rollup_stake_amount": "10000000000",
-  "smart_rollup_commitment_period_in_blocks": 90,
+  "smart_rollup_commitment_period_in_blocks": 5,
   "smart_rollup_max_lookahead_in_blocks": 259200,
   "smart_rollup_max_active_outbox_levels": 120960,
   "smart_rollup_max_outbox_messages_per_level": 100,
   "smart_rollup_number_of_sections_in_dissection": 32,
   "smart_rollup_timeout_period_in_blocks": 60480,
-  "smart_rollup_max_number_of_cemented_commitments": 5,
+  "smart_rollup_max_number_of_cemented_commitments": 10000,
   "smart_rollup_max_number_of_parallel_games": 32,
   "smart_rollup_reveal_activation_level": {
-    "raw_data": { "Blake2B": 0 },
+    "raw_data": {
+      "Blake2B": 0
+    },
     "metadata": 0,
     "dal_page": 1,
     "dal_parameters": 1,
@@ -89,16 +94,37 @@
   "edge_of_staking_over_delegation": 2,
   "adaptive_issuance_launch_ema_threshold": 0,
   "adaptive_rewards_params": {
-    "issuance_ratio_final_min": { "numerator": "1", "denominator": "400" },
-    "issuance_ratio_final_max": { "numerator": "1", "denominator": "10" },
-    "issuance_ratio_initial_min": { "numerator": "9", "denominator": "200" },
-    "issuance_ratio_initial_max": { "numerator": "11", "denominator": "200" },
+    "issuance_ratio_final_min": {
+      "numerator": "1",
+      "denominator": "400"
+    },
+    "issuance_ratio_final_max": {
+      "numerator": "1",
+      "denominator": "10"
+    },
+    "issuance_ratio_initial_min": {
+      "numerator": "9",
+      "denominator": "200"
+    },
+    "issuance_ratio_initial_max": {
+      "numerator": "11",
+      "denominator": "200"
+    },
     "initial_period": 10,
     "transition_period": 50,
     "max_bonus": "50000000000000",
-    "growth_rate": { "numerator": "1", "denominator": "100" },
-    "center_dz": { "numerator": "1", "denominator": "2" },
-    "radius_dz": { "numerator": "1", "denominator": "50" }
+    "growth_rate": {
+      "numerator": "1",
+      "denominator": "100"
+    },
+    "center_dz": {
+      "numerator": "1",
+      "denominator": "2"
+    },
+    "radius_dz": {
+      "numerator": "1",
+      "denominator": "50"
+    }
   },
   "adaptive_issuance_activation_vote_enable": true,
   "autostaking_enable": true,
