@@ -148,15 +148,19 @@ impl Account {
         Ok(account.amount)
     }
 
-    pub fn deposit(
+    pub fn add_balance(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
         addr: &Address,
         amount: Amount,
     ) -> Result<()> {
         let account = Self::get_mut(hrt, tx, addr)?;
+        let checked_balance = account
+            .amount
+            .checked_add(amount)
+            .ok_or(crate::error::Error::BalanceOverflow)?;
 
-        account.amount += amount;
+        account.amount = checked_balance;
         Ok(())
     }
 
