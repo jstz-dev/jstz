@@ -115,7 +115,7 @@ async fn exec(command: Command) -> Result<()> {
         Command::Docs => docs::exec(),
         Command::Completions { shell } => completions::exec(shell),
         Command::Sandbox(sandbox_command) => sandbox::exec(sandbox_command).await,
-        Command::Bridge(bridge_command) => bridge::exec(bridge_command),
+        Command::Bridge(bridge_command) => bridge::exec(bridge_command).await,
         Command::Account(account_command) => account::exec(account_command).await,
         Command::Deploy {
             code,

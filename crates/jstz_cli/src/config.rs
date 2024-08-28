@@ -173,6 +173,29 @@ impl AddressOrAlias {
                 .map(|(_, user)| user.address.clone()),
         }
     }
+
+    pub fn resolve_l1(
+        &self,
+        cfg: &Config,
+        network: &Option<NetworkName>,
+    ) -> Result<Address> {
+        match self {
+            AddressOrAlias::Address(address) => Ok(address.clone()),
+            AddressOrAlias::Alias(alias) => {
+                let alias_info = cfg
+                    .octez_client(network)?
+                    .alias_info(alias)
+                    .map_err(|_|
+                        user_error!(
+                        "Alias '{}' not found in octez-client. Please provide a valid address or alias.",
+                        alias
+                    ))?;
+
+                let address = Address::from_base58(&alias_info.address)?;
+                Ok(address)
+            }
+        }
+    }
 }
 
 pub struct AccountsIter<'a> {

@@ -4,6 +4,7 @@ use crate::logs::{exec_trace, DEFAULT_LOG_LEVEL};
 use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
 use jstz_proto::context::account::Address;
+use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
     receipt::Content as ReceiptContent,
@@ -26,6 +27,36 @@ use crate::{
 // This was measured by running the benchmark.js,
 // where the FA2 transfer function was called 1000 times.
 pub const DEFAULT_GAS_LIMIT: u32 = 550000;
+
+pub enum Host {
+    AddressOrAlias(AddressOrAlias),
+    Jstz,
+}
+
+impl Host {
+    pub fn resolve(&self, config: &Config) -> Result<String> {
+        match self {
+            Host::AddressOrAlias(address_or_alias) => {
+                Ok(address_or_alias.resolve(config)?.to_base58())
+            }
+            Host::Jstz => Ok(JSTZ_HOST.to_string()),
+        }
+    }
+}
+
+impl TryFrom<&str> for Host {
+    type Error = crate::error::Error;
+
+    fn try_from(value: &str) -> Result<Self> {
+        match value {
+            JSTZ_HOST => Ok(Host::Jstz),
+            _ => {
+                let address_or_alias = AddressOrAlias::from_str(value)?;
+                Ok(Host::AddressOrAlias(address_or_alias))
+            }
+        }
+    }
+}
 
 pub async fn exec(
     url: String,
@@ -55,15 +86,14 @@ pub async fn exec(
         .host_str()
         .ok_or(user_error!("URL {} requires a host.", styles::url(&url)))?;
 
-    let address_or_alias = AddressOrAlias::from_str(host)?;
+    let parsed_host = Host::try_from(host)?;
+    let resolved_host = parsed_host.resolve(&cfg)?;
 
-    if address_or_alias.is_alias() {
-        let address = address_or_alias.resolve(&cfg)?;
-
-        info!("Resolved host '{}' to '{}'.", host, address);
+    if host != resolved_host.as_str() {
+        info!("Resolved host '{}' to '{}'.", host, resolved_host);
 
         url_object
-            .set_host(Some(&address.to_string()))
+            .set_host(Some(&resolved_host.to_string()))
             .map_err(|_| anyhow!("Failed to set host"))?;
     }
 
@@ -125,8 +155,10 @@ pub async fn exec(
     };
 
     if trace {
-        let address = address_or_alias.resolve(&cfg)?;
-        spawn_trace(&address, &jstz_client).await?;
+        if let Host::AddressOrAlias(address_or_alias) = parsed_host {
+            let address = address_or_alias.resolve(&cfg)?;
+            spawn_trace(&address, &jstz_client).await?;
+        }
     }
 
     jstz_client.post_operation(&signed_op).await?;
