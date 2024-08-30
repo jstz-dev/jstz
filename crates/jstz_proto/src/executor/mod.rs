@@ -43,7 +43,7 @@ fn execute_operation_inner(
         } => {
             let result = match run.uri.host() {
                 Some(JSTZ_HOST) => {
-                    smart_function::jstz_run::execute(hrt, tx, &source, run, ticketer)?
+                    smart_function::jstz_run::execute(hrt, tx, ticketer, &source, run)?
                 }
                 _ => smart_function::run::execute(hrt, tx, &source, run, operation_hash)?,
             };

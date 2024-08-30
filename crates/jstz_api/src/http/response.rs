@@ -16,7 +16,7 @@ use boa_engine::{
     Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{custom_trace, Finalize, GcRefMut, Trace};
-use http::{Response as InnerResponse, StatusCode};
+use http::{header, Response as InnerResponse, StatusCode};
 use jstz_core::{
     accessor,
     native::{
@@ -54,6 +54,15 @@ unsafe impl Trace for Response {
 pub struct ResponseOptions {
     status: u16,
     headers: Headers,
+}
+
+impl ResponseOptions {
+    pub fn from(status_code: http::StatusCode, headers: header::HeaderMap) -> Self {
+        Self {
+            status: status_code.as_u16(),
+            headers: Headers::from(headers),
+        }
+    }
 }
 
 impl Default for ResponseOptions {

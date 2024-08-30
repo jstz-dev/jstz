@@ -2,16 +2,17 @@ use std::{io::Read, ops::BitXor};
 
 use boa_engine::{
     js_string,
-    object::{builtins::JsPromise, FunctionObjectBuilder},
+    object::{builtins::JsPromise, FunctionObjectBuilder, Object},
     Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
 };
-use boa_gc::{Finalize, Trace};
+use boa_gc::{Finalize, GcRefMut, Trace};
 use derive_more::{Deref, DerefMut};
+use http::Uri;
 use jstz_api::{
     http::{
-        body::HttpBody,
+        body::{Body, BodyWithType, HttpBody},
         request::{Request, RequestClass},
-        response::Response,
+        response::{Response, ResponseClass, ResponseOptions},
     },
     js_log::set_js_logger,
 };
@@ -24,7 +25,8 @@ use tezos_smart_rollup::prelude::debug_msg;
 use crate::{
     api::{self, TraceData},
     context::account::{Account, Address, Amount, ParsedCode},
-    operation::OperationHash,
+    operation::{OperationHash, RunFunction},
+    receipt,
     request_logger::{log_request_end, log_request_start},
     Error, Result,
 };
@@ -317,7 +319,6 @@ impl Script {
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         // 1. Load script
-
         let script = runtime::with_js_hrt_and_tx(|hrt, tx| {
             Script::load(hrt, tx, &address, context)
         })?;
@@ -345,6 +346,80 @@ impl Script {
         )?;
 
         Ok(result.into())
+    }
+}
+
+pub struct HostScript;
+
+impl HostScript {
+    fn create_run_function_from_request(
+        request_deref: &mut GcRefMut<'_, Object, Request>,
+        gas_limit: usize,
+    ) -> JsResult<RunFunction> {
+        let method = request_deref.method().clone();
+        let uri =
+            Uri::try_from(request_deref.url().clone().to_string()).map_err(|_| {
+                JsError::from_native(JsNativeError::error().with_message("Invalid host"))
+            })?;
+        let body = request_deref.body().clone().to_http_body();
+        let headers = request_deref.headers().deref_mut().to_http_headers();
+        Ok(RunFunction {
+            uri,
+            method,
+            body,
+            headers,
+            gas_limit,
+        })
+    }
+
+    fn create_response_from_run_receipt(
+        run_receipt: receipt::RunFunction,
+        context: &mut Context<'_>,
+    ) -> JsResult<Response> {
+        let body = Body::from_http_body(run_receipt.body, context)?;
+        let options = ResponseOptions::from(run_receipt.status_code, run_receipt.headers);
+        Response::new(
+            BodyWithType {
+                body,
+                content_type: None,
+            },
+            options,
+            context,
+        )
+    }
+
+    pub fn run(
+        self_address: &Address,
+        request: &mut GcRefMut<'_, Object, Request>,
+        context: &mut Context<'_>,
+    ) -> JsResult<JsValue> {
+        let run = Self::create_run_function_from_request(request, 1)?;
+        let response = runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<Response> {
+            // 1. Begin a new transaction
+            tx.begin();
+
+            // 2. Execute jstz host smart function
+            let result = jstz_run::execute_without_ticketer(hrt, tx, self_address, run);
+
+            // 3. Commit or rollback the transaction
+            match result {
+                Ok(run_receipt) => {
+                    if run_receipt.status_code.is_success() {
+                        tx.commit(hrt)?;
+                    } else {
+                        tx.rollback()?;
+                    }
+                    Self::create_response_from_run_receipt(run_receipt, context)
+                }
+                Err(err) => {
+                    tx.rollback()?;
+                    Err(err.into())
+                }
+            }
+        })?;
+
+        let js_response = JsNativeObject::new::<ResponseClass>(response, context)?;
+        Ok(js_response.inner().clone())
     }
 }
 
@@ -445,19 +520,24 @@ pub mod run {
 }
 
 pub mod jstz_run {
+    use jstz_core::kv::Storage;
     use tezos_crypto_rs::hash::ContractKt1Hash;
+    use tezos_smart_rollup::storage::path::{OwnedPath, RefPath};
 
     use super::*;
     use crate::{
         executor::{withdraw::Withdrawal, JSTZ_HOST},
-        operation, receipt,
+        operation::{self, RunFunction},
+        receipt,
     };
 
     const WITHDRAW_PATH: &str = "/withdraw";
 
-    fn validate_withdraw_request(run: operation::RunFunction) -> Result<Withdrawal> {
-        let method = run
-            .method
+    fn validate_withdraw_request(
+        method: http::Method,
+        body: HttpBody,
+    ) -> Result<Withdrawal> {
+        let method = method
             .as_str()
             .parse::<http::Method>()
             .map_err(|_| Error::InvalidHttpRequestMethod)?;
@@ -466,7 +546,7 @@ pub mod jstz_run {
             return Err(Error::InvalidHttpRequestMethod);
         }
 
-        let body = match run.body {
+        let body = match body {
             Some(body) => body,
             None => Err(Error::InvalidHttpRequestBody)?,
         };
@@ -484,18 +564,21 @@ pub mod jstz_run {
     pub fn execute(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
+        ticketer: &ContractKt1Hash,
         source: &Address,
         run: operation::RunFunction,
-        ticketer: &ContractKt1Hash,
     ) -> Result<receipt::RunFunction> {
-        if run.uri.host() != Some(JSTZ_HOST) {
+        let RunFunction {
+            uri, method, body, ..
+        } = run;
+        if uri.host() != Some(JSTZ_HOST) {
             return Err(Error::InvalidHost);
         }
-        match run.uri.path() {
+        match uri.path() {
             WITHDRAW_PATH => {
                 // TODO: https://linear.app/tezos/issue/JSTZ-77/check-gas-limit-when-performing-native-withdraws
                 // Check gas limit
-                let withdrawal = validate_withdraw_request(run)?;
+                let withdrawal = validate_withdraw_request(method, body)?;
                 crate::executor::withdraw::execute_withdraw(
                     hrt, tx, source, withdrawal, ticketer,
                 )?;
@@ -506,20 +589,36 @@ pub mod jstz_run {
                 };
                 Ok(receipt)
             }
+
             _ => Err(Error::UnsupportedPath),
         }
+    }
+
+    pub fn execute_without_ticketer(
+        hrt: &mut impl HostRuntime,
+        tx: &mut Transaction,
+        source: &Address,
+        run: operation::RunFunction,
+    ) -> Result<receipt::RunFunction> {
+        let ticketer_path = OwnedPath::from(&RefPath::assert_from(b"/ticketer"));
+        let ticketer: ContractKt1Hash =
+            Storage::get(hrt, &ticketer_path)?.expect("ticketer should be set");
+        execute(hrt, tx, &ticketer, source, run)
     }
 
     #[cfg(test)]
     mod test {
         use http::{header, HeaderMap, Method, Uri};
         use jstz_core::kv::Transaction;
+        use jstz_mock::host::JstzMockHost;
         use serde_json::json;
         use tezos_crypto_rs::hash::ContractKt1Hash;
         use tezos_smart_rollup_mock::MockHost;
 
         use crate::{
-            executor::smart_function::jstz_run::Account, operation::RunFunction, Error,
+            executor::smart_function::jstz_run::{execute_without_ticketer, Account},
+            operation::RunFunction,
+            Error,
         };
 
         use super::execute;
@@ -559,7 +658,7 @@ pub mod jstz_run {
             let ticketer =
                 ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
                     .unwrap();
-            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            let result = execute(&mut host, &mut tx, &ticketer, &source, req);
             assert!(matches!(result, Err(super::Error::InvalidHost)));
         }
 
@@ -575,7 +674,7 @@ pub mod jstz_run {
             let ticketer =
                 ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
                     .unwrap();
-            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            let result = execute(&mut host, &mut tx, &ticketer, &source, req);
             assert!(matches!(result, Err(super::Error::UnsupportedPath)));
         }
 
@@ -591,7 +690,7 @@ pub mod jstz_run {
             let ticketer =
                 ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
                     .unwrap();
-            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            let result = execute(&mut host, &mut tx, &ticketer, &source, req);
             assert!(matches!(
                 result,
                 Err(super::Error::InvalidHttpRequestMethod)
@@ -618,14 +717,14 @@ pub mod jstz_run {
             let ticketer =
                 ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
                     .unwrap();
-            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            let result = execute(&mut host, &mut tx, &ticketer, &source, req);
             assert!(matches!(result, Err(Error::InvalidHttpRequestBody)));
 
             let req = RunFunction {
                 body: None,
                 ..withdraw_request()
             };
-            let result = execute(&mut host, &mut tx, &source, req, &ticketer);
+            let result = execute(&mut host, &mut tx, &ticketer, &source, req);
             assert!(matches!(result, Err(Error::InvalidHttpRequestBody)));
         }
 
@@ -644,7 +743,7 @@ pub mod jstz_run {
                 ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER)
                     .unwrap();
 
-            execute(&mut host, &mut tx, &source, req, &ticketer)
+            execute(&mut host, &mut tx, &ticketer, &source, req)
                 .expect("Withdraw should not fail");
 
             tx.begin();
@@ -652,6 +751,29 @@ pub mod jstz_run {
 
             let level = host.run_level(|_| {});
             assert_eq!(1, host.outbox_at(level).len());
+        }
+
+        #[test]
+        fn execute_without_ticketer_succeeds() {
+            let mut host = JstzMockHost::default();
+            let mut tx = Transaction::default();
+            let source = jstz_mock::account1();
+            let rt = host.rt();
+
+            tx.begin();
+            Account::add_balance(rt, &mut tx, &source, 10).unwrap();
+            tx.commit(rt).unwrap();
+
+            let req = withdraw_request();
+
+            execute_without_ticketer(rt, &mut tx, &source, req)
+                .expect("Withdraw should not fail");
+
+            tx.begin();
+            assert_eq!(0, Account::balance(rt, &mut tx, &source).unwrap());
+
+            let level = rt.run_level(|_| {});
+            assert_eq!(1, rt.outbox_at(level).len());
         }
     }
 }

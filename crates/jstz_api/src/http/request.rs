@@ -304,6 +304,10 @@ impl Request {
     pub fn body_used(&self) -> bool {
         self.request.body().is_used()
     }
+
+    pub fn body(&mut self) -> &mut Body {
+        self.request.body_mut()
+    }
 }
 
 pub struct RequestClass;
