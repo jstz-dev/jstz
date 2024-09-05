@@ -25,6 +25,9 @@ pub enum Error {
     SerializationError {
         description: String,
     },
+    OutboxError {
+        source: crate::kv::outbox::OutboxError,
+    },
 }
 
 impl From<Error> for JsError {
@@ -45,6 +48,9 @@ impl From<Error> for JsError {
                 .into(),
             Error::SerializationError { description } => JsNativeError::eval()
                 .with_message(format!("serialization error: {description}"))
+                .into(),
+            Error::OutboxError { source } => JsNativeError::eval()
+                .with_message(format!("OutboxError: {}", source))
                 .into(),
         }
     }
