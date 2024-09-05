@@ -6,10 +6,16 @@ use std::{
 
 use derive_more::{Deref, DerefMut};
 use serde::de::DeserializeOwned;
+
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
-use super::value::{BoxedValue, Value};
-use super::Storage;
+use super::{
+    outbox::{
+        flush, OutboxError, OutboxMessage, PersistentOutboxQueue, SnapshotOutboxQueue,
+    },
+    value::{BoxedValue, Value},
+    Storage,
+};
 use crate::error::{KvError, Result};
 
 /// A transaction is a 'lazy' snapshot of the persistent key-value store from
@@ -55,6 +61,8 @@ pub struct Transaction {
     // A stack of transactional snapshots
     stack: Vec<Snapshot>,
     lookup_map: LookupMap,
+    persistent_outbox: PersistentOutboxQueue,
+    snapshot_outbox_len: u32,
 }
 
 #[derive(Debug, Clone, Deref, DerefMut)]
@@ -101,6 +109,7 @@ struct Snapshot {
     insert_edits: BTreeMap<Key, SnapshotValue>,
     // A set of 'remove' edits to be applied
     remove_edits: BTreeSet<Key>,
+    outbox_queue: SnapshotOutboxQueue,
 }
 
 impl Snapshot {
@@ -132,6 +141,10 @@ impl Snapshot {
 
     pub fn contains_key(&self, key: &Key) -> bool {
         self.insert_edits.contains_key(key) && !self.remove_edits.contains(key)
+    }
+
+    pub fn outbox_queue_mut(&mut self) -> &mut SnapshotOutboxQueue {
+        &mut self.outbox_queue
     }
 }
 
@@ -338,6 +351,22 @@ impl Transaction {
         }
     }
 
+    pub fn queue_outbox_message(
+        &mut self,
+        rt: &mut impl Runtime,
+        message: OutboxMessage,
+    ) -> Result<()> {
+        if self.persistent_outbox.len(rt)? + self.snapshot_outbox_len + 1
+            > self.persistent_outbox.max(rt)?
+        {
+            Err(OutboxError::OutboxQueueFull)?;
+        }
+        let current_outbox_queue = self.current_snapshot()?.outbox_queue_mut();
+        current_outbox_queue.queue_message(message);
+        self.snapshot_outbox_len += 1;
+        Ok(())
+    }
+
     /// Begin a transaction.
     pub fn begin(&mut self) {
         self.stack.push(Snapshot::default())
@@ -361,6 +390,8 @@ impl Transaction {
                 self.lookup_map.update(key.clone(), prev_idx);
                 prev_ctxt.insert(key, value);
             }
+
+            prev_ctxt.outbox_queue.extend(curr_ctxt.outbox_queue);
         } else {
             for key in &curr_ctxt.remove_edits {
                 Storage::remove(rt, key)?
@@ -369,6 +400,9 @@ impl Transaction {
             for (key, value) in curr_ctxt.insert_edits {
                 Storage::insert(rt, &key, value.0.as_ref())?
             }
+
+            flush(rt, &mut self.persistent_outbox, curr_ctxt.outbox_queue)?;
+            self.snapshot_outbox_len = 0;
 
             // Update lookup map
             self.lookup_map.clear()
@@ -571,5 +605,208 @@ impl JsTransaction {
         let rt: &'static mut Transaction = mem::transmute(tx);
 
         Self { inner: rt }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use jstz_crypto::public_key_hash::PublicKeyHash;
+    use tezos_data_encoding::nom::NomReader;
+    use tezos_smart_rollup::{
+        michelson::{
+            ticket::FA2_1Ticket, MichelsonContract, MichelsonNat, MichelsonOption,
+            MichelsonPair,
+        },
+        outbox::{OutboxMessageFull, OutboxMessageTransaction},
+        types::{Contract, Entrypoint},
+    };
+    use tezos_smart_rollup_mock::MockHost;
+
+    use crate::kv::outbox::{OutboxMessage, PersistentOutboxQueue};
+
+    use super::Transaction;
+
+    fn make_withdrawal(account: &PublicKeyHash) -> OutboxMessage {
+        let creator =
+            Contract::from_b58check("KT1NgXQ6Mwu3XKFDcKdYFS6dkkY3iNKdBKEc").unwrap();
+        let parameters = MichelsonPair(
+            MichelsonContract(Contract::try_from(account.to_base58()).unwrap()),
+            FA2_1Ticket::new(
+                creator.clone(),
+                MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                10,
+            )
+            .unwrap(),
+        );
+        let outbox_tx = OutboxMessageTransaction {
+            parameters,
+            destination: creator,
+            entrypoint: Entrypoint::try_from("burn".to_string()).unwrap(),
+        };
+        OutboxMessage::Withdrawal(vec![outbox_tx].into())
+    }
+
+    #[test]
+    fn push_outbox_message_succeeds_until_outbox_queue_is_full() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction {
+            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
+            ..Transaction::default()
+        };
+
+        for i in 0..120 {
+            if i % 10 == 0 {
+                tx.begin();
+            }
+            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let message = make_withdrawal(&acc);
+            tx.queue_outbox_message(&mut host, message).unwrap();
+        }
+
+        assert_eq!(120, tx.snapshot_outbox_len);
+
+        // Adding an additional message to a full outbox queue without
+        // flushing should fail
+        let error = tx
+            .queue_outbox_message(
+                &mut host,
+                make_withdrawal(
+                    &PublicKeyHash::digest(format!("failure account").as_bytes())
+                        .unwrap(),
+                ),
+            )
+            .expect_err("Outbox should be full");
+
+        assert!(matches!(
+            error,
+            crate::error::Error::OutboxError {
+                source: crate::kv::outbox::OutboxError::OutboxQueueFull
+            }
+        ));
+    }
+
+    #[test]
+    fn non_final_commit_appends_outbox_messages_to_previous_snapshot() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction {
+            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
+            ..Transaction::default()
+        };
+
+        for i in 0..120 {
+            if i % 60 == 0 {
+                tx.begin();
+            }
+            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let message = make_withdrawal(&acc);
+            tx.queue_outbox_message(&mut host, message).unwrap();
+        }
+
+        tx.commit(&mut host).unwrap();
+
+        assert_eq!(120, tx.snapshot_outbox_len);
+
+        let level = host.run_level(|_| {});
+        let outbox = host.outbox_at(level);
+
+        assert_eq!(0, outbox.len());
+    }
+
+    #[test]
+    #[ignore]
+    fn final_commit_resets_snapshot_queue_len() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction {
+            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
+            ..Transaction::default()
+        };
+
+        for i in 0..120 {
+            if i % 60 == 0 {
+                tx.begin();
+            }
+            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let message = make_withdrawal(&acc);
+            tx.queue_outbox_message(&mut host, message).unwrap();
+        }
+
+        tx.commit(&mut host).unwrap();
+        tx.commit(&mut host).unwrap();
+        assert_eq!(0, tx.snapshot_outbox_len);
+
+        let level = host.run_level(|_| {});
+        let outbox = host.outbox_at(level);
+
+        assert_eq!(100, outbox.len());
+    }
+
+    #[test]
+    fn final_commit_flush_outbox_messages_in_enqueue_order() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction {
+            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
+            ..Transaction::default()
+        };
+
+        // Enqueue 120 messages, 60 per snapshot
+        for i in 0..120 {
+            if i % 60 == 0 {
+                tx.begin();
+            }
+
+            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let message = make_withdrawal(&acc);
+            tx.queue_outbox_message(&mut host, message).unwrap();
+        }
+
+        // Commit both snapshots
+        tx.commit(&mut host).unwrap();
+        tx.commit(&mut host).unwrap();
+
+        let level = host.run_level(|_| {});
+        let outbox = host.outbox_at(level);
+
+        // Maximum number of outbox messages per level is 100.
+        // The remaining 20 messages are left in the persistent queue.
+        assert_eq!(100, outbox.len());
+        assert_eq!(20, tx.persistent_outbox.len(&mut host).unwrap());
+
+        for i in 0..100 {
+            let (_, message) =
+                OutboxMessageFull::<OutboxMessage>::nom_read(outbox[i].as_slice())
+                    .unwrap();
+
+            assert_eq!(
+                message,
+                make_withdrawal(
+                    &PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap()
+                )
+                .into()
+            );
+        }
+
+        tx.begin();
+        tx.commit(&mut host).unwrap();
+
+        let level = host.run_level(|_| {});
+        let outbox = host.outbox_at(level);
+
+        assert_eq!(20, outbox.len());
+        assert_eq!(0, tx.persistent_outbox.len(&mut host).unwrap());
+
+        for i in 0..20 {
+            let (_, message) =
+                OutboxMessageFull::<OutboxMessage>::nom_read(outbox[i].as_slice())
+                    .unwrap();
+
+            assert_eq!(
+                message,
+                make_withdrawal(
+                    &PublicKeyHash::digest(format!("account{}", 100 + i).as_bytes())
+                        .unwrap()
+                )
+                .into()
+            );
+        }
     }
 }
