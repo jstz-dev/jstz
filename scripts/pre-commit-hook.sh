@@ -10,6 +10,7 @@ if ! git diff --exit-code --quiet; then
 fi
 
 make fmt
+make lint
 
 # Check if there are any changes
 if ! git diff --exit-code; then
