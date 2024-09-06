@@ -115,7 +115,7 @@ mod test {
         let ticketer =
             ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER).unwrap();
         tx.begin();
-        Account::add_balance(&mut host, &mut tx, &source, 10)
+        Account::add_balance(&host, &mut tx, &source, 10)
             .expect("Add balance should succeed");
         tx.commit(&mut host).unwrap();
 
@@ -141,7 +141,7 @@ mod test {
             ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER).unwrap();
 
         tx.begin();
-        Account::add_balance(&mut host, &mut tx, &source, 10)
+        Account::add_balance(&host, &mut tx, &source, 10)
             .expect("Add balance should succeed");
         tx.commit(&mut host).unwrap();
 
