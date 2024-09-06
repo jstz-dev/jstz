@@ -636,7 +636,7 @@ pub mod jstz_run {
             let source = jstz_mock::account1();
 
             tx.begin();
-            Account::add_balance(&mut host, &mut tx, &source, 10).unwrap();
+            Account::add_balance(&host, &mut tx, &source, 10).unwrap();
             tx.commit(&mut host).unwrap();
 
             let req = withdraw_request();
