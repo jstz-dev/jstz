@@ -24,6 +24,7 @@ jstz_crypto = { path = "../jstz_crypto" }
 serde.workspace = true
 serde_json.workspace = true
 tezos_crypto_rs.workspace = true
+tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
 
 [dev-dependencies]

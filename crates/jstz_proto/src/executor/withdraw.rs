@@ -5,24 +5,20 @@ use jstz_core::{
 
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::{
-    michelson::{
-        ticket::FA2_1Ticket, MichelsonContract, MichelsonNat, MichelsonOption,
-        MichelsonPair,
-    },
-    outbox::OutboxMessageTransaction,
-    types::{Contract, Entrypoint},
+    michelson::{ticket::FA2_1Ticket, MichelsonOption, MichelsonPair},
+    types::Contract,
 };
 
 use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::{
     context::account::{Account, Address, Amount},
-    Result,
+    Error, Result,
 };
 
 const BURN_ENTRYPOINT: &str = "burn";
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Withdrawal {
     pub amount: Amount,
     pub receiver: Address,
@@ -33,25 +29,19 @@ fn create_withdrawal(
     receiver: &Address,
     ticketer: &ContractKt1Hash,
 ) -> Result<OutboxMessage> {
-    let pkh = receiver.to_base58();
-    let entrypoint = Entrypoint::try_from(BURN_ENTRYPOINT.to_string()).unwrap();
-    let parameters = MichelsonPair(
-        MichelsonContract(Contract::try_from(pkh).unwrap()),
-        FA2_1Ticket::new(
-            Contract::Originated(ticketer.clone()),
-            MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
-            amount,
-        )
-        .unwrap(),
-    );
-    let message = OutboxMessage::Withdrawal(
-        vec![OutboxMessageTransaction {
-            entrypoint,
-            parameters,
-            destination: Contract::Originated(ticketer.clone()),
-        }]
-        .into(),
-    );
+    let receiver_pkh = receiver.to_base58();
+    let ticket = FA2_1Ticket::new(
+        Contract::Originated(ticketer.clone()),
+        MichelsonPair(0.into(), MichelsonOption(None)),
+        amount,
+    )
+    .map_err(|_| Error::InvalidTicketType)?;
+    let message = OutboxMessage::new_withdrawal_message(
+        &Contract::try_from(receiver_pkh).unwrap(),
+        &Contract::Originated(ticketer.clone()),
+        ticket,
+        BURN_ENTRYPOINT,
+    )?;
     Ok(message)
 }
 

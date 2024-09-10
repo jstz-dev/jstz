@@ -3,8 +3,12 @@ use jstz_api::http::body::HttpBody;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    context::account::Address, executor::fa_deposit::FaDepositReceiptContent,
-    operation::OperationHash, Result,
+    context::account::Address,
+    executor::{
+        fa_deposit::FaDepositReceiptContent, fa_withdraw::FaWithdrawalReceiptContent,
+    },
+    operation::OperationHash,
+    Result,
 };
 
 pub type ReceiptResult<T> = std::result::Result<T, String>;
@@ -46,4 +50,5 @@ pub enum Content {
     RunFunction(RunFunction),
     Deposit,
     FaDeposit(FaDepositReceiptContent),
+    FaWithdrawal(FaWithdrawalReceiptContent),
 }

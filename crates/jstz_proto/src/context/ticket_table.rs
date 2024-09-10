@@ -46,6 +46,10 @@ impl TicketTable {
         }
     }
 
+    /// Adds the given `amount` from the ticket balance of `owner`
+    /// for the ticket `ticket_hash` and returns the account's new balance.
+    /// Creates the account if it doesn't exist. Fails if the addition causes
+    /// an overflow.
     pub fn add(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
@@ -70,6 +74,9 @@ impl TicketTable {
         }
     }
 
+    /// Subtracts the given `amount` from the ticket balance of `owner`
+    /// for the ticket `ticket_hash` and returns the account's new balance.
+    /// Fails if the account doesn't exist or the account has insufficient funds.
     pub fn sub(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
