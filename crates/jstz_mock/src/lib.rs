@@ -37,6 +37,10 @@ pub fn account2() -> jstz_crypto::public_key_hash::PublicKeyHash {
     .unwrap()
 }
 
+pub fn kt1_account1() -> ContractKt1Hash {
+    ContractKt1Hash::try_from("KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV").unwrap()
+}
+
 pub fn ticket_hash1() -> TicketHash {
     let ticket = UnitTicket::new(
         Contract::from_b58check("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap(),

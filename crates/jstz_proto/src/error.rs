@@ -2,7 +2,10 @@ use boa_engine::{JsError, JsNativeError};
 use derive_more::{Display, Error, From};
 use tezos_smart_rollup::michelson::ticket::TicketHashError;
 
-use crate::{context::ticket_table, executor::fa_deposit};
+use crate::{
+    context::ticket_table,
+    executor::{fa_deposit, fa_withdraw},
+};
 
 #[derive(Display, Debug, Error, From)]
 pub enum Error {
@@ -23,14 +26,21 @@ pub enum Error {
     InvalidHttpRequest,
     InvalidHttpRequestBody,
     InvalidHttpRequestMethod,
+    InvalidHeaderValue,
+    InvalidUri,
+    InvalidTicketType,
     TicketTableError {
         source: ticket_table::TicketTableError,
     },
     FaDepositError {
         source: fa_deposit::FaDepositError,
     },
+    FaWithdrawError {
+        source: fa_withdraw::FaWithdrawError,
+    },
     TicketHashError(TicketHashError),
     TicketAmountTooLarge,
+    ZeroAmountNotAllowed,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -80,11 +90,24 @@ impl From<Error> for JsError {
             Error::FaDepositError { source } => JsNativeError::eval()
                 .with_message(format!("FaDepositError: {}", source))
                 .into(),
+            Error::FaWithdrawError { source } => JsNativeError::eval()
+                .with_message(format!("FaWithdrawError: {}", source))
+                .into(),
             Error::TicketHashError(inner) => JsNativeError::eval()
                 .with_message(format!("{}", inner))
                 .into(),
             Error::TicketAmountTooLarge => JsNativeError::eval()
                 .with_message("TicketAmountTooLarge")
+                .into(),
+            Error::InvalidTicketType => JsNativeError::eval()
+                .with_message("InvalidTicketType")
+                .into(),
+            Error::InvalidUri => JsNativeError::eval().with_message("InvalidUri").into(),
+            Error::InvalidHeaderValue => JsNativeError::eval()
+                .with_message("InvalidHeaderValue")
+                .into(),
+            Error::ZeroAmountNotAllowed => JsNativeError::eval()
+                .with_message("ZeroAmountNotAllowed")
                 .into(),
         }
     }
