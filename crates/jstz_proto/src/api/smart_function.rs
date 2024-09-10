@@ -267,8 +267,11 @@ mod test {
     use serde_json::json;
 
     use crate::{
-        context::account::{Account, Address, ParsedCode},
-        executor::smart_function::{self, register_web_apis},
+        context::{
+            account::{Account, Address, ParsedCode},
+            ticket_table::TicketTable,
+        },
+        executor::smart_function::{self, register_web_apis, Script},
         operation::RunFunction,
     };
 
@@ -326,7 +329,7 @@ mod test {
     }
 
     #[test]
-    fn call_system_script_from_smart_function_succeeds() {
+    fn host_script_withdraw_from_smart_function_succeeds() {
         let mut mock_host = JstzMockHost::default();
         let host = mock_host.rt();
         let mut tx = Transaction::default();
@@ -395,5 +398,126 @@ mod test {
         )
         .expect_err("Expected error");
         assert_eq!("EvalError: InsufficientFunds", error.to_string());
+    }
+
+    #[test]
+    fn host_script_fa_withdraw_from_smart_function_succeeds() {
+        let receiver = jstz_mock::account1();
+        let source = jstz_mock::account2();
+        let ticketer = jstz_mock::kt1_account1();
+        let ticketer_string = ticketer.clone();
+        let l1_proxy_contract = ticketer.clone();
+
+        let ticket_id = 1234;
+        let ticket_content = b"random ticket content".to_vec();
+        let json_ticket_content = json!(&ticket_content);
+        assert_eq!("[114,97,110,100,111,109,32,116,105,99,107,101,116,32,99,111,110,116,101,110,116]", format!("{}", json_ticket_content));
+        let ticket =
+            jstz_mock::parse_ticket(ticketer, 1, (ticket_id, Some(ticket_content)));
+        let ticket_hash = ticket.hash().unwrap();
+        let token_smart_function_intial_ticket_balance = 100;
+        let withdraw_amount = 90;
+        let mut jstz_mock_hosh = JstzMockHost::default();
+
+        let host = jstz_mock_hosh.rt();
+        let mut tx = Transaction::default();
+
+        // 1. Deploy our "token contract"
+        tx.begin();
+        let token_contract_code = format!(
+            r#"
+                export default (request) => {{
+                    const url = new URL(request.url)
+                    if (url.pathname === "/withdraw") {{
+                        const withdrawRequest = new Request("tezos://jstz/fa-withdraw", {{
+                            method: "POST",
+                            headers: {{
+                                "Content-type": "application/json",
+                            }},
+                            body: JSON.stringify({{
+                                amount: {withdraw_amount},
+                                routing_info: {{
+                                    receiver: {{ Tz1: "{receiver}" }},
+                                    proxy_l1_contract: "{l1_proxy_contract}"
+                                }},
+                                ticket_info: {{
+                                    id: {ticket_id},
+                                    content: {json_ticket_content},
+                                    ticketer: "{ticketer_string}"
+                                }}
+                            }}),
+                        }});
+                        return SmartFunction.call(withdrawRequest);
+                    }}
+                    else {{
+                        return Response.error();
+                    }}
+                    
+                }}
+            "#,
+        );
+        let parsed_code = ParsedCode::try_from(token_contract_code.to_string()).unwrap();
+        let token_smart_function =
+            Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+        // 2. Add its ticket blance
+        TicketTable::add(
+            host,
+            &mut tx,
+            &token_smart_function,
+            &ticket_hash,
+            token_smart_function_intial_ticket_balance,
+        )
+        .unwrap();
+        tx.commit(host).unwrap();
+
+        // 3. Call the smart function
+        tx.begin();
+        let run_function = RunFunction {
+            uri: format!("tezos://{}/withdraw", &token_smart_function)
+                .try_into()
+                .unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        smart_function::run::execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            fake_op_hash,
+        )
+        .expect("Fa withdraw expected");
+
+        tx.commit(host).unwrap();
+
+        let level = host.run_level(|_| {});
+        let outbox = host.outbox_at(level);
+
+        assert_eq!(1, outbox.len());
+        tx.begin();
+        let balance =
+            TicketTable::get_balance(host, &mut tx, &token_smart_function, &ticket_hash)
+                .unwrap();
+        assert_eq!(10, balance);
+
+        // Trying a second fa withdraw should fail with insufficient funds
+        tx.begin();
+        let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
+        let error = smart_function::run::execute(
+            host,
+            &mut tx,
+            &source,
+            run_function,
+            fake_op_hash2,
+        )
+        .expect_err("Expected error");
+        assert_eq!(
+            "EvalError: TicketTableError: InsufficientFunds",
+            error.to_string()
+        );
     }
 }

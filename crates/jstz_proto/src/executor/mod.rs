@@ -9,9 +9,9 @@ use crate::{
 
 pub mod deposit;
 pub mod fa_deposit;
+pub mod fa_withdraw;
 pub mod smart_function;
 pub mod withdraw;
-
 pub const JSTZ_HOST: &str = "jstz";
 
 fn execute_operation_inner(

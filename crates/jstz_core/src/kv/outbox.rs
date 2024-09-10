@@ -5,9 +5,11 @@ use tezos_smart_rollup::{
     core_unsafe::MAX_OUTPUT_SIZE,
     michelson::{ticket::FA2_1Ticket, MichelsonContract, MichelsonPair},
     outbox::{
-        AtomicBatch, OutboxMessageFull, OutboxMessageTransactionBatch, OutboxQueue,
+        AtomicBatch, OutboxMessageFull, OutboxMessageTransaction,
+        OutboxMessageTransactionBatch, OutboxQueue,
     },
     prelude::debug_msg,
+    types::{Contract, Entrypoint},
 };
 
 use tezos_data_encoding::{enc::BinWriter, encoding::HasEncoding, nom::NomReader};
@@ -20,13 +22,34 @@ const PERSISTENT_OUTBOX_QUEUE_ROOT: RefPath<'static> =
 
 const JSTZ_OUTBOX_QUEUE_META: RefPath<'static> = RefPath::assert_from(b"/outbox/meta");
 
-type NativeWithdrawalParameters = MichelsonPair<MichelsonContract, FA2_1Ticket>;
-
-type Withdrawal = OutboxMessageTransactionBatch<NativeWithdrawalParameters>;
+type WithdrawalParameters = MichelsonPair<MichelsonContract, FA2_1Ticket>;
+type Withdrawal = OutboxMessageTransactionBatch<WithdrawalParameters>;
 
 #[derive(Debug, HasEncoding, PartialEq)]
 pub enum OutboxMessage {
     Withdrawal(Withdrawal),
+}
+
+impl OutboxMessage {
+    pub fn new_withdrawal_message(
+        receiver: &Contract,
+        destination: &Contract,
+        ticket: FA2_1Ticket,
+        entrypoint: &str,
+    ) -> Result<OutboxMessage> {
+        let entrypoint = Entrypoint::try_from(entrypoint.to_string())
+            .map_err(|_| OutboxError::InvalidEntrypoint)?;
+        let parameters = MichelsonPair(MichelsonContract(receiver.clone()), ticket);
+        let message = OutboxMessage::Withdrawal(
+            vec![OutboxMessageTransaction {
+                entrypoint,
+                parameters,
+                destination: destination.clone(),
+            }]
+            .into(),
+        );
+        Ok(message)
+    }
 }
 
 impl AtomicBatch for OutboxMessage {}
@@ -49,11 +72,7 @@ impl<'a> NomReader<'a> for OutboxMessage {
 
 impl From<OutboxMessage> for OutboxMessageFull<OutboxMessage> {
     fn from(message: OutboxMessage) -> Self {
-        match message {
-            OutboxMessage::Withdrawal(_) => {
-                OutboxMessageFull::AtomicTransactionBatch(message)
-            }
-        }
+        OutboxMessageFull::AtomicTransactionBatch(message)
     }
 }
 
@@ -308,6 +327,8 @@ pub enum OutboxError {
     OutboxMessageSerializationError,
     OutboxQueueMetaNotFound,
     OutboxQueueMetaAlreadyExists,
+    InvalidTicketType,
+    InvalidEntrypoint,
 }
 
 #[cfg(test)]
