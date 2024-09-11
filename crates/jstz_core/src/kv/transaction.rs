@@ -610,18 +610,24 @@ impl JsTransaction {
 #[cfg(test)]
 mod test {
     use jstz_crypto::public_key_hash::PublicKeyHash;
+    use serde::{Deserialize, Serialize};
     use tezos_data_encoding::nom::NomReader;
     use tezos_smart_rollup::{
+        host::Runtime,
         michelson::{
             ticket::FA2_1Ticket, MichelsonContract, MichelsonNat, MichelsonOption,
             MichelsonPair,
         },
         outbox::{OutboxMessageFull, OutboxMessageTransaction},
+        storage::path::OwnedPath,
         types::{Contract, Entrypoint},
     };
     use tezos_smart_rollup_mock::MockHost;
 
-    use crate::kv::outbox::{OutboxMessage, PersistentOutboxQueue};
+    use crate::kv::{
+        outbox::{OutboxMessage, PersistentOutboxQueue},
+        Storage,
+    };
 
     use super::Transaction;
 
@@ -643,6 +649,90 @@ mod test {
             entrypoint: Entrypoint::try_from("burn".to_string()).unwrap(),
         };
         OutboxMessage::Withdrawal(vec![outbox_tx].into())
+    }
+
+    #[test]
+    fn test_nested_transactions() {
+        let hrt = &mut MockHost::default();
+        let tx = &mut Transaction::default();
+
+        #[derive(Clone, Serialize, Deserialize, Debug, Default)]
+        struct Account {
+            amount: u64,
+        }
+
+        impl Account {
+            fn path(name: &str) -> OwnedPath {
+                OwnedPath::try_from(format!("/jstz_account/{}", name)).unwrap()
+            }
+
+            fn get<'a>(
+                hrt: &impl Runtime,
+                tx: &'a mut Transaction,
+                path: &OwnedPath,
+            ) -> &'a mut Self {
+                tx.entry(hrt, path.clone()).unwrap().or_insert_default()
+            }
+
+            fn get_from_storage(hrt: &impl Runtime, path: &OwnedPath) -> Self {
+                Storage::get::<Account>(hrt, path)
+                    .unwrap()
+                    .unwrap_or_default()
+            }
+        }
+
+        // Start transaction (tx0)
+        tx.begin();
+
+        let account1 = &Account::path("tz1notanaddress1");
+        let account2 = &Account::path("tz1notanaddress2");
+
+        assert_eq!(0, Account::get(hrt, tx, account1).amount);
+        assert_eq!(0, Account::get(hrt, tx, account2).amount);
+
+        // Start transaction (tx1)
+        tx.begin();
+
+        Account::get(hrt, tx, account2).amount += 25;
+
+        assert_eq!(0, Account::get(hrt, tx, account1).amount);
+        assert_eq!(25, Account::get(hrt, tx, account2).amount);
+
+        // Start transaction (tx2)
+        tx.begin();
+
+        Account::get(hrt, tx, account1).amount += 57;
+
+        assert_eq!(57, Account::get(hrt, tx, account1).amount);
+        assert_eq!(25, Account::get(hrt, tx, account2).amount);
+
+        // Commit transaction (tx2)
+        tx.commit(hrt).unwrap();
+
+        // In transaction (tx1)
+
+        Account::get(hrt, tx, account1).amount += 57;
+
+        assert_eq!(2 * 57, Account::get(hrt, tx, account1).amount);
+        assert_eq!(25, Account::get(hrt, tx, account2).amount);
+
+        // Commit transaction (tx1)
+        tx.commit(hrt).unwrap();
+
+        // In transaction (tx0)
+
+        assert_eq!(2 * 57, Account::get(hrt, tx, account1).amount);
+
+        Account::get(hrt, tx, account1).amount += 57;
+
+        assert_eq!(3 * 57, Account::get(hrt, tx, account1).amount);
+
+        tx.commit(hrt).unwrap();
+
+        // Check storage
+
+        assert_eq!(3 * 57, Account::get_from_storage(hrt, account1).amount);
+        assert_eq!(25, Account::get_from_storage(hrt, account2).amount);
     }
 
     #[test]

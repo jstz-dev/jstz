@@ -28,7 +28,6 @@ nom.workspace = true
 [dev-dependencies]
 anyhow.workspace = true 
 expect-test.workspace = true
-jstz_crypto = { path = "../jstz_crypto" }
-jstz_proto = { path = "../jstz_proto" }
+jstz_crypto = { path = "../jstz_crypto" } 
 tezos-smart-rollup-mock.workspace = true
 tokio.workspace = true
