@@ -11,6 +11,6 @@ async-trait.workspace = true
 bollard.workspace = true
 bytes.workspace = true
 env_logger.workspace = true
-futures-util.workspace = true
+futures-util = { version = "0.3", features = ["io"] }
 tokio.workspace = true
 log.workspace = true

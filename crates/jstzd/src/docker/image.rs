@@ -140,3 +140,11 @@ mod test {
         assert_eq!(image.exposed_ports(), &[8080]);
     }
 }
+
+#[tokio::test]
+async fn test_pull_image() {
+    let client = Arc::new(Docker::connect_with_local_defaults().unwrap());
+    let image = GenericImage::new("busybox").with_tag("stable");
+    image.pull_image(client.clone()).await.unwrap();
+    assert!(image.image_exists(client.clone()).await);
+}
