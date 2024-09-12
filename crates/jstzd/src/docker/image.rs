@@ -1,3 +1,12 @@
+use anyhow::Result;
+use bollard::{
+    image::{CreateImageOptions, ListImagesOptions},
+    Docker,
+};
+use futures_util::StreamExt;
+use log::info;
+use std::{collections::HashMap, sync::Arc};
+#[async_trait::async_trait]
 pub trait Image: Sized {
     const LATEST_TAG: &'static str = "latest";
     fn image_name(&self) -> &str;
@@ -14,6 +23,48 @@ pub trait Image: Sized {
     // If specified, used as a validation on container creation
     fn exposed_ports(&self) -> &[u16] {
         &[]
+    }
+    async fn pull_image(&self, client: Arc<Docker>) -> Result<()> {
+        if Self::image_exists(self, client.clone()).await {
+            info!("Image: {:?} already exists ", self.image_name());
+            return Ok(());
+        }
+        self.create_image(client.clone()).await
+    }
+    async fn image_exists(&self, client: Arc<Docker>) -> bool {
+        let filters = [("reference".to_string(), vec![self.image_uri()])]
+            .into_iter()
+            .collect::<HashMap<_, _>>();
+        let images = &client
+            .list_images(Some(ListImagesOptions::<String> {
+                all: true,
+                filters,
+                ..Default::default()
+            }))
+            .await;
+        match images {
+            Ok(images) => !images.is_empty(),
+            Err(_) => false,
+        }
+    }
+    async fn create_image(&self, client: Arc<Docker>) -> anyhow::Result<()> {
+        let options = Some(CreateImageOptions {
+            from_image: self.image_name(),
+            tag: self.image_tag(),
+            ..Default::default()
+        });
+        let mut stream = client.create_image(options, None, None);
+        while let Some(create_info) = stream.next().await {
+            match create_info {
+                Ok(info) => {
+                    if let Some(status) = info.status {
+                        println!("{:?}", status)
+                    }
+                }
+                Err(e) => return Err(e.into()),
+            }
+        }
+        Ok(())
     }
 }
 

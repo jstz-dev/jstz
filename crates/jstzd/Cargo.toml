@@ -7,4 +7,9 @@ repository.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+async-trait.workspace = true
 bollard.workspace = true
+env_logger.workspace = true
+futures-util.workspace = true
+tokio.workspace = true
+log.workspace = true
