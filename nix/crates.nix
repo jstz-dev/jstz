@@ -102,6 +102,7 @@ in {
     jstz_rollup = crate "jstz_rollup";
     inherit jstz_kernel;
     jstz_wpt = crate "jstz_wpt";
+    jstzd = crate "jstzd";
     octez = crate "octez";
 
     # Special target to build all crates in the workspace
@@ -119,13 +120,6 @@ in {
         cargoNextestExtraArg = "--bins --lib";
       });
 
-    cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
-      // {
-        cargoArtifacts = cargoDeps;
-        # Generate coverage reports for codecov
-        cargoLlvmCovExtraArgs = "--bins --lib --codecov --output-path $out";
-      });
-
     cargo-clippy = craneLib.cargoClippy (commonWorkspace
       // {
         cargoArtifacts = cargoDeps;
@@ -134,5 +128,17 @@ in {
 
     # TODO(https://linear.app/tezos/issue/JSTZ-44)
     # Run the integration tests
+    cargo-test-integration = craneLib.cargoNextest (commonWorkspace
+      // {
+        cargoArtifacts = cargoDeps;
+        cargoNextestExtraArg = "--test jstzd";
+      });
+
+    cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
+      // {
+        cargoArtifacts = cargoDeps;
+        # Generate coverage reports for codecov
+        cargoLlvmCovExtraArgs = "--bins --lib --test jstzd --codecov --output-path $out";
+      });
   };
 }

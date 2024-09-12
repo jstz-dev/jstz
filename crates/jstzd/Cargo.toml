@@ -1,0 +1,10 @@
+[package]
+name = "jstzd"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "jstzd"
+path = "src/main.rs"

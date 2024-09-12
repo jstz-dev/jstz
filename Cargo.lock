@@ -2465,6 +2465,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "jstzd"
+version = "0.1.0-alpha.0"
+
+[[package]]
 name = "language-tags"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
