@@ -1,4 +1,3 @@
-pub mod command;
 pub mod joinhandle;
 
 use async_trait::async_trait;
