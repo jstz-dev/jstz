@@ -11,3 +11,4 @@ tokio.workspace = true
 async-dropper.workspace = true
 async-trait.workspace = true
 futures-util.workspace = true
+bollard.workspace = true

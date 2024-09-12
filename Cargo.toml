@@ -101,6 +101,8 @@ urlpattern = "0.2.0"
 wasm-bindgen = "0.2.92"
 async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
 async-trait = "0.1.82"
+bollard = "0.16.1"
+
 
 [workspace.dependencies.tezos-smart-rollup]
 version = "0.2.2"
