@@ -12,7 +12,8 @@ members = [
   "crates/jstz_rollup",
   "crates/jstz_sdk",
   "crates/jstz_wpt",
-  "crates/octez"
+  "crates/octez",
+  "crates/jstzd"
 ]
 
 [workspace.package]

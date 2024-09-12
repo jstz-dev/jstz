@@ -1,0 +1,17 @@
+[package]
+name = "jstzd"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+tokio.workspace = true
+async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
+async-trait = "0.1.82"
+futures-util.workspace = true
+async-scoped = "0.9.0"
+
+[dev-dependencies]
+tokio-test = "0.4.4"
