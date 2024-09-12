@@ -9,6 +9,7 @@ repository.workspace = true
 anyhow.workspace = true
 async-trait.workspace = true
 bollard.workspace = true
+bytes.workspace = true
 env_logger.workspace = true
 futures-util.workspace = true
 tokio.workspace = true

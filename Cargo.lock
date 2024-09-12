@@ -2613,6 +2613,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "bollard",
+ "bytes",
  "env_logger",
  "futures-util",
  "log",
