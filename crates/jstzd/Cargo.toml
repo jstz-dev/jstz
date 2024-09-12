@@ -1,0 +1,10 @@
+[package]
+name = "jstzd"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+bollard.workspace = true

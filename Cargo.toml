@@ -12,7 +12,8 @@ members = [
   "crates/jstz_rollup",
   "crates/jstz_sdk",
   "crates/jstz_wpt",
-  "crates/octez"
+  "crates/octez",
+  "crates/jstzd"
 ]
 
 [workspace.package]
@@ -98,6 +99,10 @@ tokio-util = "0.7.10"
 url = "2.4.1"
 urlpattern = "0.2.0"
 wasm-bindgen = "0.2.92"
+bollard = "0.16.1"
+# async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
+# async-trait = "0.1.82"
+# async-scoped = "0.9.0"
 
 [workspace.dependencies.tezos-smart-rollup]
 version = "0.2.2"
