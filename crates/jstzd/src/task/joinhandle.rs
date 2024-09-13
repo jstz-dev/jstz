@@ -187,7 +187,14 @@ impl Future for JoinHandle {
                     Poll::Pending
                 }
             }
-            Err(_) => Poll::Pending,
+            Err(_) => {
+                let waker = cx.waker().clone();
+                tokio::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs_f32(0.3)).await;
+                    waker.wake();
+                });
+                Poll::Pending
+            }
         };
     }
 }
