@@ -7,8 +7,8 @@ repository.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-tokio.workspace = true
 async-dropper.workspace = true
 async-trait.workspace = true
-futures-util.workspace = true
 bollard.workspace = true
+futures-util.workspace = true
+tokio.workspace = true

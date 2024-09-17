@@ -37,6 +37,7 @@ base64 = "0.21.7"
 bincode = "1.3.3"
 boa_engine = { version = "0.17.0", features = ["fuzz"] }
 boa_gc = "0.17.0"
+bollard = "0.16.1"
 bs58 = "0.5"
 bytes = "1.4.0"
 chrono = { version = "0.4.34", default-features = false, features = ["std"] }
@@ -101,8 +102,6 @@ urlpattern = "0.2.0"
 wasm-bindgen = "0.2.92"
 async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
 async-trait = "0.1.82"
-bollard = "0.16.1"
-
 
 [workspace.dependencies.tezos-smart-rollup]
 version = "0.2.2"
