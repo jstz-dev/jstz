@@ -3,7 +3,10 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Result;
 use bollard::{image::ListImagesOptions, secret::ImageSummary, Docker};
 use jstzd::docker::{GenericImage, Image};
+<<<<<<< HEAD
 use serial_test::serial;
+=======
+>>>>>>> d418e66 (test(jstzd): add integration test for pulling image)
 
 // search image locally
 async fn search_local_image(
