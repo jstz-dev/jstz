@@ -26,7 +26,7 @@ pub trait Image: Sized {
     }
     async fn pull_image(&self, client: Arc<Docker>) -> Result<()> {
         if Self::image_exists(self, client.clone()).await {
-            info!("Image: {:?} already exists ", self.image_name());
+            info!("Image: {:?} already exists ", self.image_uri());
             return Ok(());
         }
         self.create_image(client.clone()).await
