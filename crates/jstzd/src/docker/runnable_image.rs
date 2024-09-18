@@ -142,7 +142,7 @@ impl<I: Image> RunnableImage<I> {
                         self.image.image_uri()
                     ));
                 }
-                return Err(err.into());
+                Err(err.into())
             }
         }
     }

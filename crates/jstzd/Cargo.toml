@@ -19,3 +19,6 @@ log.workspace = true
 name = "jstzd"
 path = "src/main.rs"
 
+
+[dev-dependencies]
+serial_test.workspace = true

@@ -3,6 +3,7 @@ use std::{collections::HashMap, sync::Arc};
 use anyhow::Result;
 use bollard::{image::ListImagesOptions, secret::ImageSummary, Docker};
 use jstzd::docker::{GenericImage, Image};
+use serial_test::serial;
 
 // search image locally
 async fn search_local_image(
@@ -24,8 +25,8 @@ async fn search_local_image(
         Err(_) => Err(anyhow::anyhow!("Image not found")),
     }
 }
-
 #[tokio::test]
+#[serial]
 async fn test_pull_image() -> Result<()> {
     let docker = Docker::connect_with_socket_defaults().unwrap();
     let docker = Arc::new(docker);

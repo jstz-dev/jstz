@@ -43,7 +43,7 @@ impl Container {
                         self.id
                     ));
                 }
-                return Err(e.into());
+                Err(e.into())
             }
         }
     }

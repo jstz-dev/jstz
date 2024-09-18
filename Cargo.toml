@@ -79,6 +79,7 @@ regex = "1"
 reqwest = { version = "0.11.24", features = ["json"] }
 reqwest-eventsource = "0.5.0"
 rustyline = "14.0.0"
+serial_test = "3.1.1"
 serde = { version = "1.0.196", features = ["derive"] }
 serde-wasm-bindgen = "0.6.5"
 serde_json = "1.0.107"
@@ -102,6 +103,7 @@ urlpattern = "0.2.0"
 wasm-bindgen = "0.2.92"
 async-dropper = { version = "0.3.1", features = ["tokio", "simple"] }
 async-trait = "0.1.82"
+
 
 [workspace.dependencies.tezos-smart-rollup]
 version = "0.2.2"
