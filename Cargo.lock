@@ -2666,6 +2666,7 @@ dependencies = [
  "async-dropper",
  "async-trait",
  "bollard",
+ "bytes",
  "futures-util",
  "log",
  "tokio",

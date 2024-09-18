@@ -68,6 +68,7 @@ pub trait Image: Sized {
     }
 }
 
+#[derive(Clone)]
 pub struct GenericImage {
     image_name: String,
     image_tag: Option<String>,
