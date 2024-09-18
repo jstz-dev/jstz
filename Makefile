@@ -66,18 +66,11 @@ test-unit:
 test-int:
 # --test only runs a specified integration test (a test in /tests).
 #        the glob pattern is used to match all integration tests
-# 
-# FIXME(https://linear.app/tezos/issue/JSTZ-46): 
-# Currently this runs the test for `test_nested_transactions`. This test should 
-# be moved to an inline-test in the `jstz_core` crate to avoid this.  
 	@cargo nextest run --test "*"
 
 .PHONY: cov 
 cov:
-# TODO(https://linear.app/tezos/issue/JSTZ-47): 
-# This will only generate a coverage report for unit tests. We should add coverage 
-# for integration tests as well.
-	@cargo llvm-cov --lib --bins --html --open 
+	@cargo llvm-cov --workspace --exclude-from-test "jstz_api" --html --open 
 
 .PHONY: check
 check: lint fmt
@@ -123,9 +116,3 @@ lint:
 	@touch $(CLI_KERNEL_PATH)
 	@cargo clippy --all-targets -- --deny warnings
 	@rm -f $(CLI_KERNEL_PATH)
-
-.PHONY: ci-cov 
-ci-cov:
-# This will only generate a coverage report for unit tests. We should add coverage
-# for integration tests as well.
-	@cargo llvm-cov --lib --bins --codecov --output-path codecov.json

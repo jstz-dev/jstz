@@ -119,11 +119,23 @@ in {
         cargoNextestExtraArg = "--bins --lib";
       });
 
+    cargo-test-int = craneLib.cargoNextest (commonWorkspace
+      // {
+        cargoArtifacts = cargoDeps;
+        # Run the integration tests
+        #
+        # FIXME():
+        # Don't run the `jstz_api` integration tests until they've been paralellized
+        #
+        # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
+        cargoNextestExtraArg = "--workspace --test \"*\" --exclude \"jstz_api\"";
+      });
+
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
         cargoArtifacts = cargoDeps;
         # Generate coverage reports for codecov
-        cargoLlvmCovExtraArgs = "--bins --lib --codecov --output-path $out";
+        cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out";
       });
 
     cargo-clippy = craneLib.cargoClippy (commonWorkspace
@@ -131,8 +143,5 @@ in {
         cargoArtifacts = cargoDeps;
         cargoClippyExtraArgs = "--all-targets -- --deny warnings";
       });
-
-    # TODO(https://linear.app/tezos/issue/JSTZ-44)
-    # Run the integration tests
   };
 }
