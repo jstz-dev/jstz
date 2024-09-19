@@ -136,6 +136,7 @@
 
                 # Code coverage
                 cargo-llvm-cov
+                docker
               ]
               ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev]
               ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
