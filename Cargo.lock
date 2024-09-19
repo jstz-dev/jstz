@@ -2664,6 +2664,7 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "async-dropper",
+ "async-scoped",
  "async-trait",
  "bollard",
  "bytes",

@@ -1,11 +1,27 @@
 use anyhow::Result;
+use async_dropper::AsyncDrop;
+use async_scoped::TokioScope;
+use async_trait::async_trait;
 use bollard::Docker;
+use log::error;
 use std::sync::Arc;
 
 pub struct Container {
     pub id: String,
     client: Option<Arc<Docker>>,
+    dropped: bool,
     _private: (),
+}
+
+impl Default for Container {
+    fn default() -> Self {
+        Self {
+            id: String::new(),
+            client: None,
+            dropped: false,
+            _private: (),
+        }
+    }
 }
 
 impl Container {
@@ -14,6 +30,7 @@ impl Container {
         Self {
             id,
             client: Some(client),
+            dropped: false,
             _private: (),
         }
     }
@@ -48,15 +65,36 @@ impl Container {
         }
     }
 
-    // Stop and remove the container, should be called when dropping the container
-    pub async fn cleanup(&self) -> Result<()> {
-        self.stop().await?;
-        self.remove().await
-    }
-
     fn client(&self) -> Result<&Arc<Docker>> {
         self.client
             .as_ref()
             .ok_or_else(|| anyhow::anyhow!("Client does not exist"))
+    }
+}
+
+#[async_trait]
+impl AsyncDrop for Container {
+    async fn async_drop(&mut self) {
+        self.stop().await.unwrap_or_else(|e| error!("{}", e));
+        self.remove().await.unwrap_or_else(|e| error!("{}", e));
+    }
+}
+
+impl Drop for Container {
+    // same drop implementation as in async-dropper-simple crate
+    // https://github.com/t3hmrman/async-dropper/blob/ec6e5bbd6c894b23538cfec80375bcaefb8e5710/crates/async-dropper-simple/src/no_default_bound.rs#L111
+    fn drop(&mut self) {
+        if !self.dropped {
+            // Prevent the copy `this` to drop again
+            self.dropped = true;
+            let mut this = std::mem::take(self);
+            // Prevent the original `self` to drop again
+            self.dropped = true;
+            TokioScope::scope_and_block(|s| {
+                s.spawn(async move {
+                    this.async_drop().await;
+                })
+            });
+        }
     }
 }
