@@ -6,22 +6,12 @@ use bollard::Docker;
 use log::error;
 use std::sync::Arc;
 
+#[derive(Default)]
 pub struct Container {
     pub id: String,
     client: Option<Arc<Docker>>,
     dropped: bool,
     _private: (),
-}
-
-impl Default for Container {
-    fn default() -> Self {
-        Self {
-            id: String::new(),
-            client: None,
-            dropped: false,
-            _private: (),
-        }
-    }
 }
 
 impl Container {
@@ -81,14 +71,10 @@ impl AsyncDrop for Container {
 }
 
 impl Drop for Container {
-    // same drop implementation as in async-dropper-simple crate
-    // https://github.com/t3hmrman/async-dropper/blob/ec6e5bbd6c894b23538cfec80375bcaefb8e5710/crates/async-dropper-simple/src/no_default_bound.rs#L111
     fn drop(&mut self) {
         if !self.dropped {
-            // Prevent the copy `this` to drop again
             self.dropped = true;
             let mut this = std::mem::take(self);
-            // Prevent the original `self` to drop again
             self.dropped = true;
             TokioScope::scope_and_block(|s| {
                 s.spawn(async move {
