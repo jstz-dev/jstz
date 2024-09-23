@@ -138,6 +138,7 @@ in {
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
         RUST_LOG = "trace";
+        RUST_BACKTRACE = 1;
         cargoArtifacts = cargoDeps;
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.cargo-nextest];
         cargoLlvmCovCommand = "nextest";

@@ -13,7 +13,7 @@ bollard.workspace = true
 futures-util.workspace = true
 tokio.workspace = true
 env_logger.workspace = true
-users = "0.11.0"
+whoami = "1.5.2"
 
 [[bin]]
 name = "jstzd"
