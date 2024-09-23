@@ -22,6 +22,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: nix --version
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
       - name: Format
         run: nix --accept-flake-config fmt -- --fail-on-change
       - name: Prevent blst
