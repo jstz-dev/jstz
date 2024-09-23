@@ -139,7 +139,7 @@ in {
       // {
         RUST_LOG = "trace";
         cargoArtifacts = cargoDeps;
-        buildInputs = commonWorkspace.buildInputs ++ [pkgs.cargo-nextest pkgs.docker];
+        buildInputs = commonWorkspace.buildInputs ++ [pkgs.cargo-nextest];
         cargoLlvmCovCommand = "nextest";
         # Generate coverage reports for codecov
         cargoLlvmCovExtraArgs = "--codecov --output-path $out --workspace --exclude-from-test \"jstz_api\" --no-capture";
