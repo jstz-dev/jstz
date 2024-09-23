@@ -115,10 +115,7 @@ impl<I: Image> RunnableImage<I> {
         self
     }
 
-    pub async fn create_container(
-        self,
-        client: Arc<Docker>,
-    ) -> anyhow::Result<Container> {
+    pub async fn create_container(self, client: Arc<Docker>) -> Result<Container> {
         self.all_container_ports_are_exposed()?;
         let config = Config::<String> {
             image: Some(self.image.image_uri().to_string()),
