@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use bollard::{container::ListContainersOptions, Docker};
+use futures_util::AsyncBufReadExt;
 use jstzd::docker::{GenericImage, Image, RunnableImage};
 use serial_test::serial;
 
@@ -29,6 +30,65 @@ async fn runs_container() -> Result<()> {
     let container = runnable_image.create_container(docker.clone()).await?;
     container.start().await?;
     assert!(container_exists(docker, &container.id, None).await);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[serial]
+async fn container_streams_stdout() -> Result<()> {
+    let docker = docker();
+    let image = image(docker.clone()).await?;
+    let cmd = vec![
+        "/bin/sh".to_string(),
+        "-c".to_string(),
+        "sleep 1; echo hello from stdout;".to_string(),
+    ];
+    let runnable_image =
+        RunnableImage::new(image.clone(), "test_container3").with_overridden_cmd(cmd);
+    let container = runnable_image.create_container(docker.clone()).await?;
+    container.start().await?;
+    let mut stdout = container.stdout().await?;
+    let mut out_line: String = String::new();
+    stdout.read_line(&mut out_line).await?;
+    assert_eq!(out_line, "hello from stdout\n");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[serial]
+async fn container_streams_stderr() -> Result<()> {
+    let docker = docker();
+    let image = image(docker.clone()).await?;
+    let cmd = vec![
+        "/bin/sh".to_string(),
+        "-c".to_string(),
+        "sleep 1; echo 'hello from stderr' >&2;".to_string(),
+    ];
+    let runnable_image =
+        RunnableImage::new(image.clone(), "test_container3").with_overridden_cmd(cmd);
+    let container = runnable_image.create_container(docker.clone()).await?;
+    container.start().await?;
+    let mut stderr = container.stderr().await?;
+    let mut err_line: String = String::new();
+    stderr.read_line(&mut err_line).await?;
+    assert_eq!(err_line, "hello from stderr\n");
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[serial]
+async fn stdout_fails_for_container_not_running() -> Result<()> {
+    let docker = docker();
+    let image = image(docker.clone()).await?;
+    let runnable_image = RunnableImage::new(image.clone(), "test_container3");
+    let container = runnable_image.create_container(docker.clone()).await?;
+    container.start().await?;
+    let stdout = container.stdout().await;
+    assert!(stdout.is_err());
+    assert_eq!(
+        stdout.err().unwrap().to_string(),
+        "Container is not running".to_string()
+    );
     Ok(())
 }
 
