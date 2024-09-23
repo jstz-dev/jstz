@@ -124,6 +124,7 @@ in {
       // {
         cargoArtifacts = cargoDeps;
 
+        RUST_LOG = "debug";
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.docker];
         # Run the integration tests
         #
@@ -131,15 +132,16 @@ in {
         # Don't run the `jstz_api` integration tests until they've been paralellized
         #
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
-        cargoNextestExtraArg = "--workspace --test \"*\" --exclude \"jstz_api\"";
+        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --no-capture";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
+        RUST_LOG = "debug";
         cargoArtifacts = cargoDeps;
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.docker];
         # Generate coverage reports for codecov
-        cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out";
+        cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --no-capture --codecov --output-path $out";
       });
 
     cargo-clippy = craneLib.cargoClippy (commonWorkspace

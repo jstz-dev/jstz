@@ -12,6 +12,7 @@ async-trait.workspace = true
 bollard.workspace = true
 futures-util.workspace = true
 tokio.workspace = true
+env_logger.workspace = true
 
 [[bin]]
 name = "jstzd"
