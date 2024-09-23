@@ -9,7 +9,9 @@ repository.workspace = true
 anyhow.workspace = true
 async-dropper.workspace = true
 async-trait.workspace = true
+async-scoped.workspace = true
 bollard.workspace = true
+bytes.workspace = true
 futures-util.workspace = true
 tokio.workspace = true
 log.workspace = true
@@ -18,3 +20,6 @@ log.workspace = true
 name = "jstzd"
 path = "src/main.rs"
 
+
+[dev-dependencies]
+serial_test.workspace = true
