@@ -4,6 +4,7 @@
   lib,
   stdenv,
   rust-toolchain,
+  octez,
 }: let
   craneLib = (crane.mkLib pkgs).overrideToolchain (_: rust-toolchain);
 
@@ -114,33 +115,32 @@ in {
 
     cargo-test-unit = craneLib.cargoNextest (commonWorkspace
       // {
-        cargoArtifacts = cargoDeps;
         # Run the unit tests
         cargoNextestExtraArg = "--bins --lib";
       });
 
     cargo-test-int = craneLib.cargoNextest (commonWorkspace
       // {
-        cargoArtifacts = cargoDeps;
+        buildInputs = commonWorkspace.buildInputs ++ [octez];
+        doCheck = true;
         # Run the integration tests
         #
         # FIXME():
         # Don't run the `jstz_api` integration tests until they've been paralellized
         #
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
-        cargoNextestExtraArg = "--workspace --test \"*\" --exclude \"jstz_api\"";
+        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\"";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
-        cargoArtifacts = cargoDeps;
+        buildInputs = commonWorkspace.buildInputs ++ [octez];
         # Generate coverage reports for codecov
         cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out";
       });
 
     cargo-clippy = craneLib.cargoClippy (commonWorkspace
       // {
-        cargoArtifacts = cargoDeps;
         cargoClippyExtraArgs = "--all-targets -- --deny warnings";
       });
   };

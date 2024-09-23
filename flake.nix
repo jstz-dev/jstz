@@ -32,6 +32,23 @@
       url = "github:serokell/nix-npm-buildpackage";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Octez
+
+    # We explicitly have opam-nix-integration as an input to avoid having two versions of nixpkgs
+    opam-nix-integration = {
+      url = "github:vapourismo/opam-nix-integration";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
+
+    octez-v21 = {
+      url = "gitlab:tezos/tezos/octez-v21.0-rc2";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.rust-overlay.follows = "rust-overlay";
+      inputs.opam-nix-integration.follows = "opam-nix-integration";
+    };
   };
 
   outputs = inputs:
@@ -42,6 +59,52 @@
             inherit system;
             overlays = [(import ./nix/overlay.nix) (import rust-overlay) npm-buildpackage.overlays.default];
           };
+
+          # Build octez release for this system
+          #
+          # TODO(https://linear.app/tezos/issue/JSTZ-152):
+          # This patch here should be upstreamed to tezos/tezos
+          octez = octez-v21.packages.${system}.default.overrideAttrs (old: let
+            rustToolchain = pkgs.rust-bin.fromRustupToolchainFile "${old.src}/rust-toolchain";
+            rustPlatform = pkgs.makeRustPlatform {
+              rustc = rustToolchain;
+              cargo = rustToolchain;
+            };
+          in {
+            patches =
+              (old.patches or [])
+              ++ [
+                ./nix/patches/0001-fix-octez-rust-deps-for-nix.patch
+              ];
+
+            # Network access for fetching cargo dependencies is disabled in sandboxed
+            # builds. Instead we need to explicitly fetch the dependencies. Nixpkgs
+            # provides two ways to do this:
+            #
+            #  - `fetchCargoTarball` fetches the dependencies using `cargo vendor`
+            #     It requires an explicit `hash`.
+            #
+            #  - `importCargoLock` parses the `Cargo.lock` file and fetches each
+            #     dependency using `fetchurl`. It doesn't require an explicit `hash`.
+            #
+            # The latter is slower but doesn't require an explicit `hash` and is therefore
+            # more maintainable (since this derivation isn't built in CI).
+            cargoDeps = rustPlatform.importCargoLock {
+              lockFile = "${old.src}/src/rust_deps/Cargo.lock";
+            };
+            cargoRoot = "src/rust_deps";
+
+            nativeBuildInputs =
+              (old.nativeBuildInputs or [])
+              ++ [
+                # See https://nixos.org/manual/nixpkgs/stable/#compiling-non-rust-packages-that-include-rust-code
+                # for more information.
+                #
+                # `cargoSetupHook` configures cargo to vendor dependencies using `cargoDeps`.
+                rustToolchain
+                rustPlatform.cargoSetupHook
+              ];
+          });
 
           clangNoArch =
             if pkgs.stdenv.isDarwin
@@ -61,7 +124,7 @@
             else pkgs.clang;
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
-          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain;};
+          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
 
           fmt = treefmt.lib.evalModule pkgs {
@@ -136,6 +199,7 @@
 
                 # Code coverage
                 cargo-llvm-cov
+                octez
               ]
               ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev]
               ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
