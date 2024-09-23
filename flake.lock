@@ -73,12 +73,101 @@
         "type": "github"
       }
     },
+    "octez-v21": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "opam-nix-integration": [
+          "opam-nix-integration"
+        ],
+        "opam-repository": "opam-repository",
+        "rust-overlay": [
+          "rust-overlay"
+        ]
+      },
+      "locked": {
+        "lastModified": 1726495500,
+        "narHash": "sha256-LxIn3uvqOrNdlcUnbSvHGnVTn47rREvVqdvA4+AL8D0=",
+        "owner": "tezos",
+        "repo": "tezos",
+        "rev": "44643df827aa2d745c3d8a09a6649fe175ff77d7",
+        "type": "gitlab"
+      },
+      "original": {
+        "owner": "tezos",
+        "ref": "octez-v21.0-rc2",
+        "repo": "tezos",
+        "type": "gitlab"
+      }
+    },
+    "opam-nix-integration": {
+      "inputs": {
+        "flake-utils": [
+          "flake-utils"
+        ],
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "opam-repository": "opam-repository_2"
+      },
+      "locked": {
+        "lastModified": 1716561961,
+        "narHash": "sha256-SgeZItYuUZV7WSaoX4G7J1ZpmwgeI3ocQCLP95E+O1U=",
+        "owner": "vapourismo",
+        "repo": "opam-nix-integration",
+        "rev": "0f98236c75cdb436be7669ccaa249264456baa37",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vapourismo",
+        "repo": "opam-nix-integration",
+        "type": "github"
+      }
+    },
+    "opam-repository": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1723381368,
+        "narHash": "sha256-fN8jaeSfK8lbIQcvPXk96FeH8i7sjGjkwqnf0C9ZCog=",
+        "owner": "ocaml",
+        "repo": "opam-repository",
+        "rev": "0f4d0ee5b69b496a4e26f305891c31400f0b4b5f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ocaml",
+        "repo": "opam-repository",
+        "type": "github"
+      }
+    },
+    "opam-repository_2": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1688548241,
+        "narHash": "sha256-cmk1kCLtcL9GJplfl4J7t0r8g0N25O4G0ctycV4eyPo=",
+        "owner": "ocaml",
+        "repo": "opam-repository",
+        "rev": "860072345fa2f234ff10ffeee88db6906e138e92",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ocaml",
+        "repo": "opam-repository",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "crane": "crane",
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
         "npm-buildpackage": "npm-buildpackage",
+        "octez-v21": "octez-v21",
+        "opam-nix-integration": "opam-nix-integration",
         "rust-overlay": "rust-overlay",
         "treefmt": "treefmt"
       }

@@ -32,6 +32,23 @@
       url = "github:serokell/nix-npm-buildpackage";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Octez
+
+    # We explicitly have opam-nix-integration as an input to avoid having two versions of nixpkgs
+    opam-nix-integration = {
+      url = "github:vapourismo/opam-nix-integration";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+    };
+
+    octez-v21 = {
+      url = "gitlab:tezos/tezos/octez-v21.0-rc2";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.flake-utils.follows = "flake-utils";
+      inputs.rust-overlay.follows = "rust-overlay";
+      inputs.opam-nix-integration.follows = "opam-nix-integration";
+    };
   };
 
   outputs = inputs:
@@ -42,6 +59,9 @@
             inherit system;
             overlays = [(import ./nix/overlay.nix) (import rust-overlay) npm-buildpackage.overlays.default];
           };
+
+          # Build octez release for this system
+          octez = octez-v21.packages.${system}.default;
 
           clangNoArch =
             if pkgs.stdenv.isDarwin
@@ -61,7 +81,7 @@
             else pkgs.clang;
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
-          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain;};
+          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
 
           fmt = treefmt.lib.evalModule pkgs {
@@ -136,6 +156,7 @@
 
                 # Code coverage
                 cargo-llvm-cov
+                octez
               ]
               ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev]
               ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
