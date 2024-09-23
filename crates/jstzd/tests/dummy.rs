@@ -5,6 +5,12 @@ use jstzd::main;
 async fn test_main() {
     env_logger::init();
 
+    println!(
+        "current user: {:?} ({})",
+        users::get_current_username(),
+        users::get_current_uid()
+    );
+
     let docker = Docker::connect_with_unix(
         "unix:///var/run/docker.sock",
         120,

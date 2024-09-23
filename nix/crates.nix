@@ -124,7 +124,7 @@ in {
       // {
         cargoArtifacts = cargoDeps;
 
-        RUST_LOG = "debug";
+        RUST_LOG = "trace";
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.docker];
         # Run the integration tests
         #
@@ -137,11 +137,12 @@ in {
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
-        RUST_LOG = "debug";
+        RUST_LOG = "trace";
         cargoArtifacts = cargoDeps;
-        buildInputs = commonWorkspace.buildInputs ++ [pkgs.docker];
+        buildInputs = commonWorkspace.buildInputs ++ [pkgs.cargo-nextest pkgs.docker];
+        cargoLlvmCovCommand = "nextest";
         # Generate coverage reports for codecov
-        cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --no-capture --codecov --output-path $out";
+        cargoLlvmCovExtraArgs = "--codecov --output-path $out --workspace --exclude-from-test \"jstz_api\" --no-capture";
       });
 
     cargo-clippy = craneLib.cargoClippy (commonWorkspace
