@@ -187,11 +187,12 @@ impl FaWithdraw {
 
 #[cfg(test)]
 mod test {
+    use tezos_data_encoding::enc::BinWriter;
     use tezos_data_encoding::nom::NomReader;
+    use tezos_smart_rollup::types::Entrypoint;
     use tezos_smart_rollup::{
-        michelson::MichelsonContract,
+        michelson::{MichelsonContract, MichelsonNat},
         outbox::{OutboxMessageFull, OutboxMessageTransaction},
-        types::Entrypoint,
     };
     use tezos_smart_rollup_mock::MockHost;
 
@@ -344,5 +345,25 @@ mod test {
 
         let result = fa_withdrawal.execute(&mut rt, &mut tx, &source, 100);
         assert!(matches!(result, Err(Error::ZeroAmountNotAllowed)));
+    }
+
+    #[test]
+    fn get_ticket_hash() {
+        let creator = MichelsonContract(
+            Contract::try_from("KT1WVYoJDKeVYwsgb4bNyazqigy3tVXWh6cW".to_string())
+                .unwrap(),
+        );
+        let contents = MichelsonPair::<MichelsonNat, MichelsonOption<MichelsonBytes>>(
+            100.into(),
+            MichelsonOption(None),
+        );
+
+        let mut bytes = Vec::new();
+        creator.bin_write(&mut bytes).unwrap();
+        contents.bin_write(&mut bytes).unwrap();
+        let digest = tezos_crypto_rs::blake2b::digest_256(bytes.as_slice());
+        let digest: [u8; 32] = digest.try_into().unwrap();
+        let hex_encoded = hex::encode(digest);
+        println!("{}", hex_encoded);
     }
 }

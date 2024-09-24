@@ -30,3 +30,5 @@ tezos-smart-rollup.workspace = true
 [dev-dependencies]
 jstz_mock = { path = "../jstz_mock" }
 tezos-smart-rollup-mock.workspace = true
+tezos-smart-rollup-encoding.workspace = true
+hex.workspace = true

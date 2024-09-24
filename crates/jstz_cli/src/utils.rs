@@ -5,8 +5,9 @@ use std::{
 };
 
 use jstz_proto::context::account::Address;
+use tezos_crypto_rs::hash::ContractKt1Hash;
 
-use crate::error::{Error, Result};
+use crate::error::{user_error, Error, Result};
 
 #[derive(Clone, Debug)]
 pub enum AddressOrAlias {
@@ -31,6 +32,33 @@ impl ToString for AddressOrAlias {
         match self {
             Self::Address(address) => address.to_string(),
             Self::Alias(alias) => alias.to_string(),
+        }
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum OriginatedOrAlias {
+    Address(ContractKt1Hash),
+    Alias(String),
+}
+
+impl FromStr for OriginatedOrAlias {
+    type Err = Error;
+
+    fn from_str(address_or_alias: &str) -> Result<Self> {
+        if address_or_alias.starts_with("KT1") {
+            Ok(Self::Address(address_or_alias.parse()?))
+        } else {
+            Ok(Self::Alias(address_or_alias.to_string()))
+        }
+    }
+}
+
+impl ToString for OriginatedOrAlias {
+    fn to_string(&self) -> String {
+        match self {
+            OriginatedOrAlias::Address(contract) => contract.to_base58_check(),
+            OriginatedOrAlias::Alias(alias) => alias.clone(),
         }
     }
 }
@@ -68,4 +96,16 @@ pub fn read_file_or_input_or_piped(
             read_piped_input()
         }
     }
+}
+
+pub fn convert_tez_to_mutez(tez: f64) -> Result<u64> {
+    // 1 XTZ = 1,000,000 Mutez
+    let mutez = tez * 1_000_000.0;
+    if mutez.fract() != 0. {
+        Err(user_error!(
+            "Invalid amount: XTZ can have at most 6 decimal places"
+        ))?;
+    }
+
+    Ok(mutez as u64)
 }

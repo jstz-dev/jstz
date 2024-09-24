@@ -12,11 +12,12 @@ use log::debug;
 use octez::{OctezClient, OctezNode, OctezRollupNode};
 use serde::{Deserialize, Serialize};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
+use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::{
     error::{bail, user_error, Result},
     jstz::JstzClient,
-    utils::AddressOrAlias,
+    utils::{AddressOrAlias, OriginatedOrAlias},
 };
 
 use crate::sandbox::{
@@ -192,6 +193,28 @@ impl AddressOrAlias {
                     ))?;
 
                 let address = Address::from_base58(&alias_info.address)?;
+                Ok(address)
+            }
+        }
+    }
+}
+
+impl OriginatedOrAlias {
+    pub fn resolve_l1(
+        &self,
+        cfg: &Config,
+        network: &Option<NetworkName>,
+    ) -> Result<ContractKt1Hash> {
+        match self {
+            OriginatedOrAlias::Address(kt1) => Ok(kt1.clone()),
+            OriginatedOrAlias::Alias(alias) => {
+                let address = cfg.octez_client(network)?
+                    .resolve_contract(alias).map_err(|_|user_error!(
+                        "Alias '{}' not found in octez-client. Please provide a valid address or alias.",
+                        alias
+                    ))?;
+
+                let address = ContractKt1Hash::from_base58_check(&address)?;
                 Ok(address)
             }
         }

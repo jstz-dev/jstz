@@ -1,0 +1,132 @@
+/*
+  Example FA2 token that only supports tokens with id 1
+*/
+type Storage = {
+  total_supply: nat,
+  balances: big_map<address, nat>,
+  operators: big_map<address, set<address>>
+}
+
+type Return = [list<operation>, Storage]
+
+const checkOperatorAllowed = (_from_, _sender, _storage: Storage): unit => {
+  return unit;
+// if (from_ == sender) {
+//   return;
+// } else {
+//   let found =
+//     match(Big_map.find_opt(from_, storage.operators)) {
+//       when (Some(account_operators)):
+//         Set.mem(sender, account_operators)
+//       when (None()):
+//         false
+//     };
+//   if (! found) {
+//     failwith("Sender not valid operator")
+//   }
+//   return
+// }
+}
+
+namespace Transfer {
+  const token_id = 1
+  type Transfer = { to: address, token_id: nat, amount: nat }
+  type BatchTransfer = list<{ from_: address, txs: list<Transfer> }>
+  const checkIfEnoughBalance = (token_id, amount, balance) => {
+    if (token_id != 1) {
+      failwith("Invalid token id - must be 1")
+    }
+    if (balance < amount) {
+      failwith("Insufficient token balance")
+    }
+  }
+  const innerTransfer = (from_, balances, { to, token_id, amount }) => {
+    const from_bal = Big_map.find(from_, balances);
+    const to_bal = Option.value(0n, Big_map.find_opt(to, balances));
+    if (token_id != 1n) {
+      failwith("Token id must be 1n")
+    }
+    if (from_bal < amount) {
+      failwith("Insufficient token balance")
+    }
+    const b1 = Big_map.add(from_, abs(from_bal - amount), balances);
+    return Big_map.add(to, to_bal + amount, b1);
+  }
+  @entry
+  const transfer = (transfers: BatchTransfer, storage: Storage): Return => {
+    const sender = Tezos.get_sender();
+    const updatedBalances =
+      List.fold(
+        ([balances, { from_, txs }]) => {
+          // checkOperatorAllowed(from_, sender, storage)
+          const updatedBalances =
+            List.fold(
+              ([balances, { to, token_id, amount }]) =>
+                innerTransfer(from_, balances, { to, token_id, amount }),
+              txs,
+              balances
+            )
+          return updatedBalances
+        },
+        transfers,
+        storage.balances
+      )
+    return [[], { ...storage, balances: updatedBalances }]
+  }
+}
+
+namespace UpdateOperators {
+  type UpdateOperatorInfo = { owner: address, operator: address, token_id: nat }
+  type UpdateOperator =
+    ["AddOperator", UpdateOperatorInfo] | ["RemoveOperator", UpdateOperatorInfo]
+  @entry
+  const update_operators = (batchUpdate: list<UpdateOperator>, storage: Storage): Return => {
+    const sender = Tezos.get_sender();
+    const updatedOperators =
+      List.fold(
+        ([operators, updateOperator]) => {
+          return match(updateOperator) {
+            when (AddOperator({ owner, operator, token_id })):
+              do {
+                if (token_id != 1n) {
+                  failwith("Token id must be 1n")
+                }
+                // checkOperatorAllowed(owner, sender, storage);
+                const curr_operator_set =
+                  Option.value(Set.empty, Big_map.find_opt(owner, operators));
+                const new_operators =
+                  Big_map.add(
+                    owner,
+                    Set.add(operator, curr_operator_set),
+                    operators
+                  );
+                return new_operators
+              }
+            when (RemoveOperator({ owner, operator, token_id })):
+              do {
+                if (token_id != 1n) {
+                  failwith("Token id must be 1n")
+                }
+                // checkOperatorAllowed(owner, sender, storage);
+                const curr_operator_set =
+                  Option.value(Set.empty, Big_map.find_opt(owner, operators));
+                const new_operators =
+                  Big_map.add(
+                    owner,
+                    Set.remove(operator, curr_operator_set),
+                    operators
+                  );
+                return new_operators
+              }
+          }
+        },
+        batchUpdate,
+        storage.operators
+      )
+    return [[], { ...storage, operators: updatedOperators }]
+  }
+}
+
+@entry const transfer = Transfer.transfer
+
+@entry const update_operators = UpdateOperators.update_operators

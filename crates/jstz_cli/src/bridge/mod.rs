@@ -1,13 +1,15 @@
 use clap::Subcommand;
+use fa_deploy::FaDeploy;
+use fa_deposit::FaDeposit;
 
 mod deposit;
+mod fa_deploy;
+mod fa_deposit;
 mod withdraw;
 
-use crate::{
-    config::NetworkName,
-    error::{user_error, Result},
-    utils::AddressOrAlias,
-};
+use crate::{config::NetworkName, utils::AddressOrAlias};
+
+use anyhow::Result;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
@@ -42,6 +44,11 @@ pub enum Command {
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
+    /// Deploys an FA token bridge with minimal functionality.
+    FaDeploy(FaDeploy),
+    /// Deposits FA tokens from SENDER to RECEIVER using the
+    /// FA token bridge
+    FaDeposit(FaDeposit),
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -57,17 +64,7 @@ pub async fn exec(command: Command) -> Result<()> {
             amount,
             network,
         } => withdraw::exec(to, amount, network).await,
+        Command::FaDeploy(deploy) => deploy.exec(),
+        Command::FaDeposit(deposit) => deposit.exec(),
     }
-}
-
-pub fn convert_tez_to_mutez(tez: f64) -> Result<u64> {
-    // 1 XTZ = 1,000,000 Mutez
-    let mutez = tez * 1_000_000.0;
-    if mutez.fract() != 0. {
-        Err(user_error!(
-            "Invalid amount: XTZ can have at most 6 decimal places"
-        ))?;
-    }
-
-    Ok(mutez as u64)
 }
