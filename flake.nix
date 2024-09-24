@@ -61,7 +61,17 @@
           };
 
           # Build octez release for this system
-          octez = octez-v21.packages.${system}.default;
+          octez = octez-v21.packages.${system}.default.overrideAttrs (old: {
+            patches =
+              (old.patches or [])
+              ++ [
+                # The rust_deps library relies on `/bin/bash` (via the `dune` `bash` action)
+                # which is not available in Nix, so instead we rely on the `run` action with
+                # the shebang provided bash interpreter which Nix happily patches to use the
+                # Nix bash path for us.
+                ./nix/patches/0001-fix-octez-rust-deps-for-nix.patch
+              ];
+          });
 
           clangNoArch =
             if pkgs.stdenv.isDarwin
