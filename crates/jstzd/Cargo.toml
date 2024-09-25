@@ -12,7 +12,9 @@ async-trait.workspace = true
 bollard.workspace = true
 futures-util.workspace = true
 tokio.workspace = true
+log.workspace = true
 
 [[bin]]
 name = "jstzd"
 path = "src/main.rs"
+

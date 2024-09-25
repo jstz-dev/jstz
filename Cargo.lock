@@ -2667,6 +2667,7 @@ dependencies = [
  "async-trait",
  "bollard",
  "futures-util",
+ "log",
  "tokio",
 ]
 
