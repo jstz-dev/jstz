@@ -403,32 +403,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6b4930d2cb77ce62f89ee5d5289b4ac049559b1c45539271f5ed4fdc7db34545"
 
 [[package]]
-name = "async-dropper"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d901072ae4dcdca2201b98beb02d31fb4b6b2472fbd0e870b12ec15b8b35b2d2"
-dependencies = [
- "async-dropper-derive",
- "async-dropper-simple",
- "async-trait",
- "futures",
- "tokio",
-]
-
-[[package]]
-name = "async-dropper-derive"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a35cf17a37761f1c88b8e770b5956820fe84c12854165b6f930c604ea186e47e"
-dependencies = [
- "async-trait",
- "proc-macro2",
- "quote",
- "syn 2.0.68",
- "tokio",
-]
-
-[[package]]
 name = "async-dropper-simple"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2663,10 +2637,14 @@ name = "jstzd"
 version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
- "async-dropper",
+ "async-dropper-simple",
  "async-trait",
  "bollard",
  "futures-util",
+ "octez",
+ "rand 0.8.5",
+ "reqwest",
+ "tempfile",
  "tokio",
 ]
 
