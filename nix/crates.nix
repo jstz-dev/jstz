@@ -103,6 +103,7 @@ in {
     jstz_rollup = crate "jstz_rollup";
     inherit jstz_kernel;
     jstz_wpt = crate "jstz_wpt";
+    jstzd = crate "jstzd";
     octez = crate "octez";
 
     # Special target to build all crates in the workspace
@@ -121,7 +122,7 @@ in {
 
     cargo-test-int = craneLib.cargoNextest (commonWorkspace
       // {
-        buildInputs = commonWorkspace.buildInputs ++ [octez];
+        buildInputs = commonWorkspace.buildInputs ++ [octez pkgs.cacert];
         doCheck = true;
         # Run the integration tests
         #
@@ -134,7 +135,7 @@ in {
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
-        buildInputs = commonWorkspace.buildInputs ++ [octez];
+        buildInputs = commonWorkspace.buildInputs ++ [octez pkgs.cacert];
         # Generate coverage reports for codecov
         cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out";
       });

@@ -1,3 +1,5 @@
+pub mod octez_node;
+
 use anyhow::Result;
 use async_trait::async_trait;
 

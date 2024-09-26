@@ -50,6 +50,7 @@ impl OctezNode {
         run_command(self.command().args([
             "identity",
             "generate",
+            "0",
             "--data-dir",
             self.octez_node_dir.to_str().expect("Invalid path"),
         ]))

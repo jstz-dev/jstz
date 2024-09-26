@@ -7,11 +7,17 @@ repository.workspace = true
 
 [dependencies]
 anyhow.workspace = true
-async-dropper.workspace = true
+async-dropper-simple.workspace = true
 async-trait.workspace = true
 bollard.workspace = true
 futures-util.workspace = true
+octez = { path = "../octez" }
+tempfile.workspace = true
 tokio.workspace = true
+
+[dev-dependencies]
+rand.workspace = true
+reqwest.workspace = true
 
 [[bin]]
 name = "jstzd"
