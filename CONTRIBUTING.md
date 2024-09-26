@@ -186,18 +186,50 @@ To edit documentation:
 
 ## Creating a pull request 📩
 
-Please write a meaningful description for your pull request. If your pull request references an issue or Asana task, please mention it in the description. The format for pull request titles is `component/kind: description`.
+Please adhere to the following PR guidelines
 
-For 'stacked' pull requests, please ensure your pull request lists all dependencies and uses the predecessor branch as the target.
+### PR preparation
 
-To make sure your pull request is easy to review:
+- Have a title of the form `type(component): subject`. See [commitlint](https://github.com/conventional-changelog/commitlint/#what-is-commitlint) for possible types
+- Give meaning context and description about the issue solved/feature added
+  - Context - Why is this change required? What problem does it solve?
+  - Description - Describe your changes in detail. Add anything else to highlight to the reviewer.
+- Anticipate questions: explain anything which may look surprising either in PR description or in code comments if it will be useful for future readers
+- Include [magic word + link/issue ID](https://linear.app/docs/github?tabs=206cad22125a#link-using-pull-requests) in the description for project tracking
+- 1 Linear issue per PR
+- Clean commit history (jstz uses a semi-linear commit history)
+- [Meaningful commit messages](https://cbea.ms/git-commit/)
+- Have tests / testing instructions
+- Aim for above 80% patch coverage
+- Favour small PRs
+- Author's are responsible to have assignees / reviewers allocated
+- Stacked PRs should target their predecessor
 
-- **Use `git rebase`**. We maintain a semi-linear git history. This means that your branch should be a direct suffix of `main` (or the target branch). Addtionally, it should not contain any merge commits.
-- **Don't push fixup commits\***. When your reviewer asks for changes, they will want you to rewrite your branch history so that the commit history is clean.
+### PR management
 
-  If you branch history is dirty (containing fixup commits, etc) then we will squash-merge\*. However, this is undesirable as we lose the information that individual commits provide.
+- Use assignee field to indicate action is required from that particular person
+- 1 assignee at a time to avoid responsibility dilution
+- Commenter responsible for resolving conversations except in code suggestions which automatically close a conversation when applied
+- Assignee assigns the next person to take action Eg. Reviewer assigns author after providing feedback. Author assigns Reviewer after applying feedback.
+- Mark as Draft to indicate PR isn’t ready to be reviewed/merged
+- Maintain a logical commit history if possible. Squash commit history if not (not ideal as lose information that the commit provides).
+- Force push to relevant commits when applying simple changes
+- Use Fixup commits when applying complicated changes
+- Do not merge Fixup commits. The must always be squashed, ideally, each sections goes into their relevant commits
+- Create follow up issues for suggestions that are out of scope
+- Rebase branch on main frequently
 
-- **Follow the Rust style guide**. Please see the [Rust style guide](https://doc.rust-lang.org/nightly/style-guide/). Additionally ensure your code is formatted using
+### Code
+
+- `TODO/FIXME`s in code should be linked to an issue number and of the form
+  ```
+  // TODO: <link to issue>
+  // <one-line explanation>
+  // <longer explanation if the issue description is not the right place.>
+  ```
+- Commented code should be removed
+- Code should compile and tests should pass in between commits
+- Follow the [Rust style guide](https://doc.rust-lang.org/nightly/style-guide/). Additionally ensure your code is formatted using
 
   ```sh
   make fmt
@@ -209,6 +241,4 @@ To make sure your pull request is easy to review:
   ./scripts/install-hooks.sh
   ```
 
-- **Document your code**. Write documentation for your changes, either as comments or as a markdown file in `/docs`.
-
-- **Do not submit untested code**. If you are not able to build or run `jstz` locally to verify that your changes work as expected, please do not submit the changes -- unless the PR is marked as a 'draft'.
+- Write documentation for your changes, either as comments or as a markdown file in `/docs`. Prefer writing doc comments for code with `pub` visibility.
