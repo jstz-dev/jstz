@@ -2645,7 +2645,6 @@ dependencies = [
  "octez",
  "rand 0.8.5",
  "reqwest",
- "serde",
  "tempfile",
  "tokio",
 ]

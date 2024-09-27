@@ -13,7 +13,6 @@ bollard.workspace = true
 futures-util.workspace = true
 http.workspace = true
 octez = { path = "../octez" }
-serde.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
 
