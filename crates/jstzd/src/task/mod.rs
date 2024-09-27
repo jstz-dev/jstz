@@ -1,3 +1,4 @@
+pub mod endpoint;
 pub mod octez_node;
 
 use anyhow::Result;
