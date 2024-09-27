@@ -2641,6 +2641,7 @@ dependencies = [
  "async-trait",
  "bollard",
  "futures-util",
+ "http 1.1.0",
  "octez",
  "rand 0.8.5",
  "reqwest",
