@@ -8,7 +8,7 @@ use tokio::sync::RwLock;
 use octez::AsyncOctezNode;
 use tokio::process::Child;
 
-const DEFAULT_RPC_ENDPOINT: &str = "localhost:8732";
+pub const DEFAULT_RPC_ENDPOINT: &str = "localhost:8732";
 const DEFAULT_NETWORK: &str = "sandbox";
 const DEFAULT_BINARY_PATH: &str = "octez-node";
 
