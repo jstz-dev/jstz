@@ -2,11 +2,13 @@ use std::{path::PathBuf, process::Command};
 
 use anyhow::{anyhow, Result};
 
+mod async_node;
 mod client;
 mod node;
 mod rollup;
 mod thread;
 
+pub use async_node::*;
 pub use client::*;
 pub use node::*;
 pub use rollup::*;
