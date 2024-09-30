@@ -1,7 +1,11 @@
 use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
 use anyhow::{anyhow, bail, Result};
 use http::Uri;
-use std::{ffi::OsStr, path::PathBuf, str::FromStr};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 use tempfile::tempdir;
 use tokio::process::{Child, Command};
 
@@ -75,7 +79,6 @@ impl OctezClientBuilder {
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct OctezClient {
     binary_path: PathBuf,
@@ -84,7 +87,6 @@ pub struct OctezClient {
     disable_unsafe_disclaimer: bool,
 }
 
-#[allow(dead_code)]
 impl OctezClient {
     fn command<S: AsRef<OsStr>, I: IntoIterator<Item = S>>(
         &self,
@@ -111,6 +113,16 @@ impl OctezClient {
     ) -> Result<Child> {
         let mut command = self.command(args)?;
         Ok(command.spawn()?)
+    }
+
+    pub async fn config_init(&self, output_path: &Path) -> Result<()> {
+        let output = output_path
+            .to_str()
+            .ok_or(anyhow!("config output path must be a valid utf-8 path"))?;
+        self.spawn_command(["config", "init", "--output", output])?
+            .wait()
+            .await?;
+        Ok(())
     }
 }
 
