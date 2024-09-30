@@ -130,3 +130,9 @@ namespace UpdateOperators {
 @entry const transfer = Transfer.transfer
 
 @entry const update_operators = UpdateOperators.update_operators
+
+@view
+const balance_of = (address, storage: Storage) => {
+  let balance = Option.value(0n, Big_map.find_opt(address, storage.balances))
+  return balance
+}

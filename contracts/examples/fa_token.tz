@@ -92,5 +92,9 @@
                     DROP } ;
              UPDATE 3 } ;
          NIL operation ;
-         PAIR } }
+         PAIR } ;
+  view "balance_of"
+       address
+       nat
+       { UNPAIR ; SWAP ; GET 3 ; SWAP ; GET ; IF_NONE { PUSH nat 0 } {} } }
 
