@@ -1,10 +1,11 @@
-use super::{endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
+use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
 use anyhow::{bail, Result};
 use http::Uri;
 use std::{path::PathBuf, str::FromStr};
-use tempfile::{tempdir, TempDir};
+use tempfile::tempdir;
 
 const DEFAULT_BINARY_PATH: &str = "octez-client";
+
 #[derive(Default)]
 pub struct OctezClientBuilder {
     // if None, use the binary in $PATH
@@ -46,13 +47,13 @@ impl OctezClientBuilder {
 
     pub fn build(self) -> Result<OctezClient> {
         self.validate_binary_path()?;
-        self.validate_base_dir()?;
         let node_default_endpoint = format!("http://{}", DEFAULT_RPC_ENDPOINT);
         Ok(OctezClient {
             binary_path: self.binary_path.unwrap_or(DEFAULT_BINARY_PATH.into()),
-            base_dir: self
-                .base_dir
-                .map_or(Directory::TempDir(tempdir()?), Directory::Path),
+            base_dir: match self.base_dir {
+                Some(path_buf) => Directory::try_from(path_buf)?,
+                None => Directory::TempDir(tempdir()?),
+            },
             endpoint: self
                 .endpoint
                 .unwrap_or(Endpoint::try_from(Uri::from_str(&node_default_endpoint)?)?),
@@ -71,26 +72,10 @@ impl OctezClientBuilder {
         }
         Ok(())
     }
-
-    fn validate_base_dir(&self) -> Result<()> {
-        if let Some(base_dir) = &self.base_dir {
-            if !base_dir.exists() {
-                bail!("Base directory does not exist");
-            }
-            if !base_dir.is_dir() {
-                bail!("Base directory is not a directory");
-            }
-        }
-        Ok(())
-    }
-}
-
-enum Directory {
-    TempDir(TempDir),
-    Path(PathBuf),
 }
 
 #[allow(dead_code)]
+#[derive(Debug)]
 pub struct OctezClient {
     binary_path: PathBuf,
     base_dir: Directory,
@@ -100,7 +85,7 @@ pub struct OctezClient {
 
 #[cfg(test)]
 mod test {
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, TempDir};
 
     use super::*;
     #[test]
@@ -162,8 +147,7 @@ mod test {
         let octez_client = OctezClientBuilder::new()
             .set_base_dir(dir_path.clone())
             .build();
-        assert!(octez_client
-            .is_err_and(|e| &e.to_string() == "Base directory does not exist"));
+        octez_client.expect_err("Should fail when base dir does not exist ");
     }
 
     #[test]
@@ -173,8 +157,8 @@ mod test {
         let octez_client = OctezClientBuilder::new()
             .set_base_dir(invalid_dir_path.clone())
             .build();
-        assert!(octez_client
-            .is_err_and(|e| &e.to_string() == "Base directory is not a directory"));
+
+        octez_client.expect_err("Should fail when base dir is not a directory");
     }
 
     #[test]
@@ -190,6 +174,7 @@ mod test {
             octez_client.is_err_and(|e| &e.to_string() == "Binary path does not exist")
         );
     }
+
     #[test]
     fn validates_binary_path_is_file() {
         let temp_dir = TempDir::new().unwrap();
