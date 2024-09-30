@@ -1,11 +1,8 @@
 use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
 use anyhow::{anyhow, bail, Result};
 use http::Uri;
-use std::{
-    ffi::OsStr,
-    path::{Path, PathBuf},
-    str::FromStr,
-};
+use std::path::Path;
+use std::{ffi::OsStr, path::PathBuf, str::FromStr};
 use tempfile::tempdir;
 use tokio::process::{Child, Command};
 
