@@ -1,8 +1,9 @@
 use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use http::Uri;
-use std::{path::PathBuf, str::FromStr};
+use std::{ffi::OsStr, path::PathBuf, str::FromStr};
 use tempfile::tempdir;
+use tokio::process::{Child, Command};
 
 const DEFAULT_BINARY_PATH: &str = "octez-client";
 
@@ -81,6 +82,36 @@ pub struct OctezClient {
     base_dir: Directory,
     endpoint: Endpoint,
     disable_unsafe_disclaimer: bool,
+}
+
+#[allow(dead_code)]
+impl OctezClient {
+    fn command<S: AsRef<OsStr>, I: IntoIterator<Item = S>>(
+        &self,
+        args: I,
+    ) -> Result<Command> {
+        let binary_path = self
+            .binary_path
+            .to_str()
+            .ok_or(anyhow!("binary path must be a valid utf-8 path"))?;
+        let mut command = Command::new(binary_path);
+        let base_dir: String = (&self.base_dir).try_into()?;
+        command.args(["--base-dir", &base_dir]);
+        command.args(["--endpoint", &self.endpoint.to_string()]);
+        if self.disable_unsafe_disclaimer {
+            command.env("TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER", "Y");
+        }
+        command.args(args);
+        Ok(command)
+    }
+
+    fn spawn_command<S: AsRef<OsStr>, I: IntoIterator<Item = S>>(
+        &self,
+        args: I,
+    ) -> Result<Child> {
+        let mut command = self.command(args)?;
+        Ok(command.spawn()?)
+    }
 }
 
 #[cfg(test)]
@@ -185,5 +216,33 @@ mod test {
         assert!(
             octez_client.is_err_and(|e| &e.to_string() == "Binary path is not a file")
         );
+    }
+
+    #[test]
+    fn commands_are_created() {
+        let temp_dir = TempDir::new().unwrap();
+        let base_dir = temp_dir.path().to_path_buf();
+        let octez_client = OctezClientBuilder::new()
+            .set_base_dir(base_dir.clone())
+            .build()
+            .unwrap();
+        let actual = octez_client.command(["some", "command"]).unwrap();
+        let actual_program = actual.as_std().get_program().to_str().unwrap();
+        let actual_args = actual
+            .as_std()
+            .get_args()
+            .map(|arg| arg.to_str().unwrap())
+            .collect::<Vec<&str>>();
+        let expected_program = DEFAULT_BINARY_PATH;
+        let expected_args: Vec<&str> = vec![
+            "--base-dir",
+            base_dir.to_str().unwrap(),
+            "--endpoint",
+            "http://localhost:8732",
+            "some",
+            "command",
+        ];
+        assert_eq!(actual_program, expected_program);
+        assert_eq!(actual_args, expected_args);
     }
 }
