@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use http::{uri::Scheme, Uri};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Endpoint {
     scheme: String,
     host: String,
