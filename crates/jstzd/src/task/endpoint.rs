@@ -18,6 +18,12 @@ impl Endpoint {
     }
 }
 
+impl ToString for Endpoint {
+    fn to_string(&self) -> String {
+        format!("{}://{}:{}", self.scheme, self.host, self.port)
+    }
+}
+
 impl TryFrom<Uri> for Endpoint {
     type Error = anyhow::Error;
     fn try_from(value: Uri) -> Result<Self, Self::Error> {
@@ -82,5 +88,11 @@ mod tests {
         let uri = Uri::from_static("http://:9999/abc");
         let err = Endpoint::try_from(uri).unwrap_err();
         assert_eq!(err.to_string(), "No host part in URI 'http://:9999/abc'");
+    }
+
+    #[test]
+    fn test_to_string() {
+        let endpoint = Endpoint::localhost(8765);
+        assert!(endpoint.to_string().contains("http://localhost:8765"));
     }
 }
