@@ -2,7 +2,7 @@ use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_EN
 use anyhow::{anyhow, bail, Result};
 use http::Uri;
 use std::path::Path;
-use std::{ffi::OsStr, path::PathBuf, str::FromStr};
+use std::{ffi::OsStr, fmt, path::PathBuf, str::FromStr};
 use tempfile::tempdir;
 use tokio::process::{Child, Command};
 
@@ -77,6 +77,25 @@ impl OctezClientBuilder {
 }
 
 #[derive(Debug)]
+pub enum Signature {
+    ED25519,
+    SECP256K1,
+    P256,
+    BLS,
+}
+
+impl fmt::Display for Signature {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Signature::ED25519 => write!(f, "ed25519"),
+            Signature::SECP256K1 => write!(f, "secp256k1"),
+            Signature::P256 => write!(f, "p256"),
+            Signature::BLS => write!(f, "bls"),
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct OctezClient {
     binary_path: PathBuf,
     base_dir: Directory,
@@ -120,6 +139,22 @@ impl OctezClient {
             .wait()
             .await?;
         Ok(())
+    }
+
+    pub async fn gen_keys(
+        &self,
+        alias: &str,
+        signature: Option<Signature>,
+    ) -> Result<()> {
+        let mut command = self.command(["gen", "keys", alias])?;
+        if let Some(signature) = signature {
+            command.args(["--sig", &signature.to_string()]);
+        }
+        let status = command.spawn()?.wait().await?;
+        match status.code() {
+            Some(0) => Ok(()),
+            _ => bail!("failed to generate keys for {}", alias),
+        }
     }
 }
 
