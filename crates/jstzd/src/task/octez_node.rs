@@ -145,7 +145,7 @@ impl Task for OctezNode {
             octez_node_dir: config.data_dir,
         };
 
-        // localhost:8731 refers to the peer http endpoint. This will be removed
+        // localhost:8731 refers to the peer http endpoint. This will be removed!
         // when we switch to the async node implementation where this option is removed
         node.config_init(&config.network, "localhost:8731", &config.rpc_endpoint, 0)?;
         node.generate_identity()?;
