@@ -12,7 +12,7 @@ pub const DEFAULT_RPC_ENDPOINT: &str = "localhost:8732";
 const DEFAULT_NETWORK: &str = "sandbox";
 const DEFAULT_BINARY_PATH: &str = "octez-node";
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct OctezNodeConfig {
     /// Path to the octez node binary.
     binary_path: PathBuf,
@@ -132,6 +132,7 @@ impl AsyncDrop for ChildWrapper {
 #[derive(Default, Clone)]
 pub struct OctezNode {
     inner: Arc<RwLock<AsyncDropper<ChildWrapper>>>,
+    config: OctezNodeConfig,
 }
 
 #[async_trait]
@@ -141,8 +142,8 @@ impl Task for OctezNode {
     /// Spins up the task with the given config.
     async fn spawn(config: Self::Config) -> Result<Self> {
         let node = AsyncOctezNode {
-            octez_node_bin: Some(config.binary_path),
-            octez_node_dir: config.data_dir,
+            octez_node_bin: Some(config.binary_path.clone()),
+            octez_node_dir: config.data_dir.clone(),
         };
 
         let status = node.generate_identity().await?.wait().await?;
@@ -176,6 +177,7 @@ impl Task for OctezNode {
                     .await?,
                 ),
             }))),
+            config,
         })
     }
 
@@ -187,7 +189,22 @@ impl Task for OctezNode {
 
     /// Conducts a health check on the running task.
     async fn health_check(&self) -> Result<bool> {
-        todo!()
+        // Returns whether or not the node is ready to answer to requests.
+        // https://gitlab.com/tezos/tezos/-/raw/2e84c439c25c4d9b363127a6685868e223877034/docs/api/rpc-openapi.json
+        let res =
+            reqwest::get(format!("http://{}/health/ready", &self.config.rpc_endpoint))
+                .await;
+        if res.is_err() {
+            return Ok(false);
+        }
+        let body = res
+            .unwrap()
+            .json::<std::collections::HashMap<String, bool>>()
+            .await?;
+        if let Some(v) = body.get("ready") {
+            return Ok(*v);
+        }
+        return Err(anyhow::anyhow!("unexpected error: `ready` cannot be retrieved from octez-node health check endpoint"));
     }
 }
 
