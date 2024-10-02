@@ -3020,6 +3020,7 @@ dependencies = [
  "serde_json",
  "signal-hook",
  "tezos-smart-rollup-encoding",
+ "tokio",
 ]
 
 [[package]]

@@ -21,3 +21,4 @@ serde.workspace = true
 serde_json.workspace = true
 signal-hook.workspace = true
 tezos-smart-rollup-encoding.workspace = true
+tokio.workspace = true

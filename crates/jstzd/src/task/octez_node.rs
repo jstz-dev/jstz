@@ -5,8 +5,8 @@ use async_trait::async_trait;
 use std::{fs::File, path::PathBuf, sync::Arc};
 use tokio::sync::RwLock;
 
-use octez::OctezNode as InnerOctezNode;
-use std::process::Child;
+use octez::AsyncOctezNode;
+use tokio::process::Child;
 
 const DEFAULT_RPC_ENDPOINT: &str = "localhost:8732";
 const DEFAULT_NETWORK: &str = "sandbox";
@@ -116,7 +116,7 @@ struct ChildWrapper {
 impl ChildWrapper {
     pub async fn kill(&mut self) -> anyhow::Result<()> {
         if let Some(mut v) = self.inner.take() {
-            return Ok(v.kill()?);
+            v.kill().await?;
         }
         Ok(())
     }
@@ -140,15 +140,27 @@ impl Task for OctezNode {
 
     /// Spins up the task with the given config.
     async fn spawn(config: Self::Config) -> Result<Self> {
-        let node = InnerOctezNode {
+        let node = AsyncOctezNode {
             octez_node_bin: Some(config.binary_path),
             octez_node_dir: config.data_dir,
         };
 
-        // localhost:8731 refers to the peer http endpoint. This will be removed
-        // when we switch to the async node implementation where this option is removed
-        node.config_init(&config.network, "localhost:8731", &config.rpc_endpoint, 0)?;
-        node.generate_identity()?;
+        let status = node.generate_identity().await?.wait().await?;
+        match status.code() {
+            Some(0) => (),
+            _ => return Err(anyhow::anyhow!("failed to generate node identity")),
+        }
+
+        let status = node
+            .config_init(&config.network, &config.rpc_endpoint, 0)
+            .await?
+            .wait()
+            .await?;
+        match status.code() {
+            Some(0) => (),
+            _ => return Err(anyhow::anyhow!("failed to initialise node config")),
+        }
+
         Ok(OctezNode {
             inner: Arc::new(RwLock::new(AsyncDropper::new(ChildWrapper {
                 inner: Some(
@@ -160,7 +172,8 @@ impl Task for OctezNode {
                             .map(|s| s as &str)
                             .collect::<Vec<&str>>()
                             .as_slice(),
-                    )?,
+                    )
+                    .await?,
                 ),
             }))),
         })
