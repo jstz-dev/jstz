@@ -4,7 +4,7 @@ use http::Uri;
 use std::path::Path;
 use std::{ffi::OsStr, fmt, path::PathBuf, str::FromStr};
 use tempfile::tempdir;
-use tokio::process::{Child, Command};
+use tokio::process::Command;
 
 const DEFAULT_BINARY_PATH: &str = "octez-client";
 
@@ -123,22 +123,25 @@ impl OctezClient {
         Ok(command)
     }
 
-    fn spawn_command<S: AsRef<OsStr>, I: IntoIterator<Item = S>>(
+    async fn spawn_and_wait_command<S: AsRef<OsStr>, I: IntoIterator<Item = S>>(
         &self,
         args: I,
-    ) -> Result<Child> {
+    ) -> Result<()> {
         let mut command = self.command(args)?;
-        Ok(command.spawn()?)
+        let status = command.spawn()?.wait().await?;
+        match status.code() {
+            Some(0) => Ok(()),
+            Some(code) => bail!("Command {:?} failed with exit code {}", command, code),
+            None => bail!("Command terminated by a signal"),
+        }
     }
 
     pub async fn config_init(&self, output_path: &Path) -> Result<()> {
         let output = output_path
             .to_str()
             .ok_or(anyhow!("config output path must be a valid utf-8 path"))?;
-        self.spawn_command(["config", "init", "--output", output])?
-            .wait()
-            .await?;
-        Ok(())
+        self.spawn_and_wait_command(["config", "init", "--output", output])
+            .await
     }
 
     pub async fn gen_keys(
@@ -146,15 +149,23 @@ impl OctezClient {
         alias: &str,
         signature: Option<Signature>,
     ) -> Result<()> {
-        let mut command = self.command(["gen", "keys", alias])?;
         if let Some(signature) = signature {
-            command.args(["--sig", &signature.to_string()]);
+            return self
+                .spawn_and_wait_command([
+                    "gen",
+                    "keys",
+                    alias,
+                    "--sig",
+                    &signature.to_string(),
+                ])
+                .await;
         }
-        let status = command.spawn()?.wait().await?;
-        match status.code() {
-            Some(0) => Ok(()),
-            _ => bail!("failed to generate keys for {}", alias),
-        }
+        self.spawn_and_wait_command(["gen", "keys", alias]).await
+    }
+
+    pub async fn import_secret_key(&self, alias: &str, secret_key: &str) -> Result<()> {
+        self.spawn_and_wait_command(["import", "secret", "key", alias, secret_key])
+            .await
     }
 }
 

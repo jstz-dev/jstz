@@ -15,6 +15,9 @@ fn first_item(json: Value) -> Value {
     json.as_array().unwrap()[0].clone()
 }
 
+const SECRET_KEY: &str =
+    "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
+
 #[tokio::test]
 async fn config_init() {
     let temp_dir = TempDir::new().unwrap();
@@ -69,5 +72,40 @@ async fn generates_keys_throws() {
     let alias = "test_alias".to_string();
     let _ = octez_client.gen_keys(&alias, None).await;
     let res = octez_client.gen_keys(&alias, None).await;
-    assert!(res.is_err_and(|e| e.to_string().contains("failed to generate key")));
+    assert!(res.is_err_and(|e| { e.to_string().contains("\"gen\" \"keys\"") }));
+}
+
+#[tokio::test]
+async fn imports_secret_key() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_dir = temp_dir.path().to_path_buf();
+    let octez_client = OctezClientBuilder::new()
+        .set_base_dir(base_dir.clone())
+        .build()
+        .unwrap();
+    let alias = "test_alias".to_string();
+    let res = octez_client.import_secret_key(&alias, SECRET_KEY).await;
+    assert!(res.is_ok());
+    let hashes = first_item(read_file(&base_dir.join("public_key_hashs")));
+    let pub_keys = first_item(read_file(&base_dir.join("public_keys")));
+    let secret_keys = first_item(read_file(&base_dir.join("secret_keys")));
+    assert_eq!(hashes["name"], alias);
+    assert_eq!(pub_keys["name"], alias);
+    assert_eq!(secret_keys["name"], alias);
+}
+
+#[tokio::test]
+async fn imports_secret_key_throws() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_dir = temp_dir.path().to_path_buf();
+    let octez_client = OctezClientBuilder::new()
+        .set_base_dir(base_dir.clone())
+        .build()
+        .unwrap();
+    let alias = "test_alias".to_string();
+    let _ = octez_client.import_secret_key(&alias, SECRET_KEY).await;
+    let res = octez_client.import_secret_key(&alias, SECRET_KEY).await;
+    assert!(
+        res.is_err_and(|e| { e.to_string().contains("\"import\" \"secret\" \"key\"") })
+    );
 }
