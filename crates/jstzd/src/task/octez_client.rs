@@ -1,6 +1,7 @@
-use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
+use super::{directory::Directory, endpoint::Endpoint};
 use anyhow::{anyhow, bail, Result};
 use http::Uri;
+use octez::DEFAULT_RPC_ENDPOINT;
 use std::path::Path;
 use std::{ffi::OsStr, fmt, path::PathBuf, str::FromStr};
 use tempfile::tempdir;
