@@ -1,11 +1,14 @@
 mod bootstrap;
 
-pub use bootstrap::{BootstrapAccount, BootstrapContract};
-use bootstrap::{BootstrapAccounts, BootstrapContracts};
+pub use bootstrap::{BootstrapAccount, BootstrapContract, BootstrapSmartRollup};
+use bootstrap::{BootstrapAccounts, BootstrapContracts, BootstrapSmartRollups};
 use rust_embed::Embed;
 use serde_json::Value;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
+
+#[cfg(test)]
+use bootstrap::SmartRollupPvmKind;
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum ProtocolConstants {
@@ -72,6 +75,7 @@ pub struct ProtocolParameterBuilder {
     protocol: Protocol,
     constants: ProtocolConstants,
     bootstrap_contracts: BootstrapContracts,
+    bootstrap_smart_rollups: BootstrapSmartRollups,
     bootstrap_accounts: BootstrapAccounts,
     path: Option<PathBuf>,
 }
@@ -107,6 +111,14 @@ impl ProtocolParameterBuilder {
         self
     }
 
+    pub fn set_bootstrap_smart_rollups(
+        &mut self,
+        rollups: Vec<BootstrapSmartRollup>,
+    ) -> &mut Self {
+        self.bootstrap_smart_rollups.rollups = rollups;
+        self
+    }
+
     pub fn set_path(&mut self, path: &str) -> &mut Self {
         self.path = Some(PathBuf::from(path));
         self
@@ -132,6 +144,10 @@ impl ProtocolParameterBuilder {
             "bootstrap_contracts".to_owned(),
             Value::from(self.bootstrap_contracts),
         );
+        json.insert(
+            "bootstrap_smart_rollups".to_owned(),
+            Value::from(self.bootstrap_smart_rollups),
+        );
         drop(f);
         let path = self
             .path
@@ -145,13 +161,14 @@ impl ProtocolParameterBuilder {
 #[cfg(test)]
 mod tests {
     use super::{
-        BootstrapAccount, BootstrapContract, Protocol, ProtocolConstants,
-        ProtocolParameterBuilder,
+        BootstrapAccount, BootstrapContract, BootstrapSmartRollup, Protocol,
+        ProtocolConstants, ProtocolParameterBuilder, SmartRollupPvmKind,
     };
 
     const ACCOUNT_PUBLIC_KEY: &str =
         "edpktzB3sirfeX6PrgAgWvRVT8Fd28jVLbWXKJmaUrYmK2UoSHc1eJ";
     const CONTRACT_HASH: &str = "KT1QuofAgnsWffHzLA7D78rxytJruGHDe7XG";
+    const SMART_ROLLUP_ADDRESS: &str = "sr1Upj1Zguseor6FdP6mMGgf7VoYxEVQvNZX";
 
     #[test]
     fn parameter_builder() {
@@ -187,6 +204,7 @@ mod tests {
         assert_eq!(builder.protocol, Protocol::Alpha);
         assert!(builder.bootstrap_accounts.accounts.is_empty());
         assert!(builder.bootstrap_contracts.contracts.is_empty());
+        assert!(builder.bootstrap_smart_rollups.rollups.is_empty());
     }
 
     #[tokio::test]
@@ -205,6 +223,13 @@ mod tests {
                 serde_json::Value::String("test-contract".to_owned()),
                 900,
                 Some(CONTRACT_HASH),
+            )
+            .unwrap()])
+            .set_bootstrap_smart_rollups(vec![BootstrapSmartRollup::new(
+                SMART_ROLLUP_ADDRESS,
+                SmartRollupPvmKind::Riscv,
+                "dummy-kernel",
+                serde_json::Value::String("dummy-params".to_owned()),
             )
             .unwrap()]);
         let output_path = builder.build().await.unwrap();
@@ -237,6 +262,28 @@ mod tests {
         assert_eq!(
             contract.get("script").unwrap().as_str().unwrap(),
             "test-contract"
+        );
+
+        // Check rollups
+        let rollups = json
+            .get("bootstrap_smart_rollups")
+            .unwrap()
+            .as_array()
+            .unwrap();
+        assert_eq!(rollups.len(), 1);
+        let rollup = rollups.last().unwrap().as_object().unwrap();
+        assert_eq!(rollup.get("address").unwrap(), SMART_ROLLUP_ADDRESS);
+        assert_eq!(
+            rollup.get("pvm_kind").unwrap().as_str().unwrap(),
+            SmartRollupPvmKind::Riscv.to_string()
+        );
+        assert_eq!(
+            rollup.get("kernel").unwrap().as_str().unwrap(),
+            "dummy-kernel"
+        );
+        assert_eq!(
+            rollup.get("parameters_ty").unwrap().as_str().unwrap(),
+            "dummy-params"
         );
     }
 }
