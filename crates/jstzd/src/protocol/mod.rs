@@ -1,7 +1,7 @@
 mod bootstrap;
 
-pub use bootstrap::BootstrapAccount;
-use bootstrap::BootstrapAccounts;
+pub use bootstrap::{BootstrapAccount, BootstrapContract};
+use bootstrap::{BootstrapAccounts, BootstrapContracts};
 use rust_embed::Embed;
 use serde_json::Value;
 use std::fmt::Display;
@@ -71,6 +71,7 @@ pub struct ProtocolParameterFile;
 pub struct ProtocolParameterBuilder {
     protocol: Protocol,
     constants: ProtocolConstants,
+    bootstrap_contracts: BootstrapContracts,
     bootstrap_accounts: BootstrapAccounts,
     path: Option<PathBuf>,
 }
@@ -98,6 +99,14 @@ impl ProtocolParameterBuilder {
         self
     }
 
+    pub fn set_bootstrap_contracts(
+        &mut self,
+        contracts: Vec<BootstrapContract>,
+    ) -> &mut Self {
+        self.bootstrap_contracts.contracts = contracts;
+        self
+    }
+
     pub fn set_path(&mut self, path: &str) -> &mut Self {
         self.path = Some(PathBuf::from(path));
         self
@@ -119,6 +128,10 @@ impl ProtocolParameterBuilder {
             "bootstrap_accounts".to_owned(),
             Value::from(self.bootstrap_accounts),
         );
+        json.insert(
+            "bootstrap_contracts".to_owned(),
+            Value::from(self.bootstrap_contracts),
+        );
         drop(f);
         let path = self
             .path
@@ -132,11 +145,13 @@ impl ProtocolParameterBuilder {
 #[cfg(test)]
 mod tests {
     use super::{
-        BootstrapAccount, Protocol, ProtocolConstants, ProtocolParameterBuilder,
+        BootstrapAccount, BootstrapContract, Protocol, ProtocolConstants,
+        ProtocolParameterBuilder,
     };
 
     const ACCOUNT_PUBLIC_KEY: &str =
         "edpktzB3sirfeX6PrgAgWvRVT8Fd28jVLbWXKJmaUrYmK2UoSHc1eJ";
+    const CONTRACT_HASH: &str = "KT1QuofAgnsWffHzLA7D78rxytJruGHDe7XG";
 
     #[test]
     fn parameter_builder() {
@@ -171,6 +186,7 @@ mod tests {
         assert!(builder.path.is_none());
         assert_eq!(builder.protocol, Protocol::Alpha);
         assert!(builder.bootstrap_accounts.accounts.is_empty());
+        assert!(builder.bootstrap_contracts.contracts.is_empty());
     }
 
     #[tokio::test]
@@ -184,7 +200,13 @@ mod tests {
             .set_constants(ProtocolConstants::Sandbox)
             .set_bootstrap_accounts(
                 [BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap()].to_vec(),
-            );
+            )
+            .set_bootstrap_contracts(vec![BootstrapContract::new(
+                serde_json::Value::String("test-contract".to_owned()),
+                900,
+                Some(CONTRACT_HASH),
+            )
+            .unwrap()]);
         let output_path = builder.build().await.unwrap();
         assert_eq!(expected_output_path, output_path);
         let file = std::fs::File::open(output_path).unwrap();
@@ -206,5 +228,15 @@ mod tests {
         assert_eq!(keys, ["amount", "public_key"]);
         assert_eq!(account.get("amount").unwrap(), 1000);
         assert_eq!(account.get("public_key").unwrap(), ACCOUNT_PUBLIC_KEY);
+
+        // Check contracts
+        let contracts = json.get("bootstrap_contracts").unwrap().as_array().unwrap();
+        assert_eq!(contracts.len(), 1);
+        let contract = contracts.last().unwrap();
+        assert_eq!(contract.get("amount").unwrap(), 900);
+        assert_eq!(
+            contract.get("script").unwrap().as_str().unwrap(),
+            "test-contract"
+        );
     }
 }
