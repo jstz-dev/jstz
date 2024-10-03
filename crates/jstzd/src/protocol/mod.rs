@@ -1,3 +1,7 @@
+mod bootstrap;
+
+pub use bootstrap::BootstrapAccount;
+use bootstrap::BootstrapAccounts;
 use rust_embed::Embed;
 use serde_json::Value;
 use std::fmt::Display;
@@ -67,6 +71,7 @@ pub struct ProtocolParameterFile;
 pub struct ProtocolParameterBuilder {
     protocol: Protocol,
     constants: ProtocolConstants,
+    bootstrap_accounts: BootstrapAccounts,
     path: Option<PathBuf>,
 }
 
@@ -82,6 +87,14 @@ impl ProtocolParameterBuilder {
 
     pub fn set_constants(&mut self, constants: ProtocolConstants) -> &mut Self {
         self.constants = constants;
+        self
+    }
+
+    pub fn set_bootstrap_accounts(
+        &mut self,
+        accounts: Vec<BootstrapAccount>,
+    ) -> &mut Self {
+        self.bootstrap_accounts.accounts = accounts;
         self
     }
 
@@ -102,6 +115,10 @@ impl ProtocolParameterBuilder {
         let json = raw_json
             .as_object_mut()
             .ok_or(anyhow::anyhow!("Failed to convert json file"))?;
+        json.insert(
+            "bootstrap_accounts".to_owned(),
+            Value::from(self.bootstrap_accounts),
+        );
         drop(f);
         let path = self
             .path
@@ -114,7 +131,12 @@ impl ProtocolParameterBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::{Protocol, ProtocolConstants, ProtocolParameterBuilder};
+    use super::{
+        BootstrapAccount, Protocol, ProtocolConstants, ProtocolParameterBuilder,
+    };
+
+    const ACCOUNT_PUBLIC_KEY: &str =
+        "edpktzB3sirfeX6PrgAgWvRVT8Fd28jVLbWXKJmaUrYmK2UoSHc1eJ";
 
     #[test]
     fn parameter_builder() {
@@ -122,13 +144,21 @@ mod tests {
         builder
             .set_constants(ProtocolConstants::TestConstants)
             .set_protocol(Protocol::TestVersion)
-            .set_path("/test/path");
+            .set_path("/test/path")
+            .set_bootstrap_accounts(
+                [BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap()].to_vec(),
+            );
         assert_eq!(builder.constants, ProtocolConstants::TestConstants);
         assert_eq!(
             builder.path.unwrap().as_os_str().to_str().unwrap(),
             "/test/path"
         );
         assert_eq!(builder.protocol.hash(), Protocol::TestVersion.hash());
+        assert_eq!(builder.bootstrap_accounts.accounts.len(), 1);
+        assert_eq!(
+            builder.bootstrap_accounts.accounts.last().unwrap(),
+            &BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap()
+        );
     }
 
     #[test]
@@ -140,6 +170,7 @@ mod tests {
         );
         assert!(builder.path.is_none());
         assert_eq!(builder.protocol, Protocol::Alpha);
+        assert!(builder.bootstrap_accounts.accounts.is_empty());
     }
 
     #[tokio::test]
@@ -150,7 +181,10 @@ mod tests {
         builder
             .set_path(expected_output_path.as_os_str().to_str().unwrap())
             .set_protocol(Protocol::Alpha)
-            .set_constants(ProtocolConstants::Sandbox);
+            .set_constants(ProtocolConstants::Sandbox)
+            .set_bootstrap_accounts(
+                [BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap()].to_vec(),
+            );
         let output_path = builder.build().await.unwrap();
         assert_eq!(expected_output_path, output_path);
         let file = std::fs::File::open(output_path).unwrap();
@@ -162,5 +196,15 @@ mod tests {
                 .unwrap(),
             2
         );
+
+        // Check accounts
+        let accounts = json.get("bootstrap_accounts").unwrap().as_array().unwrap();
+        assert_eq!(accounts.len(), 1);
+        let account = accounts.last().unwrap().as_object().unwrap();
+        let mut keys = account.keys().collect::<Vec<_>>();
+        keys.sort();
+        assert_eq!(keys, ["amount", "public_key"]);
+        assert_eq!(account.get("amount").unwrap(), 1000);
+        assert_eq!(account.get("public_key").unwrap(), ACCOUNT_PUBLIC_KEY);
     }
 }

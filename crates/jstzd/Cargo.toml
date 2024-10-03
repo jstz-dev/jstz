@@ -12,6 +12,7 @@ async-trait.workspace = true
 bollard.workspace = true
 futures-util.workspace = true
 http.workspace = true
+jstz_crypto = { path = "../jstz_crypto" }
 octez = { path = "../octez" }
 reqwest.workspace = true
 rust-embed.workspace = true
