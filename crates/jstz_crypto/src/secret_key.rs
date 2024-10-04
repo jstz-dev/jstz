@@ -2,15 +2,10 @@ use std::fmt::{self, Debug};
 
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::SecretKeyEd25519;
-use tezos_crypto_rs::hash::SeedEd25519;
 
 use crate::{error::Result, signature::Signature};
 
-// FIXME: workaround via `SeedEd25519` will be unnecessary in the next tezos_crypto_rs release
-//        (will be included in next SDK release)
-
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
-#[serde(from = "SecretKeySerde", into = "SecretKeySerde")]
 pub enum SecretKey {
     Ed25519(SecretKeyEd25519),
 }
@@ -29,7 +24,6 @@ impl SecretKey {
 
     pub fn from_base58(data: &str) -> Result<Self> {
         let sk = SecretKeyEd25519::from_base58_check(data)?;
-
         Ok(SecretKey::Ed25519(sk))
     }
 
@@ -45,23 +39,33 @@ impl ToString for SecretKey {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
-enum SecretKeySerde {
-    Ed25519(SeedEd25519),
-}
+#[cfg(test)]
+mod test {
+    use super::SecretKey;
 
-impl From<SecretKey> for SecretKeySerde {
-    fn from(s: SecretKey) -> Self {
-        let SecretKey::Ed25519(sk) = s;
-        let sk: Vec<u8> = sk.into();
-        Self::Ed25519(SeedEd25519::try_from(sk).unwrap())
+    const SK: &str = "edsk3caELE9Pmo6Zyy3rNrE1THwYGQc97FUnGz5Si5NC78d6khpW6A";
+
+    #[test]
+    fn base58_round_trip() {
+        let sk = SecretKey::from_base58(SK).expect("Should not fail");
+        assert_eq!(sk.to_base58(), SK);
     }
-}
 
-impl From<SecretKeySerde> for SecretKey {
-    fn from(s: SecretKeySerde) -> Self {
-        let SecretKeySerde::Ed25519(sk) = s;
-        let sk: Vec<u8> = sk.into();
-        Self::Ed25519(SecretKeyEd25519::try_from(sk).unwrap())
+    #[test]
+    fn to_string() {
+        let sk = SecretKey::from_base58(SK).expect("Should not fail");
+        assert_eq!(sk.to_string(), SK);
+    }
+
+    #[test]
+    fn json_round_trip() {
+        let json =
+            r#"{"Ed25519":"edsk3YuM4VFTRxq4LmWzf293iEdgramaDhgVnx3ij3CzgQTeDRcb1Q"}"#;
+        let sk: SecretKey = serde_json::from_str(json).expect("Should not fail");
+        assert_eq!(
+            sk.to_string(),
+            "edsk3YuM4VFTRxq4LmWzf293iEdgramaDhgVnx3ij3CzgQTeDRcb1Q"
+        );
+        assert_eq!(serde_json::to_string(&sk).expect("Should not fail"), json);
     }
 }
