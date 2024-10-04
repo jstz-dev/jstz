@@ -62,6 +62,35 @@ async fn generates_keys() {
 }
 
 #[tokio::test]
+async fn generates_keys_with_custom_signature() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_dir = temp_dir.path().to_path_buf();
+    let octez_client = OctezClientBuilder::new()
+        .set_base_dir(base_dir.clone())
+        .build()
+        .unwrap();
+    let alias = "test_alias".to_string();
+    let res = octez_client
+        .gen_keys(&alias, Some(jstzd::task::octez_client::Signature::BLS))
+        .await;
+    assert!(res.is_ok());
+    let hashes = first_item(read_file(&base_dir.join("public_key_hashs")));
+    let pub_keys = first_item(read_file(&base_dir.join("public_keys")));
+    let secret_keys = first_item(read_file(&base_dir.join("secret_keys")));
+    assert_eq!(hashes["name"], alias);
+    assert_eq!(pub_keys["name"], alias);
+    assert!(pub_keys["value"]
+        .as_str()
+        .unwrap()
+        .starts_with("unencrypted:BL"));
+    assert_eq!(secret_keys["name"], alias);
+    assert!(secret_keys["value"]
+        .as_str()
+        .unwrap()
+        .starts_with("unencrypted:BL"));
+}
+
+#[tokio::test]
 async fn generates_keys_throws() {
     let temp_dir = TempDir::new().unwrap();
     let base_dir = temp_dir.path().to_path_buf();

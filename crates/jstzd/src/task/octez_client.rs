@@ -8,6 +8,8 @@ use tokio::process::Command;
 
 const DEFAULT_BINARY_PATH: &str = "octez-client";
 
+type StdOut = String;
+
 #[derive(Default)]
 pub struct OctezClientBuilder {
     // if None, use the binary in $PATH
@@ -126,13 +128,23 @@ impl OctezClient {
     async fn spawn_and_wait_command<S: AsRef<OsStr>, I: IntoIterator<Item = S>>(
         &self,
         args: I,
-    ) -> Result<()> {
+    ) -> Result<StdOut> {
         let mut command = self.command(args)?;
-        let status = command.spawn()?.wait().await?;
-        match status.code() {
-            Some(0) => Ok(()),
-            Some(code) => bail!("Command {:?} failed with exit code {}", command, code),
-            None => bail!("Command terminated by a signal"),
+        let output = command.output().await?;
+        match output.status.code() {
+            Some(0) => Ok(String::from_utf8(output.stdout)?),
+            Some(code) => {
+                let stderr = String::from_utf8(output.stderr)?;
+                bail!(
+                    "Command {:?} failed with exit code {}: {}",
+                    command,
+                    code,
+                    stderr
+                )
+            }
+            None => {
+                bail!("Command terminated by a signal");
+            }
         }
     }
 
@@ -141,7 +153,8 @@ impl OctezClient {
             .to_str()
             .ok_or(anyhow!("config output path must be a valid utf-8 path"))?;
         self.spawn_and_wait_command(["config", "init", "--output", output])
-            .await
+            .await?;
+        Ok(())
     }
 
     pub async fn gen_keys(
@@ -150,7 +163,7 @@ impl OctezClient {
         signature: Option<Signature>,
     ) -> Result<()> {
         if let Some(signature) = signature {
-            return self
+            let _ = self
                 .spawn_and_wait_command([
                     "gen",
                     "keys",
@@ -159,13 +172,16 @@ impl OctezClient {
                     &signature.to_string(),
                 ])
                 .await;
+            return Ok(());
         }
-        self.spawn_and_wait_command(["gen", "keys", alias]).await
+        self.spawn_and_wait_command(["gen", "keys", alias]).await?;
+        Ok(())
     }
 
     pub async fn import_secret_key(&self, alias: &str, secret_key: &str) -> Result<()> {
         self.spawn_and_wait_command(["import", "secret", "key", alias, secret_key])
-            .await
+            .await?;
+        Ok(())
     }
 }
 
