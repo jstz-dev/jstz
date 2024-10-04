@@ -254,6 +254,35 @@ impl OctezClient {
             .await?;
         Ok(())
     }
+
+    pub async fn activate_protocol(
+        &self,
+        protocol: &str,
+        fitness: &str,
+        key: &str,
+        parameters_file: &Path,
+    ) -> Result<()> {
+        let args = [
+            "-block",
+            "genesis",
+            "activate",
+            "protocol",
+            protocol,
+            "with",
+            "fitness",
+            fitness,
+            "and",
+            "key",
+            key,
+            "and",
+            "parameters",
+            parameters_file
+                .to_str()
+                .ok_or(anyhow!("parameters file path must be a valid utf-8 path"))?,
+        ];
+        self.spawn_and_wait_command(args).await?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
