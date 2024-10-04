@@ -288,11 +288,11 @@ mod test {
 
         register_web_apis(&realm, context);
 
-        let self_address = Address::digest(b"random bytes").unwrap();
+        let self_address = Address::digest_tz1(b"random bytes").unwrap();
         let amount = 100;
 
         let operation_hash = Blake2b::from(b"operation_hash".as_ref());
-        let receiver = Address::digest(b"receiver address").unwrap();
+        let receiver = Address::digest_tz1(b"receiver address").unwrap();
         let http_request = http::Request::builder()
             .method(Method::POST)
             .uri("tezos://jstz/withdraw")

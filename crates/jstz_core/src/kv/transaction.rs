@@ -747,7 +747,8 @@ mod test {
             if i % 10 == 0 {
                 tx.begin();
             }
-            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let acc =
+                PublicKeyHash::digest_tz1(format!("account{}", i).as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
             tx.queue_outbox_message(&mut host, message).unwrap();
         }
@@ -760,7 +761,7 @@ mod test {
             .queue_outbox_message(
                 &mut host,
                 make_withdrawal(
-                    &PublicKeyHash::digest("failure account".to_string().as_bytes())
+                    &PublicKeyHash::digest_tz1("failure account".to_string().as_bytes())
                         .unwrap(),
                 ),
             )
@@ -786,7 +787,8 @@ mod test {
             if i % 60 == 0 {
                 tx.begin();
             }
-            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let acc =
+                PublicKeyHash::digest_tz1(format!("account{}", i).as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
             tx.queue_outbox_message(&mut host, message).unwrap();
         }
@@ -814,7 +816,8 @@ mod test {
             if i % 60 == 0 {
                 tx.begin();
             }
-            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let acc =
+                PublicKeyHash::digest_tz1(format!("account{}", i).as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
             tx.queue_outbox_message(&mut host, message).unwrap();
         }
@@ -843,7 +846,8 @@ mod test {
                 tx.begin();
             }
 
-            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let acc =
+                PublicKeyHash::digest_tz1(format!("account{}", i).as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
             tx.queue_outbox_message(&mut host, message).unwrap();
         }
@@ -868,7 +872,8 @@ mod test {
             assert_eq!(
                 message,
                 make_withdrawal(
-                    &PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap()
+                    &PublicKeyHash::digest_tz1(format!("account{}", i).as_bytes())
+                        .unwrap()
                 )
                 .into()
             );
@@ -891,7 +896,7 @@ mod test {
             assert_eq!(
                 message,
                 make_withdrawal(
-                    &PublicKeyHash::digest(format!("account{}", 100 + i).as_bytes())
+                    &PublicKeyHash::digest_tz1(format!("account{}", 100 + i).as_bytes())
                         .unwrap()
                 )
                 .into()

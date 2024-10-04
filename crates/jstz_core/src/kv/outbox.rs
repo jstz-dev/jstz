@@ -388,8 +388,8 @@ mod test {
         let mut host = MockHost::default();
 
         let accounts = [
-            PublicKeyHash::digest(b"account1").unwrap(),
-            PublicKeyHash::digest(b"account2").unwrap(),
+            PublicKeyHash::digest_tz1(b"account1").unwrap(),
+            PublicKeyHash::digest_tz1(b"account2").unwrap(),
         ];
         let withdrawals: Vec<OutboxMessage> = accounts
             .clone()
@@ -423,10 +423,10 @@ mod test {
         let mut host = MockHost::default();
         let mut persistent_queue = PersistentOutboxQueue::default();
         let accounts = [
-            PublicKeyHash::digest(b"account1").unwrap(),
-            PublicKeyHash::digest(b"account2").unwrap(),
-            PublicKeyHash::digest(b"account3").unwrap(),
-            PublicKeyHash::digest(b"account4").unwrap(),
+            PublicKeyHash::digest_tz1(b"account1").unwrap(),
+            PublicKeyHash::digest_tz1(b"account2").unwrap(),
+            PublicKeyHash::digest_tz1(b"account3").unwrap(),
+            PublicKeyHash::digest_tz1(b"account4").unwrap(),
         ];
 
         for account in accounts.iter().take(2) {
@@ -461,7 +461,7 @@ mod test {
         let mut messages: Vec<OutboxMessage> = vec![];
         for i in 0..120 {
             let account =
-                PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+                PublicKeyHash::digest_tz1(format!("account{}", i).as_bytes()).unwrap();
             messages.push(make_withdrawal(&account))
         }
         let mut messages = messages.into_iter();
@@ -487,7 +487,7 @@ mod test {
     fn write_outbox_message_test() {
         let mut host = MockHost::default();
         let withdrawals = [0; 10]
-            .map(|_| make_withdrawal(&PublicKeyHash::digest(b"account1").unwrap()))
+            .map(|_| make_withdrawal(&PublicKeyHash::digest_tz1(b"account1").unwrap()))
             .into_iter();
 
         for withdrawal in withdrawals {
@@ -504,7 +504,7 @@ mod test {
     fn write_outbox_message_errors_on_full_outbox() {
         let mut host = MockHost::default();
         let mut withdrawals = [0; 101]
-            .map(|_| make_withdrawal(&PublicKeyHash::digest(b"account1").unwrap()))
+            .map(|_| make_withdrawal(&PublicKeyHash::digest_tz1(b"account1").unwrap()))
             .into_iter();
 
         for withdrawal in withdrawals.by_ref().take(100) {
@@ -526,8 +526,8 @@ mod test {
 
     #[test]
     fn extend_snapshot() {
-        let acc1 = PublicKeyHash::digest(b"account1").unwrap();
-        let acc2 = PublicKeyHash::digest(b"account2").unwrap();
+        let acc1 = PublicKeyHash::digest_tz1(b"account1").unwrap();
+        let acc2 = PublicKeyHash::digest_tz1(b"account2").unwrap();
         let mut outbox_queue_snapshot1 =
             SnapshotOutboxQueue(vec![make_withdrawal(&acc1)]);
         let outbox_queue_snapshot2 = SnapshotOutboxQueue(vec![make_withdrawal(&acc2)]);

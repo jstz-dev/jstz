@@ -236,7 +236,8 @@ impl Script {
     ) -> Result<Address> {
         let nonce = Account::nonce(hrt, tx, source)?;
 
-        let address = Address::digest(format!("{}{}{}", source, code, nonce).as_bytes())?;
+        let address =
+            Address::digest_tz1(format!("{}{}{}", source, code, nonce).as_bytes())?;
 
         let account = Account::create(hrt, tx, &address, balance, Some(code));
         if account.is_ok() {
