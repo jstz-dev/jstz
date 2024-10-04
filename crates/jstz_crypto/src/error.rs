@@ -8,6 +8,8 @@ pub enum Error {
     TezosFromBytesError { source: FromBytesError },
     TezosCryptoError { source: CryptoError },
     InvalidSignature,
+    InvalidPublicKeyHash,
+    InvalidPublicKey,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
