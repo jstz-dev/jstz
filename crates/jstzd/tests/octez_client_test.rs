@@ -1,10 +1,17 @@
-use jstzd::task::{endpoint::Endpoint, octez_client::OctezClientBuilder};
+use jstzd::task::{
+    endpoint::Endpoint,
+    octez_client::OctezClientBuilder,
+    octez_node::{self, DEFAULT_RPC_ENDPOINT},
+    Task,
+};
 use serde_json::Value;
 use std::{
     fs::{read_to_string, remove_file},
     path::Path,
 };
 use tempfile::{NamedTempFile, TempDir};
+mod utils;
+use utils::retry;
 
 fn read_file(path: &Path) -> Value {
     serde_json::from_str(&read_to_string(path).expect("Unable to read file"))
@@ -137,4 +144,75 @@ async fn imports_secret_key_throws() {
     assert!(
         res.is_err_and(|e| { e.to_string().contains("\"import\" \"secret\" \"key\"") })
     );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn activate_protocol() {
+    // 1. start octez node
+    let (mut octez_node, _temp_data_dir) = spawn_octez_node().await;
+    // 2. setup octez client
+    let temp_dir = TempDir::new().unwrap();
+    let base_dir = temp_dir.path().to_path_buf();
+    let octez_client = OctezClientBuilder::new()
+        .set_base_dir(base_dir.clone())
+        .build()
+        .unwrap();
+    // 3. import activator key
+    let activator = "activator".to_string();
+    octez_client
+        .import_secret_key(&activator, SECRET_KEY)
+        .await
+        .expect("Failed to generate activator key");
+    let params_file =
+        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/sandbox-params.json");
+    let blocks_head_endpoint =
+        format!("http://{}/chains/main/blocks/head", DEFAULT_RPC_ENDPOINT);
+    let response = get_response_text(&blocks_head_endpoint).await;
+    assert!(response.contains(
+        "\"protocol\":\"PrihK96nBAFSxVL1GLJTVhu9YnzkMFiBeuJRPA8NwuZVZCE1L6i\""
+    ));
+    assert!(response.contains("\"level\":0"));
+    // 4. activate the alpha protocol
+    let protocol_activated = octez_client
+        .activate_protocol(
+            "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
+            "0",
+            &activator,
+            &params_file,
+        )
+        .await;
+    assert!(protocol_activated.is_ok());
+    // 5. check if the protocol is activated and the block is baked.
+    let response = get_response_text(&blocks_head_endpoint).await;
+    assert!(response.contains(
+        "\"protocol\":\"ProtoGenesisGenesisGenesisGenesisGenesisGenesk612im\""
+    ));
+    assert!(response.contains("\"level\":1"));
+    let _ = octez_node.kill().await;
+}
+
+async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
+    let temp_dir = TempDir::new().unwrap();
+    let data_dir = temp_dir.path();
+    let mut config_builder = octez_node::OctezNodeConfigBuilder::new();
+    config_builder
+        .set_binary_path("octez-node")
+        .set_network("sandbox")
+        .set_data_dir(data_dir.to_str().unwrap())
+        .set_run_options(&["--synchronisation-threshold", "0"]);
+    let octez_node = octez_node::OctezNode::spawn(config_builder.build().unwrap())
+        .await
+        .unwrap();
+    let node_ready = retry(15, 1000, || async { octez_node.health_check().await }).await;
+    assert!(node_ready);
+    (octez_node, temp_dir)
+}
+
+async fn get_response_text(endpoint: &str) -> String {
+    reqwest::get(endpoint)
+        .await
+        .expect("Failed to get block head")
+        .text()
+        .await
+        .expect("Failed to get response text")
 }
