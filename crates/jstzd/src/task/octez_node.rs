@@ -61,7 +61,7 @@ impl OctezNodeConfigBuilder {
         self
     }
 
-    /// Sets the HTTP(S) endpoint of the node RPC interface, e.g. 'http://localhost:8732'
+    /// Sets the HTTP(S) endpoint of the node RPC interface, e.g. 'localhost:8732'
     pub fn set_rpc_endpoint(&mut self, endpoint: &str) -> &mut Self {
         self.rpc_endpoint = Some(endpoint.to_owned());
         self
