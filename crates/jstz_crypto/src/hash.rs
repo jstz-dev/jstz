@@ -4,6 +4,7 @@ use boa_gc::{empty_trace, Finalize, Trace};
 use derive_more::{Display, Error};
 use hex::FromHexError;
 use serde::{Deserialize, Serialize};
+
 #[derive(
     Debug,
     Clone,
