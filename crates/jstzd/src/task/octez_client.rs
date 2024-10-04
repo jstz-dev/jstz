@@ -1,4 +1,6 @@
-use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
+use crate::jstzd::DEFAULT_RPC_ENDPOINT;
+
+use super::{directory::Directory, endpoint::Endpoint};
 use anyhow::{anyhow, bail, Result};
 use http::Uri;
 use jstz_crypto::public_key::PublicKey;
@@ -252,6 +254,35 @@ impl OctezClient {
     pub async fn import_secret_key(&self, alias: &str, secret_key: &str) -> Result<()> {
         self.spawn_and_wait_command(["import", "secret", "key", alias, secret_key])
             .await?;
+        Ok(())
+    }
+
+    pub async fn activate_protocol(
+        &self,
+        protocol: &str,
+        fitness: &str,
+        key: &str,
+        parameters_file: &Path,
+    ) -> Result<()> {
+        let args = [
+            "-block",
+            "genesis",
+            "activate",
+            "protocol",
+            protocol,
+            "with",
+            "fitness",
+            fitness,
+            "and",
+            "key",
+            key,
+            "and",
+            "parameters",
+            parameters_file
+                .to_str()
+                .ok_or(anyhow!("parameters file path must be a valid utf-8 path"))?,
+        ];
+        self.spawn_and_wait_command(args).await?;
         Ok(())
     }
 }
