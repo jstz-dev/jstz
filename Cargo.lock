@@ -3022,6 +3022,7 @@ dependencies = [
  "serde",
  "serde_json",
  "signal-hook",
+ "tempfile",
  "tezos-smart-rollup-encoding",
  "tokio",
 ]
