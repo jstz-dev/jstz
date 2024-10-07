@@ -21,6 +21,7 @@ tokio.workspace = true
 
 [dev-dependencies]
 rand.workspace = true
+serial_test.workspace = true
 
 [[bin]]
 name = "jstzd"

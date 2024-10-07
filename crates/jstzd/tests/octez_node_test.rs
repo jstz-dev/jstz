@@ -1,7 +1,9 @@
 use jstzd::task::{octez_node, Task};
-mod utils;
+use serial_test::serial;
 use utils::retry;
+
 #[tokio::test(flavor = "multi_thread")]
+#[serial]
 async fn octez_node_test() {
     let data_dir = tempfile::tempdir().unwrap();
     let log_file = tempfile::NamedTempFile::new().unwrap();

@@ -11,6 +11,7 @@ use std::{
 };
 use tempfile::{NamedTempFile, TempDir};
 mod utils;
+use serial_test::serial;
 use utils::retry;
 
 fn read_file(path: &Path) -> Value {
@@ -147,6 +148,7 @@ async fn imports_secret_key_throws() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[serial]
 async fn activate_protocol() {
     // 1. start octez node
     let (mut octez_node, _temp_data_dir) = spawn_octez_node().await;
