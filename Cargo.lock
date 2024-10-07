@@ -2642,6 +2642,7 @@ dependencies = [
  "bollard",
  "futures-util",
  "http 1.1.0",
+ "jstz_crypto",
  "octez",
  "rand 0.8.5",
  "reqwest",

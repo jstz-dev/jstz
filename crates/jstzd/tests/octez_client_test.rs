@@ -62,6 +62,54 @@ async fn generates_keys() {
 }
 
 #[tokio::test]
+async fn show_address() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_dir = temp_dir.path().to_path_buf();
+    let octez_client = OctezClientBuilder::new()
+        .set_base_dir(base_dir.clone())
+        .build()
+        .unwrap();
+    let alias = "test_alias".to_string();
+    let _ = octez_client.gen_keys(&alias, None).await;
+    let res = octez_client.show_address(&alias, false).await;
+
+    assert!(res.is_ok_and(|addr| {
+        addr.hash.to_string().starts_with("tz1")
+            && addr.public_key.to_string().starts_with("edpk")
+    }));
+}
+
+#[tokio::test]
+async fn show_address_with_secret_key() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_dir = temp_dir.path().to_path_buf();
+    let octez_client = OctezClientBuilder::new()
+        .set_base_dir(base_dir.clone())
+        .build()
+        .unwrap();
+    let alias = "test_alias".to_string();
+    let _ = octez_client.gen_keys(&alias, None).await;
+    let res = octez_client.show_address(&alias, true).await;
+    assert!(res.is_ok_and(|addr| addr
+        .secret_key
+        .is_some_and(|sk| sk.to_string().starts_with("edsk"))));
+}
+
+#[tokio::test]
+async fn show_address_fails_for_non_existing_alias() {
+    let temp_dir = TempDir::new().unwrap();
+    let base_dir = temp_dir.path().to_path_buf();
+    let octez_client = OctezClientBuilder::new()
+        .set_base_dir(base_dir.clone())
+        .build()
+        .unwrap();
+    let res = octez_client.show_address("test_alias", true).await;
+    assert!(res.is_err_and(|e| e
+        .to_string()
+        .contains("no public key hash alias named test_alias")))
+}
+
+#[tokio::test]
 async fn generates_keys_with_custom_signature() {
     let temp_dir = TempDir::new().unwrap();
     let base_dir = temp_dir.path().to_path_buf();
