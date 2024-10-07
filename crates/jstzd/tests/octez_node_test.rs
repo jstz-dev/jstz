@@ -1,5 +1,6 @@
 use jstzd::task::{octez_node, Task};
 use serial_test::serial;
+mod utils;
 use utils::retry;
 
 #[tokio::test(flavor = "multi_thread")]

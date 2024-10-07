@@ -1,8 +1,5 @@
 use jstzd::task::{
-    endpoint::Endpoint,
-    octez_client::OctezClientBuilder,
-    octez_node::{self, DEFAULT_RPC_ENDPOINT},
-    Task,
+    endpoint::Endpoint, octez_client::OctezClientBuilder, octez_node, Task,
 };
 use serde_json::Value;
 use std::{
@@ -156,6 +153,7 @@ async fn activate_protocol() {
     let temp_dir = TempDir::new().unwrap();
     let base_dir = temp_dir.path().to_path_buf();
     let octez_client = OctezClientBuilder::new()
+        .set_endpoint(Endpoint::localhost(4000))
         .set_base_dir(base_dir.clone())
         .build()
         .unwrap();
@@ -168,7 +166,7 @@ async fn activate_protocol() {
     let params_file =
         Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/sandbox-params.json");
     let blocks_head_endpoint =
-        format!("http://{}/chains/main/blocks/head", DEFAULT_RPC_ENDPOINT);
+        format!("http://{}/chains/main/blocks/head", "localhost:4000");
     let response = get_response_text(&blocks_head_endpoint).await;
     assert!(response.contains(
         "\"protocol\":\"PrihK96nBAFSxVL1GLJTVhu9YnzkMFiBeuJRPA8NwuZVZCE1L6i\""
@@ -191,6 +189,18 @@ async fn activate_protocol() {
     ));
     assert!(response.contains("\"level\":1"));
     let _ = octez_node.kill().await;
+    // Wait for the process to shutdown entirely
+    let health_check_endpoint = format!("http://{}/health/ready", "localhost:4000");
+    let node_destroyed = retry(10, 1000, || async {
+        let res = reqwest::get(&health_check_endpoint).await;
+        // Should get an error since the node should have been terminated
+        if let Err(e) = res {
+            return Ok(e.to_string().contains("Connection refused"));
+        }
+        Err(anyhow::anyhow!(""))
+    })
+    .await;
+    assert!(node_destroyed);
 }
 
 async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
@@ -198,6 +208,7 @@ async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
     let data_dir = temp_dir.path();
     let mut config_builder = octez_node::OctezNodeConfigBuilder::new();
     config_builder
+        .set_rpc_endpoint("localhost:4000")
         .set_binary_path("octez-node")
         .set_network("sandbox")
         .set_data_dir(data_dir.to_str().unwrap())
@@ -205,7 +216,7 @@ async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
     let octez_node = octez_node::OctezNode::spawn(config_builder.build().unwrap())
         .await
         .unwrap();
-    let node_ready = retry(15, 1000, || async { octez_node.health_check().await }).await;
+    let node_ready = retry(10, 1000, || async { octez_node.health_check().await }).await;
     assert!(node_ready);
     (octez_node, temp_dir)
 }
