@@ -1,6 +1,9 @@
 use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
 use anyhow::{anyhow, bail, Result};
 use http::Uri;
+use jstz_crypto::public_key::PublicKey;
+use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_crypto::secret_key::SecretKey;
 use std::path::Path;
 use std::{ffi::OsStr, fmt, path::PathBuf, str::FromStr};
 use tempfile::tempdir;
@@ -98,6 +101,61 @@ impl fmt::Display for Signature {
 }
 
 #[derive(Debug)]
+pub struct Address {
+    pub hash: PublicKeyHash,
+    pub public_key: PublicKey,
+    pub secret_key: Option<SecretKey>,
+}
+
+impl Address {
+    const HASH: &'static str = "Hash";
+    const PUBLIC_KEY: &'static str = "Public Key";
+    const SECRET_KEY: &'static str = "Secret Key";
+}
+
+impl TryFrom<StdOut> for Address {
+    type Error = anyhow::Error;
+    // the output of `show address` command is expected to be in the following format:
+    /*
+     * Hash: tz1..
+     * Public Key: edpk..
+     * Secret Key: (unencrypted:)edsk..
+     */
+    fn try_from(stdout: StdOut) -> Result<Self> {
+        if !stdout.starts_with(Self::HASH) {
+            bail!("Invalid format:, {:?}", stdout);
+        }
+        let mut hash = None;
+        let mut public_key = None;
+        let mut secret_key = None;
+        for line in stdout.lines() {
+            if let Some((key, mut value)) = line.split_once(": ") {
+                match key {
+                    Self::HASH => {
+                        hash = Some(PublicKeyHash::from_base58(value)?);
+                    }
+                    Self::PUBLIC_KEY => {
+                        public_key = Some(PublicKey::from_base58(value)?);
+                    }
+                    Self::SECRET_KEY => {
+                        if value.starts_with("unencrypted") {
+                            value = value.split(':').nth(1).unwrap();
+                        }
+                        secret_key = Some(SecretKey::from_base58(value)?);
+                    }
+                    _ => bail!("Invalid key: {:?}", key),
+                }
+            }
+        }
+        Ok(Address {
+            hash: hash.ok_or(anyhow!("Missing hash"))?,
+            public_key: public_key.ok_or(anyhow!("Missing public key"))?,
+            secret_key,
+        })
+    }
+}
+
+#[derive(Debug)]
 pub struct OctezClient {
     binary_path: PathBuf,
     base_dir: Directory,
@@ -176,6 +234,19 @@ impl OctezClient {
         }
         self.spawn_and_wait_command(["gen", "keys", alias]).await?;
         Ok(())
+    }
+
+    pub async fn show_address(
+        &self,
+        alias: &str,
+        include_secret_key: bool,
+    ) -> Result<Address> {
+        let mut args = vec!["show", "address", alias];
+        if include_secret_key {
+            args.push("--show-secret");
+        }
+        let stdout = self.spawn_and_wait_command(args).await?;
+        Address::try_from(stdout)
     }
 
     pub async fn import_secret_key(&self, alias: &str, secret_key: &str) -> Result<()> {
@@ -315,5 +386,39 @@ mod test {
         ];
         assert_eq!(actual_program, expected_program);
         assert_eq!(actual_args, expected_args);
+    }
+
+    #[test]
+    fn address_try_from() {
+        let input_text = "Hash: tz1d5aeTJZ89RxAcuFduWRmyRUwYXfZSBVSB\nPublic Key: edpkutoN27QVVbshDg2iWTGAPDN3jywvAhzxuWm3D4Nqbn7aF8fhka\nSecret Key: edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
+        let res = Address::try_from(input_text.to_string());
+        assert!(res.is_ok_and(|addr| {
+            addr.hash.to_base58() == "tz1d5aeTJZ89RxAcuFduWRmyRUwYXfZSBVSB"
+                && addr.public_key.to_base58()
+                    == "edpkutoN27QVVbshDg2iWTGAPDN3jywvAhzxuWm3D4Nqbn7aF8fhka"
+                && addr.secret_key.unwrap().to_base58()
+                    == "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
+        }));
+    }
+
+    #[test]
+    fn address_try_from_fails_on_invalid_input() {
+        let input_text = "Wrong format";
+        let res = Address::try_from(input_text.to_owned());
+        assert!(res.is_err_and(|e| e.to_string().contains("Invalid format")));
+    }
+
+    #[test]
+    fn address_try_from_fails_on_invalid_key() {
+        let input_text = "Hash: tz1d5aeTJZ89RxAcuFduWRmyRUwYXfZSBVSB\nPublicKey: edpkutoN27QVVbshDg2iWTGAPDN3jywvAhzxuWm3D4Nqbn7aF8fhka";
+        let res = Address::try_from(input_text.to_owned());
+        assert!(res.is_err_and(|e| e.to_string().contains("Invalid key")));
+    }
+
+    #[test]
+    fn address_try_from_fails_on_missing_public_key() {
+        let input_text = "Hash: tz1d5aeTJZ89RxAcuFduWRmyRUwYXfZSBVSB";
+        let res = Address::try_from(input_text.to_owned());
+        assert!(res.is_err_and(|e| e.to_string().contains("Missing public key")));
     }
 }
