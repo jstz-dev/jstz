@@ -2,12 +2,12 @@
 
 { # this ensures the entire script is downloaded
 
-  version="20240703"
+  version="20241007"
   network="ghostnet"
   # FIXME: https://app.asana.com/0/1205770721173533/1207698416028745/f
   # Update the container URL to point to jstz-dev instead of trilitech
   # (once the runners have been transferred)
-  container="ghcr.io/trilitech/jstz-cli:$version"
+  container="ghcr.io/jstz-dev/jstz/jstz-cli:$version"
   jstz_home="$HOME/.jstz"
 
   # ps -p filters on the parent process, -o comm= prints the command name (supressing the header)

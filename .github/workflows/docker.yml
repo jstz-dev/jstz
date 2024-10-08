@@ -28,33 +28,32 @@ on:
 
 env:
   DOCKER_REGISTRY: ghcr.io
-  DOCKER_IMAGE_BASE: trilitech
+  DOCKER_IMAGE_BASE: jstz-dev/jstz
 
 jobs:
   build-kernel:
     name: Build (Kernel)
-    runs-on: ubuntu-latest
+    runs-on: [x86_64, linux, nix]
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2.7.1
-      - name: Rust setup
-        # FIXME: Once rustup adds a command to install a toolchain from rust-toolchain.toml, we can remove this.
-        run: rustup toolchain add 1.73.0 --profile minimal
-
-      - name: Build kernel
-        run: make build-kernel
+      - run: nix --version
+      - name: Format
+        run: nix --accept-flake-config fmt -- --fail-on-change
+      - name: Prevent blst
+        run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
+      - name: Build
+        run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_kernel
       - name: Upload kernel
         id: upload-kernel
         uses: actions/upload-artifact@v4
         with:
           name: jstz-kernel
-          path: target/wasm32-unknown-unknown/release/jstz_kernel.wasm
+          path: result/lib/jstz_kernel.wasm
 
   build-docker:
     name: Build (Docker)
     needs: [build-kernel]
-    runs-on:
-      group: jstz
+    runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
