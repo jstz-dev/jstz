@@ -1,4 +1,6 @@
-use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
+use crate::jstzd::DEFAULT_RPC_ENDPOINT;
+
+use super::{directory::Directory, endpoint::Endpoint};
 use anyhow::{anyhow, bail, Result};
 use http::Uri;
 use std::path::Path;
