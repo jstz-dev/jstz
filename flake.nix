@@ -59,7 +59,6 @@
             inherit system;
             overlays = [(import ./nix/overlay.nix) (import rust-overlay) npm-buildpackage.overlays.default];
           };
-
           # Build octez release for this system
           #
           # TODO(https://linear.app/tezos/issue/JSTZ-152):

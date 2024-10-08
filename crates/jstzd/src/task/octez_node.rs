@@ -5,7 +5,7 @@ use anyhow::Result;
 use async_dropper_simple::{AsyncDrop, AsyncDropper};
 use async_trait::async_trait;
 use std::{fs::File, path::PathBuf, sync::Arc};
-use tokio::sync::RwLock;
+use tokio::{fs, sync::RwLock};
 
 use octez::AsyncOctezNode;
 use tokio::process::Child;
@@ -108,7 +108,7 @@ impl OctezNodeConfigBuilder {
                 .unwrap_or(PathBuf::from(tempfile::TempDir::new().unwrap().path())),
             network: self.network.take().unwrap_or(DEFAULT_NETWORK.to_owned()),
             rpc_endpoint: self.rpc_endpoint.take().unwrap_or(format!(
-                "{}:{}",
+                "http://{}:{}",
                 LOCALHOST,
                 unused_port()
             )),
@@ -180,7 +180,12 @@ impl Task for OctezNode {
             .wait()
             .await?;
         match status.code() {
-            Some(0) => (),
+            Some(0) => {
+                let config =
+                    fs::read_to_string(&config.data_dir.join("config.json")).await?;
+                println!("Node Config:");
+                println!("{}", config);
+            }
             _ => return Err(anyhow::anyhow!("failed to initialise node config")),
         }
 

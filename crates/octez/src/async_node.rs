@@ -40,6 +40,10 @@ impl AsyncOctezNode {
                 num_connections.to_string().as_str(),
                 "--net-addr",
                 p2p_endpoint,
+                "--synchronisation-threshold",
+                "0",
+                "--allow-all-rpc",
+                rpc_endpoint,
             ])
             .spawn()?)
     }
