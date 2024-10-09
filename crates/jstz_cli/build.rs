@@ -2,6 +2,7 @@
 //!   - jstz_kernel.wasm
 //!   - sandbox-params.json
 //!   - sandbox.json
+//!
 //! files to the OUT_DIR directory.
 //! It also generates the sandbox_paths.rs file which contains the paths to the files in the OUT_DIR.
 

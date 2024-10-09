@@ -543,7 +543,7 @@ impl NativeClass for ResponseClass {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance> {
-        let body: BodyWithType = match args.get(0) {
+        let body: BodyWithType = match args.first() {
             None | Some(JsValue::Undefined | JsValue::Null) => BodyWithType::default(),
             Some(value) => value.try_js_into(context)?,
         };

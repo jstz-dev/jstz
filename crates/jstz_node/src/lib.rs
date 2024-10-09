@@ -1,5 +1,7 @@
-use std::io::{self, ErrorKind::Other};
-use std::path::PathBuf;
+use std::{
+    io::{self, ErrorKind::Other},
+    path::PathBuf,
+};
 
 use actix_cors::Cors;
 use actix_web::{middleware::Logger, web::Data, App, HttpServer};

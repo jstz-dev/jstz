@@ -1,4 +1,5 @@
 use std::{
+    fmt::{self, Display},
     fs,
     io::{self, IsTerminal},
     str::FromStr,
@@ -26,11 +27,11 @@ impl FromStr for AddressOrAlias {
     }
 }
 
-impl ToString for AddressOrAlias {
-    fn to_string(&self) -> String {
+impl Display for AddressOrAlias {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Address(address) => address.to_string(),
-            Self::Alias(alias) => alias.to_string(),
+            Self::Address(address) => write!(f, "{}", address),
+            Self::Alias(alias) => write!(f, "{}", alias),
         }
     }
 }

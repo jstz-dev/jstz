@@ -273,7 +273,7 @@ impl UrlPatternClass {
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         let url_pattern = UrlPattern::try_from_js(this)?;
-        let input: UrlPatternInput = match args.get(0) {
+        let input: UrlPatternInput = match args.first() {
             Some(value) => value.try_js_into(context)?,
             None => UrlPatternInput::default(),
         };
@@ -287,7 +287,7 @@ impl UrlPatternClass {
         context: &mut Context<'_>,
     ) -> JsResult<JsValue> {
         let url_pattern = UrlPattern::try_from_js(this)?;
-        let input: UrlPatternInput = match args.get(0) {
+        let input: UrlPatternInput = match args.first() {
             Some(value) => value.try_js_into(context)?,
             None => UrlPatternInput::default(),
         };
@@ -487,7 +487,7 @@ impl NativeClass for UrlPatternClass {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<UrlPattern> {
-        let input: UrlPatternInput = match args.get(0) {
+        let input: UrlPatternInput = match args.first() {
             Some(value) => value.try_js_into(context)?,
             None => UrlPatternInput::default(),
         };

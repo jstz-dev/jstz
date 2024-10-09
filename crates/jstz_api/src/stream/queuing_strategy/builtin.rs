@@ -1,12 +1,3 @@
-use crate::{
-    idl,
-    stream::{
-        queuing_strategy::size::{
-            ByteLengthQueuingStrategySizeAlgorithm, CountQueuingStrategySizeAlgorithm,
-        },
-        tmp::get_jsobject_property,
-    },
-};
 use boa_engine::{
     js_string, object::Object, property::Attribute, value::TryFromJs, Context, JsArgs,
     JsNativeError, JsResult, JsValue, NativeFunction,
@@ -16,6 +7,16 @@ use jstz_core::{
     accessor,
     js_fn::JsCallableWithoutThis,
     native::{Accessor, ClassBuilder, NativeClass},
+};
+
+use crate::{
+    idl,
+    stream::{
+        queuing_strategy::size::{
+            ByteLengthQueuingStrategySizeAlgorithm, CountQueuingStrategySizeAlgorithm,
+        },
+        tmp::get_jsobject_property,
+    },
 };
 
 /// [Streams Standard - § 7.1.][https://streams.spec.whatwg.org/#qs-api]
@@ -172,7 +173,7 @@ macro_rules! define_builtin_queuing_strategy_class(
                 context: &mut Context<'_>,
             ) -> JsResult<Self::Instance> {
                 let init: QueuingStrategyInit = args
-                    .get(0)
+                    .first()
                     .ok_or_else(|| {
                         JsNativeError::typ()
                             .with_message(format!("{} constructor: At least 1 argument required, but only 0 passed", $struct_name_as_str))

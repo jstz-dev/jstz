@@ -49,8 +49,9 @@ impl HostHooks for Hooks {
     // }
 
     fn utc_now(&self) -> NaiveDateTime {
-        NaiveDateTime::from_timestamp_opt(UTC_NOW, 0)
+        DateTime::from_timestamp(UTC_NOW, 0)
             .expect("Failed to create `NaiveDateTime` from `UTC_NOW`")
+            .naive_utc()
     }
 
     fn local_from_utc(&self, utc: NaiveDateTime) -> DateTime<FixedOffset> {
@@ -123,10 +124,10 @@ impl boa_engine::job::JobQueue for JobQueue {
 
 thread_local! {
     /// Thread-local host context
-    static JS_HOST_RUNTIME: RefCell<Option<JsHostRuntime<'static>>> = RefCell::new(None);
+    static JS_HOST_RUNTIME: RefCell<Option<JsHostRuntime<'static>>> = const { RefCell::new(None) };
 
     /// Thread-local transaction
-    static JS_TRANSACTION: RefCell<Option<JsTransaction>> = RefCell::new(None);
+    static JS_TRANSACTION: RefCell<Option<JsTransaction>> = const { RefCell::new(None) };
 }
 
 /// Enters a new host context, running the closure `f` with the new context

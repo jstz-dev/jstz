@@ -166,7 +166,7 @@ impl SmartFunctionApi {
         let smart_function = SmartFunction::from_js_value(this)?;
 
         let function_code: String = args
-            .get(0)
+            .first()
             .ok_or_else(|| {
                 JsNativeError::typ()
                     .with_message("Expected at least 1 argument but 0 provided")

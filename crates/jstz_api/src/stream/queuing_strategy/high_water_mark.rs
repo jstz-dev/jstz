@@ -1,11 +1,13 @@
-use crate::idl;
-use crate::stream::queuing_strategy::DefaultQueuingStrategy;
-use crate::stream::queuing_strategy::{
-    builtin::{ByteLengthQueuingStrategy, CountQueuingStrategy},
-    QueuingStrategy,
-};
 use boa_engine::{object::NativeObject, JsError, JsNativeError, JsResult};
 use jstz_core::native::JsNativeObject;
+
+use crate::{
+    idl,
+    stream::queuing_strategy::{
+        builtin::{ByteLengthQueuingStrategy, CountQueuingStrategy},
+        DefaultQueuingStrategy, QueuingStrategy,
+    },
+};
 
 /// [Streams Standard - § 7.4.][https://streams.spec.whatwg.org/#validate-and-normalize-high-water-mark]
 /// > `ExtractHighWaterMark(strategy, defaultHWM)`

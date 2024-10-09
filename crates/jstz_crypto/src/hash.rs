@@ -1,4 +1,7 @@
-use std::array::TryFromSliceError;
+use std::{
+    array::TryFromSliceError,
+    fmt::{self, Display},
+};
 
 use boa_gc::{empty_trace, Finalize, Trace};
 use derive_more::{Display, Error};
@@ -24,9 +27,9 @@ unsafe impl Trace for Blake2b {
     empty_trace!();
 }
 
-impl ToString for Blake2b {
-    fn to_string(&self) -> String {
-        hex::encode(self.0)
+impl Display for Blake2b {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", hex::encode(self.0))
     }
 }
 

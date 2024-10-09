@@ -1,21 +1,8 @@
-use futures::Future;
-use indicatif::{ProgressBar, ProgressStyle};
-use jstz_rollup::{rollup::make_installer, Exchanger, JstzRollup, NativeBridge};
-use nix::{
-    sys::signal::{kill, Signal},
-    unistd::Pid,
-};
-use octez::OctezThread;
-use regex::Regex;
-use signal_hook::{
-    consts::{SIGINT, SIGTERM},
-    iterator::Signals,
-};
-use std::io::Write;
 use std::{
     cell::RefCell,
     env,
     fs::{self, File, OpenOptions},
+    io::Write,
     io::{BufRead, BufReader, Seek},
     path::PathBuf,
     process::{Child, Command, Stdio},
@@ -25,9 +12,22 @@ use std::{
 };
 
 use console::style;
+use futures::Future;
 use in_container::in_container;
+use indicatif::{ProgressBar, ProgressStyle};
+use jstz_rollup::{rollup::make_installer, Exchanger, JstzRollup, NativeBridge};
 use log::info;
+use nix::{
+    sys::signal::{kill, Signal},
+    unistd::Pid,
+};
+use octez::OctezThread;
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
+use regex::Regex;
+use signal_hook::{
+    consts::{SIGINT, SIGTERM},
+    iterator::Signals,
+};
 use tempfile::TempDir;
 use tokio::task::{self, JoinHandle};
 
@@ -187,7 +187,7 @@ impl Sandbox {
                             }
                         }
 
-                        for signal in signals.pending() {
+                        if let Some(signal)= signals.pending().next() {
                             match signal {
                                 SIGINT | SIGTERM => {
                                     info!(
@@ -470,7 +470,6 @@ fn spawn_jstz_node(cfg: &Config) -> Result<impl Future<Output = Result<()>> + 's
     let kernel_log_path = cfg.sandbox_logs_dir().join("kernel.log");
     let mut log_file = OpenOptions::new()
         .create(true)
-        .write(true)
         .append(true)
         .open(log_path.clone())?;
     debug!(log_file, "Jstz node started 🎉");
@@ -667,8 +666,8 @@ fn run_progress_bar(cfg: &Config, mut child: Option<Child>) -> Result<()> {
     let file = OpenOptions::new()
         .read(true)
         .write(true)
-        .create(true)
-        .open(&sandbox_daemon_log_path(cfg))?;
+        .truncate(true)
+        .open(sandbox_daemon_log_path(cfg))?;
     let mut reader = BufReader::new(file);
     let mut buffer = String::new();
 
