@@ -1,7 +1,6 @@
 use std::{
     any::{Any, TypeId},
     collections::HashMap,
-    io::Read,
     ops::{Deref, DerefMut},
 };
 
@@ -9,8 +8,9 @@ pub use boa_engine::realm;
 use boa_engine::{
     js_string,
     object::{builtins::JsPromise, NativeObject, ObjectInitializer},
+    parser::source::ReadChar,
     property::Attribute,
-    Context, JsObject, JsResult, JsValue, Source,
+    Context, JsData, JsObject, JsResult, JsValue, Source,
 };
 use boa_gc::{empty_trace, Finalize, GcRef, GcRefCell, GcRefMut, Trace};
 use derive_more::{Deref, DerefMut, From};
@@ -43,10 +43,10 @@ impl DerefMut for Module {
 }
 
 impl Module {
-    pub fn parse<R: Read>(
+    pub fn parse<R: ReadChar>(
         src: Source<'_, R>,
         realm: Option<Realm>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self> {
         let realm = realm.unwrap_or_else(|| context.realm().clone().into());
         let module = boa_engine::Module::parse(src, Some(realm.inner_realm()), context)?;
@@ -62,26 +62,26 @@ impl Module {
 }
 
 /// A context handle is a local context with a
-pub struct ContextHandle<'host, 's> {
+pub struct ContextHandle<'s> {
     outer: realm::Realm,
-    context: &'s mut Context<'host>,
+    context: &'s mut Context,
 }
 
-impl<'host, 's> Deref for ContextHandle<'host, 's> {
-    type Target = Context<'host>;
+impl<'s> Deref for ContextHandle<'s> {
+    type Target = Context;
 
     fn deref(&self) -> &Self::Target {
         self.context
     }
 }
 
-impl<'host, 's> DerefMut for ContextHandle<'host, 's> {
+impl<'s> DerefMut for ContextHandle<'s> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.context
     }
 }
 
-impl<'host, 's> Drop for ContextHandle<'host, 's> {
+impl<'s> Drop for ContextHandle<'s> {
     fn drop(&mut self) {
         self.context.enter_realm(self.outer.clone());
     }
@@ -97,36 +97,33 @@ impl Realm {
         self.deref().clone()
     }
 
-    pub fn context_handle<'s, 'host>(
-        &self,
-        context: &'s mut Context<'host>,
-    ) -> ContextHandle<'host, 's> {
+    pub fn context_handle<'s>(&self, context: &'s mut Context) -> ContextHandle<'s> {
         let outer = context.enter_realm(self.inner.clone());
         ContextHandle { outer, context }
     }
 
-    pub fn global_object(&self, context: &mut Context<'_>) -> JsObject {
+    pub fn global_object(&self, context: &mut Context) -> JsObject {
         self.context_handle(context).global_object()
     }
 
     pub fn register_global_class<T: NativeClass>(
         &self,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<()> {
         let context = &mut self.context_handle(context);
         register_global_class::<T>(context)
     }
 
-    pub fn register_api<T: Api>(&self, api: T, context: &mut Context<'_>) {
+    pub fn register_api<T: Api>(&self, api: T, context: &mut Context) {
         let context = &mut self.context_handle(context);
         api.init(context)
     }
 
     /// Parses, compiles and evaluates the script `src`.
-    pub fn eval<R: Read>(
+    pub fn eval<R: ReadChar>(
         &self,
         src: Source<'_, R>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         self.context_handle(context).eval(src)
     }
@@ -141,11 +138,7 @@ impl Realm {
     ///
     /// This doesn't evaluate the module with the _module's_ realm, but the realm given
     /// as `self`.
-    pub fn eval_module(
-        &self,
-        module: &Module,
-        context: &mut Context<'_>,
-    ) -> JsResult<JsPromise> {
+    pub fn eval_module(&self, module: &Module, context: &mut Context) -> JsPromise {
         let context = &mut self.context_handle(context);
 
         module.load_link_evaluate(context)
@@ -175,7 +168,7 @@ type HostDefinedMap = HashMap<TracedTypeId, GcRefCell<Box<dyn NativeObject>>>;
 /// objects.
 ///
 /// This allows storing types which are mapped by their [`TypeId`].
-#[derive(Trace, Finalize, Default)]
+#[derive(Trace, Finalize, JsData, Default)]
 pub struct HostDefined {
     env: HostDefinedMap,
 }
@@ -291,8 +284,8 @@ macro_rules! host_defined {
 impl HostDefined {
     pub const NAME: &'static str = "#JSTZ__HOSTDEFINED";
 
-    pub(crate) fn init(self, context: &mut Context<'_>) {
-        let host_defined = ObjectInitializer::with_native(self, context).build();
+    pub(crate) fn init(self, context: &mut Context) {
+        let host_defined = ObjectInitializer::with_native_data(self, context).build();
 
         context
             .register_global_property(
@@ -307,7 +300,7 @@ impl HostDefined {
 }
 
 impl Realm {
-    pub fn new(context: &mut Context<'_>) -> JsResult<Self> {
+    pub fn new(context: &mut Context) -> JsResult<Self> {
         // 1. Create `boa_engine` realm with defined host hooks
         let realm = Self {
             inner: context.create_realm()?,

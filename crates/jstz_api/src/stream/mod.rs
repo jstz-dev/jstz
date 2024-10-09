@@ -14,7 +14,7 @@ type Chunk = idl::Any;
 pub struct StreamApi;
 
 impl jstz_core::Api for StreamApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         ReadableStreamApi.init(context);
         QueuingStrategyApi.init(context);
     }

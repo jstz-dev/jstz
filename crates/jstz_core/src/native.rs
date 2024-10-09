@@ -1,15 +1,15 @@
 use std::marker::PhantomData;
 
 use boa_engine::{
-    builtins::object::Object as GlobalObject,
+    builtins::object::OrdinaryObject,
     context::intrinsics::StandardConstructor,
     js_string,
     object::{
-        builtins::JsFunction, ConstructorBuilder, FunctionBinding, FunctionObjectBuilder,
-        JsPrototype, Object, ObjectData, PROTOTYPE,
+        builtins::JsFunction, ConstructorBuilder, ErasedObject, FunctionBinding,
+        FunctionObjectBuilder, JsPrototype, PROTOTYPE,
     },
     property::{Attribute, PropertyDescriptor, PropertyKey},
-    Context, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue,
+    Context, JsData, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue,
 };
 use boa_gc::{Finalize, GcRef, GcRefMut, Trace};
 
@@ -18,7 +18,7 @@ pub use boa_engine::{object::NativeObject, NativeFunction};
 use crate::value::IntoJs;
 
 /// This struct permits Rust types to be passed around as JavaScript objects.
-#[derive(Trace, Finalize, Debug)]
+#[derive(Trace, Finalize, JsData, Debug)]
 pub struct JsNativeObject<T: NativeObject> {
     inner: JsValue,
     _phantom: PhantomData<T>,
@@ -41,7 +41,7 @@ impl<T: NativeObject> JsNativeObject<T> {
     pub fn new_with_proto<C, P>(
         prototype: P,
         native_object: T,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self>
     where
         C: NativeClass<Instance = T>,
@@ -71,10 +71,7 @@ impl<T: NativeObject> JsNativeObject<T> {
         let prototype =
             <P as Into<Option<JsObject>>>::into(prototype).unwrap_or(class_prototype);
 
-        let obj = JsObject::from_proto_and_data(
-            prototype,
-            ObjectData::native_object(native_object),
-        );
+        let obj = JsObject::from_proto_and_data(prototype, native_object);
 
         Ok(Self {
             inner: obj.into(),
@@ -82,7 +79,7 @@ impl<T: NativeObject> JsNativeObject<T> {
         })
     }
 
-    pub fn new<C>(native_object: T, context: &mut Context<'_>) -> JsResult<Self>
+    pub fn new<C>(native_object: T, context: &mut Context) -> JsResult<Self>
     where
         C: NativeClass<Instance = T>,
     {
@@ -111,7 +108,7 @@ impl<T: NativeObject> JsNativeObject<T> {
             .expect("Type mismatch in `JsNativeObject`")
     }
 
-    pub fn deref_mut(&self) -> GcRefMut<'_, Object, T> {
+    pub fn deref_mut(&self) -> GcRefMut<'_, ErasedObject, T> {
         self.object()
             .downcast_mut::<T>()
             .expect("Type mismatch in `JsNativeObject`")
@@ -126,7 +123,7 @@ impl<T: NativeObject> From<JsNativeObject<T>> for JsValue {
 
 impl<T: NativeObject> IntoJs for JsNativeObject<T> {
     #[inline]
-    fn into_js(self, _context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, _context: &mut Context) -> JsValue {
         self.into()
     }
 }
@@ -163,7 +160,7 @@ impl Accessor {
         }
     }
 
-    pub fn get(mut self, function: NativeFunction, context: &mut Context<'_>) -> Self {
+    pub fn get(mut self, function: NativeFunction, context: &mut Context) -> Self {
         let get = FunctionObjectBuilder::new(context.realm(), function)
             .name(self.name)
             .length(0)
@@ -172,7 +169,7 @@ impl Accessor {
         self
     }
 
-    pub fn set(mut self, function: NativeFunction, context: &mut Context<'_>) -> Self {
+    pub fn set(mut self, function: NativeFunction, context: &mut Context) -> Self {
         let set = FunctionObjectBuilder::new(context.realm(), function)
             .name(format!("set_{}", self.name))
             .length(1)
@@ -213,12 +210,12 @@ macro_rules! accessor {
 
 /// Class builder which allows adding methods and static methods to the class.
 #[derive(Debug)]
-pub struct ClassBuilder<'ctx, 'host> {
-    builder: ConstructorBuilder<'ctx, 'host>,
+pub struct ClassBuilder<'ctx> {
+    builder: ConstructorBuilder<'ctx>,
 }
 
-impl<'ctx, 'host> ClassBuilder<'ctx, 'host> {
-    fn new<T>(context: &'ctx mut Context<'host>) -> Self
+impl<'ctx> ClassBuilder<'ctx> {
+    fn new<T>(context: &'ctx mut Context) -> Self
     where
         T: NativeClass,
     {
@@ -389,7 +386,7 @@ impl<'ctx, 'host> ClassBuilder<'ctx, 'host> {
 
     /// Return the current context.
     #[inline]
-    pub fn context(&mut self) -> &mut Context<'host> {
+    pub fn context(&mut self) -> &mut Context {
         self.builder.context()
     }
 }
@@ -397,7 +394,7 @@ impl<'ctx, 'host> ClassBuilder<'ctx, 'host> {
 fn raw_constructor<T: NativeClass>(
     target: &JsValue,
     args: &[JsValue],
-    context: &mut Context<'_>,
+    context: &mut Context,
 ) -> JsResult<JsValue> {
     if target.is_undefined() {
         return Err(JsNativeError::typ()
@@ -428,10 +425,8 @@ fn raw_constructor<T: NativeClass>(
 }
 
 pub trait JsNativeObjectToString: NativeObject + Sized {
-    fn to_string(
-        this: &JsNativeObject<Self>,
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue>;
+    fn to_string(this: &JsNativeObject<Self>, context: &mut Context)
+        -> JsResult<JsValue>;
 }
 
 pub trait NativeClass {
@@ -451,7 +446,7 @@ pub trait NativeClass {
     fn data_constructor(
         target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self::Instance>;
 
     /// Initializes the properties of the constructed object for an instance of this class.
@@ -462,18 +457,18 @@ pub trait NativeClass {
     fn object_constructor(
         _this: &JsNativeObject<Self::Instance>,
         _args: &[JsValue],
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<()> {
         Ok(())
     }
 
     /// Initializes the internals and the methods of the class.
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()>;
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()>;
 
     fn to_string(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue>
     where
         Self::Instance: JsNativeObjectToString,
@@ -481,12 +476,12 @@ pub trait NativeClass {
         if let Ok(native_obj) = JsNativeObject::<Self::Instance>::try_from(this.clone()) {
             Self::Instance::to_string(&native_obj, context)
         } else {
-            GlobalObject::to_string(this, &[], context)
+            OrdinaryObject::to_string(this, &[], context)
         }
     }
 }
 
-pub fn register_global_class<T: NativeClass>(context: &mut Context<'_>) -> JsResult<()> {
+pub fn register_global_class<T: NativeClass>(context: &mut Context) -> JsResult<()> {
     let mut class_builder = ClassBuilder::new::<T>(context);
     T::init(&mut class_builder)?;
 

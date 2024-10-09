@@ -28,7 +28,7 @@ impl Display for LogRecord {
 }
 
 impl LogRecord {
-    pub fn new(log_data: LogData, context: &mut Context<'_>) -> Self {
+    pub fn new(log_data: LogData, context: &mut Context) -> Self {
         host_defined!(context, host_defined);
         let trace_data = host_defined
             .get::<TraceData>()
@@ -57,7 +57,7 @@ impl LogRecord {
 pub(crate) struct JsonLogger;
 
 impl JsLog for JsonLogger {
-    fn log(&self, log_data: LogData, context: &mut Context<'_>) {
+    fn log(&self, log_data: LogData, context: &mut Context) {
         let log_record = LogRecord::new(log_data, context).to_string();
         runtime::with_js_hrt(|hrt| {
             hrt.write_debug(&(LOG_PREFIX.to_string() + &log_record + "\n"));

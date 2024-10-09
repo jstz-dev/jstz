@@ -13,11 +13,11 @@ use boa_engine::{
     js_string,
     object::{
         builtins::{JsDate, JsPromise},
-        Object,
+        ErasedObject,
     },
     property::Attribute,
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
 use jstz_core::{
@@ -30,7 +30,7 @@ use jstz_core::{
 
 use super::blob::{Blob, BlobClass, BlobParts, BlobPropertyBag};
 
-#[derive(Trace, Finalize, Clone)]
+#[derive(Trace, Finalize, JsData, Clone)]
 pub struct File {
     blob: Blob,
     name: String,
@@ -43,7 +43,7 @@ impl File {
         file_bits: BlobParts,
         file_name: String,
         options: &Option<FilePropertyBag>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self> {
         // 1. Let bytes be the result of processing blob parts given fileBits and options.
         //    NOTE: we use Blob constructor instead
@@ -61,9 +61,7 @@ impl File {
         let d = options
             .as_ref()
             .and_then(|options| options.last_modified)
-            .unwrap_or_else(|| {
-                context.host_hooks().utc_now().and_utc().timestamp_millis()
-            });
+            .unwrap_or_else(|| context.host_hooks().utc_now());
         // 4. Return a new File object F such that:
         Ok(Self {
             // 2. F refers to the bytes byte sequence.
@@ -93,11 +91,11 @@ impl File {
         self.blob.type_()
     }
 
-    pub fn text(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn text(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         self.blob.text(context)
     }
 
-    pub fn array_buffer(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn array_buffer(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         self.blob.array_buffer(context)
     }
 
@@ -112,7 +110,7 @@ impl File {
 }
 
 impl File {
-    pub fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    pub fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -131,7 +129,7 @@ pub struct FilePropertyBag {
 }
 
 impl TryFromJs for FilePropertyBag {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let blob_property_bag = BlobPropertyBag::try_from_js(value, context)?;
 
         let obj = value.as_object().ok_or_else(|| {
@@ -163,7 +161,7 @@ impl TryFromJs for FilePropertyBag {
 pub struct FileClass;
 
 impl FileClass {
-    fn name(context: &mut Context<'_>) -> Accessor {
+    fn name(context: &mut Context) -> Accessor {
         accessor!(
             context,
             File,
@@ -172,7 +170,7 @@ impl FileClass {
         )
     }
 
-    fn last_modified(context: &mut Context<'_>) -> Accessor {
+    fn last_modified(context: &mut Context) -> Accessor {
         accessor!(
             context,
             File,
@@ -181,7 +179,7 @@ impl FileClass {
         )
     }
 
-    fn size(context: &mut Context<'_>) -> Accessor {
+    fn size(context: &mut Context) -> Accessor {
         accessor!(
             context,
             File,
@@ -190,7 +188,7 @@ impl FileClass {
         )
     }
 
-    fn type_(context: &mut Context<'_>) -> Accessor {
+    fn type_(context: &mut Context) -> Accessor {
         accessor!(
             context,
             File,
@@ -202,7 +200,7 @@ impl FileClass {
     fn text(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut file = File::try_from_js(this)?;
 
@@ -212,7 +210,7 @@ impl FileClass {
     fn array_buffer(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut file = File::try_from_js(this)?;
 
@@ -222,7 +220,7 @@ impl FileClass {
     fn slice(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let file = File::try_from_js(this)?;
         let start: Option<i64> = args.get_or_undefined(0).try_js_into(context)?;
@@ -244,7 +242,7 @@ impl NativeClass for FileClass {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self::Instance> {
         let blob_parts: BlobParts = args.get_or_undefined(0).try_js_into(context)?;
         let file_name: String = args.get_or_undefined(1).try_js_into(context)?;
@@ -254,7 +252,7 @@ impl NativeClass for FileClass {
         File::new(blob_parts, file_name, &options, context)
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let name = Self::name(class.context());
         let last_modified = Self::last_modified(class.context());
         let size = Self::size(class.context());
@@ -288,7 +286,7 @@ impl NativeClass for FileClass {
 pub struct FileApi;
 
 impl jstz_core::Api for FileApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<FileClass>(context)
             .expect("The `File` class shouldn't exist yet")
     }

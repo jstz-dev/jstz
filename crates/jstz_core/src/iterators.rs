@@ -77,9 +77,9 @@ use crate::{
 };
 use boa_engine::{
     js_string,
-    object::{builtins::JsArray, NativeObject, Object},
+    object::{builtins::JsArray, ErasedObject, NativeObject},
     value::TryFromJs,
-    Context, JsError, JsNativeError, JsObject, JsResult, JsSymbol, JsValue,
+    Context, JsData, JsError, JsNativeError, JsObject, JsResult, JsSymbol, JsValue,
     NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
@@ -91,7 +91,7 @@ enum PairIteratorKind {
 }
 
 impl TryFromJs for PairIteratorKind {
-    fn try_from_js(value: &JsValue, _context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, _context: &mut Context) -> JsResult<Self> {
         let kind_str = value
             .as_string()
             .ok_or::<JsError>(
@@ -124,7 +124,7 @@ pub struct PairValue {
 }
 
 impl IntoJs for PairValue {
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, context: &mut Context) -> JsValue {
         JsArray::from_iter([self.key, self.value], context).into()
     }
 }
@@ -142,11 +142,12 @@ pub trait PairIterable: NativeObject {
     fn pair_iterable_get(
         &self,
         index: usize,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<PairValue>;
 }
 
 /// Rust type used for pair iterator objects. Not relevant to users.
+#[derive(JsData)]
 pub struct PairIterator<T: PairIterable> {
     target: JsNativeObject<T>,
     kind: PairIteratorKind,
@@ -192,13 +193,13 @@ impl<T: PairIterable> Finalize for PairIterator<T> {
 }
 
 unsafe impl<T: PairIterable> Trace for PairIterator<T> {
-    boa_gc::custom_trace!(this, {
+    boa_gc::custom_trace!(this, mark, {
         mark(&this.target);
     });
 }
 
 impl<T: PairIterable> PairIterator<T> {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -218,7 +219,7 @@ struct IteratorResult {
 }
 
 impl IntoJs for IteratorResult {
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, context: &mut Context) -> JsValue {
         let obj = JsObject::with_object_proto(context.intrinsics());
         obj.create_data_property_or_throw(js_string!("value"), self.value, context)
             .expect("unexpected error while converting IteratorResult to JsValue");
@@ -240,7 +241,7 @@ impl<T: PairIterable> PairIteratorMethods<T> {
     fn next(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut pair_iterator = PairIterator::<T>::try_from_js(this)?;
         if pair_iterator.index >= pair_iterator.target.deref().pair_iterable_len()? {
@@ -301,9 +302,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
     ///     }
     /// }
     /// ```
-    pub fn define_pair_iterable_methods(
-        class: &mut ClassBuilder<'_, '_>,
-    ) -> JsResult<()> {
+    pub fn define_pair_iterable_methods(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         // TODO workaround until JsSymbol::iterator() is pub
         let symbol_iterator: JsSymbol = class
             .context()
@@ -323,7 +322,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
             NativeFunction::from_fn_ptr(
                 |this: &JsValue,
                  _args: &[JsValue],
-                 context: &mut Context<'_>|
+                 context: &mut Context|
                  -> JsResult<JsValue> {
                     let target = JsNativeObject::try_from(this.clone())?;
                     let pair_iterator = PairIterator::entries(target);
@@ -337,7 +336,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
             NativeFunction::from_fn_ptr(
                 |this: &JsValue,
                  _args: &[JsValue],
-                 context: &mut Context<'_>|
+                 context: &mut Context|
                  -> JsResult<JsValue> {
                     let target = JsNativeObject::try_from(this.clone())?;
                     let pair_iterator = PairIterator::entries(target);
@@ -351,7 +350,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
             NativeFunction::from_fn_ptr(
                 |this: &JsValue,
                  _args: &[JsValue],
-                 context: &mut Context<'_>|
+                 context: &mut Context|
                  -> JsResult<JsValue> {
                     let target = JsNativeObject::try_from(this.clone())?;
                     let pair_iterator = PairIterator::keys(target);
@@ -365,7 +364,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
             NativeFunction::from_fn_ptr(
                 |this: &JsValue,
                  _args: &[JsValue],
-                 context: &mut Context<'_>|
+                 context: &mut Context|
                  -> JsResult<JsValue> {
                     let target = JsNativeObject::try_from(this.clone())?;
                     let pair_iterator = PairIterator::values(target);
@@ -379,7 +378,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
             NativeFunction::from_fn_ptr(
                 |this: &JsValue,
                  args: &[JsValue],
-                 context: &mut Context<'_>|
+                 context: &mut Context|
                  -> JsResult<JsValue> {
                     let target: JsNativeObject<T::Iterable> =
                         JsNativeObject::try_from(this.clone())?;
@@ -427,7 +426,7 @@ impl<T: PairIteratorClass> NativeClass for T {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self::Instance> {
         let init_arg = match args.first() {
             None => Err(JsError::from_native(
@@ -455,7 +454,7 @@ impl<T: PairIteratorClass> NativeClass for T {
         })
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let iterator_prototype = class
             .context()
             .intrinsics()

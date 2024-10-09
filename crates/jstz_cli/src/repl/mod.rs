@@ -169,7 +169,7 @@ pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     }
 }
 
-fn print_rt_result(result: JsResult<JsValue>, context: &mut Context<'_>) {
+fn print_rt_result(result: JsResult<JsValue>, context: &mut Context) {
     match result {
         Ok(res) => {
             if !res.is_undefined() {

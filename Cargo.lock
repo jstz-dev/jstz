@@ -408,6 +408,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "76a2e8124351fda1ef8aaaa3bbd7ebbcb486bbcd4225aca0aa0d84bb2db8fecb"
 
 [[package]]
+name = "arrayvec"
+version = "0.7.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
+
+[[package]]
 name = "async-dropper-simple"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -575,23 +581,25 @@ dependencies = [
 
 [[package]]
 name = "boa_ast"
-version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?rev=78c8540e#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
+version = "0.19.0"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
 dependencies = [
  "arbitrary",
  "bitflags 2.6.0",
  "boa_interner",
  "boa_macros",
+ "boa_string",
  "indexmap 2.6.0",
  "num-bigint 0.4.6",
- "rustc-hash",
+ "rustc-hash 2.0.0",
 ]
 
 [[package]]
 name = "boa_engine"
-version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?rev=78c8540e#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
+version = "0.19.0"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
 dependencies = [
+ "arrayvec",
  "bitflags 2.6.0",
  "boa_ast",
  "boa_gc",
@@ -599,22 +607,26 @@ dependencies = [
  "boa_macros",
  "boa_parser",
  "boa_profiler",
- "chrono",
+ "boa_string",
+ "bytemuck",
+ "cfg-if",
  "dashmap",
  "fast-float",
+ "hashbrown 0.14.5",
  "icu_normalizer",
  "indexmap 2.6.0",
- "itertools 0.11.0",
+ "intrusive-collections",
+ "itertools 0.13.0",
  "num-bigint 0.4.6",
  "num-integer",
  "num-traits",
  "num_enum",
  "once_cell",
- "paste",
  "pollster",
+ "portable-atomic",
  "rand 0.8.5",
  "regress",
- "rustc-hash",
+ "rustc-hash 2.0.0",
  "ryu-js",
  "serde",
  "serde_json",
@@ -623,23 +635,25 @@ dependencies = [
  "tap",
  "thin-vec",
  "thiserror",
+ "time",
 ]
 
 [[package]]
 name = "boa_gc"
-version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?rev=78c8540e#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
+version = "0.19.0"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
 dependencies = [
  "boa_macros",
  "boa_profiler",
+ "boa_string",
  "hashbrown 0.14.5",
  "thin-vec",
 ]
 
 [[package]]
 name = "boa_interner"
-version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?rev=78c8540e#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
+version = "0.19.0"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
 dependencies = [
  "arbitrary",
  "boa_gc",
@@ -648,14 +662,14 @@ dependencies = [
  "indexmap 2.6.0",
  "once_cell",
  "phf",
- "rustc-hash",
+ "rustc-hash 2.0.0",
  "static_assertions",
 ]
 
 [[package]]
 name = "boa_macros"
-version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?rev=78c8540e#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
+version = "0.19.0"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -665,8 +679,8 @@ dependencies = [
 
 [[package]]
 name = "boa_parser"
-version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?rev=78c8540e#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
+version = "0.19.0"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
 dependencies = [
  "bitflags 2.6.0",
  "boa_ast",
@@ -678,13 +692,25 @@ dependencies = [
  "num-bigint 0.4.6",
  "num-traits",
  "regress",
- "rustc-hash",
+ "rustc-hash 2.0.0",
 ]
 
 [[package]]
 name = "boa_profiler"
-version = "0.17.0"
-source = "git+https://github.com/trilitech/boa.git?rev=78c8540e#78c8540eb0167abd62975f47d40aa55a7bbcf5d0"
+version = "0.19.0"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+
+[[package]]
+name = "boa_string"
+version = "0.19.0"
+source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+dependencies = [
+ "fast-float",
+ "paste",
+ "rustc-hash 2.0.0",
+ "sptr",
+ "static_assertions",
+]
 
 [[package]]
 name = "bollard"
@@ -771,6 +797,20 @@ name = "bytemuck"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94bbb0ad554ad961ddc5da507a12a29b14e4ae5bda06b19f575a3e6079d2e2ae"
+dependencies = [
+ "bytemuck_derive",
+]
+
+[[package]]
+name = "bytemuck_derive"
+version = "1.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcfcc3cd946cb52f0bbfdbbcfa2f4e24f75ebb6c0e1002f7c25904fada18b9ec"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.79",
+]
 
 [[package]]
 name = "byteorder"
@@ -1816,15 +1856,6 @@ checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
 
 [[package]]
 name = "hashbrown"
-version = "0.13.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
-dependencies = [
- "ahash",
-]
-
-[[package]]
-name = "hashbrown"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
@@ -2148,9 +2179,9 @@ dependencies = [
 
 [[package]]
 name = "icu_collections"
-version = "1.3.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3907b2246e8dd5a29ead8a965e7c0c8a90e9b928e614a4279257d45c5e553e91"
+checksum = "db2fa452206ebee18c4b5c2274dbf1de17008e874b4dc4f0aea9d01ca79e4526"
 dependencies = [
  "displaydoc",
  "yoke",
@@ -2160,9 +2191,9 @@ dependencies = [
 
 [[package]]
 name = "icu_locid"
-version = "1.3.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f284eb342dc49d3e9d9f3b188489d76b5d22dfb1d1a5e0d1941811253bac625c"
+checksum = "13acbb8371917fc971be86fc8057c41a64b521c184808a698c02acc242dbf637"
 dependencies = [
  "displaydoc",
  "litemap",
@@ -2173,9 +2204,9 @@ dependencies = [
 
 [[package]]
 name = "icu_locid_transform"
-version = "1.3.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6551daf80882d8e68eee186cc19e132d8bde1b1f059a79b93384a5ca0e8fc5e7"
+checksum = "01d11ac35de8e40fdeda00d9e1e9d92525f3f9d887cdd7aa81d727596788b54e"
 dependencies = [
  "displaydoc",
  "icu_locid",
@@ -2187,15 +2218,15 @@ dependencies = [
 
 [[package]]
 name = "icu_locid_transform_data"
-version = "1.3.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2a741eba5431f75eb2f1f9022d3cffabcadda6771e54fb4e77c8ba8653e4da44"
+checksum = "fdc8ff3388f852bede6b579ad4e978ab004f139284d7b28715f773507b946f6e"
 
 [[package]]
 name = "icu_normalizer"
-version = "1.3.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "080fc33a720d50a7342b0c58df010fbcfb842d6f78ef81555f8b1ac6bba57d3c"
+checksum = "19ce3e0da2ec68599d193c93d088142efd7f9c5d6fc9b803774855747dc6a84f"
 dependencies = [
  "displaydoc",
  "icu_collections",
@@ -2211,15 +2242,15 @@ dependencies = [
 
 [[package]]
 name = "icu_normalizer_data"
-version = "1.3.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f8d22f74066c2e6442db2a9aa14950278e86719e811e304e48bae03094b369d"
+checksum = "f8cafbf7aa791e9b22bec55a167906f9e1215fd475cd22adfcf660e03e989516"
 
 [[package]]
 name = "icu_properties"
-version = "1.3.2"
+version = "1.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3477ae70f8ca8dc08ff7574b5398ed0a2f2e4e6b66bdff2558a92ed67e262be1"
+checksum = "93d6020766cfc6302c15dbbc9c8778c37e62c14427cb7f6e601d849e092aeef5"
 dependencies = [
  "displaydoc",
  "icu_collections",
@@ -2232,15 +2263,15 @@ dependencies = [
 
 [[package]]
 name = "icu_properties_data"
-version = "1.3.4"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "98507b488098f45eb95ef495612a2012e4d8ad6095dda86cb2f1728aa2204a60"
+checksum = "67a8effbc3dd3e4ba1afa8ad918d5684b8868b3b26500753effea8d2eed19569"
 
 [[package]]
 name = "icu_provider"
-version = "1.3.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "68acdef80034b5e35d8524e9817479d389a4f9774f3f0cbe1bf3884d80fd5934"
+checksum = "6ed421c8a8ef78d3e2dbc98a973be2f3770cb42b606e3ab18d6237c4dfde68d9"
 dependencies = [
  "displaydoc",
  "icu_locid",
@@ -2255,9 +2286,9 @@ dependencies = [
 
 [[package]]
 name = "icu_provider_macros"
-version = "1.3.2"
+version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2060258edfcfe32ca7058849bf0f146cb5c59aadbedf480333c0d0002f97bc99"
+checksum = "1ec89e9337638ecdc08744df490b221a7399bf8d164eb52a665454e60e075ad6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2349,6 +2380,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "intrusive-collections"
+version = "0.9.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "189d0897e4cbe8c75efedf3502c18c887b05046e59d28404d4d8e46cbc4d1e86"
+dependencies = [
+ "memoffset",
+]
+
+[[package]]
 name = "ipnet"
 version = "2.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2373,18 +2413,18 @@ checksum = "7943c866cc5cd64cbc25b2e01621d07fa8eb2a1a23160ee81ce38704e97b8ecf"
 
 [[package]]
 name = "itertools"
-version = "0.11.0"
+version = "0.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b1c173a5686ce8bfa551b3563d0c2170bf24ca44da99c7ca4bfdab5418c3fe57"
+checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
 dependencies = [
  "either",
 ]
 
 [[package]]
 name = "itertools"
-version = "0.12.1"
+version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ba291022dbbd398a455acf126c1e341954079855bc60dfdda641363bd6922569"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -2866,6 +2906,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
+name = "memoffset"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "488016bfae457b036d996092f6cb448677611ce4449e970ceaf42695203f218a"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
 name = "mime"
 version = "0.3.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3050,6 +3099,15 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.79",
+]
+
+[[package]]
+name = "num_threads"
+version = "0.1.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5c7398b9c8b70908f6371f47ed36737907c87c52af34c268fed0bf0ceb92ead9"
+dependencies = [
+ "libc",
 ]
 
 [[package]]
@@ -3708,11 +3766,11 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 
 [[package]]
 name = "regress"
-version = "0.7.1"
+version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4ed9969cad8051328011596bf549629f1b800cf1731e7964b1eef8dfc480d2c2"
+checksum = "1541daf4e4ed43a0922b7969bdc2170178bcacc5dabf7e39bc508a9fa3953a7a"
 dependencies = [
- "hashbrown 0.13.2",
+ "hashbrown 0.14.5",
  "memchr",
 ]
 
@@ -3849,6 +3907,12 @@ name = "rustc-hash"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08d43f7aa6b08d49f382cde6a7982047c3426db949b1424bc4b7ec9ae12c6ce2"
+
+[[package]]
+name = "rustc-hash"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "583034fd73374156e66797ed8e5b0d5690409c9226b22d87cb7f19821c05d152"
 
 [[package]]
 name = "rustc_version"
@@ -4861,7 +4925,10 @@ checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
 dependencies = [
  "deranged",
  "itoa",
+ "js-sys",
+ "libc",
  "num-conv",
+ "num_threads",
  "powerfmt",
  "serde",
  "time-core",
@@ -4895,7 +4962,7 @@ dependencies = [
  "once_cell",
  "pbkdf2",
  "rand 0.8.5",
- "rustc-hash",
+ "rustc-hash 1.1.0",
  "sha2 0.10.8",
  "thiserror",
  "unicode-normalization",

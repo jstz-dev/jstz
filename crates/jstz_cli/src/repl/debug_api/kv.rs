@@ -76,7 +76,7 @@ impl KvApi {
         Ok(result.into())
     }
 
-    pub fn namespace(context: &mut boa_engine::Context<'_>) -> JsObject {
+    pub fn namespace(context: &mut boa_engine::Context) -> JsObject {
         let storage = ObjectInitializer::new(context)
             .function(NativeFunction::from_fn_ptr(Self::get), js_string!("get"), 2)
             .function(NativeFunction::from_fn_ptr(Self::set), js_string!("set"), 3)
