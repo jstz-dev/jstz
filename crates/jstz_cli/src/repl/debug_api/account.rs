@@ -86,7 +86,7 @@ impl AccountApi {
         Ok(JsValue::undefined())
     }
 
-    pub fn namespace(context: &mut boa_engine::Context<'_>) -> JsObject {
+    pub fn namespace(context: &mut boa_engine::Context) -> JsObject {
         let storage = ObjectInitializer::new(context)
             .function(
                 NativeFunction::from_fn_ptr(Self::balance),

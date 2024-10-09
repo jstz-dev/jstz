@@ -36,7 +36,7 @@ impl JsCallableWithoutThis<(Chunk,), idl::UnrestrictedDouble>
     fn call_without_this(
         &self,
         _inputs: (Chunk,),
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<idl::UnrestrictedDouble> {
         match self {
             CountQueuingStrategySizeAlgorithm::ReturnOne => {
@@ -66,7 +66,7 @@ impl JsCallableWithoutThis<(Chunk,), idl::UnrestrictedDouble>
     fn call_without_this(
         &self,
         _inputs: (Chunk,),
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<idl::UnrestrictedDouble> {
         match self {
             ByteLengthQueuingStrategySizeAlgorithm::ReturnByteLengthOfChunk => {
@@ -105,7 +105,7 @@ impl JsCallableWithoutThis<(Chunk,), idl::UnrestrictedDouble>
     fn call_without_this(
         &self,
         inputs: (Chunk,),
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<idl::UnrestrictedDouble> {
         match self {
             QueuingStrategySizeAlgorithm::Count(size_algorithm) => {

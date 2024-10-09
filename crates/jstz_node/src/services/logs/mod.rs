@@ -165,6 +165,7 @@ impl Service for LogsService {
 pub enum Line {
     #[cfg(feature = "persistent-logging")]
     // Indicates the start and end of a smart function call (request).
+    #[cfg(feature = "persistent-logging")]
     Request(RequestEvent),
     // Indicates the js log message from the smart function (e.g. log).
     Js(LogRecord),

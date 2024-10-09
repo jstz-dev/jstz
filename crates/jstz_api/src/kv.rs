@@ -1,8 +1,8 @@
 use std::ops::Deref;
 
 use boa_engine::{
-    js_string, object::ObjectInitializer, property::Attribute, Context, JsArgs, JsError,
-    JsNativeError, JsResult, JsString, JsValue, NativeFunction,
+    js_string, object::ObjectInitializer, property::Attribute, Context, JsArgs, JsData,
+    JsError, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, Trace};
 use jstz_core::{host::HostRuntime, kv::Transaction, runtime, Result};
@@ -10,7 +10,7 @@ use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 
-#[derive(Debug, Trace, Finalize)]
+#[derive(Debug, Trace, Finalize, JsData)]
 pub struct Kv {
     prefix: String,
 }
@@ -153,18 +153,20 @@ impl KvApi {
 }
 
 impl jstz_core::Api for KvApi {
-    fn init(self, context: &mut boa_engine::Context<'_>) {
-        let storage =
-            ObjectInitializer::with_native(Kv::new(self.address.to_string()), context)
-                .function(NativeFunction::from_fn_ptr(Self::set), js_string!("set"), 2)
-                .function(NativeFunction::from_fn_ptr(Self::get), js_string!("get"), 1)
-                .function(
-                    NativeFunction::from_fn_ptr(Self::delete),
-                    js_string!("delete"),
-                    1,
-                )
-                .function(NativeFunction::from_fn_ptr(Self::has), js_string!("has"), 1)
-                .build();
+    fn init(self, context: &mut Context) {
+        let storage = ObjectInitializer::with_native_data(
+            Kv::new(self.address.to_string()),
+            context,
+        )
+        .function(NativeFunction::from_fn_ptr(Self::set), js_string!("set"), 2)
+        .function(NativeFunction::from_fn_ptr(Self::get), js_string!("get"), 1)
+        .function(
+            NativeFunction::from_fn_ptr(Self::delete),
+            js_string!("delete"),
+            1,
+        )
+        .function(NativeFunction::from_fn_ptr(Self::has), js_string!("has"), 1)
+        .build();
 
         context
             .register_global_property(js_string!(Self::NAME), storage, Attribute::all())

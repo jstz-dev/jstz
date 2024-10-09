@@ -10,10 +10,10 @@ use std::str::FromStr;
 
 use boa_engine::{
     js_string,
-    object::{builtins::JsPromise, Object},
+    object::{builtins::JsPromise, ErasedObject},
     property::Attribute,
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{custom_trace, Finalize, GcRefMut, Trace};
 use http::{header, Response as InnerResponse, StatusCode};
@@ -31,6 +31,7 @@ use super::{
     header::{Headers, HeadersClass},
 };
 
+#[derive(JsData)]
 pub struct Response {
     response: InnerResponse<Body>,
     headers: JsNativeObject<Headers>,
@@ -45,7 +46,7 @@ impl Finalize for Response {
 }
 
 unsafe impl Trace for Response {
-    custom_trace!(this, {
+    custom_trace!(this, mark, {
         mark(&this.headers);
         mark(this.response.body());
     });
@@ -103,7 +104,7 @@ impl Response {
     pub fn new(
         body_with_type: BodyWithType,
         options: ResponseOptions,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self> {
         // 1. If `init["status"]` is not in the range 200 to 500 inclusive,
         // 2. (FIXME:) SKIPPED
@@ -233,17 +234,17 @@ impl Response {
     }
 
     /// Returns a promise that resolves with an ArrayBuffer representation of the response body.
-    pub fn array_buffer(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn array_buffer(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         self.response.body_mut().array_buffer(context)
     }
 
     /// Returns a promise that resolves with the result of parsing the response body text as JSON.
-    pub fn json(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn json(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         self.response.body_mut().json(context)
     }
 
     /// Returns a promise that resolves with a text representation of the response body.
-    pub fn text(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn text(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         self.response.body_mut().text(context)
     }
 }
@@ -257,7 +258,7 @@ impl ResponseBuilder {
     ///  - [WHATWG specification][spec]
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-response-error
-    pub fn error(context: &mut Context<'_>) -> JsResult<Response> {
+    pub fn error(context: &mut Context) -> JsResult<Response> {
         // 1. Create a `Response` object given a new "network error".
 
         // Note: A network error is a response whose type is "error",
@@ -290,7 +291,7 @@ impl ResponseBuilder {
     pub fn redirect(
         url: String,
         status: Option<u16>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Response> {
         // 1. Let `parsed_url` be the result of parsing `url`
         let parsed_url = Url::from_str(&url).map_err(|_| {
@@ -338,7 +339,7 @@ impl ResponseBuilder {
     ///  - [WHATWG specification][spec]
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-response-json
-    pub fn json(value: &JsValue, context: &mut Context<'_>) -> JsResult<Response> {
+    pub fn json(value: &JsValue, context: &mut Context) -> JsResult<Response> {
         // 1, 2, 4. See `BodyWithType::json`
         let body = BodyWithType::json(value, context)?;
 
@@ -353,7 +354,7 @@ impl ResponseBuilder {
 pub struct ResponseClass;
 
 impl Response {
-    pub fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    pub fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -369,7 +370,7 @@ impl ResponseClass {
     fn static_error(
         _this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         Ok(
             JsNativeObject::new::<Self>(ResponseBuilder::error(context)?, context)?
@@ -381,7 +382,7 @@ impl ResponseClass {
     fn static_json(
         _this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let value = args.get_or_undefined(0);
 
@@ -395,7 +396,7 @@ impl ResponseClass {
     fn static_redirect(
         _this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let url: String = args.get_or_undefined(0).try_js_into(context)?;
         let status: Option<u16> = args.get_or_undefined(1).try_js_into(context)?;
@@ -408,7 +409,7 @@ impl ResponseClass {
         .clone())
     }
 
-    fn headers(context: &mut Context<'_>) -> Accessor {
+    fn headers(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Response,
@@ -417,7 +418,7 @@ impl ResponseClass {
         )
     }
 
-    fn ok(context: &mut Context<'_>) -> Accessor {
+    fn ok(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Response,
@@ -426,7 +427,7 @@ impl ResponseClass {
         )
     }
 
-    fn redirected(context: &mut Context<'_>) -> Accessor {
+    fn redirected(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Response,
@@ -435,7 +436,7 @@ impl ResponseClass {
         )
     }
 
-    fn status(context: &mut Context<'_>) -> Accessor {
+    fn status(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Response,
@@ -444,7 +445,7 @@ impl ResponseClass {
         )
     }
 
-    fn status_text(context: &mut Context<'_>) -> Accessor {
+    fn status_text(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Response,
@@ -453,7 +454,7 @@ impl ResponseClass {
         )
     }
 
-    fn url(context: &mut Context<'_>) -> Accessor {
+    fn url(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Response,
@@ -467,7 +468,7 @@ impl ResponseClass {
         )
     }
 
-    fn body_used(context: &mut Context<'_>) -> Accessor {
+    fn body_used(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Response,
@@ -479,7 +480,7 @@ impl ResponseClass {
     fn array_buffer(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut request = Response::try_from_js(this)?;
 
@@ -489,7 +490,7 @@ impl ResponseClass {
     fn text(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut request = Response::try_from_js(this)?;
 
@@ -499,7 +500,7 @@ impl ResponseClass {
     fn json(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut request = Response::try_from_js(this)?;
 
@@ -508,7 +509,7 @@ impl ResponseClass {
 }
 
 impl TryFromJs for ResponseOptions {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let obj = value.as_object().ok_or_else(|| {
             JsError::from_native(JsNativeError::typ().with_message("Expected `JsObject`"))
         })?;
@@ -541,7 +542,7 @@ impl NativeClass for ResponseClass {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self::Instance> {
         let body: BodyWithType = match args.first() {
             None | Some(JsValue::Undefined | JsValue::Null) => BodyWithType::default(),
@@ -556,7 +557,7 @@ impl NativeClass for ResponseClass {
         Response::new(body, options, context)
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let url = Self::url(class.context());
         let redirected = Self::redirected(class.context());
         let status = Self::status(class.context());
@@ -611,7 +612,7 @@ impl NativeClass for ResponseClass {
 pub struct ResponseApi;
 
 impl jstz_core::Api for ResponseApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<ResponseClass>(context)
             .expect("The `Response` class shouldn't exist yet")
     }

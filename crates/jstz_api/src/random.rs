@@ -1,17 +1,17 @@
 use boa_engine::{
     js_string,
-    object::{FunctionObjectBuilder, Object, ObjectInitializer},
-    Context, JsNativeError, JsResult, JsValue, NativeFunction,
+    object::{ErasedObject, FunctionObjectBuilder, ObjectInitializer},
+    Context, JsData, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
 
-#[derive(Trace, Finalize)]
+#[derive(Trace, Finalize, JsData)]
 struct RandomGen {
     seed: u64,
 }
 
 impl RandomGen {
-    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -45,7 +45,7 @@ impl RandomApi {
 impl jstz_core::Api for RandomApi {
     fn init(self, context: &mut Context) {
         let generator =
-            ObjectInitializer::with_native(RandomGen { seed: self.seed }, context)
+            ObjectInitializer::with_native_data(RandomGen { seed: self.seed }, context)
                 .build()
                 .into();
         let random_method = FunctionObjectBuilder::new(

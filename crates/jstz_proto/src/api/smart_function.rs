@@ -2,9 +2,9 @@ use std::ops::Deref;
 
 use boa_engine::{
     js_string,
-    object::{builtins::JsPromise, Object, ObjectInitializer},
+    object::{builtins::JsPromise, ErasedObject, ObjectInitializer},
     property::Attribute,
-    Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 
 use jstz_api::http::request::Request;
@@ -25,6 +25,7 @@ use crate::{
 
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
+#[derive(JsData)]
 pub struct TraceData {
     pub address: Address,
     pub operation_hash: OperationHash,
@@ -36,6 +37,7 @@ unsafe impl Trace for TraceData {
     empty_trace!();
 }
 
+#[derive(JsData)]
 struct SmartFunction {
     address: Address,
 }
@@ -46,7 +48,7 @@ unsafe impl Trace for SmartFunction {
 }
 
 impl SmartFunction {
-    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -96,7 +98,7 @@ impl SmartFunction {
         self_address: &Address,
         request: &JsNativeObject<Request>,
         operation_hash: OperationHash,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         // 1. Get address from request
         let mut request_deref = request.deref_mut();
@@ -131,7 +133,7 @@ impl SmartFunctionApi {
     fn fetch(
         address: &Address,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         host_defined!(context, host_defined);
         let trace_data = host_defined
@@ -152,7 +154,7 @@ impl SmartFunctionApi {
     fn call(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let smart_function = SmartFunction::from_js_value(this)?;
         Self::fetch(&smart_function.address, args, context)
@@ -161,7 +163,7 @@ impl SmartFunctionApi {
     fn create(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let smart_function = SmartFunction::from_js_value(this)?;
 
@@ -176,11 +178,7 @@ impl SmartFunctionApi {
 
         let initial_balance = match args.get(1) {
             None => 0,
-            Some(balance) => balance
-                .to_big_uint64(context)?
-                .iter_u64_digits()
-                .next()
-                .unwrap_or_default(),
+            Some(balance) => balance.to_big_uint64(context)?,
         };
 
         let promise = JsPromise::new(
@@ -202,15 +200,15 @@ impl SmartFunctionApi {
                 Ok(JsValue::undefined())
             },
             context,
-        )?;
+        );
 
         Ok(promise.into())
     }
 }
 
 impl jstz_core::Api for SmartFunctionApi {
-    fn init(self, context: &mut Context<'_>) {
-        let smart_function = ObjectInitializer::with_native(
+    fn init(self, context: &mut Context) {
+        let smart_function = ObjectInitializer::with_native_data(
             SmartFunction {
                 address: self.address.clone(),
             },
