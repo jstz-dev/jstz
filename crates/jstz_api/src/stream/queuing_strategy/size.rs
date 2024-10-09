@@ -1,7 +1,8 @@
-use crate::{idl, stream::queuing_strategy::*, stream::Chunk};
 use boa_engine::{object::NativeObject, Context, JsResult};
 use boa_gc::{Finalize, Trace};
 use jstz_core::{js_fn::JsCallableWithoutThis, native::JsNativeObject};
+
+use crate::{idl, stream::queuing_strategy::*, stream::Chunk};
 
 pub trait ExtractSizeAlgorithm {
     // The type of the extracted size algorithm. It could just be `QueuingStrategySizeAlgorithm`.

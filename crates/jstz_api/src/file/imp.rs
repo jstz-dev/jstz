@@ -61,7 +61,9 @@ impl File {
         let d = options
             .as_ref()
             .and_then(|options| options.last_modified)
-            .unwrap_or_else(|| context.host_hooks().utc_now().timestamp_millis());
+            .unwrap_or_else(|| {
+                context.host_hooks().utc_now().and_utc().timestamp_millis()
+            });
         // 4. Return a new File object F such that:
         Ok(Self {
             // 2. F refers to the bytes byte sequence.
