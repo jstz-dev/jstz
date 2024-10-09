@@ -1,7 +1,6 @@
-use core::fmt;
-use std::fmt::{Display, Formatter};
-
 use crate::{error::Result, Error};
+use std::fmt::{self, Display};
+
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::{PublicKeyEd25519, PublicKeyP256, PublicKeySecp256k1};
 
@@ -43,7 +42,7 @@ impl PublicKey {
 }
 
 impl Display for PublicKey {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_base58())
     }
 }

@@ -1,3 +1,7 @@
+use boa_engine::{value::TryFromJs, Context, JsArgs, JsResult, JsValue};
+use boa_gc::{custom_trace, Finalize, Trace};
+use jstz_core::native::{register_global_class, ClassBuilder, NativeClass};
+
 use crate::stream::{
     queuing_strategy::{
         high_water_mark::{ExtractHighWaterMark, HighWaterMark},
@@ -6,9 +10,6 @@ use crate::stream::{
     },
     readable::underlying_source::{ReadableStreamType, UnderlyingSource},
 };
-use boa_engine::{value::TryFromJs, Context, JsArgs, JsResult, JsValue};
-use boa_gc::{custom_trace, Finalize, Trace};
-use jstz_core::native::{register_global_class, ClassBuilder, NativeClass};
 
 pub mod underlying_source;
 

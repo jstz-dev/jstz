@@ -1,9 +1,3 @@
-use crate::context::{
-    account::{Address, Amount},
-    ticket_table::TicketTable,
-};
-
-use crate::{Error, Result};
 use derive_more::{Display, Error, From};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{
@@ -20,6 +14,14 @@ use tezos_smart_rollup::{
         MichelsonBytes, MichelsonOption, MichelsonPair,
     },
     types::Contract,
+};
+
+use crate::{
+    context::{
+        account::{Address, Amount},
+        ticket_table::TicketTable,
+    },
+    Error, Result,
 };
 
 const WITHDRAW_ENTRYPOINT: &str = "withdraw";

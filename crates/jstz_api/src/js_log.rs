@@ -1,7 +1,10 @@
 use boa_engine::{Context, JsNativeError, JsResult};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use std::cell::Cell;
+use std::{
+    cell::Cell,
+    fmt::{self, Display},
+};
 
 #[derive(Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug, ValueEnum)]
 pub enum LogLevel {
@@ -11,15 +14,14 @@ pub enum LogLevel {
     LOG = 4,
 }
 
-impl ToString for LogLevel {
-    fn to_string(&self) -> String {
+impl Display for LogLevel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            LogLevel::ERROR => "ERROR",
-            LogLevel::WARN => "WARN",
-            LogLevel::INFO => "INFO",
-            LogLevel::LOG => "LOG",
+            LogLevel::ERROR => write!(f, "ERROR"),
+            LogLevel::WARN => write!(f, "WARN"),
+            LogLevel::INFO => write!(f, "INFO"),
+            LogLevel::LOG => write!(f, "LOG"),
         }
-        .to_string()
     }
 }
 

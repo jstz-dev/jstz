@@ -1,3 +1,5 @@
+use std::fmt::{self, Display};
+
 use boa_engine::{
     builtins, js_string,
     object::{builtins::JsArray, Object},
@@ -227,13 +229,17 @@ impl UrlSearchParams {
     }
 }
 
-impl ToString for UrlSearchParams {
-    fn to_string(&self) -> String {
-        self.values
-            .iter()
-            .map(|(k, v)| format!("{k}={v}"))
-            .collect::<Vec<String>>()
-            .join("&")
+impl Display for UrlSearchParams {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.values
+                .iter()
+                .map(|(k, v)| format!("{k}={v}"))
+                .collect::<Vec<String>>()
+                .join("&")
+        )
     }
 }
 
@@ -465,7 +471,7 @@ impl NativeClass for UrlSearchParamsClass {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<UrlSearchParams> {
-        match args.get(0) {
+        match args.first() {
             None => Ok(UrlSearchParams::default()),
             Some(init) => init.try_js_into(context),
         }

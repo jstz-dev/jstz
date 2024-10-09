@@ -97,7 +97,7 @@ impl OctezThread {
                 }
             }
 
-            for signal in signals.pending() {
+            if let Some(signal) = signals.pending().next() {
                 match signal {
                     SIGINT | SIGTERM => {
                         println!("Received signal {:?}, shutting down...", signal);

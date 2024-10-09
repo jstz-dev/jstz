@@ -1,6 +1,9 @@
 use crate::unused_port;
 use anyhow::Result;
-use std::path::PathBuf;
+use std::{
+    fmt::{self, Display, Formatter},
+    path::PathBuf,
+};
 
 const DEFAULT_NETWORK: &str = "sandbox";
 const DEFAULT_BINARY_PATH: &str = "octez-node";
@@ -15,12 +18,12 @@ pub enum OctezNodeHistoryMode {
     Rolling(u8),
 }
 
-impl ToString for OctezNodeHistoryMode {
-    fn to_string(&self) -> String {
+impl Display for OctezNodeHistoryMode {
+    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
-            Self::Archive => "archive".to_owned(),
-            Self::Full(v) => format!("full:{v}"),
-            Self::Rolling(v) => format!("rolling:{v}"),
+            Self::Archive => write!(f, "archive"),
+            Self::Full(v) => write!(f, "full:{}", v),
+            Self::Rolling(v) => write!(f, "rolling:{}", v),
         }
     }
 }
@@ -32,8 +35,8 @@ pub struct OctezNodeRunOptions {
     history_mode: Option<OctezNodeHistoryMode>,
 }
 
-impl ToString for OctezNodeRunOptions {
-    fn to_string(&self) -> String {
+impl Display for OctezNodeRunOptions {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let mut s = vec![];
         s.push(format!(
             "--synchronisation-threshold {}",
@@ -41,9 +44,10 @@ impl ToString for OctezNodeRunOptions {
         ));
         s.push(format!("--network {}", &self.network));
         if let Some(v) = &self.history_mode {
-            s.push(format!("--history-mode {}", v.to_string()));
+            s.push(format!("--history-mode {}", v));
         }
-        s.join(" ")
+        let line = s.join(" ");
+        write!(f, "{}", line)
     }
 }
 

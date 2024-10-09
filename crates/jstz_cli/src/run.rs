@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use crate::logs::{exec_trace, DEFAULT_LOG_LEVEL};
 use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
 use jstz_proto::context::account::Address;
@@ -14,12 +13,12 @@ use spinners::{Spinner, Spinners};
 use tokio::sync::mpsc;
 use url::Url;
 
-use crate::error::bail_user_error;
-use crate::jstz::JstzClient;
 use crate::{
     account,
     config::{Config, NetworkName},
-    error::{anyhow, user_error, Result},
+    error::{anyhow, bail_user_error, user_error, Result},
+    jstz::JstzClient,
+    logs::{exec_trace, DEFAULT_LOG_LEVEL},
     term::styles,
     utils::{read_file_or_input_or_piped, AddressOrAlias},
 };

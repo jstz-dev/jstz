@@ -3822,7 +3822,7 @@ dependencies = [
  "quote",
  "rust-embed-utils",
  "shellexpand",
- "syn 2.0.68",
+ "syn 2.0.79",
  "walkdir",
 ]
 

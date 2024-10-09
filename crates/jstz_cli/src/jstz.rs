@@ -37,11 +37,7 @@ impl JstzClient {
         hash: &OperationHash,
     ) -> Result<Option<Receipt>> {
         let response = self
-            .get(&format!(
-                "{}/operations/{}/receipt",
-                self.endpoint,
-                hash.to_string()
-            ))
+            .get(&format!("{}/operations/{}/receipt", self.endpoint, hash))
             .await?;
 
         if response.status().is_success() {

@@ -12,13 +12,14 @@
 //! - The default queuing strategy is supposed to behave as if it were `new CountQueuingStrategy({highWaterMark: 1.0})`.
 //!
 
+use boa_engine::{value::TryFromJs, Context, JsResult, JsValue};
+use derive_more::*;
+use jstz_core::native::{register_global_class, JsNativeObject};
+
 use crate::stream::queuing_strategy::builtin::{
     ByteLengthQueuingStrategy, ByteLengthQueuingStrategyClass, CountQueuingStrategy,
     CountQueuingStrategyClass,
 };
-use boa_engine::{value::TryFromJs, Context, JsResult, JsValue};
-use derive_more::*;
-use jstz_core::native::{register_global_class, JsNativeObject};
 
 pub mod builtin;
 pub mod high_water_mark;

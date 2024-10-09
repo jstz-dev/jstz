@@ -2,7 +2,6 @@ use jstz_core::{
     host::HostRuntime,
     kv::{outbox::OutboxMessage, Transaction},
 };
-
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::{
     michelson::{ticket::FA2_1Ticket, MichelsonOption, MichelsonPair},

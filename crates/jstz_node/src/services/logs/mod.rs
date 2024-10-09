@@ -1,21 +1,25 @@
-use crate::tailed_file::TailedFile;
+use std::{io::ErrorKind::InvalidInput, sync::Arc};
+
 use actix_web::{
     get,
     web::{Data, Path, ServiceConfig},
     Responder, Scope,
 };
-
-use super::Service;
 use anyhow;
-use jstz_proto::context::account::Address;
-use jstz_proto::{
-    js_logger::{LogRecord, LOG_PREFIX},
-    request_logger::{RequestEvent, REQUEST_END_PREFIX, REQUEST_START_PREFIX},
+#[cfg(feature = "persistent-logging")]
+use jstz_proto::request_logger::{
+    RequestEvent, REQUEST_END_PREFIX, REQUEST_START_PREFIX,
 };
-use std::io::ErrorKind::InvalidInput;
-use std::sync::Arc;
+use jstz_proto::{
+    context::account::Address,
+    js_logger::{LogRecord, LOG_PREFIX},
+};
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
+
+use super::Service;
+
+use crate::tailed_file::TailedFile;
 
 pub mod broadcaster;
 
@@ -159,6 +163,7 @@ impl Service for LogsService {
 
 // Represents each line in the log file.
 pub enum Line {
+    #[cfg(feature = "persistent-logging")]
     // Indicates the start and end of a smart function call (request).
     Request(RequestEvent),
     // Indicates the js log message from the smart function (e.g. log).
@@ -221,6 +226,8 @@ impl LogsService {
                                 }
 
                                 // Stream the log
+                                #[cfg(not(feature = "persistent-logging"))]
+                                #[allow(irrefutable_let_patterns)]
                                 if let Line::Js(log) = line {
                                     broadcaster
                                         .broadcast(&log.address, &line_str[LOG_PREFIX.len()..])
@@ -245,12 +252,15 @@ impl LogsService {
             return LogRecord::try_from_string(log).map(Line::Js);
         }
 
-        if let Some(request) = line.strip_prefix(REQUEST_START_PREFIX) {
-            return RequestEvent::try_from_string(request).map(Line::Request);
-        }
+        #[cfg(feature = "persistent-logging")]
+        {
+            if let Some(request) = line.strip_prefix(REQUEST_START_PREFIX) {
+                return RequestEvent::try_from_string(request).map(Line::Request);
+            }
 
-        if let Some(request) = line.strip_prefix(REQUEST_END_PREFIX) {
-            return RequestEvent::try_from_string(request).map(Line::Request);
+            if let Some(request) = line.strip_prefix(REQUEST_END_PREFIX) {
+                return RequestEvent::try_from_string(request).map(Line::Request);
+            }
         }
 
         None
