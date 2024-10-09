@@ -857,14 +857,14 @@
                   },
                   {
                     "name": "Error seen with fatal does not prevent future decodes",
-                    "status": "Fail",
-                    "message": "assert_throws_js: decode() should throw on incomplete sequence function \"function () { [native code] }\" did not throw"
+                    "status": "Pass",
+                    "message": null
                   }
                 ],
                 "status": "Null",
                 "metrics": {
-                  "passed": 35,
-                  "failed": 1,
+                  "passed": 36,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
