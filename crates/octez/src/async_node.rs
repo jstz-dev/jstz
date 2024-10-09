@@ -22,6 +22,7 @@ impl AsyncOctezNode {
         &self,
         network: &str,
         rpc_endpoint: &str,
+        p2p_endpoint: &str,
         num_connections: u32,
     ) -> Result<Child> {
         Ok(self
@@ -37,6 +38,8 @@ impl AsyncOctezNode {
                 rpc_endpoint,
                 "--connections",
                 num_connections.to_string().as_str(),
+                "--net-addr",
+                p2p_endpoint,
             ])
             .spawn()?)
     }

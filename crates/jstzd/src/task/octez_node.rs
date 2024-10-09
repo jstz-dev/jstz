@@ -1,3 +1,5 @@
+use crate::unused_port;
+
 use super::Task;
 use anyhow::Result;
 use async_dropper_simple::{AsyncDrop, AsyncDropper};
@@ -8,9 +10,10 @@ use tokio::sync::RwLock;
 use octez::AsyncOctezNode;
 use tokio::process::Child;
 
-pub const DEFAULT_RPC_ENDPOINT: &str = "localhost:8732";
 const DEFAULT_NETWORK: &str = "sandbox";
 const DEFAULT_BINARY_PATH: &str = "octez-node";
+const LOCALHOST: &str = "localhost";
+const LOCAL_ADDRESS: &str = "127.0.0.1";
 
 #[derive(Default, Clone)]
 pub struct OctezNodeConfig {
@@ -22,6 +25,8 @@ pub struct OctezNodeConfig {
     network: String,
     /// HTTP endpoint of the node RPC interface, e.g. 'localhost:8732'
     rpc_endpoint: String,
+    // TCP address and port at for p2p which this instance can be reached
+    p2p_address: String,
     /// Path to the file that keeps octez node logs.
     log_file: PathBuf,
     /// Run options for octez node.
@@ -34,6 +39,7 @@ pub struct OctezNodeConfigBuilder {
     data_dir: Option<PathBuf>,
     network: Option<String>,
     rpc_endpoint: Option<String>,
+    p2p_endpoint: Option<String>,
     log_file: Option<PathBuf>,
     options: Option<Vec<String>>,
 }
@@ -61,9 +67,14 @@ impl OctezNodeConfigBuilder {
         self
     }
 
-    /// Sets the HTTP(S) endpoint of the node RPC interface, e.g. 'http://localhost:8732'
+    /// Sets the HTTP(S) endpoint of the node RPC interface, e.g. 'localhost:8732'
     pub fn set_rpc_endpoint(&mut self, endpoint: &str) -> &mut Self {
         self.rpc_endpoint = Some(endpoint.to_owned());
+        self
+    }
+
+    pub fn set_p2p_endpoint(&mut self, endpoint: &str) -> &mut Self {
+        self.p2p_endpoint = Some(endpoint.to_owned());
         self
     }
 
@@ -96,10 +107,16 @@ impl OctezNodeConfigBuilder {
                 .take()
                 .unwrap_or(PathBuf::from(tempfile::TempDir::new().unwrap().path())),
             network: self.network.take().unwrap_or(DEFAULT_NETWORK.to_owned()),
-            rpc_endpoint: self
-                .rpc_endpoint
-                .take()
-                .unwrap_or(DEFAULT_RPC_ENDPOINT.to_owned()),
+            rpc_endpoint: self.rpc_endpoint.take().unwrap_or(format!(
+                "{}:{}",
+                LOCALHOST,
+                unused_port()
+            )),
+            p2p_address: self.p2p_endpoint.take().unwrap_or(format!(
+                "{}:{}",
+                LOCAL_ADDRESS,
+                unused_port()
+            )),
             log_file: self.log_file.take().unwrap_or(PathBuf::from(
                 tempfile::NamedTempFile::new().unwrap().path(),
             )),
@@ -135,6 +152,12 @@ pub struct OctezNode {
     config: OctezNodeConfig,
 }
 
+impl OctezNode {
+    pub fn rpc_endpoint(&self) -> &str {
+        &self.config.rpc_endpoint
+    }
+}
+
 #[async_trait]
 impl Task for OctezNode {
     type Config = OctezNodeConfig;
@@ -153,7 +176,12 @@ impl Task for OctezNode {
         }
 
         let status = node
-            .config_init(&config.network, &config.rpc_endpoint, 0)
+            .config_init(
+                &config.network,
+                &config.rpc_endpoint,
+                &config.p2p_address,
+                0,
+            )
             .await?
             .wait()
             .await?;
@@ -212,9 +240,7 @@ impl Task for OctezNode {
 mod tests {
     use std::path::PathBuf;
 
-    use crate::task::octez_node::{
-        DEFAULT_BINARY_PATH, DEFAULT_NETWORK, DEFAULT_RPC_ENDPOINT,
-    };
+    use crate::task::octez_node::{DEFAULT_BINARY_PATH, DEFAULT_NETWORK};
 
     use super::OctezNodeConfigBuilder;
 
@@ -247,7 +273,6 @@ mod tests {
         // Checks if the default path is a valid one that actually can exist in the file system
         std::fs::create_dir(config.data_dir).unwrap();
         assert_eq!(config.network, DEFAULT_NETWORK.to_owned());
-        assert_eq!(config.rpc_endpoint, DEFAULT_RPC_ENDPOINT.to_owned());
         // Checks if the default path is a valid one that actually can exist in the file system
         std::fs::File::create(config.log_file).unwrap();
         assert_eq!(config.options, Vec::<String>::default());
