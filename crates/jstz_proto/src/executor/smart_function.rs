@@ -25,13 +25,12 @@ use tezos_smart_rollup::prelude::debug_msg;
 use crate::{
     api::{self, TraceData},
     context::account::{Account, Address, Amount, ParsedCode},
+    js_logger::JsonLogger,
     operation::{OperationHash, RunFunction},
     receipt,
     request_logger::{log_request_end, log_request_start},
     Error, Result,
 };
-
-use crate::js_logger::JsonLogger;
 
 pub mod headers {
 

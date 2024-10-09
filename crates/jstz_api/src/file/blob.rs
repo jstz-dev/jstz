@@ -9,7 +9,8 @@
 //! [spec]: https://w3c.github.io/FileAPI/
 //! [infra-spec]: https://infra.spec.whatwg.org/
 
-use crate::idl::{ArrayBufferLike, JsBufferSource};
+use std::cmp::{max, min};
+
 use boa_engine::{
     js_string,
     object::{
@@ -28,7 +29,8 @@ use jstz_core::{
     },
     value::IntoJs,
 };
-use std::cmp::{max, min};
+
+use crate::idl::{ArrayBufferLike, JsBufferSource};
 
 #[derive(Trace, Finalize, Clone)]
 pub struct Blob {

@@ -16,11 +16,10 @@ use serde_with::{DeserializeFromStr, SerializeDisplay};
 use crate::{
     error::{bail, user_error, Result},
     jstz::JstzClient,
+    sandbox::{
+        SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT,
+    },
     utils::AddressOrAlias,
-};
-
-use crate::sandbox::{
-    SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT,
 };
 
 pub fn jstz_home_dir() -> PathBuf {

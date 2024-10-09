@@ -1,3 +1,5 @@
+use std::fmt::{self, Display};
+
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::PublicKeyEd25519;
 
@@ -21,8 +23,8 @@ impl PublicKey {
     }
 }
 
-impl ToString for PublicKey {
-    fn to_string(&self) -> String {
-        self.to_base58()
+impl Display for PublicKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_base58())
     }
 }
