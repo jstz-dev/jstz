@@ -1,7 +1,10 @@
-use std::io::SeekFrom;
-use std::path::Path;
-use tokio::io::{AsyncSeekExt, BufReader, Result};
-use tokio::{fs::File, io::Lines};
+use std::{io::SeekFrom, path::Path};
+
+use tokio::{
+    fs::File,
+    io::Lines,
+    io::{AsyncSeekExt, BufReader, Result},
+};
 
 pub struct TailedFile(BufReader<File>);
 

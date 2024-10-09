@@ -1,5 +1,10 @@
+use std::{
+    collections::BTreeMap,
+    fmt::{self, Display},
+    net::IpAddr,
+};
+
 use crate::docker::Image;
-use std::{collections::BTreeMap, net::IpAddr};
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum AccessMode {
@@ -28,11 +33,11 @@ pub enum Host {
     HostGateway,
 }
 
-impl ToString for Host {
-    fn to_string(&self) -> String {
+impl Display for Host {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Host::Addr(ip) => ip.to_string(),
-            Host::HostGateway => "host-gateway".to_string(),
+            Host::Addr(ip) => write!(f, "{}", ip),
+            Host::HostGateway => write!(f, "host-gateway"),
         }
     }
 }

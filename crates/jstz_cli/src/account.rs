@@ -1,10 +1,11 @@
+use std::collections::hash_map::Entry;
+
 use bip39::{Language, Mnemonic, MnemonicType};
 use clap::Subcommand;
 use dialoguer::{Confirm, Input};
 use jstz_crypto::keypair_from_passphrase;
 use jstz_proto::context::account::Address;
 use log::{debug, info, warn};
-use std::collections::hash_map::Entry;
 
 use crate::{
     config::{Account, Config, NetworkName, SmartFunction, User},

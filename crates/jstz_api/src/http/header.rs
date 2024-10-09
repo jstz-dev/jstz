@@ -563,7 +563,7 @@ impl NativeClass for HeadersClass {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Headers> {
-        match args.get(0) {
+        match args.first() {
             None => Ok(Headers::default()),
             Some(value) => {
                 let init: HeadersInit = value.try_js_into(context)?;

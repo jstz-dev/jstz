@@ -383,7 +383,7 @@ impl<T: PairIteratorClass> PairIterableMethods<T> {
                  -> JsResult<JsValue> {
                     let target: JsNativeObject<T::Iterable> =
                         JsNativeObject::try_from(this.clone())?;
-                    let callback_arg = args.get(0).ok_or::<JsError>(
+                    let callback_arg = args.first().ok_or::<JsError>(
                         JsNativeError::typ()
                             .with_message("expected callback argument to forEach")
                             .into(),
@@ -429,7 +429,7 @@ impl<T: PairIteratorClass> NativeClass for T {
         args: &[JsValue],
         context: &mut Context<'_>,
     ) -> JsResult<Self::Instance> {
-        let init_arg = match args.get(0) {
+        let init_arg = match args.first() {
             None => Err(JsError::from_native(
                 JsNativeError::typ()
                     .with_message("expected 2 arguments to pair iterator constructor"),

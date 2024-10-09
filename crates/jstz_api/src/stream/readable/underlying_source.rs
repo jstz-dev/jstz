@@ -1,5 +1,7 @@
 //! [Streams Standard - § 4.2.3. The underlying source API][https://streams.spec.whatwg.org/#underlying-source-api]
 
+use std::str::FromStr;
+
 use boa_engine::{
     object::builtins::JsPromise, value::TryFromJs, Context, JsNativeError, JsObject,
     JsResult, JsValue,
@@ -11,11 +13,8 @@ use jstz_core::{
     native::JsNativeObject,
     value::IntoJs,
 };
-use std::str::FromStr;
 
-use crate::idl;
-
-use crate::stream::tmp::*;
+use crate::{idl, stream::tmp::*};
 
 /// [Streams Standard - § 4.2.3.][https://streams.spec.whatwg.org/#underlying-source-api]
 /// > ```
