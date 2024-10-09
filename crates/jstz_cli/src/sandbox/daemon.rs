@@ -187,7 +187,7 @@ impl Sandbox {
                             }
                         }
 
-                        if let Some(signal)= signals.pending().next() {
+                        if let Some(signal) = signals.pending().next() {
                             match signal {
                                 SIGINT | SIGTERM => {
                                     info!(

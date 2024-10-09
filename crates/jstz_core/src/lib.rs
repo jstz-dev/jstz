@@ -16,7 +16,7 @@ pub mod value;
 /// A generic runtime API
 pub trait Api {
     /// Initialize a runtime API
-    fn init(self, context: &mut Context<'_>);
+    fn init(self, context: &mut Context);
 }
 
 pub use realm::{Module, Realm};

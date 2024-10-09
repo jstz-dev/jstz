@@ -6,7 +6,7 @@ use tezos_smart_rollup::prelude::debug_msg;
 pub(crate) struct PrettyLogger;
 
 impl JsLog for PrettyLogger {
-    fn log(&self, log_data: LogData, _context: &mut Context<'_>) {
+    fn log(&self, log_data: LogData, _context: &mut Context) {
         let LogData {
             level,
             text,

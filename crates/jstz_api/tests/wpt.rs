@@ -3,8 +3,8 @@ use std::future::IntoFuture;
 use anyhow::Result;
 use boa_engine::{
     js_string, object::FunctionObjectBuilder, property::PropertyDescriptor,
-    value::TryFromJs, Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction,
-    Source,
+    value::TryFromJs, Context, JsArgs, JsData, JsNativeError, JsResult, JsValue,
+    NativeFunction, Source,
 };
 use boa_gc::{Finalize, Trace};
 use derive_more::{From, Into};
@@ -18,7 +18,7 @@ use jstz_wpt::{
 macro_rules! impl_try_from_js_for_enum {
     ($ty:ty) => {
         impl TryFromJs for $ty {
-            fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+            fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
                 let value: u8 = value.try_js_into(context)?;
 
                 value.try_into().map_err(|_| {
@@ -99,7 +99,7 @@ pub struct TestsResult {
 /// This struct implements the TestHarness API expected by [wpt]
 ///
 /// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html
-#[derive(Default, Debug, Trace, Finalize)]
+#[derive(Default, Debug, Trace, Finalize, JsData)]
 pub struct TestHarnessReport {
     #[unsafe_ignore_trace]
     status: Option<WptTestStatus>,
@@ -162,7 +162,7 @@ impl TestHarnessReportApi {
     pub fn test_result_callback(
         _this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         preamble!(context, report);
 
@@ -176,7 +176,7 @@ impl TestHarnessReportApi {
     pub fn test_completion_callback(
         _this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         preamble!(context, report);
 
@@ -192,7 +192,7 @@ impl TestHarnessReportApi {
 }
 
 impl jstz_core::Api for TestHarnessReportApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         let test_result_callback = FunctionObjectBuilder::new(
             context.realm(),
             NativeFunction::from_fn_ptr(Self::test_result_callback),
@@ -210,7 +210,7 @@ impl jstz_core::Api for TestHarnessReportApi {
         .build();
 
         #[inline]
-        fn call_global_function(name: &str, args: &[JsValue], context: &mut Context<'_>) {
+        fn call_global_function(name: &str, args: &[JsValue], context: &mut Context) {
             let value = context
                 .global_object()
                 .get(js_string!(name), context)
@@ -238,7 +238,7 @@ impl jstz_core::Api for TestHarnessReportApi {
     }
 }
 
-pub fn register_apis(context: &mut Context<'_>) {
+pub fn register_apis(context: &mut Context) {
     // Register all the APIs here
     // TODO this is not all the APIs
     jstz_api::http::header::HeadersApi.init(context);
@@ -247,7 +247,7 @@ pub fn register_apis(context: &mut Context<'_>) {
 }
 
 pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
-    let mut rt: Runtime<'_> = Runtime::new(usize::MAX)?;
+    let mut rt: Runtime = Runtime::new(usize::MAX)?;
 
     // Initialize the host-defined object with the test harness report
     {

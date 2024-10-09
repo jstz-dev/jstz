@@ -12,10 +12,11 @@
 
 use boa_engine::{
     js_string,
-    object::{builtins::JsArray, Object},
+    object::{builtins::JsArray, ErasedObject},
     property::Attribute,
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsError, JsNativeError, JsObject, JsResult, JsValue,
+    NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
@@ -52,7 +53,7 @@ pub struct UrlPatternResult {
     pub(crate) result: InnerUrlPatternResult,
 }
 
-#[derive(Finalize)]
+#[derive(Finalize, JsData)]
 pub struct UrlPattern {
     pub(crate) url_pattern: InnerUrlPattern,
 }
@@ -64,7 +65,7 @@ unsafe impl Trace for UrlPattern {
 impl JsNativeObjectToString for UrlPattern {
     fn to_string(
         this: &JsNativeObject<Self>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let s = format!("{:?}", this.deref().url_pattern);
         Ok(s.into_js(context))
@@ -94,7 +95,7 @@ impl UrlPattern {
     pub fn new(
         input: UrlPatternInput,
         base_url: Option<String>,
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<Self> {
         let url_pattern_init =
             quirks::process_construct_pattern_input(input.0, base_url.as_deref())
@@ -180,7 +181,7 @@ impl UrlPattern {
 pub struct UrlPatternClass;
 
 impl UrlPattern {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -195,7 +196,7 @@ impl UrlPattern {
 }
 
 impl UrlPatternClass {
-    fn hash(context: &mut Context<'_>) -> Accessor {
+    fn hash(context: &mut Context) -> Accessor {
         accessor!(
             context,
             UrlPattern,
@@ -204,7 +205,7 @@ impl UrlPatternClass {
         )
     }
 
-    fn hostname(context: &mut Context<'_>) -> Accessor {
+    fn hostname(context: &mut Context) -> Accessor {
         accessor!(
             context,
             UrlPattern,
@@ -213,7 +214,7 @@ impl UrlPatternClass {
         )
     }
 
-    fn password(context: &mut Context<'_>) -> Accessor {
+    fn password(context: &mut Context) -> Accessor {
         accessor!(
             context,
             UrlPattern,
@@ -222,7 +223,7 @@ impl UrlPatternClass {
         )
     }
 
-    fn pathname(context: &mut Context<'_>) -> Accessor {
+    fn pathname(context: &mut Context) -> Accessor {
         accessor!(
             context,
             UrlPattern,
@@ -231,7 +232,7 @@ impl UrlPatternClass {
         )
     }
 
-    fn port(context: &mut Context<'_>) -> Accessor {
+    fn port(context: &mut Context) -> Accessor {
         accessor!(
             context,
             UrlPattern,
@@ -240,7 +241,7 @@ impl UrlPatternClass {
         )
     }
 
-    fn protocol(context: &mut Context<'_>) -> Accessor {
+    fn protocol(context: &mut Context) -> Accessor {
         accessor!(
             context,
             UrlPattern,
@@ -249,7 +250,7 @@ impl UrlPatternClass {
         )
     }
 
-    fn search(context: &mut Context<'_>) -> Accessor {
+    fn search(context: &mut Context) -> Accessor {
         accessor!(
             context,
             UrlPattern,
@@ -258,7 +259,7 @@ impl UrlPatternClass {
         )
     }
 
-    fn username(context: &mut Context<'_>) -> Accessor {
+    fn username(context: &mut Context) -> Accessor {
         accessor!(
             context,
             UrlPattern,
@@ -270,7 +271,7 @@ impl UrlPatternClass {
     fn test(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let url_pattern = UrlPattern::try_from_js(this)?;
         let input: UrlPatternInput = match args.first() {
@@ -284,7 +285,7 @@ impl UrlPatternClass {
     fn exec(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let url_pattern = UrlPattern::try_from_js(this)?;
         let input: UrlPatternInput = match args.first() {
@@ -299,7 +300,7 @@ impl UrlPatternClass {
 }
 
 impl TryFromJs for UrlPatternInit {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let obj = value.as_object().ok_or_else(|| {
             JsError::from_native(JsNativeError::typ().with_message("Expected `JsObject`"))
         })?;
@@ -332,7 +333,7 @@ impl TryFromJs for UrlPatternInit {
 }
 
 impl TryFromJs for UrlPatternInput {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         if value.is_string() {
             let string: String = value.try_js_into(context)?;
             return Ok(Self(quirks::StringOrInit::String(string)));
@@ -344,7 +345,7 @@ impl TryFromJs for UrlPatternInput {
 }
 
 impl IntoJs for UrlPatternInput {
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, context: &mut Context) -> JsValue {
         let UrlPatternInput(string_or_init) = self;
         match string_or_init {
             quirks::StringOrInit::Init(init) => UrlPatternInit(init).into_js(context),
@@ -366,7 +367,7 @@ impl From<quirks::UrlPatternInit> for UrlPatternInput {
 }
 
 impl IntoJs for UrlPatternComponentResult {
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, context: &mut Context) -> JsValue {
         let url_pattern_component_result = self.0;
         let input = url_pattern_component_result.input;
         let groups: Vec<(String, String)> =
@@ -398,7 +399,7 @@ impl IntoJs for UrlPatternComponentResult {
 }
 
 impl IntoJs for UrlPatternInit {
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, context: &mut Context) -> JsValue {
         let obj = JsObject::with_object_proto(context.intrinsics());
         let init = self.0;
 
@@ -440,7 +441,7 @@ impl IntoJs for UrlPatternInit {
 }
 
 impl IntoJs for UrlPatternResult {
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, context: &mut Context) -> JsValue {
         let UrlPatternResult { result, inputs } = self;
         let obj = JsObject::with_object_proto(context.intrinsics());
 
@@ -485,7 +486,7 @@ impl NativeClass for UrlPatternClass {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<UrlPattern> {
         let input: UrlPatternInput = match args.first() {
             Some(value) => value.try_js_into(context)?,
@@ -496,7 +497,7 @@ impl NativeClass for UrlPatternClass {
         UrlPattern::new(input, base_url, context)
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let hash = UrlPatternClass::hash(class.context());
         let hostname = UrlPatternClass::hostname(class.context());
         let password = UrlPatternClass::password(class.context());
@@ -532,7 +533,7 @@ impl NativeClass for UrlPatternClass {
 pub struct UrlPatternApi;
 
 impl jstz_core::Api for UrlPatternApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<UrlPatternClass>(context)
             .expect("The `URLPattern` class shouldn't exist yet")
     }

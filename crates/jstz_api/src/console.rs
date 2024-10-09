@@ -15,10 +15,10 @@
 
 use boa_engine::{
     js_string,
-    object::{Object, ObjectInitializer},
+    object::{ErasedObject, ObjectInitializer},
     property::Attribute,
     value::Numeric,
-    Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::value::IntoJs;
@@ -35,7 +35,7 @@ fn display_js(value: &JsValue) -> String {
 ///
 /// More information:
 ///  - [WHATWG `formatter` specification][https://console.spec.whatwg.org/#formatter]
-fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
+fn formatter(data: &[JsValue], context: &mut Context) -> JsResult<String> {
     match data {
         [] => Ok(String::new()),
         [val] => Ok(display_js(val)),
@@ -110,7 +110,7 @@ fn formatter(data: &[JsValue], context: &mut Context<'_>) -> JsResult<String> {
     }
 }
 
-#[derive(Finalize, Default)]
+#[derive(Finalize, JsData, Default)]
 struct Console {
     groups: Vec<String>,
 }
@@ -149,7 +149,7 @@ impl Console {
         &self,
         assertion: bool,
         data: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<()> {
         if !assertion {
             let mut args: Vec<JsValue> = Vec::from(data);
@@ -186,7 +186,7 @@ impl Console {
     ///
     /// [spec]: https://console.spec.whatwg.org/#debug
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/debug
-    fn debug(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
+    fn debug(&self, data: &[JsValue], context: &mut Context) -> JsResult<()> {
         log(
             LogData {
                 level: LogLevel::LOG,
@@ -208,7 +208,7 @@ impl Console {
     ///
     /// [spec]: https://console.spec.whatwg.org/#warn
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/warn
-    fn warn(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
+    fn warn(&self, data: &[JsValue], context: &mut Context) -> JsResult<()> {
         log(
             LogData {
                 level: LogLevel::WARN,
@@ -230,7 +230,7 @@ impl Console {
     ///
     /// [spec]: https://console.spec.whatwg.org/#error
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/error
-    fn error(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
+    fn error(&self, data: &[JsValue], context: &mut Context) -> JsResult<()> {
         log(
             LogData {
                 level: LogLevel::ERROR,
@@ -252,7 +252,7 @@ impl Console {
     ///
     /// [spec]: https://console.spec.whatwg.org/#info
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/info
-    fn info(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
+    fn info(&self, data: &[JsValue], context: &mut Context) -> JsResult<()> {
         log(
             LogData {
                 level: LogLevel::INFO,
@@ -274,7 +274,7 @@ impl Console {
     ///
     /// [spec]: https://console.spec.whatwg.org/#log
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/log
-    fn log(&self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
+    fn log(&self, data: &[JsValue], context: &mut Context) -> JsResult<()> {
         log(
             LogData {
                 level: LogLevel::LOG,
@@ -296,7 +296,7 @@ impl Console {
     ///
     /// [spec]: https://console.spec.whatwg.org/#group
     /// [mdn]: https://developer.mozilla.org/en-US/docs/Web/API/console/group
-    fn group(&mut self, data: &[JsValue], context: &mut Context<'_>) -> JsResult<()> {
+    fn group(&mut self, data: &[JsValue], context: &mut Context) -> JsResult<()> {
         let group_label = formatter(data, context)?;
         log(
             LogData {
@@ -330,7 +330,7 @@ impl Console {
 pub struct ConsoleApi;
 
 impl Console {
-    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -347,7 +347,7 @@ macro_rules! variadic_console_function {
         fn $name(
             this: &JsValue,
             args: &[JsValue],
-            context: &mut Context<'_>,
+            context: &mut Context,
         ) -> JsResult<JsValue> {
             let console = Console::from_js_value(this)?;
 
@@ -369,7 +369,7 @@ impl ConsoleApi {
     fn assert(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let console = Console::from_js_value(this)?;
 
@@ -383,7 +383,7 @@ impl ConsoleApi {
     fn group(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut console = Console::from_js_value(this)?;
         console.group(args, context)?;
@@ -393,7 +393,7 @@ impl ConsoleApi {
     fn group_end(
         this: &JsValue,
         _args: &[JsValue],
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut console = Console::from_js_value(this)?;
 
@@ -404,7 +404,7 @@ impl ConsoleApi {
     fn clear(
         this: &JsValue,
         _args: &[JsValue],
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut console = Console::from_js_value(this)?;
         console.clear();
@@ -413,8 +413,8 @@ impl ConsoleApi {
 }
 
 impl jstz_core::Api for ConsoleApi {
-    fn init(self, context: &mut Context<'_>) {
-        let console = ObjectInitializer::with_native(Console::default(), context)
+    fn init(self, context: &mut Context) {
+        let console = ObjectInitializer::with_native_data(Console::default(), context)
             .function(NativeFunction::from_fn_ptr(Self::log), js_string!("log"), 0)
             .function(
                 NativeFunction::from_fn_ptr(Self::error),

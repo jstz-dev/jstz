@@ -1,8 +1,9 @@
-use std::{io::Read, ops::BitXor};
+use std::ops::BitXor;
 
 use boa_engine::{
     js_string,
-    object::{builtins::JsPromise, FunctionObjectBuilder, Object},
+    object::{builtins::JsPromise, ErasedObject, FunctionObjectBuilder},
+    parser::source::ReadChar,
     Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
@@ -55,14 +56,13 @@ pub mod headers {
 // If the value is a promise, then we apply the on_fulfilled and on_rejected to the promise.
 fn try_apply_to_value_or_promise(
     value_or_promise: JsResult<JsValue>,
-    on_fulfilled: fn(&JsValue, &mut Context<'_>) -> JsResult<()>,
-    on_rejected: fn(&mut Context<'_>) -> JsResult<()>,
-    context: &mut Context<'_>,
+    on_fulfilled: fn(&JsValue, &mut Context) -> JsResult<()>,
+    on_rejected: fn(&mut Context) -> JsResult<()>,
+    context: &mut Context,
 ) -> JsResult<JsValue> {
     match value_or_promise {
         Ok(value) => match value.as_promise() {
             Some(promise) => {
-                let promise = JsPromise::from_object(promise.clone()).unwrap();
                 let result = promise.then(
                     Some(
                         FunctionObjectBuilder::new(context.realm(), unsafe {
@@ -91,7 +91,7 @@ fn try_apply_to_value_or_promise(
                         .build(),
                     ),
                     context,
-                )?;
+                );
                 Ok(result.into())
             }
             None => {
@@ -115,7 +115,7 @@ fn compute_seed(address: &Address, operation_hash: &OperationHash) -> u64 {
     seed
 }
 
-pub fn register_web_apis(realm: &Realm, context: &mut Context<'_>) {
+pub fn register_web_apis(realm: &Realm, context: &mut Context) {
     realm.register_api(jstz_api::url::UrlApi, context);
     realm.register_api(jstz_api::urlpattern::UrlPatternApi, context);
     realm.register_api(jstz_api::http::HttpApi, context);
@@ -128,7 +128,7 @@ pub fn register_jstz_apis(
     realm: &Realm,
     address: &Address,
     seed: u64,
-    context: &mut Context<'_>,
+    context: &mut Context,
 ) {
     realm.register_api(
         jstz_api::KvApi {
@@ -155,7 +155,7 @@ pub fn register_jstz_apis(
 pub struct Script(Module);
 
 impl Script {
-    fn get_default_export(&self, context: &mut Context<'_>) -> JsResult<JsValue> {
+    fn get_default_export(&self, context: &mut Context) -> JsResult<JsValue> {
         self.namespace(context).get(js_string!("default"), context)
     }
 
@@ -163,7 +163,7 @@ impl Script {
         &self,
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let default_export = self.get_default_export(context)?;
 
@@ -181,7 +181,7 @@ impl Script {
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         address: &Address,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> Result<Self> {
         let src =
             Account::function_code(hrt, tx, address)?.ok_or(Error::InvalidAddress)?;
@@ -189,9 +189,9 @@ impl Script {
         Ok(Self::parse(Source::from_bytes(&src), context)?)
     }
 
-    pub fn parse<R: Read>(
+    pub fn parse<R: ReadChar>(
         src: Source<'_, R>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self> {
         let module = Module::parse(src, Some(Realm::new(context)?), context)?;
         Ok(Self(module))
@@ -201,7 +201,7 @@ impl Script {
         &self,
         address: &Address,
         operation_hash: &OperationHash,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) {
         register_web_apis(self.realm(), context);
         register_jstz_apis(
@@ -218,8 +218,8 @@ impl Script {
         &self,
         address: &Address,
         operation_hash: &OperationHash,
-        context: &mut Context<'_>,
-    ) -> JsResult<JsPromise> {
+        context: &mut Context,
+    ) -> JsPromise {
         self.register_apis(address, operation_hash, context);
 
         self.realm().eval_module(self, context)
@@ -257,7 +257,7 @@ impl Script {
         address: &Address,
         operation_hash: &OperationHash,
         request: &JsValue,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let context = &mut self.realm().context_handle(context);
 
@@ -315,7 +315,7 @@ impl Script {
         address: Address,
         operation_hash: OperationHash,
         request: &JsValue,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         // 1. Load script
         let script = runtime::with_js_hrt_and_tx(|hrt, tx| {
@@ -323,7 +323,7 @@ impl Script {
         })?;
 
         // 2. Evaluate the script's module
-        let script_promise = script.init(&address, &operation_hash, context)?;
+        let script_promise = script.init(&address, &operation_hash, context);
 
         // 3. Once evaluated, call the script's handler
         let result = script_promise.then(
@@ -342,7 +342,7 @@ impl Script {
             ),
             None,
             context,
-        )?;
+        );
 
         Ok(result.into())
     }
@@ -352,7 +352,7 @@ pub struct HostScript;
 
 impl HostScript {
     fn create_run_function_from_request(
-        request_deref: &mut GcRefMut<'_, Object, Request>,
+        request_deref: &mut GcRefMut<'_, ErasedObject, Request>,
         gas_limit: usize,
     ) -> JsResult<RunFunction> {
         let method = request_deref.method().clone();
@@ -373,7 +373,7 @@ impl HostScript {
 
     fn create_response_from_run_receipt(
         run_receipt: receipt::RunFunction,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Response> {
         let body = Body::from_http_body(run_receipt.body, context)?;
         let options = ResponseOptions::from(run_receipt.status_code, run_receipt.headers);
@@ -389,8 +389,8 @@ impl HostScript {
 
     pub fn run(
         self_address: &Address,
-        request: &mut GcRefMut<'_, Object, Request>,
-        context: &mut Context<'_>,
+        request: &mut GcRefMut<'_, ErasedObject, Request>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let run = Self::create_run_function_from_request(request, 1)?;
         let response = runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<Response> {
