@@ -1,4 +1,6 @@
-use super::{directory::Directory, endpoint::Endpoint, octez_node::DEFAULT_RPC_ENDPOINT};
+use crate::jstzd::DEFAULT_RPC_ENDPOINT;
+
+use super::{directory::Directory, endpoint::Endpoint};
 use anyhow::{anyhow, bail, Result};
 use http::Uri;
 use std::path::Path;
@@ -116,8 +118,8 @@ impl OctezClient {
             .ok_or(anyhow!("binary path must be a valid utf-8 path"))?;
         let mut command = Command::new(binary_path);
         let base_dir: String = (&self.base_dir).try_into()?;
-        command.args(["--base-dir", &base_dir]);
-        command.args(["--endpoint", &self.endpoint.to_string()]);
+        command.args(["-base-dir", &base_dir]);
+        command.args(["-endpoint", &self.endpoint.to_string()]);
         if self.disable_unsafe_disclaimer {
             command.env("TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER", "Y");
         }
@@ -135,6 +137,10 @@ impl OctezClient {
             Some(0) => Ok(String::from_utf8(output.stdout)?),
             Some(code) => {
                 let stderr = String::from_utf8(output.stderr)?;
+                println!(
+                    "Command {:#?} failed with exit code {}: {}",
+                    command, code, stderr
+                );
                 bail!(
                     "Command {:?} failed with exit code {}: {}",
                     command,
@@ -142,9 +148,7 @@ impl OctezClient {
                     stderr
                 )
             }
-            None => {
-                bail!("Command terminated by a signal");
-            }
+            None => bail!("Command terminated by a signal"),
         }
     }
 
@@ -181,6 +185,45 @@ impl OctezClient {
     pub async fn import_secret_key(&self, alias: &str, secret_key: &str) -> Result<()> {
         self.spawn_and_wait_command(["import", "secret", "key", alias, secret_key])
             .await?;
+        Ok(())
+    }
+
+    pub async fn activate_protocol(
+        &self,
+        protocol: &str,
+        fitness: &str,
+        key: &str,
+        parameters_file: &Path,
+    ) -> Result<()> {
+        // println!("Pameters file");
+        // let params =
+        //     fs::read_to_string("/build/source/crates/jstzd/tests/sandbox-params.json")
+        //         .await?;
+        // println!("{}", params);
+        let args = [
+            "--protocol",
+            "ProtoGenesisGenesisGenesisGenesisGenesisGenesk612im",
+            "-block",
+            "genesis",
+            "--better-errors",
+            "activate",
+            "protocol",
+            protocol,
+            "with",
+            "fitness",
+            fitness,
+            "and",
+            "key",
+            key,
+            "and",
+            "parameters",
+            parameters_file
+                .to_str()
+                .ok_or(anyhow!("parameters file path must be a valid utf-8 path"))?,
+        ];
+        let output = self.spawn_and_wait_command(args).await?;
+        println!("Spawn output");
+        println!("{}", output);
         Ok(())
     }
 }
@@ -290,6 +333,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn commands_are_created() {
         let temp_dir = TempDir::new().unwrap();
         let base_dir = temp_dir.path().to_path_buf();

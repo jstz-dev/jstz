@@ -5,7 +5,7 @@ use http::{uri::Scheme, Uri};
 pub struct Endpoint {
     scheme: String,
     host: String,
-    port: u16,
+    pub port: u16,
 }
 
 impl Endpoint {
@@ -15,6 +15,10 @@ impl Endpoint {
             host: "localhost".to_owned(),
             port,
         }
+    }
+
+    pub fn to_string_raw(&self) -> String {
+        format!("{}:{}", self.host, self.port)
     }
 }
 

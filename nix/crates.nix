@@ -122,7 +122,7 @@ in {
 
     cargo-test-int = craneLib.cargoNextest (commonWorkspace
       // {
-        buildInputs = commonWorkspace.buildInputs ++ [octez pkgs.cacert];
+        buildInputs = commonWorkspace.buildInputs ++ [octez pkgs.cacert pkgs.iana-etc];
         doCheck = true;
         # Run the integration tests
         #
@@ -130,12 +130,22 @@ in {
         # Don't run the `jstz_api` integration tests until they've been paralellized
         #
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
-        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\"";
+        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --no-capture";
+        # createEtcServices = pkgs.writeShellScriptBin "createEtcServices" ''
+        #   mkdir -p /etc
+        #   cat > /etc/services << EOF
+        #   http  80/tcp
+        #   https 443/tcp
+        #   EOF
+        # '';
+        # preCheck = ''
+        #   eval ${createEtcServices}/bin/createEtcServices
+        # '';
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
-        buildInputs = commonWorkspace.buildInputs ++ [octez pkgs.cacert];
+        buildInputs = commonWorkspace.buildInputs ++ [octez pkgs.cacert pkgs.iana-etc];
         # Generate coverage reports for codecov
         cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out";
       });
