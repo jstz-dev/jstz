@@ -1,4 +1,4 @@
-use boa_engine::{js_string, object::ObjectInitializer, property::Attribute};
+use boa_engine::{js_string, object::ObjectInitializer, property::Attribute, Context};
 
 mod account;
 mod kv;
@@ -10,7 +10,7 @@ impl DebugApi {
 }
 
 impl jstz_core::Api for DebugApi {
-    fn init(self, context: &mut boa_engine::Context<'_>) {
+    fn init(self, context: &mut Context) {
         let kv_api = kv::KvApi::namespace(context);
         let account_api = account::AccountApi::namespace(context);
 

@@ -44,7 +44,7 @@ pub struct LogData {
 
 // The implementor of this trait controls how console.log/warn/error etc is handled.
 pub trait JsLog {
-    fn log(&self, log_data: LogData, context: &mut Context<'_>);
+    fn log(&self, log_data: LogData, context: &mut Context);
     fn flush(&self) {}
 }
 
@@ -57,7 +57,7 @@ pub fn set_js_logger(logger: &'static dyn JsLog) {
     CONSOLE_LOGGER.set(Some(logger));
 }
 
-pub(crate) fn log(log_data: LogData, context: &mut Context<'_>) -> JsResult<()> {
+pub(crate) fn log(log_data: LogData, context: &mut Context) -> JsResult<()> {
     CONSOLE_LOGGER.with(|logger| {
         if let Some(logger) = logger.get() {
             logger.log(log_data, context);

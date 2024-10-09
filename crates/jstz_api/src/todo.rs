@@ -1,4 +1,4 @@
-use boa_engine::value::TryFromJs;
+use boa_engine::{value::TryFromJs, Context, JsResult, JsValue};
 use boa_gc::{custom_trace, Finalize, Trace};
 use jstz_core::value::IntoJs;
 
@@ -16,25 +16,19 @@ impl Finalize for Todo {
 
 #[allow(unused_variables)]
 unsafe impl Trace for Todo {
-    custom_trace!(this, todo!());
+    custom_trace!(this, mark, todo!());
 }
 
 #[allow(unused_variables)]
 impl IntoJs for Todo {
-    fn into_js(
-        self,
-        context: &mut boa_engine::prelude::Context<'_>,
-    ) -> boa_engine::prelude::JsValue {
+    fn into_js(self, context: &mut Context) -> JsValue {
         todo!()
     }
 }
 
 #[allow(unused_variables)]
 impl TryFromJs for Todo {
-    fn try_from_js(
-        value: &boa_engine::prelude::JsValue,
-        context: &mut boa_engine::prelude::Context<'_>,
-    ) -> boa_engine::prelude::JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         todo!()
     }
 }

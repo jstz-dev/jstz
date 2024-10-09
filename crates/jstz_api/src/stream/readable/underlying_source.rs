@@ -3,8 +3,8 @@
 use std::str::FromStr;
 
 use boa_engine::{
-    object::builtins::JsPromise, value::TryFromJs, Context, JsNativeError, JsObject,
-    JsResult, JsValue,
+    object::builtins::JsPromise, value::TryFromJs, Context, JsData, JsNativeError,
+    JsObject, JsResult, JsValue,
 };
 use boa_gc::{custom_trace, Finalize, Trace};
 use jstz_core::{
@@ -26,7 +26,7 @@ use crate::{idl, stream::tmp::*};
 /// >   \[EnforceRange\] unsigned long long autoAllocateChunkSize;
 /// > };
 /// > ```
-#[derive(Debug)]
+#[derive(Debug, JsData)]
 pub struct UnderlyingSource {
     /// A reference to the [`JsObject`] from which the [`UnderlyingSource`] was build, used as `this` parameter when calling the methods of the [`UnderlyingSource`].
     ///
@@ -96,7 +96,7 @@ impl Finalize for UnderlyingSource {
 }
 
 unsafe impl Trace for UnderlyingSource {
-    custom_trace!(this, {
+    custom_trace!(this, mark, {
         mark(&this.this);
         mark(&this.start);
         mark(&this.pull);
@@ -106,7 +106,7 @@ unsafe impl Trace for UnderlyingSource {
 
 // TODO derive this implementation with a macro?
 impl TryFromJs for UnderlyingSource {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let this = value.to_object(context)?;
         let start: Option<UnderlyingSourceStartCallback> =
             get_jsobject_property(&this, "start", context)?.try_js_into(context)?;
@@ -212,7 +212,7 @@ impl UnderlyingSourceTrait for UndefinedUnderlyingSource {
         _controller: JsNativeObject<ReadableStreamController>,
         context: &mut Context,
     ) -> JsResult<Option<JsPromise>> {
-        JsPromise::resolve(JsValue::Undefined, context).map(Option::Some)
+        Ok(Some(JsPromise::resolve(JsValue::Undefined, context)))
     }
 
     fn cancel(
@@ -220,7 +220,7 @@ impl UnderlyingSourceTrait for UndefinedUnderlyingSource {
         _reason: Option<JsValue>,
         context: &mut Context,
     ) -> JsResult<Option<JsPromise>> {
-        JsPromise::resolve(JsValue::Undefined, context).map(Option::Some)
+        Ok(Some(JsPromise::resolve(JsValue::Undefined, context)))
     }
 }
 
@@ -311,7 +311,7 @@ impl UnderlyingSourceTrait for Option<UnderlyingSource> {
 
 /// [Streams Standard - § 4.2.3.][https://streams.spec.whatwg.org/#typedefdef-readablestreamcontroller]
 /// > `typedef (ReadableStreamDefaultController or ReadableByteStreamController) ReadableStreamController;`
-#[derive(Debug)]
+#[derive(Debug, JsData)]
 pub enum ReadableStreamController {
     DefaultController(ReadableStreamDefaultController),
     ByteController(ReadableByteStreamController),
@@ -322,7 +322,7 @@ impl Finalize for ReadableStreamController {
 }
 
 unsafe impl Trace for ReadableStreamController {
-    custom_trace!(this, {
+    custom_trace!(this, mark, {
         match this {
             ReadableStreamController::DefaultController(value) => mark(value),
             ReadableStreamController::ByteController(value) => mark(value),
@@ -370,14 +370,14 @@ impl FromStr for ReadableStreamType {
 }
 
 impl IntoJs for ReadableStreamType {
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, context: &mut Context) -> JsValue {
         let str: &str = self.into();
         String::from(str).into_js(context)
     }
 }
 
 impl TryFromJs for ReadableStreamType {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let str = String::try_from_js(value, context)?;
         ReadableStreamType::from_str(&str).map_err(|()| {
             JsNativeError::typ()

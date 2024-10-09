@@ -16,13 +16,13 @@
 use boa_engine::{
     object::builtins::{JsArrayBuffer, JsPromise},
     value::TryFromJs,
-    Context, JsError, JsNativeError, JsResult, JsString, JsValue,
+    Context, JsData, JsError, JsNativeError, JsResult, JsString, JsValue,
 };
 use boa_gc::{Finalize, Trace};
 
 pub type HttpBody = Option<Vec<u8>>;
 
-#[derive(Trace, Finalize, Clone)]
+#[derive(Trace, Finalize, JsData, Clone)]
 enum Inner {
     Text(JsString),
     Bytes(Vec<u8>),
@@ -61,7 +61,7 @@ impl Inner {
         }
     }
 
-    fn into_array_buffer(self, context: &mut Context<'_>) -> JsResult<JsArrayBuffer> {
+    fn into_array_buffer(self, context: &mut Context) -> JsResult<JsArrayBuffer> {
         JsArrayBuffer::from_byte_block(self.bytes(), context)
     }
 }
@@ -72,7 +72,7 @@ pub struct Body {
 }
 
 impl Body {
-    pub fn from_http_body(body: HttpBody, _context: &mut Context<'_>) -> JsResult<Self> {
+    pub fn from_http_body(body: HttpBody, _context: &mut Context) -> JsResult<Self> {
         let inner = body.map(Inner::Bytes);
 
         Ok(Self { inner })
@@ -129,9 +129,12 @@ impl Body {
     ///  - [WHATWG specification][spec]
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-body-arraybuffer
-    pub fn array_buffer(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn array_buffer(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         let inner = self.inner()?;
-        JsPromise::resolve(inner.into_array_buffer(context)?, context)
+        Ok(JsPromise::resolve(
+            inner.into_array_buffer(context)?,
+            context,
+        ))
     }
 
     /// Returns a promise fulfilled with body's content as a string
@@ -140,9 +143,9 @@ impl Body {
     ///  - [WHATWG specification][spec]
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-body-text
-    pub fn text(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn text(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         let inner = self.inner()?;
-        JsPromise::resolve(inner.text()?, context)
+        Ok(JsPromise::resolve(inner.text()?, context))
     }
 
     /// Returns a promise fulfilled with body's content parsed as JSON
@@ -151,7 +154,7 @@ impl Body {
     ///  - [WHATWG specification][spec]
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-body-json
-    pub fn json(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn json(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         let inner = self.inner()?;
         let json: serde_json::Value =
             serde_json::from_str(&inner.string()?).map_err(|_| {
@@ -161,7 +164,10 @@ impl Body {
                 )
             })?;
 
-        JsPromise::resolve(JsValue::from_json(&json, context)?, context)
+        Ok(JsPromise::resolve(
+            JsValue::from_json(&json, context)?,
+            context,
+        ))
     }
 }
 
@@ -183,7 +189,7 @@ pub enum BodyInit {
 }
 
 impl TryFromJs for BodyInit {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         if let Some(string) = value.as_string() {
             return Ok(Self::Text(string.clone()));
         };
@@ -214,7 +220,7 @@ impl BodyWithType {
     ///  - [WHATWG specification][spec]
     ///
     /// [spec] https://fetch.spec.whatwg.org/#dom-response-jsonF
-    pub fn json(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    pub fn json(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let json = value.to_json(context)?;
         let bytes =
             JsArrayBuffer::from_byte_block(json.to_string().into_bytes(), context)?;
@@ -242,7 +248,7 @@ impl BodyWithType {
                 })
             }
             BodyInit::BufferSource(array_buffer) => {
-                let bytes = array_buffer.take()?;
+                let bytes = array_buffer.detach(&JsValue::undefined())?;
 
                 let body = Body::new(Inner::Bytes(bytes));
                 Ok(Self {
@@ -255,7 +261,7 @@ impl BodyWithType {
 }
 
 impl TryFromJs for BodyWithType {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let init: BodyInit = value.try_js_into(context)?;
 
         BodyWithType::from_init(init)

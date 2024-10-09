@@ -43,7 +43,7 @@ impl Default for QueuingStrategy {
 }
 
 impl TryFromJs for QueuingStrategy {
-    fn try_from_js(value: &JsValue, _context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, _context: &mut Context) -> JsResult<Self> {
         if JsNativeObject::<CountQueuingStrategy>::is(value) {
             JsNativeObject::<CountQueuingStrategy>::try_from(value.clone())
                 .map(Into::into)
@@ -59,7 +59,7 @@ impl TryFromJs for QueuingStrategy {
 pub struct QueuingStrategyApi;
 
 impl jstz_core::Api for QueuingStrategyApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<CountQueuingStrategyClass>(context)
             .expect("The `CountQueuingStrategy` class shouldn't exist yet");
         register_global_class::<ByteLengthQueuingStrategyClass>(context)

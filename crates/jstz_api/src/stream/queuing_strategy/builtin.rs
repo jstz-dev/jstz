@@ -1,6 +1,6 @@
 use boa_engine::{
-    js_string, object::Object, property::Attribute, value::TryFromJs, Context, JsArgs,
-    JsNativeError, JsResult, JsValue, NativeFunction,
+    js_string, object::ErasedObject, property::Attribute, value::TryFromJs, Context,
+    JsArgs, JsData, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
 use jstz_core::{
@@ -30,7 +30,7 @@ pub struct QueuingStrategyInit {
 }
 
 impl TryFromJs for QueuingStrategyInit {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let this = value.to_object(context)?;
         let high_water_mark: idl::UnrestrictedDouble =
             get_jsobject_property(&this, "highWaterMark", context)?
@@ -58,7 +58,7 @@ impl TryFromJs for QueuingStrategyInit {
 /// > };
 /// > ```
 ///
-#[derive(Trace, Finalize)]
+#[derive(Trace, Finalize, JsData)]
 pub struct CountQueuingStrategy {
     pub high_water_mark: idl::UnrestrictedDouble,
 }
@@ -69,7 +69,7 @@ impl CountQueuingStrategy {
     }
 }
 
-#[derive(Trace, Finalize)]
+#[derive(Trace, Finalize, JsData)]
 pub struct ByteLengthQueuingStrategy {
     pub high_water_mark: idl::UnrestrictedDouble,
 }
@@ -89,7 +89,9 @@ macro_rules! impl_for_builtin_queuing_strategy_struct {
                 }
             }
 
-            pub fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<Object, Self>> {
+            pub fn try_from_js(
+                value: &JsValue,
+            ) -> JsResult<GcRefMut<ErasedObject, Self>> {
                 value
                     .as_object()
                     .and_then(|obj| obj.downcast_mut::<Self>())
@@ -118,7 +120,7 @@ pub struct ByteLengthQueuingStrategyClass {}
 macro_rules! define_high_water_mark_accessor_for_builtin_queuing_strategy_class {
     ($class_name : ident) => {
         impl $class_name {
-            fn high_water_mark(context: &mut Context<'_>) -> Accessor {
+            fn high_water_mark(context: &mut Context) -> Accessor {
                 accessor!(
                     context,
                     CountQueuingStrategy,
@@ -141,7 +143,7 @@ impl CountQueuingStrategyClass {
     fn size(
         _this: &JsValue,
         _args: &[JsValue],
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<JsValue> {
         Ok(CountQueuingStrategySizeAlgorithm::RETURN_VALUE.into())
     }
@@ -151,7 +153,7 @@ impl ByteLengthQueuingStrategyClass {
     fn size(
         _this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let chunk = args.get_or_undefined(0);
         ByteLengthQueuingStrategySizeAlgorithm::ReturnByteLengthOfChunk
@@ -170,7 +172,7 @@ macro_rules! define_builtin_queuing_strategy_class(
             fn data_constructor(
                 _target: &JsValue,
                 args: &[JsValue],
-                context: &mut Context<'_>,
+                context: &mut Context,
             ) -> JsResult<Self::Instance> {
                 let init: QueuingStrategyInit = args
                     .first()
@@ -182,7 +184,7 @@ macro_rules! define_builtin_queuing_strategy_class(
                 Ok($struct_name::new(init))
             }
 
-            fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+            fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
                 let high_water_mark = Self::high_water_mark(class.context());
 
                 class
