@@ -22,6 +22,7 @@ jstz_crypto = { path = "../jstz_crypto" }
 
 [dev-dependencies]
 rand.workspace = true
+regex.workspace = true
 
 [[bin]]
 name = "jstzd"

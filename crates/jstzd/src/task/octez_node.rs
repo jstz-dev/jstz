@@ -1,15 +1,14 @@
 use crate::unused_port;
 
-use super::Task;
+use super::{
+    child_wrapper::{ChildWrapper, SharedChildWrapper},
+    Task,
+};
 use anyhow::Result;
-use async_dropper_simple::{AsyncDrop, AsyncDropper};
 use async_trait::async_trait;
-use std::{fs::File, path::PathBuf, sync::Arc};
-use tokio::sync::RwLock;
+use std::{fs::File, path::PathBuf};
 
 use octez::AsyncOctezNode;
-use tokio::process::Child;
-
 const DEFAULT_NETWORK: &str = "sandbox";
 const DEFAULT_BINARY_PATH: &str = "octez-node";
 const LOCALHOST: &str = "localhost";
@@ -20,11 +19,11 @@ pub struct OctezNodeConfig {
     /// Path to the octez node binary.
     binary_path: PathBuf,
     /// Path to the directory where the node keeps data.
-    data_dir: PathBuf,
+    pub data_dir: PathBuf,
     /// Name of the tezos network that the node instance runs on.
     network: String,
     /// HTTP endpoint of the node RPC interface, e.g. 'localhost:8732'
-    rpc_endpoint: String,
+    pub rpc_endpoint: String,
     // TCP address and port at for p2p which this instance can be reached
     p2p_address: String,
     /// Path to the file that keeps octez node logs.
@@ -125,31 +124,10 @@ impl OctezNodeConfigBuilder {
     }
 }
 
-#[derive(Default)]
-struct ChildWrapper {
-    inner: Option<Child>,
-}
-
-impl ChildWrapper {
-    pub async fn kill(&mut self) -> anyhow::Result<()> {
-        if let Some(mut v) = self.inner.take() {
-            v.kill().await?;
-        }
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl AsyncDrop for ChildWrapper {
-    async fn async_drop(&mut self) {
-        let _ = self.kill().await;
-    }
-}
-
 #[derive(Default, Clone)]
 pub struct OctezNode {
-    inner: Arc<RwLock<AsyncDropper<ChildWrapper>>>,
-    config: OctezNodeConfig,
+    inner: SharedChildWrapper,
+    pub config: OctezNodeConfig,
 }
 
 impl OctezNode {
@@ -191,20 +169,19 @@ impl Task for OctezNode {
         }
 
         Ok(OctezNode {
-            inner: Arc::new(RwLock::new(AsyncDropper::new(ChildWrapper {
-                inner: Some(
-                    node.run(
-                        &File::create(&config.log_file)?,
-                        config
-                            .options
-                            .iter()
-                            .map(|s| s as &str)
-                            .collect::<Vec<&str>>()
-                            .as_slice(),
-                    )
-                    .await?,
-                ),
-            }))),
+            inner: ChildWrapper::new_shared(
+                node.run(
+                    &File::create(&config.log_file)?,
+                    config
+                        .options
+                        .iter()
+                        .map(|s| s as &str)
+                        .collect::<Vec<&str>>()
+                        .as_slice(),
+                )
+                .await?,
+            ),
+
             config,
         })
     }
