@@ -22,7 +22,6 @@ jstz_crypto = { path = "../jstz_crypto" }
 
 [dev-dependencies]
 rand.workspace = true
-serial_test.workspace = true
 
 [[bin]]
 name = "jstzd"

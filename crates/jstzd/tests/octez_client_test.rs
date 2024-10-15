@@ -10,7 +10,6 @@ use std::{
 };
 use tempfile::{NamedTempFile, TempDir};
 mod utils;
-use serial_test::serial;
 use utils::retry;
 
 fn read_file(path: &Path) -> Value {
@@ -195,7 +194,6 @@ async fn imports_secret_key_throws() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[serial]
 async fn activate_protocol() {
     // 1. start octez node
     let (mut octez_node, _temp_data_dir) = spawn_octez_node().await;
@@ -235,6 +233,7 @@ async fn activate_protocol() {
         .await;
     assert!(protocol_activated.is_ok());
     // 5. check if the protocol is activated and the block is baked.
+    // The block level progress indicates that the protocol has been activated.
     let response = get_response_text(&blocks_head_endpoint).await;
     assert!(response.contains(
         "\"protocol\":\"ProtoGenesisGenesisGenesisGenesisGenesisGenesk612im\""
