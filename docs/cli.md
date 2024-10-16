@@ -239,7 +239,7 @@ $ jstz deploy examples/logs.js --name my_function
 $ jstz logs trace my_function
 ```
 
-In a new termninal, run the counter function and you will see the following output:
+In a new terminal, run the counter function and you will see the following output:
 
 ```bash
 [🪵]: log

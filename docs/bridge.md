@@ -26,7 +26,7 @@ jstz bridge deposit --from tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU \
     --amount 42
 ```
 
-sucessfully deposits 42 XTZ from `tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU` to the `tz1ZvXcDBWMAys2ro6kJXrgiWUcUF8RvCHYy` `jstz` address, outputting:
+successfully deposits 42 XTZ from `tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU` to the `tz1ZvXcDBWMAys2ro6kJXrgiWUcUF8RvCHYy` `jstz` address, outputting:
 
 ```
 Deposited 42 XTZ to tz4N7y3T2e2dfCyHB1Ama68jnt3Fps7Ufu6d
