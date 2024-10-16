@@ -31,7 +31,7 @@ The possible settings are:
 
 - `headers` (`HeadersInit`, optional)
 
-  Any headers that should be attatched to the request. Either a [`Headers`](./headers.md) object, an `Array` of key-value pairs, or a `Record<string, string>`.
+  Any headers that should be attached to the request. Either a [`Headers`](./headers.md) object, an `Array` of key-value pairs, or a `Record<string, string>`.
 
 - `body` (`BodyInit | null`, optional)
 

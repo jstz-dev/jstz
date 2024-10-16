@@ -101,38 +101,38 @@ group: x = 2
 ### `console.log(...message : unknown[]) : void`{#log}
 
 Outputs a general logging message.
-String reresentations of each of the arguments will be concatenated, separated by spaces and written to the logs.
+String representations of each of the arguments will be concatenated, separated by spaces and written to the logs.
 
 ### `console.info(...message : unknown[]) : void`{#info}
 
 Outputs a informative logging message.
-String reresentations of each of the arguments will be concatenated, separated by spaces and written to the logs.
+String representations of each of the arguments will be concatenated, separated by spaces and written to the logs.
 
 ### `console.warn(...message : unknown[]) : void`{#warn}
 
 Outputs a warning logging message.
-String reresentations of each of the arguments will be concatenated, separated by spaces and written to the logs.
+String representations of each of the arguments will be concatenated, separated by spaces and written to the logs.
 
 ### `console.error(...message : unknown[]) : void`{#error}
 
 Outputs a warning message.
-String reresentations of each of the arguments will be concatenated, separated by spaces and written to the logs.
+String representations of each of the arguments will be concatenated, separated by spaces and written to the logs.
 
 ### `console.assert(assertion: unknown, ...message : unknown[]) : void`{#assert}
 
 Outputs an error message if the first argument is falsy.
-String reresentations of each of the arguments will be concatenated, separated by spaces and written to the logs.
+String representations of each of the arguments will be concatenated, separated by spaces and written to the logs.
 Has no effect if the first argument is truthy.
 
 ### `console.debug(...message : unknown[]) : void`{#debug}
 
 Outputs a debug logging message.
-String reresentations of each of the arguments will be concatenated, separated by spaces and written to the logs.
+String representations of each of the arguments will be concatenated, separated by spaces and written to the logs.
 
 ### `console.group(...label : unknown[]) : void`{#group}
 
 Begins a group and pushes the label to the group stack.
-The group label will consist of the string reresentations of each of the arguments, concatenated and separated by spaces.
+The group label will consist of the string representations of each of the arguments, concatenated and separated by spaces.
 Subsequent messages will be indented at the level of the group.
 
 ### `console.groupCollapsed(...message : unknown[]) : void`

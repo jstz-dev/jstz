@@ -19,11 +19,11 @@ In the `jstz_core` crates, `jstz` uses Boa and enables Rust types to be passed a
 
 When writing smart functions, we need a way to store data across different calls of the functions. Therefore, `jstz` _smart functions_ implement a persistent key-value store used for storing and retrieval of arbitrary JSON blobs. This store can be accessed through a global _Kv_ object.
 
-The key-value store implements _optimistic concurrency control scheme_. It is optimistically assumed that conflicts between different transactions (snapshots of the persistent kv store) are sufficiently rare thus not interfering each other. Before commiting, the transaction verifies whether no other transaction has modified the data it has read.
+The key-value store implements _optimistic concurrency control scheme_. It is optimistically assumed that conflicts between different transactions (snapshots of the persistent kv store) are sufficiently rare thus not interfering each other. Before committing, the transaction verifies whether no other transaction has modified the data it has read.
 
-The transactions performed over the KV store offer ACID guarantees and serializability, therefore any transaction can be commited only if it does not conflict with any previously commited ones.
+The transactions performed over the KV store offer ACID guarantees and serializability, therefore any transaction can be committed only if it does not conflict with any previously committed ones.
 
-In each transaction, the repeated access to the same key is optimized through caching. Similarly, writes are buffered until the transaction is commited at which point it gets flushed to the persistent KV storage.
+In each transaction, the repeated access to the same key is optimized through caching. Similarly, writes are buffered until the transaction is committed at which point it gets flushed to the persistent KV storage.
 
 `jstz` implements several `jstz`-specific APIs such as `Kv`, `Ledger`, and `SmartFunction`. Additionally, `jstz` provides implementations for many web standard APIs in the `jstz_api` crate.
 
@@ -35,7 +35,7 @@ _Kv_ store is implemented on top of jstz\*core::kv. The API provides access to a
 
 ### Ledger
 
-A specialised type of the KV store is the Ledger that provides access to the balances of the L2 tez. Additionally it also stores so-called 'self address' - the address of the smart function itself. Similarly to the KV store, all operations on the ledger are synchronous and atomic, commited only if the request to the smart function succeeds.
+A specialised type of the KV store is the Ledger that provides access to the balances of the L2 tez. Additionally it also stores so-called 'self address' - the address of the smart function itself. Similarly to the KV store, all operations on the ledger are synchronous and atomic, committed only if the request to the smart function succeeds.
 
 ### SmartFunction
 
@@ -110,7 +110,7 @@ cd tezos
 nix-build -j auto
 ```
 
-After Nix successfully builds Octez (it takes a long time 🕣), the Octez binaries will be accessable from `result`.
+After Nix successfully builds Octez (it takes a long time 🕣), the Octez binaries will be accessible from `result`.
 
 Once Octez has been built, copy the following binaries to `jstz`:
 

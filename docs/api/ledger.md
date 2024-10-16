@@ -4,7 +4,7 @@ The `Ledger` object maintains a persistent ledger of all accounts and their
 balances of L2 tez (stored as mutez). Additionally, the `Ledger` object stores the 'self address' of
 the smart function, which is the address of the smart function itself.
 
-All operations on `Ledger` are synchronous and atomic, committed if the request to the smart function suceeds.
+All operations on `Ledger` are synchronous and atomic, committed if the request to the smart function succeeds.
 
 ## Quick Start
 

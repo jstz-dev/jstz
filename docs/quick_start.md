@@ -31,14 +31,14 @@ const ONE_TEZ = 1000000;
 // Maximum amount of tez a requester can receive
 const MAX_TEZ = 10000;
 
-const getRecievedTez = (requester: Address): number => {
+const getReceivedTez = (requester: Address): number => {
   let receivedTez: number | null = Kv.get(`received/${requester}`);
   receivedTez = receivedTez === null ? 0 : receivedTez;
   console.debug(`Requestor already received ${receivedTez} tez`);
   return receivedTez;
 };
 
-const setRecievedTez = (requester: Address, received: number): void => {
+const setReceivedTez = (requester: Address, received: number): void => {
   Kv.set(`received/${requester}`, received + 1);
 };
 
@@ -55,8 +55,8 @@ const handler = async (request: Request): Promise<Response> => {
   }
 
   // If the requester already received too much tez, decline the request
-  const recievedTez = getRecievedTez(requester);
-  if (recievedTez >= MAX_TEZ) {
+  const receivedTez = getReceivedTez(requester);
+  if (receivedTez >= MAX_TEZ) {
     return new Response("Sorry, you already received too much tez");
   }
 
@@ -71,7 +71,7 @@ const handler = async (request: Request): Promise<Response> => {
       "Sorry, I don't have enough tez to fulfill your request",
     );
   }
-  setRecievedTez(requester, recievedTez + 1);
+  setReceivedTez(requester, receivedTez + 1);
 
   return new Response("Thank you for your polite request. You received 1 tez!");
 };
@@ -88,7 +88,7 @@ The smart function consists of:
 
 - An `export default` statement.
 
-  `export default` is JavaScript syntax required for defining an EMCAScript module.
+  `export default` is JavaScript syntax required for defining an ECMAScript module.
   Smart functions _must_ have an default export of a function, which has the following type:
 
   ```typescript
@@ -118,7 +118,7 @@ In addition to several [standard Web APIs](./api/index.md#web-platform-apis), `j
 
 - **`SmartFunction` API**
 
-  Smart functions can invoke other smart functions using `fetch`, similiar to network requests in JavaScript.
+  Smart functions can invoke other smart functions using `fetch`, similar to network requests in JavaScript.
   Additionally, new smart functions can be deployed by a smart function using the [`SmartFunction`](./api/smart_function.md) API.
 
 ## 2. Deploying your Smart Function
@@ -249,7 +249,7 @@ jstz bridge deposit --from bootstrap1 --to tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W 
 
 ## 3. Running and debugging your Smart Function
 
-After a succesful deployment, you will be able to run the smart function with the provided command to run your smart function similarly to the following:
+After a successful deployment, you will be able to run the smart function with the provided command to run your smart function similarly to the following:
 
 ```sh
 jstz run tezos://tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W/ --data '{"message":"Please, give me some tez."}'
