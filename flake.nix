@@ -187,6 +187,7 @@
                 rust-toolchain
                 rust-analyzer
                 wabt
+                wasm-pack
                 cargo-sort
                 cargo-nextest
 
