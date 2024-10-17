@@ -18,6 +18,12 @@ impl Endpoint {
     }
 }
 
+impl Default for Endpoint {
+    fn default() -> Self {
+        Self::localhost(80)
+    }
+}
+
 impl ToString for Endpoint {
     fn to_string(&self) -> String {
         format!("{}://{}:{}", self.scheme, self.host, self.port)
