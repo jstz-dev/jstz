@@ -35,19 +35,9 @@
 
     # Octez
 
-    # We explicitly have opam-nix-integration as an input to avoid having two versions of nixpkgs
-    opam-nix-integration = {
-      url = "github:vapourismo/opam-nix-integration";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-    };
-
     octez-v21 = {
-      url = "gitlab:tezos/tezos/octez-v21.0-rc2";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.flake-utils.follows = "flake-utils";
-      inputs.rust-overlay.follows = "rust-overlay";
-      inputs.opam-nix-integration.follows = "opam-nix-integration";
+      # pin octez-v21 to a specific commit until the next release is available
+      url = "gitlab:tezos/tezos/c6c7373f31917d1bcf1fbc6550937b3ae1d3d748";
     };
   };
 
