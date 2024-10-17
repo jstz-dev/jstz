@@ -11,7 +11,7 @@ use std::{ffi::OsStr, fmt, path::PathBuf, str::FromStr};
 use tempfile::tempdir;
 use tokio::process::Command;
 
-const DEFAULT_BINARY_PATH: &str = "octez-client";
+pub const DEFAULT_BINARY_PATH: &str = "octez-client";
 
 type StdOut = String;
 
@@ -160,7 +160,7 @@ impl TryFrom<StdOut> for Address {
 #[derive(Debug)]
 pub struct OctezClient {
     binary_path: PathBuf,
-    base_dir: Directory,
+    pub base_dir: Directory,
     endpoint: Endpoint,
     disable_unsafe_disclaimer: bool,
 }

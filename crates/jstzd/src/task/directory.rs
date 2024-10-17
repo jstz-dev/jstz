@@ -31,6 +31,16 @@ impl TryFrom<PathBuf> for Directory {
     }
 }
 
+impl TryFrom<&Directory> for PathBuf {
+    type Error = anyhow::Error;
+    fn try_from(dir: &Directory) -> Result<PathBuf> {
+        match dir {
+            Directory::TempDir(temp_dir) => Ok(temp_dir.path().to_path_buf()),
+            Directory::Path(path) => Ok(path.as_path().to_path_buf()),
+        }
+    }
+}
+
 impl TryFrom<&Directory> for String {
     type Error = anyhow::Error;
     fn try_from(dir: &Directory) -> Result<Self> {
