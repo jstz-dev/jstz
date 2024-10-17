@@ -20,6 +20,20 @@
         "type": "github"
       }
     },
+    "flake-compat": {
+      "locked": {
+        "lastModified": 1696426674,
+        "narHash": "sha256-kvjfFW7WAETZlt09AgDn1MrtKzP7t90Vf7vypd3OL1U=",
+        "rev": "0f9255e01c2351cc7d116c072cb317785dd33b33",
+        "revCount": 57,
+        "type": "tarball",
+        "url": "https://api.flakehub.com/f/pinned/edolstra/flake-compat/1.0.1/018afb31-abd1-7bff-a5e4-cff7e18efb7a/source.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://flakehub.com/f/edolstra/flake-compat/1.tar.gz"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
@@ -75,6 +89,7 @@
     },
     "octez-v21": {
       "inputs": {
+        "flake-compat": "flake-compat",
         "flake-utils": [
           "flake-utils"
         ],
@@ -90,17 +105,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1726495500,
-        "narHash": "sha256-LxIn3uvqOrNdlcUnbSvHGnVTn47rREvVqdvA4+AL8D0=",
+        "lastModified": 1729167219,
+        "narHash": "sha256-/C7YMgvhiC03dGL+BBG88EEN0t/Fhk+3bB9U/Idobs4=",
         "owner": "tezos",
         "repo": "tezos",
-        "rev": "44643df827aa2d745c3d8a09a6649fe175ff77d7",
+        "rev": "c6c7373f31917d1bcf1fbc6550937b3ae1d3d748",
         "type": "gitlab"
       },
       "original": {
         "owner": "tezos",
-        "ref": "octez-v21.0-rc2",
         "repo": "tezos",
+        "rev": "c6c7373f31917d1bcf1fbc6550937b3ae1d3d748",
         "type": "gitlab"
       }
     },
@@ -115,11 +130,11 @@
         "opam-repository": "opam-repository_2"
       },
       "locked": {
-        "lastModified": 1716561961,
-        "narHash": "sha256-SgeZItYuUZV7WSaoX4G7J1ZpmwgeI3ocQCLP95E+O1U=",
+        "lastModified": 1728662094,
+        "narHash": "sha256-tOAquEaPr15wNWbfsxNqV6s6oCfC0yQvC5D5MRKm+ig=",
         "owner": "vapourismo",
         "repo": "opam-nix-integration",
-        "rev": "0f98236c75cdb436be7669ccaa249264456baa37",
+        "rev": "576bfd60b8fc1cf548ae71b842496a15a797f4fd",
         "type": "github"
       },
       "original": {
@@ -131,11 +146,11 @@
     "opam-repository": {
       "flake": false,
       "locked": {
-        "lastModified": 1723381368,
-        "narHash": "sha256-fN8jaeSfK8lbIQcvPXk96FeH8i7sjGjkwqnf0C9ZCog=",
+        "lastModified": 1727454553,
+        "narHash": "sha256-9p5c2qV5IfRGrYEnHNFw7hHCYgD2jAnTumJStUr8dPE=",
         "owner": "ocaml",
         "repo": "opam-repository",
-        "rev": "0f4d0ee5b69b496a4e26f305891c31400f0b4b5f",
+        "rev": "a70ac3366bdaaf354374c8ac8929d09c17e6f494",
         "type": "github"
       },
       "original": {
@@ -174,19 +189,16 @@
     },
     "rust-overlay": {
       "inputs": {
-        "flake-utils": [
-          "flake-utils"
-        ],
         "nixpkgs": [
           "nixpkgs"
         ]
       },
       "locked": {
-        "lastModified": 1701656211,
-        "narHash": "sha256-lfFXsLWH4hVbEKR6K+UcDiKxeS6Lz4FkC1DZ9LHqf9Y=",
+        "lastModified": 1729132166,
+        "narHash": "sha256-Mhl4T7gDGknG4nPbHNSGWynfSjZeoWBdsaIzhUYuIlU=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "47a276e820ae4ae1b8d98a503bf09d2ceb52dfd8",
+        "rev": "32d889f9b9fc65cb65aa2d5db282d60ed06f348e",
         "type": "github"
       },
       "original": {
