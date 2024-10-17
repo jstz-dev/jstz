@@ -8,7 +8,6 @@ use tezos_smart_rollup::{
 };
 
 use crate::inbox::{read_message, Message};
-
 pub mod inbox;
 pub mod parsing;
 
