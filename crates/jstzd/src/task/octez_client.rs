@@ -1,11 +1,12 @@
 use crate::jstzd::DEFAULT_RPC_ENDPOINT;
 
-use super::{directory::Directory, endpoint::Endpoint};
+use super::directory::Directory;
 use anyhow::{anyhow, bail, Result};
 use http::Uri;
 use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::secret_key::SecretKey;
+use octez::Endpoint;
 use std::path::Path;
 use std::{ffi::OsStr, fmt, path::PathBuf, str::FromStr};
 use tempfile::tempdir;
