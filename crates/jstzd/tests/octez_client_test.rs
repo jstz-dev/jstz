@@ -245,12 +245,13 @@ async fn activate_protocol() {
 async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
     let temp_dir = TempDir::new().unwrap();
     let data_dir = temp_dir.path();
-    let mut config_builder = octez_node::OctezNodeConfigBuilder::new();
+    let mut config_builder = octez::OctezNodeConfigBuilder::new();
+    let mut run_option_builder = octez::OctezNodeRunOptionsBuilder::new();
     config_builder
         .set_binary_path("octez-node")
         .set_network("sandbox")
         .set_data_dir(data_dir.to_str().unwrap())
-        .set_run_options(&["--synchronisation-threshold", "0"]);
+        .set_run_options(&run_option_builder.set_synchronisation_threshold(0).build());
     let octez_node = octez_node::OctezNode::spawn(config_builder.build().unwrap())
         .await
         .unwrap();

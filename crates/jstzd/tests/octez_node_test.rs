@@ -13,14 +13,19 @@ async fn octez_node_test() {
         .port();
     let rpc_endpoint = format!("localhost:{}", port);
 
-    let mut config_builer = octez_node::OctezNodeConfigBuilder::new();
+    let mut run_option_builder = octez::OctezNodeRunOptionsBuilder::new();
+    let run_options = run_option_builder
+        .set_synchronisation_threshold(0)
+        .set_network("sandbox")
+        .build();
+    let mut config_builer = octez::OctezNodeConfigBuilder::new();
     config_builer
         .set_binary_path("octez-node")
         .set_data_dir(data_dir.path().to_str().unwrap())
         .set_network("sandbox")
         .set_rpc_endpoint(&rpc_endpoint)
         .set_log_file(log_file.path().to_str().unwrap())
-        .set_run_options(&[]);
+        .set_run_options(&run_options);
     let mut f = octez_node::OctezNode::spawn(config_builer.build().unwrap())
         .await
         .unwrap();
