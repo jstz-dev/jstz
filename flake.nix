@@ -43,7 +43,8 @@
     };
 
     octez-v21 = {
-      url = "gitlab:tezos/tezos/octez-v21.0-rc2";
+      # pin octez-v21 to a specific commit until the next release is available
+      url = "gitlab:tezos/tezos/c6c7373f31917d1bcf1fbc6550937b3ae1d3d748";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
