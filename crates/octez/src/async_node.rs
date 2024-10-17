@@ -2,6 +2,8 @@ use std::{fs::File, path::PathBuf, process::Stdio};
 
 use tokio::process::{Child, Command};
 
+use crate::OctezNodeRunOptions;
+
 use super::path_or_default;
 use anyhow::Result;
 
@@ -57,7 +59,11 @@ impl AsyncOctezNode {
             .spawn()?)
     }
 
-    pub async fn run(&self, log_file: &File, options: &[&str]) -> Result<Child> {
+    pub async fn run(
+        &self,
+        log_file: &File,
+        options: &OctezNodeRunOptions,
+    ) -> Result<Child> {
         let mut command = self.command();
 
         command
@@ -67,7 +73,7 @@ impl AsyncOctezNode {
                 self.octez_node_dir.to_str().expect("Invalid path"),
                 "--singleprocess",
             ])
-            .args(options)
+            .args(options.to_string().split(' '))
             .stdout(Stdio::from(log_file.try_clone()?))
             .stderr(Stdio::from(log_file.try_clone()?));
 
