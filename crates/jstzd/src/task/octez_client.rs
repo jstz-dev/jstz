@@ -1,11 +1,12 @@
 use crate::jstzd::DEFAULT_RPC_ENDPOINT;
 
 use super::{directory::Directory, endpoint::Endpoint};
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Context, Result};
 use http::Uri;
 use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::secret_key::SecretKey;
+use regex::Regex;
 use std::path::Path;
 use std::{ffi::OsStr, fmt, path::PathBuf, str::FromStr};
 use tempfile::tempdir;
@@ -257,6 +258,29 @@ impl OctezClient {
         Ok(())
     }
 
+    pub async fn get_balance(&self, alias: &str) -> Result<u64> {
+        let stdout = self
+            .spawn_and_wait_command(["get", "balance", "for", alias])
+            .await?;
+        Self::extract_digits(&stdout)
+    }
+
+    // Extract digits followed by a space and ꜩ
+    // e.g. 30000 ꜩ -> 30000
+    fn extract_digits(input: &str) -> Result<u64> {
+        // Define a regex pattern to capture the digits followed by a space and ꜩ
+        let re = Regex::new(r"(\d+)\s*ꜩ").context("Failed to create regex")?;
+        if let Some(caps) = re.captures(input) {
+            caps.get(1)
+                .context("Failed to capture digits")?
+                .as_str()
+                .parse::<u64>()
+                .context("Failed to parse digits as u64")
+        } else {
+            Err(anyhow::anyhow!("Pattern did not match the input string"))
+        }
+    }
+
     pub async fn activate_protocol(
         &self,
         protocol: &str,
@@ -466,5 +490,15 @@ mod test {
         let input_text = "Hash: tz1d5aeTJZ89RxAcuFduWRmyRUwYXfZSBVSB";
         let res = Address::try_from(input_text.to_owned());
         assert!(res.is_err_and(|e| e.to_string().contains("Missing public key")));
+    }
+
+    #[test]
+    fn extract_digits() {
+        let input = "30000 ꜩ";
+        let res = OctezClient::extract_digits(input);
+        assert!(res.is_ok_and(|balance| balance == 30000));
+        let input = "random text";
+        let res = OctezClient::extract_digits(input);
+        assert!(res.is_err_and(|e| e.to_string().contains("Pattern did not match")));
     }
 }
