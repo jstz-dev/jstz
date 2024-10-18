@@ -470,7 +470,7 @@ fn spawn_jstz_node(cfg: &Config) -> Result<impl Future<Output = Result<()>> + 's
     let kernel_log_path = cfg.sandbox_logs_dir().join("kernel.log");
     let mut log_file = OpenOptions::new()
         .create(true)
-        .truncate(true)
+        .append(true)
         .open(log_path.clone())?;
     debug!(log_file, "Jstz node started 🎉");
 
