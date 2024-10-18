@@ -2,7 +2,7 @@ use super::Task;
 use anyhow::Result;
 use async_dropper_simple::{AsyncDrop, AsyncDropper};
 use async_trait::async_trait;
-use octez::OctezNodeConfig;
+use octez::{Endpoint, OctezNodeConfig};
 use std::{fs::File, sync::Arc};
 use tokio::sync::RwLock;
 
@@ -37,7 +37,7 @@ pub struct OctezNode {
 }
 
 impl OctezNode {
-    pub fn rpc_endpoint(&self) -> &str {
+    pub fn rpc_endpoint(&self) -> &Endpoint {
         &self.config.rpc_endpoint
     }
 }
@@ -95,9 +95,11 @@ impl Task for OctezNode {
     async fn health_check(&self) -> Result<bool> {
         // Returns whether or not the node is ready to answer to requests.
         // https://gitlab.com/tezos/tezos/-/raw/2e84c439c25c4d9b363127a6685868e223877034/docs/api/rpc-openapi.json
-        let res =
-            reqwest::get(format!("http://{}/health/ready", &self.config.rpc_endpoint))
-                .await;
+        let res = reqwest::get(format!(
+            "{}/health/ready",
+            &self.config.rpc_endpoint.to_string()
+        ))
+        .await;
         if res.is_err() {
             return Ok(false);
         }
