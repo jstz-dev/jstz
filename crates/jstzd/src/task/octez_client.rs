@@ -1,15 +1,21 @@
+use std::{
+    ffi::OsStr,
+    fmt,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
+
+use anyhow::{anyhow, bail, Result};
+use http::Uri;
+use jstz_crypto::{
+    public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
+};
+use tempfile::tempdir;
+use tokio::process::Command;
+
 use crate::jstzd::DEFAULT_RPC_ENDPOINT;
 
 use super::{directory::Directory, endpoint::Endpoint};
-use anyhow::{anyhow, bail, Result};
-use http::Uri;
-use jstz_crypto::public_key::PublicKey;
-use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_crypto::secret_key::SecretKey;
-use std::path::Path;
-use std::{ffi::OsStr, fmt, path::PathBuf, str::FromStr};
-use tempfile::tempdir;
-use tokio::process::Command;
 
 const DEFAULT_BINARY_PATH: &str = "octez-client";
 

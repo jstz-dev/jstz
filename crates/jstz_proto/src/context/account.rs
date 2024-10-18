@@ -1,18 +1,18 @@
 use std::{
-    fmt::{self, Display, Formatter},
+    fmt::{self, Display},
     result,
 };
 
-use crate::error::{Error, Result};
 use boa_engine::{Context, JsError, JsResult, Module, Source};
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
 };
 use jstz_crypto::public_key_hash::PublicKeyHash;
-
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
+
+use crate::error::{Error, Result};
 
 pub type Address = PublicKeyHash;
 
@@ -32,7 +32,7 @@ impl Nonce {
 }
 
 impl Display for Nonce {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }

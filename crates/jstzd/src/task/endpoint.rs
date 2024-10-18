@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+use std::fmt::{self, Display};
+
 use http::{uri::Scheme, Uri};
 
 #[derive(Debug, Clone, PartialEq)]
@@ -18,9 +20,9 @@ impl Endpoint {
     }
 }
 
-impl ToString for Endpoint {
-    fn to_string(&self) -> String {
-        format!("{}://{}:{}", self.scheme, self.host, self.port)
+impl Display for Endpoint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}://{}:{}", self.scheme, self.host, self.port)
     }
 }
 

@@ -1,4 +1,4 @@
-use std::fmt::{self, Debug};
+use std::fmt::{self, Debug, Display};
 
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::SecretKeyEd25519;
@@ -33,9 +33,9 @@ impl SecretKey {
     }
 }
 
-impl ToString for SecretKey {
-    fn to_string(&self) -> String {
-        self.to_base58()
+impl Display for SecretKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.to_base58())
     }
 }
 

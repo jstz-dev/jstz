@@ -1,13 +1,13 @@
-use std::fmt::Display;
+use std::fmt::{self, Display};
 
 use boa_engine::prelude::Context;
-pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
 use jstz_core::{host::HostRuntime, host_defined, runtime};
 use serde::Deserialize;
 use serde::Serialize;
 
-use crate::api::TraceData;
-use crate::context::account::Address;
+use crate::{api::TraceData, context::account::Address};
+
+pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
 
 pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
 
@@ -20,7 +20,7 @@ pub struct LogRecord {
 }
 
 impl Display for LogRecord {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(
             &serde_json::to_string(self).expect("Failed to convert LogRecord to string"),
         )

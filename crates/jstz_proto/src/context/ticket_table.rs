@@ -1,4 +1,3 @@
-use crate::error::Result;
 use derive_more::{Display, Error, From};
 use jstz_core::kv::{Entry, Transaction};
 use jstz_crypto::public_key_hash::PublicKeyHash;
@@ -9,6 +8,8 @@ use tezos_smart_rollup::{
 };
 
 use super::account::Amount;
+
+use crate::error::Result;
 
 #[derive(Display, Debug, Error, From)]
 pub enum TicketTableError {

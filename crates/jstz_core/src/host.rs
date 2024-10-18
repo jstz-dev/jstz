@@ -346,7 +346,7 @@ mod erased_runtime {
         }
 
         fn store_delete_value<T: Path>(&mut self, path: &T) -> Result<(), HostError> {
-            self.erased_store_delete(erase::Path(path))
+            self.erased_store_delete_value(erase::Path(path))
         }
 
         fn store_count_subkeys<T: Path>(&self, prefix: &T) -> Result<u64, HostError> {
