@@ -216,8 +216,7 @@ async fn activate_protocol() {
         .expect("Failed to generate activator key");
     let params_file =
         Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/sandbox-params.json");
-    let blocks_head_endpoint =
-        format!("{}/chains/main/blocks/head", rpc_endpoint.to_string());
+    let blocks_head_endpoint = format!("{}/chains/main/blocks/head", rpc_endpoint);
     let response = get_response_text(&blocks_head_endpoint).await;
     assert!(response.contains(
         "\"protocol\":\"PrihK96nBAFSxVL1GLJTVhu9YnzkMFiBeuJRPA8NwuZVZCE1L6i\""

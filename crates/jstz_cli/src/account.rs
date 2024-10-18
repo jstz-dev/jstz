@@ -22,7 +22,7 @@ impl User {
     pub fn from_passphrase(passphrase: String) -> Result<Self> {
         let (sk, pk) = keypair_from_passphrase(passphrase.as_str())?;
 
-        let address = Address::try_from(&pk)?;
+        let address = Address::from(&pk);
 
         Ok(Self {
             address,
