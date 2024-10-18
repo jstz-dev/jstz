@@ -1,10 +1,10 @@
 diff --git a/manifest/product_octez.ml b/manifest/product_octez.ml
-index f4336a077a..6ab49b65cf 100644
+index b99bf82156..3bcb1d9129 100644
 --- a/manifest/product_octez.ml
 +++ b/manifest/product_octez.ml
-@@ -522,7 +522,7 @@ let octez_rust_deps =
-               [S "source_tree"; S "../riscv"];
-               [S "source_tree"; S "../kernel_sdk"];
+@@ -575,7 +575,7 @@ let octez_rust_deps =
+               [S "file"; S "../../src/lib_wasm_runtime/build.rs"];
+               [S "glob_files_rec"; S "../../src/lib_wasm_runtime/src/**.rs"];
              ];
 -            [S "action"; [S "no-infer"; [S "bash"; S "./build.sh"]]];
 +            [S "action"; [S "no-infer"; [S "system"; S "bash ./build.sh"]]];
@@ -12,12 +12,12 @@ index f4336a077a..6ab49b65cf 100644
          ]
  
 diff --git a/src/rust_deps/dune b/src/rust_deps/dune
-index de48dbfde8..20934e2e21 100644
+index 4e6bc21230..094f4f0d1e 100644
 --- a/src/rust_deps/dune
 +++ b/src/rust_deps/dune
-@@ -22,4 +22,4 @@
-   (source_tree src)
-   (source_tree ../riscv)
-   (source_tree ../kernel_sdk))
+@@ -25,4 +25,4 @@
+   (file ../../src/lib_wasm_runtime/Cargo.toml)
+   (file ../../src/lib_wasm_runtime/build.rs)
+   (glob_files_rec ../../src/lib_wasm_runtime/src/**.rs))
 - (action (no-infer (bash ./build.sh))))
-+ (action (no-infer (system "bash ./build.sh"))))
++  (action (no-infer (system "bash ./build.sh"))))
