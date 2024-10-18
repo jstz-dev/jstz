@@ -195,6 +195,58 @@ async fn imports_secret_key_throws() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
+async fn get_balance() {
+    // 1. start octez node
+    let (mut octez_node, _temp_data_dir) = spawn_octez_node().await;
+    // 2. setup octez client
+    let temp_dir = TempDir::new().unwrap();
+    let base_dir = temp_dir.path().to_path_buf();
+    let rpc_endpoint = Uri::from_str(octez_node.rpc_endpoint()).unwrap();
+    let rpc_endpoint: Endpoint = Endpoint::try_from(rpc_endpoint).unwrap();
+    let octez_client = OctezClientBuilder::new()
+        .set_endpoint(rpc_endpoint.clone())
+        .set_base_dir(base_dir.clone())
+        .build()
+        .unwrap();
+    // 3. import secret key for bootstrap1
+    let bootstrap1 = "bootstrap1".to_string();
+    octez_client
+        .import_secret_key(
+            &bootstrap1,
+            "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+        )
+        .await
+        .expect("Failed to generate activator key");
+    // 4. activate the alpha protocol
+    let activator = "activator".to_string();
+    octez_client
+        .import_secret_key(&activator, SECRET_KEY)
+        .await
+        .expect("Failed to generate activator key");
+    let params_file =
+        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/sandbox-params.json");
+    let protocol_activated = octez_client
+        .activate_protocol(
+            "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
+            "0",
+            &activator,
+            &params_file,
+        )
+        .await;
+    assert!(protocol_activated.is_ok());
+    // 5. check balance for bootstrap1
+    let balance = octez_client.get_balance(&bootstrap1).await;
+    assert!(balance.is_ok_and(|balance| balance == 3800000f64));
+    let non_existing_alias = "non_existing_alias".to_string();
+    let balance = octez_client.get_balance(&non_existing_alias).await;
+    assert!(balance.is_err_and(|e| {
+        e.to_string()
+            .contains("no contract or key named non_existing_alias")
+    }));
+    let _ = octez_node.kill().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
 async fn activate_protocol() {
     // 1. start octez node
     let (mut octez_node, _temp_data_dir) = spawn_octez_node().await;
