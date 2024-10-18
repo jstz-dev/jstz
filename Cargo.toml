@@ -80,6 +80,7 @@ rand = "0.8"
 regex = "1"
 reqwest = { version = "0.11.24", features = ["json"] }
 reqwest-eventsource = "0.5.0"
+rust-embed = { version = "8.5.0", features = ["interpolate-folder-path"] }
 rustyline = "14.0.0"
 serde = { version = "1.0.196", features = ["derive"] }
 serde-wasm-bindgen = "0.6.5"
