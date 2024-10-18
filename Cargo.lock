@@ -3018,6 +3018,7 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "hex",
+ "http 1.1.0",
  "regex",
  "reqwest",
  "serde",
