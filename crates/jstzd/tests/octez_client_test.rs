@@ -1,4 +1,5 @@
 use http::Uri;
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstzd::task::{
     endpoint::Endpoint, octez_client::OctezClientBuilder, octez_node, Task,
 };
@@ -267,4 +268,26 @@ async fn get_response_text(endpoint: &str) -> String {
         .text()
         .await
         .expect("Failed to get response text")
+}
+
+#[tokio::test]
+async fn add_address() {
+    let address =
+        PublicKeyHash::from_base58("tz1cMWTNwecApUicCrHfTRwHEhBcZGjkUwCw").unwrap();
+    let temp_dir = TempDir::new().unwrap();
+    let base_dir = temp_dir.path().to_path_buf();
+    let octez_client = OctezClientBuilder::new()
+        .set_base_dir(base_dir.clone())
+        .build()
+        .unwrap();
+    let alias = "test_alias".to_string();
+    let res = octez_client.add_address(&alias, &address, false).await;
+    assert!(res.is_ok());
+    let res = octez_client.add_address(&alias, &address, false).await;
+    assert!(res
+        .unwrap_err()
+        .to_string()
+        .contains("test_alias already exists"));
+    let res = octez_client.add_address(&alias, &address, true).await;
+    assert!(res.is_ok());
 }

@@ -285,6 +285,21 @@ impl OctezClient {
         self.spawn_and_wait_command(args).await?;
         Ok(())
     }
+
+    pub async fn add_address(
+        &self,
+        alias: &str,
+        public_key_hash: &PublicKeyHash,
+        overwrite: bool,
+    ) -> Result<()> {
+        let hash_string = public_key_hash.to_string();
+        let mut args = vec!["add", "address", alias, &hash_string];
+        if overwrite {
+            args.push("-f");
+        }
+        self.spawn_and_wait_command(args).await?;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
