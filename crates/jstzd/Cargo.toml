@@ -13,6 +13,7 @@ bollard.workspace = true
 futures-util.workspace = true
 http.workspace = true
 octez = { path = "../octez" }
+regex.workspace = true
 reqwest.workspace = true
 rust-embed.workspace = true
 serde.workspace = true
