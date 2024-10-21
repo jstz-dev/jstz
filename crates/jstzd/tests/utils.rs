@@ -13,3 +13,8 @@ where
     }
     false
 }
+
+#[allow(dead_code)]
+pub async fn get_request(endpoint: &str) -> String {
+    reqwest::get(endpoint).await.unwrap().text().await.unwrap()
+}
