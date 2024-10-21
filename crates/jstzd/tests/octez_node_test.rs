@@ -1,17 +1,13 @@
 use jstzd::task::{octez_node, Task};
 mod utils;
+use octez::{unused_port, Endpoint};
 use utils::retry;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn octez_node_test() {
     let data_dir = tempfile::tempdir().unwrap();
     let log_file = tempfile::NamedTempFile::new().unwrap();
-    let port = std::net::TcpListener::bind("127.0.0.1:0")
-        .unwrap()
-        .local_addr()
-        .unwrap()
-        .port();
-    let rpc_endpoint = format!("localhost:{}", port);
+    let rpc_endpoint = Endpoint::localhost(unused_port());
 
     let mut run_option_builder = octez::OctezNodeRunOptionsBuilder::new();
     let run_options = run_option_builder
@@ -36,7 +32,7 @@ async fn octez_node_test() {
 
     let _ = f.kill().await;
     // Wait for the process to shutdown entirely
-    let health_check_endpoint = format!("http://{}/health/ready", rpc_endpoint);
+    let health_check_endpoint = format!("{}/health/ready", rpc_endpoint);
     let node_destroyed = retry(10, 1000, || async {
         let res = reqwest::get(&health_check_endpoint).await;
         // Should get an error since the node should have been terminated

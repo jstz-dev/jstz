@@ -1,13 +1,13 @@
-use crate::unused_port;
+use crate::{unused_port, Endpoint};
 use anyhow::Result;
 use std::{
     fmt::{self, Display, Formatter},
     path::PathBuf,
+    str::FromStr,
 };
 
 const DEFAULT_NETWORK: &str = "sandbox";
 const DEFAULT_BINARY_PATH: &str = "octez-node";
-const LOCALHOST: &str = "localhost";
 const LOCAL_ADDRESS: &str = "127.0.0.1";
 
 #[derive(Clone, PartialEq, Debug)]
@@ -101,9 +101,9 @@ pub struct OctezNodeConfig {
     /// Name of the tezos network that the node instance runs on.
     pub network: String,
     /// HTTP endpoint of the node RPC interface, e.g. 'localhost:8732'
-    pub rpc_endpoint: String,
+    pub rpc_endpoint: Endpoint,
     // TCP address and port at for p2p which this instance can be reached
-    pub p2p_address: String,
+    pub p2p_address: Endpoint,
     /// Path to the file that keeps octez node logs.
     pub log_file: PathBuf,
     /// Run options for octez node.
@@ -115,8 +115,8 @@ pub struct OctezNodeConfigBuilder {
     binary_path: Option<PathBuf>,
     data_dir: Option<PathBuf>,
     network: Option<String>,
-    rpc_endpoint: Option<String>,
-    p2p_endpoint: Option<String>,
+    rpc_endpoint: Option<Endpoint>,
+    p2p_endpoint: Option<Endpoint>,
     log_file: Option<PathBuf>,
     run_options: Option<OctezNodeRunOptions>,
 }
@@ -144,13 +144,13 @@ impl OctezNodeConfigBuilder {
         self
     }
 
-    /// Sets the HTTP(S) endpoint of the node RPC interface, e.g. 'localhost:8732'
-    pub fn set_rpc_endpoint(&mut self, endpoint: &str) -> &mut Self {
+    /// Sets the HTTP endpoint of the node RPC interface, e.g. 'localhost:8732'
+    pub fn set_rpc_endpoint(&mut self, endpoint: &Endpoint) -> &mut Self {
         self.rpc_endpoint = Some(endpoint.to_owned());
         self
     }
 
-    pub fn set_p2p_endpoint(&mut self, endpoint: &str) -> &mut Self {
+    pub fn set_p2p_endpoint(&mut self, endpoint: &Endpoint) -> &mut Self {
         self.p2p_endpoint = Some(endpoint.to_owned());
         self
     }
@@ -179,16 +179,17 @@ impl OctezNodeConfigBuilder {
                 .take()
                 .unwrap_or(PathBuf::from(tempfile::TempDir::new().unwrap().path())),
             network: self.network.take().unwrap_or(DEFAULT_NETWORK.to_owned()),
-            rpc_endpoint: self.rpc_endpoint.take().unwrap_or(format!(
-                "{}:{}",
-                LOCALHOST,
-                unused_port()
-            )),
-            p2p_address: self.p2p_endpoint.take().unwrap_or(format!(
-                "{}:{}",
-                LOCAL_ADDRESS,
-                unused_port()
-            )),
+            rpc_endpoint: self
+                .rpc_endpoint
+                .take()
+                .unwrap_or(Endpoint::localhost(unused_port())),
+            p2p_address: self.p2p_endpoint.take().unwrap_or(
+                Endpoint::try_from(
+                    http::Uri::from_str(&format!("{}:{}", LOCAL_ADDRESS, unused_port()))
+                        .unwrap(),
+                )
+                .unwrap(),
+            ),
             log_file: self.log_file.take().unwrap_or(PathBuf::from(
                 tempfile::NamedTempFile::new().unwrap().path(),
             )),
@@ -200,6 +201,8 @@ impl OctezNodeConfigBuilder {
 #[cfg(test)]
 mod tests {
     use std::path::PathBuf;
+
+    use crate::Endpoint;
 
     use super::{
         OctezNodeConfigBuilder, OctezNodeHistoryMode, OctezNodeRunOptions,
@@ -214,7 +217,7 @@ mod tests {
             .set_binary_path("/tmp/binary")
             .set_data_dir("/tmp/something")
             .set_network("network")
-            .set_rpc_endpoint("my_endpoint")
+            .set_rpc_endpoint(&Endpoint::localhost(8888))
             .set_log_file("/log_file")
             .set_run_options(&run_options)
             .build()
@@ -222,7 +225,7 @@ mod tests {
         assert_eq!(config.binary_path, PathBuf::from("/tmp/binary"));
         assert_eq!(config.data_dir, PathBuf::from("/tmp/something"));
         assert_eq!(config.network, "network".to_owned());
-        assert_eq!(config.rpc_endpoint, "my_endpoint".to_owned());
+        assert_eq!(config.rpc_endpoint, Endpoint::localhost(8888));
         assert_eq!(config.log_file, PathBuf::from("/log_file"));
         assert_eq!(config.run_options, run_options);
     }

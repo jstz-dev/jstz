@@ -1,13 +1,10 @@
-use http::Uri;
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstzd::task::{
-    endpoint::Endpoint, octez_client::OctezClientBuilder, octez_node, Task,
-};
+use jstzd::task::{octez_client::OctezClientBuilder, octez_node, Task};
+use octez::Endpoint;
 use serde_json::Value;
 use std::{
     fs::{read_to_string, remove_file},
     path::Path,
-    str::FromStr,
 };
 use tempfile::{NamedTempFile, TempDir};
 mod utils;
@@ -201,8 +198,7 @@ async fn get_balance() {
     // 2. setup octez client
     let temp_dir = TempDir::new().unwrap();
     let base_dir = temp_dir.path().to_path_buf();
-    let rpc_endpoint = Uri::from_str(octez_node.rpc_endpoint()).unwrap();
-    let rpc_endpoint: Endpoint = Endpoint::try_from(rpc_endpoint).unwrap();
+    let rpc_endpoint = octez_node.rpc_endpoint();
     let octez_client = OctezClientBuilder::new()
         .set_endpoint(rpc_endpoint.clone())
         .set_base_dir(base_dir.clone())
@@ -253,8 +249,7 @@ async fn activate_protocol() {
     // 2. setup octez client
     let temp_dir = TempDir::new().unwrap();
     let base_dir = temp_dir.path().to_path_buf();
-    let rpc_endpoint = Uri::from_str(octez_node.rpc_endpoint()).unwrap();
-    let rpc_endpoint: Endpoint = Endpoint::try_from(rpc_endpoint).unwrap();
+    let rpc_endpoint = octez_node.rpc_endpoint();
     let octez_client = OctezClientBuilder::new()
         .set_endpoint(rpc_endpoint.clone())
         .set_base_dir(base_dir.clone())

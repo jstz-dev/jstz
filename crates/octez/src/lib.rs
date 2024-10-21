@@ -4,6 +4,7 @@ use anyhow::{anyhow, Result};
 
 mod async_node;
 mod client;
+mod endpoint;
 mod node;
 mod node_config;
 mod rollup;
@@ -11,6 +12,7 @@ mod thread;
 
 pub use async_node::*;
 pub use client::*;
+pub use endpoint::*;
 pub use node::*;
 pub use node_config::*;
 pub use rollup::*;
