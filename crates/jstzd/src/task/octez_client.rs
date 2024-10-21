@@ -213,6 +213,10 @@ impl OctezClient {
         }
     }
 
+    pub fn base_dir(&self) -> &Directory {
+        &self.base_dir
+    }
+
     pub async fn config_init(&self, output_path: &Path) -> Result<()> {
         let output = output_path
             .to_str()

@@ -8,7 +8,7 @@ use std::{
 };
 use tempfile::{NamedTempFile, TempDir};
 mod utils;
-use utils::retry;
+use utils::{get_request, retry};
 
 fn read_file(path: &Path) -> Value {
     serde_json::from_str(&read_to_string(path).expect("Unable to read file"))
@@ -264,7 +264,7 @@ async fn activate_protocol() {
     let params_file =
         Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/sandbox-params.json");
     let blocks_head_endpoint = format!("{}/chains/main/blocks/head", rpc_endpoint);
-    let response = get_response_text(&blocks_head_endpoint).await;
+    let response = get_request(&blocks_head_endpoint).await;
     assert!(response.contains(
         "\"protocol\":\"PrihK96nBAFSxVL1GLJTVhu9YnzkMFiBeuJRPA8NwuZVZCE1L6i\""
     ));
@@ -281,7 +281,7 @@ async fn activate_protocol() {
     assert!(protocol_activated.is_ok());
     // 5. check if the protocol is activated and the block is baked.
     // The block level progress indicates that the protocol has been activated.
-    let response = get_response_text(&blocks_head_endpoint).await;
+    let response = get_request(&blocks_head_endpoint).await;
     assert!(response.contains(
         "\"protocol\":\"ProtoGenesisGenesisGenesisGenesisGenesisGenesk612im\""
     ));
@@ -305,15 +305,6 @@ async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
     let node_ready = retry(10, 1000, || async { octez_node.health_check().await }).await;
     assert!(node_ready);
     (octez_node, temp_dir)
-}
-
-async fn get_response_text(endpoint: &str) -> String {
-    reqwest::get(endpoint)
-        .await
-        .expect("Failed to get block head")
-        .text()
-        .await
-        .expect("Failed to get response text")
 }
 
 #[tokio::test]

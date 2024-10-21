@@ -27,9 +27,11 @@ impl Display for ProtocolConstants {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub enum Protocol {
     Alpha,
+    ParisC,
+    Quebec,
 }
 
 impl Default for Protocol {
@@ -42,6 +44,8 @@ impl Protocol {
     fn hash(&self) -> &'static str {
         match self {
             Protocol::Alpha => "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
+            Protocol::ParisC => "PsParisCZo7KAh1Z1smVd9ZMZ1HHn5gkzbM94V3PLCpknFWhUAi",
+            Protocol::Quebec => "PsQubecQubecQubecQubecQubecQubecQubecQubecQubec",
         }
     }
 

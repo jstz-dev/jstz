@@ -1,44 +1,25 @@
+use super::child_wrapper::{ChildWrapper, SharedChildWrapper};
 use super::Task;
 use anyhow::Result;
-use async_dropper_simple::{AsyncDrop, AsyncDropper};
 use async_trait::async_trait;
 use octez::{Endpoint, OctezNodeConfig};
-use std::{fs::File, sync::Arc};
-use tokio::sync::RwLock;
+use std::fs::File;
 
 use octez::AsyncOctezNode;
-use tokio::process::Child;
-
-#[derive(Default)]
-struct ChildWrapper {
-    inner: Option<Child>,
-}
-
-impl ChildWrapper {
-    pub async fn kill(&mut self) -> anyhow::Result<()> {
-        if let Some(mut v) = self.inner.take() {
-            v.kill().await?;
-        }
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl AsyncDrop for ChildWrapper {
-    async fn async_drop(&mut self) {
-        let _ = self.kill().await;
-    }
-}
 
 #[derive(Default, Clone)]
 pub struct OctezNode {
-    inner: Arc<RwLock<AsyncDropper<ChildWrapper>>>,
+    inner: SharedChildWrapper,
     config: OctezNodeConfig,
 }
 
 impl OctezNode {
     pub fn rpc_endpoint(&self) -> &Endpoint {
         &self.config.rpc_endpoint
+    }
+
+    pub fn config(&self) -> &OctezNodeConfig {
+        &self.config
     }
 }
 
@@ -71,16 +52,15 @@ impl Task for OctezNode {
             .await?;
         match status.code() {
             Some(0) => (),
-            _ => return Err(anyhow::anyhow!("failed to initialise node config")),
+            _ => return Err(anyhow::anyhow!("failed to initialize node config")),
         }
 
         Ok(OctezNode {
-            inner: Arc::new(RwLock::new(AsyncDropper::new(ChildWrapper {
-                inner: Some(
-                    node.run(&File::create(&config.log_file)?, &config.run_options)
-                        .await?,
-                ),
-            }))),
+            inner: ChildWrapper::new_shared(
+                node.run(&File::create(&config.log_file)?, &config.run_options)
+                    .await?,
+            ),
+
             config,
         })
     }
