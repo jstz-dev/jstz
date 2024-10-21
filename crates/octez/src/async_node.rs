@@ -2,7 +2,7 @@ use std::{fs::File, path::PathBuf, process::Stdio};
 
 use tokio::process::{Child, Command};
 
-use crate::OctezNodeRunOptions;
+use crate::{Endpoint, OctezNodeRunOptions};
 
 use super::path_or_default;
 use anyhow::Result;
@@ -23,8 +23,8 @@ impl AsyncOctezNode {
     pub async fn config_init(
         &self,
         network: &str,
-        rpc_endpoint: &str,
-        p2p_endpoint: &str,
+        rpc_endpoint: &Endpoint,
+        p2p_endpoint: &Endpoint,
         num_connections: u32,
     ) -> Result<Child> {
         Ok(self
@@ -36,12 +36,13 @@ impl AsyncOctezNode {
                 network,
                 "--data-dir",
                 self.octez_node_dir.to_str().expect("Invalid path"),
+                // the node executable does not accept the scheme part
                 "--rpc-addr",
-                rpc_endpoint,
+                &rpc_endpoint.to_authority(),
                 "--connections",
                 num_connections.to_string().as_str(),
                 "--net-addr",
-                p2p_endpoint,
+                &p2p_endpoint.to_authority(),
             ])
             .spawn()?)
     }

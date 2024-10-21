@@ -1,5 +1,4 @@
 pub mod directory;
-pub mod endpoint;
 pub mod octez_client;
 pub mod octez_node;
 

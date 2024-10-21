@@ -18,6 +18,16 @@ impl Endpoint {
             port,
         }
     }
+
+    pub fn to_authority(&self) -> String {
+        format!("{}:{}", self.host, self.port)
+    }
+}
+
+impl Default for Endpoint {
+    fn default() -> Self {
+        Self::localhost(80)
+    }
 }
 
 impl Display for Endpoint {
@@ -90,6 +100,12 @@ mod tests {
         let uri = Uri::from_static("http://:9999/abc");
         let err = Endpoint::try_from(uri).unwrap_err();
         assert_eq!(err.to_string(), "No host part in URI 'http://:9999/abc'");
+    }
+
+    #[test]
+    fn to_authority() {
+        let endpoint = Endpoint::localhost(8765);
+        assert_eq!(endpoint.to_authority(), "localhost:8765");
     }
 
     #[test]
