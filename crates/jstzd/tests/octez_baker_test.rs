@@ -1,14 +1,13 @@
 use std::path::Path;
 
-use jstzd::{
+use jstzd::task::{octez_baker::OctezBaker, octez_node, Task};
+
+use octez::r#async::{
+    baker::{BakerBinaryPath, OctezBakerConfigBuilder},
+    client::{OctezClient, OctezClientBuilder},
+    node_config::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder},
     protocol::Protocol,
-    task::{
-        octez_baker::{BakerBinaryPath, OctezBaker, OctezBakerConfigBuilder},
-        octez_client::{OctezClient, OctezClientBuilder},
-        octez_node, Task,
-    },
 };
-use octez::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder};
 use regex::Regex;
 use tempfile::TempDir;
 mod utils;
@@ -32,7 +31,7 @@ async fn test_baker() {
     import_bootstrap_keys(&octez_client).await;
     // 4. start baker
     let baker_config = OctezBakerConfigBuilder::new()
-        .set_binary_path(BakerBinaryPath::BuiltIn(Protocol::Alpha))
+        .set_binary_path(BakerBinaryPath::Env(Protocol::Alpha))
         .with_node_and_client(octez_node.config(), &octez_client)
         .build()
         .expect("Failed to build baker config");

@@ -1,6 +1,12 @@
 use jstzd::task::{octez_node, Task};
 mod utils;
-use octez::{unused_port, Endpoint};
+use octez::{
+    r#async::{
+        endpoint::Endpoint,
+        node_config::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder},
+    },
+    unused_port,
+};
 use utils::retry;
 
 #[tokio::test(flavor = "multi_thread")]
@@ -9,12 +15,12 @@ async fn octez_node_test() {
     let log_file = tempfile::NamedTempFile::new().unwrap();
     let rpc_endpoint = Endpoint::localhost(unused_port());
 
-    let mut run_option_builder = octez::OctezNodeRunOptionsBuilder::new();
+    let mut run_option_builder = OctezNodeRunOptionsBuilder::new();
     let run_options = run_option_builder
         .set_synchronisation_threshold(0)
         .set_network("sandbox")
         .build();
-    let mut config_builer = octez::OctezNodeConfigBuilder::new();
+    let mut config_builer = OctezNodeConfigBuilder::new();
     config_builer
         .set_binary_path("octez-node")
         .set_data_dir(data_dir.path().to_str().unwrap())

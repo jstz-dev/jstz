@@ -2,10 +2,10 @@ use super::child_wrapper::{ChildWrapper, SharedChildWrapper};
 use super::Task;
 use anyhow::Result;
 use async_trait::async_trait;
-use octez::{Endpoint, OctezNodeConfig};
+use octez::r#async::endpoint::Endpoint;
+use octez::r#async::node;
+use octez::r#async::node_config::OctezNodeConfig;
 use std::fs::File;
-
-use octez::AsyncOctezNode;
 
 #[derive(Default, Clone)]
 pub struct OctezNode {
@@ -29,7 +29,7 @@ impl Task for OctezNode {
 
     /// Spins up the task with the given config.
     async fn spawn(config: Self::Config) -> Result<Self> {
-        let node = AsyncOctezNode {
+        let node = node::OctezNode {
             octez_node_bin: Some(config.binary_path.clone()),
             octez_node_dir: config.data_dir.clone(),
         };

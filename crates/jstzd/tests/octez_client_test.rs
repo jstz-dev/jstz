@@ -1,6 +1,10 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstzd::task::{octez_client::OctezClientBuilder, octez_node, Task};
-use octez::Endpoint;
+use jstzd::task::{octez_node, Task};
+use octez::r#async::{
+    client::{OctezClientBuilder, Signature},
+    endpoint::Endpoint,
+    node_config::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder},
+};
 use serde_json::Value;
 use std::{
     fs::{read_to_string, remove_file},
@@ -26,7 +30,7 @@ const SECRET_KEY: &str =
 async fn config_init() {
     let temp_dir = TempDir::new().unwrap();
     let expected_base_dir = temp_dir.path().to_path_buf();
-    let expected_endpoint: Endpoint = Endpoint::localhost(3000);
+    let expected_endpoint = Endpoint::localhost(3000);
     let config_file = NamedTempFile::new().unwrap();
     let _ = remove_file(config_file.path());
     let octez_client = OctezClientBuilder::new()
@@ -122,9 +126,7 @@ async fn generates_keys_with_custom_signature() {
         .build()
         .unwrap();
     let alias = "test_alias".to_string();
-    let res = octez_client
-        .gen_keys(&alias, Some(jstzd::task::octez_client::Signature::BLS))
-        .await;
+    let res = octez_client.gen_keys(&alias, Some(Signature::BLS)).await;
     assert!(res.is_ok());
     let hashes = first_item(read_file(&base_dir.join("public_key_hashs")));
     let pub_keys = first_item(read_file(&base_dir.join("public_keys")));
@@ -292,8 +294,8 @@ async fn activate_protocol() {
 async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
     let temp_dir = TempDir::new().unwrap();
     let data_dir = temp_dir.path();
-    let mut config_builder = octez::OctezNodeConfigBuilder::new();
-    let mut run_option_builder = octez::OctezNodeRunOptionsBuilder::new();
+    let mut config_builder = OctezNodeConfigBuilder::new();
+    let mut run_option_builder = OctezNodeRunOptionsBuilder::new();
     config_builder
         .set_binary_path("octez-node")
         .set_network("sandbox")

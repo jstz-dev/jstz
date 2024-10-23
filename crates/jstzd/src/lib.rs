@@ -1,6 +1,4 @@
 pub mod docker;
-pub mod jstzd;
-pub mod protocol;
 pub mod task;
 
 /// The `main` function for running jstzd

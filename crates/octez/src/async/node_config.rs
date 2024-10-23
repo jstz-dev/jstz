@@ -1,10 +1,12 @@
-use crate::{unused_port, Endpoint};
+use crate::unused_port;
 use anyhow::Result;
 use std::{
     fmt::{self, Display, Formatter},
     path::PathBuf,
     str::FromStr,
 };
+
+use super::endpoint::Endpoint;
 
 const DEFAULT_NETWORK: &str = "sandbox";
 const DEFAULT_BINARY_PATH: &str = "octez-node";
@@ -200,14 +202,8 @@ impl OctezNodeConfigBuilder {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::path::PathBuf;
-
-    use crate::Endpoint;
-
-    use super::{
-        OctezNodeConfigBuilder, OctezNodeHistoryMode, OctezNodeRunOptions,
-        OctezNodeRunOptionsBuilder, DEFAULT_BINARY_PATH, DEFAULT_NETWORK,
-    };
 
     #[test]
     fn config_builder() {
