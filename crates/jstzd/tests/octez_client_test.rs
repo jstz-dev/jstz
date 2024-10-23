@@ -1,5 +1,5 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstzd::task::{octez_client::OctezClientBuilder, octez_node, Task};
+use jstzd::task::{octez_client::OctezClientBuilder, Task};
 use octez::Endpoint;
 use serde_json::Value;
 use std::{
@@ -8,7 +8,11 @@ use std::{
 };
 use tempfile::{NamedTempFile, TempDir};
 mod utils;
-use utils::{get_request, retry};
+use std::path::PathBuf;
+use utils::{
+    activate_alpha, create_client, get_request, import_activator, spawn_octez_node,
+    SECRET_KEY,
+};
 
 fn read_file(path: &Path) -> Value {
     serde_json::from_str(&read_to_string(path).expect("Unable to read file"))
@@ -18,9 +22,6 @@ fn read_file(path: &Path) -> Value {
 fn first_item(json: Value) -> Value {
     json.as_array().unwrap()[0].clone()
 }
-
-const SECRET_KEY: &str =
-    "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
 
 #[tokio::test]
 async fn config_init() {
@@ -48,12 +49,8 @@ async fn config_init() {
 
 #[tokio::test]
 async fn generates_keys() {
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let octez_client = OctezClientBuilder::new()
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(&Endpoint::default());
+    let base_dir = PathBuf::try_from(octez_client.base_dir()).unwrap();
     let alias = "test_alias".to_string();
     let res = octez_client.gen_keys(&alias, None).await;
     assert!(res.is_ok());
@@ -67,12 +64,7 @@ async fn generates_keys() {
 
 #[tokio::test]
 async fn show_address() {
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let octez_client = OctezClientBuilder::new()
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(&Endpoint::default());
     let alias = "test_alias".to_string();
     let _ = octez_client.gen_keys(&alias, None).await;
     let res = octez_client.show_address(&alias, false).await;
@@ -85,12 +77,7 @@ async fn show_address() {
 
 #[tokio::test]
 async fn show_address_with_secret_key() {
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let octez_client = OctezClientBuilder::new()
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(&Endpoint::default());
     let alias = "test_alias".to_string();
     let _ = octez_client.gen_keys(&alias, None).await;
     let res = octez_client.show_address(&alias, true).await;
@@ -101,12 +88,7 @@ async fn show_address_with_secret_key() {
 
 #[tokio::test]
 async fn show_address_fails_for_non_existing_alias() {
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let octez_client = OctezClientBuilder::new()
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(&Endpoint::default());
     let res = octez_client.show_address("test_alias", true).await;
     assert!(res.is_err_and(|e| e
         .to_string()
@@ -115,12 +97,8 @@ async fn show_address_fails_for_non_existing_alias() {
 
 #[tokio::test]
 async fn generates_keys_with_custom_signature() {
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let octez_client = OctezClientBuilder::new()
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(&Endpoint::default());
+    let base_dir = PathBuf::try_from(octez_client.base_dir()).unwrap();
     let alias = "test_alias".to_string();
     let res = octez_client
         .gen_keys(&alias, Some(jstzd::task::octez_client::Signature::BLS))
@@ -144,12 +122,7 @@ async fn generates_keys_with_custom_signature() {
 
 #[tokio::test]
 async fn generates_keys_throws() {
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let octez_client = OctezClientBuilder::new()
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(&Endpoint::default());
     let alias = "test_alias".to_string();
     let _ = octez_client.gen_keys(&alias, None).await;
     let res = octez_client.gen_keys(&alias, None).await;
@@ -158,12 +131,8 @@ async fn generates_keys_throws() {
 
 #[tokio::test]
 async fn imports_secret_key() {
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let octez_client = OctezClientBuilder::new()
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(&Endpoint::default());
+    let base_dir = PathBuf::try_from(octez_client.base_dir()).unwrap();
     let alias = "test_alias".to_string();
     let res = octez_client.import_secret_key(&alias, SECRET_KEY).await;
     assert!(res.is_ok());
@@ -177,12 +146,7 @@ async fn imports_secret_key() {
 
 #[tokio::test]
 async fn imports_secret_key_throws() {
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let octez_client = OctezClientBuilder::new()
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(&Endpoint::default());
     let alias = "test_alias".to_string();
     let _ = octez_client.import_secret_key(&alias, SECRET_KEY).await;
     let res = octez_client.import_secret_key(&alias, SECRET_KEY).await;
@@ -196,14 +160,7 @@ async fn get_balance() {
     // 1. start octez node
     let mut octez_node = spawn_octez_node().await;
     // 2. setup octez client
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let rpc_endpoint = octez_node.rpc_endpoint();
-    let octez_client = OctezClientBuilder::new()
-        .set_endpoint(rpc_endpoint.clone())
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(octez_node.rpc_endpoint());
     // 3. import secret key for bootstrap1
     let bootstrap1 = "bootstrap1".to_string();
     octez_client
@@ -214,22 +171,9 @@ async fn get_balance() {
         .await
         .expect("Failed to generate activator key");
     // 4. activate the alpha protocol
-    let activator = "activator".to_string();
-    octez_client
-        .import_secret_key(&activator, SECRET_KEY)
-        .await
-        .expect("Failed to generate activator key");
-    let params_file =
-        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/sandbox-params.json");
-    let protocol_activated = octez_client
-        .activate_protocol(
-            "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
-            "0",
-            &activator,
-            &params_file,
-        )
-        .await;
-    assert!(protocol_activated.is_ok());
+    import_activator(&octez_client).await;
+    activate_alpha(&octez_client).await;
+
     // 5. check balance for bootstrap1
     let balance = octez_client.get_balance(&bootstrap1).await;
     assert!(balance.is_ok_and(|balance| balance == 3800000f64));
@@ -247,38 +191,20 @@ async fn activate_protocol() {
     // 1. start octez node
     let mut octez_node = spawn_octez_node().await;
     // 2. setup octez client
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let rpc_endpoint = octez_node.rpc_endpoint();
-    let octez_client = OctezClientBuilder::new()
-        .set_endpoint(rpc_endpoint.clone())
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(octez_node.rpc_endpoint());
     // 3. import activator key
-    let activator = "activator".to_string();
-    octez_client
-        .import_secret_key(&activator, SECRET_KEY)
-        .await
-        .expect("Failed to generate activator key");
-    let params_file =
-        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/sandbox-params.json");
-    let blocks_head_endpoint = format!("{}/chains/main/blocks/head", rpc_endpoint);
+    import_activator(&octez_client).await;
+
+    let blocks_head_endpoint =
+        format!("{}/chains/main/blocks/head", octez_node.rpc_endpoint());
     let response = get_request(&blocks_head_endpoint).await;
     assert!(response.contains(
         "\"protocol\":\"PrihK96nBAFSxVL1GLJTVhu9YnzkMFiBeuJRPA8NwuZVZCE1L6i\""
     ));
     assert!(response.contains("\"level\":0"));
     // 4. activate the alpha protocol
-    let protocol_activated = octez_client
-        .activate_protocol(
-            "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
-            "0",
-            &activator,
-            &params_file,
-        )
-        .await;
-    assert!(protocol_activated.is_ok());
+    activate_alpha(&octez_client).await;
+
     // 5. check if the protocol is activated and the block is baked.
     // The block level progress indicates that the protocol has been activated.
     let response = get_request(&blocks_head_endpoint).await;
@@ -289,31 +215,11 @@ async fn activate_protocol() {
     let _ = octez_node.kill().await;
 }
 
-async fn spawn_octez_node() -> octez_node::OctezNode {
-    let mut config_builder = octez::OctezNodeConfigBuilder::new();
-    let mut run_option_builder = octez::OctezNodeRunOptionsBuilder::new();
-    config_builder
-        .set_binary_path("octez-node")
-        .set_network("sandbox")
-        .set_run_options(&run_option_builder.set_synchronisation_threshold(0).build());
-    let octez_node = octez_node::OctezNode::spawn(config_builder.build().unwrap())
-        .await
-        .unwrap();
-    let node_ready = retry(10, 1000, || async { octez_node.health_check().await }).await;
-    assert!(node_ready);
-    octez_node
-}
-
 #[tokio::test]
 async fn add_address() {
     let address =
         PublicKeyHash::from_base58("tz1cMWTNwecApUicCrHfTRwHEhBcZGjkUwCw").unwrap();
-    let temp_dir = TempDir::new().unwrap();
-    let base_dir = temp_dir.path().to_path_buf();
-    let octez_client = OctezClientBuilder::new()
-        .set_base_dir(base_dir.clone())
-        .build()
-        .unwrap();
+    let octez_client = create_client(&Endpoint::default());
     let alias = "test_alias".to_string();
     let res = octez_client.add_address(&alias, &address, false).await;
     assert!(res.is_ok());
