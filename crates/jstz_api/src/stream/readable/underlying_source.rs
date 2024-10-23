@@ -17,7 +17,7 @@ use jstz_core::{
 use crate::{idl, stream::tmp::*};
 
 /// [Streams Standard - § 4.2.3.][https://streams.spec.whatwg.org/#underlying-source-api]
-/// > ```
+/// > ```notrust
 /// > dictionary UnderlyingSource {
 /// >   UnderlyingSourceStartCallback start;
 /// >   UnderlyingSourcePullCallback pull;
