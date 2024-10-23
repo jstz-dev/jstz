@@ -384,6 +384,24 @@ impl OctezClient {
         }
         Ok((contract_address.unwrap(), operation_hash.unwrap()))
     }
+
+    pub async fn transfer(
+        &self,
+        src: &str,
+        dst: &str,
+        amount_tez: f64,
+    ) -> Result<OperationHash> {
+        let amount_str = amount_tez.to_string();
+        let args = vec!["transfer", &amount_str, "from", src, "to", dst];
+        let output = self.spawn_and_wait_command(args).await?;
+
+        match parse_operation_hash(&output) {
+            Some(v) => Ok(v),
+            None => Err(anyhow::anyhow!(
+                "failed to parse operation hash from execution output"
+            )),
+        }
+    }
 }
 
 fn parse_operation_hash(output: &str) -> Option<OperationHash> {

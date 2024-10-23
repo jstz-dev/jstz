@@ -254,3 +254,16 @@ async fn originate_contract() {
     let _ = baker.kill().await;
     let _ = octez_node.kill().await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn transfer() {
+    let (mut octez_node, octez_client, mut baker) = setup().await;
+
+    octez_client
+        .transfer("bootstrap1", "bootstrap2", 10.0)
+        .await
+        .unwrap();
+
+    let _ = baker.kill().await;
+    let _ = octez_node.kill().await;
+}
