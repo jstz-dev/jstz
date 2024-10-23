@@ -1,7 +1,5 @@
 mod child_wrapper;
-pub mod directory;
 pub mod octez_baker;
-pub mod octez_client;
 pub mod octez_node;
 
 use anyhow::Result;

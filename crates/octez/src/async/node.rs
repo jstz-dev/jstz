@@ -2,12 +2,15 @@ use std::{fs::File, path::PathBuf, process::Stdio};
 
 use tokio::process::{Child, Command};
 
-use crate::{Endpoint, OctezNodeRunOptions};
+use crate::path_or_default;
 
-use super::path_or_default;
 use anyhow::Result;
 
-pub struct AsyncOctezNode {
+use super::{endpoint::Endpoint, node_config::OctezNodeRunOptions};
+
+pub const DEFAULT_RPC_ENDPOINT: &str = "localhost:8732";
+
+pub struct OctezNode {
     /// Path to the octez-node binary
     /// If None, the binary will inside PATH will be used
     pub octez_node_bin: Option<PathBuf>,
@@ -15,7 +18,7 @@ pub struct AsyncOctezNode {
     pub octez_node_dir: PathBuf,
 }
 
-impl AsyncOctezNode {
+impl OctezNode {
     fn command(&self) -> Command {
         Command::new(path_or_default(self.octez_node_bin.as_ref(), "octez-node"))
     }

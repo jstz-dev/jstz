@@ -1,11 +1,8 @@
-use super::directory::Directory;
-use crate::jstzd::DEFAULT_RPC_ENDPOINT;
 use anyhow::{anyhow, bail, Context, Result};
 use http::Uri;
 use jstz_crypto::{
     public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
 };
-use octez::Endpoint;
 use regex::Regex;
 use std::{
     ffi::OsStr,
@@ -15,6 +12,8 @@ use std::{
 };
 use tempfile::tempdir;
 use tokio::process::Command;
+
+use super::{directory::Directory, endpoint::Endpoint, node::DEFAULT_RPC_ENDPOINT};
 
 const DEFAULT_BINARY_PATH: &str = "octez-client";
 
