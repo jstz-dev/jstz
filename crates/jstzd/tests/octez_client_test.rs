@@ -4,14 +4,15 @@ use octez::Endpoint;
 use serde_json::Value;
 use std::{
     fs::{read_to_string, remove_file},
+    io::Write,
     path::Path,
 };
 use tempfile::{NamedTempFile, TempDir};
 mod utils;
 use std::path::PathBuf;
 use utils::{
-    activate_alpha, create_client, get_request, import_activator, spawn_octez_node,
-    SECRET_KEY,
+    activate_alpha, create_client, get_request, import_activator, setup,
+    spawn_octez_node, SECRET_KEY,
 };
 
 fn read_file(path: &Path) -> Value {
@@ -230,4 +231,26 @@ async fn add_address() {
         .contains("test_alias already exists"));
     let res = octez_client.add_address(&alias, &address, true).await;
     assert!(res.is_ok());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn originate_contract() {
+    let (mut octez_node, octez_client, mut baker) = setup().await;
+
+    let mut config_file = NamedTempFile::new().unwrap();
+    config_file.write_all("parameter (unit %entrypoint_1); storage int; code { CDR; NIL operation; PAIR; };".as_bytes()).unwrap();
+    octez_client
+        .originate_contract(
+            "foo",
+            "bootstrap1",
+            10000.0,
+            config_file.path(),
+            Some("1"),
+            Some(0.5),
+        )
+        .await
+        .unwrap();
+
+    let _ = baker.kill().await;
+    let _ = octez_node.kill().await;
 }

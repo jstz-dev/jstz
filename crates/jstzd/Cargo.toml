@@ -19,6 +19,7 @@ rust-embed.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
+tezos_crypto_rs.workspace = true
 tokio.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
 
