@@ -20,7 +20,7 @@ use crate::{
 };
 
 /// [Streams Standard - § 7.1.][https://streams.spec.whatwg.org/#qs-api]
-/// > ```
+/// > ```notrust
 /// > dictionary QueuingStrategyInit {
 /// >   required unrestricted double highWaterMark;
 /// > };
@@ -48,7 +48,7 @@ impl TryFromJs for QueuingStrategyInit {
 /// > A common queuing strategy when dealing with streams of generic objects is to simply count the number of chunks that have been accumulated so far, waiting until this number reaches a specified high-water mark. As such, this strategy is also provided out of the box.
 ///
 /// [Streams Standard - § 7.3.1.][https://streams.spec.whatwg.org/#countqueuingstrategy]
-/// > ```
+/// > ```notrust
 /// > [Exposed=*]
 /// > interface CountQueuingStrategy {
 /// >   constructor(QueuingStrategyInit init);
