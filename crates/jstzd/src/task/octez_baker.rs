@@ -3,11 +3,12 @@ use crate::protocol::Protocol;
 use super::{
     child_wrapper::{ChildWrapper, SharedChildWrapper},
     octez_client::OctezClient,
+    octez_node::OctezNode,
     Task,
 };
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
-use octez::{Endpoint, OctezNodeConfig};
+use octez::Endpoint;
 
 use std::{fmt::Display, path::PathBuf};
 use tokio::process::Command;
@@ -76,12 +77,11 @@ impl OctezBakerConfigBuilder {
 
     pub fn with_node_and_client(
         mut self,
-        node_config: &OctezNodeConfig,
+        node: &OctezNode,
         client: &OctezClient,
     ) -> Self {
-        self.octez_node_data_dir = Some(node_config.data_dir.clone());
-        let endpoint = &node_config.rpc_endpoint;
-        self.octez_node_endpoint = Some(endpoint.clone());
+        self.octez_node_data_dir = Some(node.data_dir());
+        self.octez_node_endpoint = Some(node.rpc_endpoint().clone());
         self.octez_client_base_dir = Some(PathBuf::try_from(client.base_dir()).unwrap());
         self
     }
@@ -146,7 +146,7 @@ mod test {
     use octez::OctezNodeConfigBuilder;
     use tempfile::TempDir;
 
-    use crate::task::octez_client::OctezClientBuilder;
+    use crate::task::{octez_client::OctezClientBuilder, octez_node::OctezNode};
 
     use super::*;
     #[test]
@@ -185,19 +185,17 @@ mod test {
         assert!(config.is_err_and(|e| e.to_string().contains("binary path not set")));
     }
 
-    #[tokio::test]
-    async fn test_with_node_config_and_client() {
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_with_node_and_client() {
         let node_endpoint =
             Endpoint::try_from(Uri::from_static("http://localhost:8732")).unwrap();
-        let temp_dir = TempDir::new().unwrap();
-        let data_dir: &std::path::Path = temp_dir.path();
         let node_config = OctezNodeConfigBuilder::new()
             .set_binary_path("octez-node")
             .set_network("sandbox")
             .set_rpc_endpoint(&node_endpoint)
-            .set_data_dir(data_dir.to_str().unwrap())
             .build()
             .expect("Failed to build node config");
+        let octez_node = OctezNode::spawn(node_config).await.unwrap();
 
         let temp_dir = TempDir::new().unwrap();
         let base_dir: std::path::PathBuf = temp_dir.path().to_path_buf();
@@ -208,7 +206,7 @@ mod test {
             .expect("Failed to build octez client");
         let config: OctezBakerConfig = OctezBakerConfigBuilder::new()
             .set_binary_path(BakerBinaryPath::BuiltIn(Protocol::Alpha))
-            .with_node_and_client(&node_config, &octez_client)
+            .with_node_and_client(&octez_node, &octez_client)
             .build()
             .unwrap();
         assert_eq!(
@@ -216,7 +214,7 @@ mod test {
             BakerBinaryPath::BuiltIn(Protocol::Alpha)
         );
         assert_eq!(config.octez_client_base_dir, base_dir);
-        assert_eq!(config.octez_node_data_dir, data_dir);
+        assert_eq!(config.octez_node_data_dir, octez_node.data_dir());
         assert_eq!(config.octez_node_endpoint, node_endpoint);
     }
 }

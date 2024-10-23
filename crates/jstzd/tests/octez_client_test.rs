@@ -194,7 +194,7 @@ async fn imports_secret_key_throws() {
 #[tokio::test(flavor = "multi_thread")]
 async fn get_balance() {
     // 1. start octez node
-    let (mut octez_node, _temp_data_dir) = spawn_octez_node().await;
+    let mut octez_node = spawn_octez_node().await;
     // 2. setup octez client
     let temp_dir = TempDir::new().unwrap();
     let base_dir = temp_dir.path().to_path_buf();
@@ -245,7 +245,7 @@ async fn get_balance() {
 #[tokio::test(flavor = "multi_thread")]
 async fn activate_protocol() {
     // 1. start octez node
-    let (mut octez_node, _temp_data_dir) = spawn_octez_node().await;
+    let mut octez_node = spawn_octez_node().await;
     // 2. setup octez client
     let temp_dir = TempDir::new().unwrap();
     let base_dir = temp_dir.path().to_path_buf();
@@ -289,22 +289,19 @@ async fn activate_protocol() {
     let _ = octez_node.kill().await;
 }
 
-async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
-    let temp_dir = TempDir::new().unwrap();
-    let data_dir = temp_dir.path();
+async fn spawn_octez_node() -> octez_node::OctezNode {
     let mut config_builder = octez::OctezNodeConfigBuilder::new();
     let mut run_option_builder = octez::OctezNodeRunOptionsBuilder::new();
     config_builder
         .set_binary_path("octez-node")
         .set_network("sandbox")
-        .set_data_dir(data_dir.to_str().unwrap())
         .set_run_options(&run_option_builder.set_synchronisation_threshold(0).build());
     let octez_node = octez_node::OctezNode::spawn(config_builder.build().unwrap())
         .await
         .unwrap();
     let node_ready = retry(10, 1000, || async { octez_node.health_check().await }).await;
     assert!(node_ready);
-    (octez_node, temp_dir)
+    octez_node
 }
 
 #[tokio::test]

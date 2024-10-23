@@ -97,7 +97,7 @@ pub struct OctezNodeConfig {
     /// Path to the octez node binary.
     pub binary_path: PathBuf,
     /// Path to the directory where the node keeps data.
-    pub data_dir: PathBuf,
+    pub data_dir: Option<PathBuf>,
     /// Name of the tezos network that the node instance runs on.
     pub network: String,
     /// HTTP endpoint of the node RPC interface, e.g. 'localhost:8732'
@@ -105,7 +105,7 @@ pub struct OctezNodeConfig {
     // TCP address and port at for p2p which this instance can be reached
     pub p2p_address: Endpoint,
     /// Path to the file that keeps octez node logs.
-    pub log_file: PathBuf,
+    pub log_file: Option<PathBuf>,
     /// Run options for octez node.
     pub run_options: OctezNodeRunOptions,
 }
@@ -174,10 +174,7 @@ impl OctezNodeConfigBuilder {
                 .binary_path
                 .take()
                 .unwrap_or(PathBuf::from(DEFAULT_BINARY_PATH)),
-            data_dir: self
-                .data_dir
-                .take()
-                .unwrap_or(PathBuf::from(tempfile::TempDir::new().unwrap().path())),
+            data_dir: self.data_dir.take(),
             network: self.network.take().unwrap_or(DEFAULT_NETWORK.to_owned()),
             rpc_endpoint: self
                 .rpc_endpoint
@@ -190,9 +187,7 @@ impl OctezNodeConfigBuilder {
                 )
                 .unwrap(),
             ),
-            log_file: self.log_file.take().unwrap_or(PathBuf::from(
-                tempfile::NamedTempFile::new().unwrap().path(),
-            )),
+            log_file: self.log_file.take(),
             run_options: self.run_options.take().unwrap_or_default(),
         })
     }
@@ -223,10 +218,10 @@ mod tests {
             .build()
             .unwrap();
         assert_eq!(config.binary_path, PathBuf::from("/tmp/binary"));
-        assert_eq!(config.data_dir, PathBuf::from("/tmp/something"));
+        assert_eq!(config.data_dir, Some(PathBuf::from("/tmp/something")));
         assert_eq!(config.network, "network".to_owned());
         assert_eq!(config.rpc_endpoint, Endpoint::localhost(8888));
-        assert_eq!(config.log_file, PathBuf::from("/log_file"));
+        assert_eq!(config.log_file, Some(PathBuf::from("/log_file")));
         assert_eq!(config.run_options, run_options);
     }
 
@@ -234,11 +229,7 @@ mod tests {
     fn config_builder_default() {
         let config = OctezNodeConfigBuilder::new().build().unwrap();
         assert_eq!(config.binary_path, PathBuf::from(DEFAULT_BINARY_PATH));
-        // Checks if the default path is a valid one that actually can exist in the file system
-        std::fs::create_dir(config.data_dir).unwrap();
         assert_eq!(config.network, DEFAULT_NETWORK.to_owned());
-        // Checks if the default path is a valid one that actually can exist in the file system
-        std::fs::File::create(config.log_file).unwrap();
         assert_eq!(config.run_options, OctezNodeRunOptions::default());
     }
 

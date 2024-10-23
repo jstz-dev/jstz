@@ -33,7 +33,7 @@ async fn test_baker() {
     // 4. start baker
     let baker_config = OctezBakerConfigBuilder::new()
         .set_binary_path(BakerBinaryPath::BuiltIn(Protocol::Alpha))
-        .with_node_and_client(octez_node.config(), &octez_client)
+        .with_node_and_client(&octez_node, &octez_client)
         .build()
         .expect("Failed to build baker config");
     // check if the block is baked
