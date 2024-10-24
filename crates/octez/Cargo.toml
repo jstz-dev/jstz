@@ -24,5 +24,6 @@ serde.workspace = true
 serde_json.workspace = true
 signal-hook.workspace = true
 tempfile.workspace = true
+tezos_crypto_rs.workspace = true
 tezos-smart-rollup-encoding.workspace = true
 tokio.workspace = true
