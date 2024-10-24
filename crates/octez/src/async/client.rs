@@ -11,7 +11,7 @@ use std::{
     str::FromStr,
 };
 use tempfile::tempdir;
-use tezos_crypto_rs::hash::{ContractKt1Hash, OperationHash};
+use tezos_crypto_rs::hash::{BlockHash, ContractKt1Hash, OperationHash};
 use tokio::process::Command;
 
 use super::{directory::Directory, endpoint::Endpoint, node::DEFAULT_RPC_ENDPOINT};
@@ -381,6 +381,32 @@ impl OctezClient {
             ));
         }
         Ok((contract_address.unwrap(), operation_hash.unwrap()))
+    }
+
+    pub async fn wait_for(
+        &self,
+        operation_hash: &OperationHash,
+        branch: Option<&BlockHash>,
+        previous_num_blocks: Option<u32>,
+    ) -> Result<()> {
+        let operation_str = operation_hash.to_string();
+        let previous_num_blocks_str = match previous_num_blocks {
+            Some(v) => v.to_string(),
+            None => String::new(),
+        };
+        let branch_str = match branch {
+            Some(v) => v.to_string(),
+            None => String::new(),
+        };
+        let mut args = vec!["wait", "for", &operation_str, "to", "be", "included"];
+        if !previous_num_blocks_str.is_empty() {
+            args.append(&mut vec!["--check-previous", &previous_num_blocks_str]);
+        }
+        if !branch_str.is_empty() {
+            args.append(&mut vec!["--branch", &branch_str]);
+        }
+        self.spawn_and_wait_command(args).await?;
+        Ok(())
     }
 }
 
