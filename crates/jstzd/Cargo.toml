@@ -12,6 +12,7 @@ async-trait.workspace = true
 bollard.workspace = true
 futures-util.workspace = true
 http.workspace = true
+jstz_crypto = { path = "../jstz_crypto" }
 octez = { path = "../octez" }
 regex.workspace = true
 reqwest.workspace = true
@@ -19,7 +20,6 @@ serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
-jstz_crypto = { path = "../jstz_crypto" }
 
 [dev-dependencies]
 rand.workspace = true
