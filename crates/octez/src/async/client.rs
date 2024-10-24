@@ -11,6 +11,7 @@ use std::{
     str::FromStr,
 };
 use tempfile::tempdir;
+use tezos_crypto_rs::hash::{ContractKt1Hash, OperationHash};
 use tokio::process::Command;
 
 use super::{directory::Directory, endpoint::Endpoint, node::DEFAULT_RPC_ENDPOINT};
@@ -331,6 +332,81 @@ impl OctezClient {
         self.spawn_and_wait_command(args).await?;
         Ok(())
     }
+
+    pub async fn originate_contract(
+        &self,
+        contract_alias: &str,
+        funding_account_src: &str, // can be an address or an alias
+        fund_tez: f64,
+        contract_path: &Path,
+        init_data: Option<&str>,
+        burn_cap: Option<f64>,
+    ) -> Result<(ContractKt1Hash, OperationHash)> {
+        let fund_str = fund_tez.to_string();
+        let burn_cap_str = match burn_cap {
+            Some(v) => v.to_string(),
+            None => String::new(),
+        };
+        let mut args = vec![
+            "originate",
+            "contract",
+            contract_alias,
+            "transferring",
+            &fund_str,
+            "from",
+            funding_account_src,
+            "running",
+            contract_path
+                .to_str()
+                .ok_or(anyhow::anyhow!("failed to convert contract path to string"))?,
+        ];
+        if let Some(data) = init_data {
+            args.append(&mut vec!["--init", data]);
+        }
+        if !burn_cap_str.is_empty() {
+            args.append(&mut vec!["--burn-cap", &burn_cap_str]);
+        }
+        let output = self.spawn_and_wait_command(args).await?;
+
+        let operation_hash = parse_operation_hash(&output);
+        if operation_hash.is_none() {
+            return Err(anyhow::anyhow!(
+                "failed to parse operation hash from execution output"
+            ));
+        }
+        let contract_address = parse_contract_address(&output);
+        if contract_address.is_none() {
+            return Err(anyhow::anyhow!(
+                "failed to parse contract address from execution output"
+            ));
+        }
+        Ok((contract_address.unwrap(), operation_hash.unwrap()))
+    }
+}
+
+fn parse_operation_hash(output: &str) -> Option<OperationHash> {
+    let operation_hash_pattern =
+        regex::Regex::new("Operation hash is '(o[1-9A-HJ-NP-Za-km-z]{50})'").unwrap();
+    if let Some(capture) = operation_hash_pattern.captures(output) {
+        let raw_operation_hash = capture.get(1).unwrap().as_str();
+        if let Ok(v) = OperationHash::from_base58_check(raw_operation_hash) {
+            return Some(v);
+        }
+    }
+    None
+}
+
+fn parse_contract_address(output: &str) -> Option<ContractKt1Hash> {
+    let contract_hash_pattern =
+        regex::Regex::new("New contract (KT1[1-9A-HJ-NP-Za-km-z]{33}) originated.")
+            .unwrap();
+    if let Some(capture) = contract_hash_pattern.captures(output) {
+        let raw_contract_hash = capture.get(1).unwrap().as_str();
+        if let Ok(v) = ContractKt1Hash::from_base58_check(raw_contract_hash) {
+            return Some(v);
+        }
+    }
+    None
 }
 
 #[cfg(test)]
@@ -515,5 +591,59 @@ mod test {
         let input = "15.23453 ꜩ";
         let res = OctezClient::extract_digits(input);
         assert!(res.is_ok_and(|balance| balance == 15.23453));
+    }
+
+    #[test]
+    fn parse_contract_address() {
+        let contract_hash = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";
+        assert_eq!(
+            super::parse_contract_address(&format!(
+                "New contract {contract_hash} originated."
+            ))
+            .unwrap(),
+            ContractKt1Hash::from_base58_check(contract_hash).unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_contract_address_pattern_mismatch() {
+        let contract_hash = "foobar";
+        assert!(super::parse_contract_address(&format!(
+            "New contract {contract_hash} originated."
+        ))
+        .is_none());
+    }
+
+    #[test]
+    fn parse_contract_address_bad_hash() {
+        let contract_hash = format!("KT1{}", "1".repeat(33));
+        assert!(super::parse_contract_address(&format!(
+            "New contract {contract_hash} originated."
+        ))
+        .is_none());
+    }
+
+    #[test]
+    fn parse_operation_hash() {
+        let operation_hash = "op15fmUF1cypvbX6H5Uu8i1Fwtf2fX3vFk8yxGQLoZDCfvqht2i";
+        assert_eq!(
+            super::parse_operation_hash(&format!("Operation hash is '{operation_hash}'"))
+                .unwrap(),
+            OperationHash::from_base58_check(operation_hash).unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_operation_hash_pattern_mismatch() {
+        assert!(super::parse_operation_hash("Operation hash is 'foobar'").is_none());
+    }
+
+    #[test]
+    fn parse_operation_hash_bad_hash() {
+        assert!(super::parse_operation_hash(&format!(
+            "Operation hash is 'o{}'",
+            "1".repeat(50)
+        ))
+        .is_none());
     }
 }
