@@ -23,6 +23,7 @@ tokio.workspace = true
 
 [dev-dependencies]
 rand.workspace = true
+tezos_crypto_rs.workspace = true
 
 [[bin]]
 name = "jstzd"
