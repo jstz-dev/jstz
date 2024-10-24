@@ -1,16 +1,22 @@
 use super::child_wrapper::{ChildWrapper, SharedChildWrapper};
-use super::Task;
+use super::{file::FileWrapper, Task};
 use anyhow::Result;
 use async_trait::async_trait;
+use octez::r#async::directory::Directory;
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::node;
 use octez::r#async::node_config::OctezNodeConfig;
-use std::fs::File;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 #[derive(Default, Clone)]
 pub struct OctezNode {
     inner: SharedChildWrapper,
     config: OctezNodeConfig,
+    // holds the TempDir instance so that the directory does not get deleted too soon
+    _data_dir: Arc<Directory>,
+    // holds the NamedTempFile instance so that the file does not get deleted too soon
+    _log_file: Arc<FileWrapper>,
 }
 
 impl OctezNode {
@@ -18,8 +24,8 @@ impl OctezNode {
         &self.config.rpc_endpoint
     }
 
-    pub fn config(&self) -> &OctezNodeConfig {
-        &self.config
+    pub fn data_dir(&self) -> PathBuf {
+        PathBuf::try_from(self._data_dir.as_ref()).unwrap()
     }
 }
 
@@ -29,9 +35,17 @@ impl Task for OctezNode {
 
     /// Spins up the task with the given config.
     async fn spawn(config: Self::Config) -> Result<Self> {
+        let data_dir = match &config.data_dir {
+            Some(v) => Directory::Path(v.clone()),
+            None => Directory::default(),
+        };
+        let log_file = match &config.log_file {
+            Some(v) => FileWrapper::try_from(v.clone())?,
+            None => FileWrapper::default(),
+        };
         let node = node::OctezNode {
             octez_node_bin: Some(config.binary_path.clone()),
-            octez_node_dir: config.data_dir.clone(),
+            octez_node_dir: PathBuf::try_from(&data_dir)?,
         };
 
         let status = node.generate_identity().await?.wait().await?;
@@ -57,11 +71,11 @@ impl Task for OctezNode {
 
         Ok(OctezNode {
             inner: ChildWrapper::new_shared(
-                node.run(&File::create(&config.log_file)?, &config.run_options)
-                    .await?,
+                node.run(log_file.as_file(), &config.run_options).await?,
             ),
-
             config,
+            _log_file: Arc::new(log_file),
+            _data_dir: Arc::new(data_dir),
         })
     }
 

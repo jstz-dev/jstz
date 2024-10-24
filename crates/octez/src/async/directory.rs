@@ -9,6 +9,12 @@ pub enum Directory {
     Path(PathBuf),
 }
 
+impl Default for Directory {
+    fn default() -> Self {
+        Self::TempDir(TempDir::new().unwrap())
+    }
+}
+
 impl TryFrom<PathBuf> for Directory {
     type Error = anyhow::Error;
 

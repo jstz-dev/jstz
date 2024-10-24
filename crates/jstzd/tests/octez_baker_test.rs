@@ -1,7 +1,4 @@
-use std::path::Path;
-
-use jstzd::task::{octez_baker::OctezBaker, octez_node, Task};
-
+use jstzd::task::{octez_baker::OctezBaker, Task};
 use octez::r#async::{
     baker::{BakerBinaryPath, OctezBakerConfigBuilder},
     client::{OctezClient, OctezClientBuilder},
@@ -9,14 +6,16 @@ use octez::r#async::{
     protocol::Protocol,
 };
 use regex::Regex;
+use std::path::Path;
 use tempfile::TempDir;
 mod utils;
+use std::path::PathBuf;
 use utils::{get_request, retry};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_baker() {
     // 1. start octez node
-    let (mut octez_node, _temp_data_dir) = spawn_octez_node().await;
+    let mut octez_node = spawn_octez_node().await;
     // 2. setup octez client
     let temp_dir = TempDir::new().unwrap();
     let base_dir: std::path::PathBuf = temp_dir.path().to_path_buf();
@@ -32,7 +31,14 @@ async fn test_baker() {
     // 4. start baker
     let baker_config = OctezBakerConfigBuilder::new()
         .set_binary_path(BakerBinaryPath::Env(Protocol::Alpha))
-        .with_node_and_client(octez_node.config(), &octez_client)
+        .set_octez_client_base_dir(
+            PathBuf::try_from(octez_client.base_dir())
+                .unwrap()
+                .to_str()
+                .unwrap(),
+        )
+        .set_octez_node_data_dir(octez_node.data_dir().to_str().unwrap())
+        .set_octez_node_endpoint(octez_node.rpc_endpoint())
         .build()
         .expect("Failed to build baker config");
     // check if the block is baked
@@ -55,9 +61,7 @@ async fn test_baker() {
     let _ = octez_node.kill().await;
 }
 
-async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
-    let temp_dir = TempDir::new().unwrap();
-    let data_dir = temp_dir.path();
+async fn spawn_octez_node() -> jstzd::task::octez_node::OctezNode {
     let mut config_builder = OctezNodeConfigBuilder::new();
     let run_options = OctezNodeRunOptionsBuilder::new()
         .set_synchronisation_threshold(0)
@@ -65,14 +69,14 @@ async fn spawn_octez_node() -> (octez_node::OctezNode, TempDir) {
     config_builder
         .set_binary_path("octez-node")
         .set_network("sandbox")
-        .set_data_dir(data_dir.to_str().unwrap())
         .set_run_options(&run_options);
-    let octez_node = octez_node::OctezNode::spawn(config_builder.build().unwrap())
-        .await
-        .unwrap();
+    let octez_node =
+        jstzd::task::octez_node::OctezNode::spawn(config_builder.build().unwrap())
+            .await
+            .unwrap();
     let node_ready = retry(10, 1000, || async { octez_node.health_check().await }).await;
     assert!(node_ready);
-    (octez_node, temp_dir)
+    octez_node
 }
 
 async fn import_bootstrap_keys(octez_client: &OctezClient) {
