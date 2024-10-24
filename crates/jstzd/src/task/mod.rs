@@ -1,4 +1,5 @@
 mod child_wrapper;
+mod file;
 pub mod octez_baker;
 pub mod octez_node;
 
