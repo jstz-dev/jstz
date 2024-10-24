@@ -1,4 +1,5 @@
 pub mod baker;
+mod bootstrap;
 pub mod client;
 pub mod directory;
 pub mod endpoint;
