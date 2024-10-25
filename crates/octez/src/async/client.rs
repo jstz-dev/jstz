@@ -162,6 +162,74 @@ impl TryFrom<StdOut> for Address {
     }
 }
 
+#[derive(Default)]
+struct TransferOptionsBuilder {
+    from: Option<String>,
+    to: Option<String>,
+    amount: Option<u64>,
+    entrypoint: Option<String>,
+    arg: Option<String>,
+    burn_cap: Option<f64>,
+}
+
+impl TransferOptionsBuilder {
+    pub fn new() -> Self {
+        TransferOptionsBuilder {
+            ..Default::default()
+        }
+    }
+
+    pub fn set_from(mut self, from: String) -> Self {
+        self.from = Some(from);
+        self
+    }
+
+    pub fn set_to(mut self, to: String) -> Self {
+        self.to = Some(to);
+        self
+    }
+
+    pub fn set_entrypoint(mut self, entrypoint: String) -> Self {
+        self.entrypoint = Some(entrypoint);
+        self
+    }
+
+    pub fn set_arg(mut self, arg: String) -> Self {
+        self.arg = Some(arg);
+        self
+    }
+
+    pub fn set_amount(mut self, amount: u64) -> Self {
+        self.amount = Some(amount);
+        self
+    }
+
+    pub fn set_burn_cap(mut self, burn_cap: f64) -> Self {
+        self.burn_cap = Some(burn_cap);
+        self
+    }
+
+    pub fn build(self) -> Result<TransferOptions> {
+        Ok(TransferOptions {
+            from: self.from.ok_or(anyhow!("Missing from"))?,
+            to: self.to.ok_or(anyhow!("Missing to"))?,
+            amount: self.amount.unwrap_or_default(),
+            entrypoint: self.entrypoint,
+            arg: self.arg,
+            burn_cap: self.burn_cap,
+        })
+    }
+}
+
+struct TransferOptions {
+    from: String,
+    to: String,
+    amount: u64,
+    entrypoint: Option<String>,
+    arg: Option<String>,
+    burn_cap: Option<f64>,
+}
+
 #[derive(Debug)]
 pub struct OctezClient {
     binary_path: PathBuf,
@@ -381,6 +449,53 @@ impl OctezClient {
             ));
         }
         Ok((contract_address.unwrap(), operation_hash.unwrap()))
+    }
+
+    pub async fn call_contract(
+        &self,
+        from: &str,
+        contract: &str,
+        amount: u64,
+        entrypoint: &str,
+        arg: &str,
+        burn_cap: Option<f64>,
+    ) -> Result<OperationHash> {
+        let transfer_options = TransferOptionsBuilder::new()
+            .set_from(from.to_string())
+            .set_to(contract.to_string())
+            .set_amount(amount)
+            .set_entrypoint(entrypoint.to_string())
+            .set_arg(arg.to_string())
+            .set_burn_cap(burn_cap.unwrap_or_default())
+            .build()?;
+        self.transfer(transfer_options).await
+    }
+
+    async fn transfer(&self, options: TransferOptions) -> Result<OperationHash> {
+        let amount: String = options.amount.to_string();
+        let mut args = vec![
+            "transfer",
+            &amount,
+            "from",
+            &options.from,
+            "to",
+            &options.to,
+        ];
+        if let Some(entrypoint) = options.entrypoint.as_ref() {
+            args.extend_from_slice(&["--entrypoint", entrypoint]);
+        }
+        if let Some(arg) = options.arg.as_ref() {
+            args.extend_from_slice(&["--arg", arg]);
+        }
+        let burn_cap = options.burn_cap.as_ref().map(|s| s.to_string());
+        if let Some(burn_cap) = burn_cap.as_ref() {
+            args.extend_from_slice(&["--burn-cap", burn_cap]);
+        }
+        let stdout = self.spawn_and_wait_command(&args).await?;
+        if let Some(operation_hash) = parse_operation_hash(&stdout) {
+            return Ok(operation_hash);
+        }
+        Err(anyhow!("transfer failed"))
     }
 }
 
@@ -645,5 +760,53 @@ mod test {
             "1".repeat(50)
         ))
         .is_none());
+    }
+
+    #[test]
+    fn transfer_options() {
+        let options = TransferOptionsBuilder::new()
+            .set_from("tz1".to_string())
+            .set_to("tz2".to_string())
+            .set_entrypoint("entrypoint".to_string())
+            .set_arg("arg".to_string())
+            .set_amount(100)
+            .set_burn_cap(999f64)
+            .build()
+            .unwrap();
+        assert_eq!(&options.from, "tz1");
+        assert_eq!(&options.to, "tz2");
+        assert_eq!(options.entrypoint.unwrap(), "entrypoint");
+        assert_eq!(options.arg.unwrap(), "arg");
+        assert_eq!(options.amount, 100);
+        assert_eq!(options.burn_cap.unwrap(), 999f64);
+    }
+
+    #[test]
+    fn transfer_options_default() {
+        let options = TransferOptionsBuilder::new()
+            .set_from("tz1".to_string())
+            .set_to("tz2".to_string())
+            .build()
+            .unwrap();
+        assert_eq!(options.from, "tz1");
+        assert_eq!(options.to, "tz2");
+        assert_eq!(options.entrypoint, None);
+        assert_eq!(options.arg, None);
+        assert_eq!(options.amount, 0);
+        assert_eq!(options.burn_cap, None);
+    }
+
+    #[test]
+    fn missing_from_transfer_options_throws() {
+        let options = TransferOptionsBuilder::new().build();
+        assert!(options.is_err_and(|e| e.to_string().contains("Missing from")));
+    }
+
+    #[test]
+    fn missing_to_transfer_options_throws() {
+        let options = TransferOptionsBuilder::new()
+            .set_from("tz1".to_string())
+            .build();
+        assert!(options.is_err_and(|e| e.to_string().contains("Missing to")));
     }
 }

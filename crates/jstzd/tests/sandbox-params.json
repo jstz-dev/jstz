@@ -104,5 +104,74 @@
   "autostaking_enable": true,
   "adaptive_issuance_force_activation": false,
   "ns_enable": true,
-  "direct_ticket_spending_enable": false
+  "direct_ticket_spending_enable": false,
+  "bootstrap_contracts": [
+    {
+      "script": {
+        "code": [
+          {
+            "prim": "parameter",
+            "args": [{ "prim": "int", "annots": ["%myEntryPoint"] }]
+          },
+          {
+            "prim": "storage",
+            "args": [
+              {
+                "prim": "pair",
+                "args": [
+                  { "prim": "int", "annots": ["%myParameter1"] },
+                  { "prim": "int", "annots": ["%myParameter2"] }
+                ]
+              }
+            ]
+          },
+          {
+            "prim": "code",
+            "args": [
+              [
+                { "prim": "UNPAIR" },
+                {
+                  "prim": "PUSH",
+                  "args": [{ "prim": "int" }, { "int": "123" }]
+                },
+                { "prim": "DUP", "args": [{ "int": "3" }] },
+                { "prim": "CAR" },
+                { "prim": "COMPARE" },
+                { "prim": "LE" },
+                {
+                  "prim": "IF",
+                  "args": [
+                    [],
+                    [
+                      {
+                        "prim": "PUSH",
+                        "args": [
+                          { "prim": "string" },
+                          {
+                            "string": "Assert failure: self.data.myParameter1 \u003C= 123"
+                          }
+                        ]
+                      },
+                      { "prim": "FAILWITH" }
+                    ]
+                  ]
+                },
+                { "prim": "SWAP" },
+                { "prim": "DUP" },
+                { "prim": "CAR" },
+                { "prim": "DIG", "args": [{ "int": "2" }] },
+                { "prim": "ADD" },
+                { "prim": "UPDATE", "args": [{ "int": "1" }] },
+                { "prim": "NIL", "args": [{ "prim": "operation" }] },
+                { "prim": "PAIR" }
+              ]
+            ]
+          }
+        ],
+        "storage": { "prim": "Pair", "args": [{ "int": "1" }, { "int": "0" }] }
+      },
+      "amount": "10000",
+      "hash": "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ"
+    }
+  ]
 }
