@@ -13,7 +13,7 @@ use tempfile::{NamedTempFile, TempDir};
 mod utils;
 use std::path::PathBuf;
 use utils::{
-    activate_alpha, create_client, get_request, import_activator, setup,
+    activate_alpha, create_client, get_request, import_activator, spawn_octez_node,
     spawn_octez_node, SECRET_KEY,
 };
 
