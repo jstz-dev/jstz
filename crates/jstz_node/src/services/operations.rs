@@ -1,14 +1,17 @@
 use super::error::{ServiceError, ServiceResult};
 use super::{AppState, Service};
 use anyhow::anyhow;
+use axum::routing::{get, post};
 use axum::{
     extract::{Path, State},
-    routing::{get, post},
-    Json, Router,
+    Json,
 };
-use jstz_proto::{operation::SignedOperation, receipt::Receipt};
+use jstz_proto::operation::SignedOperation;
+use jstz_proto::receipt::Receipt;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
+
+use utoipa_axum::router::OpenApiRouter;
 
 pub struct OperationsService;
 
@@ -49,11 +52,11 @@ async fn receipt(
 }
 
 impl Service for OperationsService {
-    fn router() -> Router<AppState> {
-        let routes = Router::new()
+    fn router_with_openapi() -> OpenApiRouter<AppState> {
+        let routes = OpenApiRouter::new()
             .route("/", post(inject))
             .route("/:operation_hash/receipt", get(receipt));
 
-        Router::new().nest("/operations", routes)
+        OpenApiRouter::new().nest("/operations", routes)
     }
 }

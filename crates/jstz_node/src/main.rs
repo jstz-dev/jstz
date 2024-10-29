@@ -12,6 +12,16 @@ const DEFAULT_JSTZ_NODE_ADDR: &str = "127.0.0.1";
 const DEFAULT_JSTZ_NODE_PORT: u16 = 8933;
 
 #[derive(Debug, Parser)]
+enum Command {
+    Run(Args),
+    Spec {
+        /// Output path of the OpenAPI spec
+        #[arg(short, long)]
+        out: Option<PathBuf>,
+    },
+}
+
+#[derive(Debug, Parser)]
 struct Args {
     #[arg(long, default_value = DEFAULT_JSTZ_NODE_ADDR)]
     addr: String,
@@ -35,13 +45,23 @@ struct Args {
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
+    match Command::parse() {
+        Command::Run(args) => {
+            let rollup_endpoint = args.rollup_endpoint.unwrap_or(format!(
+                "http://{}:{}",
+                args.rollup_node_rpc_addr, args.rollup_node_rpc_port
+            ));
 
-    let args = Args::parse();
-
-    let rollup_endpoint = args.rollup_endpoint.unwrap_or(format!(
-        "http://{}:{}",
-        args.rollup_node_rpc_addr, args.rollup_node_rpc_port
-    ));
-
-    jstz_node::run(&args.addr, args.port, rollup_endpoint, args.kernel_log_path).await
+            jstz_node::run(&args.addr, args.port, rollup_endpoint, args.kernel_log_path)
+                .await
+        }
+        Command::Spec { out } => {
+            let spec = jstz_node::openapi_json_raw()?;
+            match out {
+                Some(out) => std::fs::write(out, spec)?,
+                None => println!("{}", spec),
+            }
+            Ok(())
+        }
+    }
 }

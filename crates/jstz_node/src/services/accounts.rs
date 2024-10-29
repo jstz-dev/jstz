@@ -2,11 +2,12 @@ use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
     routing::get,
-    Json, Router,
+    Json,
 };
 use jstz_api::KvValue;
 use jstz_proto::context::account::{Account, Nonce, ParsedCode};
 use serde::Deserialize;
+use utoipa_axum::router::OpenApiRouter;
 
 use super::{
     error::{ServiceError, ServiceResult},
@@ -112,14 +113,14 @@ async fn kv_subkeys(
 }
 
 impl Service for AccountsService {
-    fn router() -> Router<AppState> {
-        let routes = Router::new()
+    fn router_with_openapi() -> OpenApiRouter<AppState> {
+        let routes = OpenApiRouter::new()
             .route("/:address/nonce", get(nonce))
             .route("/:address/code", get(code))
             .route("/:address/balance", get(balance))
             .route("/:address/kv", get(kv))
             .route("/:address/kv/subkeys", get(kv_subkeys));
 
-        Router::new().nest("/accounts", routes)
+        OpenApiRouter::new().nest("/accounts", routes)
     }
 }

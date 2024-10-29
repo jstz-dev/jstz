@@ -1,6 +1,6 @@
 use crate::AppState;
 
-use axum::Router;
+use utoipa_axum::router::OpenApiRouter;
 
 pub mod accounts;
 pub mod error;
@@ -8,5 +8,5 @@ pub mod logs;
 pub mod operations;
 
 pub trait Service {
-    fn router() -> Router<AppState>;
+    fn router_with_openapi() -> OpenApiRouter<AppState>;
 }
