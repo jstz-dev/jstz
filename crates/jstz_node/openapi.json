@@ -13,6 +13,551 @@
     },
     "version": "0.1.0-alpha.0"
   },
-  "paths": {},
-  "components": {}
+  "paths": {
+    "/operations": {
+      "post": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Inject an operation into Jstz",
+        "operationId": "inject",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedOperation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successfully injectedd"
+          },
+          "400": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/operations/{operation_hash}/receipt": {
+      "get": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Get the receipt of an operation",
+        "operationId": "receipt",
+        "parameters": [
+          {
+            "name": "operation_hash",
+            "in": "path",
+            "description": "Operation hash",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Receipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Content": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "DeployFunction"
+            ],
+            "properties": {
+              "DeployFunction": {
+                "$ref": "#/components/schemas/DeployFunction"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "RunFunction"
+            ],
+            "properties": {
+              "RunFunction": {
+                "$ref": "#/components/schemas/RunFunction"
+              }
+            }
+          }
+        ]
+      },
+      "DeployFunction": {
+        "type": "object",
+        "required": [
+          "function_code",
+          "account_credit"
+        ],
+        "properties": {
+          "account_credit": {
+            "$ref": "#/components/schemas/u64",
+            "description": "Amount of tez to credit to the smart function account, debited from the sender"
+          },
+          "function_code": {
+            "$ref": "#/components/schemas/ParsedCode",
+            "description": "Smart function code"
+          }
+        }
+      },
+      "DeployFunctionReceipt": {
+        "type": "object",
+        "required": [
+          "address"
+        ],
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/PublicKeyHash"
+          }
+        }
+      },
+      "FaDepositReceipt": {
+        "type": "object",
+        "required": [
+          "receiver",
+          "ticket_balance"
+        ],
+        "properties": {
+          "receiver": {
+            "$ref": "#/components/schemas/PublicKeyHash"
+          },
+          "run_function": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RunFunctionReceipt"
+              }
+            ]
+          },
+          "ticket_balance": {
+            "$ref": "#/components/schemas/u64"
+          }
+        }
+      },
+      "FaWithdrawReceipt": {
+        "type": "object",
+        "required": [
+          "source",
+          "outbox_message_id"
+        ],
+        "properties": {
+          "outbox_message_id": {
+            "$ref": "#/components/schemas/String"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PublicKeyHash"
+          }
+        }
+      },
+      "Nonce": {
+        "type": "integer",
+        "format": "int64",
+        "minimum": 0
+      },
+      "Operation": {
+        "type": "object",
+        "required": [
+          "source",
+          "nonce",
+          "content"
+        ],
+        "properties": {
+          "content": {
+            "$ref": "#/components/schemas/Content"
+          },
+          "nonce": {
+            "$ref": "#/components/schemas/Nonce"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PublicKeyHash"
+          }
+        }
+      },
+      "ParsedCode": {
+        "type": "string",
+        "format": "javascript",
+        "example": "export default (request) => new Response('Hello world!')"
+      },
+      "PublicKey": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Ed25519",
+            "required": [
+              "Ed25519"
+            ],
+            "properties": {
+              "Ed25519": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "Ed25519": "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"
+            }
+          },
+          {
+            "type": "object",
+            "title": "Secp256k1",
+            "required": [
+              "Secp256k1"
+            ],
+            "properties": {
+              "Secp256k1": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "Secp256k1": "sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY"
+            }
+          },
+          {
+            "type": "object",
+            "title": "P256",
+            "required": [
+              "P256"
+            ],
+            "properties": {
+              "P256": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "P256": "p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1"
+            }
+          }
+        ],
+        "description": "Tezos public key"
+      },
+      "PublicKeyHash": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Tz1",
+            "required": [
+              "Tz1"
+            ],
+            "properties": {
+              "Tz1": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "Tz1": "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU"
+            }
+          },
+          {
+            "type": "object",
+            "title": "Tz2",
+            "required": [
+              "Tz2"
+            ],
+            "properties": {
+              "Tz2": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "Tz2": "tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh"
+            }
+          },
+          {
+            "type": "object",
+            "title": "Tz3",
+            "required": [
+              "Tz3"
+            ],
+            "properties": {
+              "Tz3": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "Tz3": "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C"
+            }
+          }
+        ],
+        "description": "Tezos Address"
+      },
+      "Receipt": {
+        "type": "object",
+        "required": [
+          "hash",
+          "inner"
+        ],
+        "properties": {
+          "hash": {
+            "type": "string"
+          },
+          "inner": {
+            "$ref": "#/components/schemas/ReceiptResult_ReceiptContent"
+          }
+        }
+      },
+      "ReceiptResult_ReceiptContent": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "Ok"
+            ],
+            "properties": {
+              "Ok": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "DeployFunction"
+                    ],
+                    "properties": {
+                      "DeployFunction": {
+                        "$ref": "#/components/schemas/DeployFunctionReceipt"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "RunFunction"
+                    ],
+                    "properties": {
+                      "RunFunction": {
+                        "$ref": "#/components/schemas/RunFunctionReceipt"
+                      }
+                    }
+                  },
+                  {
+                    "type": "string",
+                    "enum": [
+                      "Deposit"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "FaDeposit"
+                    ],
+                    "properties": {
+                      "FaDeposit": {
+                        "$ref": "#/components/schemas/FaDepositReceipt"
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "FaWithdraw"
+                    ],
+                    "properties": {
+                      "FaWithdraw": {
+                        "$ref": "#/components/schemas/FaWithdrawReceipt"
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "Err"
+            ],
+            "properties": {
+              "Err": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "RunFunction": {
+        "type": "object",
+        "description": "Request used to run a smart function. The target smart function is given by the host part of the uri. The rest of the attributes will be handled by the smart function itself.",
+        "required": [
+          "uri",
+          "method",
+          "headers",
+          "body",
+          "gas_limit"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          "gas_limit": {
+            "type": "integer",
+            "description": "Maximum amount of gas that is allowed for the execution of this operation",
+            "minimum": 0
+          },
+          "headers": {
+            "type": "object",
+            "description": "Any valid HTTP headers"
+          },
+          "method": {
+            "type": "string",
+            "description": "Any valid HTTP method",
+            "examples": [
+              "GET",
+              "POST",
+              "PUT",
+              "UPDATE",
+              "DELETE"
+            ]
+          },
+          "uri": {
+            "type": "string",
+            "format": "uri",
+            "description": "Smart function URI in the form tezos://{smart_function_address}/rest/of/path",
+            "examples": [
+              "tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"
+            ]
+          }
+        }
+      },
+      "RunFunctionReceipt": {
+        "type": "object",
+        "required": [
+          "body",
+          "status_code",
+          "headers"
+        ],
+        "properties": {
+          "body": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          "headers": {
+            "type": "object",
+            "description": "Any valid HTTP headers"
+          },
+          "status_code": {
+            "type": "integer",
+            "description": "Valid status code",
+            "minimum": 0
+          }
+        }
+      },
+      "Signature": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Ed25519 signature",
+            "required": [
+              "Ed25519"
+            ],
+            "properties": {
+              "Ed25519": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "Ed25519": "edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB"
+            }
+          },
+          {
+            "type": "object",
+            "title": "Secp256k1 signature",
+            "required": [
+              "Secp256k1"
+            ],
+            "properties": {
+              "Secp256k1": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "Secp256k1": "spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H"
+            }
+          },
+          {
+            "type": "object",
+            "title": "P256 signature",
+            "required": [
+              "P256"
+            ],
+            "properties": {
+              "P256": {
+                "type": "string"
+              }
+            },
+            "example": {
+              "P256": "p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH"
+            }
+          }
+        ]
+      },
+      "SignedOperation": {
+        "type": "object",
+        "required": [
+          "public_key",
+          "signature",
+          "inner"
+        ],
+        "properties": {
+          "inner": {
+            "$ref": "#/components/schemas/Operation"
+          },
+          "public_key": {
+            "$ref": "#/components/schemas/PublicKey"
+          },
+          "signature": {
+            "$ref": "#/components/schemas/Signature"
+          }
+        }
+      },
+      "String": {
+        "type": "string"
+      },
+      "u64": {
+        "type": "integer",
+        "format": "int64",
+        "minimum": 0
+      }
+    }
+  }
 }
