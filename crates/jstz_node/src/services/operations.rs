@@ -1,7 +1,6 @@
 use super::error::{ServiceError, ServiceResult};
 use super::{AppState, Service};
 use anyhow::anyhow;
-use axum::routing::{get, post};
 use axum::{
     extract::{Path, State},
     Json,
@@ -12,9 +11,23 @@ use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
 
 use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
 pub struct OperationsService;
 
+const OPERATIONS_TAG: &str = "Operations";
+
+/// Inject an operation into Jstz
+#[utoipa::path(
+        post,
+        path = "",
+        tag = OPERATIONS_TAG,
+        responses(
+            (status = 200, description = "Operation successfully injectedd"),
+            (status = 400),
+            (status = 500)
+        )
+    )]
 async fn inject(
     State(AppState { rollup_client, .. }): State<AppState>,
     Json(operation): Json<SignedOperation>,
@@ -34,6 +47,20 @@ async fn inject(
     Ok(())
 }
 
+/// Get the receipt of an operation
+#[utoipa::path(
+        get,
+        path = "/{operation_hash}/receipt",
+        tag = OPERATIONS_TAG,
+        params(
+            ("operation_hash" = String, description = "Operation hash")
+        ),
+        responses(
+            (status = 200, body = Receipt),
+            (status = 400),
+            (status = 500)
+        )
+    )]
 async fn receipt(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(hash): Path<String>,
@@ -54,8 +81,8 @@ async fn receipt(
 impl Service for OperationsService {
     fn router_with_openapi() -> OpenApiRouter<AppState> {
         let routes = OpenApiRouter::new()
-            .route("/", post(inject))
-            .route("/:operation_hash/receipt", get(receipt));
+            .routes(routes!(inject))
+            .routes(routes!(receipt));
 
         OpenApiRouter::new().nest("/operations", routes)
     }
