@@ -13,14 +13,13 @@ description.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-cors.workspace = true
-actix-web-lab.workspace = true
-actix-web.workspace = true
 anyhow.workspace = true
+axum.workspace = true
 base64.workspace = true
 bincode.workspace = true
 clap.workspace = true
 dirs.workspace = true
+derive_more.workspace = true
 env_logger.workspace = true
 futures-util.workspace = true
 hex.workspace = true
@@ -44,6 +43,7 @@ thiserror.workspace = true
 tokio-stream.workspace = true
 tokio-util.workspace = true
 tokio.workspace = true
+tower-http.workspace = true
 
 [[bin]]
 name = "jstz-node"

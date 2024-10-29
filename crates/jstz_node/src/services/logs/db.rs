@@ -2,7 +2,6 @@
 use std::fs;
 
 use super::{Line, QueryResponse};
-use actix_web::web::block;
 use anyhow::{anyhow, Result};
 use jstz_proto::{
     context::account::Address, js_logger::LogRecord, request_logger::RequestEvent,
@@ -10,6 +9,7 @@ use jstz_proto::{
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{params, Params, Statement};
+use tokio::task::spawn_blocking;
 
 pub type SqliteConnectionPool = Pool<SqliteConnectionManager>;
 pub type SqliteConnection = PooledConnection<r2d2_sqlite::SqliteConnectionManager>;
@@ -59,7 +59,7 @@ impl Db {
     async fn get_connection_from_pool(
         pool: SqliteConnectionPool,
     ) -> Result<SqliteConnection> {
-        block(move || pool.get())
+        spawn_blocking(move || pool.get())
             .await
             .map_err(|e| {
                 anyhow!("Failed to get connection from pool: {}", e.to_string())

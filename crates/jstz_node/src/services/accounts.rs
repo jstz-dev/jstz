@@ -1,18 +1,18 @@
-use std::collections::HashMap;
-
-use actix_web::{
-    get,
-    web::{Data, Path, Query, ServiceConfig},
-    HttpResponse, Responder, Scope,
-};
 use anyhow::anyhow;
+use axum::{
+    extract::{Path, Query, State},
+    routing::get,
+    Json, Router,
+};
 use jstz_api::KvValue;
-use jstz_proto::context::account::Account;
-use octez::OctezRollupClient;
+use jstz_proto::context::account::{Account, Nonce, ParsedCode};
+use serde::Deserialize;
 
-use crate::Result;
-
-use super::Service;
+use super::{
+    error::{ServiceError, ServiceResult},
+    Service,
+};
+use crate::AppState;
 
 fn construct_storage_key(address: &str, key: &Option<String>) -> String {
     match key {
@@ -21,124 +21,105 @@ fn construct_storage_key(address: &str, key: &Option<String>) -> String {
     }
 }
 
-#[get("/{address}/nonce")]
+#[derive(Deserialize)]
+struct KvQuery {
+    key: Option<String>,
+}
+
+pub struct AccountsService;
+
 async fn nonce(
-    rollup_client: Data<OctezRollupClient>,
-    path: Path<String>,
-) -> Result<impl Responder> {
-    let key = format!("/jstz_account/{}", path.into_inner());
-
+    State(AppState { rollup_client, .. }): State<AppState>,
+    Path(address): Path<String>,
+) -> ServiceResult<Json<Nonce>> {
+    let key = format!("/jstz_account/{}", address);
     let value = rollup_client.get_value(&key).await?;
-
-    let nonce = match value {
+    let account_nonce = match value {
         Some(value) => {
             bincode::deserialize::<Account>(&value)
                 .map_err(|_| anyhow!("Failed to deserialize account"))?
                 .nonce
         }
-        None => return Ok(HttpResponse::NotFound().finish()),
+        None => Err(ServiceError::NotFound)?,
     };
-
-    Ok(HttpResponse::Ok().json(nonce))
+    Ok(Json(account_nonce))
 }
 
-#[get("/{address}/code")]
 async fn code(
-    rollup_client: Data<OctezRollupClient>,
-    path: Path<String>,
-) -> Result<impl Responder> {
-    let key = format!("/jstz_account/{}", path.into_inner());
-
+    State(AppState { rollup_client, .. }): State<AppState>,
+    Path(address): Path<String>,
+) -> ServiceResult<Json<ParsedCode>> {
+    let key = format!("/jstz_account/{}", address);
     let value = rollup_client.get_value(&key).await?;
-
-    let code = match value {
+    let account_code = match value {
         Some(value) => {
             bincode::deserialize::<Account>(&value)
                 .map_err(|_| anyhow!("Failed to deserialize account"))?
                 .function_code
         }
-        None => return Ok(HttpResponse::NotFound().finish()),
-    };
-
-    Ok(HttpResponse::Ok().json(code))
+        None => Err(ServiceError::NotFound)?,
+    }
+    .ok_or_else(|| {
+        ServiceError::BadRequest("Account is not a smart function".to_string())
+    })?;
+    Ok(Json(account_code))
 }
 
-#[get("/{address}/balance")]
 async fn balance(
-    rollup_client: Data<OctezRollupClient>,
-    path: Path<String>,
-) -> Result<impl Responder> {
-    let key = format!("/jstz_account/{}", path.into_inner());
-
+    State(AppState { rollup_client, .. }): State<AppState>,
+    Path(address): Path<String>,
+) -> ServiceResult<Json<u64>> {
+    let key = format!("/jstz_account/{}", address);
     let value = rollup_client.get_value(&key).await?;
-
-    let balance = match value {
+    let account_balance = match value {
         Some(value) => {
             bincode::deserialize::<Account>(&value)
                 .map_err(|_| anyhow!("Failed to deserialize account"))?
                 .amount
         }
-        None => return Ok(HttpResponse::NotFound().finish()),
+        None => Err(ServiceError::NotFound)?,
     };
-
-    Ok(HttpResponse::Ok().json(balance))
+    Ok(Json(account_balance))
 }
 
-#[get("/{address}/kv")]
 async fn kv(
-    rollup_client: Data<OctezRollupClient>,
-    path: Path<String>,
-    query: Query<HashMap<String, String>>,
-) -> Result<impl Responder> {
-    let address = path.into_inner();
-    let key_option = query.get("key").cloned();
-
-    let storage_key = construct_storage_key(&address, &key_option);
-
-    let value = rollup_client.get_value(&storage_key).await?;
-
-    let value = match value {
+    State(AppState { rollup_client, .. }): State<AppState>,
+    Path(address): Path<String>,
+    Query(KvQuery { key }): Query<KvQuery>,
+) -> ServiceResult<Json<KvValue>> {
+    let key = construct_storage_key(&address, &key);
+    let value = rollup_client.get_value(&key).await?;
+    let kv_value = match value {
         Some(value) => bincode::deserialize::<KvValue>(&value)
             .map_err(|_| anyhow!("Failed to deserialize account"))?,
-        None => return Ok(HttpResponse::NotFound().finish()),
+        None => Err(ServiceError::NotFound)?,
     };
-
-    Ok(HttpResponse::Ok().json(value))
+    Ok(Json(kv_value))
 }
 
-#[get("/{address}/kv/subkeys")]
 async fn kv_subkeys(
-    rollup_client: Data<OctezRollupClient>,
-    path: Path<String>,
-    query: Query<HashMap<String, String>>,
-) -> Result<impl Responder> {
-    let address = path.into_inner();
-
-    let key_option = query.get("key").cloned();
-
-    let storage_key = construct_storage_key(&address, &key_option);
-
-    let value = rollup_client.get_subkeys(&storage_key).await?;
-
-    let value = match value {
+    State(AppState { rollup_client, .. }): State<AppState>,
+    Path(address): Path<String>,
+    Query(KvQuery { key }): Query<KvQuery>,
+) -> ServiceResult<Json<Vec<String>>> {
+    let key = construct_storage_key(&address, &key);
+    let value = rollup_client.get_subkeys(&key).await?;
+    let subkeys = match value {
         Some(value) => value,
-        None => return Ok(HttpResponse::NotFound().finish()),
+        None => Err(ServiceError::NotFound)?,
     };
-
-    Ok(HttpResponse::Ok().json(value))
+    Ok(Json(subkeys))
 }
-
-pub struct AccountsService;
 
 impl Service for AccountsService {
-    fn configure(cfg: &mut ServiceConfig) {
-        let scope = Scope::new("/accounts")
-            .service(nonce)
-            .service(code)
-            .service(balance)
-            .service(kv)
-            .service(kv_subkeys);
+    fn router() -> Router<AppState> {
+        let routes = Router::new()
+            .route("/:address/nonce", get(nonce))
+            .route("/:address/code", get(code))
+            .route("/:address/balance", get(balance))
+            .route("/:address/kv", get(kv))
+            .route("/:address/kv/subkeys", get(kv_subkeys));
 
-        cfg.service(scope);
+        Router::new().nest("/accounts", routes)
     }
 }

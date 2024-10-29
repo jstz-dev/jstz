@@ -1,11 +1,13 @@
-use std::{io::ErrorKind::InvalidInput, sync::Arc};
+use std::sync::Arc;
 
-use actix_web::{
-    get,
-    web::{Data, Path, ServiceConfig},
-    Responder, Scope,
-};
 use anyhow;
+use axum::{
+    extract::{Path, State},
+    response::Sse,
+    routing::get,
+    Router,
+};
+use broadcaster::InfallibleSSeStream;
 #[cfg(feature = "persistent-logging")]
 use jstz_proto::request_logger::{
     RequestEvent, REQUEST_END_PREFIX, REQUEST_START_PREFIX,
@@ -17,17 +19,15 @@ use jstz_proto::{
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 
-use super::Service;
-
-use crate::tailed_file::TailedFile;
+use crate::{tailed_file::TailedFile, AppState, Service};
 
 pub mod broadcaster;
 
 #[cfg(feature = "persistent-logging")]
-mod db;
+pub mod db;
 
 #[cfg(not(feature = "persistent-logging"))]
-mod db {
+pub mod db {
     #[derive(Clone)]
     pub struct Db {}
     impl Db {
@@ -41,29 +41,33 @@ use self::{broadcaster::Broadcaster, db::Db};
 
 #[cfg(feature = "persistent-logging")]
 mod persistent_logging {
-    pub use crate::{Error, Result};
-    pub use actix_web::{web::Query, HttpResponse};
+    use crate::{services::error::ServiceError, AppState};
+    pub use anyhow::Result;
+    use axum::{
+        extract::{Path, Query, State},
+        response::IntoResponse,
+        Json,
+    };
+    use jstz_proto::context::account::Address;
     pub use serde::{Deserialize, Serialize};
+
+    use super::db::Db;
     pub const DEAULT_PAGINATION_LIMIT: usize = 100;
     pub const DEAULT_PAGINATION_OFFSET: usize = 0;
-    use super::{get, Address, Data, Db, Path};
+
     #[derive(Deserialize, Debug)]
     pub struct Pagination {
         limit: Option<usize>,
         offset: Option<usize>,
     }
 
-    #[get("{address}/persistent/requests")]
     pub async fn persistent_logs(
-        pagination: Query<Pagination>,
-        db: Data<Db>,
-        path: Path<String>,
-    ) -> Result<HttpResponse> {
-        let address = path.into_inner();
-
-        let address = Address::from_base58(&address)?;
-
-        let Pagination { limit, offset } = pagination.into_inner();
+        State(AppState { db, .. }): State<AppState>,
+        Path(address): Path<String>,
+        Query(Pagination { limit, offset }): Query<Pagination>,
+    ) -> anyhow::Result<impl IntoResponse, ServiceError> {
+        let address = Address::from_base58(&address)
+            .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
         let result = query(
             &db,
             QueryParams::GetLogsByAddress(
@@ -74,17 +78,16 @@ mod persistent_logging {
         )
         .await?;
 
-        Ok(HttpResponse::Ok().json(result))
+        Ok(Json(result))
     }
 
-    #[get("{address}/persistent/requests/{request_id}")]
     pub async fn persistent_logs_by_request_id(
-        db: Data<Db>,
-        path: Path<(String, String)>,
-    ) -> Result<HttpResponse> {
-        let (address, request_id) = path.into_inner();
-
-        let address = Address::from_base58(&address)?;
+        State(AppState { db, .. }): State<AppState>,
+        Path(address): Path<String>,
+        Path(request_id): Path<String>,
+    ) -> Result<impl IntoResponse, ServiceError> {
+        let address = Address::from_base58(&address)
+            .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
 
         let result = query(
             &db,
@@ -92,7 +95,7 @@ mod persistent_logging {
         )
         .await?;
 
-        Ok(HttpResponse::Ok().json(result))
+        Ok(Json(result))
     }
 
     #[derive(Serialize, Deserialize)]
@@ -113,7 +116,10 @@ mod persistent_logging {
         GetLogsByAddressAndRequestId(Address, String),
     }
 
-    pub async fn query(db: &Db, param: QueryParams) -> Result<Vec<QueryResponse>> {
+    pub async fn query(
+        db: &Db,
+        param: QueryParams,
+    ) -> anyhow::Result<Vec<QueryResponse>> {
         match param {
             QueryParams::GetLogsByAddress(addr, offset, limit) => {
                 db.logs_by_address(addr, offset, limit).await
@@ -122,42 +128,27 @@ mod persistent_logging {
                 db.logs_by_address_and_request_id(addr, request_id).await
             }
         }
-        .map_err(Error::InternalError)
     }
 }
 #[cfg(feature = "persistent-logging")]
 use persistent_logging::*;
 
-#[get("{address}/stream")]
-async fn stream_logs(
-    broadcaster: Data<Broadcaster>,
-    path: Path<String>,
-) -> std::io::Result<impl Responder> {
-    let address = path.into_inner();
-
-    // TODO: add better error
-    let address = Address::from_base58(&address)
-        .map_err(|e| std::io::Error::new(InvalidInput, e))?;
-
-    Ok(broadcaster.new_client(address).await)
-}
+use super::error::{ServiceError, ServiceResult};
 
 pub struct LogsService;
 
 impl Service for LogsService {
-    fn configure(cfg: &mut ServiceConfig) {
-        let scope = Scope::new("/logs").service(stream_logs);
-
-        #[cfg(not(feature = "persistent-logging"))]
-        cfg.service(scope);
+    fn router() -> Router<AppState> {
+        let routes = Router::new().route("/:address/stream", get(stream_log));
 
         #[cfg(feature = "persistent-logging")]
-        {
-            let scope = scope
-                .service(persistent_logs)
-                .service(persistent_logs_by_request_id);
-            cfg.service(scope);
-        }
+        let routes = routes
+            .route("/:address/persistent/requests", get(persistent_logs))
+            .route(
+                "/:address/persistent/requests/:request_id",
+                get(persistent_logs_by_request_id),
+            );
+        Router::new().nest("/logs", routes)
     }
 }
 
@@ -178,7 +169,7 @@ impl LogsService {
         cancellation_token: &CancellationToken,
     ) -> anyhow::Result<(Arc<Broadcaster>, Db, JoinHandle<std::io::Result<()>>)> {
         // Create a broadcaster for streaming logs.
-        let broadcaster = Broadcaster::create();
+        let broadcaster = Broadcaster::new();
 
         // Create a connection with the sqlite database.
         let db = Db::init().await?;
@@ -205,7 +196,7 @@ impl LogsService {
         #[allow(unused_variables)] db: Db,
         cancellation_token: CancellationToken,
     ) -> JoinHandle<std::io::Result<()>> {
-        actix_web::rt::spawn(async move {
+        tokio::task::spawn(async move {
             let mut lines = file.lines();
             loop {
                 tokio::select! {
@@ -266,4 +257,13 @@ impl LogsService {
 
         None
     }
+}
+
+async fn stream_log(
+    State(AppState { broadcaster, .. }): State<AppState>,
+    Path(address): Path<String>,
+) -> ServiceResult<Sse<InfallibleSSeStream>> {
+    let address = Address::from_base58(&address)
+        .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
+    Ok(broadcaster.new_client(address).await)
 }
