@@ -3137,9 +3137,11 @@ dependencies = [
  "rust-embed",
  "serde",
  "serde_json",
+ "serde_with",
  "signal-hook",
  "tempfile",
  "tezos-smart-rollup-encoding",
+ "tezos_crypto_rs 0.6.0",
  "tokio",
 ]
 

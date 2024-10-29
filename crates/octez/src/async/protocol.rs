@@ -1,5 +1,6 @@
-pub use super::bootstrap::BootstrapAccount;
-use super::bootstrap::BootstrapAccounts;
+pub use super::bootstrap::{BootstrapAccount, BootstrapContract};
+use super::bootstrap::{BootstrapAccounts, BootstrapContracts};
+
 use rust_embed::Embed;
 use serde_json::Value;
 use std::fmt::Display;
@@ -68,6 +69,8 @@ pub struct ProtocolParameterBuilder {
     constants: Option<ProtocolConstants>,
     /// Bootstrap accounts.
     bootstrap_accounts: BootstrapAccounts,
+    /// Bootstrap contracts.
+    bootstrap_contracts: BootstrapContracts,
     /// Path to an existing parameter file whose content will be used as the base
     /// parameter set. If `source_path` is not given, a predefined parameter
     /// file will be used instead depending on `protocol` and `constants`.
@@ -100,6 +103,17 @@ impl ProtocolParameterBuilder {
         self
     }
 
+    pub fn set_bootstrap_contracts(
+        &mut self,
+        contracts: impl IntoIterator<Item = BootstrapContract>,
+    ) -> &mut Self {
+        self.bootstrap_contracts = BootstrapContracts::default();
+        for contract in contracts {
+            self.bootstrap_contracts.add_contract(contract);
+        }
+        self
+    }
+
     pub fn set_source_path(&mut self, path: &str) -> &mut Self {
         self.source_path = Some(PathBuf::from(path));
         self
@@ -116,6 +130,8 @@ impl ProtocolParameterBuilder {
 
         self.merge_bootstrap_accounts(json)?;
         self.bootstrap_accounts = BootstrapAccounts::default();
+        self.merge_bootstrap_contracts(json)?;
+        self.bootstrap_contracts = BootstrapContracts::default();
 
         let mut output_file = tempfile::NamedTempFile::new().unwrap();
         serde_json::to_writer(output_file.as_file(), &json)?;
@@ -183,6 +199,23 @@ impl ProtocolParameterBuilder {
         json.insert("bootstrap_accounts".to_owned(), Value::from(&accounts));
         Ok(())
     }
+
+    fn merge_bootstrap_contracts(
+        &mut self,
+        json: &mut serde_json::Map<String, Value>,
+    ) -> anyhow::Result<()> {
+        let mut contracts = BootstrapContracts::default();
+        if let Some(value) = json.get("bootstrap_contracts") {
+            let existing_contracts = serde_json::from_value(value.clone())?;
+            contracts.merge(&existing_contracts);
+        }
+        contracts.merge(&self.bootstrap_contracts);
+        json.insert(
+            "bootstrap_contracts".to_owned(),
+            serde_json::to_value(contracts)?,
+        );
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -193,14 +226,17 @@ mod tests {
     use tempfile::NamedTempFile;
 
     use super::{
-        BootstrapAccount, Protocol, ProtocolConstants, ProtocolParameterBuilder,
+        BootstrapAccount, BootstrapContract, Protocol, ProtocolConstants,
+        ProtocolParameterBuilder,
     };
 
     const ACCOUNT_PUBLIC_KEY: &str =
         "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv";
+    const CONTRACT_HASH: &str = "KT1QuofAgnsWffHzLA7D78rxytJruGHDe7XG";
 
     fn create_dummy_source_file(
         bootstrap_accounts: Option<Vec<BootstrapAccount>>,
+        bootstrap_contracts: Option<Vec<BootstrapContract>>,
     ) -> NamedTempFile {
         let mut source_file = tempfile::NamedTempFile::new().unwrap();
         let mut json = serde_json::json!({"foo":"bar"});
@@ -209,6 +245,18 @@ mod tests {
             obj.insert(
                 "bootstrap_accounts".to_owned(),
                 Value::Array(accounts.iter().map(Value::from).collect::<Vec<Value>>()),
+            );
+        }
+        if let Some(contracts) = bootstrap_contracts {
+            let obj = json.as_object_mut().unwrap();
+            obj.insert(
+                "bootstrap_contracts".to_owned(),
+                Value::Array(
+                    contracts
+                        .iter()
+                        .map(|v| serde_json::to_value(v).unwrap())
+                        .collect::<Vec<Value>>(),
+                ),
             );
         }
         serde_json::to_writer(source_file.as_file(), &json).unwrap();
@@ -221,11 +269,15 @@ mod tests {
     fn parameter_builder() {
         let mut builder = ProtocolParameterBuilder::new();
         let account = BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap();
+        let contract =
+            BootstrapContract::new(serde_json::json!("foobar"), 0, Some(CONTRACT_HASH))
+                .unwrap();
         builder
             .set_constants(ProtocolConstants::Sandbox)
             .set_protocol(Protocol::Alpha)
             .set_source_path("/test/path")
-            .set_bootstrap_accounts([account.clone()]);
+            .set_bootstrap_accounts([account.clone()])
+            .set_bootstrap_contracts([contract.clone()]);
         assert_eq!(builder.constants.unwrap(), ProtocolConstants::Sandbox);
         assert_eq!(builder.source_path.unwrap().to_str().unwrap(), "/test/path");
         assert_eq!(builder.protocol.unwrap().hash(), Protocol::Alpha.hash());
@@ -234,6 +286,9 @@ mod tests {
             *builder.bootstrap_accounts.accounts().last().unwrap(),
             &account
         );
+        let contracts = builder.bootstrap_contracts.contracts();
+        assert_eq!(contracts.len(), 1);
+        assert_eq!(contracts.last().unwrap(), &contract);
     }
 
     #[test]
@@ -247,7 +302,7 @@ mod tests {
     #[test]
     fn build_parameters_from_given_file() {
         let mut builder = ProtocolParameterBuilder::new();
-        let source_file = create_dummy_source_file(None);
+        let source_file = create_dummy_source_file(None, None);
         builder.set_source_path(source_file.path().to_str().unwrap());
 
         let output_file = builder.build().unwrap();
@@ -288,7 +343,7 @@ mod tests {
             .unwrap(),
             BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap(),
         ];
-        let source_file = create_dummy_source_file(Some(vec![accounts[0].clone()]));
+        let source_file = create_dummy_source_file(Some(vec![accounts[0].clone()]), None);
         builder
             .set_source_path(source_file.path().to_str().unwrap())
             .set_bootstrap_accounts(accounts[1..].to_vec());
@@ -314,5 +369,90 @@ mod tests {
 
         let second_account = accounts.last().unwrap();
         assert_eq!(second_account, &accounts[1]);
+    }
+
+    #[test]
+    fn set_bootstrap_contracts() {
+        let mut builder = ProtocolParameterBuilder::new();
+        builder.set_bootstrap_contracts([
+            BootstrapContract::new(serde_json::json!("foobar"), 1000, None).unwrap(),
+            BootstrapContract::new(
+                serde_json::json!("foobar"),
+                2000,
+                Some(CONTRACT_HASH),
+            )
+            .unwrap(),
+        ]);
+        let output_file = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(output_file).unwrap();
+
+        let mut contracts = json
+            .get("bootstrap_contracts")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .clone();
+        assert_eq!(contracts.len(), 2);
+        contracts.sort_by_key(|v| v.get("amount").unwrap().as_str().unwrap().to_owned());
+
+        let contract = contracts.first().unwrap();
+        assert_eq!(
+            contract,
+            &serde_json::json!({"amount": "1000", "script": "foobar"})
+        );
+
+        let contract = contracts.last().unwrap();
+        assert_eq!(
+            contract,
+            &serde_json::json!({"hash": CONTRACT_HASH, "amount": "2000", "script": "foobar"})
+        );
+    }
+
+    #[test]
+    fn merge_existing_bootstrap_contracts() {
+        let contracts = [
+            BootstrapContract::new(
+                serde_json::json!("existing-contract"),
+                100,
+                Some(CONTRACT_HASH),
+            )
+            .unwrap(),
+            BootstrapContract::new(
+                serde_json::json!("new-contract"),
+                1000,
+                Some("KT1L7KRpTBC4jqBVAuNdjcscp2jpC3xaogzK"),
+            )
+            .unwrap(),
+            BootstrapContract::new(
+                serde_json::json!("skipped-contract"),
+                1000,
+                Some(CONTRACT_HASH),
+            )
+            .unwrap(),
+        ];
+        let mut builder = ProtocolParameterBuilder::new();
+        let source_file =
+            create_dummy_source_file(None, Some(vec![contracts[0].clone()]));
+        builder
+            .set_source_path(source_file.path().to_str().unwrap())
+            .set_bootstrap_contracts(contracts[1..].to_vec());
+        let output_file = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(output_file).unwrap();
+
+        let contracts = json
+            .get("bootstrap_contracts")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
+            .collect::<Vec<BootstrapContract>>();
+        assert_eq!(contracts.len(), 2);
+
+        // the 3rd contract was not injected because its hash collides with the 1st contract
+        let existing_contract = contracts.first().unwrap();
+        assert_eq!(existing_contract, &contracts[0]);
+        let new_contract = contracts.last().unwrap();
+        assert_eq!(new_contract, &contracts[1]);
     }
 }
