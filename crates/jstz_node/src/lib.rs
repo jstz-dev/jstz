@@ -1,6 +1,6 @@
 use std::{path::PathBuf, sync::Arc};
 
-use axum::Router;
+use api_doc::ApiDoc;
 use octez::OctezRollupClient;
 use services::{
     accounts::AccountsService,
@@ -10,10 +10,14 @@ use services::{
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 
+mod api_doc;
 mod services;
 mod tailed_file;
 use services::Service;
 use tokio_util::sync::CancellationToken;
+use utoipa::OpenApi;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_scalar::{Scalar, Servable};
 
 #[derive(Clone)]
 pub struct AppState {
@@ -45,11 +49,9 @@ pub async fn run(
         .allow_origin(Any)
         .allow_headers(Any);
 
-    let router = Router::new()
-        .merge(OperationsService::router())
-        .merge(AccountsService::router())
-        .with_state(state)
-        .layer(cors);
+    let (router, openapi) = router().with_state(state).layer(cors).split_for_parts();
+
+    let router = router.merge(Scalar::with_url("/scalar", openapi));
 
     let listener = TcpListener::bind(format!("{}:{}", addr, port)).await?;
     axum::serve(listener, router).await?;
@@ -57,4 +59,16 @@ pub async fn run(
     cancellation_token.cancel();
     tail_file_handle.await.unwrap()?;
     Ok(())
+}
+
+fn router() -> OpenApiRouter<AppState> {
+    OpenApiRouter::with_openapi(ApiDoc::openapi())
+        .merge(OperationsService::router_with_openapi())
+        .merge(AccountsService::router_with_openapi())
+        .merge(LogsService::router_with_openapi())
+}
+
+pub fn openapi_json_raw() -> anyhow::Result<String> {
+    let doc = router().split_for_parts().1.to_pretty_json()?;
+    Ok(doc)
 }

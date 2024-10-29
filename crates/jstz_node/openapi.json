@@ -1,0 +1,18 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Jstz Node",
+    "description": "JavaScript server runtime for Tezos Smart Rollups",
+    "contact": {
+      "name": "Trilitech",
+      "email": "contact@trili.tech"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/jstz-dev/jstz/blob/main/LICENSE"
+    },
+    "version": "0.1.0-alpha.0"
+  },
+  "paths": {},
+  "components": {}
+}

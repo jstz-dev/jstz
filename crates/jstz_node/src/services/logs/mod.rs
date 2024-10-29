@@ -5,7 +5,6 @@ use axum::{
     extract::{Path, State},
     response::Sse,
     routing::get,
-    Router,
 };
 use broadcaster::InfallibleSSeStream;
 #[cfg(feature = "persistent-logging")]
@@ -18,6 +17,7 @@ use jstz_proto::{
 };
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::{tailed_file::TailedFile, AppState, Service};
 
@@ -138,9 +138,8 @@ use super::error::{ServiceError, ServiceResult};
 pub struct LogsService;
 
 impl Service for LogsService {
-    fn router() -> Router<AppState> {
-        let routes = Router::new().route("/:address/stream", get(stream_log));
-
+    fn router_with_openapi() -> OpenApiRouter<AppState> {
+        let routes = OpenApiRouter::new().route("/:address/stream", get(stream_log));
         #[cfg(feature = "persistent-logging")]
         let routes = routes
             .route("/:address/persistent/requests", get(persistent_logs))
@@ -148,7 +147,7 @@ impl Service for LogsService {
                 "/:address/persistent/requests/:request_id",
                 get(persistent_logs_by_request_id),
             );
-        Router::new().nest("/logs", routes)
+        OpenApiRouter::new().nest("/logs", routes)
     }
 }
 
