@@ -1,10 +1,11 @@
 {
   pkgs,
-  crane,
   lib,
   stdenv,
+  crane,
   rust-toolchain,
   octez,
+  mozjs,
 }: let
   craneLib = (crane.mkLib pkgs).overrideToolchain (_: rust-toolchain);
 
@@ -34,6 +35,8 @@
       ++ lib.optionals
       stdenv.isDarwin
       (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
+
+    MOZJS_ARCHIVE = mozjs;
   };
 
   # Build *just* the workspace dependencies.
@@ -97,11 +100,12 @@ in {
       });
     jstz_core = crate "jstz_core";
     jstz_crypto = crate "jstz_crypto";
+    jstz_engine = crate "jstz_engine";
+    inherit jstz_kernel;
     jstz_mock = crate "jstz_mock";
     jstz_node = crate "jstz_node";
     jstz_proto = crate "jstz_proto";
     jstz_rollup = crate "jstz_rollup";
-    inherit jstz_kernel;
     jstz_wpt = crate "jstz_wpt";
     jstzd = crate "jstzd";
     octez = crate "octez";
@@ -116,8 +120,9 @@ in {
 
     cargo-test-unit = craneLib.cargoNextest (commonWorkspace
       // {
+        doCheck = true;
         # Run the unit tests
-        cargoNextestExtraArg = "--bins --lib";
+        cargoNextestExtraArgs = "--bins --lib";
       });
 
     cargo-test-int = craneLib.cargoNextest (commonWorkspace
@@ -126,7 +131,7 @@ in {
         doCheck = true;
         # Run the integration tests
         #
-        # FIXME():
+        # FIXME(https://linear.app/tezos/issue/JSTZ-186):
         # Don't run the `jstz_api` integration tests until they've been paralellized
         #
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace

@@ -1,0 +1,16 @@
+[package]
+name = "jstz_engine"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description = "A memory-safe JavaScript engine API in Rust"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+mozjs.workspace = true

@@ -54,7 +54,11 @@
         system: let
           pkgs = import nixpkgs {
             inherit system;
-            overlays = [(import ./nix/overlay.nix) (import rust-overlay) npm-buildpackage.overlays.default];
+            overlays = [
+              (import ./nix/overlay.nix)
+              (import rust-overlay)
+              npm-buildpackage.overlays.default
+            ];
           };
 
           # Build octez release for this system
@@ -122,7 +126,10 @@
             else pkgs.clang;
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
-          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
+          llvmPackages = pkgs.llvmPackages_16;
+
+          mozjs = pkgs.callPackage ./nix/mozjs.nix {};
+          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez mozjs;};
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
 
           fmt = treefmt.lib.evalModule pkgs {
@@ -171,6 +178,7 @@
                   ''
                     npm install --lockfile-version 2
                     export PATH="$PWD/node_modules/.bin/:$PATH"
+                    export MOZJS_ARCHIVE=${mozjs}
                   ''
                 ]
                 ++ lib.optionals stdenv.isLinux [
@@ -181,27 +189,30 @@
 
             buildInputs = with pkgs;
               [
-                llvmPackages_16.clangNoLibc
+                # C toolchain
+                llvmPackages.clangNoLibc
+                llvmPackages.llvm # for llvm-objdump (building mozjs from source)
+
+                # Rust toolchain
                 rust-toolchain
                 rust-analyzer
                 wabt
                 wasm-pack
                 cargo-sort
                 cargo-nextest
+                cargo-llvm-cov
 
+                # JavaScript/TypeScript toolchain
                 nodejs
                 prefetch-npm-deps
 
+                # Nix toolchain
                 alejandra
 
-                sqlite
-
-                # Code coverage
-                cargo-llvm-cov
-                octez
-
-                # For running the web platform tests
-                python39
+                # Runtime dependencies
+                sqlite # for jstz-node
+                octez # for jstzd
+                python39 # for running web-platform tests
               ]
               ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev]
               ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
