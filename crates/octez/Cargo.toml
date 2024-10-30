@@ -27,4 +27,5 @@ signal-hook.workspace = true
 tempfile.workspace = true
 tezos_crypto_rs.workspace = true
 tezos-smart-rollup-encoding.workspace = true
+tezos_crypto_rs.workspace = true
 tokio.workspace = true

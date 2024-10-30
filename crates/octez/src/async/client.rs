@@ -9,6 +9,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::tempdir;
+use tezos_crypto_rs::hash::{ContractKt1Hash, OperationHash};
 use tokio::process::Command;
 
 use super::{directory::Directory, endpoint::Endpoint, node_config::OctezNodeConfig};
@@ -328,6 +329,80 @@ impl OctezClient {
         self.spawn_and_wait_command(args).await?;
         Ok(())
     }
+
+    pub async fn originate_contract(
+        &self,
+        contract_alias: &str,
+        funding_account_src: &str,
+        fund_tez: f64,
+        contract_path: &Path,
+        init_data: Option<&str>,
+        burn_cap: Option<f64>,
+    ) -> Result<(ContractKt1Hash, OperationHash)> {
+        let fund_str = fund_tez.to_string();
+        let burn_cap_str = burn_cap.map(|v| v.to_string());
+        let mut args = vec![
+            "originate",
+            "contract",
+            contract_alias,
+            "transferring",
+            &fund_str,
+            "from",
+            funding_account_src,
+            "running",
+            contract_path
+                .to_str()
+                .ok_or(anyhow::anyhow!("failed to convert contract path to string"))?,
+        ];
+        if let Some(data) = init_data {
+            args.append(&mut vec!["--init", data]);
+        }
+        if let Some(v) = &burn_cap_str {
+            args.append(&mut vec!["--burn-cap", v]);
+        }
+        let output = self.spawn_and_wait_command(args).await?;
+
+        let operation_hash = parse_operation_hash(&output);
+        if let Err(e) = operation_hash {
+            anyhow::bail!(
+                "failed to parse operation hash from execution output: {:?}",
+                e
+            );
+        }
+        let contract_address = parse_contract_address(&output);
+        if let Err(e) = contract_address {
+            anyhow::bail!(
+                "failed to parse contract address from execution output: {:?}",
+                e
+            );
+        }
+        Ok((contract_address.unwrap(), operation_hash.unwrap()))
+    }
+}
+
+fn parse_regex(pattern_str: &str, output: &str) -> Result<String> {
+    let pattern = regex::Regex::new(pattern_str)?;
+    Ok(pattern
+        .captures(output)
+        .ok_or(anyhow::anyhow!("input string does not match the pattern"))?
+        .get(1)
+        .ok_or(anyhow::anyhow!("cannot find the first match group"))?
+        .as_str()
+        .to_owned())
+}
+
+fn parse_operation_hash(output: &str) -> Result<OperationHash> {
+    let raw_operation_hash =
+        parse_regex("Operation hash is '(o[1-9A-HJ-NP-Za-km-z]{50})'", output)?;
+    Ok(OperationHash::from_base58_check(&raw_operation_hash)?)
+}
+
+fn parse_contract_address(output: &str) -> Result<ContractKt1Hash> {
+    let raw_contract_hash = parse_regex(
+        "New contract (KT1[1-9A-HJ-NP-Za-km-z]{33}) originated.",
+        output,
+    )?;
+    Ok(ContractKt1Hash::from_base58_check(&raw_contract_hash)?)
 }
 
 #[cfg(test)]
@@ -536,5 +611,67 @@ mod test {
         let input = "15.23453 ꜩ";
         let res = OctezClient::extract_digits(input);
         assert!(res.is_ok_and(|balance| balance == 15.23453));
+    }
+
+    #[test]
+    fn test_parse_contract_address() {
+        let contract_hash = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";
+        assert_eq!(
+            parse_contract_address(&format!("New contract {contract_hash} originated."))
+                .unwrap(),
+            ContractKt1Hash::from_base58_check(contract_hash).unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_contract_address_pattern_mismatch() {
+        let contract_hash = "foobar";
+        assert_eq!(
+            parse_contract_address(&format!("New contract {contract_hash} originated."))
+                .unwrap_err()
+                .to_string(),
+            "input string does not match the pattern"
+        );
+    }
+
+    #[test]
+    fn parse_contract_address_bad_hash() {
+        let contract_hash = format!("KT1{}", "1".repeat(33));
+        assert_eq!(
+            parse_contract_address(&format!("New contract {contract_hash} originated."))
+                .unwrap_err()
+                .to_string(),
+            "invalid checksum"
+        );
+    }
+
+    #[test]
+    fn test_parse_operation_hash() {
+        let operation_hash = "op15fmUF1cypvbX6H5Uu8i1Fwtf2fX3vFk8yxGQLoZDCfvqht2i";
+        assert_eq!(
+            parse_operation_hash(&format!("Operation hash is '{operation_hash}'"))
+                .unwrap(),
+            OperationHash::from_base58_check(operation_hash).unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_operation_hash_pattern_mismatch() {
+        assert_eq!(
+            parse_operation_hash("Operation hash is 'foobar'")
+                .unwrap_err()
+                .to_string(),
+            "input string does not match the pattern"
+        );
+    }
+
+    #[test]
+    fn parse_operation_hash_bad_hash() {
+        assert_eq!(
+            parse_operation_hash(&format!("Operation hash is 'o{}'", "1".repeat(50)))
+                .unwrap_err()
+                .to_string(),
+            "invalid checksum"
+        );
     }
 }
