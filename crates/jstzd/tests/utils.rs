@@ -1,11 +1,14 @@
 #![allow(dead_code)]
 use jstzd::task::{octez_baker, octez_node::OctezNode, Task};
-use octez::r#async::{
-    baker::{BakerBinaryPath, OctezBakerConfigBuilder},
-    client::{OctezClient, OctezClientBuilder},
-    endpoint::Endpoint,
-    node_config::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder},
-    protocol::Protocol,
+use octez::{
+    r#async::{
+        baker::{BakerBinaryPath, OctezBakerConfigBuilder},
+        client::{OctezClient, OctezClientBuilder},
+        endpoint::Endpoint,
+        node_config::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder},
+        protocol::Protocol,
+    },
+    unused_port,
 };
 use regex::Regex;
 use std::path::{Path, PathBuf};
@@ -78,6 +81,8 @@ pub async fn spawn_octez_node() -> OctezNode {
     config_builder
         .set_binary_path("octez-node")
         .set_network("sandbox")
+        .set_rpc_endpoint(&Endpoint::localhost(unused_port()))
+        .set_p2p_endpoint(&Endpoint::localhost(unused_port()))
         .set_run_options(&run_option_builder.set_synchronisation_threshold(0).build());
     let octez_node = OctezNode::spawn(config_builder.build().unwrap())
         .await

@@ -1,4 +1,3 @@
-use crate::unused_port;
 use anyhow::Result;
 use std::{
     fmt::{self, Display, Formatter},
@@ -10,6 +9,8 @@ use super::endpoint::Endpoint;
 
 const DEFAULT_NETWORK: &str = "sandbox";
 const DEFAULT_BINARY_PATH: &str = "octez-node";
+const DEFAULT_RPC_PORT: u16 = 8732;
+const DEFAULT_P2P_PORT: u16 = 9732;
 const LOCAL_ADDRESS: &str = "127.0.0.1";
 
 #[derive(Clone, PartialEq, Debug)]
@@ -181,11 +182,14 @@ impl OctezNodeConfigBuilder {
             rpc_endpoint: self
                 .rpc_endpoint
                 .take()
-                .unwrap_or(Endpoint::localhost(unused_port())),
+                .unwrap_or(Endpoint::localhost(DEFAULT_RPC_PORT)),
             p2p_address: self.p2p_endpoint.take().unwrap_or(
                 Endpoint::try_from(
-                    http::Uri::from_str(&format!("{}:{}", LOCAL_ADDRESS, unused_port()))
-                        .unwrap(),
+                    http::Uri::from_str(&format!(
+                        "{}:{}",
+                        LOCAL_ADDRESS, DEFAULT_P2P_PORT
+                    ))
+                    .unwrap(),
                 )
                 .unwrap(),
             ),
@@ -226,6 +230,11 @@ mod tests {
         let config = OctezNodeConfigBuilder::new().build().unwrap();
         assert_eq!(config.binary_path, PathBuf::from(DEFAULT_BINARY_PATH));
         assert_eq!(config.network, DEFAULT_NETWORK.to_owned());
+        assert_eq!(config.rpc_endpoint, Endpoint::localhost(DEFAULT_RPC_PORT));
+        assert_eq!(
+            config.p2p_address,
+            Endpoint::try_from(http::Uri::from_static("127.0.0.1:9732")).unwrap()
+        );
         assert_eq!(config.run_options, OctezNodeRunOptions::default());
     }
 
