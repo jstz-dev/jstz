@@ -389,7 +389,7 @@ dependencies = [
 [[package]]
 name = "boa_ast"
 version = "0.19.0"
-source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+source = "git+https://github.com/trilitech/boa.git?branch=ajob410@fix/remove-wasm-bindgen-from-time#c10d6a2fd126eb5a6b9ce06161d201eb9059fad3"
 dependencies = [
  "arbitrary",
  "bitflags 2.6.0",
@@ -404,7 +404,7 @@ dependencies = [
 [[package]]
 name = "boa_engine"
 version = "0.19.0"
-source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+source = "git+https://github.com/trilitech/boa.git?branch=ajob410@fix/remove-wasm-bindgen-from-time#c10d6a2fd126eb5a6b9ce06161d201eb9059fad3"
 dependencies = [
  "arrayvec",
  "bitflags 2.6.0",
@@ -448,7 +448,7 @@ dependencies = [
 [[package]]
 name = "boa_gc"
 version = "0.19.0"
-source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+source = "git+https://github.com/trilitech/boa.git?branch=ajob410@fix/remove-wasm-bindgen-from-time#c10d6a2fd126eb5a6b9ce06161d201eb9059fad3"
 dependencies = [
  "boa_macros",
  "boa_profiler",
@@ -460,7 +460,7 @@ dependencies = [
 [[package]]
 name = "boa_interner"
 version = "0.19.0"
-source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+source = "git+https://github.com/trilitech/boa.git?branch=ajob410@fix/remove-wasm-bindgen-from-time#c10d6a2fd126eb5a6b9ce06161d201eb9059fad3"
 dependencies = [
  "arbitrary",
  "boa_gc",
@@ -476,7 +476,7 @@ dependencies = [
 [[package]]
 name = "boa_macros"
 version = "0.19.0"
-source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+source = "git+https://github.com/trilitech/boa.git?branch=ajob410@fix/remove-wasm-bindgen-from-time#c10d6a2fd126eb5a6b9ce06161d201eb9059fad3"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -487,7 +487,7 @@ dependencies = [
 [[package]]
 name = "boa_parser"
 version = "0.19.0"
-source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+source = "git+https://github.com/trilitech/boa.git?branch=ajob410@fix/remove-wasm-bindgen-from-time#c10d6a2fd126eb5a6b9ce06161d201eb9059fad3"
 dependencies = [
  "bitflags 2.6.0",
  "boa_ast",
@@ -505,12 +505,12 @@ dependencies = [
 [[package]]
 name = "boa_profiler"
 version = "0.19.0"
-source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+source = "git+https://github.com/trilitech/boa.git?branch=ajob410@fix/remove-wasm-bindgen-from-time#c10d6a2fd126eb5a6b9ce06161d201eb9059fad3"
 
 [[package]]
 name = "boa_string"
 version = "0.19.0"
-source = "git+https://github.com/trilitech/boa.git?branch=ryutamago/fix-undefined-to-json#c7b9ff04991a4a9dfbc9356e7f92efba93fe9dac"
+source = "git+https://github.com/trilitech/boa.git?branch=ajob410@fix/remove-wasm-bindgen-from-time#c10d6a2fd126eb5a6b9ce06161d201eb9059fad3"
 dependencies = [
  "fast-float",
  "paste",
@@ -5195,7 +5195,6 @@ checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
 dependencies = [
  "deranged",
  "itoa",
- "js-sys",
  "libc",
  "num-conv",
  "num_threads",
