@@ -8,8 +8,6 @@ use anyhow::Result;
 
 use super::{endpoint::Endpoint, node_config::OctezNodeRunOptions};
 
-pub const DEFAULT_RPC_ENDPOINT: &str = "localhost:8732";
-
 pub struct OctezNode {
     /// Path to the octez-node binary
     /// If None, the binary will inside PATH will be used

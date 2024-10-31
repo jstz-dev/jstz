@@ -32,9 +32,8 @@ async fn config_init() {
     let expected_endpoint = Endpoint::localhost(3000);
     let config_file = NamedTempFile::new().unwrap();
     let _ = remove_file(config_file.path());
-    let octez_client = OctezClientBuilder::new()
+    let octez_client = OctezClientBuilder::new(expected_endpoint.clone())
         .set_base_dir(expected_base_dir.clone())
-        .set_endpoint(expected_endpoint.clone())
         .build()
         .unwrap();
     let res = octez_client.config_init(config_file.path()).await;

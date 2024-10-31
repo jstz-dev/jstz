@@ -94,7 +94,7 @@ impl OctezNodeRunOptionsBuilder {
     }
 }
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct OctezNodeConfig {
     /// Path to the octez node binary.
     pub binary_path: PathBuf,
