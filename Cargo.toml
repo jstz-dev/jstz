@@ -152,13 +152,6 @@ version = "0.6.0"
 default-features = false
 
 [patch.crates-io]
-boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_engine = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_interner = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_macros = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_parser = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_profiler = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
 # NOTE: When updating `tag`, also update the `tag` in the `mozjs_archive` derivation in `nix/crates.nix`
 mozjs = { git = "https://github.com/servo/mozjs.git", tag = "mozjs-sys-v0.128.3-0" }
 tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git" }
@@ -170,3 +163,10 @@ tezos-smart-rollup-entrypoint = { git = "https://gitlab.com/tezos/tezos.git" }
 tezos-smart-rollup-debug = { git = "https://gitlab.com/tezos/tezos.git" }
 tezos-smart-rollup-panic-hook = { git = "https://gitlab.com/tezos/tezos.git" }
 tezos-smart-rollup-storage = { git = "https://gitlab.com/tezos/tezos.git" }
+boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_engine = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_interner = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_macros = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_parser = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_profiler = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
