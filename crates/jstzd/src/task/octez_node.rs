@@ -9,7 +9,7 @@ use octez::r#async::node_config::OctezNodeConfig;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-#[derive(Default, Clone)]
+#[derive(Clone)]
 pub struct OctezNode {
     inner: SharedChildWrapper,
     config: OctezNodeConfig,

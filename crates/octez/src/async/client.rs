@@ -1,5 +1,4 @@
 use anyhow::{anyhow, bail, Context, Result};
-use http::Uri;
 use jstz_crypto::{
     public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
 };
@@ -8,31 +7,37 @@ use std::{
     ffi::OsStr,
     fmt,
     path::{Path, PathBuf},
-    str::FromStr,
 };
 use tempfile::tempdir;
 use tokio::process::Command;
 
-use super::{directory::Directory, endpoint::Endpoint, node::DEFAULT_RPC_ENDPOINT};
+use super::{directory::Directory, endpoint::Endpoint, node_config::OctezNodeConfig};
 
 const DEFAULT_BINARY_PATH: &str = "octez-client";
 
 type StdOut = String;
 
-#[derive(Default)]
 pub struct OctezClientBuilder {
     // if None, use the binary in $PATH
     binary_path: Option<PathBuf>,
     // if None, use temp directory
     base_dir: Option<PathBuf>,
-    // if None, use localhost:8732 (the default endpoint for octez-node)
-    endpoint: Option<Endpoint>,
+    octez_node_endpoint: Endpoint,
     disable_unsafe_disclaimer: bool,
 }
 
 impl OctezClientBuilder {
-    pub fn new() -> Self {
-        OctezClientBuilder::default()
+    pub fn new(octez_node_endpoint: Endpoint) -> Self {
+        OctezClientBuilder {
+            binary_path: None,
+            base_dir: None,
+            octez_node_endpoint,
+            disable_unsafe_disclaimer: false,
+        }
+    }
+
+    pub fn with_octez_node_config(config: &OctezNodeConfig) -> Self {
+        Self::new(config.rpc_endpoint.clone())
     }
 
     pub fn set_binary_path(mut self, binary_path: PathBuf) -> Self {
@@ -42,11 +47,6 @@ impl OctezClientBuilder {
 
     pub fn set_base_dir(mut self, base_dir: PathBuf) -> Self {
         self.base_dir = Some(base_dir);
-        self
-    }
-
-    pub fn set_endpoint(mut self, endpoint: Endpoint) -> Self {
-        self.endpoint = Some(endpoint);
         self
     }
 
@@ -60,16 +60,13 @@ impl OctezClientBuilder {
 
     pub fn build(self) -> Result<OctezClient> {
         self.validate_binary_path()?;
-        let node_default_endpoint = format!("http://{}", DEFAULT_RPC_ENDPOINT);
         Ok(OctezClient {
             binary_path: self.binary_path.unwrap_or(DEFAULT_BINARY_PATH.into()),
             base_dir: match self.base_dir {
                 Some(path_buf) => Directory::try_from(path_buf)?,
                 None => Directory::TempDir(tempdir()?),
             },
-            endpoint: self
-                .endpoint
-                .unwrap_or(Endpoint::try_from(Uri::from_str(&node_default_endpoint)?)?),
+            octez_node_endpoint: self.octez_node_endpoint,
             disable_unsafe_disclaimer: self.disable_unsafe_disclaimer,
         })
     }
@@ -165,7 +162,7 @@ impl TryFrom<StdOut> for Address {
 pub struct OctezClient {
     binary_path: PathBuf,
     base_dir: Directory,
-    endpoint: Endpoint,
+    octez_node_endpoint: Endpoint,
     disable_unsafe_disclaimer: bool,
 }
 
@@ -181,7 +178,7 @@ impl OctezClient {
         let mut command = Command::new(binary_path);
         let base_dir: String = (&self.base_dir).try_into()?;
         command.args(["--base-dir", &base_dir]);
-        command.args(["--endpoint", &self.endpoint.to_string()]);
+        command.args(["--endpoint", &self.octez_node_endpoint.to_string()]);
         if self.disable_unsafe_disclaimer {
             command.env("TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER", "Y");
         }
@@ -335,24 +332,41 @@ impl OctezClient {
 
 #[cfg(test)]
 mod test {
-    use tempfile::{NamedTempFile, TempDir};
+    use crate::r#async::node_config::OctezNodeConfigBuilder;
 
     use super::*;
+    use tempfile::{NamedTempFile, TempDir};
     #[test]
-    fn builds_default_octez_client() {
-        let octez_client = OctezClientBuilder::new().build().unwrap();
+    fn builds_octez_client() {
+        let endpoint = Endpoint::default();
+        let octez_client = OctezClientBuilder::new(endpoint.clone()).build().unwrap();
         assert_eq!(
             octez_client.binary_path.to_str().unwrap(),
             DEFAULT_BINARY_PATH
         );
         assert!(matches!(octez_client.base_dir, Directory::TempDir(_)));
         assert!(!octez_client.disable_unsafe_disclaimer);
-        assert_eq!(octez_client.endpoint, Endpoint::localhost(8732))
+        assert_eq!(octez_client.octez_node_endpoint, endpoint)
+    }
+    #[test]
+    fn builds_octez_client_with_node_config() {
+        let node_config = OctezNodeConfigBuilder::new().build().unwrap();
+        let octez_client = OctezClientBuilder::with_octez_node_config(&node_config)
+            .build()
+            .unwrap();
+        assert_eq!(
+            octez_client.binary_path.to_str().unwrap(),
+            DEFAULT_BINARY_PATH
+        );
+        assert!(matches!(octez_client.base_dir, Directory::TempDir(_)));
+        assert!(!octez_client.disable_unsafe_disclaimer);
+        assert_eq!(octez_client.octez_node_endpoint, node_config.rpc_endpoint)
     }
 
     #[test]
     fn temp_dir_is_created_by_default() {
-        let octez_client = OctezClientBuilder::new().build().unwrap();
+        let endpoint = Endpoint::default();
+        let octez_client = OctezClientBuilder::new(endpoint).build().unwrap();
         assert!(
             matches!(octez_client.base_dir, Directory::TempDir(temp_dir) if temp_dir.path().exists())
         );
@@ -360,7 +374,8 @@ mod test {
 
     #[test]
     fn temp_dir_is_removed_on_drop() {
-        let octez_client = OctezClientBuilder::new().build().unwrap();
+        let endpoint = Endpoint::default();
+        let octez_client = OctezClientBuilder::new(endpoint).build().unwrap();
         match &octez_client.base_dir {
             Directory::TempDir(temp_dir) => {
                 let temp_dir_path = temp_dir.path().to_path_buf();
@@ -373,11 +388,12 @@ mod test {
 
     #[test]
     fn sets_custom_binary_and_dir_path() {
+        let endpoint = Endpoint::default();
         let temp_file = NamedTempFile::new().unwrap();
         let binary_path = temp_file.path().to_path_buf();
         let temp_dir = TempDir::new().unwrap();
         let dir_path = temp_dir.path().to_path_buf();
-        let octez_client = OctezClientBuilder::new()
+        let octez_client = OctezClientBuilder::new(endpoint)
             .set_binary_path(binary_path.clone())
             .set_base_dir(dir_path.clone())
             .build()
@@ -391,10 +407,11 @@ mod test {
     #[test]
     fn validates_base_dir_exists() {
         let temp_dir = TempDir::new().unwrap();
+        let endpoint = Endpoint::default();
         let dir_path = temp_dir.path().to_path_buf();
         let _ = std::fs::remove_file(&dir_path);
         let _ = std::fs::remove_dir_all(&dir_path);
-        let octez_client = OctezClientBuilder::new()
+        let octez_client = OctezClientBuilder::new(endpoint)
             .set_base_dir(dir_path.clone())
             .build();
         octez_client.expect_err("Should fail when base dir does not exist ");
@@ -402,9 +419,10 @@ mod test {
 
     #[test]
     fn validates_base_dir_is_dir() {
+        let endpoint = Endpoint::default();
         let temp_file = NamedTempFile::new().unwrap();
         let invalid_dir_path = temp_file.path().to_path_buf();
-        let octez_client = OctezClientBuilder::new()
+        let octez_client = OctezClientBuilder::new(endpoint)
             .set_base_dir(invalid_dir_path.clone())
             .build();
 
@@ -414,10 +432,11 @@ mod test {
     #[test]
     fn validates_binary_path_exists() {
         let temp_file = NamedTempFile::new().unwrap();
+        let endpoint = Endpoint::default();
         let binary_path = temp_file.path().to_path_buf();
         let _ = std::fs::remove_file(&binary_path);
         let _ = std::fs::remove_dir_all(&binary_path);
-        let octez_client = OctezClientBuilder::new()
+        let octez_client = OctezClientBuilder::new(endpoint)
             .set_binary_path(binary_path.clone())
             .build();
         assert!(
@@ -427,9 +446,10 @@ mod test {
 
     #[test]
     fn validates_binary_path_is_file() {
+        let endpoint = Endpoint::default();
         let temp_dir = TempDir::new().unwrap();
         let invalid_binary_path = temp_dir.path().to_path_buf();
-        let octez_client = OctezClientBuilder::new()
+        let octez_client = OctezClientBuilder::new(endpoint)
             .set_binary_path(invalid_binary_path.clone())
             .build();
         assert!(
@@ -439,9 +459,10 @@ mod test {
 
     #[test]
     fn commands_are_created() {
+        let endpoint = Endpoint::default();
         let temp_dir = TempDir::new().unwrap();
         let base_dir = temp_dir.path().to_path_buf();
-        let octez_client = OctezClientBuilder::new()
+        let octez_client = OctezClientBuilder::new(endpoint)
             .set_base_dir(base_dir.clone())
             .build()
             .unwrap();
@@ -457,7 +478,7 @@ mod test {
             "--base-dir",
             base_dir.to_str().unwrap(),
             "--endpoint",
-            "http://localhost:8732",
+            "http://localhost:80",
             "some",
             "command",
         ];

@@ -88,8 +88,7 @@ pub async fn spawn_octez_node() -> OctezNode {
 }
 
 pub fn create_client(node_endpoint: &Endpoint) -> OctezClient {
-    OctezClientBuilder::new()
-        .set_endpoint(node_endpoint.clone())
+    OctezClientBuilder::new(node_endpoint.clone())
         .build()
         .unwrap()
 }
