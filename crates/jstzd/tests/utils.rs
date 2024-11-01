@@ -9,6 +9,7 @@ use octez::r#async::{
 };
 use regex::Regex;
 use std::path::{Path, PathBuf};
+use tezos_crypto_rs::hash::BlockHash;
 
 pub const SECRET_KEY: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
@@ -109,6 +110,23 @@ fn extract_level(input: &str) -> i32 {
         .get(1)
         .map(|level_match| level_match.as_str().parse::<i32>().unwrap())
         .unwrap()
+}
+
+pub async fn get_head_block_hash(rpc_endpoint: &str) -> BlockHash {
+    let blocks_head_endpoint =
+        format!("{}/chains/main/blocks/head", rpc_endpoint.to_owned());
+    let response = get_request(&blocks_head_endpoint).await;
+    BlockHash::from_base58_check(
+        serde_json::from_str::<serde_json::Value>(&response)
+            .unwrap()
+            .as_object()
+            .unwrap()
+            .get("hash")
+            .unwrap()
+            .as_str()
+            .unwrap(),
+    )
+    .unwrap()
 }
 
 pub async fn import_bootstrap_keys(octez_client: &OctezClient) {

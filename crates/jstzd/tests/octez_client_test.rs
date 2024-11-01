@@ -13,8 +13,8 @@ use tempfile::{NamedTempFile, TempDir};
 mod utils;
 use std::path::PathBuf;
 use utils::{
-    activate_alpha, create_client, get_request, import_activator, setup,
-    spawn_octez_node, SECRET_KEY,
+    activate_alpha, create_client, get_head_block_hash, get_request, import_activator,
+    setup, spawn_octez_node, SECRET_KEY,
 };
 
 fn read_file(path: &Path) -> Value {
@@ -233,12 +233,13 @@ async fn add_address() {
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn originate_contract() {
+async fn originate_contract_and_wait_for() {
     let (mut octez_node, octez_client, mut baker) = setup().await;
+    let head = get_head_block_hash(&octez_node.rpc_endpoint().to_string()).await;
 
     let mut config_file = NamedTempFile::new().unwrap();
     config_file.write_all("parameter (unit %entrypoint_1); storage int; code { CDR; NIL operation; PAIR; };".as_bytes()).unwrap();
-    octez_client
+    let (_, op) = octez_client
         .originate_contract(
             "foo",
             "bootstrap1",
@@ -249,6 +250,44 @@ async fn originate_contract() {
         )
         .await
         .unwrap();
+
+    // test --check-previous
+    tokio::time::timeout(
+        tokio::time::Duration::from_secs(2),
+        octez_client.wait_for(&op, None, Some(5)),
+    )
+    .await
+    .expect("wait_for should complete soon enough")
+    .expect("wait_for should be able to find the operation");
+
+    // test --branch
+    tokio::time::timeout(
+        tokio::time::Duration::from_secs(2),
+        octez_client.wait_for(&op, Some(&head), None),
+    )
+    .await
+    .expect("wait_for should complete soon enough")
+    .expect("wait_for should be able to find the operation");
+
+    tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+
+    // calling wait_for with the current head (after the operation was performed) should timeout
+    let head = get_head_block_hash(&octez_node.rpc_endpoint().to_string()).await;
+    tokio::time::timeout(
+        tokio::time::Duration::from_secs(2),
+        octez_client.wait_for(&op, Some(&head), None),
+    )
+    .await
+    .expect_err("wait_for should timeout");
+
+    // calling wait_for with the immediate previous block (after the operation was performed)
+    // should time out
+    tokio::time::timeout(
+        tokio::time::Duration::from_secs(2),
+        octez_client.wait_for(&op, None, Some(1)),
+    )
+    .await
+    .expect_err("wait_for should timeout");
 
     let _ = baker.kill().await;
     let _ = octez_node.kill().await;

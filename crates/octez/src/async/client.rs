@@ -9,7 +9,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tempfile::tempdir;
-use tezos_crypto_rs::hash::{ContractKt1Hash, OperationHash};
+use tezos_crypto_rs::hash::{BlockHash, ContractKt1Hash, OperationHash};
 use tokio::process::Command;
 
 use super::{directory::Directory, endpoint::Endpoint, node_config::OctezNodeConfig};
@@ -377,6 +377,26 @@ impl OctezClient {
             );
         }
         Ok((contract_address.unwrap(), operation_hash.unwrap()))
+    }
+
+    pub async fn wait_for(
+        &self,
+        operation_hash: &OperationHash,
+        branch: Option<&BlockHash>,
+        previous_num_blocks: Option<u32>,
+    ) -> Result<()> {
+        let operation_str = operation_hash.to_string();
+        let previous_num_blocks_str = previous_num_blocks.map(|v| v.to_string());
+        let branch_str = branch.map(|v| v.to_string());
+        let mut args = vec!["wait", "for", &operation_str, "to", "be", "included"];
+        if let Some(v) = &previous_num_blocks_str {
+            args.append(&mut vec!["--check-previous", v]);
+        }
+        if let Some(v) = &branch_str {
+            args.append(&mut vec!["--branch", v]);
+        }
+        self.spawn_and_wait_command(args).await?;
+        Ok(())
     }
 }
 
