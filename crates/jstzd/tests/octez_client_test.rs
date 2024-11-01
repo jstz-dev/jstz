@@ -172,7 +172,7 @@ async fn get_balance() {
         .expect("Failed to generate activator key");
     // 4. activate the alpha protocol
     import_activator(&octez_client).await;
-    activate_alpha(&octez_client).await;
+    activate_alpha(&octez_client, None).await;
 
     // 5. check balance for bootstrap1
     let balance = octez_client.get_balance(&bootstrap1).await;
@@ -203,7 +203,7 @@ async fn activate_protocol() {
     ));
     assert!(response.contains("\"level\":0"));
     // 4. activate the alpha protocol
-    activate_alpha(&octez_client).await;
+    activate_alpha(&octez_client, None).await;
 
     // 5. check if the protocol is activated and the block is baked.
     // The block level progress indicates that the protocol has been activated.

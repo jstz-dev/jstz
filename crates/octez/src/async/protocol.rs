@@ -1,6 +1,6 @@
-#[cfg(test)]
-use super::bootstrap::SmartRollupPvmKind;
-pub use super::bootstrap::{BootstrapAccount, BootstrapContract, BootstrapSmartRollup};
+pub use super::bootstrap::{
+    BootstrapAccount, BootstrapContract, BootstrapSmartRollup, SmartRollupPvmKind,
+};
 use super::bootstrap::{BootstrapAccounts, BootstrapContracts, BootstrapSmartRollups};
 
 use rust_embed::Embed;
@@ -9,9 +9,15 @@ use std::fmt::Display;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
 
-pub trait ReadWritable: Read + Write {}
+pub trait ReadWritable: Read + Write {
+    fn path(&self) -> PathBuf;
+}
 
-impl ReadWritable for tempfile::NamedTempFile {}
+impl ReadWritable for tempfile::NamedTempFile {
+    fn path(&self) -> PathBuf {
+        PathBuf::from(self.path())
+    }
+}
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum ProtocolConstants {
