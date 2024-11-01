@@ -2,7 +2,7 @@ use boa_engine::JsError;
 use jstz_proto::{
     context::account::ParsedCode,
     operation::{Content, DeployFunction, Operation, SignedOperation},
-    receipt::Content as ReceiptContent,
+    receipt::ReceiptContent,
 };
 use log::{debug, info};
 

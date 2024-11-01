@@ -19,7 +19,7 @@ fn execute_operation_inner(
     tx: &mut Transaction,
     signed_operation: SignedOperation,
     ticketer: &ContractKt1Hash,
-) -> Result<receipt::Content> {
+) -> Result<receipt::ReceiptContent> {
     let operation = signed_operation.verify()?;
     let operation_hash = operation.hash();
 
@@ -33,7 +33,7 @@ fn execute_operation_inner(
         } => {
             let result = smart_function::deploy::execute(hrt, tx, &source, deployment)?;
 
-            Ok(receipt::Content::DeployFunction(result))
+            Ok(receipt::ReceiptContent::DeployFunction(result))
         }
 
         Operation {
@@ -47,7 +47,7 @@ fn execute_operation_inner(
                 }
                 _ => smart_function::run::execute(hrt, tx, &source, run, operation_hash)?,
             };
-            Ok(receipt::Content::RunFunction(result))
+            Ok(receipt::ReceiptContent::RunFunction(result))
         }
     }
 }

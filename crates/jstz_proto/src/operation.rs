@@ -1,15 +1,15 @@
+use crate::{
+    context::account::{Account, Address, Amount, Nonce, ParsedCode},
+    Error, Result,
+};
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Blake2b, public_key::PublicKey, signature::Signature};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-use crate::{
-    context::account::{Account, Address, Amount, Nonce, ParsedCode},
-    Error, Result,
-};
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct Operation {
     pub source: Address,
     pub nonce: Nonce,
@@ -79,31 +79,54 @@ impl Operation {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
 pub struct DeployFunction {
+    /// Smart function code
     pub function_code: ParsedCode,
+    /// Amount of tez to credit to the smart function account, debited from the sender
     pub account_credit: Amount,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
+#[schema(description = "Request used to run a smart function. \
+    The target smart function is given by the host part of the uri. \
+    The rest of the attributes will be handled by the smart function itself.")]
 pub struct RunFunction {
+    /// Smart function URI in the form tezos://{smart_function_address}/rest/of/path
     #[serde(with = "http_serde::uri")]
+    #[schema(
+            value_type = String,
+            format = Uri,
+            examples("tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"),
+        )]
     pub uri: Uri,
+    /// Any valid HTTP method
     #[serde(with = "http_serde::method")]
+    #[schema(
+            value_type = String,
+            examples("GET", "POST", "PUT", "UPDATE", "DELETE"),
+        )]
     pub method: Method,
+    /// Any valid HTTP headers
     #[serde(with = "http_serde::header_map")]
+    #[schema(
+            value_type = Object,
+            additional_properties,
+        )]
     pub headers: HeaderMap,
+    #[schema(schema_with = openapi::http_body_schema)]
     pub body: HttpBody,
+    /// Maximum amount of gas that is allowed for the execution of this operation
     pub gas_limit: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
 pub enum Content {
     DeployFunction(DeployFunction),
     RunFunction(RunFunction),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct SignedOperation {
     pub public_key: PublicKey,
     signature: Signature,
@@ -188,4 +211,12 @@ pub mod external {
 pub enum ExternalOperation {
     Deposit(external::Deposit),
     FaDeposit(external::FaDeposit),
+}
+
+pub mod openapi {
+    use utoipa::{openapi::Array, schema};
+
+    pub fn http_body_schema() -> Array {
+        schema!(Option<Vec<u8>>).build()
+    }
 }

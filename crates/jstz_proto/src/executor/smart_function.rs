@@ -372,7 +372,7 @@ impl HostScript {
     }
 
     fn create_response_from_run_receipt(
-        run_receipt: receipt::RunFunction,
+        run_receipt: receipt::RunFunctionReceipt,
         context: &mut Context,
     ) -> JsResult<Response> {
         let body = Body::from_http_body(run_receipt.body, context)?;
@@ -449,7 +449,7 @@ pub mod run {
         source: &Address,
         run: operation::RunFunction,
         operation_hash: OperationHash,
-    ) -> Result<receipt::RunFunction> {
+    ) -> Result<receipt::RunFunctionReceipt> {
         let operation::RunFunction {
             uri,
             method,
@@ -510,7 +510,7 @@ pub mod run {
 
         let (http_parts, body) = Response::to_http_response(&response).into_parts();
 
-        Ok(receipt::RunFunction {
+        Ok(receipt::RunFunctionReceipt {
             body,
             status_code: http_parts.status,
             headers: http_parts.headers,
@@ -562,7 +562,7 @@ pub mod jstz_run {
         ticketer: &ContractKt1Hash,
         source: &Address,
         run: RunFunction,
-    ) -> Result<receipt::RunFunction> {
+    ) -> Result<receipt::RunFunctionReceipt> {
         let uri = run.uri.clone();
         if uri.host() != Some(JSTZ_HOST) {
             return Err(Error::InvalidHost);
@@ -576,7 +576,7 @@ pub mod jstz_run {
                 crate::executor::withdraw::execute_withdraw(
                     hrt, tx, source, withdrawal, ticketer,
                 )?;
-                let receipt = receipt::RunFunction {
+                let receipt = receipt::RunFunctionReceipt {
                     body: None,
                     status_code: http::StatusCode::OK,
                     headers: http::HeaderMap::new(),
@@ -588,7 +588,7 @@ pub mod jstz_run {
                 let fa_withdraw_receipt_content = fa_withdraw.execute(
                     hrt, tx, source, 1000, // fake gas limit
                 )?;
-                let receipt = receipt::RunFunction {
+                let receipt = receipt::RunFunctionReceipt {
                     body: fa_withdraw_receipt_content.to_http_body(),
                     status_code: http::StatusCode::OK,
                     headers: http::HeaderMap::new(),
@@ -604,7 +604,7 @@ pub mod jstz_run {
         tx: &mut Transaction,
         source: &Address,
         run: RunFunction,
-    ) -> Result<receipt::RunFunction> {
+    ) -> Result<receipt::RunFunctionReceipt> {
         let ticketer_path = OwnedPath::from(&RefPath::assert_from(b"/ticketer"));
         let ticketer: ContractKt1Hash =
             Storage::get(hrt, &ticketer_path)?.expect("ticketer should be set");
@@ -907,7 +907,7 @@ pub mod deploy {
         tx: &mut Transaction,
         source: &Address,
         deployment: operation::DeployFunction,
-    ) -> Result<receipt::DeployFunction> {
+    ) -> Result<receipt::DeployFunctionReceipt> {
         let operation::DeployFunction {
             function_code,
             account_credit,
@@ -915,6 +915,6 @@ pub mod deploy {
 
         let address = Script::deploy(hrt, tx, source, function_code, account_credit)?;
 
-        Ok(receipt::DeployFunction { address })
+        Ok(receipt::DeployFunctionReceipt { address })
     }
 }

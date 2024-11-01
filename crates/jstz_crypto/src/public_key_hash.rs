@@ -7,18 +7,45 @@ use tezos_crypto_rs::{
     hash::{ContractTz1Hash, ContractTz2Hash, ContractTz3Hash, HashTrait},
     PublicKeyWithHash,
 };
+use utoipa::ToSchema;
 
 use crate::{
     error::{Error, Result},
     public_key::PublicKey,
 };
 
+/// Tezos Address
 #[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Finalize,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+    Finalize,
+    ToSchema,
 )]
 pub enum PublicKeyHash {
+    #[schema(
+        title = "Tz1",
+        value_type = String,
+        example = json!({ "Tz1": "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU" })
+    )]
     Tz1(ContractTz1Hash),
+    #[schema(
+        title = "Tz2",
+        value_type = String,
+        example =  json!({ "Tz2": "tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh" })
+    )]
     Tz2(ContractTz2Hash),
+    #[schema(
+        title = "Tz3",
+        value_type = String,
+        example = json!({ "Tz3": "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C" })
+    )]
     Tz3(ContractTz3Hash),
 }
 

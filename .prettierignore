@@ -12,3 +12,5 @@
 
 # Lock files
 **/*.lock
+
+crates/jstz_node/openapi.json

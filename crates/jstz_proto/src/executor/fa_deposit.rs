@@ -5,6 +5,7 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::{michelson::ticket::TicketHash, prelude::debug_msg};
+use utoipa::ToSchema;
 
 use crate::{
     context::{account::Amount, ticket_table::TicketTable},
@@ -21,11 +22,11 @@ const FA_DEPOSIT_GAS_LIMIT: usize = usize::MAX;
 const NULL_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
 const DEPOSIT_URI: &str = "/-/deposit";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FaDepositReceiptContent {
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct FaDepositReceipt {
     pub receiver: PublicKeyHash,
     pub ticket_balance: Amount,
-    pub run_function: Option<crate::receipt::RunFunction>,
+    pub run_function: Option<crate::receipt::RunFunctionReceipt>,
 }
 
 #[derive(Display, Debug, Error, From)]
@@ -40,9 +41,9 @@ fn deposit_to_receiver(
     receiver: &PublicKeyHash,
     ticket_hash: &TicketHash,
     amount: Amount,
-) -> Result<FaDepositReceiptContent> {
+) -> Result<FaDepositReceipt> {
     let final_balance = TicketTable::add(rt, tx, receiver, ticket_hash, amount)?;
-    Ok(FaDepositReceiptContent {
+    Ok(FaDepositReceipt {
         receiver: receiver.clone(),
         ticket_balance: final_balance,
         run_function: None,
@@ -79,7 +80,7 @@ fn deposit_to_proxy_contract(
     tx: &mut Transaction,
     deposit: &FaDeposit,
     proxy_contract: &PublicKeyHash,
-) -> Result<FaDepositReceiptContent> {
+) -> Result<FaDepositReceipt> {
     let run = new_run_function(deposit.to_http_body(), proxy_contract)?;
     let source = PublicKeyHash::from_base58(NULL_ADDRESS)?;
     let result = smart_function::run::execute(rt, tx, &source, run, deposit.hash());
@@ -93,7 +94,7 @@ fn deposit_to_proxy_contract(
                     &deposit.ticket_hash,
                     deposit.amount,
                 )?;
-                Ok(FaDepositReceiptContent {
+                Ok(FaDepositReceipt {
                     receiver: proxy_contract.clone(),
                     ticket_balance: final_balance,
                     run_function: Some(run_receipt),
@@ -131,7 +132,7 @@ fn execute_inner(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
     deposit: &FaDeposit,
-) -> Result<FaDepositReceiptContent> {
+) -> Result<FaDepositReceipt> {
     match &deposit.proxy_smart_function {
         None => deposit_to_receiver(
             rt,
@@ -156,7 +157,7 @@ pub fn execute(
     let operation_hash = deposit.hash();
     Receipt::new(
         operation_hash,
-        Ok(crate::receipt::Content::FaDeposit(content)),
+        Ok(crate::receipt::ReceiptContent::FaDeposit(content)),
     )
 }
 
@@ -171,8 +172,8 @@ mod test {
 
     use crate::{
         context::{account::ParsedCode, ticket_table::TicketTable},
-        executor::fa_deposit::{FaDeposit, FaDepositReceiptContent},
-        receipt::{Content, Receipt},
+        executor::fa_deposit::{FaDeposit, FaDepositReceipt},
+        receipt::{Receipt, ReceiptContent},
     };
 
     fn mock_fa_deposit(proxy: Option<PublicKeyHash>) -> FaDeposit {
@@ -200,7 +201,7 @@ mod test {
         assert_eq!(expected_hash, *receipt.hash());
 
         match receipt.inner {
-            Ok(Content::FaDeposit(FaDepositReceiptContent {
+            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,
@@ -239,7 +240,7 @@ mod test {
         assert_eq!(expected_hash, *receipt.hash());
 
         match receipt.inner {
-            Ok(Content::FaDeposit(FaDepositReceiptContent {
+            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,
@@ -291,7 +292,7 @@ mod test {
         let Receipt { inner, .. } = super::execute(&mut host, &mut tx, fa_deposit);
 
         match inner {
-            Ok(Content::FaDeposit(FaDepositReceiptContent {
+            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,
@@ -343,7 +344,7 @@ mod test {
         let Receipt { inner, .. } = super::execute(&mut host, &mut tx, fa_deposit2);
 
         match inner {
-            Ok(Content::FaDeposit(FaDepositReceiptContent {
+            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,
@@ -390,7 +391,7 @@ mod test {
         let Receipt { inner, .. } = super::execute(&mut host, &mut tx, fa_deposit);
 
         match inner {
-            Ok(Content::FaDeposit(FaDepositReceiptContent {
+            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,

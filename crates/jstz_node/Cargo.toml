@@ -25,8 +25,8 @@ env_logger.workspace = true
 futures-util.workspace = true
 hex.workspace = true
 jstz_api = { path = "../jstz_api" }
-jstz_crypto = { path = "../jstz_crypto" }
-jstz_proto = { path = "../jstz_proto" }
+jstz_crypto = { path = "../jstz_crypto", features = ["openapi"] }
+jstz_proto = { path = "../jstz_proto", features = ["openapi"] }
 log.workspace = true
 octez = { path = "../octez" }
 parking_lot.workspace = true

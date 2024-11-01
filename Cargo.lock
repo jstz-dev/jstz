@@ -2753,6 +2753,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tezos_crypto_rs 0.6.0",
+ "utoipa",
 ]
 
 [[package]]
@@ -2855,6 +2856,7 @@ dependencies = [
  "tezos-smart-rollup-mock",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
+ "utoipa",
 ]
 
 [[package]]
@@ -5630,6 +5632,7 @@ dependencies = [
  "quote",
  "regex",
  "syn 2.0.85",
+ "url",
 ]
 
 [[package]]
