@@ -36,7 +36,7 @@ pub async fn setup() -> (OctezNode, OctezClient, octez_baker::OctezBaker) {
 
     import_bootstrap_keys(&octez_client).await;
     import_activator(&octez_client).await;
-    activate_alpha(&octez_client).await;
+    activate_alpha(&octez_client, None).await;
 
     let baker = spawn_baker(&octez_node, &octez_client).await;
     (octez_node, octez_client, baker)
@@ -156,9 +156,10 @@ pub async fn import_activator(octez_client: &OctezClient) {
         .expect("Failed to generate activator key");
 }
 
-pub async fn activate_alpha(octez_client: &OctezClient) {
-    let params_file =
-        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/sandbox-params.json");
+pub async fn activate_alpha(octez_client: &OctezClient, params: Option<PathBuf>) {
+    let params_file = params.unwrap_or(
+        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/sandbox-params.json"),
+    );
     let protocol_activated = octez_client
         .activate_protocol(
             "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
