@@ -5,7 +5,7 @@ use serde::de::{Error, Visitor};
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use tezos_crypto_rs::hash::ContractKt1Hash;
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct BootstrapAccount {
@@ -209,18 +209,138 @@ impl BootstrapContracts {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
+pub enum SmartRollupPvmKind {
+    #[serde(rename = "wasm_2_0_0")]
+    Wasm,
+    #[serde(rename = "riscv")]
+    Riscv,
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]
+pub struct BootstrapSmartRollup {
+    /// Rollup address.
+    // Do not use `sr1Ghq66tYK9y3r8CC1Tf8i8m5nxh8nTvZEf`. This is etherlink and the rollup
+    // node rejects any new kernel with this address.
+    address: SmartRollupHash,
+    /// Type of Proof-generating Virtual Machine (PVM) that interprets the kernel.
+    pvm_kind: SmartRollupPvmKind,
+    /// Smart rollup kernel in hex string.
+    kernel: String,
+    /// Michelson type of the rollup entrypoint in JSON format.
+    parameters_ty: Value,
+}
+
+impl BootstrapSmartRollup {
+    pub fn new(
+        address: &str,
+        pvm_kind: SmartRollupPvmKind,
+        kernel: &str,
+        parameters_ty: Value,
+    ) -> anyhow::Result<Self> {
+        Ok(Self {
+            address: SmartRollupHash::from_base58_check(address)?,
+            pvm_kind,
+            kernel: kernel.to_owned(),
+            parameters_ty,
+        })
+    }
+
+    #[cfg(test)]
+    pub fn kernel(&self) -> &str {
+        &self.kernel
+    }
+}
+
+#[derive(Default, PartialEq, Debug)]
+pub struct BootstrapSmartRollups {
+    rollups: HashMap<String, BootstrapSmartRollup>,
+}
+
+impl Serialize for BootstrapSmartRollups {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut s = serializer.serialize_seq(Some(self.rollups.len()))?;
+        for rollup in self.rollups() {
+            s.serialize_element(rollup)?;
+        }
+        s.end()
+    }
+}
+
+struct BootstrapRollupsVisitor;
+
+impl<'de> Visitor<'de> for BootstrapRollupsVisitor {
+    type Value = BootstrapSmartRollups;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a list of bootstrap rollups")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'de>,
+    {
+        let mut rollups = BootstrapSmartRollups::default();
+        while let Some(element) = seq.next_element()? {
+            match serde_json::from_value(element) {
+                Ok(rollup) => rollups.add_rollup(rollup),
+                Err(e) => {
+                    return Err(A::Error::custom(format!(
+                        "failed to parse rollup: {:?}",
+                        e
+                    )))
+                }
+            };
+        }
+        Ok(rollups)
+    }
+}
+
+impl<'de> Deserialize<'de> for BootstrapSmartRollups {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(BootstrapRollupsVisitor)
+    }
+}
+
+impl BootstrapSmartRollups {
+    pub fn add_rollup(&mut self, rollup: BootstrapSmartRollup) {
+        let key = rollup.address.to_string();
+        self.rollups.entry(key).or_insert(rollup);
+    }
+
+    pub fn merge(&mut self, rollups: &BootstrapSmartRollups) {
+        for rollup in rollups.rollups() {
+            self.add_rollup(rollup.clone());
+        }
+    }
+
+    pub fn rollups(&self) -> Vec<&BootstrapSmartRollup> {
+        self.rollups
+            .values()
+            .collect::<Vec<&BootstrapSmartRollup>>()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::{HashMap, HashSet};
 
     use super::{
         BootstrapAccount, BootstrapAccounts, BootstrapContract, BootstrapContracts,
+        BootstrapSmartRollup, BootstrapSmartRollups, SmartRollupPvmKind,
     };
     use serde_json::Value;
 
     const ACCOUNT_PUBLIC_KEY: &str =
         "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv";
     const CONTRACT_HASH: &str = "KT1QuofAgnsWffHzLA7D78rxytJruGHDe7XG";
+    const SMART_ROLLUP_ADDRESS: &str = "sr1Upj1Zguseor6FdP6mMGgf7VoYxEVQvNZX";
 
     #[test]
     fn bootstrap_account_new() {
@@ -356,5 +476,93 @@ mod tests {
             ],
         };
         assert_eq!(contracts, expected_contracts);
+    }
+
+    #[test]
+    fn bootstrap_smart_rollup_new() {
+        let rollup = BootstrapSmartRollup::new(
+            SMART_ROLLUP_ADDRESS,
+            SmartRollupPvmKind::Riscv,
+            "dummy-kernel",
+            Value::String("dummy-params".to_owned()),
+        )
+        .unwrap();
+        assert_eq!(rollup.address.to_string(), SMART_ROLLUP_ADDRESS);
+        assert_eq!(rollup.pvm_kind, SmartRollupPvmKind::Riscv);
+        assert_eq!(rollup.kernel, "dummy-kernel");
+        assert_eq!(rollup.parameters_ty.as_str().unwrap(), "dummy-params");
+    }
+
+    #[test]
+    fn serialize_bootstrap_smart_rollups() {
+        let rollups = BootstrapSmartRollups {
+            rollups: HashMap::from_iter([(
+                SMART_ROLLUP_ADDRESS.to_owned(),
+                BootstrapSmartRollup::new(
+                    SMART_ROLLUP_ADDRESS,
+                    SmartRollupPvmKind::Riscv,
+                    "dummy-kernel",
+                    Value::String("dummy-params".to_owned()),
+                )
+                .unwrap(),
+            )]),
+        };
+        let value = serde_json::to_value(&rollups).unwrap();
+        assert_eq!(
+            value,
+            serde_json::json!([{"address": SMART_ROLLUP_ADDRESS, "pvm_kind": "riscv", "kernel": "dummy-kernel", "parameters_ty": "dummy-params"}])
+        );
+    }
+
+    #[test]
+    fn deserialize_bootstrap_smart_rollups() {
+        let value = serde_json::json!([{"address": SMART_ROLLUP_ADDRESS, "pvm_kind": "riscv", "kernel": "dummy-kernel", "parameters_ty": "dummy-params"}]);
+        let rollups = serde_json::from_value::<BootstrapSmartRollups>(value).unwrap();
+        let expected_rollups = BootstrapSmartRollups {
+            rollups: HashMap::from_iter([(
+                SMART_ROLLUP_ADDRESS.to_owned(),
+                BootstrapSmartRollup::new(
+                    SMART_ROLLUP_ADDRESS,
+                    SmartRollupPvmKind::Riscv,
+                    "dummy-kernel",
+                    Value::String("dummy-params".to_owned()),
+                )
+                .unwrap(),
+            )]),
+        };
+        assert_eq!(rollups, expected_rollups);
+    }
+
+    #[test]
+    fn serialize_pvm_kind() {
+        assert_eq!(
+            serde_json::to_value::<SmartRollupPvmKind>(SmartRollupPvmKind::Riscv)
+                .unwrap(),
+            serde_json::json!("riscv")
+        );
+        assert_eq!(
+            serde_json::to_value::<SmartRollupPvmKind>(SmartRollupPvmKind::Wasm).unwrap(),
+            serde_json::json!("wasm_2_0_0")
+        );
+    }
+
+    #[test]
+    fn deserialize_pvm_kind() {
+        assert_eq!(
+            serde_json::from_value::<SmartRollupPvmKind>(serde_json::json!("riscv"))
+                .unwrap(),
+            SmartRollupPvmKind::Riscv
+        );
+        assert_eq!(
+            serde_json::from_value::<SmartRollupPvmKind>(serde_json::json!("wasm_2_0_0"))
+                .unwrap(),
+            SmartRollupPvmKind::Wasm
+        );
+        assert_eq!(
+            serde_json::from_value::<SmartRollupPvmKind>(serde_json::json!("dummy"))
+                .unwrap_err()
+                .to_string(),
+            "unknown variant `dummy`, expected `wasm_2_0_0` or `riscv`"
+        )
     }
 }

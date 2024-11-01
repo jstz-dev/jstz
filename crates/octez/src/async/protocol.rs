@@ -1,5 +1,7 @@
-pub use super::bootstrap::{BootstrapAccount, BootstrapContract};
-use super::bootstrap::{BootstrapAccounts, BootstrapContracts};
+#[cfg(test)]
+use super::bootstrap::SmartRollupPvmKind;
+pub use super::bootstrap::{BootstrapAccount, BootstrapContract, BootstrapSmartRollup};
+use super::bootstrap::{BootstrapAccounts, BootstrapContracts, BootstrapSmartRollups};
 
 use rust_embed::Embed;
 use serde_json::Value;
@@ -71,6 +73,8 @@ pub struct ProtocolParameterBuilder {
     bootstrap_accounts: BootstrapAccounts,
     /// Bootstrap contracts.
     bootstrap_contracts: BootstrapContracts,
+    /// Bootstrap smart rollups.
+    bootstrap_smart_rollups: BootstrapSmartRollups,
     /// Path to an existing parameter file whose content will be used as the base
     /// parameter set. If `source_path` is not given, a predefined parameter
     /// file will be used instead depending on `protocol` and `constants`.
@@ -114,6 +118,17 @@ impl ProtocolParameterBuilder {
         self
     }
 
+    pub fn set_bootstrap_smart_rollups(
+        &mut self,
+        rollups: impl IntoIterator<Item = BootstrapSmartRollup>,
+    ) -> &mut Self {
+        self.bootstrap_smart_rollups = BootstrapSmartRollups::default();
+        for rollup in rollups {
+            self.bootstrap_smart_rollups.add_rollup(rollup);
+        }
+        self
+    }
+
     pub fn set_source_path(&mut self, path: &str) -> &mut Self {
         self.source_path = Some(PathBuf::from(path));
         self
@@ -132,6 +147,8 @@ impl ProtocolParameterBuilder {
         self.bootstrap_accounts = BootstrapAccounts::default();
         self.merge_bootstrap_contracts(json)?;
         self.bootstrap_contracts = BootstrapContracts::default();
+        self.merge_bootstrap_smart_rollups(json)?;
+        self.bootstrap_smart_rollups = BootstrapSmartRollups::default();
 
         let mut output_file = tempfile::NamedTempFile::new().unwrap();
         serde_json::to_writer(output_file.as_file(), &json)?;
@@ -216,6 +233,23 @@ impl ProtocolParameterBuilder {
         );
         Ok(())
     }
+
+    fn merge_bootstrap_smart_rollups(
+        &mut self,
+        json: &mut serde_json::Map<String, Value>,
+    ) -> anyhow::Result<()> {
+        let mut rollups = BootstrapSmartRollups::default();
+        if let Some(value) = json.get("bootstrap_smart_rollups") {
+            let existing_rollups = serde_json::from_value(value.clone())?;
+            rollups.merge(&existing_rollups);
+        }
+        rollups.merge(&self.bootstrap_smart_rollups);
+        json.insert(
+            "bootstrap_smart_rollups".to_owned(),
+            serde_json::to_value(rollups)?,
+        );
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -226,17 +260,19 @@ mod tests {
     use tempfile::NamedTempFile;
 
     use super::{
-        BootstrapAccount, BootstrapContract, Protocol, ProtocolConstants,
-        ProtocolParameterBuilder,
+        BootstrapAccount, BootstrapContract, BootstrapSmartRollup, Protocol,
+        ProtocolConstants, ProtocolParameterBuilder, SmartRollupPvmKind,
     };
 
     const ACCOUNT_PUBLIC_KEY: &str =
         "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv";
     const CONTRACT_HASH: &str = "KT1QuofAgnsWffHzLA7D78rxytJruGHDe7XG";
+    const SMART_ROLLUP_ADDRESS: &str = "sr1Upj1Zguseor6FdP6mMGgf7VoYxEVQvNZX";
 
     fn create_dummy_source_file(
         bootstrap_accounts: Option<Vec<BootstrapAccount>>,
         bootstrap_contracts: Option<Vec<BootstrapContract>>,
+        bootstrap_rollups: Option<Vec<BootstrapSmartRollup>>,
     ) -> NamedTempFile {
         let mut source_file = tempfile::NamedTempFile::new().unwrap();
         let mut json = serde_json::json!({"foo":"bar"});
@@ -259,6 +295,18 @@ mod tests {
                 ),
             );
         }
+        if let Some(rollups) = bootstrap_rollups {
+            let obj = json.as_object_mut().unwrap();
+            obj.insert(
+                "bootstrap_smart_rollups".to_owned(),
+                Value::Array(
+                    rollups
+                        .iter()
+                        .map(|v| serde_json::to_value(v).unwrap())
+                        .collect::<Vec<Value>>(),
+                ),
+            );
+        }
         serde_json::to_writer(source_file.as_file(), &json).unwrap();
         source_file.flush().unwrap();
         source_file.rewind().unwrap();
@@ -272,12 +320,20 @@ mod tests {
         let contract =
             BootstrapContract::new(serde_json::json!("foobar"), 0, Some(CONTRACT_HASH))
                 .unwrap();
+        let rollup = BootstrapSmartRollup::new(
+            SMART_ROLLUP_ADDRESS,
+            SmartRollupPvmKind::Riscv,
+            "dummy-kernel",
+            serde_json::json!("dummy-params"),
+        )
+        .unwrap();
         builder
             .set_constants(ProtocolConstants::Sandbox)
             .set_protocol(Protocol::Alpha)
             .set_source_path("/test/path")
             .set_bootstrap_accounts([account.clone()])
-            .set_bootstrap_contracts([contract.clone()]);
+            .set_bootstrap_contracts([contract.clone()])
+            .set_bootstrap_smart_rollups([rollup.clone()]);
         assert_eq!(builder.constants.unwrap(), ProtocolConstants::Sandbox);
         assert_eq!(builder.source_path.unwrap().to_str().unwrap(), "/test/path");
         assert_eq!(builder.protocol.unwrap().hash(), Protocol::Alpha.hash());
@@ -289,6 +345,9 @@ mod tests {
         let contracts = builder.bootstrap_contracts.contracts();
         assert_eq!(contracts.len(), 1);
         assert_eq!(contracts.last().unwrap(), &contract);
+        let rollups = builder.bootstrap_smart_rollups.rollups();
+        assert_eq!(rollups.len(), 1);
+        assert_eq!(*rollups.last().unwrap(), &rollup);
     }
 
     #[test]
@@ -302,7 +361,7 @@ mod tests {
     #[test]
     fn build_parameters_from_given_file() {
         let mut builder = ProtocolParameterBuilder::new();
-        let source_file = create_dummy_source_file(None, None);
+        let source_file = create_dummy_source_file(None, None, None);
         builder.set_source_path(source_file.path().to_str().unwrap());
 
         let output_file = builder.build().unwrap();
@@ -343,7 +402,8 @@ mod tests {
             .unwrap(),
             BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap(),
         ];
-        let source_file = create_dummy_source_file(Some(vec![accounts[0].clone()]), None);
+        let source_file =
+            create_dummy_source_file(Some(vec![accounts[0].clone()]), None, None);
         builder
             .set_source_path(source_file.path().to_str().unwrap())
             .set_bootstrap_accounts(accounts[1..].to_vec());
@@ -432,7 +492,7 @@ mod tests {
         ];
         let mut builder = ProtocolParameterBuilder::new();
         let source_file =
-            create_dummy_source_file(None, Some(vec![contracts[0].clone()]));
+            create_dummy_source_file(None, Some(vec![contracts[0].clone()]), None);
         builder
             .set_source_path(source_file.path().to_str().unwrap())
             .set_bootstrap_contracts(contracts[1..].to_vec());
@@ -454,5 +514,87 @@ mod tests {
         assert_eq!(existing_contract, &contracts[0]);
         let new_contract = contracts.last().unwrap();
         assert_eq!(new_contract, &contracts[1]);
+    }
+
+    #[test]
+    fn set_bootstrap_smart_rollups() {
+        let mut builder = ProtocolParameterBuilder::new();
+        let rollup = BootstrapSmartRollup::new(
+            SMART_ROLLUP_ADDRESS,
+            SmartRollupPvmKind::Riscv,
+            "dummy-kernel",
+            serde_json::json!("dummy-params"),
+        )
+        .unwrap();
+        builder.set_bootstrap_smart_rollups([rollup.clone()]);
+        let output_file = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(output_file).unwrap();
+
+        let rollups = json
+            .get("bootstrap_smart_rollups")
+            .unwrap()
+            .as_array()
+            .unwrap();
+        assert_eq!(rollups.len(), 1);
+        let found_rollup = rollups.last().unwrap();
+        assert_eq!(
+            found_rollup,
+            &serde_json::json!({
+                "address": SMART_ROLLUP_ADDRESS,
+                "pvm_kind": SmartRollupPvmKind::Riscv,
+                "kernel": "dummy-kernel",
+                "parameters_ty": "dummy-params"
+            })
+        );
+    }
+
+    #[test]
+    fn merge_existing_bootstrap_rollups() {
+        let first_rollup = BootstrapSmartRollup::new(
+            SMART_ROLLUP_ADDRESS,
+            SmartRollupPvmKind::Riscv,
+            "foo-kernel",
+            serde_json::json!("foo-params"),
+        )
+        .unwrap();
+        let skipped_rollup = BootstrapSmartRollup::new(
+            SMART_ROLLUP_ADDRESS,
+            SmartRollupPvmKind::Riscv,
+            "bar-kernel",
+            serde_json::Value::String("bar-params".to_owned()),
+        )
+        .unwrap();
+        let second_rollup = BootstrapSmartRollup::new(
+            "sr1Ghq66tYK9y3r8CC1Tf8i8m5nxh8nTvZEf",
+            SmartRollupPvmKind::Riscv,
+            "new-kernel",
+            serde_json::Value::String("new-params".to_owned()),
+        )
+        .unwrap();
+
+        let mut builder = ProtocolParameterBuilder::new();
+        let source_file =
+            create_dummy_source_file(None, None, Some(vec![first_rollup.clone()]));
+        builder
+            .set_source_path(source_file.path().to_str().unwrap())
+            .set_bootstrap_smart_rollups(vec![
+                skipped_rollup.clone(),
+                second_rollup.clone(),
+            ]);
+
+        let output_file = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(output_file).unwrap();
+        let mut rollups = json
+            .get("bootstrap_smart_rollups")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
+            .collect::<Vec<BootstrapSmartRollup>>();
+        assert_eq!(rollups.len(), 2);
+        rollups.sort_by_key(|v| v.kernel().to_owned());
+        assert_eq!(rollups.first().unwrap(), &first_rollup);
+        assert_eq!(rollups.last().unwrap(), &second_rollup);
     }
 }
