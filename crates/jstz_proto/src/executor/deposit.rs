@@ -14,5 +14,8 @@ pub fn execute(
 
     let result = Account::add_balance(hrt, tx, &receiver, amount);
     let hash = Blake2b::from(deposit.inbox_id.to_be_bytes().as_slice());
-    Receipt::new(hash, result.map(|_| crate::receipt::Content::Deposit))
+    Receipt::new(
+        hash,
+        result.map(|_| crate::receipt::ReceiptContent::Deposit),
+    )
 }

@@ -26,6 +26,7 @@ serde_json.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
+utoipa.workspace = true
 
 [dev-dependencies]
 jstz_mock = { path = "../jstz_mock" }

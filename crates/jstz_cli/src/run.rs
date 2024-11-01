@@ -6,7 +6,7 @@ use jstz_proto::context::account::Address;
 use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
-    receipt::Content as ReceiptContent,
+    receipt::ReceiptContent,
 };
 use log::{debug, info};
 use spinners::{Spinner, Spinners};

@@ -3,13 +3,30 @@ use std::fmt::{self, Display};
 
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::{PublicKeyEd25519, PublicKeyP256, PublicKeySecp256k1};
+use utoipa::ToSchema;
 
 // FIXME: https://linear.app/tezos/issue/JSTZ-169/support-bls-in-risc-v
 // Add BLS support
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+/// Tezos public key
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
 pub enum PublicKey {
+    #[schema(
+        title = "Ed25519",
+        value_type = String,
+        example = json!({ "Ed25519": "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi" })
+    )]
     Ed25519(PublicKeyEd25519),
+    #[schema(
+        title = "Secp256k1",
+        value_type = String,
+        example = json!({ "Secp256k1": "sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY" })
+    )]
     Secp256k1(PublicKeySecp256k1),
+    #[schema(
+        title = "P256",
+        value_type = String,
+        example = json!({ "P256": "p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1" })
+    )]
     P256(PublicKeyP256),
 }
 

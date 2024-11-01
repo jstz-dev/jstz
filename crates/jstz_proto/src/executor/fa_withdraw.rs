@@ -15,6 +15,7 @@ use tezos_smart_rollup::{
     },
     types::Contract,
 };
+use utoipa::ToSchema;
 
 use crate::{
     context::{
@@ -81,13 +82,13 @@ impl TryFrom<FA2_1Ticket> for Ticket {
 
 type OutboxMessageId = String;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct FaWithdrawReceiptContent {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+pub struct FaWithdrawReceipt {
     pub source: PublicKeyHash,
     pub outbox_message_id: OutboxMessageId,
 }
 
-impl FaWithdrawReceiptContent {
+impl FaWithdrawReceipt {
     pub fn to_http_body(&self) -> HttpBody {
         Some(String::as_bytes(&json!(&self).to_string()).to_vec())
     }
@@ -147,7 +148,7 @@ impl FaWithdraw {
         rt: &mut impl HostRuntime,
         tx: &mut Transaction,
         source: &Address,
-    ) -> Result<FaWithdrawReceiptContent> {
+    ) -> Result<FaWithdrawReceipt> {
         if self.amount == 0 {
             Err(Error::ZeroAmountNotAllowed)?
         }
@@ -159,7 +160,7 @@ impl FaWithdraw {
         let ticket = ticket_info.to_ticket(amount)?;
         let outbox_message_id =
             withdraw_from_ticket_owner(rt, tx, source, &routing_info, amount, ticket)?;
-        Ok(FaWithdrawReceiptContent {
+        Ok(FaWithdrawReceipt {
             source: source.clone(),
             outbox_message_id,
         })
@@ -175,7 +176,7 @@ impl FaWithdraw {
         // TODO: https://linear.app/tezos/issue/JSTZ-114/fa-withdraw-gas-calculation
         // Properly consume gas
         _gas_limit: u64,
-    ) -> Result<FaWithdrawReceiptContent> {
+    ) -> Result<FaWithdrawReceipt> {
         tx.begin();
         let result = self.fa_withdraw(rt, tx, source);
         if result.is_ok() {
@@ -246,7 +247,7 @@ mod test {
             .expect("Should succeed");
         tx.commit(&mut rt).unwrap();
         assert_eq!(
-            FaWithdrawReceiptContent {
+            FaWithdrawReceipt {
                 source,
                 outbox_message_id: "".to_string() // outbox message not implemented yet
             },
