@@ -2736,6 +2736,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tempfile",
+ "tezos_crypto_rs 0.6.0",
  "tokio",
 ]
 
