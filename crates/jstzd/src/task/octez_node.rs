@@ -25,7 +25,7 @@ impl OctezNode {
     }
 
     pub fn data_dir(&self) -> PathBuf {
-        PathBuf::try_from(self._data_dir.as_ref()).unwrap()
+        self._data_dir.as_ref().into()
     }
 }
 
@@ -45,7 +45,7 @@ impl Task for OctezNode {
         };
         let node = node::OctezNode {
             octez_node_bin: Some(config.binary_path.clone()),
-            octez_node_dir: PathBuf::try_from(&data_dir)?,
+            octez_node_dir: (&data_dir).into(),
         };
 
         let status = node.generate_identity().await?.wait().await?;

@@ -37,12 +37,11 @@ impl TryFrom<PathBuf> for Directory {
     }
 }
 
-impl TryFrom<&Directory> for PathBuf {
-    type Error = anyhow::Error;
-    fn try_from(dir: &Directory) -> Result<PathBuf> {
+impl From<&Directory> for PathBuf {
+    fn from(dir: &Directory) -> PathBuf {
         match dir {
-            Directory::TempDir(temp_dir) => Ok(temp_dir.path().to_path_buf()),
-            Directory::Path(path) => Ok(path.as_path().to_path_buf()),
+            Directory::TempDir(temp_dir) => temp_dir.path().to_path_buf(),
+            Directory::Path(path) => path.clone(),
         }
     }
 }
@@ -112,5 +111,14 @@ mod test {
         let directory = Directory::Path(invalid_file_path);
         let res: Result<String, anyhow::Error> = (&directory).try_into();
         assert!(res.is_err_and(|e| { e.to_string().contains("valid utf-8 path") }));
+    }
+
+    #[test]
+    fn test_from_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path().to_path_buf();
+        let directory = Directory::Path(dir_path.clone());
+        let path_buf: PathBuf = (&directory).into();
+        assert_eq!(path_buf, dir_path);
     }
 }
