@@ -49,10 +49,7 @@ pub async fn spawn_baker(
     let baker_config = OctezBakerConfigBuilder::new()
         .set_binary_path(BakerBinaryPath::Env(Protocol::Alpha))
         .set_octez_client_base_dir(
-            PathBuf::try_from(octez_client.base_dir())
-                .unwrap()
-                .to_str()
-                .unwrap(),
+            PathBuf::from(octez_client.base_dir()).to_str().unwrap(),
         )
         .set_octez_node_data_dir(octez_node.data_dir().to_str().unwrap())
         .set_octez_node_endpoint(octez_node.rpc_endpoint())

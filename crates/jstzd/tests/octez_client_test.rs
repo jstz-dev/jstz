@@ -52,7 +52,7 @@ async fn config_init() {
 #[tokio::test]
 async fn generates_keys() {
     let octez_client = create_client(&Endpoint::default());
-    let base_dir = PathBuf::try_from(octez_client.base_dir()).unwrap();
+    let base_dir = PathBuf::from(octez_client.base_dir());
     let alias = "test_alias".to_string();
     let res = octez_client.gen_keys(&alias, None).await;
     assert!(res.is_ok());
@@ -100,7 +100,7 @@ async fn show_address_fails_for_non_existing_alias() {
 #[tokio::test]
 async fn generates_keys_with_custom_signature() {
     let octez_client = create_client(&Endpoint::default());
-    let base_dir = PathBuf::try_from(octez_client.base_dir()).unwrap();
+    let base_dir = PathBuf::from(octez_client.base_dir());
     let alias = "test_alias".to_string();
     let res = octez_client.gen_keys(&alias, Some(Signature::BLS)).await;
     assert!(res.is_ok());
@@ -132,7 +132,7 @@ async fn generates_keys_throws() {
 #[tokio::test]
 async fn imports_secret_key() {
     let octez_client = create_client(&Endpoint::default());
-    let base_dir = PathBuf::try_from(octez_client.base_dir()).unwrap();
+    let base_dir = PathBuf::from(octez_client.base_dir());
     let alias = "test_alias".to_string();
     let res = octez_client.import_secret_key(&alias, SECRET_KEY).await;
     assert!(res.is_ok());
