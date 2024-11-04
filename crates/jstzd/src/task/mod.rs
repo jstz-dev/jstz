@@ -2,6 +2,7 @@ mod child_wrapper;
 mod file;
 pub mod octez_baker;
 pub mod octez_node;
+pub mod octez_rollup;
 
 use anyhow::Result;
 use async_trait::async_trait;

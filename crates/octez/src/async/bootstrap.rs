@@ -1,4 +1,5 @@
 use std::collections::{HashMap, HashSet};
+use std::fmt;
 
 use jstz_crypto::public_key::PublicKey;
 use serde::de::{Error, Visitor};
@@ -215,6 +216,16 @@ pub enum SmartRollupPvmKind {
     Wasm,
     #[serde(rename = "riscv")]
     Riscv,
+}
+
+impl fmt::Display for SmartRollupPvmKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s = match self {
+            SmartRollupPvmKind::Wasm => "wasm_2_0_0",
+            SmartRollupPvmKind::Riscv => "riscv",
+        };
+        write!(f, "{}", s)
+    }
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Deserialize, Serialize)]

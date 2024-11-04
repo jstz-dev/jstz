@@ -6,3 +6,4 @@ pub mod endpoint;
 pub mod node;
 pub mod node_config;
 pub mod protocol;
+pub mod rollup;

@@ -14,7 +14,7 @@ mod utils;
 use std::path::PathBuf;
 use utils::{
     activate_alpha, create_client, get_head_block_hash, get_request, import_activator,
-    setup, spawn_octez_node, SECRET_KEY,
+    setup, spawn_octez_node, ACTIVATOR_SECRET_KEY,
 };
 
 fn read_file(path: &Path) -> Value {
@@ -134,7 +134,9 @@ async fn imports_secret_key() {
     let octez_client = create_client(&Endpoint::default());
     let base_dir = PathBuf::from(octez_client.base_dir());
     let alias = "test_alias".to_string();
-    let res = octez_client.import_secret_key(&alias, SECRET_KEY).await;
+    let res = octez_client
+        .import_secret_key(&alias, ACTIVATOR_SECRET_KEY)
+        .await;
     assert!(res.is_ok());
     let hashes = first_item(read_file(&base_dir.join("public_key_hashs")));
     let pub_keys = first_item(read_file(&base_dir.join("public_keys")));
@@ -148,8 +150,12 @@ async fn imports_secret_key() {
 async fn imports_secret_key_throws() {
     let octez_client = create_client(&Endpoint::default());
     let alias = "test_alias".to_string();
-    let _ = octez_client.import_secret_key(&alias, SECRET_KEY).await;
-    let res = octez_client.import_secret_key(&alias, SECRET_KEY).await;
+    let _ = octez_client
+        .import_secret_key(&alias, ACTIVATOR_SECRET_KEY)
+        .await;
+    let res = octez_client
+        .import_secret_key(&alias, ACTIVATOR_SECRET_KEY)
+        .await;
     assert!(
         res.is_err_and(|e| { e.to_string().contains("\"import\" \"secret\" \"key\"") })
     );

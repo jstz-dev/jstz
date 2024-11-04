@@ -22,6 +22,14 @@ impl Endpoint {
     pub fn to_authority(&self) -> String {
         format!("{}:{}", self.host, self.port)
     }
+
+    pub fn host(&self) -> &str {
+        &self.host
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
+    }
 }
 
 impl Default for Endpoint {
