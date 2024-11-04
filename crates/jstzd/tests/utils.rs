@@ -1,18 +1,21 @@
 #![allow(dead_code)]
-use jstzd::task::{octez_baker, octez_node::OctezNode, Task};
+use jstzd::task::{octez_baker, octez_node::OctezNode, octez_rollup, Task};
 use octez::r#async::{
     baker::{BakerBinaryPath, OctezBakerConfigBuilder},
     client::{OctezClient, OctezClientBuilder},
     endpoint::Endpoint,
     node_config::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder},
     protocol::Protocol,
+    rollup::{OctezRollupConfigBuilder, RollupDataDir},
 };
 use regex::Regex;
 use std::path::{Path, PathBuf};
-use tezos_crypto_rs::hash::BlockHash;
+use tezos_crypto_rs::hash::{BlockHash, SmartRollupHash};
 
-pub const SECRET_KEY: &str =
+pub const ACTIVATOR_SECRET_KEY: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
+
+pub const ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 
 pub async fn retry<'a, F>(retries: u16, interval_ms: u64, f: impl Fn() -> F) -> bool
 where
@@ -40,6 +43,32 @@ pub async fn setup() -> (OctezNode, OctezClient, octez_baker::OctezBaker) {
 
     let baker = spawn_baker(&octez_node, &octez_client).await;
     (octez_node, octez_client, baker)
+}
+
+pub async fn spawn_rollup(
+    octez_node: &OctezNode,
+    octez_client: &OctezClient,
+) -> octez_rollup::OctezRollup {
+    let kernel_installer = Path::new(std::env!("CARGO_MANIFEST_DIR"))
+        .join("tests/toy_rollup/kernel_installer");
+    let preimages_dir =
+        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/toy_rollup/preimages");
+    let config = OctezRollupConfigBuilder::new(
+        octez_node.rpc_endpoint().clone(),
+        octez_client.base_dir().into(),
+        SmartRollupHash::from_base58_check(ROLLUP_ADDRESS).unwrap(),
+        "bootstrap1".to_string(),
+        kernel_installer,
+    )
+    .set_data_dir(RollupDataDir::TempWithPreImages { preimages_dir })
+    .build()
+    .unwrap();
+    let rollup = octez_rollup::OctezRollup::spawn(config)
+        .await
+        .expect("Failed to spawn rollup");
+    let rollup_ready = retry(10, 1000, || async { rollup.health_check().await }).await;
+    assert!(rollup_ready);
+    rollup
 }
 
 pub async fn spawn_baker(
@@ -148,7 +177,7 @@ pub async fn import_bootstrap_keys(octez_client: &OctezClient) {
 pub async fn import_activator(octez_client: &OctezClient) {
     let activator = "activator".to_string();
     octez_client
-        .import_secret_key(&activator, SECRET_KEY)
+        .import_secret_key(&activator, ACTIVATOR_SECRET_KEY)
         .await
         .expect("Failed to generate activator key");
 }
