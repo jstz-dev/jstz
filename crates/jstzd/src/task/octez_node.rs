@@ -71,7 +71,7 @@ impl Task for OctezNode {
 
         Ok(OctezNode {
             inner: ChildWrapper::new_shared(
-                node.run(log_file.as_file(), &config.run_options).await?,
+                node.run(log_file.as_file(), &config.run_options)?,
             ),
             config,
             _log_file: Arc::new(log_file),

@@ -61,11 +61,7 @@ impl OctezNode {
             .spawn()?)
     }
 
-    pub async fn run(
-        &self,
-        log_file: &File,
-        options: &OctezNodeRunOptions,
-    ) -> Result<Child> {
+    pub fn run(&self, log_file: &File, options: &OctezNodeRunOptions) -> Result<Child> {
         let mut command = self.command();
 
         command
