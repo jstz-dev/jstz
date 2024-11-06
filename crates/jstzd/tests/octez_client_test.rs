@@ -1,8 +1,9 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstzd::task::Task;
-use octez::r#async::client::OctezClientBuilder;
-use octez::r#async::client::Signature;
-use octez::r#async::endpoint::Endpoint;
+use octez::r#async::{
+    client::{OctezClientBuilder, Signature},
+    endpoint::Endpoint,
+};
 use serde_json::Value;
 use std::{
     fs::{read_to_string, remove_file},
@@ -236,6 +237,30 @@ async fn add_address() {
         .contains("test_alias already exists"));
     let res = octez_client.add_address(&alias, &address, true).await;
     assert!(res.is_ok());
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn call_contract() {
+    let (mut octez_node, octez_client, mut baker) = setup().await;
+    let bootstrap1: String = "bootstrap1".to_string();
+    let contract = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ".to_string();
+    let before = octez_client.get_balance(&contract).await.unwrap();
+    let amount = 1000f64;
+    let op_hash = octez_client
+        .call_contract(
+            &bootstrap1,
+            &contract,
+            amount,
+            "myEntryPoint",
+            "1",
+            Some(999f64),
+        )
+        .await;
+    assert!(op_hash.is_ok());
+    let after = octez_client.get_balance(&contract).await.unwrap();
+    assert_eq!(before + amount, after);
+    let _ = baker.kill().await;
+    let _ = octez_node.kill().await;
 }
 
 #[tokio::test(flavor = "multi_thread")]
