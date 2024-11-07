@@ -14,49 +14,84 @@ pub struct BootstrapAccount {
     amount_mutez: u64,
 }
 
-impl TryFrom<&Value> for BootstrapAccount {
-    type Error = anyhow::Error;
+impl Serialize for BootstrapAccount {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // A bootstrap account is represented as an array with two string elements in a
+        // parameter file: [<public_key>, <amount_mutez>]. For instance,
+        // ["edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav", "1000000"]
+        // represents an account with 1 tez.
+        let mut s = serializer.serialize_seq(Some(2))?;
+        s.serialize_element(&self.public_key.to_string())?;
+        s.serialize_element(&self.amount_mutez.to_string())?;
+        s.end()
+    }
+}
 
-    fn try_from(value: &Value) -> Result<Self, Self::Error> {
-        let array = value
-            .as_array()
-            .ok_or(anyhow::anyhow!("value is not a valid json array"))?;
-        if array.len() != 2 {
-            return Err(anyhow::anyhow!(
-                "value is not in the acceptable format for bootstrap accounts"
+struct BootstrapAccountVisitor;
+
+impl<'de> Visitor<'de> for BootstrapAccountVisitor {
+    type Value = BootstrapAccount;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a list representing a bootstrap account")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'de>,
+    {
+        if let Some(v) = seq.size_hint() {
+            if v != 2 {
+                return Err(A::Error::custom(
+                    "the input list should contain exactly two elements: address public key and account balance as string",
+                ));
+            }
+        }
+
+        let mut first_element: Option<String> = None;
+        let mut second_element: Option<String> = None;
+        while let Some(current) = seq.next_element()? {
+            if first_element.is_none() {
+                first_element.replace(current);
+            } else if second_element.is_none() {
+                second_element.replace(current);
+            } else {
+                return Err(A::Error::custom(
+                    "the input list contains more than two elements",
+                ));
+            }
+        }
+
+        if first_element.is_none() || second_element.is_none() {
+            return Err(A::Error::custom(
+                "the input list should contain exactly two elements: address public key and account balance as string",
             ));
         }
-        let public_key = array
-            .first()
-            .unwrap()
-            .as_str()
-            .ok_or(anyhow::anyhow!("'public_key' is not a valid string"))?;
-        let amount_mutez = array
-            .get(1)
-            .unwrap()
-            .as_str()
-            .ok_or(anyhow::anyhow!(
-                "'amount' is not a valid string representing an unsigned integer"
-            ))?
-            .parse::<u64>();
-        if amount_mutez.is_err() {
-            return Err(anyhow::anyhow!(
-                "'amount' is not a valid string representing an unsigned integer"
-            ));
-        }
-        Ok(Self {
-            public_key: PublicKey::from_base58(public_key)?,
-            amount_mutez: amount_mutez.unwrap(),
+
+        BootstrapAccount::new(
+            &first_element.unwrap(),
+            second_element.unwrap().parse::<u64>().map_err(|e| {
+                A::Error::custom(format!("failed to parse account balance: {:?}", e))
+            })?,
+        )
+        .map_err(|e| {
+            A::Error::custom(format!(
+                "failed to instantiate bootstrap account from the given value: {:?}",
+                e
+            ))
         })
     }
 }
 
-impl From<&BootstrapAccount> for Value {
-    fn from(value: &BootstrapAccount) -> Self {
-        Value::Array(vec![
-            Value::String(value.public_key.to_string()),
-            Value::String(value.amount_mutez.to_string()),
-        ])
+impl<'de> Deserialize<'de> for BootstrapAccount {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(BootstrapAccountVisitor)
     }
 }
 
@@ -68,15 +103,63 @@ impl BootstrapAccount {
         })
     }
 
-    #[cfg(test)]
     pub fn amount(&self) -> u64 {
         self.amount_mutez
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq)]
 pub struct BootstrapAccounts {
     accounts: HashMap<String, BootstrapAccount>,
+}
+
+impl Serialize for BootstrapAccounts {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut s = serializer.serialize_seq(Some(self.accounts().len()))?;
+        for account in self.accounts() {
+            s.serialize_element(account)?;
+        }
+        s.end()
+    }
+}
+
+struct BootstrapAccountsVisitor;
+
+impl<'de> Visitor<'de> for BootstrapAccountsVisitor {
+    type Value = BootstrapAccounts;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a list of bootstrap accounts")
+    }
+
+    fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'de>,
+    {
+        let mut accounts = BootstrapAccounts::default();
+        while let Some(element) = seq.next_element()? {
+            match serde_json::from_value(element) {
+                Ok(account) => accounts.add_account(account),
+                Err(e) => Err(A::Error::custom(format!(
+                    "failed to parse account: {:?}",
+                    e
+                )))?,
+            };
+        }
+        Ok(accounts)
+    }
+}
+
+impl<'de> Deserialize<'de> for BootstrapAccounts {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_seq(BootstrapAccountsVisitor)
+    }
 }
 
 impl BootstrapAccounts {
@@ -88,11 +171,11 @@ impl BootstrapAccounts {
     pub fn accounts(&self) -> Vec<&BootstrapAccount> {
         self.accounts.values().collect::<Vec<&BootstrapAccount>>()
     }
-}
 
-impl From<&BootstrapAccounts> for Value {
-    fn from(value: &BootstrapAccounts) -> Self {
-        Value::Array(value.accounts.values().map(Value::from).collect())
+    pub fn merge(&mut self, accounts: &BootstrapAccounts) {
+        for account in accounts.accounts() {
+            self.add_account(account.clone());
+        }
     }
 }
 
@@ -361,15 +444,72 @@ mod tests {
     }
 
     #[test]
-    fn bootstrap_account_try_from() {
-        let value = serde_json::json!([ACCOUNT_PUBLIC_KEY, "1"]);
-        let account = BootstrapAccount::try_from(&value).unwrap();
+    fn serialize_bootstrap_account() {
+        let account = BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap();
+        assert_eq!(
+            serde_json::to_value(account).unwrap(),
+            serde_json::json!([ACCOUNT_PUBLIC_KEY, "1000"])
+        );
+    }
+
+    #[test]
+    fn deserialize_bootstrap_account() {
+        let value = serde_json::json!([&ACCOUNT_PUBLIC_KEY, "1"]);
+        let account = serde_json::from_value::<BootstrapAccount>(value).unwrap();
         assert_eq!(account.amount_mutez, 1);
         assert_eq!(account.public_key.to_string(), ACCOUNT_PUBLIC_KEY);
+    }
 
+    #[test]
+    fn deserialize_bootstrap_account_incorrect_amount_of_elements() {
+        let value = serde_json::json!([ACCOUNT_PUBLIC_KEY, "1", 2]);
+        assert_eq!(
+            serde_json::from_value::<BootstrapAccount>(value)
+                .unwrap_err()
+                .to_string(),
+            "the input list should contain exactly two elements: address public key and account balance as string"
+        );
+
+        let value = serde_json::json!([ACCOUNT_PUBLIC_KEY]);
+        assert_eq!(
+            serde_json::from_value::<BootstrapAccount>(value)
+                .unwrap_err()
+                .to_string(),
+            "the input list should contain exactly two elements: address public key and account balance as string"
+        );
+    }
+
+    #[test]
+    fn deserialize_bootstrap_account_value_out_of_range() {
         let value = serde_json::json!([ACCOUNT_PUBLIC_KEY, "-1"]);
-        BootstrapAccount::try_from(&value)
-            .expect_err("try_from should fail with negative amount");
+        assert_eq!(
+            serde_json::from_value::<BootstrapAccount>(value)
+                .unwrap_err()
+                .to_string(),
+            "failed to parse account balance: ParseIntError { kind: InvalidDigit }"
+        );
+    }
+
+    #[test]
+    fn deserialize_bootstrap_account_invalid_balance_type() {
+        let value = serde_json::json!([ACCOUNT_PUBLIC_KEY, 1]);
+        assert_eq!(
+            serde_json::from_value::<BootstrapAccount>(value)
+                .unwrap_err()
+                .to_string(),
+            "invalid type: integer `1`, expected a string"
+        );
+    }
+
+    #[test]
+    fn deserialize_bootstrap_account_invalid_public_key() {
+        let value = serde_json::json!(["foobar", "1"]);
+        assert_eq!(
+            serde_json::from_value::<BootstrapAccount>(value)
+                .unwrap_err()
+                .to_string(),
+            "failed to instantiate bootstrap account from the given value: InvalidPublicKey"
+        );
     }
 
     #[test]
@@ -390,15 +530,30 @@ mod tests {
     }
 
     #[test]
-    fn serde_value_from_bootstrap_accounts() {
+    fn serialize_bootstrap_accounts() {
         let accounts = BootstrapAccounts {
             accounts: HashMap::from_iter([(
                 ACCOUNT_PUBLIC_KEY.to_owned(),
                 BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap(),
             )]),
         };
-        let value = Value::from(&accounts);
+        let value = serde_json::to_value(accounts).unwrap();
         assert_eq!(value, serde_json::json!([[ACCOUNT_PUBLIC_KEY, "1000"]]));
+    }
+
+    #[test]
+    fn deserialize_bootstrap_accounts() {
+        let value = serde_json::json!([[ACCOUNT_PUBLIC_KEY, "1000"]]);
+        let accounts = serde_json::from_value::<BootstrapAccounts>(value).unwrap();
+        assert_eq!(
+            accounts,
+            BootstrapAccounts {
+                accounts: HashMap::from_iter([(
+                    ACCOUNT_PUBLIC_KEY.to_owned(),
+                    BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap(),
+                )]),
+            }
+        );
     }
 
     #[test]
