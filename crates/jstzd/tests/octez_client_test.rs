@@ -14,8 +14,8 @@ use tempfile::{NamedTempFile, TempDir};
 mod utils;
 use std::path::PathBuf;
 use utils::{
-    activate_alpha, create_client, get_head_block_hash, get_request, import_activator,
-    setup, spawn_octez_node, ACTIVATOR_SECRET_KEY,
+    activate_alpha, create_client, get_head_block_hash, get_operation_kind, get_request,
+    import_activator, setup, spawn_octez_node, ACTIVATOR_SECRET_KEY,
 };
 
 fn read_file(path: &Path) -> Value {
@@ -319,6 +319,33 @@ async fn originate_contract_and_wait_for() {
     )
     .await
     .expect_err("wait_for should timeout");
+
+    let _ = baker.kill().await;
+    let _ = octez_node.kill().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn send_rollup_inbox_message() {
+    let (mut octez_node, octez_client, mut baker) = setup().await;
+
+    let (block, op) = octez_client
+        .send_rollup_inbox_message("bootstrap1", "0000", Some(0.1))
+        .await
+        .unwrap();
+
+    tokio::time::timeout(
+        tokio::time::Duration::from_secs(5),
+        octez_client.wait_for(&op, Some(&block), None),
+    )
+    .await
+    .expect("wait_for should complete soon enough")
+    .expect("wait_for should be able to find the operation");
+
+    let operation_kind =
+        get_operation_kind(&octez_node.rpc_endpoint().to_string(), &block, &op)
+            .await
+            .unwrap();
+    assert_eq!(operation_kind, "smart_rollup_add_messages");
 
     let _ = baker.kill().await;
     let _ = octez_node.kill().await;
