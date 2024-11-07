@@ -210,16 +210,14 @@ impl ProtocolParameterBuilder {
     ) -> anyhow::Result<()> {
         let mut accounts = BootstrapAccounts::default();
         if let Some(value) = json.get("bootstrap_accounts") {
-            if let Some(existing_accounts) = value.as_array() {
-                for account in existing_accounts {
-                    accounts.add_account(BootstrapAccount::try_from(account)?);
-                }
-            }
+            let existing_accounts = serde_json::from_value(value.clone())?;
+            accounts.merge(&existing_accounts);
         }
-        for account in self.bootstrap_accounts.accounts() {
-            accounts.add_account(account.clone());
-        }
-        json.insert("bootstrap_accounts".to_owned(), Value::from(&accounts));
+        accounts.merge(&self.bootstrap_accounts);
+        json.insert(
+            "bootstrap_accounts".to_owned(),
+            serde_json::to_value(accounts)?,
+        );
         Ok(())
     }
 
@@ -286,7 +284,12 @@ mod tests {
             let obj = json.as_object_mut().unwrap();
             obj.insert(
                 "bootstrap_accounts".to_owned(),
-                Value::Array(accounts.iter().map(Value::from).collect::<Vec<Value>>()),
+                Value::Array(
+                    accounts
+                        .iter()
+                        .map(|v| serde_json::to_value(v).unwrap())
+                        .collect::<Vec<Value>>(),
+                ),
             );
         }
         if let Some(contracts) = bootstrap_contracts {
@@ -422,7 +425,7 @@ mod tests {
             .as_array()
             .unwrap()
             .iter()
-            .map(|v| BootstrapAccount::try_from(v).unwrap())
+            .map(|v| serde_json::from_value(v.clone()).unwrap())
             .collect::<Vec<BootstrapAccount>>();
         assert_eq!(accounts.len(), 2);
         accounts.sort_by_key(|v| v.amount());
