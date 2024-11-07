@@ -536,6 +536,30 @@ impl OctezClient {
         self.spawn_and_wait_command(args).await?;
         Ok(())
     }
+
+    pub async fn send_rollup_inbox_message(
+        &self,
+        src: &str,
+        message_hex: &str,
+        burn_cap: Option<f64>,
+    ) -> Result<(BlockHash, OperationHash)> {
+        let burn_cap_str = burn_cap.map(|v| v.to_string());
+        let inbox_message = format!("hex: [\"{}\"]", message_hex);
+        let mut args = vec![
+            "send",
+            "smart",
+            "rollup",
+            "message",
+            &inbox_message,
+            "from",
+            src,
+        ];
+        if let Some(v) = &burn_cap_str {
+            args.append(&mut vec!["--burn-cap", v]);
+        }
+        let output = self.spawn_and_wait_command(args).await?;
+        Ok((parse_block_hash(&output)?, parse_operation_hash(&output)?))
+    }
 }
 
 fn parse_regex(pattern_str: &str, output: &str) -> Result<String> {
@@ -561,6 +585,14 @@ fn parse_contract_address(output: &str) -> Result<ContractKt1Hash> {
         output,
     )?;
     Ok(ContractKt1Hash::from_base58_check(&raw_contract_hash)?)
+}
+
+fn parse_block_hash(output: &str) -> Result<BlockHash> {
+    let raw_block_hash = parse_regex(
+        "Operation found in block: (B[1-9A-HJ-NP-Za-km-z]{50})",
+        output,
+    )?;
+    Ok(BlockHash::from_base58_check(&raw_block_hash)?)
 }
 
 #[cfg(test)]
@@ -895,5 +927,35 @@ mod test {
             .set_from("tz1".to_string())
             .build();
         assert!(options.is_err_and(|e| e.to_string().contains("Missing to")));
+    }
+
+    #[test]
+    fn test_parse_block_hash() {
+        let block_hash = "BMTQKTFpvnW4rm1g4U5YndrRmca6Msz8pNqZZZ9HwcHmGLeWYV1";
+        assert_eq!(
+            parse_block_hash(&format!("Operation found in block: {block_hash} ()"))
+                .unwrap(),
+            BlockHash::from_base58_check(block_hash).unwrap()
+        );
+    }
+
+    #[test]
+    fn parse_block_hash_pattern_mismatch() {
+        assert_eq!(
+            parse_block_hash("Operation found in block: foobar")
+                .unwrap_err()
+                .to_string(),
+            "input string does not match the pattern"
+        );
+    }
+
+    #[test]
+    fn parse_block_hash_bad_hash() {
+        assert_eq!(
+            parse_block_hash(&format!("Operation found in block: B{}", "1".repeat(50)))
+                .unwrap_err()
+                .to_string(),
+            "invalid checksum"
+        );
     }
 }

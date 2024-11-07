@@ -10,7 +10,7 @@ use octez::r#async::{
 };
 use regex::Regex;
 use std::path::{Path, PathBuf};
-use tezos_crypto_rs::hash::{BlockHash, SmartRollupHash};
+use tezos_crypto_rs::hash::{BlockHash, OperationHash, SmartRollupHash};
 
 pub const ACTIVATOR_SECRET_KEY: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
@@ -182,4 +182,35 @@ pub async fn activate_alpha(octez_client: &OctezClient, params: Option<PathBuf>)
 
 pub async fn get_request(endpoint: &str) -> String {
     reqwest::get(endpoint).await.unwrap().text().await.unwrap()
+}
+
+pub async fn get_operation_kind(
+    rpc_endpoint: &str,
+    block_hash: &BlockHash,
+    operation_hash: &OperationHash,
+) -> Option<String> {
+    let op_str = operation_hash.to_string();
+    let blocks_head_endpoint = format!(
+        "{}/chains/main/blocks/{}/operations",
+        rpc_endpoint.to_owned(),
+        block_hash
+    );
+    let response: serde_json::Value =
+        serde_json::from_str(&get_request(&blocks_head_endpoint).await).unwrap();
+    for group in response.as_array()? {
+        for op in group.as_array()? {
+            let obj = op.as_object()?;
+            if obj.get("hash")? == &op_str {
+                return Some(
+                    obj.get("contents")?
+                        .as_array()?
+                        .first()?
+                        .get("kind")?
+                        .as_str()?
+                        .to_owned(),
+                );
+            }
+        }
+    }
+    None
 }
