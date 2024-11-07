@@ -88,6 +88,8 @@ pub struct ProtocolParameterBuilder {
 }
 
 impl ProtocolParameterBuilder {
+    const MIN_BOOTSTRAP_ACCOUNT_BALANCE_MUTEZ: u64 = 6_000_000_000;
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -214,6 +216,24 @@ impl ProtocolParameterBuilder {
             accounts.merge(&existing_accounts);
         }
         accounts.merge(&self.bootstrap_accounts);
+
+        if accounts.accounts().is_empty() {
+            anyhow::bail!(
+                "should have at least one bootstrap account with at least 6000 tez"
+            )
+        }
+
+        // at least one bootstrap account needs to have 6000 tez
+        let at_least_one_account_with_sufficient_fund = accounts
+            .accounts()
+            .iter()
+            .any(|v| (v.amount() >= Self::MIN_BOOTSTRAP_ACCOUNT_BALANCE_MUTEZ));
+        if !at_least_one_account_with_sufficient_fund {
+            anyhow::bail!(
+                "at least one of the bootstrap accounts needs to have at least 6000 tez"
+            )
+        }
+
         json.insert(
             "bootstrap_accounts".to_owned(),
             serde_json::to_value(accounts)?,
@@ -322,10 +342,25 @@ mod tests {
         source_file
     }
 
+    /// Creates a builder with at least one bootstrap account by default to pass the account check
+    fn default_builder() -> ProtocolParameterBuilder {
+        let mut builder = ProtocolParameterBuilder::new();
+        builder.set_bootstrap_accounts([BootstrapAccount::new(
+            ACCOUNT_PUBLIC_KEY,
+            ProtocolParameterBuilder::MIN_BOOTSTRAP_ACCOUNT_BALANCE_MUTEZ,
+        )
+        .unwrap()]);
+        builder
+    }
+
     #[test]
     fn parameter_builder() {
         let mut builder = ProtocolParameterBuilder::new();
-        let account = BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap();
+        let account = BootstrapAccount::new(
+            ACCOUNT_PUBLIC_KEY,
+            ProtocolParameterBuilder::MIN_BOOTSTRAP_ACCOUNT_BALANCE_MUTEZ,
+        )
+        .unwrap();
         let contract =
             BootstrapContract::new(serde_json::json!("foobar"), 0, Some(CONTRACT_HASH))
                 .unwrap();
@@ -361,7 +396,7 @@ mod tests {
 
     #[test]
     fn parameter_builder_default() {
-        let mut builder = ProtocolParameterBuilder::new();
+        let mut builder = default_builder();
         // builder should be able to find the template file with default values
         // and write an output file, so we check if the result is ok here
         assert!(builder.build().is_ok());
@@ -370,7 +405,15 @@ mod tests {
     #[test]
     fn build_parameters_from_given_file() {
         let mut builder = ProtocolParameterBuilder::new();
-        let source_file = create_dummy_source_file(None, None, None);
+        let source_file = create_dummy_source_file(
+            Some(vec![BootstrapAccount::new(
+                ACCOUNT_PUBLIC_KEY,
+                ProtocolParameterBuilder::MIN_BOOTSTRAP_ACCOUNT_BALANCE_MUTEZ,
+            )
+            .unwrap()]),
+            None,
+            None,
+        );
         builder.set_source_path(source_file.path().to_str().unwrap());
 
         let output_file = builder.build().unwrap();
@@ -383,9 +426,11 @@ mod tests {
     #[test]
     fn set_bootstrap_accounts() {
         let mut builder = ProtocolParameterBuilder::new();
-        builder.set_bootstrap_accounts([
-            BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap()
-        ]);
+        builder.set_bootstrap_accounts([BootstrapAccount::new(
+            ACCOUNT_PUBLIC_KEY,
+            ProtocolParameterBuilder::MIN_BOOTSTRAP_ACCOUNT_BALANCE_MUTEZ,
+        )
+        .unwrap()]);
         let output_file = builder.build().unwrap();
         let json: Value = serde_json::from_reader(output_file).unwrap();
 
@@ -396,7 +441,7 @@ mod tests {
             account.first().unwrap().as_str().unwrap(),
             ACCOUNT_PUBLIC_KEY
         );
-        assert_eq!(account.get(1).unwrap().as_str().unwrap(), "1000");
+        assert_eq!(account.get(1).unwrap().as_str().unwrap(), "6000000000");
     }
 
     #[test]
@@ -406,7 +451,7 @@ mod tests {
             BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1).unwrap(),
             BootstrapAccount::new(
                 "edpkvLEsnuq1TnYX9uc4Mcig9AiP7m3VtHpNGViDBivbvYwzzhzZRx",
-                1000,
+                ProtocolParameterBuilder::MIN_BOOTSTRAP_ACCOUNT_BALANCE_MUTEZ,
             )
             .unwrap(),
             BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap(),
@@ -441,8 +486,36 @@ mod tests {
     }
 
     #[test]
-    fn set_bootstrap_contracts() {
+    fn merge_bootstrap_accounts_no_account() {
         let mut builder = ProtocolParameterBuilder::new();
+        match builder.build() {
+            Err(e) => {
+                assert_eq!(
+                    e.to_string(),
+                    "should have at least one bootstrap account with at least 6000 tez"
+                )
+            }
+            _ => panic!("build should fail"),
+        }
+    }
+
+    #[test]
+    fn merge_bootstrap_accounts_insufficient_fund() {
+        let mut builder = ProtocolParameterBuilder::new();
+        let accounts = [BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1).unwrap()];
+        builder.set_bootstrap_accounts(accounts);
+        match builder.build() {
+            Err(e) => assert_eq!(
+                e.to_string(),
+                "at least one of the bootstrap accounts needs to have at least 6000 tez"
+            ),
+            _ => panic!("build should fail"),
+        }
+    }
+
+    #[test]
+    fn set_bootstrap_contracts() {
+        let mut builder = default_builder();
         builder.set_bootstrap_contracts([
             BootstrapContract::new(serde_json::json!("foobar"), 1000, None).unwrap(),
             BootstrapContract::new(
@@ -499,7 +572,7 @@ mod tests {
             )
             .unwrap(),
         ];
-        let mut builder = ProtocolParameterBuilder::new();
+        let mut builder = default_builder();
         let source_file =
             create_dummy_source_file(None, Some(vec![contracts[0].clone()]), None);
         builder
@@ -527,7 +600,7 @@ mod tests {
 
     #[test]
     fn set_bootstrap_smart_rollups() {
-        let mut builder = ProtocolParameterBuilder::new();
+        let mut builder = default_builder();
         let rollup = BootstrapSmartRollup::new(
             SMART_ROLLUP_ADDRESS,
             SmartRollupPvmKind::Riscv,
@@ -581,7 +654,7 @@ mod tests {
         )
         .unwrap();
 
-        let mut builder = ProtocolParameterBuilder::new();
+        let mut builder = default_builder();
         let source_file =
             create_dummy_source_file(None, None, Some(vec![first_rollup.clone()]));
         builder

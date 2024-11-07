@@ -16,14 +16,26 @@ use utils::{
 #[tokio::test(flavor = "multi_thread")]
 async fn protocol_parameters() {
     let mut param_builder = ProtocolParameterBuilder::new();
-    let bootstrap_account_address = "tz1Ke5At2oVQGyjtU325kUEANe1XGmJBHj2Y";
+    // showing that it's fine as long as at least one account has sufficient balance
+    let bootstrap_accounts = [
+        (
+            "tz1Ke5At2oVQGyjtU325kUEANe1XGmJBHj2Y",
+            "edpktkhoky4f5kqm2EVwYrMBq5rY9sLYdpFgXixQDWifuBHjhuVuNN",
+            6000000000,
+        ),
+        (
+            "tz1L9RF6ybHfGuced5VDv31pn2zxrmxDnJaS",
+            "edpkughHYKvKWBEZMjbXnd7VhrqNbNvN8jjgC83XGPytEuTGZSgjBi",
+            1,
+        ),
+    ];
     let bootstrap_contract_address = "KT1DjrMdtHteERJHsKxKjEhvmpz95owLLMbM";
     let bootstrap_rollup_address = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
-    param_builder.set_bootstrap_accounts([BootstrapAccount::new(
-        "edpktkhoky4f5kqm2EVwYrMBq5rY9sLYdpFgXixQDWifuBHjhuVuNN",
-        6000000000,
-    )
-    .unwrap()]);
+    param_builder.set_bootstrap_accounts(
+        bootstrap_accounts
+            .iter()
+            .map(|&(_, key, amount)| BootstrapAccount::new(key, amount).unwrap()),
+    );
     param_builder.set_bootstrap_contracts([BootstrapContract::new(
             serde_json::json!({"code":[{"prim":"parameter","args":[{"prim":"unit","annots":["%entrypoint_1"]}]},{"prim":"storage","args":[{"prim":"int"}]},{"prim":"code","args":[[{"prim":"CDR"},{"prim":"NIL","args":[{"prim":"operation"}]},{"prim":"PAIR"}]]}],"storage":{"int":"1"}}),
             2000000,
@@ -45,12 +57,9 @@ async fn protocol_parameters() {
     import_activator(&octez_client).await;
     activate_alpha(&octez_client, Some(param_file.path())).await;
 
-    check_bootstrap_contract(
-        octez_node.rpc_endpoint(),
-        bootstrap_account_address,
-        6000000000,
-    )
-    .await;
+    for (address, _, amount) in bootstrap_accounts {
+        check_bootstrap_contract(octez_node.rpc_endpoint(), address, amount).await;
+    }
 
     check_bootstrap_contract(
         octez_node.rpc_endpoint(),
