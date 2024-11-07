@@ -30,7 +30,7 @@ impl Display for OctezNodeHistoryMode {
     }
 }
 
-#[derive(Default, Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct OctezNodeRunOptions {
     synchonisation_threshold: u8,
     network: String,
@@ -50,6 +50,16 @@ impl Display for OctezNodeRunOptions {
         }
         let line = s.join(" ");
         write!(f, "{}", line)
+    }
+}
+
+impl Default for OctezNodeRunOptions {
+    fn default() -> Self {
+        Self {
+            network: DEFAULT_NETWORK.to_owned(),
+            synchonisation_threshold: 0,
+            history_mode: None,
+        }
     }
 }
 
@@ -249,6 +259,14 @@ mod tests {
     fn run_option_builder_default() {
         let mut run_options_builder = OctezNodeRunOptionsBuilder::new();
         let run_options = run_options_builder.build();
+        assert!(run_options.history_mode.is_none());
+        assert_eq!(run_options.network, "sandbox");
+        assert_eq!(run_options.synchonisation_threshold, 0);
+    }
+
+    #[test]
+    fn run_option_default() {
+        let run_options = OctezNodeRunOptions::default();
         assert!(run_options.history_mode.is_none());
         assert_eq!(run_options.network, "sandbox");
         assert_eq!(run_options.synchonisation_threshold, 0);
