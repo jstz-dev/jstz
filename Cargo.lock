@@ -2925,6 +2925,7 @@ dependencies = [
  "anyhow",
  "async-dropper-simple",
  "async-trait",
+ "axum",
  "bollard",
  "futures-util",
  "http 1.1.0",
