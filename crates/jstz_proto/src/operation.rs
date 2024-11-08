@@ -111,10 +111,7 @@ pub struct RunFunction {
     pub method: Method,
     /// Any valid HTTP headers
     #[serde(with = "http_serde::header_map")]
-    #[schema(
-            value_type = Object,
-            additional_properties,
-        )]
+    #[schema(schema_with= openapi::http_headers)]
     pub headers: HeaderMap,
     #[schema(schema_with = openapi::http_body_schema)]
     pub body: HttpBody,
@@ -219,9 +216,19 @@ pub enum ExternalOperation {
 }
 
 pub mod openapi {
-    use utoipa::{openapi::Array, schema};
+    use utoipa::{
+        openapi::{schema::AdditionalProperties, Array, Object, ObjectBuilder},
+        schema,
+    };
 
     pub fn http_body_schema() -> Array {
         schema!(Option<Vec<u8>>).build()
+    }
+
+    pub fn http_headers() -> Object {
+        ObjectBuilder::new()
+            .additional_properties(Some(AdditionalProperties::FreeForm(true)))
+            .description(Some("Any valid HTTP headers"))
+            .build()
     }
 }
