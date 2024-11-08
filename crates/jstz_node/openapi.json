@@ -872,7 +872,8 @@
           },
           "headers": {
             "type": "object",
-            "description": "Any valid HTTP headers"
+            "description": "Any valid HTTP headers",
+            "additionalProperties": true
           },
           "method": {
             "type": "string",
@@ -916,7 +917,8 @@
           },
           "headers": {
             "type": "object",
-            "description": "Any valid HTTP headers"
+            "description": "Any valid HTTP headers",
+            "additionalProperties": true
           },
           "status_code": {
             "type": "integer",
