@@ -9,6 +9,7 @@ repository.workspace = true
 anyhow.workspace = true
 async-dropper-simple.workspace = true
 async-trait.workspace = true
+axum.workspace = true
 bollard.workspace = true
 futures-util.workspace = true
 http.workspace = true
