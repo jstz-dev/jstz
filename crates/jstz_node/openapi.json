@@ -14,6 +14,201 @@
     "version": "0.1.0-alpha.0"
   },
   "paths": {
+    "/accounts/{address}/balance": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get balance of an account",
+        "operationId": "get_balance",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/accounts/{address}/code": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get code of an account",
+        "operationId": "get_code",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParsedCode"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/accounts/{address}/kv": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get KV value under a given key path",
+        "description": "Get KV value under a given key path for an account. If `key` is not provided,\nthe empty key path will be used.",
+        "operationId": "get_kv_value",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KvValue"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/accounts/{address}/kv/subkeys": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get array of KV subkeys under a given key path",
+        "description": "Get array of KV subkeys under a given key path for an account. If `key` is not provided,\nthe empty key path will be used.",
+        "operationId": "get_kv_subkeys",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/accounts/{address}/nonce": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get nonce of an account",
+        "operationId": "get_nonce",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Nonce"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/operations": {
       "post": {
         "tags": [
@@ -178,6 +373,11 @@
             "$ref": "#/components/schemas/PublicKeyHash"
           }
         }
+      },
+      "KvValue": {
+        "type": "string",
+        "format": "json",
+        "description": "A value stored in the Key-Value store. Always valid JSON."
       },
       "Nonce": {
         "type": "integer",

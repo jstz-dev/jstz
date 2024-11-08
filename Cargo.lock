@@ -2666,6 +2666,7 @@ dependencies = [
  "tokio",
  "url",
  "urlpattern",
+ "utoipa",
 ]
 
 [[package]]
