@@ -9,6 +9,7 @@ use jstz_core::{host::HostRuntime, kv::Transaction, runtime, Result};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
+use utoipa::ToSchema;
 
 #[derive(Debug, Trace, Finalize, JsData)]
 pub struct Kv {
@@ -18,8 +19,10 @@ pub struct Kv {
 const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
 
 // TODO: Figure out a more effective way of serializing values using json
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// A value stored in the Key-Value store. Always valid JSON.
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(try_from = "String", into = "String")]
+#[schema(value_type = String, format = "json")]
 pub struct KvValue(pub serde_json::Value);
 
 impl From<KvValue> for String {

@@ -1,19 +1,20 @@
 use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
-    routing::get,
     Json,
 };
 use jstz_api::KvValue;
 use jstz_proto::context::account::{Account, Nonce, ParsedCode};
 use serde::Deserialize;
-use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::{
     error::{ServiceError, ServiceResult},
     Service,
 };
 use crate::AppState;
+
+const ACCOUNTS_TAG: &str = "Accounts";
 
 fn construct_storage_key(address: &str, key: &Option<String>) -> String {
     match key {
@@ -29,7 +30,18 @@ struct KvQuery {
 
 pub struct AccountsService;
 
-async fn nonce(
+/// Get nonce of an account
+#[utoipa::path(
+    get,
+    path = "/{address}/nonce",
+    tag = ACCOUNTS_TAG,
+    responses(
+        (status = 200, body = Nonce),
+        (status = 404),
+        (status = 500)
+    )
+)]
+async fn get_nonce(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
@@ -46,7 +58,19 @@ async fn nonce(
     Ok(Json(account_nonce))
 }
 
-async fn code(
+/// Get code of an account
+#[utoipa::path(
+    get,
+    path = "/{address}/code",
+    tag = ACCOUNTS_TAG,
+    responses(
+        (status = 200, body = ParsedCode),
+        (status = 400),
+        (status = 404),
+        (status = 500)
+    )
+)]
+async fn get_code(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<ParsedCode>> {
@@ -66,7 +90,18 @@ async fn code(
     Ok(Json(account_code))
 }
 
-async fn balance(
+/// Get balance of an account
+#[utoipa::path(
+    get,
+    path = "/{address}/balance",
+    tag = ACCOUNTS_TAG,
+    responses(
+        (status = 200, body = u64),
+        (status = 404),
+        (status = 500)
+    )
+)]
+async fn get_balance(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<u64>> {
@@ -83,7 +118,21 @@ async fn balance(
     Ok(Json(account_balance))
 }
 
-async fn kv(
+/// Get KV value under a given key path
+///
+/// Get KV value under a given key path for an account. If `key` is not provided,
+/// the empty key path will be used.
+#[utoipa::path(
+    get,
+    path = "/{address}/kv",
+    tag = ACCOUNTS_TAG,
+    responses(
+        (status = 200, body = KvValue),
+        (status = 404),
+        (status = 500)
+    )
+)]
+async fn get_kv_value(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
     Query(KvQuery { key }): Query<KvQuery>,
@@ -98,7 +147,21 @@ async fn kv(
     Ok(Json(kv_value))
 }
 
-async fn kv_subkeys(
+/// Get array of KV subkeys under a given key path
+///
+/// Get array of KV subkeys under a given key path for an account. If `key` is not provided,
+/// the empty key path will be used.
+#[utoipa::path(
+    get,
+    path = "/{address}/kv/subkeys",
+    tag = ACCOUNTS_TAG,
+    responses(
+        (status = 200, body = Vec<String>),
+        (status = 404),
+        (status = 500)
+    )
+)]
+async fn get_kv_subkeys(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
     Query(KvQuery { key }): Query<KvQuery>,
@@ -115,11 +178,11 @@ async fn kv_subkeys(
 impl Service for AccountsService {
     fn router_with_openapi() -> OpenApiRouter<AppState> {
         let routes = OpenApiRouter::new()
-            .route("/:address/nonce", get(nonce))
-            .route("/:address/code", get(code))
-            .route("/:address/balance", get(balance))
-            .route("/:address/kv", get(kv))
-            .route("/:address/kv/subkeys", get(kv_subkeys));
+            .routes(routes!(get_nonce))
+            .routes(routes!(get_code))
+            .routes(routes!(get_balance))
+            .routes(routes!(get_kv_value))
+            .routes(routes!(get_kv_subkeys));
 
         OpenApiRouter::new().nest("/accounts", routes)
     }
