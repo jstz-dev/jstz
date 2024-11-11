@@ -5,7 +5,7 @@ use octez::r#async::{
     endpoint::Endpoint,
     protocol::{
         BootstrapAccount, BootstrapContract, BootstrapSmartRollup,
-        ProtocolParameterBuilder, ReadWritable, SmartRollupPvmKind,
+        ProtocolParameterBuilder, SmartRollupPvmKind,
     },
 };
 use utils::{
@@ -55,7 +55,11 @@ async fn protocol_parameters() {
     let octez_client = create_client(octez_node.rpc_endpoint());
     import_bootstrap_keys(&octez_client).await;
     import_activator(&octez_client).await;
-    activate_alpha(&octez_client, Some(param_file.path())).await;
+    activate_alpha(
+        &octez_client,
+        Some(param_file.parameter_file().path().to_path_buf()),
+    )
+    .await;
 
     for (address, _, amount) in bootstrap_accounts {
         check_bootstrap_contract(octez_node.rpc_endpoint(), address, amount).await;
