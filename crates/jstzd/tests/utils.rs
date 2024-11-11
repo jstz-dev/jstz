@@ -80,7 +80,6 @@ pub async fn spawn_baker(
         .set_octez_client_base_dir(
             PathBuf::from(octez_client.base_dir()).to_str().unwrap(),
         )
-        .set_octez_node_data_dir(octez_node.data_dir().to_str().unwrap())
         .set_octez_node_endpoint(octez_node.rpc_endpoint())
         .build()
         .expect("Failed to build baker config");

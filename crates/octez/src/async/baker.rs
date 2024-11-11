@@ -25,11 +25,10 @@ impl Display for BakerBinaryPath {
     }
 }
 
-#[allow(dead_code)]
+#[derive(Clone)]
 pub struct OctezBakerConfig {
     binary_path: BakerBinaryPath,
     octez_client_base_dir: PathBuf,
-    octez_node_data_dir: PathBuf,
     octez_node_endpoint: Endpoint,
 }
 
@@ -37,7 +36,6 @@ pub struct OctezBakerConfig {
 pub struct OctezBakerConfigBuilder {
     binary_path: Option<BakerBinaryPath>,
     octez_client_base_dir: Option<PathBuf>,
-    octez_node_data_dir: Option<PathBuf>,
     octez_node_endpoint: Option<Endpoint>,
 }
 
@@ -56,11 +54,6 @@ impl OctezBakerConfigBuilder {
         self
     }
 
-    pub fn set_octez_node_data_dir(mut self, data_dir: &str) -> Self {
-        self.octez_node_data_dir = Some(PathBuf::from(data_dir));
-        self
-    }
-
     pub fn set_octez_node_endpoint(mut self, endpoint: &Endpoint) -> Self {
         self.octez_node_endpoint = Some(endpoint.clone());
         self
@@ -72,10 +65,6 @@ impl OctezBakerConfigBuilder {
             octez_client_base_dir: self
                 .octez_client_base_dir
                 .ok_or(anyhow!("octez_client_base_dir not set"))?,
-            octez_node_data_dir: self
-                .octez_node_data_dir
-                .clone()
-                .ok_or(anyhow!("octez_node_data_dir not set"))?,
             octez_node_endpoint: self
                 .octez_node_endpoint
                 .ok_or(anyhow!("octez_node_endpoint not set"))?,
@@ -113,31 +102,26 @@ mod test {
     #[test]
     fn test_octez_baker_config_builder() {
         let base_dir = TempDir::new().unwrap();
-        let data_dir = TempDir::new().unwrap();
         let endpoint =
             Endpoint::try_from(Uri::from_static("http://localhost:8732")).unwrap();
         let config: OctezBakerConfig = OctezBakerConfigBuilder::new()
             .set_binary_path(BakerBinaryPath::Env(Protocol::Alpha))
             .set_octez_client_base_dir(base_dir.path().to_str().unwrap())
-            .set_octez_node_data_dir(data_dir.path().to_str().unwrap())
             .set_octez_node_endpoint(&endpoint)
             .build()
             .unwrap();
         assert_eq!(config.binary_path, BakerBinaryPath::Env(Protocol::Alpha));
         assert_eq!(config.octez_client_base_dir, base_dir.path());
-        assert_eq!(config.octez_node_data_dir, data_dir.path());
         assert_eq!(config.octez_node_endpoint, endpoint);
     }
 
     #[test]
     fn octez_baker_config_builder_fails_without_binary_path() {
         let base_dir = TempDir::new().unwrap();
-        let data_dir = TempDir::new().unwrap();
         let endpoint =
             Endpoint::try_from(Uri::from_static("http://localhost:8732")).unwrap();
         let config: Result<OctezBakerConfig> = OctezBakerConfigBuilder::new()
             .set_octez_client_base_dir(base_dir.path().to_str().unwrap())
-            .set_octez_node_data_dir(data_dir.path().to_str().unwrap())
             .set_octez_node_endpoint(&endpoint)
             .build();
         assert!(config.is_err_and(|e| e.to_string().contains("binary path not set")));
