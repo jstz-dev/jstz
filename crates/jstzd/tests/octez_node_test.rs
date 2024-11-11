@@ -1,4 +1,4 @@
-use jstzd::task::{octez_node, Task};
+use jstzd::task::{octez_node, utils::retry, Task};
 mod utils;
 use octez::{
     r#async::{
@@ -7,7 +7,6 @@ use octez::{
     },
     unused_port,
 };
-use utils::retry;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn octez_node_test() {

@@ -1,23 +1,42 @@
-use super::{octez_node::OctezNode, Task};
+use super::{octez_baker::OctezBaker, octez_node::OctezNode, utils::retry, Task};
 use anyhow::Result;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use axum::Router;
-use octez::r#async::node_config::OctezNodeConfig;
+use octez::r#async::{
+    baker::OctezBakerConfig,
+    client::{OctezClient, OctezClientConfig},
+    node_config::OctezNodeConfig,
+    protocol::ProtocolParameter,
+};
 use tokio::{net::TcpListener, task::JoinHandle};
 
 struct Jstzd {
     octez_node: OctezNode,
+    baker: OctezBaker,
 }
 
 #[derive(Clone)]
 pub struct JstzdConfig {
     octez_node_config: OctezNodeConfig,
+    baker_config: OctezBakerConfig,
+    octez_client_config: OctezClientConfig,
+    protocol_params: ProtocolParameter,
 }
 
 impl JstzdConfig {
-    pub fn new(octez_node_config: OctezNodeConfig) -> Self {
-        Self { octez_node_config }
+    pub fn new(
+        octez_node_config: OctezNodeConfig,
+        baker_config: OctezBakerConfig,
+        octez_client_config: OctezClientConfig,
+        protocol_params: ProtocolParameter,
+    ) -> Self {
+        Self {
+            octez_node_config,
+            baker_config,
+            octez_client_config,
+            protocol_params,
+        }
     }
 }
 
@@ -26,17 +45,96 @@ impl Task for Jstzd {
     type Config = JstzdConfig;
 
     async fn spawn(config: Self::Config) -> Result<Self> {
-        Ok(Self {
-            octez_node: OctezNode::spawn(config.octez_node_config.clone()).await?,
-        })
+        let octez_node = OctezNode::spawn(config.octez_node_config.clone()).await?;
+        let octez_client = OctezClient::new(config.octez_client_config.clone());
+        Self::wait_for_node(&octez_node).await?;
+
+        Self::import_activator(&octez_client).await;
+        Self::activate_protocol(&octez_client, &config.protocol_params).await?;
+
+        let baker = OctezBaker::spawn(config.baker_config.clone()).await?;
+        Ok(Self { octez_node, baker })
     }
 
     async fn kill(&mut self) -> Result<()> {
-        self.octez_node.kill().await
+        let results =
+            futures::future::join_all([self.octez_node.kill(), self.baker.kill()]).await;
+
+        let mut err = vec![];
+        for result in results {
+            if let Err(e) = result {
+                err.push(e);
+            }
+        }
+
+        if !err.is_empty() {
+            Err(anyhow::anyhow!("failed to kill jstzd: {:?}", err))
+        } else {
+            Ok(())
+        }
     }
 
     async fn health_check(&self) -> Result<bool> {
-        self.octez_node.health_check().await
+        let check_results = futures::future::join_all([
+            self.octez_node.health_check(),
+            self.baker.health_check(),
+        ])
+        .await;
+
+        let mut healthy = true;
+        let mut err = vec![];
+        for result in check_results {
+            match result {
+                Err(e) => err.push(e),
+                Ok(v) => healthy = healthy && v,
+            }
+        }
+
+        if !err.is_empty() {
+            Err(anyhow::anyhow!("failed to perform health check: {:?}", err))
+        } else {
+            Ok(healthy)
+        }
+    }
+}
+
+impl Jstzd {
+    const ACTIVATOR_ACCOUNT_SK: &'static str =
+        "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
+    const ACTIVATOR_ACCOUNT_ALIAS: &'static str = "activator";
+
+    async fn import_activator(octez_client: &OctezClient) {
+        octez_client
+            .import_secret_key(Self::ACTIVATOR_ACCOUNT_ALIAS, Self::ACTIVATOR_ACCOUNT_SK)
+            .await
+            .expect("Failed to import account 'activator'");
+    }
+
+    async fn activate_protocol(
+        octez_client: &OctezClient,
+        protocol_params: &ProtocolParameter,
+    ) -> Result<()> {
+        octez_client
+            .activate_protocol(
+                protocol_params.protocol().hash(),
+                "0",
+                "activator",
+                protocol_params.parameter_file().path(),
+            )
+            .await
+    }
+
+    async fn wait_for_node(octez_node: &OctezNode) -> Result<()> {
+        let ready = retry(10, 1000, || async {
+            Ok(octez_node.health_check().await.unwrap_or(false))
+        })
+        .await;
+        if !ready {
+            return Err(anyhow::anyhow!(
+                "octez node is still not ready after retries"
+            ));
+        }
+        Ok(())
     }
 }
 
