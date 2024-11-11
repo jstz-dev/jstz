@@ -8,6 +8,7 @@ use serde_json::Value;
 use std::fmt::Display;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
+use std::sync::Arc;
 
 pub trait ReadWritable: Read + Write {
     fn path(&self) -> PathBuf;
@@ -52,7 +53,7 @@ impl Default for Protocol {
 }
 
 impl Protocol {
-    fn hash(&self) -> &'static str {
+    pub fn hash(&self) -> &'static str {
         match self {
             Protocol::Alpha => "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
             Protocol::ParisC => "PsParisCZo7KAh1Z1smVd9ZMZ1HHn5gkzbM94V3PLCpknFWhUAi",
@@ -60,7 +61,7 @@ impl Protocol {
         }
     }
 
-    fn parameter_file(&self, constants: &ProtocolConstants) -> PathBuf {
+    pub fn parameter_file(&self, constants: &ProtocolConstants) -> PathBuf {
         Path::new(&constants.to_string()).join(self.hash())
     }
 }
@@ -68,6 +69,22 @@ impl Protocol {
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/protocol_parameters/"]
 pub struct ProtocolParameterFile;
+
+#[derive(Clone)]
+pub struct ProtocolParameter {
+    protocol: Protocol,
+    parameter_file: Arc<tempfile::NamedTempFile>,
+}
+
+impl ProtocolParameter {
+    pub fn protocol(&self) -> Protocol {
+        self.protocol.clone()
+    }
+
+    pub fn parameter_file(&self) -> &tempfile::NamedTempFile {
+        &self.parameter_file
+    }
+}
 
 #[derive(Default)]
 pub struct ProtocolParameterBuilder {
@@ -142,11 +159,11 @@ impl ProtocolParameterBuilder {
         self
     }
 
-    pub fn build(&mut self) -> anyhow::Result<impl ReadWritable> {
-        let protocol = self.protocol.take();
+    pub fn build(&mut self) -> anyhow::Result<ProtocolParameter> {
+        let protocol = self.protocol.take().unwrap_or_default();
         let constants = self.constants.take();
         let source_path = self.source_path.take();
-        let mut raw_json = self.load_parameter_json(source_path, protocol, constants)?;
+        let mut raw_json = self.load_parameter_json(source_path, &protocol, constants)?;
         let json = raw_json.as_object_mut().ok_or(anyhow::anyhow!(
             "Failed to convert loaded json file into a json object"
         ))?;
@@ -162,13 +179,16 @@ impl ProtocolParameterBuilder {
         serde_json::to_writer(output_file.as_file(), &json)?;
         output_file.flush()?;
         output_file.rewind()?;
-        Ok(output_file)
+        Ok(ProtocolParameter {
+            protocol,
+            parameter_file: Arc::new(output_file),
+        })
     }
 
     fn load_parameter_json(
         &self,
         source_path: Option<PathBuf>,
-        protocol: Option<Protocol>,
+        protocol: &Protocol,
         constants: Option<ProtocolConstants>,
     ) -> anyhow::Result<Value> {
         let raw_json: Value = match source_path {
@@ -189,9 +209,7 @@ impl ProtocolParameterBuilder {
                 }
             }
             None => {
-                let file_path = protocol
-                    .unwrap_or_default()
-                    .parameter_file(&constants.unwrap_or_default());
+                let file_path = protocol.parameter_file(&constants.unwrap_or_default());
                 let file_path_str = file_path.to_str().ok_or(anyhow::anyhow!(
                     "Failed to convert parameter file path to string"
                 ))?;
@@ -399,7 +417,12 @@ mod tests {
         let mut builder = default_builder();
         // builder should be able to find the template file with default values
         // and write an output file, so we check if the result is ok here
-        assert!(builder.build().is_ok());
+        match builder.build() {
+            Ok(p) => {
+                assert_eq!(p.protocol(), Protocol::Alpha);
+            }
+            _ => panic!("builder.build should not fail"),
+        }
     }
 
     #[test]
@@ -416,8 +439,8 @@ mod tests {
         );
         builder.set_source_path(source_file.path().to_str().unwrap());
 
-        let output_file = builder.build().unwrap();
-        let json: Value = serde_json::from_reader(output_file).unwrap();
+        let parameter = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(parameter.parameter_file()).unwrap();
 
         // this output file should have the values as the source file above
         assert_eq!(json.get("foo").unwrap().as_str().unwrap(), "bar");
@@ -432,7 +455,7 @@ mod tests {
         )
         .unwrap()]);
         let output_file = builder.build().unwrap();
-        let json: Value = serde_json::from_reader(output_file).unwrap();
+        let json: Value = serde_json::from_reader(output_file.parameter_file()).unwrap();
 
         let accounts = json.get("bootstrap_accounts").unwrap().as_array().unwrap();
         assert_eq!(accounts.len(), 1);
@@ -461,8 +484,8 @@ mod tests {
         builder
             .set_source_path(source_file.path().to_str().unwrap())
             .set_bootstrap_accounts(accounts[1..].to_vec());
-        let output_file = builder.build().unwrap();
-        let json: Value = serde_json::from_reader(output_file).unwrap();
+        let parameter = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(parameter.parameter_file()).unwrap();
 
         let mut accounts = json
             .get("bootstrap_accounts")
@@ -525,8 +548,8 @@ mod tests {
             )
             .unwrap(),
         ]);
-        let output_file = builder.build().unwrap();
-        let json: Value = serde_json::from_reader(output_file).unwrap();
+        let parameter = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(parameter.parameter_file()).unwrap();
 
         let mut contracts = json
             .get("bootstrap_contracts")
@@ -578,8 +601,8 @@ mod tests {
         builder
             .set_source_path(source_file.path().to_str().unwrap())
             .set_bootstrap_contracts(contracts[1..].to_vec());
-        let output_file = builder.build().unwrap();
-        let json: Value = serde_json::from_reader(output_file).unwrap();
+        let parameter = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(parameter.parameter_file()).unwrap();
 
         let contracts = json
             .get("bootstrap_contracts")
@@ -609,8 +632,8 @@ mod tests {
         )
         .unwrap();
         builder.set_bootstrap_smart_rollups([rollup.clone()]);
-        let output_file = builder.build().unwrap();
-        let json: Value = serde_json::from_reader(output_file).unwrap();
+        let parameter = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(parameter.parameter_file()).unwrap();
 
         let rollups = json
             .get("bootstrap_smart_rollups")
@@ -664,8 +687,8 @@ mod tests {
                 second_rollup.clone(),
             ]);
 
-        let output_file = builder.build().unwrap();
-        let json: Value = serde_json::from_reader(output_file).unwrap();
+        let parameter = builder.build().unwrap();
+        let json: Value = serde_json::from_reader(parameter.parameter_file()).unwrap();
         let mut rollups = json
             .get("bootstrap_smart_rollups")
             .unwrap()
