@@ -1,7 +1,7 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstzd::task::Task;
 use octez::r#async::{
-    client::{OctezClientBuilder, Signature},
+    client::{OctezClient, OctezClientConfigBuilder, Signature},
     endpoint::Endpoint,
 };
 use serde_json::Value;
@@ -34,10 +34,11 @@ async fn config_init() {
     let expected_endpoint = Endpoint::localhost(3000);
     let config_file = NamedTempFile::new().unwrap();
     let _ = remove_file(config_file.path());
-    let octez_client = OctezClientBuilder::new(expected_endpoint.clone())
+    let octez_client_config = OctezClientConfigBuilder::new(expected_endpoint.clone())
         .set_base_dir(expected_base_dir.clone())
         .build()
         .unwrap();
+    let octez_client = OctezClient::new(octez_client_config);
     let res = octez_client.config_init(config_file.path()).await;
     assert!(res.is_ok());
     let actual: Value =

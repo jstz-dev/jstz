@@ -2,7 +2,7 @@
 use jstzd::task::{octez_baker, octez_node::OctezNode, octez_rollup, Task};
 use octez::r#async::{
     baker::{BakerBinaryPath, OctezBakerConfigBuilder},
-    client::{OctezClient, OctezClientBuilder},
+    client::{OctezClient, OctezClientConfigBuilder},
     endpoint::Endpoint,
     node_config::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder},
     protocol::Protocol,
@@ -115,9 +115,10 @@ pub async fn spawn_octez_node() -> OctezNode {
 }
 
 pub fn create_client(node_endpoint: &Endpoint) -> OctezClient {
-    OctezClientBuilder::new(node_endpoint.clone())
+    let config = OctezClientConfigBuilder::new(node_endpoint.clone())
         .build()
-        .unwrap()
+        .unwrap();
+    OctezClient::new(config)
 }
 
 pub async fn get_block_level(rpc_endpoint: &str) -> i32 {
