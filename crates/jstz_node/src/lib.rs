@@ -1,12 +1,15 @@
-use std::{path::PathBuf, sync::Arc};
-
+use anyhow::Result;
 use api_doc::ApiDoc;
+use axum::routing::get;
+use config::JstzNodeConfig;
 use octez::OctezRollupClient;
 use services::{
     accounts::AccountsService,
+    error::ServiceResult,
     logs::{broadcaster::Broadcaster, db::Db, LogsService},
     operations::OperationsService,
 };
+use std::{path::PathBuf, sync::Arc};
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -18,6 +21,7 @@ use tokio_util::sync::CancellationToken;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
+pub mod config;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -26,12 +30,25 @@ pub struct AppState {
     pub db: Db,
 }
 
+pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
+    let endpoint_addr = config.endpoint.host();
+    let endpoint_port = config.endpoint.port();
+    let rollup_endpoint = config.rollup_endpoint.to_string();
+    run(
+        endpoint_addr,
+        endpoint_port,
+        rollup_endpoint,
+        config.kernel_log_file.to_path_buf(),
+    )
+    .await
+}
+
 pub async fn run(
     addr: &str,
     port: u16,
     rollup_endpoint: String,
     kernel_log_path: PathBuf,
-) -> anyhow::Result<()> {
+) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
 
     let cancellation_token = CancellationToken::new();
@@ -66,9 +83,14 @@ fn router() -> OpenApiRouter<AppState> {
         .merge(OperationsService::router_with_openapi())
         .merge(AccountsService::router_with_openapi())
         .merge(LogsService::router_with_openapi())
+        .route("/ping", get(health_check))
 }
 
 pub fn openapi_json_raw() -> anyhow::Result<String> {
     let doc = router().split_for_parts().1.to_pretty_json()?;
     Ok(doc)
+}
+
+async fn health_check() -> ServiceResult<String> {
+    Ok("pong".to_string())
 }

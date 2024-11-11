@@ -14,6 +14,7 @@ bollard.workspace = true
 futures-util.workspace = true
 http.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
+jstz_node = {path = "../jstz_node"}
 octez = { path = "../octez" }
 regex.workspace = true
 reqwest.workspace = true
