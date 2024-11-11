@@ -57,7 +57,7 @@ impl Task for OctezRollup {
             &config.address,
             &config.operator,
             Some(&config.boot_sector_file),
-            None,
+            config.kernel_debug_file.as_deref(),
         )?);
         Ok(Self {
             inner,
