@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use jstzd::task::{octez_baker, octez_node::OctezNode, octez_rollup, Task};
+use jstzd::task::{octez_baker, octez_node::OctezNode, octez_rollup, utils::retry, Task};
 use octez::r#async::{
     baker::{BakerBinaryPath, OctezBakerConfigBuilder},
     client::{OctezClient, OctezClientConfigBuilder},
@@ -14,24 +14,7 @@ use tezos_crypto_rs::hash::{BlockHash, SmartRollupHash};
 
 pub const ACTIVATOR_SECRET_KEY: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
-
 pub const ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
-
-pub async fn retry<'a, F>(retries: u16, interval_ms: u64, f: impl Fn() -> F) -> bool
-where
-    F: std::future::Future<Output = anyhow::Result<bool>> + Send + 'a,
-{
-    let duration = tokio::time::Duration::from_millis(interval_ms);
-    for _ in 0..retries {
-        tokio::time::sleep(duration).await;
-        if let Ok(v) = f().await {
-            if v {
-                return true;
-            }
-        }
-    }
-    false
-}
 
 pub async fn setup() -> (OctezNode, OctezClient, octez_baker::OctezBaker) {
     let octez_node = spawn_octez_node().await;

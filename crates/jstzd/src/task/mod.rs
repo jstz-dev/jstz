@@ -4,6 +4,7 @@ pub mod jstzd;
 pub mod octez_baker;
 pub mod octez_node;
 pub mod octez_rollup;
+pub mod utils;
 
 use anyhow::Result;
 use async_trait::async_trait;

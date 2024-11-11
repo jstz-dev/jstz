@@ -127,7 +127,7 @@ in {
 
     cargo-test-int = craneLib.cargoNextest (commonWorkspace
       // {
-        buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
+        buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert pkgs.ps];
         doCheck = true;
         # Run the integration tests
         #
@@ -140,7 +140,7 @@ in {
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
-        buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
+        buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert pkgs.ps];
         # Generate coverage reports for codecov
         cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out";
       });
