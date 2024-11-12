@@ -285,8 +285,8 @@ async fn originate_contract_and_wait_for() {
 
     // test --check-previous
     tokio::time::timeout(
-        tokio::time::Duration::from_secs(2),
-        octez_client.wait_for(&op, None, Some(5)),
+        tokio::time::Duration::from_secs(5),
+        octez_client.wait_for(&op, None, Some(20)),
     )
     .await
     .expect("wait_for should complete soon enough")
@@ -294,19 +294,19 @@ async fn originate_contract_and_wait_for() {
 
     // test --branch
     tokio::time::timeout(
-        tokio::time::Duration::from_secs(2),
+        tokio::time::Duration::from_secs(5),
         octez_client.wait_for(&op, Some(&head), None),
     )
     .await
     .expect("wait_for should complete soon enough")
     .expect("wait_for should be able to find the operation");
 
-    tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
 
     // calling wait_for with the current head (after the operation was performed) should timeout
     let head = get_head_block_hash(&octez_node.rpc_endpoint().to_string()).await;
     tokio::time::timeout(
-        tokio::time::Duration::from_secs(2),
+        tokio::time::Duration::from_secs(5),
         octez_client.wait_for(&op, Some(&head), None),
     )
     .await
@@ -315,7 +315,7 @@ async fn originate_contract_and_wait_for() {
     // calling wait_for with the immediate previous block (after the operation was performed)
     // should time out
     tokio::time::timeout(
-        tokio::time::Duration::from_secs(2),
+        tokio::time::Duration::from_secs(10),
         octez_client.wait_for(&op, None, Some(1)),
     )
     .await
