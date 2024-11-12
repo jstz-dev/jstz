@@ -2,18 +2,20 @@ use super::{octez_baker::OctezBaker, octez_node::OctezNode, utils::retry, Task};
 use anyhow::Result;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
-use axum::Router;
+use axum::{extract::State, routing::get, Router};
 use octez::r#async::{
     baker::OctezBakerConfig,
     client::{OctezClient, OctezClientConfig},
     node_config::OctezNodeConfig,
     protocol::ProtocolParameter,
 };
-use tokio::{net::TcpListener, task::JoinHandle};
+use std::sync::Arc;
+use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
 
+#[derive(Clone)]
 struct Jstzd {
-    octez_node: OctezNode,
-    baker: OctezBaker,
+    octez_node: Arc<RwLock<OctezNode>>,
+    baker: Arc<RwLock<OctezBaker>>,
 }
 
 #[derive(Clone)]
@@ -53,12 +55,18 @@ impl Task for Jstzd {
         Self::activate_protocol(&octez_client, &config.protocol_params).await?;
 
         let baker = OctezBaker::spawn(config.baker_config.clone()).await?;
-        Ok(Self { octez_node, baker })
+        Ok(Self {
+            octez_node: Arc::new(RwLock::new(octez_node)),
+            baker: Arc::new(RwLock::new(baker)),
+        })
     }
 
     async fn kill(&mut self) -> Result<()> {
-        let results =
-            futures::future::join_all([self.octez_node.kill(), self.baker.kill()]).await;
+        let results = futures::future::join_all([
+            self.octez_node.write().await.kill(),
+            self.baker.write().await.kill(),
+        ])
+        .await;
 
         let mut err = vec![];
         for result in results {
@@ -76,8 +84,8 @@ impl Task for Jstzd {
 
     async fn health_check(&self) -> Result<bool> {
         let check_results = futures::future::join_all([
-            self.octez_node.health_check(),
-            self.baker.health_check(),
+            self.octez_node.read().await.health_check(),
+            self.baker.read().await.health_check(),
         ])
         .await;
 
@@ -139,10 +147,15 @@ impl Jstzd {
 }
 
 pub struct JstzdServer {
-    jstzd: Option<Jstzd>,
     jstzd_config: JstzdConfig,
     jstzd_server_port: u16,
     server_handle: Option<JoinHandle<()>>,
+    state: Arc<RwLock<ServerState>>,
+}
+
+#[derive(Clone)]
+struct ServerState {
+    jstzd: Option<Jstzd>,
 }
 
 #[async_trait]
@@ -157,21 +170,18 @@ impl AsyncDrop for JstzdServer {
 impl JstzdServer {
     pub fn new(config: JstzdConfig, port: u16) -> Self {
         Self {
-            jstzd: None,
             jstzd_config: config,
             jstzd_server_port: port,
             server_handle: None,
+            state: Arc::new(RwLock::new(ServerState { jstzd: None })),
         }
     }
 
     pub async fn health_check(&self) -> bool {
         if let Some(v) = &self.server_handle {
             if !v.is_finished() {
-                if let Some(jstzd) = &self.jstzd {
-                    if let Ok(v) = jstzd.health_check().await {
-                        return v;
-                    }
-                }
+                let state = self.state.read().await;
+                return health_check(&state).await;
             }
         }
 
@@ -180,7 +190,7 @@ impl JstzdServer {
 
     pub async fn stop(&mut self) -> Result<()> {
         let mut err = None;
-        if let Some(mut jstzd) = self.jstzd.take() {
+        if let Some(mut jstzd) = self.state.write().await.jstzd.take() {
             if let Err(e) = jstzd.kill().await {
                 err.replace(e);
             };
@@ -195,10 +205,15 @@ impl JstzdServer {
     }
 
     pub async fn run(&mut self) -> Result<()> {
-        self.jstzd
-            .replace(Jstzd::spawn(self.jstzd_config.clone()).await?);
+        let jstzd = Jstzd::spawn(self.jstzd_config.clone()).await?;
+        let state = ServerState {
+            jstzd: Some(jstzd.clone()),
+        };
+        self.state.write().await.jstzd.replace(jstzd);
 
-        let router = Router::new().route("/", axum::routing::get(http::StatusCode::OK));
+        let router = Router::new()
+            .route("/health", get(health_check_handler))
+            .with_state(state);
         let listener = TcpListener::bind(("0.0.0.0", self.jstzd_server_port)).await?;
 
         let handle = tokio::spawn(async {
@@ -206,5 +221,22 @@ impl JstzdServer {
         });
         self.server_handle.replace(handle);
         Ok(())
+    }
+}
+
+async fn health_check(state: &ServerState) -> bool {
+    if let Some(jstzd) = &state.jstzd {
+        if let Ok(v) = jstzd.health_check().await {
+            return v;
+        }
+    }
+
+    false
+}
+
+async fn health_check_handler(state: State<ServerState>) -> http::StatusCode {
+    match health_check(&state).await {
+        true => http::StatusCode::OK,
+        _ => http::StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
