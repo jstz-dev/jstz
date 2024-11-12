@@ -58,7 +58,7 @@ async fn jstzd_test() {
     let mut jstzd = jstzd::task::jstzd::JstzdServer::new(config, jstzd_port);
     jstzd.run().await.unwrap();
 
-    let jstz_health_check_endpoint = format!("http://localhost:{}", jstzd_port);
+    let jstz_health_check_endpoint = format!("http://localhost:{}/health", jstzd_port);
     let octez_node_health_check_endpoint = format!("{}/health/ready", rpc_endpoint);
     let jstzd_running = retry(10, 1000, || async {
         let res = reqwest::get(&jstz_health_check_endpoint).await;
