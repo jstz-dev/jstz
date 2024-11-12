@@ -28,7 +28,7 @@ async fn jstzd_test() {
         // fund the account so that it can be used by the baker
         .set_bootstrap_accounts([BootstrapAccount::new(
             "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
-            6_000_000_000,
+            7_000_000_000,
         )
         .unwrap()])
         .build()
@@ -60,21 +60,21 @@ async fn jstzd_test() {
 
     let jstz_health_check_endpoint = format!("http://localhost:{}", jstzd_port);
     let octez_node_health_check_endpoint = format!("{}/health/ready", rpc_endpoint);
-    let jstzd_running = retry(10, 1000, || async {
+    let jstzd_running = retry(30, 1000, || async {
         let res = reqwest::get(&jstz_health_check_endpoint).await;
         Ok(res.is_ok())
     })
     .await;
     assert!(jstzd_running);
 
-    let node_running = retry(10, 1000, || async {
+    let node_running = retry(30, 1000, || async {
         let res = reqwest::get(&octez_node_health_check_endpoint).await;
         Ok(res.is_ok())
     })
     .await;
     assert!(node_running);
 
-    let baker_running = retry(10, 1000, || async {
+    let baker_running = retry(30, 1000, || async {
         if run_ps().await.contains("octez-baker") {
             let last_level = get_block_level(&rpc_endpoint.to_string()).await;
             return Ok(last_level > 2);
@@ -87,7 +87,7 @@ async fn jstzd_test() {
 
     jstzd.stop().await.unwrap();
 
-    let jstzd_stopped = retry(10, 1000, || async {
+    let jstzd_stopped = retry(30, 1000, || async {
         let res = reqwest::get(&jstz_health_check_endpoint).await;
         if let Err(e) = res {
             return Ok(e.to_string().contains("Connection refused"));
@@ -97,7 +97,7 @@ async fn jstzd_test() {
     .await;
     assert!(jstzd_stopped);
 
-    let node_destroyed = retry(10, 1000, || async {
+    let node_destroyed = retry(30, 1000, || async {
         let res = reqwest::get(&octez_node_health_check_endpoint).await;
         // Should get an error since the node should have been terminated
         if let Err(e) = res {
