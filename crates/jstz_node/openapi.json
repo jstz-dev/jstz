@@ -209,6 +209,145 @@
         }
       }
     },
+    "/logs/{address}/persistent/requests": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Fetch console logs by address",
+        "description": "Fetch console logs by address from the log store only if persistent\nlogging is enabled on this Jstz node instance",
+        "operationId": "persistent_logs",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LogRecord"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/logs/{address}/persistent/requests/{request_id}": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Fetch console logs by address and request id",
+        "description": "Fetch console logs by address and request id from the log store only if persistent\nlogging is enabled on this Jstz node instance",
+        "operationId": "persistent_logs_by_request_id",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LogRecord"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/logs/{address}/stream": {
+      "get": {
+        "tags": [
+          "Logs"
+        ],
+        "summary": "Stream console logs",
+        "description": "Returns a stream of console logs from the given Smart Function as Server-Sent Events.",
+        "operationId": "stream_log",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully connected to log stream as Server-Sent Events"
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/operations": {
       "post": {
         "tags": [
@@ -378,6 +517,38 @@
         "type": "string",
         "format": "json",
         "description": "A value stored in the Key-Value store. Always valid JSON."
+      },
+      "LogLevel": {
+        "type": "string",
+        "enum": [
+          "ERROR",
+          "WARN",
+          "INFO",
+          "LOG"
+        ]
+      },
+      "LogRecord": {
+        "type": "object",
+        "required": [
+          "address",
+          "request_id",
+          "level",
+          "text"
+        ],
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/PublicKeyHash"
+          },
+          "level": {
+            "$ref": "#/components/schemas/LogLevel"
+          },
+          "request_id": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
       },
       "Nonce": {
         "type": "integer",

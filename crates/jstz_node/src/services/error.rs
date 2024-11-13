@@ -11,6 +11,7 @@ pub enum ServiceError {
     FromAnyhow(anyhow::Error),
     NotFound,
     BadRequest(String),
+    PersistentLogsDisabled,
 }
 
 pub type ServiceResult<T> = anyhow::Result<T, ServiceError>;
@@ -24,6 +25,10 @@ impl IntoResponse for ServiceError {
             ServiceError::NotFound => StatusCode::NOT_FOUND.into_response(),
             ServiceError::BadRequest(error) => {
                 (StatusCode::BAD_REQUEST, error_body(error)).into_response()
+            }
+            ServiceError::PersistentLogsDisabled => {
+                ServiceError::BadRequest("Persistent logs disabled".to_string())
+                    .into_response()
             }
         }
     }

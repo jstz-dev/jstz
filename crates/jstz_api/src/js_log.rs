@@ -5,8 +5,11 @@ use std::{
     cell::Cell,
     fmt::{self, Display},
 };
+use utoipa::ToSchema;
 
-#[derive(Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug, ValueEnum)]
+#[derive(
+    Serialize, Deserialize, PartialEq, PartialOrd, Clone, Debug, ValueEnum, ToSchema,
+)]
 pub enum LogLevel {
     ERROR = 1,
     WARN = 2,
@@ -35,6 +38,21 @@ impl LogLevel {
         }
     }
 }
+
+impl TryFrom<&str> for LogLevel {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "ERROR" => Ok(LogLevel::ERROR),
+            "WARN" => Ok(LogLevel::WARN),
+            "INFO" => Ok(LogLevel::INFO),
+            "LOG" => Ok(LogLevel::LOG),
+            _ => Err(format!("Invalid LogLevel: {}", value)),
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize)]
 pub struct LogData {
     pub level: LogLevel,
