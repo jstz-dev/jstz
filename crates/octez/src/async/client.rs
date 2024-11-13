@@ -281,7 +281,7 @@ impl OctezClient {
         Ok(command)
     }
 
-    async fn spawn_and_wait_command<S: AsRef<OsStr>, I: IntoIterator<Item = S>>(
+    pub async fn spawn_and_wait_command<S: AsRef<OsStr>, I: IntoIterator<Item = S>>(
         &self,
         args: I,
     ) -> Result<StdOut> {
