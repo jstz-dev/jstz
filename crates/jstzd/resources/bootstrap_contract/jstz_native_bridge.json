@@ -1,0 +1,297 @@
+{
+  "code": [
+    {
+      "prim": "parameter",
+      "args": [
+        {
+          "prim": "or",
+          "args": [
+            {
+              "prim": "ticket",
+              "args": [
+                {
+                  "prim": "pair",
+                  "args": [
+                    { "prim": "nat" },
+                    { "prim": "option", "args": [{ "prim": "bytes" }] }
+                  ]
+                }
+              ],
+              "annots": ["%callback"]
+            },
+            { "prim": "address", "annots": ["%deposit"] }
+          ]
+        }
+      ]
+    },
+    {
+      "prim": "storage",
+      "args": [
+        {
+          "prim": "pair",
+          "args": [
+            { "prim": "address", "annots": ["%exchanger"] },
+            { "prim": "address", "annots": ["%jstz_address"] },
+            {
+              "prim": "option",
+              "args": [{ "prim": "address" }],
+              "annots": ["%deposit_request"]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "prim": "code",
+      "args": [
+        [
+          { "prim": "UNPAIR" },
+          {
+            "prim": "IF_LEFT",
+            "args": [
+              [
+                { "prim": "DUP", "args": [{ "int": "2" }] },
+                { "prim": "UNPAIR", "args": [{ "int": "3" }] },
+                { "prim": "DROP" },
+                { "prim": "SWAP" },
+                {
+                  "prim": "IF_NONE",
+                  "args": [
+                    [
+                      {
+                        "prim": "PUSH",
+                        "args": [
+                          { "prim": "string" },
+                          { "string": "Callback on non-locked deposit" }
+                        ]
+                      },
+                      { "prim": "FAILWITH" }
+                    ],
+                    []
+                  ]
+                },
+                { "prim": "SWAP" },
+                {
+                  "prim": "CONTRACT",
+                  "args": [
+                    {
+                      "prim": "or",
+                      "args": [
+                        {
+                          "prim": "pair",
+                          "args": [
+                            { "prim": "address" },
+                            {
+                              "prim": "ticket",
+                              "args": [
+                                {
+                                  "prim": "pair",
+                                  "args": [
+                                    { "prim": "nat" },
+                                    {
+                                      "prim": "option",
+                                      "args": [{ "prim": "bytes" }]
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ],
+                          "annots": ["%deposit_ticket"]
+                        },
+                        {
+                          "prim": "pair",
+                          "args": [
+                            { "prim": "address", "annots": ["%receiver"] },
+                            {
+                              "prim": "option",
+                              "args": [{ "prim": "address" }],
+                              "annots": ["%proxy"]
+                            },
+                            {
+                              "prim": "ticket",
+                              "args": [
+                                {
+                                  "prim": "pair",
+                                  "args": [
+                                    { "prim": "nat" },
+                                    {
+                                      "prim": "option",
+                                      "args": [{ "prim": "bytes" }]
+                                    }
+                                  ]
+                                }
+                              ],
+                              "annots": ["%ticket"]
+                            }
+                          ],
+                          "annots": ["%deposit_fa_ticket"]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "prim": "IF_NONE",
+                  "args": [
+                    [
+                      {
+                        "prim": "PUSH",
+                        "args": [
+                          { "prim": "string" },
+                          { "string": "Invalid rollup address" }
+                        ]
+                      },
+                      { "prim": "FAILWITH" }
+                    ],
+                    []
+                  ]
+                },
+                {
+                  "prim": "PUSH",
+                  "args": [{ "prim": "mutez" }, { "int": "0" }]
+                },
+                { "prim": "DIG", "args": [{ "int": "3" }] },
+                { "prim": "DIG", "args": [{ "int": "3" }] },
+                { "prim": "PAIR" },
+                {
+                  "prim": "LEFT",
+                  "args": [
+                    {
+                      "prim": "pair",
+                      "args": [
+                        { "prim": "address" },
+                        { "prim": "option", "args": [{ "prim": "address" }] },
+                        {
+                          "prim": "ticket",
+                          "args": [
+                            {
+                              "prim": "pair",
+                              "args": [
+                                { "prim": "nat" },
+                                {
+                                  "prim": "option",
+                                  "args": [{ "prim": "bytes" }]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                { "prim": "TRANSFER_TOKENS" },
+                { "prim": "SWAP" },
+                { "prim": "NONE", "args": [{ "prim": "address" }] },
+                { "prim": "UPDATE", "args": [{ "int": "4" }] },
+                { "prim": "NIL", "args": [{ "prim": "operation" }] },
+                { "prim": "DIG", "args": [{ "int": "2" }] },
+                { "prim": "CONS" },
+                { "prim": "PAIR" }
+              ],
+              [
+                { "prim": "DUP", "args": [{ "int": "2" }] },
+                { "prim": "UNPAIR", "args": [{ "int": "3" }] },
+                { "prim": "SWAP" },
+                { "prim": "DROP" },
+                { "prim": "SWAP" },
+                {
+                  "prim": "IF_NONE",
+                  "args": [
+                    [],
+                    [
+                      { "prim": "DROP" },
+                      {
+                        "prim": "PUSH",
+                        "args": [
+                          { "prim": "string" },
+                          { "string": "Deposit locked" }
+                        ]
+                      },
+                      { "prim": "FAILWITH" }
+                    ]
+                  ]
+                },
+                { "prim": "AMOUNT" },
+                {
+                  "prim": "PUSH",
+                  "args": [{ "prim": "mutez" }, { "int": "0" }]
+                },
+                { "prim": "DUP", "args": [{ "int": "2" }] },
+                { "prim": "COMPARE" },
+                { "prim": "LE" },
+                {
+                  "prim": "IF",
+                  "args": [
+                    [
+                      { "prim": "DROP", "args": [{ "int": "4" }] },
+                      {
+                        "prim": "PUSH",
+                        "args": [
+                          { "prim": "string" },
+                          {
+                            "string": "Invalid deposit amount: Deposit amount must be greater than 0."
+                          }
+                        ]
+                      },
+                      { "prim": "FAILWITH" }
+                    ],
+                    [
+                      { "prim": "SELF", "annots": ["%callback"] },
+                      { "prim": "ADDRESS" },
+                      { "prim": "DIG", "args": [{ "int": "2" }] },
+                      {
+                        "prim": "CONTRACT",
+                        "args": [{ "prim": "address" }],
+                        "annots": ["%mint"]
+                      },
+                      {
+                        "prim": "IF_NONE",
+                        "args": [
+                          [
+                            { "prim": "DROP", "args": [{ "int": "4" }] },
+                            {
+                              "prim": "PUSH",
+                              "args": [
+                                { "prim": "string" },
+                                { "string": "Invalid tez ticket contract" }
+                              ]
+                            },
+                            { "prim": "FAILWITH" }
+                          ],
+                          [
+                            { "prim": "DUG", "args": [{ "int": "2" }] },
+                            { "prim": "TRANSFER_TOKENS" },
+                            { "prim": "DUG", "args": [{ "int": "2" }] },
+                            { "prim": "SOME" },
+                            { "prim": "UPDATE", "args": [{ "int": "4" }] },
+                            {
+                              "prim": "NIL",
+                              "args": [{ "prim": "operation" }]
+                            },
+                            { "prim": "DIG", "args": [{ "int": "2" }] },
+                            { "prim": "CONS" },
+                            { "prim": "PAIR" }
+                          ]
+                        ]
+                      }
+                    ]
+                  ]
+                }
+              ]
+            ]
+          }
+        ]
+      ]
+    }
+  ],
+  "storage": {
+    "prim": "Pair",
+    "args": [
+      { "string": "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ" },
+      { "string": "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK" },
+      { "prim": "None" }
+    ]
+  }
+}

@@ -11,6 +11,7 @@ use octez::r#async::{
 use regex::Regex;
 use std::path::{Path, PathBuf};
 use tezos_crypto_rs::hash::{BlockHash, OperationHash, SmartRollupHash};
+use tokio::io::AsyncReadExt;
 
 pub const ACTIVATOR_SECRET_KEY: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
@@ -213,4 +214,16 @@ pub async fn get_operation_kind(
         }
     }
     None
+}
+
+pub async fn read_json_file(path: PathBuf) -> serde_json::Value {
+    let mut current_string = String::new();
+    tokio::fs::File::open(&path)
+        .await
+        .map_err(|e| anyhow::anyhow!("error reading file '{}': {:?}", path.display(), e))
+        .unwrap()
+        .read_to_string(&mut current_string)
+        .await
+        .unwrap();
+    serde_json::from_str(&current_string).unwrap()
 }
