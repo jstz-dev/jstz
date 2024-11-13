@@ -2,9 +2,9 @@ use std::sync::Arc;
 
 use anyhow;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::Sse,
-    routing::get,
+    Json,
 };
 use broadcaster::InfallibleSSeStream;
 #[cfg(feature = "persistent-logging")]
@@ -15,9 +15,11 @@ use jstz_proto::{
     context::account::Address,
     js_logger::{LogRecord, LOG_PREFIX},
 };
+use serde::Deserialize;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
-use utoipa_axum::router::OpenApiRouter;
+use utoipa::IntoParams;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{tailed_file::TailedFile, AppState, Service};
 
@@ -41,42 +43,25 @@ use self::{broadcaster::Broadcaster, db::Db};
 
 #[cfg(feature = "persistent-logging")]
 mod persistent_logging {
-    use crate::{services::error::ServiceError, AppState};
-    pub use anyhow::Result;
+    use crate::services::logs::{LogRecord, Pagination};
+    use crate::{
+        services::error::{ServiceError, ServiceResult},
+        AppState,
+    };
     use axum::{
         extract::{Path, Query, State},
-        response::IntoResponse,
         Json,
     };
     use jstz_proto::context::account::Address;
-    pub use serde::{Deserialize, Serialize};
-
-    use super::db::Db;
-    pub const DEAULT_PAGINATION_LIMIT: usize = 100;
-    pub const DEAULT_PAGINATION_OFFSET: usize = 0;
-
-    #[derive(Deserialize, Debug)]
-    pub struct Pagination {
-        limit: Option<usize>,
-        offset: Option<usize>,
-    }
 
     pub async fn persistent_logs(
         State(AppState { db, .. }): State<AppState>,
         Path(address): Path<String>,
         Query(Pagination { limit, offset }): Query<Pagination>,
-    ) -> anyhow::Result<impl IntoResponse, ServiceError> {
+    ) -> ServiceResult<Json<Vec<LogRecord>>> {
         let address = Address::from_base58(&address)
             .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
-        let result = query(
-            &db,
-            QueryParams::GetLogsByAddress(
-                address,
-                limit.unwrap_or(DEAULT_PAGINATION_LIMIT),
-                offset.unwrap_or(DEAULT_PAGINATION_OFFSET),
-            ),
-        )
-        .await?;
+        let result = db.logs_by_address(address, offset, limit).await?;
 
         Ok(Json(result))
     }
@@ -85,71 +70,22 @@ mod persistent_logging {
         State(AppState { db, .. }): State<AppState>,
         Path(address): Path<String>,
         Path(request_id): Path<String>,
-    ) -> Result<impl IntoResponse, ServiceError> {
+    ) -> ServiceResult<Json<Vec<LogRecord>>> {
         let address = Address::from_base58(&address)
             .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
 
-        let result = query(
-            &db,
-            QueryParams::GetLogsByAddressAndRequestId(address, request_id),
-        )
-        .await?;
+        let result = db
+            .logs_by_address_and_request_id(address, request_id)
+            .await?;
 
         Ok(Json(result))
     }
-
-    #[derive(Serialize, Deserialize)]
-    pub enum QueryResponse {
-        Log {
-            level: String,
-            content: String,
-            function_address: String,
-            request_id: String,
-        },
-    }
-
-    /// Queries the log database.
-    pub type Limit = usize;
-    pub type Offset = usize;
-    pub enum QueryParams {
-        GetLogsByAddress(Address, Limit, Offset),
-        GetLogsByAddressAndRequestId(Address, String),
-    }
-
-    pub async fn query(
-        db: &Db,
-        param: QueryParams,
-    ) -> anyhow::Result<Vec<QueryResponse>> {
-        match param {
-            QueryParams::GetLogsByAddress(addr, offset, limit) => {
-                db.logs_by_address(addr, offset, limit).await
-            }
-            QueryParams::GetLogsByAddressAndRequestId(addr, request_id) => {
-                db.logs_by_address_and_request_id(addr, request_id).await
-            }
-        }
-    }
 }
+
 #[cfg(feature = "persistent-logging")]
 use persistent_logging::*;
 
 use super::error::{ServiceError, ServiceResult};
-
-pub struct LogsService;
-
-impl Service for LogsService {
-    fn router_with_openapi() -> OpenApiRouter<AppState> {
-        let routes = OpenApiRouter::new().route("/:address/stream", get(stream_log));
-        #[cfg(feature = "persistent-logging")]
-        let routes = routes
-            .route("/:address/persistent/requests", get(persistent_logs))
-            .route(
-                "/:address/persistent/requests/:request_id",
-                get(persistent_logs_by_request_id),
-            );
-        OpenApiRouter::new().nest("/logs", routes)
-    }
-}
 
 // Represents each line in the log file.
 pub enum Line {
@@ -160,6 +96,8 @@ pub enum Line {
     // Indicates the js log message from the smart function (e.g. log).
     Js(LogRecord),
 }
+
+pub struct LogsService;
 
 impl LogsService {
     // Initalise the LogService by spawning a future that reads and broadcasts the file
@@ -222,7 +160,7 @@ impl LogsService {
                                 if let Line::Js(log) = line {
                                     broadcaster
                                         .broadcast(&log.address, &line_str[LOG_PREFIX.len()..])
-                                        .await;
+                                       .await;
                                 }
                             }
                         }
@@ -258,6 +196,35 @@ impl LogsService {
     }
 }
 
+#[derive(Deserialize, Debug, IntoParams)]
+#[serde(default)]
+pub struct Pagination {
+    limit: usize,
+    offset: usize,
+}
+
+impl Default for Pagination {
+    fn default() -> Self {
+        Self {
+            limit: 100,
+            offset: 0,
+        }
+    }
+}
+
+/// Stream console logs
+///
+/// Returns a stream of console logs from the given Smart Function as Server-Sent Events.
+#[utoipa::path(
+    get,
+    path = "/{address}/stream",
+    tag = "Logs",
+    responses(
+        (status = 200, description = "Successfully connected to log stream as Server-Sent Events"),
+        (status = 400),
+        (status = 404)
+    )
+)]
 async fn stream_log(
     State(AppState { broadcaster, .. }): State<AppState>,
     Path(address): Path<String>,
@@ -265,4 +232,76 @@ async fn stream_log(
     let address = Address::from_base58(&address)
         .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
     Ok(broadcaster.new_client(address).await)
+}
+
+/// Fetch console logs by address
+///
+/// Fetch console logs by address from the log store only if persistent
+/// logging is enabled on this Jstz node instance
+#[utoipa::path(
+        get,
+        path = "/{address}/persistent/requests",
+        params(Pagination),
+        tag = "Logs",
+        responses(
+            (status = 200, body = Vec<LogRecord>),
+            (status = 400),
+            (status = 404)
+        )
+    )]
+#[allow(unused_variables)]
+pub async fn persistent_logs(
+    app_state: State<AppState>,
+    path_params: Path<String>,
+    query_params: Query<Pagination>,
+) -> ServiceResult<Json<Vec<LogRecord>>> {
+    #[cfg(feature = "persistent-logging")]
+    return persistent_logging::persistent_logs(app_state, path_params, query_params)
+        .await;
+
+    #[cfg(not(feature = "persistent-logging"))]
+    Err(ServiceError::PersistentLogsDisabled)
+}
+
+/// Fetch console logs by address and request id
+///
+/// Fetch console logs by address and request id from the log store only if persistent
+/// logging is enabled on this Jstz node instance
+#[utoipa::path(
+        get,
+        path = "/{address}/persistent/requests/{request_id}",
+        tag = "Logs",
+        responses(
+            (status = 200, body = Vec<LogRecord>),
+            (status = 400),
+            (status = 404)
+        )
+    )]
+#[allow(unused_variables)]
+pub async fn persistent_logs_by_request_id(
+    app_state: State<AppState>,
+    addr_path_param: Path<String>,
+    request_id_path_param: Path<String>,
+) -> ServiceResult<Json<Vec<LogRecord>>> {
+    #[cfg(feature = "persistent-logging")]
+    return persistent_logging::persistent_logs_by_request_id(
+        app_state,
+        addr_path_param,
+        request_id_path_param,
+    )
+    .await;
+
+    #[cfg(not(feature = "persistent-logging"))]
+    Err(ServiceError::PersistentLogsDisabled)
+}
+
+impl Service for LogsService {
+    fn router_with_openapi() -> OpenApiRouter<AppState> {
+        let router = OpenApiRouter::new()
+            .routes(routes!(stream_log))
+            .routes(routes!(persistent_logs))
+            .routes(routes!(persistent_logs_by_request_id));
+
+        OpenApiRouter::new().nest("/logs", router)
+    }
 }
