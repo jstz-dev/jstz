@@ -51,19 +51,28 @@ pub struct RunFunctionReceipt {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct DepositReceipt {
+    pub account: Address,
+    pub updated_balance: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(tag = "_type")]
 pub enum ReceiptContent {
     DeployFunction(DeployFunctionReceipt),
     RunFunction(RunFunctionReceipt),
-    Deposit,
+    Deposit(DepositReceipt),
     FaDeposit(FaDepositReceipt),
     FaWithdraw(FaWithdrawReceipt),
 }
 
 mod openapi {
+    use serde::{Deserialize, Serialize};
     use utoipa::ToSchema;
 
     #[allow(dead_code)]
-    #[derive(ToSchema)]
+    #[derive(ToSchema, Serialize, Deserialize)]
+    #[serde(tag = "_type")]
     pub enum ReceiptResult<T: ToSchema> {
         Ok(T),
         Err(String),

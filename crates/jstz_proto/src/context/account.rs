@@ -159,7 +159,7 @@ impl Account {
         tx: &mut Transaction,
         addr: &Address,
         amount: Amount,
-    ) -> Result<()> {
+    ) -> Result<u64> {
         let account = Self::get_mut(hrt, tx, addr)?;
         let checked_balance = account
             .amount
@@ -167,7 +167,7 @@ impl Account {
             .ok_or(crate::error::Error::BalanceOverflow)?;
 
         account.amount = checked_balance;
-        Ok(())
+        Ok(account.amount)
     }
 
     pub fn sub_balance(
@@ -175,13 +175,13 @@ impl Account {
         tx: &mut Transaction,
         addr: &Address,
         amount: Amount,
-    ) -> Result<()> {
+    ) -> Result<u64> {
         let account = Self::get_mut(hrt, tx, addr)?;
         if account.amount < amount {
             return Err(Error::InsufficientFunds)?;
         }
         account.amount -= amount;
-        Ok(())
+        Ok(account.amount)
     }
 
     pub fn set_balance(

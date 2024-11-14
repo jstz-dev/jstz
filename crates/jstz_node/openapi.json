@@ -422,26 +422,46 @@
       "Content": {
         "oneOf": [
           {
-            "type": "object",
-            "required": [
-              "DeployFunction"
-            ],
-            "properties": {
-              "DeployFunction": {
+            "allOf": [
+              {
                 "$ref": "#/components/schemas/DeployFunction"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "DeployFunction"
+                    ]
+                  }
+                }
               }
-            }
+            ]
           },
           {
-            "type": "object",
-            "required": [
-              "RunFunction"
-            ],
-            "properties": {
-              "RunFunction": {
+            "allOf": [
+              {
                 "$ref": "#/components/schemas/RunFunction"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "RunFunction"
+                    ]
+                  }
+                }
               }
-            }
+            ]
           }
         ]
       },
@@ -470,6 +490,23 @@
         "properties": {
           "address": {
             "$ref": "#/components/schemas/PublicKeyHash"
+          }
+        }
+      },
+      "DepositReceipt": {
+        "type": "object",
+        "required": [
+          "account",
+          "updated_balance"
+        ],
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/PublicKeyHash"
+          },
+          "updated_balance": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           }
         }
       },
@@ -637,75 +674,143 @@
       "ReceiptResult_ReceiptContent": {
         "oneOf": [
           {
-            "type": "object",
-            "required": [
-              "Ok"
-            ],
-            "properties": {
-              "Ok": {
+            "allOf": [
+              {
                 "oneOf": [
                   {
-                    "type": "object",
-                    "required": [
-                      "DeployFunction"
-                    ],
-                    "properties": {
-                      "DeployFunction": {
+                    "allOf": [
+                      {
                         "$ref": "#/components/schemas/DeployFunctionReceipt"
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "_type"
+                        ],
+                        "properties": {
+                          "_type": {
+                            "type": "string",
+                            "enum": [
+                              "DeployFunction"
+                            ]
+                          }
+                        }
                       }
-                    }
-                  },
-                  {
-                    "type": "object",
-                    "required": [
-                      "RunFunction"
-                    ],
-                    "properties": {
-                      "RunFunction": {
-                        "$ref": "#/components/schemas/RunFunctionReceipt"
-                      }
-                    }
-                  },
-                  {
-                    "type": "string",
-                    "enum": [
-                      "Deposit"
                     ]
                   },
                   {
-                    "type": "object",
-                    "required": [
-                      "FaDeposit"
-                    ],
-                    "properties": {
-                      "FaDeposit": {
-                        "$ref": "#/components/schemas/FaDepositReceipt"
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/RunFunctionReceipt"
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "_type"
+                        ],
+                        "properties": {
+                          "_type": {
+                            "type": "string",
+                            "enum": [
+                              "RunFunction"
+                            ]
+                          }
+                        }
                       }
-                    }
+                    ]
                   },
                   {
-                    "type": "object",
-                    "required": [
-                      "FaWithdraw"
-                    ],
-                    "properties": {
-                      "FaWithdraw": {
-                        "$ref": "#/components/schemas/FaWithdrawReceipt"
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/DepositReceipt"
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "_type"
+                        ],
+                        "properties": {
+                          "_type": {
+                            "type": "string",
+                            "enum": [
+                              "Deposit"
+                            ]
+                          }
+                        }
                       }
-                    }
+                    ]
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/FaDepositReceipt"
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "_type"
+                        ],
+                        "properties": {
+                          "_type": {
+                            "type": "string",
+                            "enum": [
+                              "FaDeposit"
+                            ]
+                          }
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/FaWithdrawReceipt"
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "_type"
+                        ],
+                        "properties": {
+                          "_type": {
+                            "type": "string",
+                            "enum": [
+                              "FaWithdraw"
+                            ]
+                          }
+                        }
+                      }
+                    ]
                   }
                 ]
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "Ok"
+                    ]
+                  }
+                }
               }
-            }
+            ]
           },
           {
             "type": "object",
             "required": [
-              "Err"
+              "_type"
             ],
             "properties": {
-              "Err": {
-                "type": "string"
+              "_type": {
+                "type": "string",
+                "enum": [
+                  "Err"
+                ]
               }
             }
           }

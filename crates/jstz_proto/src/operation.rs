@@ -121,6 +121,7 @@ pub struct RunFunction {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
+#[serde(tag = "_type")]
 pub enum Content {
     DeployFunction(DeployFunction),
     RunFunction(RunFunction),
