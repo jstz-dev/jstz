@@ -1,5 +1,12 @@
 #![allow(dead_code)]
-use jstzd::task::{octez_baker, octez_node::OctezNode, octez_rollup, utils::retry, Task};
+use anyhow::Result;
+use jstzd::task::{
+    octez_baker,
+    octez_node::OctezNode,
+    octez_rollup,
+    utils::{get_block_level, retry},
+    Task,
+};
 use octez::r#async::{
     baker::{BakerBinaryPath, OctezBakerConfigBuilder},
     client::{OctezClient, OctezClientConfigBuilder},
@@ -8,14 +15,15 @@ use octez::r#async::{
     protocol::Protocol,
     rollup::{OctezRollupConfigBuilder, RollupDataDir},
 };
-use regex::Regex;
+use serde::Deserialize;
 use std::path::{Path, PathBuf};
 use tezos_crypto_rs::hash::{BlockHash, OperationHash, SmartRollupHash};
 use tokio::io::AsyncReadExt;
 
 pub const ACTIVATOR_SECRET_KEY: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
-pub const ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
+pub const TOY_ROLLUP_ADDRESS: &str = "sr1JVr8SmBYRRFq38HZGM7nJUa9VcfwxGSXc";
+pub const TOY_ROLLUP_OPERATOR_ALIAS: &str = "bootstrap1";
 
 pub async fn setup() -> (OctezNode, OctezClient, octez_baker::OctezBaker) {
     let octez_node = spawn_octez_node().await;
@@ -40,8 +48,8 @@ pub async fn spawn_rollup(
     let config = OctezRollupConfigBuilder::new(
         octez_node.rpc_endpoint().clone(),
         octez_client.base_dir().into(),
-        SmartRollupHash::from_base58_check(ROLLUP_ADDRESS).unwrap(),
-        "bootstrap1".to_string(),
+        SmartRollupHash::from_base58_check(TOY_ROLLUP_ADDRESS).unwrap(),
+        TOY_ROLLUP_OPERATOR_ALIAS.to_string(),
         kernel_installer,
     )
     .set_data_dir(RollupDataDir::TempWithPreImages { preimages_dir })
@@ -74,7 +82,7 @@ pub async fn spawn_baker(
     assert!(baker_node.health_check().await.unwrap());
     let node_endpoint = octez_node.rpc_endpoint();
     let block_baked = retry(10, 1000, || async {
-        let level = get_block_level(&node_endpoint.to_string()).await;
+        let level = get_block_level(&node_endpoint.to_string()).await?;
         Ok(level > 1)
     })
     .await;
@@ -102,24 +110,6 @@ pub fn create_client(node_endpoint: &Endpoint) -> OctezClient {
         .build()
         .unwrap();
     OctezClient::new(config)
-}
-
-pub async fn get_block_level(rpc_endpoint: &str) -> i32 {
-    let blocks_head_endpoint =
-        format!("{}/chains/main/blocks/head", rpc_endpoint.to_owned());
-    let response = get_request(&blocks_head_endpoint).await;
-    extract_level(&response)
-}
-
-fn extract_level(input: &str) -> i32 {
-    // Create a regex to match "level": followed by a number
-    let re = Regex::new(r#""level":\s*(\d+)"#).unwrap();
-    // Extract the number as a string and parse it to i32
-    re.captures(input)
-        .unwrap()
-        .get(1)
-        .map(|level_match| level_match.as_str().parse::<i32>().unwrap())
-        .unwrap()
 }
 
 pub async fn get_head_block_hash(rpc_endpoint: &str) -> BlockHash {
@@ -226,4 +216,13 @@ pub async fn read_json_file(path: PathBuf) -> serde_json::Value {
         .await
         .unwrap();
     serde_json::from_str(&current_string).unwrap()
+}
+#[derive(Debug, Deserialize)]
+struct HealthCheckResponse {
+    healthy: bool,
+}
+pub async fn rollup_health_check(rollup_rpc_endpoint: &Endpoint) -> Result<bool> {
+    let res = reqwest::get(format!("{}/health", rollup_rpc_endpoint)).await?;
+    let body = res.json::<HealthCheckResponse>().await?;
+    Ok(body.healthy)
 }
