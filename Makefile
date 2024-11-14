@@ -14,7 +14,7 @@ endif
 CLI_KERNEL_PATH := crates/jstz_cli/jstz_kernel.wasm
 
 .PHONY: all
-all: test build check
+all: build test check
 
 .PHONY: build
 build: build-cli-kernel
