@@ -7,6 +7,7 @@ use boa_gc::{empty_trace, Finalize, Trace};
 use derive_more::{Display, Error};
 use hex::FromHexError;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[derive(
     Debug,
@@ -20,6 +21,7 @@ use serde::{Deserialize, Serialize};
     Deserialize,
     Default,
     Finalize,
+    ToSchema,
 )]
 pub struct Blake2b([u8; 32]);
 
