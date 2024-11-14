@@ -20,3 +20,6 @@
 //! For further details, see the [GC Implementation Guide](https://udn.realityripple.com/docs/Mozilla/Projects/SpiderMonkey/Internals/Garbage_collection).
 
 mod ptr;
+mod trace;
+
+pub use trace::{Finalize, Trace, Tracer};
