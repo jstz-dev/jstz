@@ -643,9 +643,7 @@ pub mod jstz_run {
                 body: Some(
                     json!({
                         "amount": 10,
-                        "receiver": {
-                            "Tz1": jstz_mock::account2().to_base58().to_string()
-                        },
+                        "receiver": jstz_mock::account2().to_base58().to_string(),
                     })
                     .to_string()
                     .as_bytes()

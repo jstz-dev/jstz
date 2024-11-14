@@ -582,49 +582,19 @@
       "PublicKey": {
         "oneOf": [
           {
-            "type": "object",
+            "type": "string",
             "title": "Ed25519",
-            "required": [
-              "Ed25519"
-            ],
-            "properties": {
-              "Ed25519": {
-                "type": "string"
-              }
-            },
-            "example": {
-              "Ed25519": "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"
-            }
+            "example": "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"
           },
           {
-            "type": "object",
+            "type": "string",
             "title": "Secp256k1",
-            "required": [
-              "Secp256k1"
-            ],
-            "properties": {
-              "Secp256k1": {
-                "type": "string"
-              }
-            },
-            "example": {
-              "Secp256k1": "sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY"
-            }
+            "example": "sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY"
           },
           {
-            "type": "object",
+            "type": "string",
             "title": "P256",
-            "required": [
-              "P256"
-            ],
-            "properties": {
-              "P256": {
-                "type": "string"
-              }
-            },
-            "example": {
-              "P256": "p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1"
-            }
+            "example": "p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1"
           }
         ],
         "description": "Tezos public key"
@@ -632,49 +602,19 @@
       "PublicKeyHash": {
         "oneOf": [
           {
-            "type": "object",
+            "type": "string",
             "title": "Tz1",
-            "required": [
-              "Tz1"
-            ],
-            "properties": {
-              "Tz1": {
-                "type": "string"
-              }
-            },
-            "example": {
-              "Tz1": "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU"
-            }
+            "example": "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU"
           },
           {
-            "type": "object",
+            "type": "string",
             "title": "Tz2",
-            "required": [
-              "Tz2"
-            ],
-            "properties": {
-              "Tz2": {
-                "type": "string"
-              }
-            },
-            "example": {
-              "Tz2": "tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh"
-            }
+            "example": "tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh"
           },
           {
-            "type": "object",
+            "type": "string",
             "title": "Tz3",
-            "required": [
-              "Tz3"
-            ],
-            "properties": {
-              "Tz3": {
-                "type": "string"
-              }
-            },
-            "example": {
-              "Tz3": "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C"
-            }
+            "example": "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C"
           }
         ],
         "description": "Tezos Address"
@@ -856,49 +796,19 @@
       "Signature": {
         "oneOf": [
           {
-            "type": "object",
+            "type": "string",
             "title": "Ed25519 signature",
-            "required": [
-              "Ed25519"
-            ],
-            "properties": {
-              "Ed25519": {
-                "type": "string"
-              }
-            },
-            "example": {
-              "Ed25519": "edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB"
-            }
+            "example": "edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB"
           },
           {
-            "type": "object",
+            "type": "string",
             "title": "Secp256k1 signature",
-            "required": [
-              "Secp256k1"
-            ],
-            "properties": {
-              "Secp256k1": {
-                "type": "string"
-              }
-            },
-            "example": {
-              "Secp256k1": "spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H"
-            }
+            "example": "spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H"
           },
           {
-            "type": "object",
+            "type": "string",
             "title": "P256 signature",
-            "required": [
-              "P256"
-            ],
-            "properties": {
-              "P256": {
-                "type": "string"
-              }
-            },
-            "example": {
-              "P256": "p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH"
-            }
+            "example": "p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH"
           }
         ]
       },

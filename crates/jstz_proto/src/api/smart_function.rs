@@ -340,7 +340,7 @@ mod test {
                     "Content-type": "application/json",
                 },
                 body: JSON.stringify({
-                    receiver: { Tz1: "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx" },
+                    receiver: "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx",
                     amount: 5,
                 }),
             });
@@ -435,7 +435,7 @@ mod test {
                             body: JSON.stringify({{
                                 amount: {withdraw_amount},
                                 routing_info: {{
-                                    receiver: {{ Tz1: "{receiver}" }},
+                                    receiver: "{receiver}",
                                     proxy_l1_contract: "{l1_proxy_contract}"
                                 }},
                                 ticket_info: {{

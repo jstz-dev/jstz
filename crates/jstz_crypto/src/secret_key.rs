@@ -6,6 +6,7 @@ use tezos_crypto_rs::hash::SecretKeyEd25519;
 use crate::{error::Result, signature::Signature};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
+#[serde(untagged)]
 pub enum SecretKey {
     Ed25519(SecretKeyEd25519),
 }
@@ -59,8 +60,7 @@ mod test {
 
     #[test]
     fn json_round_trip() {
-        let json =
-            r#"{"Ed25519":"edsk3YuM4VFTRxq4LmWzf293iEdgramaDhgVnx3ij3CzgQTeDRcb1Q"}"#;
+        let json = "\"edsk3YuM4VFTRxq4LmWzf293iEdgramaDhgVnx3ij3CzgQTeDRcb1Q\"";
         let sk: SecretKey = serde_json::from_str(json).expect("Should not fail");
         assert_eq!(
             sk.to_string(),

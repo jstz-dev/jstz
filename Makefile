@@ -60,13 +60,14 @@ test: test-unit test-int
 test-unit:
 # --lib only runs unit tests in library crates
 # --bins only runs unit tests in binary crates
-	@cargo nextest run --lib --bins 
+	@cargo nextest run --lib --bins
 
 .PHONY: test-int
 test-int:
 # --test only runs a specified integration test (a test in /tests).
 #        the glob pattern is used to match all integration tests
-	@cargo nextest run --test "*"
+# --exclude excludes the jstz_api wpt test
+	@cargo nextest run --test "*" --workspace --exclude "jstz_api"
 
 .PHONY: cov 
 cov:
