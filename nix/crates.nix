@@ -156,7 +156,9 @@ in {
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
-        buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
+        buildInputs = commonWorkspace.buildInputs ++ [pkgs.cargo-nextest pkgs.iana-etc octez pkgs.cacert];
+        # Use nextest for test harness (instead of `cargo test`)
+        cargoLlvmCovCommand = "nextest";
         # Generate coverage reports for codecov
         cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out --features \"skip-rollup-tests\"";
       });
