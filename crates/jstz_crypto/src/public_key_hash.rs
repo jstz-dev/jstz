@@ -28,23 +28,24 @@ use crate::{
     Finalize,
     ToSchema,
 )]
+#[serde(untagged)]
 pub enum PublicKeyHash {
     #[schema(
         title = "Tz1",
         value_type = String,
-        example = json!({ "Tz1": "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU" })
+        example = json!("tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU")
     )]
     Tz1(ContractTz1Hash),
     #[schema(
         title = "Tz2",
         value_type = String,
-        example =  json!({ "Tz2": "tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh" })
+        example =  json!("tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh")
     )]
     Tz2(ContractTz2Hash),
     #[schema(
         title = "Tz3",
         value_type = String,
-        example = json!({ "Tz3": "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C" })
+        example = json!("tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C")
     )]
     Tz3(ContractTz3Hash),
 }
