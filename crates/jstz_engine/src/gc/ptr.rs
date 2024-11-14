@@ -8,7 +8,8 @@ use mozjs::{
     jsapi::{
         jsid, HeapBigIntWriteBarriers, HeapObjectWriteBarriers, HeapScriptWriteBarriers,
         HeapStringWriteBarriers, HeapValueWriteBarriers, JSFunction, JSObject, JSScript,
-        JSString, JS::BigInt as JSBigInt, JS::Symbol as JSSymbol,
+        JSString,
+        JS::{BigInt as JSBigInt, Symbol as JSSymbol},
     },
     jsid::VoidId,
     jsval::{JSVal, UndefinedValue},
@@ -45,7 +46,7 @@ pub unsafe trait WriteBarrieredPtr: Copy {
 ///
 /// # Safety
 ///
-/// `GcPtr<T>` should only be used by values on the heap. Garbage collected pointers
+/// [`GcPtr<T>`] should only be used by values on the heap. Garbage collected pointers
 /// on the stack should be rooted.
 pub struct GcPtr<T: WriteBarrieredPtr> {
     // # Safety
@@ -92,12 +93,23 @@ impl<T: WriteBarrieredPtr> GcPtr<T> {
     ///
     /// # Safety
     ///
-    /// the caller must guarantee that the pointer is valid for reads and
+    /// The caller must guarantee that the pointer is valid for reads and
     /// points to a valid `js::gc::Cell`.
     pub unsafe fn get(&self) -> T {
         // Note: read_unaligned is used since SpiderMonkey doesn't
         // guarantee the expected alignment of Rust pointers.
         self.inner_ptr.get().read_unaligned()
+    }
+
+    /// Returns the raw pointer to the internal cell of [`GcPtr`].
+    ///
+    /// # Notes
+    ///
+    /// While the operation itself is not unsafe, the caller must guarantee
+    /// that any writes to the pointer are barriered and that the [`GcPtr`]
+    /// isn't moved for the lifetime of the pointer.
+    pub fn get_unsafe(&self) -> *mut T {
+        self.inner_ptr.get()
     }
 
     /// Sets the pointer to a new value
