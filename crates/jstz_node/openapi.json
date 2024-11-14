@@ -419,6 +419,14 @@
   },
   "components": {
     "schemas": {
+      "Blake2b": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 0
+        }
+      },
       "Content": {
         "oneOf": [
           {
@@ -669,7 +677,7 @@
         ],
         "properties": {
           "hash": {
-            "type": "string"
+            "$ref": "#/components/schemas/Blake2b"
           },
           "result": {
             "$ref": "#/components/schemas/ReceiptResult"

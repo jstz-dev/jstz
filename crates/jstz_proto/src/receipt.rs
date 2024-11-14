@@ -30,7 +30,6 @@ impl From<Result<ReceiptContent>> for ReceiptResult {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Receipt {
-    #[schema(value_type = String)]
     hash: OperationHash,
     pub result: ReceiptResult,
 }
