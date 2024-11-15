@@ -1,5 +1,6 @@
 use crate::unused_port;
 use anyhow::Result;
+use serde::Serialize;
 use std::{
     fmt::{self, Display, Formatter},
     path::PathBuf,
@@ -30,10 +31,20 @@ impl Display for OctezNodeHistoryMode {
     }
 }
 
-#[derive(Clone, PartialEq, Debug)]
+impl Serialize for OctezNodeHistoryMode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+#[derive(Clone, PartialEq, Debug, Serialize)]
 pub struct OctezNodeRunOptions {
     synchronisation_threshold: u8,
     network: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
     history_mode: Option<OctezNodeHistoryMode>,
 }
 
@@ -104,11 +115,12 @@ impl OctezNodeRunOptionsBuilder {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct OctezNodeConfig {
     /// Path to the octez node binary.
     pub binary_path: PathBuf,
     /// Path to the directory where the node keeps data.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub data_dir: Option<PathBuf>,
     /// Name of the tezos network that the node instance runs on.
     pub network: String,
@@ -117,6 +129,7 @@ pub struct OctezNodeConfig {
     // TCP address and port at for p2p which this instance can be reached
     pub p2p_address: Endpoint,
     /// Path to the file that keeps octez node logs.
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub log_file: Option<PathBuf>,
     /// Run options for octez node.
     pub run_options: OctezNodeRunOptions,
@@ -240,6 +253,62 @@ mod tests {
     }
 
     #[test]
+    fn config_serialize() {
+        let mut builder = OctezNodeConfigBuilder::new();
+        let run_options = OctezNodeRunOptionsBuilder::new()
+            .set_network("sandbox")
+            .build();
+        let config = serde_json::to_value(
+            builder
+                .set_p2p_address(&Endpoint::localhost(8889))
+                .set_binary_path("/tmp/binary")
+                .set_data_dir("/tmp/something")
+                .set_network("network")
+                .set_rpc_endpoint(&Endpoint::localhost(8888))
+                .set_log_file("/log_file")
+                .set_run_options(&run_options)
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            config,
+            serde_json::json!({
+                "binary_path": "/tmp/binary",
+                "data_dir": "/tmp/something",
+                "network": "network",
+                "rpc_endpoint": "http://localhost:8888",
+                "p2p_address": "http://localhost:8889",
+                "log_file": "/log_file",
+                "run_options": {"network": "sandbox", "synchronisation_threshold": 0}
+            })
+        );
+
+        // with None fields
+        let config = serde_json::to_value(
+            builder
+                .set_p2p_address(&Endpoint::localhost(8889))
+                .set_binary_path("/tmp/binary")
+                .set_network("network")
+                .set_rpc_endpoint(&Endpoint::localhost(8888))
+                .set_run_options(&run_options)
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            config,
+            serde_json::json!({
+                "binary_path": "/tmp/binary",
+                "network": "network",
+                "rpc_endpoint": "http://localhost:8888",
+                "p2p_address": "http://localhost:8889",
+                "run_options": {"network": "sandbox", "synchronisation_threshold": 0}
+            })
+        );
+    }
+
+    #[test]
     fn run_option_builder() {
         let mut run_options_builder = OctezNodeRunOptionsBuilder::new();
         let run_options = run_options_builder
@@ -296,9 +365,55 @@ mod tests {
     }
 
     #[test]
+    fn run_option_serialize() {
+        let mut run_options_builder = OctezNodeRunOptionsBuilder::new();
+        let run_options = serde_json::to_value(
+            run_options_builder
+                .set_network("foo")
+                .set_history_mode(OctezNodeHistoryMode::Full(5))
+                .set_synchronisation_threshold(3)
+                .build(),
+        )
+        .unwrap();
+        assert_eq!(
+            run_options,
+            serde_json::json!({"network": "foo", "history_mode": "full:5", "synchronisation_threshold": 3})
+        );
+
+        // No history mode
+        let run_options = serde_json::to_value(
+            run_options_builder
+                .set_network("foo")
+                .set_synchronisation_threshold(3)
+                .build(),
+        )
+        .unwrap();
+        assert_eq!(
+            run_options,
+            serde_json::json!({"network": "foo", "synchronisation_threshold": 3})
+        );
+    }
+
+    #[test]
     fn history_mode_to_string() {
         assert_eq!(OctezNodeHistoryMode::Archive.to_string(), "archive");
         assert_eq!(OctezNodeHistoryMode::Full(2).to_string(), "full:2");
         assert_eq!(OctezNodeHistoryMode::Rolling(1).to_string(), "rolling:1");
+    }
+
+    #[test]
+    fn history_mode_serialize() {
+        assert_eq!(
+            serde_json::to_string(&OctezNodeHistoryMode::Archive).unwrap(),
+            "\"archive\""
+        );
+        assert_eq!(
+            serde_json::to_string(&OctezNodeHistoryMode::Full(2)).unwrap(),
+            "\"full:2\""
+        );
+        assert_eq!(
+            serde_json::to_string(&OctezNodeHistoryMode::Rolling(1)).unwrap(),
+            "\"rolling:1\""
+        );
     }
 }
