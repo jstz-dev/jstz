@@ -25,7 +25,7 @@ impl OctezNode {
         &self,
         network: &str,
         rpc_endpoint: &Endpoint,
-        p2p_endpoint: &Endpoint,
+        p2p_address: &Endpoint,
         num_connections: u32,
     ) -> Result<Child> {
         Ok(self
@@ -43,7 +43,7 @@ impl OctezNode {
                 "--connections",
                 num_connections.to_string().as_str(),
                 "--net-addr",
-                &p2p_endpoint.to_authority(),
+                &p2p_address.to_authority(),
             ])
             .spawn()?)
     }
