@@ -1,9 +1,10 @@
 mod utils;
-use std::path::PathBuf;
+use std::io::Read;
 use std::str::FromStr;
 
 use anyhow::Result;
 use http::Uri;
+use jstz_node::config::JstzNodeConfig;
 use jstzd::task::jstzd::JstzdConfig;
 use jstzd::task::utils::{get_block_level, retry};
 use jstzd::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS};
@@ -21,6 +22,8 @@ use serde::Deserialize;
 use serde_json::from_str;
 use std::fs;
 use std::path::Path;
+use std::path::PathBuf;
+use tempfile::NamedTempFile;
 use tezos_crypto_rs::hash::SmartRollupHash;
 
 const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
@@ -40,11 +43,15 @@ async fn jstzd_test() {
         Uri::from_str(&format!("http://127.0.0.1:{}", unused_port())).unwrap(),
     )
     .unwrap();
+    let jstz_node_rpc_endpoint = Endpoint::localhost(unused_port());
     let jstzd_port = unused_port();
-    let (jstzd_config, octez_client_config) =
-        build_configs(&node_rpc_endpoint, &rollup_rpc_endpoint).await;
+    let (jstzd_config, octez_client_config, kernel_debug_file) = build_configs(
+        &node_rpc_endpoint,
+        &rollup_rpc_endpoint,
+        &jstz_node_rpc_endpoint,
+    )
+    .await;
     let mut jstzd = jstzd::task::jstzd::JstzdServer::new(jstzd_config, jstzd_port);
-
     // start jstzd
     jstzd.run().await.unwrap();
 
@@ -87,7 +94,19 @@ async fn jstzd_test() {
     .await;
     assert!(rollup_running);
 
+    let jstz_node_is_running = retry(10, 1000, || async {
+        let res = jstz_node_health_check(&jstz_node_rpc_endpoint.clone()).await;
+        Ok(res.is_ok_and(|healthy| healthy))
+    })
+    .await;
+    assert!(jstz_node_is_running);
+
     assert!(jstzd.health_check().await);
+
+    // check if any logs are written to the kernel_debug_file
+    let kernel_debug_content = read_file(kernel_debug_file).await;
+    assert!(kernel_debug_content.contains("Internal message: start of level"));
+    assert!(kernel_debug_content.contains("Internal message: end of level"));
 
     // stop jstzd
     jstzd.stop().await.unwrap();
@@ -101,7 +120,7 @@ async fn jstzd_test() {
     .await;
     assert!(jstzd_stopped);
 
-    // check if the node, baker, rollup are destroyed
+    // check if the node, baker, rollup and jstz_node are destroyed
     let node_destroyed = retry(30, 1000, || async {
         let res = reqwest::get(&octez_node_health_check_endpoint).await;
         // Should get an error since the node should have been terminated
@@ -137,7 +156,8 @@ async fn run_ps() -> String {
 async fn build_configs(
     octez_node_rpc_endpoint: &Endpoint,
     rollup_rpc_endpoint: &Endpoint,
-) -> (JstzdConfig, OctezClientConfig) {
+    jstz_node_rpc_endpoint: &Endpoint,
+) -> (JstzdConfig, OctezClientConfig, NamedTempFile) {
     let run_options = OctezNodeRunOptionsBuilder::new()
         .set_synchronisation_threshold(0)
         .set_network("sandbox")
@@ -171,8 +191,9 @@ async fn build_configs(
         .build()
         .expect("Failed to build baker config");
 
+    let kernel_debug_file = NamedTempFile::new().unwrap();
     let rollup_config = OctezRollupConfigBuilder::new(
-        octez_node_rpc_endpoint.clone(),
+        octez_node_config.rpc_endpoint.clone(),
         octez_client_config.base_dir().into(),
         SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
         JSTZ_ROLLUP_OPERATOR_ALIAS.to_string(),
@@ -182,18 +203,26 @@ async fn build_configs(
         preimages_dir: rollup_preimages_dir,
     })
     .set_rpc_endpoint(rollup_rpc_endpoint)
+    .set_kernel_debug_file(kernel_debug_file.path())
     .build()
     .expect("failed to build rollup config");
 
-    let config = jstzd::task::jstzd::JstzdConfig::new(
+    let jstz_node_config = JstzNodeConfig::new(
+        jstz_node_rpc_endpoint,
+        &rollup_config.rpc_endpoint,
+        kernel_debug_file.path(),
+    );
+
+    let jstzd_config = jstzd::task::jstzd::JstzdConfig::new(
         octez_node_config,
         baker_config,
         octez_client_config.clone(),
         rollup_config,
+        jstz_node_config,
         protocol_params,
     );
 
-    (config, octez_client_config)
+    (jstzd_config, octez_client_config, kernel_debug_file)
 }
 
 fn jstz_rollup_files() -> (PathBuf, PathBuf, PathBuf) {
@@ -281,4 +310,16 @@ pub async fn rollup_health_check(rollup_rpc_endpoint: &Endpoint) -> Result<bool>
     let res = reqwest::get(format!("{}/health", rollup_rpc_endpoint)).await?;
     let body = res.json::<HealthCheckResponse>().await?;
     Ok(body.healthy)
+}
+
+async fn read_file(file: NamedTempFile) -> String {
+    let mut file = file.reopen().unwrap();
+    let mut contents = String::new();
+    file.read_to_string(&mut contents).unwrap();
+    contents
+}
+
+pub async fn jstz_node_health_check(jstz_node_rpc_endpoint: &Endpoint) -> Result<bool> {
+    let res = reqwest::get(format!("{}/health", jstz_node_rpc_endpoint)).await?;
+    Ok(res.status().is_success())
 }

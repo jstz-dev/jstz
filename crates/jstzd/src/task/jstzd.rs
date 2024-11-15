@@ -1,4 +1,5 @@
 use super::{
+    jstz_node::JstzNode,
     octez_baker::OctezBaker,
     octez_node::OctezNode,
     octez_rollup::OctezRollup,
@@ -9,6 +10,7 @@ use anyhow::{anyhow, Result};
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use axum::{extract::State, routing::get, Router};
+use jstz_node::config::JstzNodeConfig;
 use octez::r#async::{
     baker::OctezBakerConfig,
     client::{OctezClient, OctezClientConfig},
@@ -25,6 +27,7 @@ struct Jstzd {
     octez_node: Arc<RwLock<OctezNode>>,
     baker: Arc<RwLock<OctezBaker>>,
     rollup: Arc<RwLock<OctezRollup>>,
+    jstz_node: Arc<RwLock<JstzNode>>,
 }
 
 #[derive(Clone)]
@@ -33,6 +36,7 @@ pub struct JstzdConfig {
     baker_config: OctezBakerConfig,
     octez_client_config: OctezClientConfig,
     octez_rollup_config: OctezRollupConfig,
+    jstz_node_config: JstzNodeConfig,
     protocol_params: ProtocolParameter,
 }
 
@@ -42,6 +46,7 @@ impl JstzdConfig {
         baker_config: OctezBakerConfig,
         octez_client_config: OctezClientConfig,
         octez_rollup_config: OctezRollupConfig,
+        jstz_node_config: JstzNodeConfig,
         protocol_params: ProtocolParameter,
     ) -> Self {
         Self {
@@ -49,6 +54,7 @@ impl JstzdConfig {
             baker_config,
             octez_client_config,
             octez_rollup_config,
+            jstz_node_config,
             protocol_params,
         }
     }
@@ -62,17 +68,19 @@ impl Task for Jstzd {
         let octez_node = OctezNode::spawn(config.octez_node_config.clone()).await?;
         let octez_client = OctezClient::new(config.octez_client_config.clone());
         Self::wait_for_node(&octez_node).await?;
-
         Self::import_activator(&octez_client).await;
         Self::import_rollup_operator(&octez_client).await;
         Self::activate_protocol(&octez_client, &config.protocol_params).await?;
         let baker = OctezBaker::spawn(config.baker_config.clone()).await?;
         Self::wait_for_block_level(&config.octez_node_config.rpc_endpoint, 3).await?;
         let rollup = OctezRollup::spawn(config.octez_rollup_config.clone()).await?;
+        let jstz_node = JstzNode::spawn(config.jstz_node_config).await?;
+        Self::wait_for_jstz_node(&jstz_node).await?;
         Ok(Self {
             octez_node: Arc::new(RwLock::new(octez_node)),
             baker: Arc::new(RwLock::new(baker)),
             rollup: Arc::new(RwLock::new(rollup)),
+            jstz_node: Arc::new(RwLock::new(jstz_node)),
         })
     }
 
@@ -81,6 +89,7 @@ impl Task for Jstzd {
             self.octez_node.write().await.kill(),
             self.baker.write().await.kill(),
             self.rollup.write().await.kill(),
+            self.jstz_node.write().await.kill(),
         ])
         .await;
 
@@ -103,6 +112,7 @@ impl Task for Jstzd {
             self.octez_node.read().await.health_check(),
             self.baker.read().await.health_check(),
             self.rollup.read().await.health_check(),
+            self.jstz_node.read().await.health_check(),
         ])
         .await;
 
@@ -183,6 +193,16 @@ impl Jstzd {
         .await;
         if !ready {
             return Err(anyhow!("baker is not ready after retries"));
+        }
+        Ok(())
+    }
+
+    async fn wait_for_jstz_node(jstz_node: &JstzNode) -> Result<()> {
+        let ready = retry(10, 1000, || async { jstz_node.health_check().await }).await;
+        if !ready {
+            return Err(anyhow::anyhow!(
+                "jstz node is still not ready after retries"
+            ));
         }
         Ok(())
     }
