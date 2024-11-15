@@ -54,13 +54,13 @@ mod test {
         tx.begin();
         let receipt = execute(&mut host, &mut tx, deposit);
         assert!(matches!(
-            receipt.clone().inner,
+            receipt.clone().result,
             ReceiptResult::Success(ReceiptContent::Deposit(DepositReceipt {
                 account,
                 updated_balance,
             })) if account == receiver && updated_balance == 20
         ));
-        let raw_json_payload = r#"{"hash":[39,12,7,148,87,7,176,168,111,219,214,147,14,123,179,202,232,151,138,59,207,182,101,158,128,98,239,57,236,88,195,42],"inner":{"_type":"Success","inner":{"_type":"DepositReceipt","account":"tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx","updated_balance":20}}}"#;
+        let raw_json_payload = r#"{"hash":[39,12,7,148,87,7,176,168,111,219,214,147,14,123,179,202,232,151,138,59,207,182,101,158,128,98,239,57,236,88,195,42],"result":{"_type":"Success","inner":{"_type":"Deposit","account":"tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx","updated_balance":20}}}"#;
         assert_eq!(raw_json_payload, serde_json::to_string(&receipt).unwrap());
     }
 }

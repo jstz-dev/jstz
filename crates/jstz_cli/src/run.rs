@@ -164,7 +164,7 @@ pub async fn exec(
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 
     debug!("Receipt: {:?}", receipt);
-    let (status_code, headers, body) = match receipt.inner {
+    let (status_code, headers, body) = match receipt.result {
         ReceiptResult::Success(ReceiptContent::RunFunction(run_function)) => (
             run_function.status_code,
             run_function.headers,
@@ -174,7 +174,7 @@ pub async fn exec(
             bail!("Expected a `RunFunction` receipt, but got something else.")
         }
 
-        ReceiptResult::Failed { source: err } => bail_user_error!("{err}"),
+        ReceiptResult::Failed(err) => bail_user_error!("{err}"),
     };
 
     if let Some(spinner) = spinner.as_mut() {

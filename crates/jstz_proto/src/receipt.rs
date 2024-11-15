@@ -11,21 +11,19 @@ use utoipa::ToSchema;
 
 // pub type ReceiptResult<T> = std::result::Result<T, ReceiptError>;
 #[derive(Debug, Clone, ToSchema, Serialize, Deserialize)]
-#[serde(tag = "_type")]
+#[serde(tag = "_type", content = "inner")]
 pub enum ReceiptResult {
     #[schema(title = "Success")]
     Success(ReceiptContent),
     #[schema(title = "Failure")]
-    Failed { source: String },
+    Failed(String),
 }
 
 impl From<Result<ReceiptContent>> for ReceiptResult {
     fn from(value: Result<ReceiptContent>) -> Self {
         match value {
             Ok(ok) => ReceiptResult::Success(ok),
-            Err(err) => ReceiptResult::Failed {
-                source: err.to_string(),
-            },
+            Err(err) => ReceiptResult::Failed(err.to_string()),
         }
     }
 }
@@ -34,14 +32,14 @@ impl From<Result<ReceiptContent>> for ReceiptResult {
 pub struct Receipt {
     #[schema(value_type = String)]
     hash: OperationHash,
-    pub inner: ReceiptResult,
+    pub result: ReceiptResult,
 }
 
 impl Receipt {
     pub fn new(hash: OperationHash, inner: Result<ReceiptContent>) -> Self {
         Self {
             hash,
-            inner: inner.into(),
+            result: inner.into(),
         }
     }
 
