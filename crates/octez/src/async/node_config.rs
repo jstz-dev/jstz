@@ -32,7 +32,7 @@ impl Display for OctezNodeHistoryMode {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct OctezNodeRunOptions {
-    synchonisation_threshold: u8,
+    synchronisation_threshold: u8,
     network: String,
     history_mode: Option<OctezNodeHistoryMode>,
 }
@@ -42,7 +42,7 @@ impl Display for OctezNodeRunOptions {
         let mut s = vec![];
         s.push(format!(
             "--synchronisation-threshold {}",
-            &self.synchonisation_threshold
+            &self.synchronisation_threshold
         ));
         s.push(format!("--network {}", &self.network));
         if let Some(v) = &self.history_mode {
@@ -57,7 +57,7 @@ impl Default for OctezNodeRunOptions {
     fn default() -> Self {
         Self {
             network: DEFAULT_NETWORK.to_owned(),
-            synchonisation_threshold: 0,
+            synchronisation_threshold: 0,
             history_mode: None,
         }
     }
@@ -65,7 +65,7 @@ impl Default for OctezNodeRunOptions {
 
 #[derive(Default)]
 pub struct OctezNodeRunOptionsBuilder {
-    synchonisation_threshold: Option<u8>,
+    synchronisation_threshold: Option<u8>,
     network: Option<String>,
     history_mode: Option<OctezNodeHistoryMode>,
 }
@@ -78,7 +78,7 @@ impl OctezNodeRunOptionsBuilder {
     }
 
     pub fn set_synchronisation_threshold(&mut self, threshold: u8) -> &mut Self {
-        self.synchonisation_threshold.replace(threshold);
+        self.synchronisation_threshold.replace(threshold);
         self
     }
 
@@ -94,8 +94,8 @@ impl OctezNodeRunOptionsBuilder {
 
     pub fn build(&mut self) -> OctezNodeRunOptions {
         OctezNodeRunOptions {
-            synchonisation_threshold: self
-                .synchonisation_threshold
+            synchronisation_threshold: self
+                .synchronisation_threshold
                 .take()
                 .unwrap_or_default(),
             network: self.network.take().unwrap_or(DEFAULT_NETWORK.to_owned()),
@@ -128,7 +128,7 @@ pub struct OctezNodeConfigBuilder {
     data_dir: Option<PathBuf>,
     network: Option<String>,
     rpc_endpoint: Option<Endpoint>,
-    p2p_endpoint: Option<Endpoint>,
+    p2p_address: Option<Endpoint>,
     log_file: Option<PathBuf>,
     run_options: Option<OctezNodeRunOptions>,
 }
@@ -162,8 +162,8 @@ impl OctezNodeConfigBuilder {
         self
     }
 
-    pub fn set_p2p_endpoint(&mut self, endpoint: &Endpoint) -> &mut Self {
-        self.p2p_endpoint = Some(endpoint.to_owned());
+    pub fn set_p2p_address(&mut self, endpoint: &Endpoint) -> &mut Self {
+        self.p2p_address = Some(endpoint.to_owned());
         self
     }
 
@@ -192,7 +192,7 @@ impl OctezNodeConfigBuilder {
                 .rpc_endpoint
                 .take()
                 .unwrap_or(Endpoint::localhost(unused_port())),
-            p2p_address: self.p2p_endpoint.take().unwrap_or(
+            p2p_address: self.p2p_address.take().unwrap_or(
                 Endpoint::try_from(
                     http::Uri::from_str(&format!("{}:{}", LOCAL_ADDRESS, unused_port()))
                         .unwrap(),
@@ -252,7 +252,7 @@ mod tests {
             OctezNodeHistoryMode::Full(5)
         );
         assert_eq!(run_options.network, "foo");
-        assert_eq!(run_options.synchonisation_threshold, 3);
+        assert_eq!(run_options.synchronisation_threshold, 3);
     }
 
     #[test]
@@ -261,7 +261,7 @@ mod tests {
         let run_options = run_options_builder.build();
         assert!(run_options.history_mode.is_none());
         assert_eq!(run_options.network, "sandbox");
-        assert_eq!(run_options.synchonisation_threshold, 0);
+        assert_eq!(run_options.synchronisation_threshold, 0);
     }
 
     #[test]
@@ -269,7 +269,7 @@ mod tests {
         let run_options = OctezNodeRunOptions::default();
         assert!(run_options.history_mode.is_none());
         assert_eq!(run_options.network, "sandbox");
-        assert_eq!(run_options.synchonisation_threshold, 0);
+        assert_eq!(run_options.synchronisation_threshold, 0);
     }
 
     #[test]
