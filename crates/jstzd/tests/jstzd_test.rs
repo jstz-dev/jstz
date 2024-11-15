@@ -100,7 +100,11 @@ async fn jstzd_test() {
     let octez_client = OctezClient::new(octez_client_config);
     check_bootstrap_contracts(&octez_client).await;
 
-    jstzd.stop().await.unwrap();
+    reqwest::Client::new()
+        .put(&format!("http://localhost:{}/shutdown", jstzd_port))
+        .send()
+        .await
+        .unwrap();
 
     let jstzd_stopped = retry(30, 1000, || async {
         let res = reqwest::get(&jstz_health_check_endpoint).await;
@@ -130,6 +134,9 @@ async fn jstzd_test() {
     assert!(baker_destroyed);
 
     assert!(!jstzd.health_check().await);
+
+    // stop should be idempotent and thus should be okay after jstzd is already stopped
+    jstzd.stop().await.unwrap();
 }
 
 async fn run_ps() -> String {
