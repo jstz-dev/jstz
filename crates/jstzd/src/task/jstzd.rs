@@ -2,7 +2,11 @@ use super::{octez_baker::OctezBaker, octez_node::OctezNode, utils::retry, Task};
 use anyhow::Result;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
-use axum::{extract::State, routing::get, Router};
+use axum::{
+    extract::State,
+    routing::{get, put},
+    Router,
+};
 use octez::r#async::{
     baker::OctezBakerConfig,
     client::{OctezClient, OctezClientConfig},
@@ -149,21 +153,19 @@ impl Jstzd {
 pub struct JstzdServer {
     jstzd_config: JstzdConfig,
     jstzd_server_port: u16,
-    server_handle: Option<JoinHandle<()>>,
     state: Arc<RwLock<ServerState>>,
 }
 
-#[derive(Clone)]
 struct ServerState {
     jstzd: Option<Jstzd>,
+    server_handle: Option<JoinHandle<()>>,
 }
 
 #[async_trait]
 impl AsyncDrop for JstzdServer {
     async fn async_drop(&mut self) {
-        if let Err(e) = self.stop().await {
-            eprintln!("failed to stop jstzd server: {:?}", e);
-        }
+        let mut lock = self.state.write().await;
+        let _ = shutdown(&mut lock).await;
     }
 }
 
@@ -172,71 +174,82 @@ impl JstzdServer {
         Self {
             jstzd_config: config,
             jstzd_server_port: port,
-            server_handle: None,
-            state: Arc::new(RwLock::new(ServerState { jstzd: None })),
+            state: Arc::new(RwLock::new(ServerState {
+                jstzd: None,
+                server_handle: None,
+            })),
         }
     }
 
     pub async fn health_check(&self) -> bool {
-        if let Some(v) = &self.server_handle {
-            if !v.is_finished() {
-                let state = self.state.read().await;
-                return health_check(&state).await;
-            }
-        }
-
-        false
+        let lock = self.state.read().await;
+        health_check(&lock).await
     }
 
     pub async fn stop(&mut self) -> Result<()> {
-        let mut err = None;
-        if let Some(mut jstzd) = self.state.write().await.jstzd.take() {
-            if let Err(e) = jstzd.kill().await {
-                err.replace(e);
-            };
-        }
-        if let Some(server) = self.server_handle.take() {
-            server.abort();
-        }
-        match err {
-            Some(e) => Err(e),
-            None => Ok(()),
-        }
+        let mut lock = self.state.write().await;
+        shutdown(&mut lock).await
     }
 
     pub async fn run(&mut self) -> Result<()> {
         let jstzd = Jstzd::spawn(self.jstzd_config.clone()).await?;
-        let state = ServerState {
-            jstzd: Some(jstzd.clone()),
-        };
         self.state.write().await.jstzd.replace(jstzd);
 
         let router = Router::new()
             .route("/health", get(health_check_handler))
-            .with_state(state);
+            .route("/shutdown", put(shutdown_handler))
+            .with_state(self.state.clone());
         let listener = TcpListener::bind(("0.0.0.0", self.jstzd_server_port)).await?;
 
         let handle = tokio::spawn(async {
             axum::serve(listener, router).await.unwrap();
         });
-        self.server_handle.replace(handle);
+        self.state.write().await.server_handle.replace(handle);
         Ok(())
     }
 }
 
 async fn health_check(state: &ServerState) -> bool {
-    if let Some(jstzd) = &state.jstzd {
-        if let Ok(v) = jstzd.health_check().await {
-            return v;
+    if let Some(v) = &state.server_handle {
+        if !v.is_finished() {
+            if let Some(jstzd) = &state.jstzd {
+                if let Ok(v) = jstzd.health_check().await {
+                    return v;
+                }
+            }
         }
     }
-
     false
 }
 
-async fn health_check_handler(state: State<ServerState>) -> http::StatusCode {
-    match health_check(&state).await {
+async fn shutdown(state: &mut ServerState) -> Result<()> {
+    if let Some(mut jstzd) = state.jstzd.take() {
+        if let Err(e) = jstzd.kill().await {
+            eprintln!("failed to shutdown jstzd: {:?}", e);
+            state.jstzd.replace(jstzd);
+            return Err(e);
+        };
+    }
+    if let Some(server) = state.server_handle.take() {
+        server.abort();
+    }
+    Ok(())
+}
+
+async fn health_check_handler(
+    state: State<Arc<RwLock<ServerState>>>,
+) -> http::StatusCode {
+    let lock = state.read().await;
+    match health_check(&lock).await {
         true => http::StatusCode::OK,
         _ => http::StatusCode::INTERNAL_SERVER_ERROR,
     }
+}
+
+async fn shutdown_handler(state: State<Arc<RwLock<ServerState>>>) -> http::StatusCode {
+    let mut lock = state.write().await;
+    if shutdown(&mut lock).await.is_err() {
+        return http::StatusCode::INTERNAL_SERVER_ERROR;
+    };
+    http::StatusCode::NO_CONTENT
 }
