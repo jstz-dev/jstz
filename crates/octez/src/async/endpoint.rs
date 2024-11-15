@@ -1,7 +1,6 @@
-#![allow(dead_code)]
-use std::fmt::{self, Display};
-
 use http::{uri::Scheme, Uri};
+use serde::Serialize;
+use std::fmt::{self, Display};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Endpoint {
@@ -29,6 +28,15 @@ impl Endpoint {
 
     pub fn port(&self) -> u16 {
         self.port
+    }
+}
+
+impl Serialize for Endpoint {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
     }
 }
 
@@ -120,5 +128,14 @@ mod tests {
     fn test_to_string() {
         let endpoint = Endpoint::localhost(8765);
         assert!(endpoint.to_string().contains("http://localhost:8765"));
+    }
+
+    #[test]
+    fn serialize() {
+        let endpoint = Endpoint::localhost(8765);
+        assert_eq!(
+            serde_json::to_string(&endpoint).unwrap(),
+            "\"http://localhost:8765\""
+        )
     }
 }
