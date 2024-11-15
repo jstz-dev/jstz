@@ -201,7 +201,7 @@ mod test {
 
         assert_eq!(expected_hash, *receipt.hash());
 
-        match receipt.inner {
+        match receipt.result {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
@@ -240,7 +240,7 @@ mod test {
 
         assert_eq!(expected_hash, *receipt.hash());
 
-        match receipt.inner {
+        match receipt.result {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
@@ -290,7 +290,8 @@ mod test {
         let fa_deposit = mock_fa_deposit(Some(proxy.clone()));
         let ticket_hash = fa_deposit.ticket_hash.clone();
 
-        let Receipt { inner, .. } = super::execute(&mut host, &mut tx, fa_deposit);
+        let Receipt { result: inner, .. } =
+            super::execute(&mut host, &mut tx, fa_deposit);
 
         match inner {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
@@ -342,7 +343,8 @@ mod test {
 
         let fa_deposit2 = mock_fa_deposit(Some(proxy.clone()));
 
-        let Receipt { inner, .. } = super::execute(&mut host, &mut tx, fa_deposit2);
+        let Receipt { result: inner, .. } =
+            super::execute(&mut host, &mut tx, fa_deposit2);
 
         match inner {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
@@ -389,7 +391,8 @@ mod test {
         let expected_receiver = fa_deposit.receiver.clone();
         let ticket_hash = fa_deposit.ticket_hash.clone();
 
-        let Receipt { inner, .. } = super::execute(&mut host, &mut tx, fa_deposit);
+        let Receipt { result: inner, .. } =
+            super::execute(&mut host, &mut tx, fa_deposit);
 
         match inner {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {

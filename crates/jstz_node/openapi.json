@@ -465,7 +465,10 @@
             ],
             "title": "RunFunction"
           }
-        ]
+        ],
+        "discriminator": {
+          "propertyName": "_type"
+        }
       },
       "DeployFunction": {
         "type": "object",
@@ -662,13 +665,13 @@
         "type": "object",
         "required": [
           "hash",
-          "inner"
+          "result"
         ],
         "properties": {
           "hash": {
             "type": "string"
           },
-          "inner": {
+          "result": {
             "$ref": "#/components/schemas/ReceiptResult"
           }
         }
@@ -785,37 +788,37 @@
             ],
             "title": "FaWithdraw"
           }
-        ]
+        ],
+        "discriminator": {
+          "propertyName": "_type"
+        }
       },
       "ReceiptResult": {
         "oneOf": [
           {
-            "allOf": [
-              {
-                "$ref": "#/components/schemas/ReceiptContent"
-              },
-              {
-                "type": "object",
-                "required": [
-                  "_type"
-                ],
-                "properties": {
-                  "_type": {
-                    "type": "string",
-                    "enum": [
-                      "Success"
-                    ]
-                  }
-                }
-              }
+            "type": "object",
+            "title": "Success",
+            "required": [
+              "inner",
+              "_type"
             ],
-            "title": "Success"
+            "properties": {
+              "_type": {
+                "type": "string",
+                "enum": [
+                  "Success"
+                ]
+              },
+              "inner": {
+                "$ref": "#/components/schemas/ReceiptContent"
+              }
+            }
           },
           {
             "type": "object",
             "title": "Failure",
             "required": [
-              "source",
+              "inner",
               "_type"
             ],
             "properties": {
@@ -825,7 +828,7 @@
                   "Failed"
                 ]
               },
-              "source": {
+              "inner": {
                 "type": "string"
               }
             }

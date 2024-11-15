@@ -1,5 +1,5 @@
 use anyhow::Result;
-use api_doc::ApiDoc;
+use api_doc::{modify, ApiDoc};
 use axum::{http, routing::get};
 use config::JstzNodeConfig;
 use octez::OctezRollupClient;
@@ -65,8 +65,8 @@ pub async fn run(
         .allow_origin(Any)
         .allow_headers(Any);
 
-    let (router, openapi) = router().with_state(state).layer(cors).split_for_parts();
-
+    let (router, mut openapi) = router().with_state(state).layer(cors).split_for_parts();
+    modify(&mut openapi);
     let router = router.merge(Scalar::with_url("/scalar", openapi));
 
     let listener = TcpListener::bind(format!("{}:{}", addr, port)).await?;
@@ -86,6 +86,7 @@ fn router() -> OpenApiRouter<AppState> {
 }
 
 pub fn openapi_json_raw() -> anyhow::Result<String> {
-    let doc = router().split_for_parts().1.to_pretty_json()?;
-    Ok(doc)
+    let mut doc = router().split_for_parts().1;
+    modify(&mut doc);
+    Ok(doc.to_pretty_json()?)
 }
