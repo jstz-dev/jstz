@@ -1,29 +1,48 @@
-use http::{HeaderMap, StatusCode};
-use jstz_api::http::body::HttpBody;
-use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
-
 use crate::{
     context::account::Address,
     executor::{fa_deposit::FaDepositReceipt, fa_withdraw::FaWithdrawReceipt},
     operation::OperationHash,
     Result,
 };
+use http::{HeaderMap, StatusCode};
+use jstz_api::http::body::HttpBody;
+use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
-pub type ReceiptResult<T> = std::result::Result<T, String>;
+// pub type ReceiptResult<T> = std::result::Result<T, ReceiptError>;
+#[derive(Debug, Clone, ToSchema, Serialize, Deserialize)]
+#[serde(tag = "_type")]
+pub enum ReceiptResult {
+    #[schema(title = "Success")]
+    Success(ReceiptContent),
+    #[schema(title = "Failure")]
+    Failed { source: String },
+}
+
+impl From<Result<ReceiptContent>> for ReceiptResult {
+    fn from(value: Result<ReceiptContent>) -> Self {
+        match value {
+            Ok(ok) => ReceiptResult::Success(ok),
+            Err(err) => ReceiptResult::Failed {
+                source: err.to_string(),
+            },
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct Receipt {
     #[schema(value_type = String)]
     hash: OperationHash,
-    #[schema(value_type = openapi::ReceiptResult<ReceiptContent>)]
-    pub inner: ReceiptResult<ReceiptContent>,
+    pub inner: ReceiptResult,
 }
 
 impl Receipt {
     pub fn new(hash: OperationHash, inner: Result<ReceiptContent>) -> Self {
-        let inner = inner.map_err(|e| e.to_string());
-        Self { hash, inner }
+        Self {
+            hash,
+            inner: inner.into(),
+        }
     }
 
     pub fn hash(&self) -> &OperationHash {
@@ -59,22 +78,14 @@ pub struct DepositReceipt {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[serde(tag = "_type")]
 pub enum ReceiptContent {
+    #[schema(title = "DeployFunction")]
     DeployFunction(DeployFunctionReceipt),
+    #[schema(title = "RunFunction")]
     RunFunction(RunFunctionReceipt),
+    #[schema(title = "Deposit")]
     Deposit(DepositReceipt),
+    #[schema(title = "FaDeposit")]
     FaDeposit(FaDepositReceipt),
+    #[schema(title = "FaWithdraw")]
     FaWithdraw(FaWithdrawReceipt),
-}
-
-mod openapi {
-    use serde::{Deserialize, Serialize};
-    use utoipa::ToSchema;
-
-    #[allow(dead_code)]
-    #[derive(ToSchema, Serialize, Deserialize)]
-    #[serde(tag = "_type")]
-    pub enum ReceiptResult<T: ToSchema> {
-        Ok(T),
-        Err(String),
-    }
 }

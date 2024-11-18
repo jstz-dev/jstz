@@ -83,6 +83,7 @@ impl TryFrom<FA2_1Ticket> for Ticket {
 type OutboxMessageId = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+#[serde(tag = "_type")]
 pub struct FaWithdrawReceipt {
     pub source: PublicKeyHash,
     pub outbox_message_id: OutboxMessageId,

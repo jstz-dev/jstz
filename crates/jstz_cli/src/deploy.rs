@@ -2,7 +2,7 @@ use boa_engine::JsError;
 use jstz_proto::{
     context::account::ParsedCode,
     operation::{Content, DeployFunction, Operation, SignedOperation},
-    receipt::ReceiptContent,
+    receipt::{ReceiptContent, ReceiptResult},
 };
 use log::{debug, info};
 
@@ -96,11 +96,11 @@ pub async fn exec(
     debug!("Receipt: {:?}", receipt);
 
     let address = match receipt.inner {
-        Ok(ReceiptContent::DeployFunction(deploy)) => deploy.address,
-        Ok(_) => {
+        ReceiptResult::Success(ReceiptContent::DeployFunction(deploy)) => deploy.address,
+        ReceiptResult::Success(_) => {
             bail!("Expected a `DeployFunction` receipt, but got something else.")
         }
-        Err(err) => {
+        ReceiptResult::Failed { source: err } => {
             bail_user_error!("Failed to deploy smart function with error {err:?}.")
         }
     };
