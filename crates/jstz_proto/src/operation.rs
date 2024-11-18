@@ -80,6 +80,7 @@ impl Operation {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
+#[serde(tag = "_type")]
 pub struct DeployFunction {
     /// Smart function code
     pub function_code: ParsedCode,
@@ -91,6 +92,7 @@ pub struct DeployFunction {
 #[schema(description = "Request used to run a smart function. \
     The target smart function is given by the host part of the uri. \
     The rest of the attributes will be handled by the smart function itself.")]
+#[serde(tag = "_type")]
 pub struct RunFunction {
     /// Smart function URI in the form tezos://{smart_function_address}/rest/of/path
     #[serde(with = "http_serde::uri")]
@@ -123,7 +125,9 @@ pub struct RunFunction {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
 #[serde(tag = "_type")]
 pub enum Content {
+    #[schema(title = "DeployFunction")]
     DeployFunction(DeployFunction),
+    #[schema(title = "RunFunction")]
     RunFunction(RunFunction),
 }
 

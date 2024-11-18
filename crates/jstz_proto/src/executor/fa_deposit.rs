@@ -23,6 +23,7 @@ const NULL_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
 const DEPOSIT_URI: &str = "/-/deposit";
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[serde(tag = "_type")]
 pub struct FaDepositReceipt {
     pub receiver: PublicKeyHash,
     pub ticket_balance: Amount,
@@ -173,7 +174,7 @@ mod test {
     use crate::{
         context::{account::ParsedCode, ticket_table::TicketTable},
         executor::fa_deposit::{FaDeposit, FaDepositReceipt},
-        receipt::{Receipt, ReceiptContent},
+        receipt::{Receipt, ReceiptContent, ReceiptResult},
     };
 
     fn mock_fa_deposit(proxy: Option<PublicKeyHash>) -> FaDeposit {
@@ -201,7 +202,7 @@ mod test {
         assert_eq!(expected_hash, *receipt.hash());
 
         match receipt.inner {
-            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
+            ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,
@@ -240,7 +241,7 @@ mod test {
         assert_eq!(expected_hash, *receipt.hash());
 
         match receipt.inner {
-            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
+            ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,
@@ -292,7 +293,7 @@ mod test {
         let Receipt { inner, .. } = super::execute(&mut host, &mut tx, fa_deposit);
 
         match inner {
-            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
+            ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,
@@ -344,7 +345,7 @@ mod test {
         let Receipt { inner, .. } = super::execute(&mut host, &mut tx, fa_deposit2);
 
         match inner {
-            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
+            ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,
@@ -391,7 +392,7 @@ mod test {
         let Receipt { inner, .. } = super::execute(&mut host, &mut tx, fa_deposit);
 
         match inner {
-            Ok(ReceiptContent::FaDeposit(FaDepositReceipt {
+            ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
                 receiver,
                 ticket_balance,
                 run_function,

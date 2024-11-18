@@ -440,7 +440,8 @@
                   }
                 }
               }
-            ]
+            ],
+            "title": "DeployFunction"
           },
           {
             "allOf": [
@@ -461,7 +462,8 @@
                   }
                 }
               }
-            ]
+            ],
+            "title": "RunFunction"
           }
         ]
       },
@@ -667,122 +669,16 @@
             "type": "string"
           },
           "inner": {
-            "$ref": "#/components/schemas/ReceiptResult_ReceiptContent"
+            "$ref": "#/components/schemas/ReceiptResult"
           }
         }
       },
-      "ReceiptResult_ReceiptContent": {
+      "ReceiptContent": {
         "oneOf": [
           {
             "allOf": [
               {
-                "oneOf": [
-                  {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/DeployFunctionReceipt"
-                      },
-                      {
-                        "type": "object",
-                        "required": [
-                          "_type"
-                        ],
-                        "properties": {
-                          "_type": {
-                            "type": "string",
-                            "enum": [
-                              "DeployFunction"
-                            ]
-                          }
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/RunFunctionReceipt"
-                      },
-                      {
-                        "type": "object",
-                        "required": [
-                          "_type"
-                        ],
-                        "properties": {
-                          "_type": {
-                            "type": "string",
-                            "enum": [
-                              "RunFunction"
-                            ]
-                          }
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/DepositReceipt"
-                      },
-                      {
-                        "type": "object",
-                        "required": [
-                          "_type"
-                        ],
-                        "properties": {
-                          "_type": {
-                            "type": "string",
-                            "enum": [
-                              "Deposit"
-                            ]
-                          }
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/FaDepositReceipt"
-                      },
-                      {
-                        "type": "object",
-                        "required": [
-                          "_type"
-                        ],
-                        "properties": {
-                          "_type": {
-                            "type": "string",
-                            "enum": [
-                              "FaDeposit"
-                            ]
-                          }
-                        }
-                      }
-                    ]
-                  },
-                  {
-                    "allOf": [
-                      {
-                        "$ref": "#/components/schemas/FaWithdrawReceipt"
-                      },
-                      {
-                        "type": "object",
-                        "required": [
-                          "_type"
-                        ],
-                        "properties": {
-                          "_type": {
-                            "type": "string",
-                            "enum": [
-                              "FaWithdraw"
-                            ]
-                          }
-                        }
-                      }
-                    ]
-                  }
-                ]
+                "$ref": "#/components/schemas/DeployFunctionReceipt"
               },
               {
                 "type": "object",
@@ -793,24 +689,144 @@
                   "_type": {
                     "type": "string",
                     "enum": [
-                      "Ok"
+                      "DeployFunction"
                     ]
                   }
                 }
               }
-            ]
+            ],
+            "title": "DeployFunction"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RunFunctionReceipt"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "RunFunction"
+                    ]
+                  }
+                }
+              }
+            ],
+            "title": "RunFunction"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DepositReceipt"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "Deposit"
+                    ]
+                  }
+                }
+              }
+            ],
+            "title": "Deposit"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FaDepositReceipt"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "FaDeposit"
+                    ]
+                  }
+                }
+              }
+            ],
+            "title": "FaDeposit"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FaWithdrawReceipt"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "FaWithdraw"
+                    ]
+                  }
+                }
+              }
+            ],
+            "title": "FaWithdraw"
+          }
+        ]
+      },
+      "ReceiptResult": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ReceiptContent"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "Success"
+                    ]
+                  }
+                }
+              }
+            ],
+            "title": "Success"
           },
           {
             "type": "object",
+            "title": "Failure",
             "required": [
+              "source",
               "_type"
             ],
             "properties": {
               "_type": {
                 "type": "string",
                 "enum": [
-                  "Err"
+                  "Failed"
                 ]
+              },
+              "source": {
+                "type": "string"
               }
             }
           }

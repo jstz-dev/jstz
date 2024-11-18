@@ -6,7 +6,7 @@ use jstz_proto::context::account::Address;
 use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
-    receipt::ReceiptContent,
+    receipt::{ReceiptContent, ReceiptResult},
 };
 use log::{debug, info};
 use spinners::{Spinner, Spinners};
@@ -165,14 +165,16 @@ pub async fn exec(
 
     debug!("Receipt: {:?}", receipt);
     let (status_code, headers, body) = match receipt.inner {
-        Ok(ReceiptContent::RunFunction(run_function)) => (
+        ReceiptResult::Success(ReceiptContent::RunFunction(run_function)) => (
             run_function.status_code,
             run_function.headers,
             run_function.body,
         ),
-        Ok(_) => bail!("Expected a `RunFunction` receipt, but got something else."),
+        ReceiptResult::Success(_) => {
+            bail!("Expected a `RunFunction` receipt, but got something else.")
+        }
 
-        Err(err) => bail_user_error!("{err}"),
+        ReceiptResult::Failed { source: err } => bail_user_error!("{err}"),
     };
 
     if let Some(spinner) = spinner.as_mut() {
