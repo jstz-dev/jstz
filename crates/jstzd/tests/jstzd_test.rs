@@ -1,6 +1,5 @@
 mod utils;
 use std::path::PathBuf;
-use tempfile::{NamedTempFile, TempPath};
 
 use jstzd::task::utils::retry;
 use jstzd::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS};
@@ -9,10 +8,9 @@ use octez::r#async::client::{OctezClient, OctezClientConfigBuilder};
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::node_config::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder};
 use octez::r#async::protocol::{
-    BootstrapAccount, BootstrapContract, Protocol, ProtocolParameterBuilder,
+    BootstrapAccount, BootstrapContract, ProtocolParameterBuilder,
 };
 use octez::unused_port;
-use utils::get_block_level;
 
 const CONTRACT_INIT_BALANCE: f64 = 1.0;
 const CONTRACT_NAMES: [(&str, &str); 2] = [
@@ -50,12 +48,8 @@ async fn jstzd_test() {
         OctezClientConfigBuilder::new(octez_node_config.rpc_endpoint.clone())
             .build()
             .unwrap();
-
-    let baker_path =
-        create_baker_executable_copy(protocol_params.protocol().clone()).await;
-    let baker_executable_name = baker_path.file_name().unwrap().to_str().unwrap();
     let baker_config = OctezBakerConfigBuilder::new()
-        .set_binary_path(BakerBinaryPath::Custom(baker_path.to_path_buf()))
+        .set_binary_path(BakerBinaryPath::Env(protocol_params.protocol().clone()))
         .set_octez_client_base_dir(
             PathBuf::from(octez_client_config.base_dir())
                 .to_str()
@@ -91,15 +85,7 @@ async fn jstzd_test() {
     .await;
     assert!(node_running);
 
-    let baker_running = retry(30, 1000, || async {
-        if run_ps().await.contains(baker_executable_name) {
-            let last_level = get_block_level(&rpc_endpoint.to_string()).await;
-            return Ok(last_level > 2);
-        }
-        Ok(false)
-    })
-    .await;
-    assert!(baker_running);
+    assert!(jstzd.baker_healthy().await);
     assert!(jstzd.health_check().await);
 
     let octez_client = OctezClient::new(octez_client_config);
@@ -132,46 +118,11 @@ async fn jstzd_test() {
     .await;
     assert!(node_destroyed);
 
-    let baker_destroyed = retry(30, 1000, || async {
-        Ok(!run_ps().await.contains(baker_executable_name))
-    })
-    .await;
-    assert!(baker_destroyed);
-
+    assert!(!jstzd.baker_healthy().await);
     assert!(!jstzd.health_check().await);
 
     // stop should be idempotent and thus should be okay after jstzd is already stopped
     jstzd.stop().await.unwrap();
-}
-
-async fn run_ps() -> String {
-    let output = tokio::process::Command::new("ps")
-        // print with extra columns so that commands don't get truncated too much
-        .args(["-o", "args"])
-        .env("COLUMNS", "1000")
-        .output()
-        .await
-        .unwrap();
-    assert_eq!(String::from_utf8(output.stderr).unwrap(), "");
-    String::from_utf8(output.stdout).unwrap()
-}
-
-async fn create_baker_executable_copy(protocol: Protocol) -> TempPath {
-    let baker_path = PathBuf::from(
-        String::from_utf8(
-            tokio::process::Command::new("which")
-                .arg(BakerBinaryPath::Env(protocol).to_string())
-                .output()
-                .await
-                .unwrap()
-                .stdout,
-        )
-        .unwrap()
-        .trim(),
-    );
-    let tmp_path = NamedTempFile::new().unwrap().into_temp_path();
-    tokio::fs::copy(baker_path, &tmp_path).await.unwrap();
-    tmp_path
 }
 
 async fn read_bootstrap_contracts() -> Vec<BootstrapContract> {
