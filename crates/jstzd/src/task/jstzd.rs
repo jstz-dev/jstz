@@ -207,6 +207,14 @@ impl JstzdServer {
         self.state.write().await.server_handle.replace(handle);
         Ok(())
     }
+
+    pub async fn baker_healthy(&self) -> bool {
+        if let Some(v) = &self.state.read().await.jstzd {
+            v.baker.read().await.health_check().await.unwrap_or(false)
+        } else {
+            false
+        }
+    }
 }
 
 async fn health_check(state: &ServerState) -> bool {
