@@ -48,6 +48,7 @@ pub unsafe trait WriteBarrieredPtr: Copy {
 ///
 /// [`GcPtr<T>`] should only be used by values on the heap. Garbage collected pointers
 /// on the stack should be rooted.
+#[derive(Debug)]
 pub struct GcPtr<T: WriteBarrieredPtr> {
     // # Safety
     //
