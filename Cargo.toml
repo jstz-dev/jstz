@@ -14,7 +14,7 @@ members = [
   "crates/jstz_sdk",
   "crates/jstz_wpt",
   "crates/jstzd",
-  "crates/octez"
+  "crates/octez",
 ]
 
 [workspace.package]
@@ -114,7 +114,14 @@ wasm-bindgen = "0.2.92"
 [workspace.dependencies.tezos-smart-rollup]
 version = "0.2.2"
 default-features = false
-features = ["std", "crypto", "panic-hook", "data-encoding", "storage", "proto-alpha"]
+features = [
+  "std",
+  "crypto",
+  "panic-hook",
+  "data-encoding",
+  "storage",
+  "proto-alpha",
+]
 
 [workspace.dependencies.tezos-smart-rollup-host]
 version = "0.2.2"
