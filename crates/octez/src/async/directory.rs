@@ -1,12 +1,23 @@
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
 use anyhow::{bail, Result};
+use serde_with::SerializeDisplay;
 use tempfile::TempDir;
 
-#[derive(Debug)]
+#[derive(Debug, SerializeDisplay)]
 pub enum Directory {
     TempDir(TempDir),
     Path(PathBuf),
+}
+
+impl Display for Directory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Directory::Path(p) => p.to_string_lossy(),
+            Directory::TempDir(p) => p.path().to_string_lossy(),
+        };
+        write!(f, "{}", s)
+    }
 }
 
 impl Default for Directory {
@@ -120,5 +131,33 @@ mod test {
         let directory = Directory::Path(dir_path.clone());
         let path_buf: PathBuf = (&directory).into();
         assert_eq!(path_buf, dir_path);
+    }
+
+    #[test]
+    fn serialize() {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path().to_path_buf();
+        let directory = Directory::Path(dir_path.clone());
+        assert_eq!(
+            serde_json::to_value(&directory).unwrap(),
+            serde_json::json!(dir_path.to_string_lossy())
+        );
+
+        let directory = Directory::TempDir(temp_dir);
+        assert_eq!(
+            serde_json::to_value(&directory).unwrap(),
+            serde_json::json!(dir_path.to_string_lossy())
+        );
+    }
+
+    #[test]
+    fn display() {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path().to_path_buf();
+        let directory = Directory::Path(dir_path.clone());
+        assert_eq!(directory.to_string(), dir_path.to_str().unwrap());
+
+        let directory = Directory::TempDir(temp_dir);
+        assert_eq!(directory.to_string(), dir_path.to_str().unwrap());
     }
 }
