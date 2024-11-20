@@ -22,7 +22,7 @@
 //!
 //! For more details, refer to the [ECMAScript Specification on Realms](https://tc39.es/ecma262/#sec-code-realms).
 
-use std::{marker::PhantomData, ptr::NonNull};
+use std::{marker::PhantomData, pin::Pin, sync::Arc};
 
 use mozjs::{
     jsapi::{JSObject, JS_NewGlobalObject, OnNewGlobalHookOption, JS},
@@ -32,21 +32,25 @@ use mozjs::{
 use crate::{
     compartment::{self, Compartment},
     context::{CanAccess, CanAlloc, Context, InCompartment},
+    custom_trace,
+    gc::{ptr::GcPtr, Finalize, Prolong, Trace},
     AsRawPtr,
 };
 
 /// A JavaScript realm with lifetime of at least `'a` allocated in compartment `C`.
 /// A realm is a global object.
+#[derive(Debug)]
 pub struct Realm<'a, C: Compartment> {
-    global_object: NonNull<JSObject>,
+    global_object: Pin<Arc<GcPtr<*mut JSObject>>>,
     marker: PhantomData<(&'a (), C)>,
 }
 
-impl<'a, C: Compartment> Copy for Realm<'a, C> {}
-
 impl<'a, C: Compartment> Clone for Realm<'a, C> {
     fn clone(&self) -> Self {
-        *self
+        Self {
+            global_object: self.global_object.clone(),
+            marker: PhantomData,
+        }
     }
 }
 
@@ -73,8 +77,12 @@ impl<'a> Realm<'a, compartment::Ref<'a>> {
             )
         };
 
+        if global_object.is_null() {
+            return None;
+        }
+
         Some(Self {
-            global_object: NonNull::new(global_object)?,
+            global_object: GcPtr::pinned(global_object),
             marker: PhantomData,
         })
     }
@@ -87,8 +95,12 @@ impl<'a, C: Compartment> Realm<'a, C> {
     {
         let global_object = unsafe { JS::CurrentGlobalOrNull(cx.as_raw_ptr()) };
 
+        if global_object.is_null() {
+            return None;
+        }
+
         Some(Self {
-            global_object: NonNull::new(global_object)?,
+            global_object: GcPtr::pinned(global_object),
             marker: PhantomData,
         })
     }
@@ -98,6 +110,18 @@ impl<'a, C: Compartment> AsRawPtr for Realm<'a, C> {
     type Ptr = *mut JSObject;
 
     unsafe fn as_raw_ptr(&self) -> Self::Ptr {
-        self.global_object.as_ptr()
+        self.global_object.get()
     }
+}
+
+impl<'a, C: Compartment> Finalize for Realm<'a, C> {}
+
+unsafe impl<'a, C: Compartment> Trace for Realm<'a, C> {
+    custom_trace!(this, mark, {
+        mark(&this.global_object);
+    });
+}
+
+unsafe impl<'a, 'b, C: Compartment> Prolong<'a> for Realm<'b, C> {
+    type Aged = Realm<'a, C>;
 }
