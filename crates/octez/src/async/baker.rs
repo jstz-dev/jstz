@@ -1,10 +1,12 @@
 use anyhow::{anyhow, Result};
+use serde::Serialize;
+use serde_with::SerializeDisplay;
 use std::{fmt::Display, path::PathBuf};
 use tokio::process::{Child, Command};
 
 use super::{endpoint::Endpoint, protocol::Protocol};
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, SerializeDisplay)]
 pub enum BakerBinaryPath {
     Env(Protocol),   // The binary exists in $PATH
     Custom(PathBuf), // The binary is at the given path
@@ -25,7 +27,7 @@ impl Display for BakerBinaryPath {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct OctezBakerConfig {
     binary_path: BakerBinaryPath,
     octez_client_base_dir: PathBuf,
@@ -94,6 +96,8 @@ impl OctezBaker {
 
 #[cfg(test)]
 mod test {
+    use std::str::FromStr;
+
     use super::*;
     use crate::r#async::endpoint::Endpoint;
     use http::Uri;
@@ -125,5 +129,47 @@ mod test {
             .set_octez_node_endpoint(&endpoint)
             .build();
         assert!(config.is_err_and(|e| e.to_string().contains("binary path not set")));
+    }
+
+    #[test]
+    fn serialize_baker_path() {
+        assert_eq!(
+            serde_json::to_string(&BakerBinaryPath::Env(Protocol::Alpha)).unwrap(),
+            "\"octez-baker-alpha\""
+        );
+
+        assert_eq!(
+            serde_json::to_string(&BakerBinaryPath::Env(Protocol::ParisC)).unwrap(),
+            "\"octez-baker-PsParisC\""
+        );
+
+        assert_eq!(
+            serde_json::to_string(&BakerBinaryPath::Custom(
+                PathBuf::from_str("/foo/bar").unwrap()
+            ))
+            .unwrap(),
+            "\"/foo/bar\""
+        );
+    }
+
+    #[test]
+    fn serialize_config() {
+        let base_dir = TempDir::new().unwrap();
+        let endpoint =
+            Endpoint::try_from(Uri::from_static("http://localhost:8732")).unwrap();
+        let config = OctezBakerConfigBuilder::new()
+            .set_binary_path(BakerBinaryPath::Env(Protocol::Alpha))
+            .set_octez_client_base_dir(base_dir.path().to_str().unwrap())
+            .set_octez_node_endpoint(&endpoint)
+            .build()
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(&config).unwrap(),
+            serde_json::json!({
+                "octez_client_base_dir": base_dir.path().to_string_lossy(),
+                "octez_node_endpoint": "http://localhost:8732",
+                "binary_path": "octez-baker-alpha"
+            })
+        )
     }
 }
