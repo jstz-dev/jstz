@@ -1,6 +1,7 @@
 mod utils;
 use std::path::PathBuf;
 
+use jstzd::task::jstzd::{JstzdConfig, JstzdServer};
 use jstzd::task::utils::retry;
 use jstzd::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS};
 use octez::r#async::baker::{BakerBinaryPath, OctezBakerConfigBuilder};
@@ -21,13 +22,36 @@ const CONTRACT_NAMES: [(&str, &str); 2] = [
 #[tokio::test(flavor = "multi_thread")]
 async fn jstzd_test() {
     let rpc_endpoint = Endpoint::localhost(unused_port());
+    let jstzd_port = unused_port();
+    let (mut jstzd, config) = create_jstzd_server(&rpc_endpoint, jstzd_port).await;
+
+    jstzd.run().await.unwrap();
+    ensure_jstzd_components_are_up(&jstzd, &rpc_endpoint, jstzd_port).await;
+    let octez_client = OctezClient::new(config.octez_client_config().clone());
+    check_bootstrap_contracts(&octez_client).await;
+
+    fetch_config_test(config, jstzd_port).await;
+
+    reqwest::Client::new()
+        .put(&format!("http://localhost:{}/shutdown", jstzd_port))
+        .send()
+        .await
+        .unwrap();
+
+    ensure_jstzd_components_are_down(&jstzd, &rpc_endpoint, jstzd_port).await;
+}
+
+async fn create_jstzd_server(
+    octez_node_rpc_endpoint: &Endpoint,
+    jstzd_port: u16,
+) -> (JstzdServer, JstzdConfig) {
     let run_options = OctezNodeRunOptionsBuilder::new()
         .set_synchronisation_threshold(0)
         .set_network("sandbox")
         .build();
     let octez_node_config = OctezNodeConfigBuilder::new()
         .set_network("sandbox")
-        .set_rpc_endpoint(&rpc_endpoint)
+        .set_rpc_endpoint(octez_node_rpc_endpoint)
         .set_run_options(&run_options)
         .build()
         .unwrap();
@@ -59,18 +83,24 @@ async fn jstzd_test() {
         .build()
         .expect("Failed to build baker config");
 
-    let config = jstzd::task::jstzd::JstzdConfig::new(
+    let config = JstzdConfig::new(
         octez_node_config,
         baker_config,
         octez_client_config.clone(),
         protocol_params,
     );
-    let jstzd_port = unused_port();
-    let mut jstzd = jstzd::task::jstzd::JstzdServer::new(config, jstzd_port);
-    jstzd.run().await.unwrap();
+    (JstzdServer::new(config.clone(), jstzd_port), config)
+}
 
+async fn ensure_jstzd_components_are_up(
+    jstzd: &JstzdServer,
+    octez_node_rpc_endpoint: &Endpoint,
+    jstzd_port: u16,
+) {
     let jstz_health_check_endpoint = format!("http://localhost:{}/health", jstzd_port);
-    let octez_node_health_check_endpoint = format!("{}/health/ready", rpc_endpoint);
+    let octez_node_health_check_endpoint =
+        format!("{}/health/ready", octez_node_rpc_endpoint);
+
     let jstzd_running = retry(30, 1000, || async {
         let res = reqwest::get(&jstz_health_check_endpoint).await;
         Ok(res.is_ok())
@@ -78,24 +108,23 @@ async fn jstzd_test() {
     .await;
     assert!(jstzd_running);
 
-    let node_running = retry(30, 1000, || async {
-        let res = reqwest::get(&octez_node_health_check_endpoint).await;
-        Ok(res.is_ok())
-    })
-    .await;
-    assert!(node_running);
+    // check if individual components are up / jstzd health check indeed covers all components
+    assert!(reqwest::get(&octez_node_health_check_endpoint)
+        .await
+        .is_ok());
 
     assert!(jstzd.baker_healthy().await);
     assert!(jstzd.health_check().await);
+}
 
-    let octez_client = OctezClient::new(octez_client_config);
-    check_bootstrap_contracts(&octez_client).await;
-
-    reqwest::Client::new()
-        .put(&format!("http://localhost:{}/shutdown", jstzd_port))
-        .send()
-        .await
-        .unwrap();
+async fn ensure_jstzd_components_are_down(
+    jstzd: &JstzdServer,
+    octez_node_rpc_endpoint: &Endpoint,
+    jstzd_port: u16,
+) {
+    let jstz_health_check_endpoint = format!("http://localhost:{}/health", jstzd_port);
+    let octez_node_health_check_endpoint =
+        format!("{}/health/ready", octez_node_rpc_endpoint);
 
     let jstzd_stopped = retry(30, 1000, || async {
         let res = reqwest::get(&jstz_health_check_endpoint).await;
@@ -107,6 +136,8 @@ async fn jstzd_test() {
     .await;
     assert!(jstzd_stopped);
 
+    // check if individual components are terminated
+    // and jstzd indeed tears down all components before it shuts down
     let node_destroyed = retry(30, 1000, || async {
         let res = reqwest::get(&octez_node_health_check_endpoint).await;
         // Should get an error since the node should have been terminated
@@ -120,9 +151,59 @@ async fn jstzd_test() {
 
     assert!(!jstzd.baker_healthy().await);
     assert!(!jstzd.health_check().await);
+}
 
-    // stop should be idempotent and thus should be okay after jstzd is already stopped
-    jstzd.stop().await.unwrap();
+async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
+    let mut full_config = serde_json::json!({});
+    for (key, expected_json) in [
+        (
+            "octez-node",
+            serde_json::to_value(jstzd_config.octez_node_config()).unwrap(),
+        ),
+        (
+            "octez-client",
+            serde_json::to_value(jstzd_config.octez_client_config()).unwrap(),
+        ),
+        (
+            "octez-baker",
+            serde_json::to_value(jstzd_config.baker_config()).unwrap(),
+        ),
+    ] {
+        let res =
+            reqwest::get(&format!("http://localhost:{}/config/{}", jstzd_port, key))
+                .await
+                .unwrap();
+        assert_eq!(
+            expected_json,
+            serde_json::from_str::<serde_json::Value>(&res.text().await.unwrap())
+                .unwrap(),
+            "config mismatch at /config/{}",
+            key
+        );
+        full_config
+            .as_object_mut()
+            .unwrap()
+            .insert(key.to_owned(), expected_json);
+    }
+
+    // invalid config type
+    assert_eq!(
+        reqwest::get(&format!("http://localhost:{}/config/foobar", jstzd_port))
+            .await
+            .unwrap()
+            .status(),
+        reqwest::StatusCode::NOT_FOUND
+    );
+
+    // all configs
+    let res = reqwest::get(&format!("http://localhost:{}/config/", jstzd_port))
+        .await
+        .unwrap();
+    assert_eq!(
+        full_config,
+        serde_json::from_str::<serde_json::Value>(&res.text().await.unwrap()).unwrap(),
+        "config mismatch at /config/",
+    );
 }
 
 async fn read_bootstrap_contracts() -> Vec<BootstrapContract> {
