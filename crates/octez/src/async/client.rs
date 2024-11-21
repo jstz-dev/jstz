@@ -3,6 +3,7 @@ use jstz_crypto::{
     public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
 };
 use regex::Regex;
+use serde::Serialize;
 use std::{
     ffi::OsStr,
     fmt,
@@ -19,7 +20,7 @@ const DEFAULT_BINARY_PATH: &str = "octez-client";
 
 type StdOut = String;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct OctezClientConfig {
     binary_path: PathBuf,
     base_dir: Arc<Directory>,
@@ -956,6 +957,27 @@ mod test {
                 .unwrap_err()
                 .to_string(),
             "invalid checksum"
+        );
+    }
+
+    #[test]
+    fn serialize_config() {
+        let endpoint = Endpoint::localhost(8888);
+        let tmp_file = NamedTempFile::new().unwrap();
+        let tmp_dir = TempDir::new().unwrap();
+        let base_dir = tmp_dir.path().to_path_buf();
+        let binary_path = tmp_file.path().to_path_buf();
+        assert_eq!(
+            serde_json::to_value(
+                OctezClientConfigBuilder::new(endpoint)
+                    .set_base_dir(base_dir.clone())
+                    .set_binary_path(binary_path.clone())
+                    .set_disable_unsafe_disclaimer(false)
+                    .build()
+                    .unwrap()
+            )
+            .unwrap(),
+            serde_json::json!({ "base_dir": base_dir.to_string_lossy(), "binary_path": binary_path.to_string_lossy(), "disable_unsafe_disclaimer": false, "octez_node_endpoint": "http://localhost:8888" })
         );
     }
 }
