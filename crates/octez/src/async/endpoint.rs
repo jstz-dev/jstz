@@ -1,8 +1,12 @@
 use http::{uri::Scheme, Uri};
 use serde::Serialize;
-use std::fmt::{self, Display};
+use serde_with::DeserializeFromStr;
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, DeserializeFromStr)]
 pub struct Endpoint {
     scheme: String,
     host: String,
@@ -28,6 +32,15 @@ impl Endpoint {
 
     pub fn port(&self) -> u16 {
         self.port
+    }
+}
+
+impl FromStr for Endpoint {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let uri = Uri::from_str(s)?;
+        Endpoint::try_from(uri)
     }
 }
 
@@ -137,5 +150,20 @@ mod tests {
             serde_json::to_string(&endpoint).unwrap(),
             "\"http://localhost:8765\""
         )
+    }
+
+    #[test]
+    fn deserialize() {
+        assert_eq!(
+            serde_json::from_str::<Endpoint>("\"http://localhost:8765\"").unwrap(),
+            Endpoint::localhost(8765)
+        );
+
+        assert_eq!(
+            serde_json::from_str::<Endpoint>("\"localhost:8765\"").unwrap(),
+            Endpoint::localhost(8765)
+        );
+
+        assert!(serde_json::from_str::<Endpoint>("\"::::\"").is_err());
     }
 }
