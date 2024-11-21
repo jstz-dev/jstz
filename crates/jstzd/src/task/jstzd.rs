@@ -3,7 +3,8 @@ use anyhow::Result;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use axum::{
-    extract::State,
+    extract::{Path, State},
+    response::IntoResponse,
     routing::{get, put},
     Router,
 };
@@ -13,20 +14,24 @@ use octez::r#async::{
     node_config::OctezNodeConfig,
     protocol::ProtocolParameter,
 };
+use serde::Serialize;
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
 
-#[derive(Clone)]
 struct Jstzd {
     octez_node: Arc<RwLock<OctezNode>>,
     baker: Arc<RwLock<OctezBaker>>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct JstzdConfig {
+    #[serde(rename(serialize = "octez-node"))]
     octez_node_config: OctezNodeConfig,
+    #[serde(rename(serialize = "octez-baker"))]
     baker_config: OctezBakerConfig,
+    #[serde(rename(serialize = "octez-client"))]
     octez_client_config: OctezClientConfig,
+    #[serde(skip_serializing)]
     protocol_params: ProtocolParameter,
 }
 
@@ -43,6 +48,18 @@ impl JstzdConfig {
             octez_client_config,
             protocol_params,
         }
+    }
+
+    pub fn octez_node_config(&self) -> &OctezNodeConfig {
+        &self.octez_node_config
+    }
+
+    pub fn octez_client_config(&self) -> &OctezClientConfig {
+        &self.octez_client_config
+    }
+
+    pub fn baker_config(&self) -> &OctezBakerConfig {
+        &self.baker_config
     }
 }
 
@@ -150,13 +167,15 @@ impl Jstzd {
     }
 }
 
+#[derive(Clone)]
 pub struct JstzdServer {
-    jstzd_config: JstzdConfig,
     jstzd_server_port: u16,
     state: Arc<RwLock<ServerState>>,
 }
 
 struct ServerState {
+    jstzd_config: JstzdConfig,
+    jstzd_config_json: serde_json::Map<String, serde_json::Value>,
     jstzd: Option<Jstzd>,
     server_handle: Option<JoinHandle<()>>,
 }
@@ -172,9 +191,14 @@ impl AsyncDrop for JstzdServer {
 impl JstzdServer {
     pub fn new(config: JstzdConfig, port: u16) -> Self {
         Self {
-            jstzd_config: config,
             jstzd_server_port: port,
             state: Arc::new(RwLock::new(ServerState {
+                jstzd_config_json: serde_json::to_value(&config)
+                    .unwrap()
+                    .as_object()
+                    .unwrap()
+                    .to_owned(),
+                jstzd_config: config,
                 jstzd: None,
                 server_handle: None,
             })),
@@ -192,12 +216,14 @@ impl JstzdServer {
     }
 
     pub async fn run(&mut self) -> Result<()> {
-        let jstzd = Jstzd::spawn(self.jstzd_config.clone()).await?;
+        let jstzd = Jstzd::spawn(self.state.read().await.jstzd_config.clone()).await?;
         self.state.write().await.jstzd.replace(jstzd);
 
         let router = Router::new()
             .route("/health", get(health_check_handler))
             .route("/shutdown", put(shutdown_handler))
+            .route("/config/:config_type", get(config_handler))
+            .route("/config/", get(all_config_handler))
             .with_state(self.state.clone());
         let listener = TcpListener::bind(("0.0.0.0", self.jstzd_server_port)).await?;
 
@@ -260,4 +286,24 @@ async fn shutdown_handler(state: State<Arc<RwLock<ServerState>>>) -> http::Statu
         return http::StatusCode::INTERNAL_SERVER_ERROR;
     };
     http::StatusCode::NO_CONTENT
+}
+
+async fn all_config_handler(state: State<Arc<RwLock<ServerState>>>) -> impl IntoResponse {
+    let config = &state.read().await.jstzd_config_json;
+    serde_json::to_string(config).unwrap().into_response()
+}
+
+async fn config_handler(
+    state: State<Arc<RwLock<ServerState>>>,
+    Path(config_type): Path<String>,
+) -> impl IntoResponse {
+    let config = &state.read().await.jstzd_config_json;
+    match config.get(&config_type) {
+        Some(v) => match serde_json::to_string(v) {
+            Ok(s) => s.into_response(),
+            // TODO: log this error
+            Err(_) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
+        },
+        None => http::StatusCode::NOT_FOUND.into_response(),
+    }
 }
