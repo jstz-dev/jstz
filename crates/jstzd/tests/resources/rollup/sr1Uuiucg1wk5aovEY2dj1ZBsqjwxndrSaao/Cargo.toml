@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: 2023 Marigold <contact@marigold.dev>
+# SPDX-FileCopyrightText: 2023 Nomadic Labs <contact@nomadic-labs.com>
+#
+# SPDX-License-Identifier: MIT
+
+[package]
+name = "outbox-kernel"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+tezos-smart-rollup = {version = "0.2.0", features = ["testing"]}
+tezos_data_encoding = {version = "0.5.0"}
+tezos_crypto_rs = { version = "0.5.0", default-features = false }

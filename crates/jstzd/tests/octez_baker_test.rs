@@ -4,7 +4,7 @@ use utils::{get_block_level, setup};
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_baker() {
-    let (mut octez_node, _, mut baker) = setup().await;
+    let (mut octez_node, _, mut baker) = setup(None).await;
     let node_endpoint = octez_node.rpc_endpoint();
 
     let _ = baker.kill().await;

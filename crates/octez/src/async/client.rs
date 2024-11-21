@@ -10,7 +10,7 @@ use std::{
     sync::Arc,
 };
 use tempfile::tempdir;
-use tezos_crypto_rs::hash::{BlockHash, ContractKt1Hash, OperationHash};
+use tezos_crypto_rs::hash::{BlockHash, ContractKt1Hash, OperationHash, SmartRollupHash};
 use tokio::process::Command;
 
 use super::{directory::Directory, endpoint::Endpoint, node_config::OctezNodeConfig};
@@ -553,6 +553,42 @@ impl OctezClient {
             &inbox_message,
             "from",
             src,
+        ];
+        if let Some(v) = &burn_cap_str {
+            args.append(&mut vec!["--burn-cap", v]);
+        }
+        let output = self.spawn_and_wait_command(args).await?;
+        Ok((parse_block_hash(&output)?, parse_operation_hash(&output)?))
+    }
+
+    pub async fn execute_rollup_outbox_message(
+        &self,
+        rollup_address: &SmartRollupHash,
+        src: &str,
+        commitment_hash: &str,
+        output_proof: &str,
+        burn_cap: Option<f64>,
+    ) -> Result<(BlockHash, OperationHash)> {
+        let burn_cap_str = burn_cap.map(|v| v.to_string());
+        let rollup_address_str = rollup_address.to_string();
+        let mut args = vec![
+            "execute",
+            "outbox",
+            "message",
+            "of",
+            "smart",
+            "rollup",
+            &rollup_address_str,
+            "from",
+            src,
+            "for",
+            "commitment",
+            "hash",
+            commitment_hash,
+            "and",
+            "output",
+            "proof",
+            output_proof,
         ];
         if let Some(v) = &burn_cap_str {
             args.append(&mut vec!["--burn-cap", v]);
