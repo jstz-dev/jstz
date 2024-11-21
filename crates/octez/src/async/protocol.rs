@@ -5,6 +5,7 @@ use super::bootstrap::{BootstrapAccounts, BootstrapContracts, BootstrapSmartRoll
 
 use rust_embed::Embed;
 use serde_json::Value;
+use serde_with::SerializeDisplay;
 use std::fmt::Display;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
@@ -39,7 +40,7 @@ impl Display for ProtocolConstants {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone, SerializeDisplay)]
 pub enum Protocol {
     Alpha,
     ParisC,
@@ -49,6 +50,12 @@ pub enum Protocol {
 impl Default for Protocol {
     fn default() -> Self {
         Self::Alpha
+    }
+}
+
+impl Display for Protocol {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.hash())
     }
 }
 
@@ -701,5 +708,13 @@ mod tests {
         rollups.sort_by_key(|v| v.kernel().to_owned());
         assert_eq!(rollups.first().unwrap(), &first_rollup);
         assert_eq!(rollups.last().unwrap(), &second_rollup);
+    }
+
+    #[test]
+    fn serialize_protocol() {
+        assert_eq!(
+            serde_json::to_string(&Protocol::Alpha).unwrap(),
+            "\"ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK\""
+        )
     }
 }
