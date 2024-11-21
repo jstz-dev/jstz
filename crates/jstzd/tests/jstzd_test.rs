@@ -39,6 +39,12 @@ async fn jstzd_test() {
         .unwrap();
 
     ensure_jstzd_components_are_down(&jstzd, &rpc_endpoint, jstzd_port).await;
+
+    // calling `run` after calling `stop` should fail because all states should have been cleared
+    assert_eq!(
+        jstzd.run().await.unwrap_err().to_string(),
+        "cannot run jstzd server without jstzd config"
+    );
 }
 
 async fn create_jstzd_server(
