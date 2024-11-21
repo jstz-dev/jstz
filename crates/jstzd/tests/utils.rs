@@ -17,13 +17,33 @@ pub const ACTIVATOR_SECRET_KEY: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
 pub const ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 
-pub async fn setup() -> (OctezNode, OctezClient, octez_baker::OctezBaker) {
+pub async fn poll<'a, F, T>(
+    max_attempts: u16,
+    interval_ms: u64,
+    f: impl Fn() -> F,
+) -> Option<T>
+where
+    F: std::future::Future<Output = Option<T>> + Send + 'a,
+{
+    let duration = tokio::time::Duration::from_millis(interval_ms);
+    for _ in 0..max_attempts {
+        tokio::time::sleep(duration).await;
+        if let Some(v) = f().await {
+            return Some(v);
+        }
+    }
+    None
+}
+
+pub async fn setup(
+    param_file_path: Option<PathBuf>,
+) -> (OctezNode, OctezClient, octez_baker::OctezBaker) {
     let octez_node = spawn_octez_node().await;
     let octez_client = create_client(octez_node.rpc_endpoint());
 
     import_bootstrap_keys(&octez_client).await;
     import_activator(&octez_client).await;
-    activate_alpha(&octez_client, None).await;
+    activate_alpha(&octez_client, param_file_path).await;
 
     let baker = spawn_baker(&octez_node, &octez_client).await;
     (octez_node, octez_client, baker)
@@ -32,17 +52,17 @@ pub async fn setup() -> (OctezNode, OctezClient, octez_baker::OctezBaker) {
 pub async fn spawn_rollup(
     octez_node: &OctezNode,
     octez_client: &OctezClient,
+    installer_path: PathBuf,
+    preimages_dir: PathBuf,
+    rollup_address: Option<&str>,
 ) -> octez_rollup::OctezRollup {
-    let kernel_installer = Path::new(std::env!("CARGO_MANIFEST_DIR"))
-        .join("tests/toy_rollup/kernel_installer");
-    let preimages_dir =
-        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/toy_rollup/preimages");
     let config = OctezRollupConfigBuilder::new(
         octez_node.rpc_endpoint().clone(),
         octez_client.base_dir().into(),
-        SmartRollupHash::from_base58_check(ROLLUP_ADDRESS).unwrap(),
+        SmartRollupHash::from_base58_check(rollup_address.unwrap_or(ROLLUP_ADDRESS))
+            .unwrap(),
         "bootstrap1".to_string(),
-        kernel_installer,
+        installer_path,
     )
     .set_data_dir(RollupDataDir::TempWithPreImages { preimages_dir })
     .build()

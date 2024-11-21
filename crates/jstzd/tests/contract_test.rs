@@ -7,7 +7,7 @@ use tokio::io::AsyncWriteExt;
 
 #[tokio::test(flavor = "multi_thread")]
 async fn built_contracts() {
-    let (_node, client, _baker) = utils::setup().await;
+    let (_node, client, _baker) = utils::setup(None).await;
     let tmp_dir = TempDir::new().unwrap();
     generate_bootstrap_contract_files(&client, tmp_dir.path()).await;
     let contract_names = ["exchanger", "jstz_native_bridge"];

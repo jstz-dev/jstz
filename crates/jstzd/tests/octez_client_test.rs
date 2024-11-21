@@ -1,9 +1,15 @@
+use anyhow::Context;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstzd::task::Task;
 use octez::r#async::{
     client::{OctezClient, OctezClientConfigBuilder, Signature},
     endpoint::Endpoint,
+    protocol::{
+        BootstrapContract, BootstrapSmartRollup, ProtocolParameter,
+        ProtocolParameterBuilder, SmartRollupPvmKind,
+    },
 };
+use serde::Deserialize;
 use serde_json::Value;
 use std::{
     fs::{read_to_string, remove_file},
@@ -11,11 +17,13 @@ use std::{
     path::Path,
 };
 use tempfile::{NamedTempFile, TempDir};
+use tezos_crypto_rs::hash::SmartRollupHash;
+use tokio::io::AsyncWriteExt;
 mod utils;
 use std::path::PathBuf;
 use utils::{
     activate_alpha, create_client, get_head_block_hash, get_operation_kind, get_request,
-    import_activator, setup, spawn_octez_node, ACTIVATOR_SECRET_KEY,
+    import_activator, poll, setup, spawn_octez_node, spawn_rollup, ACTIVATOR_SECRET_KEY,
 };
 
 fn read_file(path: &Path) -> Value {
@@ -242,7 +250,7 @@ async fn add_address() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn call_contract() {
-    let (mut octez_node, octez_client, mut baker) = setup().await;
+    let (mut octez_node, octez_client, mut baker) = setup(None).await;
     let bootstrap1: String = "bootstrap1".to_string();
     let contract = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ".to_string();
     let before = octez_client.get_balance(&contract).await.unwrap();
@@ -266,7 +274,7 @@ async fn call_contract() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn originate_contract_and_wait_for() {
-    let (mut octez_node, octez_client, mut baker) = setup().await;
+    let (mut octez_node, octez_client, mut baker) = setup(None).await;
     let head = get_head_block_hash(&octez_node.rpc_endpoint().to_string()).await;
 
     let mut config_file = NamedTempFile::new().unwrap();
@@ -327,7 +335,7 @@ async fn originate_contract_and_wait_for() {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn send_rollup_inbox_message() {
-    let (mut octez_node, octez_client, mut baker) = setup().await;
+    let (mut octez_node, octez_client, mut baker) = setup(None).await;
 
     let (block, op) = octez_client
         .send_rollup_inbox_message("bootstrap1", "0000", Some(0.1))
@@ -350,4 +358,184 @@ async fn send_rollup_inbox_message() {
 
     let _ = baker.kill().await;
     let _ = octez_node.kill().await;
+}
+
+#[derive(Deserialize)]
+struct OutputProof {
+    pub commitment: String,
+    pub proof: String,
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn execute_rollup_outbox_message() {
+    let rollup_address = "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao";
+    // this is the destination contract where the outbox messages target
+    // this address is sealed in the rollup code
+    let contract_address = "KT1TFAweS9bMBetdDB3ndFicJWAEMb8MtSrK";
+    let installer_path = Path::new(std::env!("CARGO_MANIFEST_DIR")).join(format!(
+        "tests/resources/rollup/{rollup_address}/installer.hex"
+    ));
+    let preimages_dir = Path::new(std::env!("CARGO_MANIFEST_DIR"))
+        .join(format!("tests/resources/rollup/{rollup_address}/preimages"));
+    let contract_path = Path::new(std::env!("CARGO_MANIFEST_DIR"))
+        .join(format!("tests/resources/contract/{contract_address}.json"));
+    let params = set_up_parameters_for_outbox_message(
+        rollup_address,
+        contract_address,
+        &installer_path,
+        &contract_path,
+    )
+    .await;
+
+    let (mut octez_node, octez_client, mut baker) =
+        setup(Some(params.parameter_file().path().to_path_buf())).await;
+    let mut rollup = spawn_rollup(
+        &octez_node,
+        &octez_client,
+        installer_path,
+        preimages_dir,
+        Some(rollup_address),
+    )
+    .await;
+
+    octez_client
+        .send_rollup_inbox_message("bootstrap1", "0000", Some(0.1))
+        .await
+        .unwrap();
+
+    // wait until outbox message is cemented
+    let proof = wait_for_outbox_proof(&rollup.rpc_endpoint().to_string())
+        .await
+        .unwrap();
+
+    let (block, op) = octez_client
+        .execute_rollup_outbox_message(
+            &SmartRollupHash::from_base58_check(rollup_address).unwrap(),
+            "bootstrap1",
+            &proof.commitment,
+            &format!("0x{}", &proof.proof),
+            Some(0.1),
+        )
+        .await
+        .unwrap();
+
+    tokio::time::timeout(
+        tokio::time::Duration::from_secs(5),
+        octez_client.wait_for(&op, Some(&block), None),
+    )
+    .await
+    .expect("wait_for should complete soon enough")
+    .expect("wait_for should be able to find the operation");
+
+    let operation_kind =
+        get_operation_kind(&octez_node.rpc_endpoint().to_string(), &block, &op)
+            .await
+            .unwrap();
+    assert_eq!(operation_kind, "smart_rollup_execute_outbox_message");
+
+    let _ = rollup.kill().await;
+    let _ = baker.kill().await;
+    let _ = octez_node.kill().await;
+}
+
+async fn set_up_parameters_for_outbox_message(
+    rollup_address: &str,
+    contract_address: &str,
+    installer_path: &PathBuf,
+    contract_path: &PathBuf,
+) -> ProtocolParameter {
+    let kernel = String::from_utf8(
+        tokio::fs::read(&installer_path)
+            .await
+            .unwrap_or_else(|e| panic!("failed to read installer file: {:?}", e)),
+    )
+    .unwrap();
+    let contract_json = serde_json::from_slice(
+        &tokio::fs::read(&contract_path)
+            .await
+            .unwrap_or_else(|e| panic!("failed to read contract file: {:?}", e)),
+    )
+    .unwrap();
+    let params = ProtocolParameterBuilder::new()
+        .set_bootstrap_smart_rollups([BootstrapSmartRollup::new(
+            rollup_address,
+            SmartRollupPvmKind::Wasm,
+            &kernel,
+            serde_json::json!({"prim": "bytes"}),
+        )
+        .unwrap()])
+        .set_bootstrap_contracts([BootstrapContract::new(
+            contract_json,
+            1_000_000,
+            Some(contract_address),
+        )
+        .unwrap()])
+        .set_source_path(
+            Path::new(std::env!("CARGO_MANIFEST_DIR"))
+                .join("tests/sandbox-params.json")
+                .to_str()
+                .unwrap(),
+        )
+        .build()
+        .unwrap();
+
+    let mut content = tokio::fs::read_to_string(params.parameter_file().path())
+        .await
+        .unwrap();
+    let mut value: serde_json::Value = serde_json::from_str(&content).unwrap();
+
+    // overwriting these config values so that outbox messages get cemented sooner
+    value.as_object_mut().unwrap().insert(
+        "smart_rollup_challenge_window_in_blocks".to_owned(),
+        serde_json::json!(8),
+    );
+    value.as_object_mut().unwrap().insert(
+        "smart_rollup_commitment_period_in_blocks".to_owned(),
+        serde_json::json!(8),
+    );
+
+    content = serde_json::to_string(&value).unwrap();
+    tokio::fs::File::create(params.parameter_file().path())
+        .await
+        .unwrap()
+        .write_all(content.as_bytes())
+        .await
+        .unwrap();
+
+    params
+}
+
+async fn wait_for_outbox_proof(rollup_rpc_endpoint: &str) -> anyhow::Result<OutputProof> {
+    #[derive(Deserialize)]
+    struct Message {
+        message_index: u32,
+    }
+    #[derive(Deserialize)]
+    struct Executable {
+        outbox_level: u32,
+        messages: Vec<Message>,
+    }
+
+    let url = format!("{rollup_rpc_endpoint}/local/outbox/pending/executable");
+    let (outbox_level, message_index) = poll(30, 1000, || async {
+        // response: [{"outbox_level": 1, "messages": [{"message_index": 0, ...}, {"message_index": 1, ...}]}]
+        let res = reqwest::get(&url).await.ok()?;
+        let vs = res.json::<Vec<Executable>>().await.unwrap();
+        // using the first message here since any of those should work
+        let v = vs.first()?;
+        let m = v.messages.first()?;
+        Some((v.outbox_level, m.message_index))
+    })
+    .await
+    .expect("should be able to find outbox message soon enough");
+
+    let url = format!("{rollup_rpc_endpoint}/global/block/head/helpers/proofs/outbox/{outbox_level}/messages?index={message_index}");
+    let res = reqwest::get(&url)
+        .await
+        .context("failed to call rollup RPC endpoint")?;
+    let v = res
+        .json::<OutputProof>()
+        .await
+        .context("failed to parse response of rollup outbox proof RPC")?;
+    Ok(v)
 }

@@ -11,6 +11,7 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use octez::r#async::{
     directory::Directory,
+    endpoint::Endpoint,
     rollup::{OctezRollupConfig, RollupDataDir},
 };
 use serde::Deserialize;
@@ -21,6 +22,12 @@ pub struct OctezRollup {
     config: OctezRollupConfig,
     // holds the TempDir instance so that the directory does not get deleted too soon
     _data_dir: Arc<Directory>,
+}
+
+impl OctezRollup {
+    pub fn rpc_endpoint(&self) -> &Endpoint {
+        &self.config.rpc_endpoint
+    }
 }
 
 #[derive(Debug, Deserialize)]
