@@ -1,0 +1,42 @@
+{
+  "prim": "or",
+  "args": [
+    {
+      "prim": "pair",
+      "args": [
+        { "prim": "address" },
+        {
+          "prim": "ticket",
+          "args": [
+            {
+              "prim": "pair",
+              "args": [
+                { "prim": "nat" },
+                { "prim": "option", "args": [{ "prim": "bytes" }] }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "prim": "pair",
+      "args": [
+        { "prim": "address" },
+        { "prim": "option", "args": [{ "prim": "address" }] },
+        {
+          "prim": "ticket",
+          "args": [
+            {
+              "prim": "pair",
+              "args": [
+                { "prim": "nat" },
+                { "prim": "option", "args": [{ "prim": "bytes" }] }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
