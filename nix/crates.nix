@@ -148,8 +148,9 @@ in {
         # FIXME(https://linear.app/tezos/issue/JSTZ-186):
         # Don't run the `jstz_api` integration tests until they've been paralellized
         #
-        # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
-        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\"";
+        #
+         Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
+        cargoNextestExtraArgs = "--workspace --test \"jstzd_test\" --exclude \"jstz_api\"";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
