@@ -1,9 +1,11 @@
 use std::path::{Path, PathBuf};
 
 use crate::task::jstzd::JstzdConfig;
-use crate::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS};
+use crate::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS};
 use anyhow::{Context, Result};
+use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{BootstrapContract, ProtocolParameter};
+use octez::r#async::rollup::{OctezRollupConfigBuilder, RollupDataDir};
 use octez::{
     r#async::{
         baker::{BakerBinaryPath, OctezBakerConfig, OctezBakerConfigBuilder},
@@ -14,6 +16,7 @@ use octez::{
     unused_port,
 };
 use serde::Deserialize;
+use tezos_crypto_rs::hash::SmartRollupHash;
 use tokio::io::AsyncReadExt;
 
 const ACTIVATOR_PUBLIC_KEY: &str =
@@ -65,6 +68,20 @@ pub(crate) async fn build_config(
         &octez_client_config,
     )?;
 
+    // dummy rollup config for now
+    let octez_node_endpoint = octez_node_config.rpc_endpoint.clone();
+    let octez_rollup_config = OctezRollupConfigBuilder::new(
+        octez_node_endpoint,
+        octez_client_config.base_dir().into(),
+        SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
+        "bootstrap1".to_string(),
+        "dummy-kernel".into(),
+    )
+    .set_data_dir(RollupDataDir::Temp)
+    .set_rpc_endpoint(&Endpoint::localhost(8000))
+    .build()
+    .expect("aaa");
+
     let protocol_params = build_protocol_params(config.protocol).await?;
     let server_port = config.server_port.unwrap_or(unused_port());
     Ok((
@@ -73,6 +90,7 @@ pub(crate) async fn build_config(
             octez_node_config,
             baker_config,
             octez_client_config,
+            octez_rollup_config,
             protocol_params,
         ),
     ))
