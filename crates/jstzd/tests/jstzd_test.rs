@@ -6,10 +6,7 @@ use std::str::FromStr;
 use http::Uri;
 use jstzd::task::jstzd::{JstzdConfig, JstzdServer};
 use jstzd::task::utils::retry;
-use jstzd::{
-    BOOTSTRAP_CONTRACT_NAMES, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS,
-    JSTZ_ROLLUP_ADDRESS,
-};
+use jstzd::{BOOTSTRAP_CONTRACT_NAMES, JSTZ_ROLLUP_ADDRESS};
 use octez::r#async::baker::{BakerBinaryPath, OctezBakerConfigBuilder};
 use octez::r#async::client::{OctezClient, OctezClientConfigBuilder};
 use octez::r#async::endpoint::Endpoint;
@@ -31,10 +28,6 @@ const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuG
 use tokio::time::{sleep, timeout, Duration};
 
 const CONTRACT_INIT_BALANCE: f64 = 1.0;
-const CONTRACT_NAMES: [(&str, &str); 2] = [
-    ("exchanger", EXCHANGER_ADDRESS),
-    ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
-];
 pub const JSTZ_ROLLUP_OPERATOR_PK: &str =
     "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
 pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "bootstrap1";
@@ -190,9 +183,8 @@ async fn ensure_jstzd_components_are_up(
         .await
         .is_ok());
     assert!(jstzd.baker_healthy().await);
-    // assert!(jstzd.rollup_healthy().await);
     let rollup_running =
-        retry(200, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
+        retry(30, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
     assert!(rollup_running);
     assert!(jstzd.health_check().await);
 }
