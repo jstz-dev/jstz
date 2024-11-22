@@ -1,0 +1,1 @@
+pub const EXCHANGER_ADDRESS: &str = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";

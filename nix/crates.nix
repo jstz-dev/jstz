@@ -43,6 +43,16 @@
   # This is useful for caching the dependencies when in CI.
   cargoDeps = craneLib.buildDepsOnly common;
 
+  jstz_kernel = craneLib.buildPackage (common
+    // rec {
+      inherit (craneLib.crateNameFromCargoToml {inherit src;}) version;
+      cargoArtifacts = cargoDeps;
+      doCheck = false;
+      pname = "jstz_kernel";
+      target = "wasm32-unknown-unknown";
+      cargoExtraArgs = "-p ${pname} --target ${target}";
+    });
+
   # A common set of attributes for workspace crates
   commonWorkspace =
     common
@@ -51,18 +61,12 @@
       cargoArtifacts = cargoDeps;
       doCheck = false;
 
-      # HACK
-      # To build the `jstz_cli` crate, we need a `jstz_kernel.wasm` file
-      # in the `jstz_cli` crate. This is a dummy kernel that is used to
-      # build the `jstz_cli` crate. See the `jstz_cli` derivation below
-      # for building the actual kernel.
-      preBuildPhases = ["mkDummyJstzKernelForCli"];
-      mkDummyJstzKernelForCli = ''
-        touch ./crates/jstz_cli/jstz_kernel.wasm
+      preBuildPhases = ["cpJstzKernel"];
+      cpJstzKernel = ''
+        cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
+        cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
       '';
     };
-
-  workspace = craneLib.cargoBuild commonWorkspace;
 
   # Build a crate in the workspace
   crate = pname:
@@ -73,16 +77,18 @@
       });
 
   # Build a crate in the workspace for a specific target (cross compiled)
-  crossCrate = pname: target:
-    craneLib.buildPackage (commonWorkspace
-      // {
-        inherit pname;
-        cargoExtraArgs = "-p ${pname} --target ${target}";
-      });
+  # Uncomment when we have more than one target.
+  #
+  # crossCrate = pname: target:
+  #   craneLib.buildPackage (commonWorkspace
+  #     // {
+  #       inherit pname;
+  #       cargoExtraArgs = "-p ${pname} --target ${target}";
+  #     });
+
+  workspace = craneLib.cargoBuild commonWorkspace;
 in {
-  packages = let
-    jstz_kernel = crossCrate "jstz_kernel" "wasm32-unknown-unknown";
-  in {
+  packages = {
     # A list of all the crates in the workspace
     # When adding a new crate, add it to this list
     # in alphabetical order.
@@ -107,7 +113,15 @@ in {
     jstz_proto = crate "jstz_proto";
     jstz_rollup = crate "jstz_rollup";
     jstz_wpt = crate "jstz_wpt";
-    jstzd = crate "jstzd";
+    jstzd = craneLib.buildPackage (commonWorkspace
+      // rec {
+        pname = "jstzd";
+        cargoExtraArgs = "-p ${pname}";
+        preBuildPhases = ["mkJstzKernelForJstzd"];
+        mkJstzKernelForJstzd = ''
+          cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
+        '';
+      });
     octez = crate "octez";
 
     # Special target to build all crates in the workspace

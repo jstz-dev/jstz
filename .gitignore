@@ -41,5 +41,6 @@ node_modules/
 
 # Required by the CLI
 crates/jstz_cli/jstz_kernel.wasm
+crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 
 **/*/.DS_Store
