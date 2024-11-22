@@ -11,13 +11,14 @@ else
 	PROFILE_TARGET_DIR := $(PROFILE)
 endif
 
+JSTZD_KERNEL_PATH := crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 CLI_KERNEL_PATH := crates/jstz_cli/jstz_kernel.wasm
 
 .PHONY: all
 all: build test check
 
 .PHONY: build
-build: build-cli-kernel
+build: build-cli-kernel build-jstzd-kernel
 	@cargo build $(PROFILE_OPT)
 
 .PHONY: build-bridge
@@ -33,6 +34,12 @@ build-bridge:
 build-kernel:
 	@cargo build --package jstz_kernel --target wasm32-unknown-unknown $(PROFILE_OPT)
 
+.PHONY: build-jstzd-kernel
+build-jstzd-kernel: build-kernel
+	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(JSTZD_KERNEL_PATH)
+
+# TODO: Remove once jstzd replaces the sandbox 
+# https://linear.app/tezos/issue/JSTZ-205/remove-build-for-jstz-cli
 .PHONY: build-cli-kernel
 build-cli-kernel: build-kernel
 	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(CLI_KERNEL_PATH)
@@ -114,6 +121,6 @@ fmt-check: fmt-nix-check fmt-rust-check fmt-js-check
 
 .PHONY: lint
 lint:
-	@touch $(CLI_KERNEL_PATH)
+	@touch $(CLI_KERNEL_PATH) $(JSTZD_KERNEL_PATH)
 	@cargo clippy --all-targets -- --deny warnings
-	@rm -f $(CLI_KERNEL_PATH)
+	@rm -f $(CLI_KERNEL_PATH) $(JSTZD_KERNEL_PATH)
