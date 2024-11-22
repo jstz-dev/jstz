@@ -4,11 +4,16 @@ pub mod task;
 
 pub use config::BOOTSTRAP_CONTRACT_NAMES;
 use std::process::exit;
+use tezos_crypto_rs::hash::SmartRollupHash;
 
 pub const EXCHANGER_ADDRESS: &str = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";
 
 pub const JSTZ_ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 pub const JSTZ_NATIVE_BRIDGE_ADDRESS: &str = "KT1GFiPkkTjd14oHe6MrBPiRh5djzRkVWcni";
+
+pub fn jstz_address() -> SmartRollupHash {
+    SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap()
+}
 
 /// The `main` function for running jstzd
 pub async fn main(config_path: &Option<String>) {

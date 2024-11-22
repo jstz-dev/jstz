@@ -25,6 +25,7 @@ serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
 tokio.workspace = true
+tezos_crypto_rs.workspace = true 
 
 [build-dependencies]
 anyhow.workspace = true

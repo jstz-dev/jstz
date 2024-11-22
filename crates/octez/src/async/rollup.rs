@@ -3,6 +3,7 @@ use crate::unused_port;
 use super::{bootstrap::SmartRollupPvmKind, endpoint::Endpoint};
 use anyhow::Result;
 use http::Uri;
+use serde::Deserialize;
 use std::{
     path::{Path, PathBuf},
     str::FromStr,
@@ -12,7 +13,7 @@ use tokio::process::{Child, Command};
 
 const DEFAULT_BINARY_PATH: &str = "octez-smart-rollup-node";
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, Deserialize)]
 pub enum RollupDataDir {
     /// Path to the rollup data directory. This directory
     /// should contain the kernel pre image files under `wasm_2_0_0/`
@@ -27,6 +28,7 @@ pub enum RollupDataDir {
     Temp,
 }
 
+#[derive(Deserialize)]
 pub struct OctezRollupConfigBuilder {
     /// global options:
     /// Path to the octez-smart-rollup-node binary

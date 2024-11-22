@@ -1,9 +1,10 @@
 use std::path::{Path, PathBuf};
 
 use crate::task::jstzd::JstzdConfig;
-use crate::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS};
+use crate::{jstz_address, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS};
 use anyhow::{Context, Result};
 use octez::r#async::protocol::{BootstrapContract, ProtocolParameter};
+use octez::r#async::rollup::OctezRollupConfigBuilder;
 use octez::{
     r#async::{
         baker::{BakerBinaryPath, OctezBakerConfig, OctezBakerConfigBuilder},
@@ -15,6 +16,8 @@ use octez::{
 };
 use serde::Deserialize;
 use tokio::io::AsyncReadExt;
+
+include!(concat!(env!("OUT_DIR"), "/jstz_rollup_path.rs"));
 
 const ACTIVATOR_PUBLIC_KEY: &str =
     "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
@@ -31,6 +34,8 @@ struct Config {
     #[serde(default)]
     octez_baker: OctezBakerConfigBuilder,
     octez_client: Option<OctezClientConfigBuilder>,
+    #[serde(default)]
+    octez_rollup: Option<OctezRollupConfigBuilder>,
     #[serde(default)]
     protocol: ProtocolParameterBuilder,
 }
@@ -64,15 +69,30 @@ pub(crate) async fn build_config(
         &octez_node_config,
         &octez_client_config,
     )?;
-
     let protocol_params = build_protocol_params(config.protocol).await?;
     let server_port = config.server_port.unwrap_or(unused_port());
+    let client_base_dir: String = octez_client_config.base_dir().try_into().unwrap();
+    let octez_rollup_config = config
+        .octez_rollup
+        .unwrap_or_else(|| {
+            OctezRollupConfigBuilder::new(
+                octez_node_config.rpc_endpoint.clone(),
+                client_base_dir.into(),
+                jstz_address(),
+                "bootstrap1".to_string(),
+                kernel_installer_path(),
+            )
+        })
+        .build()
+        .unwrap();
+
     Ok((
         server_port,
         JstzdConfig::new(
             octez_node_config,
             baker_config,
             octez_client_config,
+            octez_rollup_config,
             protocol_params,
         ),
     ))

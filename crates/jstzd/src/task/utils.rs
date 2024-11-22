@@ -1,3 +1,6 @@
+use anyhow::{anyhow, Result};
+use serde_json::Value;
+
 pub async fn retry<'a, F>(
     retries: u16,
     interval_ms: u64,
@@ -104,4 +107,17 @@ mod tests {
                 .is_none()
         );
     }
+}
+
+pub async fn get_block_level(rpc_endpoint: &str) -> Result<i64> {
+    let blocks_head_endpoint = format!("{}/chains/main/blocks/head", rpc_endpoint);
+    let response: Value = reqwest::get(&blocks_head_endpoint).await?.json().await?;
+
+    let level = response
+        .get("header")
+        .and_then(|header| header.get("level"))
+        .ok_or_else(|| anyhow!("Failed to extract level from head block"))?;
+    level
+        .as_i64()
+        .ok_or_else(|| anyhow!("Level is not a valid i64"))
 }
