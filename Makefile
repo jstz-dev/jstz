@@ -121,6 +121,8 @@ fmt-check: fmt-nix-check fmt-rust-check fmt-js-check
 
 .PHONY: lint
 lint:
-	@touch $(CLI_KERNEL_PATH) $(JSTZD_KERNEL_PATH)
+	@touch $(CLI_KERNEL_PATH) 
+#  Jstzd has to processes a non-empty kernel in its build script
+	@echo "ignore" > $(JSTZD_KERNEL_PATH) 
 	@cargo clippy --all-targets -- --deny warnings
 	@rm -f $(CLI_KERNEL_PATH) $(JSTZD_KERNEL_PATH)
