@@ -15,3 +15,8 @@ async fn test_octez_client() {
         .unwrap();
     println!("octez-client --version: {:?}", output);
 }
+
+#[test]
+fn timeout() {
+    std::thread::sleep(std::time::Duration::from_secs(120));
+}
