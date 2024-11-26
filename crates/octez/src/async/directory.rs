@@ -1,4 +1,4 @@
-use std::{fmt::Display, path::PathBuf};
+use std::{ffi::OsStr, fmt::Display, path::PathBuf};
 
 use anyhow::{bail, Result};
 use serde_with::SerializeDisplay;
@@ -48,11 +48,11 @@ impl TryFrom<PathBuf> for Directory {
     }
 }
 
-impl From<&Directory> for PathBuf {
-    fn from(dir: &Directory) -> PathBuf {
-        match dir {
-            Directory::TempDir(temp_dir) => temp_dir.path().to_path_buf(),
-            Directory::Path(path) => path.clone(),
+impl AsRef<OsStr> for Directory {
+    fn as_ref(&self) -> &std::ffi::OsStr {
+        match self {
+            Directory::TempDir(temp_dir) => temp_dir.path().as_os_str(),
+            Directory::Path(path) => path.as_os_str(),
         }
     }
 }
@@ -159,5 +159,19 @@ mod test {
 
         let directory = Directory::TempDir(temp_dir);
         assert_eq!(directory.to_string(), dir_path.to_str().unwrap());
+    }
+    #[test]
+    fn test_directory_from_os_str() {
+        // Test with valid UTF-8 path
+        let valid_os_str = OsStr::new("/tmp/valid/path");
+        let directory = Directory::Path(PathBuf::from(valid_os_str));
+        assert_eq!(directory.to_string(), "/tmp/valid/path");
+
+        // Test with non-UTF-8 path
+        let invalid_bytes = b"/tmp/\xFF\xFE";
+        let invalid_os_str = OsStr::from_bytes(invalid_bytes);
+        let directory = Directory::Path(PathBuf::from(invalid_os_str));
+        let res: Result<String, anyhow::Error> = (&directory).try_into();
+        assert!(res.is_err());
     }
 }
