@@ -18,5 +18,5 @@ async fn test_octez_client() {
 
 #[test]
 fn timeout() {
-    std::thread::sleep(std::time::Duration::from_secs(120));
+    std::thread::sleep(std::time::Duration::from_secs(121));
 }
