@@ -15,7 +15,7 @@
   src = let
     # Include all Rust files / cargo related files
     # Include all files in the `contracts` and `crates` directories
-    regexes = [".*\.toml$" ".*\.rs$" "^\.cargo.*$" "^Cargo.lock$" "^crates.*$" "^contracts.*$"];
+    regexes = [".*\.toml$" ".*\.rs$" "^\.cargo.*$" "^Cargo.lock$" "^crates.*$" "^contracts.*$" "\.config.*$"];
   in
     lib.sourceByRegex (lib.cleanSource ../.) regexes;
 
