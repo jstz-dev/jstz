@@ -15,7 +15,7 @@
   src = let
     # Include all Rust files / cargo related files
     # Include all files in the `contracts` and `crates` directories
-    regexes = [".*\.toml$" ".*\.rs$" "^\.cargo.*$" "^Cargo.lock$" "^crates.*$" "^contracts.*$"];
+    regexes = [".*\.toml$" ".*\.rs$" "^\.cargo.*$" "^Cargo.lock$" "^crates.*$" "^contracts.*$" "\.config.*$"];
   in
     lib.sourceByRegex (lib.cleanSource ../.) regexes;
 
@@ -151,7 +151,7 @@ in {
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
         # FIXME(https://linear.app/tezos/issue/JSTZ-237):
         # Fix tests that only fail in CI/Nix
-        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --features \"skip-rollup-tests\"";
+        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --features \"skip-rollup-tests\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
@@ -160,7 +160,7 @@ in {
         # Use nextest for test harness (instead of `cargo test`)
         cargoLlvmCovCommand = "nextest";
         # Generate coverage reports for codecov
-        cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out --features \"skip-rollup-tests\"";
+        cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out --features \"skip-rollup-tests\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-clippy = craneLib.cargoClippy (commonWorkspace
