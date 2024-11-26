@@ -9,7 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@jstz-dev/sdk": "^0.0.0",
+    "@jstz-dev/sdk": "file:../../packages/sdk",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "vite-plugin-top-level-await": "^1.4.1",

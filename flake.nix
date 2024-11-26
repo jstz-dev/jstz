@@ -216,7 +216,7 @@
                 python39 # for running web-platform tests
               ]
               ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev]
-              ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
+              ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [Security SystemConfiguration Foundation]);
           };
         }
       );
