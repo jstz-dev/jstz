@@ -1,5 +1,5 @@
 use std::{
-    fs::{self, create_dir_all},
+    os::unix::fs::symlink,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -7,7 +7,7 @@ use std::{
 use crate::task::child_wrapper::ChildWrapper;
 
 use super::{child_wrapper::SharedChildWrapper, Task};
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use async_trait::async_trait;
 use octez::r#async::{
     directory::Directory,
@@ -46,9 +46,8 @@ impl Task for OctezRollup {
                 preimages_dir: from,
             } => {
                 let temp_dir = Directory::default();
-                let to = PathBuf::from(&temp_dir).join(config.pvm_kind.to_string());
-                create_dir_all(&to)?;
-                copy_files(from, &to)?;
+                let to = Path::new(&temp_dir).join(config.pvm_kind.to_string());
+                symlink(from, to)?;
                 temp_dir
             }
             RollupDataDir::Temp => Directory::default(),
@@ -84,40 +83,5 @@ impl Task for OctezRollup {
                 .await?;
         let body = res.json::<HealthCheckResponse>().await?;
         return Ok(body.healthy);
-    }
-}
-
-/// Copy all files from `src_dir` to `dest_dir`
-fn copy_files(src_dir: &Path, dest_dir: &Path) -> Result<()> {
-    for entry in fs::read_dir(src_dir)? {
-        let path = entry?.path();
-        if path.is_file() {
-            let file_name = path
-                .file_name()
-                .ok_or_else(|| anyhow!("file name not found in path: {:?}", path))?;
-            let dest_file = dest_dir.join(file_name);
-            fs::copy(&path, &dest_file)?;
-        }
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-mod test {
-    use super::copy_files;
-
-    #[test]
-    fn test_copy_files() {
-        let temp_dir = tempfile::tempdir().unwrap();
-        let src_dir = temp_dir.path().join("src");
-        let dest_dir = temp_dir.path().join("dest");
-        std::fs::create_dir(&src_dir).unwrap();
-        std::fs::create_dir(&dest_dir).unwrap();
-        let src_file = src_dir.join("file.txt");
-        std::fs::write(&src_file, "hello").unwrap();
-        copy_files(&src_dir, &dest_dir).unwrap();
-        let dest_file = dest_dir.join("file.txt");
-        assert!(dest_file.exists());
-        assert_eq!(std::fs::read_to_string(&dest_file).unwrap(), "hello");
     }
 }
