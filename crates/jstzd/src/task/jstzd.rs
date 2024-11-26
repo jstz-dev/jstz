@@ -1,4 +1,7 @@
 use super::{
+    // child_wrapper::Shared,
+    child_wrapper::Shared,
+    jstz_node::JstzNode,
     octez_baker::OctezBaker,
     octez_node::OctezNode,
     octez_rollup::OctezRollup,
@@ -14,6 +17,7 @@ use axum::{
     routing::{get, put},
     Router,
 };
+use jstz_node::config::JstzNodeConfig;
 use octez::r#async::{
     baker::OctezBakerConfig,
     client::{OctezClient, OctezClientConfig},
@@ -26,10 +30,20 @@ use serde::Serialize;
 use std::sync::Arc;
 use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
 
+trait IntoShared {
+    fn into_shared(self) -> Shared<Self>;
+}
+
+impl<T: Task> IntoShared for T {
+    fn into_shared(self) -> Shared<Self> {
+        Arc::new(RwLock::new(self))
+    }
+}
 struct Jstzd {
-    octez_node: Arc<RwLock<OctezNode>>,
-    baker: Arc<RwLock<OctezBaker>>,
-    rollup: Arc<RwLock<OctezRollup>>,
+    octez_node: Shared<OctezNode>,
+    baker: Shared<OctezBaker>,
+    rollup: Shared<OctezRollup>,
+    jstz_node: Shared<JstzNode>,
 }
 
 #[derive(Clone, Serialize)]
@@ -43,6 +57,8 @@ pub struct JstzdConfig {
     #[serde(skip_serializing)]
     octez_rollup_config: OctezRollupConfig,
     #[serde(skip_serializing)]
+    jstz_node_config: JstzNodeConfig,
+    #[serde(skip_serializing)]
     protocol_params: ProtocolParameter,
 }
 
@@ -52,6 +68,7 @@ impl JstzdConfig {
         baker_config: OctezBakerConfig,
         octez_client_config: OctezClientConfig,
         octez_rollup_config: OctezRollupConfig,
+        jstz_node_config: JstzNodeConfig,
         protocol_params: ProtocolParameter,
     ) -> Self {
         Self {
@@ -59,6 +76,7 @@ impl JstzdConfig {
             baker_config,
             octez_client_config,
             octez_rollup_config,
+            jstz_node_config,
             protocol_params,
         }
     }
@@ -91,10 +109,13 @@ impl Task for Jstzd {
         let baker = OctezBaker::spawn(config.baker_config.clone()).await?;
         Self::wait_for_block_level(&config.octez_node_config.rpc_endpoint, 3).await?;
         let rollup = OctezRollup::spawn(config.octez_rollup_config.clone()).await?;
+        let jstz_node = JstzNode::spawn(config.jstz_node_config).await?;
+        Self::wait_for_jstz_node(&jstz_node).await?;
         Ok(Self {
-            octez_node: Arc::new(RwLock::new(octez_node)),
-            baker: Arc::new(RwLock::new(baker)),
-            rollup: Arc::new(RwLock::new(rollup)),
+            octez_node: octez_node.into_shared(),
+            baker: baker.into_shared(),
+            rollup: rollup.into_shared(),
+            jstz_node: jstz_node.into_shared(),
         })
     }
 
@@ -103,6 +124,7 @@ impl Task for Jstzd {
             self.octez_node.write().await.kill(),
             self.baker.write().await.kill(),
             self.rollup.write().await.kill(),
+            self.jstz_node.write().await.kill(),
         ])
         .await;
 
@@ -125,6 +147,7 @@ impl Task for Jstzd {
             self.octez_node.read().await.health_check(),
             self.baker.read().await.health_check(),
             self.rollup.read().await.health_check(),
+            self.jstz_node.read().await.health_check(),
         ])
         .await;
 
@@ -138,7 +161,7 @@ impl Task for Jstzd {
         }
 
         if !err.is_empty() {
-            Err(anyhow::anyhow!("failed to perform health check: {:?}", err))
+            bail!("failed to perform health check: {:?}", err)
         } else {
             Ok(healthy)
         }
@@ -210,11 +233,19 @@ impl Jstzd {
         }
         Ok(())
     }
+
+    async fn wait_for_jstz_node(jstz_node: &JstzNode) -> Result<()> {
+        let ready = retry(10, 1000, || async { jstz_node.health_check().await }).await;
+        if !ready {
+            bail!("jstz node is still not ready after retries");
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Default)]
 pub struct JstzdServerInner {
-    state: Arc<RwLock<ServerState>>,
+    state: Shared<ServerState>,
 }
 
 #[derive(Default)]
@@ -314,6 +345,19 @@ impl JstzdServer {
             None => false,
         }
     }
+
+    pub async fn jstz_node_healthy(&self) -> bool {
+        match &self.inner.state.read().await.jstzd {
+            Some(v) => v
+                .jstz_node
+                .read()
+                .await
+                .health_check()
+                .await
+                .unwrap_or(false),
+            None => false,
+        }
+    }
 }
 
 async fn health_check(state: &ServerState) -> bool {
@@ -345,9 +389,7 @@ async fn shutdown(state: &mut ServerState) -> Result<()> {
     Ok(())
 }
 
-async fn health_check_handler(
-    state: State<Arc<RwLock<ServerState>>>,
-) -> http::StatusCode {
+async fn health_check_handler(state: State<Shared<ServerState>>) -> http::StatusCode {
     let lock = state.read().await;
     match health_check(&lock).await {
         true => http::StatusCode::OK,
@@ -355,7 +397,7 @@ async fn health_check_handler(
     }
 }
 
-async fn shutdown_handler(state: State<Arc<RwLock<ServerState>>>) -> http::StatusCode {
+async fn shutdown_handler(state: State<Shared<ServerState>>) -> http::StatusCode {
     let mut lock = state.write().await;
     if shutdown(&mut lock).await.is_err() {
         return http::StatusCode::INTERNAL_SERVER_ERROR;
@@ -363,13 +405,13 @@ async fn shutdown_handler(state: State<Arc<RwLock<ServerState>>>) -> http::Statu
     http::StatusCode::NO_CONTENT
 }
 
-async fn all_config_handler(state: State<Arc<RwLock<ServerState>>>) -> impl IntoResponse {
+async fn all_config_handler(state: State<Shared<ServerState>>) -> impl IntoResponse {
     let config = &state.read().await.jstzd_config_json;
     serde_json::to_string(config).unwrap().into_response()
 }
 
 async fn config_handler(
-    state: State<Arc<RwLock<ServerState>>>,
+    state: State<Shared<ServerState>>,
     Path(config_type): Path<String>,
 ) -> impl IntoResponse {
     let config = &state.read().await.jstzd_config_json;
