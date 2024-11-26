@@ -135,7 +135,7 @@ in {
         # Don't run the `jstz_api` integration tests until they've been paralellized
         #
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
-        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\"";
+        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
