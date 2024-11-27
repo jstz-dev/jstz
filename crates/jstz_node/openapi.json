@@ -378,6 +378,43 @@
         }
       }
     },
+    "/operations/hash": {
+      "post": {
+        "tags": [
+          "Operations"
+        ],
+        "summary": "Returns the hash of an Operation",
+        "operationId": "hash_operation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Operation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Blake2b"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/operations/{operation_hash}/receipt": {
       "get": {
         "tags": [
