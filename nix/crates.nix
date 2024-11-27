@@ -150,6 +150,9 @@ in {
         #
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
         cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\"";
+        preCheck = ''
+          export TEZOS_LOG="*->debug"
+        '';
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
