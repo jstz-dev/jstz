@@ -10,10 +10,10 @@
 //!
 //! For more details, refer to the [ECMAScript Specification on Scripts and Modules](https://tc39.es/ecma262/#sec-scripts).
 
-use std::{marker::PhantomData, path::Path, ptr::NonNull};
+use std::{marker::PhantomData, path::Path, pin::Pin, sync::Arc};
 
 use mozjs::{
-    jsapi::{Compile1, JSScript, JS_ExecuteScript},
+    jsapi::{Compile1, Handle, JSScript, JS_ExecuteScript},
     jsval::{JSVal, UndefinedValue},
     rooted,
     rust::CompileOptionsWrapper,
@@ -22,12 +22,24 @@ use mozjs::{
 use crate::{
     compartment::Compartment,
     context::{CanAlloc, Context, InCompartment},
-    AsRawPtr,
+    custom_trace,
+    gc::{ptr::GcPtr, Finalize, Prolong, Trace},
+    letroot, AsRawPtr,
 };
 
+#[derive(Debug)]
 pub struct Script<'a, C: Compartment> {
-    script: NonNull<JSScript>,
+    script: Pin<Arc<GcPtr<*mut JSScript>>>,
     marker: PhantomData<(&'a (), C)>,
+}
+
+impl<'a, C: Compartment> Clone for Script<'a, C> {
+    fn clone(&self) -> Self {
+        Self {
+            script: self.script.clone(),
+            marker: PhantomData,
+        }
+    }
 }
 
 impl<'a, C: Compartment> Script<'a, C> {
@@ -47,8 +59,12 @@ impl<'a, C: Compartment> Script<'a, C> {
 
         let script = unsafe { Compile1(cx.as_raw_ptr(), options.ptr, &mut source) };
 
+        if script.is_null() {
+            return None;
+        }
+
         Some(Self {
-            script: NonNull::new(script)?,
+            script: GcPtr::pinned(script),
             marker: PhantomData,
         })
     }
@@ -67,12 +83,14 @@ impl<'a, C: Compartment> Script<'a, C> {
         // TODO(https://linear.app/tezos/issue/JSTZ-196):
         // Remove this once we have a proper way to root values
         rooted!(in(unsafe { cx.as_raw_ptr() }) let mut rval = UndefinedValue());
-        rooted!(in(unsafe { cx.as_raw_ptr() }) let mut rooted_script = unsafe { self.as_raw_ptr() });
 
         if unsafe {
             JS_ExecuteScript(
                 cx.as_raw_ptr(),
-                rooted_script.handle_mut().into(),
+                Handle {
+                    ptr: self.script.get_unsafe(),
+                    _phantom_0: PhantomData,
+                },
                 rval.handle_mut().into(),
             )
         } {
@@ -81,14 +99,39 @@ impl<'a, C: Compartment> Script<'a, C> {
             None
         }
     }
+
+    pub fn compile_and_evaluate<S>(
+        path: &Path,
+        src: &str,
+        cx: &mut Context<S>,
+    ) -> Option<JSVal>
+    where
+        S: InCompartment<C> + CanAlloc,
+    {
+        letroot!(script = Script::compile(path, src, cx)?; [cx]);
+
+        script.evaluate(cx)
+    }
 }
 
 impl<'a, C: Compartment> AsRawPtr for Script<'a, C> {
     type Ptr = *mut JSScript;
 
     unsafe fn as_raw_ptr(&self) -> Self::Ptr {
-        self.script.as_ptr()
+        self.script.get()
     }
+}
+
+impl<'a, C: Compartment> Finalize for Script<'a, C> {}
+
+unsafe impl<'a, C: Compartment> Trace for Script<'a, C> {
+    custom_trace!(this, mark, {
+        mark(&this.script);
+    });
+}
+
+unsafe impl<'a, 'b, C: Compartment> Prolong<'a> for Script<'b, C> {
+    type Aged = Script<'a, C>;
 }
 
 #[cfg(test)]
@@ -98,7 +141,7 @@ mod test {
 
     use mozjs::rust::{JSEngine, Runtime};
 
-    use crate::{compartment, context::Context, script::Script};
+    use crate::{context::Context, letroot, script::Script};
 
     #[test]
     fn test_compile_and_evaluate() {
@@ -115,17 +158,13 @@ mod test {
         let source: &'static str = "40 + 2";
 
         // Compile the script
-        let script = Script::compile(&filename, source, &mut cx).unwrap();
+        println!("Compiling script...");
+        letroot!(script = Script::compile(&filename, source, &mut cx).unwrap(); [cx]);
 
-        // TODO(https://linear.app/tezos/issue/JSTZ-196):
-        // Remove once we have a proper way of rooting things.
-        // The script is rooted in the context in `eval`, but this doesn't work due to lifetimes.
-        // So we need to transmute it here.
-        let rooted_script: Script<'_, compartment::Ref<'_>> =
-            unsafe { std::mem::transmute(script) };
+        println!("Script, {:?}", script);
 
         // Evaluate the script
-        let res = rooted_script.evaluate(&mut cx);
+        let res = script.evaluate(&mut cx);
 
         assert!(res.is_some());
 

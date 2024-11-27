@@ -21,15 +21,19 @@
 //!
 //! For more details, refer to the [ECMAScript Specification on Contexts](https://tc39.es/ecma262/#sec-global-environment-records).
 
-use std::{marker::PhantomData, ptr::NonNull};
+use std::{ffi::c_void, marker::PhantomData, pin::Pin, ptr::NonNull};
 
 use mozjs::{
-    jsapi::{JSContext, JS},
+    jsapi::{JSContext, JS_AddExtraGCRootsTracer, JS_RemoveExtraGCRootsTracer, JS},
     rust::Runtime,
 };
 
 use crate::{
     compartment::{self, Compartment},
+    gc::{
+        root::{unsafe_ffi_trace_context_roots, Root, ShadowStack},
+        Trace,
+    },
     realm::Realm,
     AsRawPtr,
 };
@@ -42,6 +46,7 @@ pub struct Context<S> {
     // SAFETY: This is only `Some` if the state `S` is `Entered<'a, C, S>`.
     // In this case, the old realm is guaranteed to be alive for at least as long as `'a`.
     old_realm: Option<*mut JS::Realm>,
+    shadow_stack: Pin<Box<ShadowStack>>,
     marker: PhantomData<S>,
 }
 
@@ -72,6 +77,20 @@ impl<'a, C: Compartment, S> CanAccess for Entered<'a, C, S> {}
 pub trait InCompartment<C: Compartment> {}
 impl<'a, C: Compartment, S> InCompartment<C> for Entered<'a, C, S> {}
 
+fn new_shadow_stack(raw_cx: NonNull<JSContext>) -> Pin<Box<ShadowStack>> {
+    // Initialize the GC roots for the context.
+    let shadow_stack = Box::pin(ShadowStack::new());
+    unsafe {
+        JS_AddExtraGCRootsTracer(
+            raw_cx.as_ptr(),
+            Some(unsafe_ffi_trace_context_roots),
+            &*shadow_stack as *const ShadowStack as *mut c_void,
+        );
+    }
+
+    shadow_stack
+}
+
 impl Context<Owned> {
     pub fn from_runtime(rt: &Runtime) -> Self {
         // SAFETY: `rt.cx()` cannot be `NULL`.
@@ -80,6 +99,7 @@ impl Context<Owned> {
         Self {
             raw_cx,
             old_realm: None,
+            shadow_stack: new_shadow_stack(raw_cx),
             marker: PhantomData,
         }
     }
@@ -89,7 +109,7 @@ impl<S> Context<S> {
     /// Enter an existing realm
     pub fn enter_realm<'a, 'b, C: Compartment>(
         &'a mut self,
-        realm: Realm<'b, C>,
+        realm: &Realm<'b, C>,
     ) -> Context<Entered<'a, C, S>>
     where
         S: CanAlloc + CanAccess,
@@ -100,6 +120,7 @@ impl<S> Context<S> {
         Context {
             raw_cx: self.raw_cx,
             old_realm: Some(old_realm),
+            shadow_stack: new_shadow_stack(self.raw_cx),
             marker: PhantomData,
         }
     }
@@ -111,22 +132,39 @@ impl<S> Context<S> {
     {
         let realm = Realm::new(self)?;
 
-        // TODO(https://linear.app/tezos/issue/JSTZ-196):
-        // Remove this `unsafe` block once rooting is implemented.
-        //
-        // SAFETY: We transmute the lifetime of the realm. This is equivalent to rooting the realm.
+        // SAFETY:
+        // We transmute the lifetime of the realm. This is equivalent to rooting the realm.
         // This safe because entering the realm immediately roots the realm.
+        //
+        // Unfortunately we cannot truly root the realm (using [`letroot!`]) since
+        // the lifetime of the realm is bound to the lifetime of [`self`]. This is
+        // a unique case where our approach to static rooting fails.
         unsafe {
             let rooted_realm: Realm<'_, compartment::Ref<'_>> =
                 std::mem::transmute(realm);
 
-            Some(self.enter_realm(rooted_realm))
+            Some(self.enter_realm(&rooted_realm))
         }
+    }
+
+    /// Creates a new root
+    pub fn root<T: Trace>(&self) -> Root<T> {
+        Root::new(self.shadow_stack.as_ref())
     }
 }
 
 impl<S> Drop for Context<S> {
     fn drop(&mut self) {
+        // Unroot everything in the current realm
+        unsafe {
+            JS_RemoveExtraGCRootsTracer(
+                self.as_raw_ptr(),
+                Some(unsafe_ffi_trace_context_roots),
+                &*self.shadow_stack as *const ShadowStack as *mut c_void,
+            );
+        }
+
+        // Leave the current realm
         if let Some(old_realm) = self.old_realm {
             unsafe {
                 JS::LeaveRealm(self.as_raw_ptr(), old_realm);
