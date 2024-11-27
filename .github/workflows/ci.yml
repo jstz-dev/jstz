@@ -33,7 +33,7 @@ jobs:
       - name: Build
         run: nix --accept-flake-config --log-format raw -L build -j auto .#{all,js_jstz}
       - name: Flake check
-        run: nix --accept-flake-config --log-format raw --log-lines 70 -L flake check -j auto
+        run: nix --log-format raw --log-lines 70 -L flake check -j auto
       # Coverage is part of nix flake check, but we want to upload it to Codecov
       # So we run it again (it's cached) and upload the result
       - name: Coverage
