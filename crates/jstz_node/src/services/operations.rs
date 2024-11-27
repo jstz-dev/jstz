@@ -5,7 +5,7 @@ use axum::{
     extract::{Path, State},
     Json,
 };
-use jstz_proto::operation::SignedOperation;
+use jstz_proto::operation::{Operation, OperationHash, SignedOperation};
 use jstz_proto::receipt::Receipt;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
@@ -78,11 +78,29 @@ async fn receipt(
     Ok(Json(receipt))
 }
 
+/// Returns the hash of an Operation
+#[utoipa::path(
+        post,
+        path = "/hash",
+        tag = OPERATIONS_TAG,
+        responses(
+            (status = 200, body = OperationHash),
+            (status = 400),
+            (status = 500)
+        )
+    )]
+async fn hash_operation(
+    Json(operation): Json<Operation>,
+) -> ServiceResult<Json<OperationHash>> {
+    Ok(Json(operation.hash()))
+}
+
 impl Service for OperationsService {
     fn router_with_openapi() -> OpenApiRouter<AppState> {
         let routes = OpenApiRouter::new()
             .routes(routes!(inject))
-            .routes(routes!(receipt));
+            .routes(routes!(receipt))
+            .routes(routes!(hash_operation));
 
         OpenApiRouter::new().nest("/operations", routes)
     }
