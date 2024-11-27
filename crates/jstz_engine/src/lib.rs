@@ -1,8 +1,8 @@
 mod compartment;
 mod context;
 mod realm;
+mod script;
 
-#[allow(dead_code)]
 pub(crate) trait AsRawPtr {
     type Ptr;
 
