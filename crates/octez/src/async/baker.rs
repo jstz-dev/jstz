@@ -1,15 +1,28 @@
 use anyhow::{anyhow, Result};
 use serde::Serialize;
-use serde_with::SerializeDisplay;
-use std::{fmt::Display, path::PathBuf};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
+use std::{fmt::Display, path::PathBuf, str::FromStr};
 use tokio::process::{Child, Command};
 
 use super::{endpoint::Endpoint, protocol::Protocol};
 
-#[derive(PartialEq, Debug, Clone, SerializeDisplay)]
+#[derive(PartialEq, Debug, Clone, SerializeDisplay, DeserializeFromStr)]
 pub enum BakerBinaryPath {
     Env(Protocol),   // The binary exists in $PATH
     Custom(PathBuf), // The binary is at the given path
+}
+
+impl FromStr for BakerBinaryPath {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        Ok(match s {
+            "octez-baker-alpha" => BakerBinaryPath::Env(Protocol::Alpha),
+            "octez-baker-PsParisC" => BakerBinaryPath::Env(Protocol::ParisC),
+            "octez-baker-PsQuebec" => BakerBinaryPath::Env(Protocol::Quebec),
+            _ => BakerBinaryPath::Custom(PathBuf::from_str(s)?),
+        })
+    }
 }
 
 impl Display for BakerBinaryPath {
@@ -171,5 +184,37 @@ mod test {
                 "binary_path": "octez-baker-alpha"
             })
         )
+    }
+
+    #[test]
+    fn baker_path_from_str() {
+        assert_eq!(
+            BakerBinaryPath::from_str("octez-baker-alpha").unwrap(),
+            BakerBinaryPath::Env(Protocol::Alpha)
+        );
+        assert_eq!(
+            BakerBinaryPath::from_str("octez-baker-PsParisC").unwrap(),
+            BakerBinaryPath::Env(Protocol::ParisC)
+        );
+        assert_eq!(
+            BakerBinaryPath::from_str("/foo/bar").unwrap(),
+            BakerBinaryPath::Custom(PathBuf::from_str("/foo/bar").unwrap())
+        );
+    }
+
+    #[test]
+    fn deserialize_baker_path() {
+        assert_eq!(
+            serde_json::from_str::<BakerBinaryPath>("\"octez-baker-alpha\"").unwrap(),
+            BakerBinaryPath::Env(Protocol::Alpha)
+        );
+        assert_eq!(
+            serde_json::from_str::<BakerBinaryPath>("\"octez-baker-PsParisC\"").unwrap(),
+            BakerBinaryPath::Env(Protocol::ParisC)
+        );
+        assert_eq!(
+            serde_json::from_str::<BakerBinaryPath>("\"/foo/bar\"").unwrap(),
+            BakerBinaryPath::Custom(PathBuf::from_str("/foo/bar").unwrap())
+        );
     }
 }
