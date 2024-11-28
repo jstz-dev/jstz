@@ -17,24 +17,6 @@ pub const ACTIVATOR_SECRET_KEY: &str =
     "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
 pub const ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 
-pub async fn poll<'a, F, T>(
-    max_attempts: u16,
-    interval_ms: u64,
-    f: impl Fn() -> F,
-) -> Option<T>
-where
-    F: std::future::Future<Output = Option<T>> + Send + 'a,
-{
-    let duration = tokio::time::Duration::from_millis(interval_ms);
-    for _ in 0..max_attempts {
-        tokio::time::sleep(duration).await;
-        if let Some(v) = f().await {
-            return Some(v);
-        }
-    }
-    None
-}
-
 pub async fn setup(
     param_file_path: Option<PathBuf>,
 ) -> (OctezNode, OctezClient, octez_baker::OctezBaker) {
