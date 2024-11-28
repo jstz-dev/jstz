@@ -1,6 +1,7 @@
 use crate::unused_port;
 use anyhow::Result;
 use serde::Serialize;
+use serde_with::DeserializeFromStr;
 use std::{
     fmt::{self, Display, Formatter},
     path::PathBuf,
@@ -13,7 +14,7 @@ const DEFAULT_NETWORK: &str = "sandbox";
 const DEFAULT_BINARY_PATH: &str = "octez-node";
 const LOCAL_ADDRESS: &str = "127.0.0.1";
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug, DeserializeFromStr)]
 pub enum OctezNodeHistoryMode {
     Archive,
     // The numerical value represents additional cycles preserved. 0 is acceptable.
@@ -27,6 +28,38 @@ impl Display for OctezNodeHistoryMode {
             Self::Archive => write!(f, "archive"),
             Self::Full(v) => write!(f, "full:{}", v),
             Self::Rolling(v) => write!(f, "rolling:{}", v),
+        }
+    }
+}
+
+impl FromStr for OctezNodeHistoryMode {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let tokens = s.split(":").collect::<Vec<&str>>();
+        let (mode, cycle) = match tokens.len() {
+            2 => (
+                tokens.first().unwrap(),
+                Some(tokens.last().unwrap().parse::<u8>().map_err(|_| {
+                    anyhow::anyhow!(format!(
+                        "invalid cycle count '{}'",
+                        tokens.last().unwrap()
+                    ))
+                })?),
+            ),
+            1 => (tokens.first().unwrap(), None),
+            _ => return Err(anyhow::anyhow!("invalid input string")),
+        };
+        match *mode {
+            "archive" => match cycle {
+                Some(_) => Err(anyhow::anyhow!(
+                    "history mode 'archive' does not accept cycle count"
+                )),
+                None => Ok(Self::Archive),
+            },
+            "full" => Ok(Self::Full(cycle.unwrap_or_default())),
+            "rolling" => Ok(Self::Rolling(cycle.unwrap_or_default())),
+            _ => Err(anyhow::anyhow!("invalid history mode '{}'", mode)),
         }
     }
 }
@@ -415,5 +448,89 @@ mod tests {
             serde_json::to_string(&OctezNodeHistoryMode::Rolling(1)).unwrap(),
             "\"rolling:1\""
         );
+    }
+
+    #[test]
+    fn history_mode_from_str() {
+        assert_eq!(
+            OctezNodeHistoryMode::from_str("archive").unwrap(),
+            OctezNodeHistoryMode::Archive
+        );
+        assert_eq!(
+            OctezNodeHistoryMode::from_str("archive:2")
+                .unwrap_err()
+                .to_string(),
+            "history mode 'archive' does not accept cycle count"
+        );
+        assert_eq!(
+            OctezNodeHistoryMode::from_str("full:2").unwrap(),
+            OctezNodeHistoryMode::Full(2)
+        );
+        assert_eq!(
+            OctezNodeHistoryMode::from_str("full:9999999")
+                .unwrap_err()
+                .to_string(),
+            "invalid cycle count '9999999'"
+        );
+        assert_eq!(
+            OctezNodeHistoryMode::from_str("rolling:1").unwrap(),
+            OctezNodeHistoryMode::Rolling(1)
+        );
+        assert_eq!(
+            OctezNodeHistoryMode::from_str("rolling").unwrap(),
+            OctezNodeHistoryMode::Rolling(0)
+        );
+        assert_eq!(
+            OctezNodeHistoryMode::from_str("foobar")
+                .unwrap_err()
+                .to_string(),
+            "invalid history mode 'foobar'"
+        );
+        assert_eq!(
+            OctezNodeHistoryMode::from_str("a:b:c")
+                .unwrap_err()
+                .to_string(),
+            "invalid input string"
+        );
+    }
+
+    #[test]
+    fn history_mode_deserialize() {
+        assert_eq!(
+            serde_json::from_str::<OctezNodeHistoryMode>("\"archive\"").unwrap(),
+            OctezNodeHistoryMode::Archive
+        );
+        assert!(
+            serde_json::from_str::<OctezNodeHistoryMode>("\"archive:2\"")
+                .unwrap_err()
+                .to_string()
+                .contains("history mode 'archive' does not accept cycle count")
+        );
+        assert_eq!(
+            serde_json::from_str::<OctezNodeHistoryMode>("\"full:2\"").unwrap(),
+            OctezNodeHistoryMode::Full(2)
+        );
+        assert!(
+            serde_json::from_str::<OctezNodeHistoryMode>("\"full:9999999\"")
+                .unwrap_err()
+                .to_string()
+                .contains("invalid cycle count '9999999'")
+        );
+        assert_eq!(
+            serde_json::from_str::<OctezNodeHistoryMode>("\"rolling:1\"").unwrap(),
+            OctezNodeHistoryMode::Rolling(1)
+        );
+        assert_eq!(
+            serde_json::from_str::<OctezNodeHistoryMode>("\"rolling\"").unwrap(),
+            OctezNodeHistoryMode::Rolling(0)
+        );
+        assert!(serde_json::from_str::<OctezNodeHistoryMode>("\"foobar\"")
+            .unwrap_err()
+            .to_string()
+            .contains("invalid history mode 'foobar'"));
+        assert!(serde_json::from_str::<OctezNodeHistoryMode>("\"a:b:c\"")
+            .unwrap_err()
+            .to_string()
+            .contains("invalid input string"));
     }
 }
