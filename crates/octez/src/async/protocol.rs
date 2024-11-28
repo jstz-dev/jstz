@@ -4,6 +4,7 @@ pub use super::bootstrap::{
 use super::bootstrap::{BootstrapAccounts, BootstrapContracts, BootstrapSmartRollups};
 
 use rust_embed::Embed;
+use serde::Deserialize;
 use serde_json::Value;
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::fmt::Display;
@@ -120,17 +121,20 @@ impl ProtocolParameter {
     }
 }
 
-#[derive(Default)]
+#[derive(Deserialize, Default, PartialEq, Debug)]
 pub struct ProtocolParameterBuilder {
     /// Target protocol version.
     protocol: Option<Protocol>,
     /// Protocol constants.
     constants: Option<ProtocolConstants>,
     /// Bootstrap accounts.
+    #[serde(default)]
     bootstrap_accounts: BootstrapAccounts,
     /// Bootstrap contracts.
+    #[serde(default)]
     bootstrap_contracts: BootstrapContracts,
     /// Bootstrap smart rollups.
+    #[serde(default)]
     bootstrap_smart_rollups: BootstrapSmartRollups,
     /// Path to an existing parameter file whose content will be used as the base
     /// parameter set. If `source_path` is not given, a predefined parameter

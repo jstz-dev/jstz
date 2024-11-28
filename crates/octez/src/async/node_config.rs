@@ -1,6 +1,6 @@
 use crate::unused_port;
 use anyhow::Result;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_with::DeserializeFromStr;
 use std::{
     fmt::{self, Display, Formatter},
@@ -73,7 +73,7 @@ impl Serialize for OctezNodeHistoryMode {
     }
 }
 
-#[derive(Clone, PartialEq, Debug, Serialize)]
+#[derive(Clone, PartialEq, Debug, Serialize, Deserialize)]
 pub struct OctezNodeRunOptions {
     synchronisation_threshold: u8,
     network: String,
@@ -168,7 +168,7 @@ pub struct OctezNodeConfig {
     pub run_options: OctezNodeRunOptions,
 }
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Debug, PartialEq)]
 pub struct OctezNodeConfigBuilder {
     binary_path: Option<PathBuf>,
     data_dir: Option<PathBuf>,
