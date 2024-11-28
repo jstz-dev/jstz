@@ -1,3 +1,4 @@
+mod config;
 pub mod docker;
 pub mod task;
 

@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::{fmt::Display, path::PathBuf, str::FromStr};
 use tokio::process::{Child, Command};
@@ -47,7 +47,7 @@ pub struct OctezBakerConfig {
     octez_node_endpoint: Endpoint,
 }
 
-#[derive(Default)]
+#[derive(Default, Deserialize, Debug, PartialEq)]
 pub struct OctezBakerConfigBuilder {
     binary_path: Option<BakerBinaryPath>,
     octez_client_base_dir: Option<PathBuf>,

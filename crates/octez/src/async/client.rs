@@ -3,7 +3,7 @@ use jstz_crypto::{
     public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
 };
 use regex::Regex;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
     fmt,
@@ -34,12 +34,14 @@ impl OctezClientConfig {
     }
 }
 
+#[derive(Deserialize, Debug, PartialEq)]
 pub struct OctezClientConfigBuilder {
     // if None, use the binary in $PATH
     binary_path: Option<PathBuf>,
     // if None, use temp directory
     base_dir: Option<PathBuf>,
     octez_node_endpoint: Endpoint,
+    #[serde(default)]
     disable_unsafe_disclaimer: bool,
 }
 
