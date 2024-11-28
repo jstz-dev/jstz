@@ -298,7 +298,7 @@ async fn originate_contract_and_wait_for() {
         octez_client.wait_for(&op, Some(&head), None),
     )
     .await
-    .expect("wait_for should complete soon enough")
+    .expect("wait_for should complete soon enough!!")
     .expect("wait_for should be able to find the operation");
 
     tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
