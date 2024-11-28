@@ -1,6 +1,6 @@
 use anyhow::Context;
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstzd::task::Task;
+use jstzd::task::{utils::poll, Task};
 use octez::r#async::{
     client::{OctezClient, OctezClientConfigBuilder, Signature},
     endpoint::Endpoint,
@@ -23,7 +23,7 @@ mod utils;
 use std::path::PathBuf;
 use utils::{
     activate_alpha, create_client, get_head_block_hash, get_operation_kind, get_request,
-    import_activator, poll, setup, spawn_octez_node, spawn_rollup, ACTIVATOR_SECRET_KEY,
+    import_activator, setup, spawn_octez_node, spawn_rollup, ACTIVATOR_SECRET_KEY,
 };
 
 fn read_file(path: &Path) -> Value {
