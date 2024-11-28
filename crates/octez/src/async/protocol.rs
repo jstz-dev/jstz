@@ -5,10 +5,11 @@ use super::bootstrap::{BootstrapAccounts, BootstrapContracts, BootstrapSmartRoll
 
 use rust_embed::Embed;
 use serde_json::Value;
-use serde_with::SerializeDisplay;
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::fmt::Display;
 use std::io::{Read, Seek, Write};
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 use std::sync::Arc;
 
 pub trait ReadWritable: Read + Write {
@@ -21,9 +22,20 @@ impl ReadWritable for tempfile::NamedTempFile {
     }
 }
 
-#[derive(PartialEq, Eq, Debug)]
+#[derive(PartialEq, Eq, Debug, DeserializeFromStr)]
 pub enum ProtocolConstants {
     Sandbox,
+}
+
+impl FromStr for ProtocolConstants {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "sandbox" => Ok(ProtocolConstants::Sandbox),
+            _ => Err(anyhow::anyhow!("unknown protocol constants '{}'", s)),
+        }
+    }
 }
 
 impl Default for ProtocolConstants {
@@ -40,11 +52,26 @@ impl Display for ProtocolConstants {
     }
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, SerializeDisplay)]
+#[derive(PartialEq, Eq, Debug, Clone, SerializeDisplay, DeserializeFromStr)]
 pub enum Protocol {
     Alpha,
     ParisC,
     Quebec,
+}
+
+impl FromStr for Protocol {
+    type Err = anyhow::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "alpha" => Ok(Protocol::Alpha),
+            "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK" => Ok(Protocol::Alpha),
+            "parisC" => Ok(Protocol::ParisC),
+            "PsParisCZo7KAh1Z1smVd9ZMZ1HHn5gkzbM94V3PLCpknFWhUAi" => Ok(Protocol::ParisC),
+            "PsQubecQubecQubecQubecQubecQubecQubecQubecQubec" => Ok(Protocol::Quebec),
+            _ => Err(anyhow::anyhow!("unknown protocol '{}'", s)),
+        }
+    }
 }
 
 impl Default for Protocol {
@@ -716,5 +743,40 @@ mod tests {
             serde_json::to_string(&Protocol::Alpha).unwrap(),
             "\"ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK\""
         )
+    }
+
+    #[test]
+    fn deserialize_protocol_constants() {
+        assert_eq!(
+            serde_json::from_str::<ProtocolConstants>("\"sandbox\"").unwrap(),
+            ProtocolConstants::Sandbox
+        );
+        assert!(serde_json::from_str::<ProtocolConstants>("\"foobar\"")
+            .unwrap_err()
+            .to_string()
+            .contains("unknown protocol constants 'foobar'"));
+    }
+
+    #[test]
+    fn deserialize_protocol() {
+        assert_eq!(
+            serde_json::from_str::<Protocol>(
+                "\"ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK\""
+            )
+            .unwrap(),
+            Protocol::Alpha
+        );
+        assert_eq!(
+            serde_json::from_str::<Protocol>("\"alpha\"").unwrap(),
+            Protocol::Alpha
+        );
+        assert_eq!(
+            serde_json::from_str::<Protocol>("\"parisC\"").unwrap(),
+            Protocol::ParisC
+        );
+        assert!(serde_json::from_str::<Protocol>("\"foobar\"")
+            .unwrap_err()
+            .to_string()
+            .contains("unknown protocol 'foobar'"));
     }
 }
