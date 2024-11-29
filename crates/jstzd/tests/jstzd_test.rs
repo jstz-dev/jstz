@@ -27,11 +27,18 @@ async fn jstzd_test() {
 
     fetch_config_test(config, jstzd_port).await;
 
-    reqwest::Client::new()
-        .put(&format!("http://localhost:{}/shutdown", jstzd_port))
-        .send()
+    tokio::spawn(async move {
+        tokio::time::sleep(tokio::time::Duration::from_secs(10)).await;
+        reqwest::Client::new()
+            .put(&format!("http://localhost:{}/shutdown", jstzd_port))
+            .send()
+            .await
+            .unwrap();
+    });
+
+    tokio::time::timeout(tokio::time::Duration::from_secs(30), jstzd.wait())
         .await
-        .unwrap();
+        .expect("should not wait too long for the server to be taken down");
 
     ensure_jstzd_components_are_down(&jstzd, &rpc_endpoint, jstzd_port).await;
 

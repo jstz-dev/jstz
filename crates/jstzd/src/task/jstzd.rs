@@ -16,7 +16,11 @@ use octez::r#async::{
 };
 use serde::Serialize;
 use std::sync::Arc;
-use tokio::{net::TcpListener, sync::RwLock, task::JoinHandle};
+use tokio::{
+    net::TcpListener,
+    sync::{oneshot, RwLock},
+    task::JoinHandle,
+};
 
 struct Jstzd {
     octez_node: Arc<RwLock<OctezNode>>,
@@ -182,6 +186,7 @@ struct ServerState {
     jstzd_config_json: serde_json::Map<String, serde_json::Value>,
     jstzd: Option<Jstzd>,
     server_handle: Option<JoinHandle<()>>,
+    shutdown_tx: Option<oneshot::Sender<()>>,
 }
 
 #[async_trait]
@@ -195,10 +200,12 @@ impl AsyncDrop for JstzdServerInner {
 pub struct JstzdServer {
     port: u16,
     inner: Arc<AsyncDropper<JstzdServerInner>>,
+    shutdown_rx: Option<oneshot::Receiver<()>>,
 }
 
 impl JstzdServer {
     pub fn new(config: JstzdConfig, port: u16) -> Self {
+        let (tx, rx) = oneshot::channel();
         Self {
             port,
             inner: Arc::new(AsyncDropper::new(JstzdServerInner {
@@ -211,8 +218,16 @@ impl JstzdServer {
                     jstzd_config: Some(config),
                     jstzd: None,
                     server_handle: None,
+                    shutdown_tx: Some(tx),
                 })),
             })),
+            shutdown_rx: Some(rx),
+        }
+    }
+
+    pub async fn wait(&mut self) {
+        if let Some(rx) = self.shutdown_rx.take() {
+            let _ = rx.await;
         }
     }
 
@@ -294,6 +309,9 @@ async fn shutdown(state: &mut ServerState) -> Result<()> {
     }
     state.jstzd_config.take();
     state.jstzd_config_json.clear();
+    if let Some(v) = state.shutdown_tx.take() {
+        let _ = v.send(());
+    }
     Ok(())
 }
 
