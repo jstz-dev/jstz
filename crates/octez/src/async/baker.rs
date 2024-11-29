@@ -40,7 +40,7 @@ impl Display for BakerBinaryPath {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug, PartialEq)]
 pub struct OctezBakerConfig {
     binary_path: BakerBinaryPath,
     octez_client_base_dir: PathBuf,
@@ -64,14 +64,26 @@ impl OctezBakerConfigBuilder {
         self
     }
 
+    pub fn binary_path(&self) -> &Option<BakerBinaryPath> {
+        &self.binary_path
+    }
+
     pub fn set_octez_client_base_dir(mut self, base_dir: &str) -> Self {
         self.octez_client_base_dir = Some(PathBuf::from(base_dir));
         self
     }
 
+    pub fn octez_client_base_dir(&self) -> &Option<PathBuf> {
+        &self.octez_client_base_dir
+    }
+
     pub fn set_octez_node_endpoint(mut self, endpoint: &Endpoint) -> Self {
         self.octez_node_endpoint = Some(endpoint.clone());
         self
+    }
+
+    pub fn octez_node_endpoint(&self) -> &Option<Endpoint> {
+        &self.octez_node_endpoint
     }
 
     pub fn build(self) -> Result<OctezBakerConfig> {

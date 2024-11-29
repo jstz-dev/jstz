@@ -61,6 +61,10 @@ impl JstzdConfig {
     pub fn baker_config(&self) -> &OctezBakerConfig {
         &self.baker_config
     }
+
+    pub fn protocol_params(&self) -> &ProtocolParameter {
+        &self.protocol_params
+    }
 }
 
 #[async_trait]
