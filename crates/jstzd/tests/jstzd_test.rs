@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 use jstzd::task::jstzd::{JstzdConfig, JstzdServer};
 use jstzd::task::utils::retry;
-use jstzd::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS};
+use jstzd::BOOTSTRAP_CONTRACT_NAMES;
 use octez::r#async::baker::{BakerBinaryPath, OctezBakerConfigBuilder};
 use octez::r#async::client::{OctezClient, OctezClientConfigBuilder};
 use octez::r#async::endpoint::Endpoint;
@@ -14,11 +14,6 @@ use octez::r#async::protocol::{
 use octez::unused_port;
 
 const CONTRACT_INIT_BALANCE: f64 = 1.0;
-const CONTRACT_NAMES: [(&str, &str); 2] = [
-    ("exchanger", EXCHANGER_ADDRESS),
-    ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
-];
-
 #[tokio::test(flavor = "multi_thread")]
 async fn jstzd_test() {
     let rpc_endpoint = Endpoint::localhost(unused_port());
@@ -214,7 +209,7 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
 
 async fn read_bootstrap_contracts() -> Vec<BootstrapContract> {
     let mut contracts = vec![];
-    for (contract_name, hash) in CONTRACT_NAMES {
+    for (contract_name, hash) in BOOTSTRAP_CONTRACT_NAMES {
         let script = utils::read_json_file(
             PathBuf::from(std::env!("CARGO_MANIFEST_DIR"))
                 .join(format!("resources/bootstrap_contract/{contract_name}.json")),
@@ -233,10 +228,10 @@ async fn read_bootstrap_contracts() -> Vec<BootstrapContract> {
 }
 
 async fn check_bootstrap_contracts(octez_client: &OctezClient) {
-    for (contract_name, hash) in CONTRACT_NAMES {
+    for (contract_name, hash) in BOOTSTRAP_CONTRACT_NAMES {
         assert_eq!(
             octez_client
-                .get_balance(EXCHANGER_ADDRESS)
+                .get_balance(hash)
                 .await
                 .unwrap_or_else(|_| panic!(
                     "should be able to find contract '{contract_name}' at '{hash}'"

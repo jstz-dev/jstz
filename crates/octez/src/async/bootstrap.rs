@@ -211,6 +211,10 @@ impl BootstrapContract {
             },
         })
     }
+
+    pub fn hash(&self) -> &Option<ContractKt1Hash> {
+        &self.hash
+    }
 }
 
 #[derive(Default, Debug, PartialEq)]
