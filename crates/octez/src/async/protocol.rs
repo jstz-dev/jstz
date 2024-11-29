@@ -185,6 +185,13 @@ impl ProtocolParameterBuilder {
         self
     }
 
+    pub fn bootstrap_contracts(&self) -> Vec<&BootstrapContract> {
+        self.bootstrap_contracts
+            .contracts()
+            .iter()
+            .collect::<Vec<&BootstrapContract>>()
+    }
+
     pub fn set_bootstrap_smart_rollups(
         &mut self,
         rollups: impl IntoIterator<Item = BootstrapSmartRollup>,
