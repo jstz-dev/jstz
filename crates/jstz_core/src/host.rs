@@ -8,7 +8,7 @@ use tezos_smart_rollup_host::{
 };
 
 pub use tezos_smart_rollup_host::runtime::{
-    Runtime as HostRuntime, RuntimeError as HostError,
+    Runtime as HostRuntime, RuntimeError as HostError, RevealError
 };
 
 mod erased_runtime {
@@ -86,7 +86,7 @@ mod erased_runtime {
             &self,
             hash: &[u8; 33],
             destination: &mut [u8],
-        ) -> Result<usize, HostError>;
+        ) -> Result<usize, RevealError>;
         fn erased_store_value_size(
             &self,
             path: erase::Path<'_>,
@@ -231,7 +231,7 @@ mod erased_runtime {
             &self,
             hash: &[u8; 33],
             destination: &mut [u8],
-        ) -> Result<usize, HostError> {
+        ) -> Result<usize, RevealError> {
             self.reveal_preimage(hash, destination)
         }
 
@@ -373,7 +373,7 @@ mod erased_runtime {
             &self,
             hash: &[u8; 33],
             destination: &mut [u8],
-        ) -> Result<usize, HostError> {
+        ) -> Result<usize, RevealError> {
             self.erased_reveal_preimage(hash, destination)
         }
 
@@ -538,7 +538,7 @@ impl<'a: 'static> HostRuntime for JsHostRuntime<'a> {
         &self,
         hash: &[u8; 33],
         destination: &mut [u8],
-    ) -> Result<usize, HostError> {
+    ) -> Result<usize, RevealError> {
         self.inner.reveal_preimage(hash, destination)
     }
 
