@@ -242,7 +242,7 @@ impl JstzdServer {
     }
 
     pub async fn run(&mut self) -> Result<()> {
-        let jstzd = Jstzd::spawn(
+        let jstzd = Self::spawn_jstzd(
             self.inner
                 .state
                 .read()
@@ -280,6 +280,17 @@ impl JstzdServer {
         } else {
             false
         }
+    }
+
+    async fn spawn_jstzd(jstzd_config: JstzdConfig) -> Result<Jstzd> {
+        let mut jstzd = Jstzd::spawn(jstzd_config).await?;
+
+        let jstzd_healthy = retry(60, 500, || async { jstzd.health_check().await }).await;
+        if !jstzd_healthy {
+            let _ = jstzd.kill().await;
+            anyhow::bail!("jstzd never turns healthy");
+        }
+        Ok(jstzd)
     }
 }
 
