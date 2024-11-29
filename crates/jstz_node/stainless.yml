@@ -95,6 +95,7 @@ resources:
   operations:
     methods:
       inject: post /operations
+      hash: post /operations/hash
     subresources:
       receipt:
         models:
