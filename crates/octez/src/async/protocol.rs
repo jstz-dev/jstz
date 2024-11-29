@@ -170,6 +170,10 @@ impl ProtocolParameterBuilder {
         self
     }
 
+    pub fn bootstrap_accounts(&self) -> Vec<&BootstrapAccount> {
+        self.bootstrap_accounts.accounts()
+    }
+
     pub fn set_bootstrap_contracts(
         &mut self,
         contracts: impl IntoIterator<Item = BootstrapContract>,

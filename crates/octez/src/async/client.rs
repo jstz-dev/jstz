@@ -32,6 +32,10 @@ impl OctezClientConfig {
     pub fn base_dir(&self) -> &Directory {
         self.base_dir.as_ref()
     }
+
+    pub fn octez_node_endpoint(&self) -> &Endpoint {
+        &self.octez_node_endpoint
+    }
 }
 
 #[derive(Deserialize, Debug, PartialEq)]
