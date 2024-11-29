@@ -1,4 +1,3 @@
-#![allow(dead_code)]
 use std::path::{Path, PathBuf};
 
 use crate::task::jstzd::JstzdConfig;
@@ -47,7 +46,9 @@ async fn parse_config(path: &str) -> Result<Config> {
     Ok(serde_json::from_str::<Config>(&s)?)
 }
 
-async fn build_config(config_path: &Option<String>) -> Result<(u16, JstzdConfig)> {
+pub(crate) async fn build_config(
+    config_path: &Option<String>,
+) -> Result<(u16, JstzdConfig)> {
     let mut config = match config_path {
         Some(p) => parse_config(p).await?,
         None => default_config(),
