@@ -5,6 +5,7 @@ pub mod task;
 use crate::task::jstzd::{JstzdConfig, JstzdServer};
 pub use config::BOOTSTRAP_CONTRACT_NAMES;
 use std::process::exit;
+use tokio::signal::unix::{signal, SignalKind};
 
 pub const EXCHANGER_ADDRESS: &str = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";
 pub const JSTZ_ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
@@ -32,8 +33,14 @@ async fn run(port: u16, config: JstzdConfig) {
         exit(1);
     }
 
-    server.wait().await;
+    let mut sigterm = signal(SignalKind::terminate()).unwrap();
+    let mut sigint = signal(SignalKind::interrupt()).unwrap();
 
+    tokio::select! {
+        _ = server.wait() => (),
+        _ = sigterm.recv() => (),
+        _ = sigint.recv() => (),
+    };
     println!("Shutting down");
     server.stop().await.unwrap();
 }
