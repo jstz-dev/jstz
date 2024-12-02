@@ -150,14 +150,11 @@ fn generate_path_getter_code(out_dir: &Path, fn_name: &str, path_suffix: &str) -
     let name_upper = fn_name.to_uppercase();
     format!(
         r#"
-        const {}_PATH: &str = "{}";
-        pub fn {}_path() -> PathBuf {{
-            PathBuf::from({}_PATH)
+        const {name_upper:}_PATH: &str = "{}";
+        pub fn {fn_name:}_path() -> PathBuf {{
+            PathBuf::from({name_upper:}_PATH)
         }}
         "#,
-        &name_upper,
         out_dir.join(path_suffix).to_str().expect("Invalid path"),
-        fn_name,
-        &name_upper,
     )
 }

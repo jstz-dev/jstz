@@ -137,7 +137,7 @@ async fn create_jstzd_server(
         octez_node_rpc_endpoint.clone(),
         octez_client_config.base_dir().into(),
         SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
-        JSTZ_ROLLUP_OPERATOR_ALIAS.to_string(),
+        JSTZ_ROLLUP_OPERATOR_PK.to_string(),
         rollup_kernel_installer,
     )
     .set_data_dir(RollupDataDir::TempWithPreImages {

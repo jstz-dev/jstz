@@ -143,6 +143,11 @@ in {
       // {
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
         doCheck = true;
+        preBuildPhases = ["cpJstzKernel"];
+        cpJstzKernel = ''
+          cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
+          cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
+        '';
         # Run the integration tests
         #
         # FIXME(https://linear.app/tezos/issue/JSTZ-186):
