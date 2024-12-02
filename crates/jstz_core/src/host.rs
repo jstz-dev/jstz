@@ -8,7 +8,7 @@ use tezos_smart_rollup_host::{
 };
 
 pub use tezos_smart_rollup_host::runtime::{
-    Runtime as HostRuntime, RuntimeError as HostError, RevealError
+    RevealError, Runtime as HostRuntime, RuntimeError as HostError,
 };
 
 mod erased_runtime {
