@@ -112,7 +112,6 @@ fn make_kernel_installer(kernel_file: &Path, preimages_dir: &Path) -> Result<Str
 /// - preimages_path(): Path to the preimages directory
 fn generate_code(out_dir: &Path) {
     let mut code = String::new();
-
     code.push_str(&generate_path_getter_code(
         out_dir,
         "kernel_installer",
@@ -151,8 +150,8 @@ fn generate_path_getter_code(out_dir: &Path, fn_name: &str, path_suffix: &str) -
     format!(
         r#"
         const {}_PATH: &str = "{}";
-        pub fn {}_path() -> PathBuf {{
-            PathBuf::from({}_PATH)
+        pub fn {}_path() -> std::path::PathBuf {{
+            std::path::PathBuf::from({}_PATH)
         }}
         "#,
         &name_upper,

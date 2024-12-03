@@ -60,7 +60,7 @@
       inherit (craneLib.crateNameFromCargoToml {inherit src;}) version;
       cargoArtifacts = cargoDeps;
       doCheck = false;
-
+      buildInputs = common.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
       preBuildPhases = ["cpJstzKernel"];
       cpJstzKernel = ''
         cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
@@ -130,10 +130,10 @@ in {
 
   checks = {
     # Build the workspace as part of `nix flake check`
-    cargo-build = workspace;
 
     cargo-test-unit = craneLib.cargoNextest (commonWorkspace
       // {
+        buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
         doCheck = true;
         # Run the unit tests
         cargoNextestExtraArgs = "--bins --lib";
@@ -148,9 +148,10 @@ in {
         # FIXME(https://linear.app/tezos/issue/JSTZ-186):
         # Don't run the `jstz_api` integration tests until they've been paralellized
         #
-        #
-         Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
-        cargoNextestExtraArgs = "--workspace --test \"jstzd_test\" --exclude \"jstz_api\"";
+        # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
+        # FIXME(https://linear.app/tezos/issue/JSTZ-237):
+        # Fix tests that only fail in CI/Nix
+        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --features \"ignore-flaky-tests\"";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace

@@ -68,7 +68,8 @@ pub(crate) async fn build_config(
         &octez_client_config,
     )?;
 
-    // dummy rollup config for now
+    // TODO: https://linear.app/tezos/issue/JSTZ-238/deserialize-rollup-config
+    // Dummy rollup config for now
     let octez_node_endpoint = octez_node_config.rpc_endpoint.clone();
     let octez_rollup_config = OctezRollupConfigBuilder::new(
         octez_node_endpoint,
@@ -80,7 +81,7 @@ pub(crate) async fn build_config(
     .set_data_dir(RollupDataDir::Temp)
     .set_rpc_endpoint(&Endpoint::localhost(8000))
     .build()
-    .expect("aaa");
+    .unwrap();
 
     let protocol_params = build_protocol_params(config.protocol).await?;
     let server_port = config.server_port.unwrap_or(unused_port());

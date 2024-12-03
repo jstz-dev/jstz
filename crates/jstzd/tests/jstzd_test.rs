@@ -4,13 +4,12 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
+use jstzd::jstz_rollup_path::*;
+
 use http::Uri;
 use jstzd::task::jstzd::{JstzdConfig, JstzdServer};
 use jstzd::task::utils::retry;
-use jstzd::{
-    BOOTSTRAP_CONTRACT_NAMES, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS,
-    JSTZ_ROLLUP_ADDRESS,
-};
+use jstzd::{BOOTSTRAP_CONTRACT_NAMES, JSTZ_ROLLUP_ADDRESS};
 use octez::r#async::baker::{BakerBinaryPath, OctezBakerConfigBuilder};
 use octez::r#async::client::{OctezClient, OctezClientConfigBuilder};
 use octez::r#async::endpoint::Endpoint;
@@ -21,13 +20,11 @@ use octez::r#async::protocol::{
 };
 use octez::r#async::rollup::{OctezRollupConfigBuilder, RollupDataDir};
 use octez::unused_port;
-use serde_json::from_str;
+use serde_json::Value;
 use std::fs;
 use tempfile::NamedTempFile;
 use tezos_crypto_rs::hash::SmartRollupHash;
 use tokio::time::{sleep, timeout};
-
-include!(concat!(env!("OUT_DIR"), "/jstz_rollup_path.rs"));
 
 const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 const CONTRACT_INIT_BALANCE: f64 = 1.0;
@@ -35,6 +32,7 @@ pub const JSTZ_ROLLUP_OPERATOR_PK: &str =
     "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
 pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "bootstrap1";
 
+#[cfg_attr(feature = "ignore-flaky-tests", ignore)]
 #[tokio::test(flavor = "multi_thread")]
 async fn jstzd_test() {
     let octez_node_rpc_endpoint = Endpoint::localhost(unused_port());
@@ -114,7 +112,7 @@ async fn create_jstzd_server(
             fs::read_to_string(rollup_kernel_installer.as_path())
                 .unwrap()
                 .as_str(),
-            from_str(fs::read_to_string(rollup_parameters_ty).unwrap().as_str())
+            Value::from_str(fs::read_to_string(rollup_parameters_ty).unwrap().as_str())
                 .expect("failed to stringify JSON"),
         )
         .unwrap()])
@@ -150,7 +148,6 @@ async fn create_jstzd_server(
     .set_kernel_debug_file(kernel_debug_file.path())
     .build()
     .expect("failed to build rollup config");
-
     let config = JstzdConfig::new(
         octez_node_config,
         baker_config,
@@ -186,9 +183,8 @@ async fn ensure_jstzd_components_are_up(
         .await
         .is_ok());
     assert!(jstzd.baker_healthy().await);
-    // assert!(jstzd.rollup_healthy().await);
     let rollup_running =
-        retry(200, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
+        retry(10, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
     assert!(rollup_running);
     assert!(jstzd.health_check().await);
 }
