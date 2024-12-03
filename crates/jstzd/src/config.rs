@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use crate::task::jstzd::JstzdConfig;
+use crate::task::jstzd::{Jstzd, JstzdConfig};
 use crate::{jstz_address, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS};
 use anyhow::{Context, Result};
 use octez::r#async::protocol::{BootstrapContract, ProtocolParameter};
@@ -16,8 +16,6 @@ use octez::{
 };
 use serde::Deserialize;
 use tokio::io::AsyncReadExt;
-
-include!(concat!(env!("OUT_DIR"), "/jstz_rollup_path.rs"));
 
 const ACTIVATOR_PUBLIC_KEY: &str =
     "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
@@ -79,8 +77,8 @@ pub(crate) async fn build_config(
                 octez_node_config.rpc_endpoint.clone(),
                 client_base_dir.into(),
                 jstz_address(),
-                "bootstrap1".to_string(),
-                kernel_installer_path(),
+                Jstzd::ROLLUP_OPERATOR_ACCOUNT_ALIAS.to_string(),
+                crate::kernel_installer_path(),
             )
         })
         .build()

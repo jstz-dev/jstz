@@ -30,7 +30,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-struct Jstzd {
+pub struct Jstzd {
     octez_node: Arc<RwLock<OctezNode>>,
     baker: Arc<RwLock<OctezBaker>>,
     rollup: Arc<RwLock<OctezRollup>>,
@@ -159,7 +159,7 @@ impl Jstzd {
     const ACTIVATOR_ACCOUNT_ALIAS: &'static str = "activator";
     const ROLLUP_OPERATOR_ACCOUNT_SK: &'static str =
         "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
-    const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &'static str = "bootstrap1";
+    pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &'static str = "bootstrap1";
 
     async fn import_activator(octez_client: &OctezClient) -> Result<()> {
         octez_client

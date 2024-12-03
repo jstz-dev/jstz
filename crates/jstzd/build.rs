@@ -148,13 +148,15 @@ fn generate_code(out_dir: &Path) {
 /// ```
 fn generate_path_getter_code(out_dir: &Path, fn_name: &str, path_suffix: &str) -> String {
     let name_upper = fn_name.to_uppercase();
-    format!(
+
+    let result = format!(
         r#"
         const {name_upper:}_PATH: &str = "{}";
-        pub fn {fn_name:}_path() -> PathBuf {{
-            PathBuf::from({name_upper:}_PATH)
-        }}
+            pub fn {fn_name:}_path() -> std::path::PathBuf {{
+                std::path::PathBuf::from({name_upper:}_PATH)
+            }}
         "#,
         out_dir.join(path_suffix).to_str().expect("Invalid path"),
-    )
+    );
+    result
 }

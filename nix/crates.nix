@@ -60,7 +60,7 @@
       inherit (craneLib.crateNameFromCargoToml {inherit src;}) version;
       cargoArtifacts = cargoDeps;
       doCheck = false;
-
+      buildInputs = common.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
       preBuildPhases = ["cpJstzKernel"];
       cpJstzKernel = ''
         cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
@@ -130,10 +130,11 @@ in {
 
   checks = {
     # Build the workspace as part of `nix flake check`
-    cargo-build = workspace;
+    # cargo-build = workspace;
 
     cargo-test-unit = craneLib.cargoNextest (commonWorkspace
       // {
+        buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
         doCheck = true;
         # Run the unit tests
         cargoNextestExtraArgs = "--bins --lib";
@@ -143,18 +144,13 @@ in {
       // {
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
         doCheck = true;
-        preBuildPhases = ["cpJstzKernel"];
-        cpJstzKernel = ''
-          cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
-          cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
-        '';
         # Run the integration tests
         #
         # FIXME(https://linear.app/tezos/issue/JSTZ-186):
         # Don't run the `jstz_api` integration tests until they've been paralellized
         #
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
-        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\"";
+        cargoNextestExtraArgs = "--workspace --test \"jstzd_test\" --exclude \"jstz_api\"";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace

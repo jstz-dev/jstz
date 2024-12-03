@@ -6,7 +6,10 @@ use std::str::FromStr;
 use http::Uri;
 use jstzd::task::jstzd::{JstzdConfig, JstzdServer};
 use jstzd::task::utils::retry;
-use jstzd::{BOOTSTRAP_CONTRACT_NAMES, JSTZ_ROLLUP_ADDRESS};
+use jstzd::{
+    kernel_installer_path, parameters_ty_path, preimages_path, BOOTSTRAP_CONTRACT_NAMES,
+    JSTZ_ROLLUP_ADDRESS,
+};
 use octez::r#async::baker::{BakerBinaryPath, OctezBakerConfigBuilder};
 use octez::r#async::client::{OctezClient, OctezClientConfigBuilder};
 use octez::r#async::endpoint::Endpoint;
@@ -22,8 +25,6 @@ use std::fs;
 use tempfile::NamedTempFile;
 use tezos_crypto_rs::hash::SmartRollupHash;
 
-include!(concat!(env!("OUT_DIR"), "/jstz_rollup_path.rs"));
-
 const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 use tokio::time::{sleep, timeout, Duration};
 
@@ -32,6 +33,10 @@ pub const JSTZ_ROLLUP_OPERATOR_PK: &str =
     "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
 pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "bootstrap1";
 
+// #[cfg_attr(
+//     feature = "ignore-flaky-tests",
+//     ignore = "Rollup node fails to run properly in CI tests"
+// )]
 #[tokio::test(flavor = "multi_thread")]
 async fn jstzd_test() {
     let octez_node_rpc_endpoint = Endpoint::localhost(unused_port());
@@ -137,7 +142,7 @@ async fn create_jstzd_server(
         octez_node_rpc_endpoint.clone(),
         octez_client_config.base_dir().into(),
         SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
-        JSTZ_ROLLUP_OPERATOR_PK.to_string(),
+        JSTZ_ROLLUP_OPERATOR_ALIAS.to_string(),
         rollup_kernel_installer,
     )
     .set_data_dir(RollupDataDir::TempWithPreImages {
