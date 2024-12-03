@@ -207,6 +207,7 @@ impl OctezRollup {
                 &kernel_debug_file.to_string_lossy(),
             ]);
         }
+        println!("\n\n\n\n command: {:?}", command);
         Ok(command.spawn()?)
     }
 }

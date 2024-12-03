@@ -80,7 +80,7 @@ pub(crate) async fn build_config(
     .set_data_dir(RollupDataDir::Temp)
     .set_rpc_endpoint(&Endpoint::localhost(8000))
     .build()
-    .expect("aaa");
+    .unwrap();
 
     let protocol_params = build_protocol_params(config.protocol).await?;
     let server_port = config.server_port.unwrap_or(unused_port());

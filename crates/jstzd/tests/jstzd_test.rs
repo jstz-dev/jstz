@@ -7,10 +7,7 @@ use std::time::Duration;
 use http::Uri;
 use jstzd::task::jstzd::{JstzdConfig, JstzdServer};
 use jstzd::task::utils::retry;
-use jstzd::{
-    BOOTSTRAP_CONTRACT_NAMES, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS,
-    JSTZ_ROLLUP_ADDRESS,
-};
+use jstzd::{BOOTSTRAP_CONTRACT_NAMES, JSTZ_ROLLUP_ADDRESS};
 use octez::r#async::baker::{BakerBinaryPath, OctezBakerConfigBuilder};
 use octez::r#async::client::{OctezClient, OctezClientConfigBuilder};
 use octez::r#async::endpoint::Endpoint;
@@ -150,7 +147,6 @@ async fn create_jstzd_server(
     .set_kernel_debug_file(kernel_debug_file.path())
     .build()
     .expect("failed to build rollup config");
-
     let config = JstzdConfig::new(
         octez_node_config,
         baker_config,
@@ -187,7 +183,7 @@ async fn ensure_jstzd_components_are_up(
         .is_ok());
     assert!(jstzd.baker_healthy().await);
     let rollup_running =
-        retry(30, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
+        retry(10, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
     assert!(rollup_running);
     assert!(jstzd.health_check().await);
 }
@@ -329,6 +325,10 @@ async fn ensure_rollup_is_logging_to(kernel_debug_file: NamedTempFile) {
     let mut file = kernel_debug_file.reopen().unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
+    println!(
+        "\n\n\n\n\n\n\n contents: {} \n\n\n\n\n\n\n \n\n\n\n\n\n\n ",
+        contents
+    );
     assert!(contents.contains("Internal message: start of level"));
     assert!(contents.contains("Internal message: end of level"));
 }
