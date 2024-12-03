@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use rust_embed::Embed;
 
 use crate::task::jstzd::JstzdConfig;
 use crate::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS};
@@ -22,6 +22,10 @@ pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
 ];
+
+#[derive(Embed)]
+#[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
+pub struct BootstrapContractFile;
 
 #[derive(Deserialize, Default)]
 struct Config {
@@ -115,26 +119,17 @@ fn populate_baker_config(
 async fn read_bootstrap_contracts() -> Result<Vec<BootstrapContract>> {
     let mut contracts = vec![];
     for (contract_name, hash) in BOOTSTRAP_CONTRACT_NAMES {
-        let script = read_json_file(
-            Path::new(std::env!("CARGO_MANIFEST_DIR"))
-                .join(format!("resources/bootstrap_contract/{contract_name}.json")),
+        let script = serde_json::from_slice(
+            &BootstrapContractFile::get(&format!("{contract_name}.json"))
+                .ok_or(anyhow::anyhow!("file not found"))?
+                .data,
         )
-        .await
         .context(format!(
             "error loading bootstrap contract '{contract_name}'"
         ))?;
         contracts.push(BootstrapContract::new(script, 1_000_000, Some(hash)).unwrap());
     }
     Ok(contracts)
-}
-
-async fn read_json_file(path: PathBuf) -> Result<serde_json::Value> {
-    let mut buf = String::new();
-    tokio::fs::File::open(&path)
-        .await?
-        .read_to_string(&mut buf)
-        .await?;
-    Ok(serde_json::from_str(&buf)?)
 }
 
 async fn build_protocol_params(
@@ -176,13 +171,21 @@ mod tests {
     };
     use tempfile::{tempdir, NamedTempFile};
     use tezos_crypto_rs::hash::ContractKt1Hash;
+    use tokio::io::AsyncReadExt;
 
     use super::Config;
 
     async fn read_bootstrap_contracts_from_param_file(
         path: PathBuf,
     ) -> Vec<BootstrapContract> {
-        let params_json = super::read_json_file(path).await.unwrap();
+        let mut buf = String::new();
+        tokio::fs::File::open(&path)
+            .await
+            .unwrap()
+            .read_to_string(&mut buf)
+            .await
+            .unwrap();
+        let params_json = serde_json::from_str::<serde_json::Value>(&buf).unwrap();
         params_json
             .as_object()
             .unwrap()
