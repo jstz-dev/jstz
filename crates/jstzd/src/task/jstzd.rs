@@ -165,7 +165,10 @@ impl Jstzd {
         octez_client
             .import_secret_key(Self::ACTIVATOR_ACCOUNT_ALIAS, Self::ACTIVATOR_ACCOUNT_SK)
             .await
-            .context("Failed to import account 'activator'")
+            .context(format!(
+                "Failed to import account '{}'",
+                Self::ACTIVATOR_ACCOUNT_ALIAS
+            ))
     }
 
     async fn import_rollup_operator(octez_client: &OctezClient) -> Result<()> {
@@ -175,7 +178,10 @@ impl Jstzd {
                 Self::ROLLUP_OPERATOR_ACCOUNT_SK,
             )
             .await
-            .context("Failed to import account 'rollup_operator'")
+            .context(format!(
+                "Failed to import account '{}'",
+                Self::ROLLUP_OPERATOR_ACCOUNT_ALIAS
+            ))
     }
 
     async fn activate_protocol(

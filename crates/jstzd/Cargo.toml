@@ -45,6 +45,9 @@ predicates.workspace = true
 rand.workspace = true
 tezos_crypto_rs.workspace = true
 
+[features]
+ignore-flaky-tests = []
+
 [[bin]]
 name = "jstzd"
 path = "src/main.rs"
