@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
+use jstz_node::config::JstzNodeConfig;
 use jstzd::jstz_rollup_path::*;
 
 use http::Uri;
@@ -40,10 +41,15 @@ async fn jstzd_test() {
         Uri::from_str(&format!("http://127.0.0.1:{}", unused_port())).unwrap(),
     )
     .unwrap();
+    let jstz_node_rpc_endpoint = Endpoint::localhost(unused_port());
     let jstzd_port = unused_port();
-    let (mut jstzd, config, kernel_debug_file) =
-        create_jstzd_server(&octez_node_rpc_endpoint, &rollup_rpc_endpoint, jstzd_port)
-            .await;
+    let (mut jstzd, config, kernel_debug_file) = create_jstzd_server(
+        &octez_node_rpc_endpoint,
+        &rollup_rpc_endpoint,
+        &jstz_node_rpc_endpoint,
+        jstzd_port,
+    )
+    .await;
 
     jstzd.run().await.unwrap();
     ensure_jstzd_components_are_up(&jstzd, &octez_node_rpc_endpoint, jstzd_port).await;
@@ -80,6 +86,7 @@ async fn jstzd_test() {
 async fn create_jstzd_server(
     octez_node_rpc_endpoint: &Endpoint,
     rollup_rpc_endpoint: &Endpoint,
+    jstz_node_rpc_endpoint: &Endpoint,
     jstzd_port: u16,
 ) -> (JstzdServer, JstzdConfig, NamedTempFile) {
     let run_options = OctezNodeRunOptionsBuilder::new()
@@ -148,11 +155,17 @@ async fn create_jstzd_server(
     .set_kernel_debug_file(kernel_debug_file.path())
     .build()
     .expect("failed to build rollup config");
+    let jstz_node_config = JstzNodeConfig::new(
+        jstz_node_rpc_endpoint,
+        &rollup_config.rpc_endpoint,
+        kernel_debug_file.path(),
+    );
     let config = JstzdConfig::new(
         octez_node_config,
         baker_config,
         octez_client_config.clone(),
         rollup_config.clone(),
+        jstz_node_config,
         protocol_params,
     );
     (
@@ -186,6 +199,7 @@ async fn ensure_jstzd_components_are_up(
     let rollup_running =
         retry(10, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
     assert!(rollup_running);
+    assert!(jstzd.jstz_node_healthy().await);
     assert!(jstzd.health_check().await);
 }
 
@@ -221,8 +235,8 @@ async fn ensure_jstzd_components_are_down(
     .await;
     assert!(node_destroyed);
     assert!(!jstzd.baker_healthy().await);
-
     assert!(!jstzd.rollup_healthy().await);
+    assert!(!jstzd.jstz_node_healthy().await);
     assert!(!jstzd.health_check().await);
 }
 

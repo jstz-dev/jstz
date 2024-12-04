@@ -4,7 +4,9 @@ use std::sync::Arc;
 use tokio::process::Child;
 use tokio::sync::RwLock;
 
-pub type SharedChildWrapper = Arc<RwLock<AsyncDropper<ChildWrapper>>>;
+pub type Shared<T> = Arc<RwLock<T>>;
+
+pub type SharedChildWrapper = Shared<AsyncDropper<ChildWrapper>>;
 
 #[derive(Default)]
 pub struct ChildWrapper {

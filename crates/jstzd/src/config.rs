@@ -3,6 +3,7 @@ use std::path::{Path, PathBuf};
 use crate::task::jstzd::JstzdConfig;
 use crate::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS};
 use anyhow::{Context, Result};
+use jstz_node::config::JstzNodeConfig;
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{BootstrapContract, ProtocolParameter};
 use octez::r#async::rollup::{OctezRollupConfigBuilder, RollupDataDir};
@@ -83,6 +84,13 @@ pub(crate) async fn build_config(
     .build()
     .unwrap();
 
+    // TODO: https://linear.app/tezos/issue/JSTZ-240/add-jstz-node-config-builder
+    // Dummy jstz node config for now
+    let jstz_node_config = JstzNodeConfig::new(
+        &Endpoint::localhost(8000),
+        &Endpoint::localhost(8000),
+        &PathBuf::from("dummy-kernel-log-file"),
+    );
     let protocol_params = build_protocol_params(config.protocol).await?;
     let server_port = config.server_port.unwrap_or(unused_port());
     Ok((
@@ -92,6 +100,7 @@ pub(crate) async fn build_config(
             baker_config,
             octez_client_config,
             octez_rollup_config,
+            jstz_node_config,
             protocol_params,
         ),
     ))
