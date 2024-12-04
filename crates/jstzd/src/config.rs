@@ -1,4 +1,5 @@
 use rust_embed::Embed;
+use std::path::PathBuf;
 
 use crate::task::jstzd::JstzdConfig;
 use crate::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS};
@@ -7,19 +8,17 @@ use jstz_node::config::JstzNodeConfig;
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{BootstrapContract, ProtocolParameter};
 use octez::r#async::rollup::{OctezRollupConfigBuilder, RollupDataDir};
-use octez::{
-    r#async::{
-        baker::{BakerBinaryPath, OctezBakerConfig, OctezBakerConfigBuilder},
-        client::{OctezClientConfig, OctezClientConfigBuilder},
-        node_config::{OctezNodeConfig, OctezNodeConfigBuilder},
-        protocol::{BootstrapAccount, Protocol, ProtocolParameterBuilder},
-    },
-    unused_port,
+use octez::r#async::{
+    baker::{BakerBinaryPath, OctezBakerConfig, OctezBakerConfigBuilder},
+    client::{OctezClientConfig, OctezClientConfigBuilder},
+    node_config::{OctezNodeConfig, OctezNodeConfigBuilder},
+    protocol::{BootstrapAccount, Protocol, ProtocolParameterBuilder},
 };
 use serde::Deserialize;
 use tezos_crypto_rs::hash::SmartRollupHash;
 use tokio::io::AsyncReadExt;
 
+const DEFAULT_JSTZD_SERVER_PORT: u16 = 55555;
 const ACTIVATOR_PUBLIC_KEY: &str =
     "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
@@ -96,7 +95,7 @@ pub(crate) async fn build_config(
         &PathBuf::from("dummy-kernel-log-file"),
     );
     let protocol_params = build_protocol_params(config.protocol).await?;
-    let server_port = config.server_port.unwrap_or(unused_port());
+    let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
     Ok((
         server_port,
         JstzdConfig::new(
@@ -433,7 +432,7 @@ mod tests {
         .unwrap();
         tmp_file.write_all(content.as_bytes()).unwrap();
 
-        let (_, config) =
+        let (port, config) =
             super::build_config(&Some(tmp_file.path().to_str().unwrap().to_owned()))
                 .await
                 .unwrap();
@@ -441,6 +440,7 @@ mod tests {
             config.octez_client_config().octez_node_endpoint(),
             &Endpoint::localhost(9999)
         );
+        assert_eq!(port, super::DEFAULT_JSTZD_SERVER_PORT);
 
         let contracts = read_bootstrap_contracts_from_param_file(
             config
