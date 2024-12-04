@@ -1,3 +1,8 @@
+use crate::config::{
+    ACTIVATOR_ACCOUNT_ALIAS, ACTIVATOR_ACCOUNT_SK, ROLLUP_OPERATOR_ACCOUNT_ALIAS,
+    ROLLUP_OPERATOR_ACCOUNT_SK,
+};
+
 use super::{
     child_wrapper::Shared,
     jstz_node::JstzNode,
@@ -97,6 +102,10 @@ impl JstzdConfig {
         &self.baker_config
     }
 
+    pub fn octez_rollup_config(&self) -> &OctezRollupConfig {
+        &self.octez_rollup_config
+    }
+
     pub fn protocol_params(&self) -> &ProtocolParameter {
         &self.protocol_params
     }
@@ -176,33 +185,23 @@ impl Task for Jstzd {
 }
 
 impl Jstzd {
-    const ACTIVATOR_ACCOUNT_SK: &'static str =
-        "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
-    const ACTIVATOR_ACCOUNT_ALIAS: &'static str = "activator";
-    const ROLLUP_OPERATOR_ACCOUNT_SK: &'static str =
-        "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
-    const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &'static str = "bootstrap1";
-
     async fn import_activator(octez_client: &OctezClient) -> Result<()> {
         octez_client
-            .import_secret_key(Self::ACTIVATOR_ACCOUNT_ALIAS, Self::ACTIVATOR_ACCOUNT_SK)
+            .import_secret_key(ACTIVATOR_ACCOUNT_ALIAS, ACTIVATOR_ACCOUNT_SK)
             .await
             .context(format!(
                 "Failed to import account '{}'",
-                Self::ACTIVATOR_ACCOUNT_ALIAS
+                ACTIVATOR_ACCOUNT_ALIAS
             ))
     }
 
     async fn import_rollup_operator(octez_client: &OctezClient) -> Result<()> {
         octez_client
-            .import_secret_key(
-                Self::ROLLUP_OPERATOR_ACCOUNT_ALIAS,
-                Self::ROLLUP_OPERATOR_ACCOUNT_SK,
-            )
+            .import_secret_key(ROLLUP_OPERATOR_ACCOUNT_ALIAS, ROLLUP_OPERATOR_ACCOUNT_SK)
             .await
             .context(format!(
                 "Failed to import account '{}'",
-                Self::ROLLUP_OPERATOR_ACCOUNT_ALIAS
+                ROLLUP_OPERATOR_ACCOUNT_ALIAS
             ))
     }
 
