@@ -1,8 +1,10 @@
 use rust_embed::Embed;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use crate::task::jstzd::JstzdConfig;
-use crate::{EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS};
+use crate::{
+    jstz_rollup_path, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS,
+};
 use anyhow::{Context, Result};
 use jstz_node::config::JstzNodeConfig;
 use octez::r#async::endpoint::Endpoint;
@@ -19,12 +21,21 @@ use tezos_crypto_rs::hash::SmartRollupHash;
 use tokio::io::AsyncReadExt;
 
 const DEFAULT_JSTZD_SERVER_PORT: u16 = 55555;
-const ACTIVATOR_PUBLIC_KEY: &str =
-    "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
+const KERNEL_DEBUG_FILE: &str = "kernel.log";
+const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
 ];
+
+pub(crate) const ACTIVATOR_ACCOUNT_SK: &str =
+    "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
+pub(crate) const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
+pub(crate) const ROLLUP_OPERATOR_ACCOUNT_SK: &str =
+    "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
+pub(crate) const ROLLUP_OPERATOR_PK: &str =
+    "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
+pub(crate) const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
@@ -72,18 +83,18 @@ pub(crate) async fn build_config(
         &octez_client_config,
     )?;
 
-    // TODO: https://linear.app/tezos/issue/JSTZ-238/deserialize-rollup-config
-    // Dummy rollup config for now
     let octez_node_endpoint = octez_node_config.rpc_endpoint.clone();
     let octez_rollup_config = OctezRollupConfigBuilder::new(
         octez_node_endpoint,
         octez_client_config.base_dir().into(),
         SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
-        "bootstrap1".to_string(),
-        "dummy-kernel".into(),
+        ROLLUP_OPERATOR_ACCOUNT_ALIAS.to_string(),
+        jstz_rollup_path::kernel_installer_path(),
     )
-    .set_data_dir(RollupDataDir::Temp)
-    .set_rpc_endpoint(&Endpoint::localhost(8000))
+    .set_data_dir(RollupDataDir::TempWithPreImages {
+        preimages_dir: jstz_rollup_path::preimages_path(),
+    })
+    .set_kernel_debug_file(Path::new(KERNEL_DEBUG_FILE))
     .build()
     .unwrap();
 
@@ -111,15 +122,10 @@ pub(crate) async fn build_config(
 
 fn default_config() -> Config {
     let mut config = Config::default();
-    config
-        .protocol
-        .set_bootstrap_accounts([BootstrapAccount::new(
-            // add activator to bootstrap accounts in default config so that
-            // at least baker has an account to run with
-            ACTIVATOR_PUBLIC_KEY,
-            40_000_000_000,
-        )
-        .unwrap()]);
+    config.protocol.set_bootstrap_accounts([
+        BootstrapAccount::new(ROLLUP_OPERATOR_PK, 60_000_000_000).unwrap(),
+        BootstrapAccount::new(ACTIVATOR_PK, 40_000_000_000).unwrap(),
+    ]);
     config
 }
 
@@ -195,10 +201,13 @@ mod tests {
             BootstrapAccount, BootstrapContract, BootstrapSmartRollup, Protocol,
             ProtocolConstants, ProtocolParameterBuilder, SmartRollupPvmKind,
         },
+        rollup::RollupDataDir,
     };
     use tempfile::{tempdir, NamedTempFile};
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tokio::io::AsyncReadExt;
+
+    use super::{jstz_rollup_path, JSTZ_ROLLUP_ADDRESS, KERNEL_DEBUG_FILE};
 
     use super::Config;
 
@@ -408,11 +417,14 @@ mod tests {
     fn default_config() {
         let config = super::default_config();
         let accounts = config.protocol.bootstrap_accounts();
-        assert_eq!(accounts.len(), 1);
-        assert_eq!(
-            **accounts.first().unwrap(),
-            BootstrapAccount::new(super::ACTIVATOR_PUBLIC_KEY, 40_000_000_000).unwrap()
-        );
+        assert_eq!(accounts.len(), 2);
+        let expected_accounts = [
+            BootstrapAccount::new(super::ROLLUP_OPERATOR_PK, 60_000_000_000).unwrap(),
+            BootstrapAccount::new(super::ACTIVATOR_PK, 40_000_000_000).unwrap(),
+        ];
+        assert!(expected_accounts
+            .iter()
+            .all(|expected| { accounts.iter().any(|account| **account == *expected) }));
     }
 
     #[tokio::test]
@@ -451,6 +463,31 @@ mod tests {
         )
         .await;
         assert_eq!(contracts.len(), 2);
+
+        assert_eq!(
+            config.octez_rollup_config().address.to_base58_check(),
+            JSTZ_ROLLUP_ADDRESS
+        );
+        assert_eq!(
+            config
+                .octez_rollup_config()
+                .kernel_debug_file
+                .as_ref()
+                .unwrap()
+                .to_str()
+                .unwrap(),
+            KERNEL_DEBUG_FILE,
+        );
+        assert_eq!(
+            config.octez_rollup_config().data_dir,
+            RollupDataDir::TempWithPreImages {
+                preimages_dir: jstz_rollup_path::preimages_path(),
+            }
+        );
+        assert_eq!(
+            config.octez_rollup_config().boot_sector_file,
+            jstz_rollup_path::kernel_installer_path()
+        );
     }
 
     #[tokio::test]
@@ -464,7 +501,7 @@ mod tests {
             .unwrap();
         let params = serde_json::from_str::<serde_json::Value>(&buf).unwrap();
 
-        // one bootstrap account should have been inserted: the activator account
+        // two bootstrap account should have been inserted: the activator account and the rollup operator account
         let accounts = params
             .as_object()
             .unwrap()
@@ -472,12 +509,19 @@ mod tests {
             .unwrap()
             .as_array()
             .unwrap();
-        assert_eq!(accounts.len(), 1);
-        assert_eq!(
-            serde_json::from_value::<BootstrapAccount>(accounts.first().unwrap().clone())
-                .unwrap(),
-            BootstrapAccount::new(super::ACTIVATOR_PUBLIC_KEY, 40_000_000_000).unwrap()
-        );
+        assert_eq!(accounts.len(), 2);
+
+        let bootstrap_accounts = accounts
+            .iter()
+            .map(|acc| serde_json::from_value::<BootstrapAccount>(acc.clone()).unwrap())
+            .collect::<Vec<_>>();
+
+        assert!(bootstrap_accounts.contains(
+            &BootstrapAccount::new(super::ACTIVATOR_PK, 40_000_000_000).unwrap()
+        ));
+        assert!(bootstrap_accounts.contains(
+            &BootstrapAccount::new(super::ROLLUP_OPERATOR_PK, 60_000_000_000).unwrap()
+        ));
     }
 
     #[tokio::test]
@@ -530,7 +574,7 @@ mod tests {
     async fn build_protocol_params() {
         let mut builder = ProtocolParameterBuilder::new();
         builder.set_bootstrap_accounts([BootstrapAccount::new(
-            super::ACTIVATOR_PUBLIC_KEY,
+            super::ACTIVATOR_PK,
             40_000_000_000,
         )
         .unwrap()]);
@@ -560,7 +604,7 @@ mod tests {
         let mut builder = ProtocolParameterBuilder::new();
         builder
             .set_bootstrap_accounts([BootstrapAccount::new(
-                super::ACTIVATOR_PUBLIC_KEY,
+                super::ACTIVATOR_PK,
                 40_000_000_000,
             )
             .unwrap()])
