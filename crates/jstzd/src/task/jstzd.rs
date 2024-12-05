@@ -106,6 +106,10 @@ impl JstzdConfig {
         &self.octez_rollup_config
     }
 
+    pub fn jstz_node_config(&self) -> &JstzNodeConfig {
+        &self.jstz_node_config
+    }
+
     pub fn protocol_params(&self) -> &ProtocolParameter {
         &self.protocol_params
     }

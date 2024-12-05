@@ -1,5 +1,6 @@
+use octez::unused_port;
 use rust_embed::Embed;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::task::jstzd::JstzdConfig;
 use crate::{
@@ -83,6 +84,7 @@ pub(crate) async fn build_config(
         &octez_client_config,
     )?;
 
+    let kernel_debug_file = Path::new(KERNEL_DEBUG_FILE);
     let octez_node_endpoint = octez_node_config.rpc_endpoint.clone();
     let octez_rollup_config = OctezRollupConfigBuilder::new(
         octez_node_endpoint,
@@ -94,16 +96,15 @@ pub(crate) async fn build_config(
     .set_data_dir(RollupDataDir::TempWithPreImages {
         preimages_dir: jstz_rollup_path::preimages_path(),
     })
-    .set_kernel_debug_file(Path::new(KERNEL_DEBUG_FILE))
+    .set_kernel_debug_file(kernel_debug_file)
     .build()
     .unwrap();
 
-    // TODO: https://linear.app/tezos/issue/JSTZ-240/add-jstz-node-config-builder
-    // Dummy jstz node config for now
+    let jstz_node_rpc_endpoint = Endpoint::localhost(unused_port());
     let jstz_node_config = JstzNodeConfig::new(
-        &Endpoint::localhost(8000),
-        &Endpoint::localhost(8000),
-        &PathBuf::from("dummy-kernel-log-file"),
+        &jstz_node_rpc_endpoint,
+        &octez_rollup_config.rpc_endpoint,
+        kernel_debug_file,
     );
     let protocol_params = build_protocol_params(config.protocol).await?;
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
@@ -487,6 +488,15 @@ mod tests {
         assert_eq!(
             config.octez_rollup_config().boot_sector_file,
             jstz_rollup_path::kernel_installer_path()
+        );
+        assert_eq!(
+            config.jstz_node_config().kernel_log_file.to_str().unwrap(),
+            KERNEL_DEBUG_FILE
+        );
+
+        assert_eq!(
+            config.jstz_node_config().rollup_endpoint,
+            config.octez_rollup_config().rpc_endpoint
         );
     }
 
