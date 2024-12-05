@@ -132,4 +132,16 @@ mod test {
             "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C"
         );
     }
+
+    #[test]
+    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
+    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
+    fn bin_round_trip() {
+        let pk = PublicKey::from_base58(TZ1).unwrap();
+        let bin = bincode::serialize(&pk).unwrap();
+        // Error message:
+        //      Result::unwrap()` on an `Err` value: DeserializeAnyNotSupported
+        let decoded = bincode::deserialize::<PublicKey>(bin.as_ref()).unwrap();
+        assert_eq!(pk, decoded);
+    }
 }
