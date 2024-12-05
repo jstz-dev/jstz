@@ -31,3 +31,4 @@ utoipa.workspace = true
 [dev-dependencies]
 jstz_mock = { path = "../jstz_mock" }
 tezos-smart-rollup-mock.workspace = true
+bincode.workspace = true
