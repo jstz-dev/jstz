@@ -86,7 +86,6 @@ impl Operation {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
-#[serde(tag = "_type")]
 pub struct DeployFunction {
     /// Smart function code
     pub function_code: ParsedCode,
@@ -98,7 +97,6 @@ pub struct DeployFunction {
 #[schema(description = "Request used to run a smart function. \
     The target smart function is given by the host part of the uri. \
     The rest of the attributes will be handled by the smart function itself.")]
-#[serde(tag = "_type")]
 pub struct RunFunction {
     /// Smart function URI in the form tezos://{smart_function_address}/rest/of/path
     #[serde(with = "http_serde::uri")]
@@ -236,5 +234,93 @@ pub mod openapi {
             .additional_properties(Some(AdditionalProperties::FreeForm(true)))
             .description(Some("Any valid HTTP headers"))
             .build()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::{DeployFunction, RunFunction};
+    use crate::{context::account::ParsedCode, operation::Content};
+    use http::{HeaderMap, Method, Uri};
+    use serde_json::json;
+
+    fn run_function_content() -> Content {
+        let body = r#""value":1""#.to_string().into_bytes();
+        Content::RunFunction(RunFunction {
+            uri: Uri::try_from(
+                "tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
+            )
+            .unwrap(),
+            method: Method::POST,
+            headers: HeaderMap::new(),
+            body: Some(body),
+            gas_limit: 10000,
+        })
+    }
+
+    fn deploy_function_content() -> Content {
+        let raw_code =
+            r#"export default handler = () => new Response("hello world!");"#.to_string();
+        let function_code = ParsedCode::try_from(raw_code).unwrap();
+        let account_credit = 100000;
+        Content::DeployFunction(DeployFunction {
+            function_code,
+            account_credit,
+        })
+    }
+
+    #[test]
+    fn test_encoding_run_function_json_round_trip() {
+        let run_function = run_function_content();
+        let json = serde_json::to_value(&run_function).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "_type":"RunFunction",
+                "body":[34,118,97,108,117,101,34,58,49,34],
+                "gas_limit":10000,
+                "headers":{},
+                "method":"POST",
+                "uri":"tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"
+            })
+        );
+        let decoded = serde_json::from_value::<Content>(json).unwrap();
+        assert_eq!(run_function, decoded);
+    }
+
+    #[test]
+    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
+    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
+    fn test_run_function_bin_round_trip() {
+        let run_function = run_function_content();
+        let binary = bincode::serialize(&run_function).unwrap();
+        let bin_decoded = bincode::deserialize::<Content>(binary.as_ref()).unwrap();
+        assert_eq!(run_function, bin_decoded);
+    }
+
+    #[test]
+    fn test_deploy_function_json_round_trip() {
+        let deploy_function = deploy_function_content();
+        let json = serde_json::to_value(&deploy_function).unwrap();
+        assert_eq!(
+            json,
+            json!({
+                "_type":"DeployFunction",
+                "account_credit":100000,
+                "function_code":"export default handler = () => new Response(\"hello world!\");"
+            })
+        );
+        let decoded = serde_json::from_value::<Content>(json).unwrap();
+        assert_eq!(deploy_function, decoded);
+    }
+
+    #[test]
+    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
+    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
+    fn test_deploy_function_bin_round_trip() {
+        let deploy_function = deploy_function_content();
+        let binary = bincode::serialize(&deploy_function).unwrap();
+        let bin_decoded = bincode::deserialize::<Content>(binary.as_ref()).unwrap();
+        assert_eq!(deploy_function, bin_decoded);
     }
 }

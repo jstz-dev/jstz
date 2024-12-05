@@ -2819,6 +2819,7 @@ name = "jstz_crypto"
 version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
+ "bincode",
  "boa_gc",
  "derive_more",
  "hex",
@@ -2912,6 +2913,7 @@ dependencies = [
 name = "jstz_proto"
 version = "0.1.0-alpha.0"
 dependencies = [
+ "bincode",
  "boa_engine",
  "boa_gc",
  "derive_more",
