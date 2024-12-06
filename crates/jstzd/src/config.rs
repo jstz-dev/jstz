@@ -10,12 +10,12 @@ use anyhow::{Context, Result};
 use jstz_node::config::JstzNodeConfig;
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{BootstrapContract, ProtocolParameter};
-use octez::r#async::rollup::{OctezRollupConfigBuilder, RollupDataDir};
 use octez::r#async::{
     baker::{BakerBinaryPath, OctezBakerConfig, OctezBakerConfigBuilder},
     client::{OctezClientConfig, OctezClientConfigBuilder},
     node_config::{OctezNodeConfig, OctezNodeConfigBuilder},
-    protocol::{BootstrapAccount, Protocol, ProtocolParameterBuilder},
+    protocol::{BootstrapAccount, ProtocolParameterBuilder},
+    rollup::{OctezRollupConfigBuilder, RollupDataDir},
 };
 use serde::Deserialize;
 use tezos_crypto_rs::hash::SmartRollupHash;
@@ -78,10 +78,12 @@ pub(crate) async fn build_config(
         None => OctezClientConfigBuilder::new(octez_node_config.rpc_endpoint.clone()),
     }
     .build()?;
+    let protocol_params = build_protocol_params(config.protocol).await?;
     let baker_config = populate_baker_config(
         config.octez_baker,
         &octez_node_config,
         &octez_client_config,
+        &protocol_params,
     )?;
 
     let kernel_debug_file = Path::new(KERNEL_DEBUG_FILE);
@@ -106,7 +108,7 @@ pub(crate) async fn build_config(
         &octez_rollup_config.rpc_endpoint,
         kernel_debug_file,
     );
-    let protocol_params = build_protocol_params(config.protocol).await?;
+
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
     Ok((
         server_port,
@@ -134,10 +136,11 @@ fn populate_baker_config(
     mut config_builder: OctezBakerConfigBuilder,
     octez_node_config: &OctezNodeConfig,
     octez_client_config: &OctezClientConfig,
+    protocol_params: &ProtocolParameter,
 ) -> Result<OctezBakerConfig> {
     if config_builder.binary_path().is_none() {
-        config_builder =
-            config_builder.set_binary_path(BakerBinaryPath::Env(Protocol::Alpha));
+        config_builder = config_builder
+            .set_binary_path(BakerBinaryPath::Env(protocol_params.protocol()));
     }
     if config_builder.octez_client_base_dir().is_none() {
         config_builder = config_builder
@@ -208,7 +211,7 @@ mod tests {
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tokio::io::AsyncReadExt;
 
-    use super::{jstz_rollup_path, JSTZ_ROLLUP_ADDRESS, KERNEL_DEBUG_FILE};
+    use super::{jstz_rollup_path, ACTIVATOR_PK, JSTZ_ROLLUP_ADDRESS, KERNEL_DEBUG_FILE};
 
     use super::Config;
 
@@ -400,13 +403,50 @@ mod tests {
             .build()
             .unwrap();
         let baker_builder = OctezBakerConfigBuilder::new();
-        let baker_config =
-            super::populate_baker_config(baker_builder, &node_config, &client_config)
-                .unwrap();
+        let protocol_params = ProtocolParameterBuilder::new()
+            .set_protocol(Protocol::ParisC)
+            .set_bootstrap_accounts([
+                BootstrapAccount::new(ACTIVATOR_PK, 40_000_000_000).unwrap()
+            ])
+            .build()
+            .unwrap();
+        let baker_config = super::populate_baker_config(
+            baker_builder,
+            &node_config,
+            &client_config,
+            &protocol_params,
+        )
+        .unwrap();
+
+        // baker path is not provided in the config, so the builder takes the protocol version from
+        // protocol_params
         assert_eq!(
             baker_config,
             OctezBakerConfigBuilder::new()
-                .set_binary_path(BakerBinaryPath::Env(Protocol::Alpha))
+                .set_binary_path(BakerBinaryPath::Env(Protocol::ParisC))
+                .set_octez_client_base_dir(tmp_dir.path().to_str().unwrap())
+                .set_octez_node_endpoint(&Endpoint::localhost(5678))
+                .build()
+                .unwrap()
+        );
+
+        // baker path is provided in the config, so the builder takes that path and ignores protocol_params
+        let baker_builder = OctezBakerConfigBuilder::new().set_binary_path(
+            BakerBinaryPath::Custom(PathBuf::from_str("/foo/bar").unwrap()),
+        );
+        let baker_config = super::populate_baker_config(
+            baker_builder,
+            &node_config,
+            &client_config,
+            &protocol_params,
+        )
+        .unwrap();
+        assert_eq!(
+            baker_config,
+            OctezBakerConfigBuilder::new()
+                .set_binary_path(BakerBinaryPath::Custom(
+                    PathBuf::from_str("/foo/bar").unwrap()
+                ))
                 .set_octez_client_base_dir(tmp_dir.path().to_str().unwrap())
                 .set_octez_node_endpoint(&Endpoint::localhost(5678))
                 .build()
