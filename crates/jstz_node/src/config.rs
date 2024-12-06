@@ -1,8 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use octez::r#async::endpoint::Endpoint;
+use serde::Serialize;
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct JstzNodeConfig {
     /// The endpoint of the jstz node.
     pub endpoint: Endpoint,
@@ -23,5 +24,25 @@ impl JstzNodeConfig {
             rollup_endpoint: rollup_endpoint.clone(),
             kernel_log_file: kernel_log_file.to_path_buf(),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_serialize_config() {
+        let config = JstzNodeConfig::new(
+            &Endpoint::localhost(8932),
+            &Endpoint::localhost(8933),
+            Path::new("/tmp/kernel.log"),
+        );
+
+        let json = serde_json::to_value(&config).unwrap();
+
+        assert_eq!(json["endpoint"], "http://localhost:8932");
+        assert_eq!(json["rollup_endpoint"], "http://localhost:8933");
+        assert_eq!(json["kernel_log_file"], "/tmp/kernel.log");
     }
 }

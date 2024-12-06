@@ -259,6 +259,10 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
             "octez-rollup",
             serde_json::to_value(jstzd_config.octez_rollup_config()).unwrap(),
         ),
+        (
+            "jstz-node",
+            serde_json::to_value(jstzd_config.jstz_node_config()).unwrap(),
+        ),
     ] {
         let res =
             reqwest::get(&format!("http://localhost:{}/config/{}", jstzd_port, key))
