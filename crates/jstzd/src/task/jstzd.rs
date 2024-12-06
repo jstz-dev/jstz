@@ -63,7 +63,7 @@ pub struct JstzdConfig {
     baker_config: OctezBakerConfig,
     #[serde(rename(serialize = "octez-client"))]
     octez_client_config: OctezClientConfig,
-    #[serde(skip_serializing)]
+    #[serde(rename(serialize = "octez-rollup"))]
     octez_rollup_config: OctezRollupConfig,
     #[serde(skip_serializing)]
     jstz_node_config: JstzNodeConfig,

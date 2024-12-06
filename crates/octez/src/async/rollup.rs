@@ -3,7 +3,7 @@ use crate::unused_port;
 use super::{bootstrap::SmartRollupPvmKind, endpoint::Endpoint};
 use anyhow::Result;
 use http::Uri;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{
     path::{Path, PathBuf},
     str::FromStr,
@@ -119,11 +119,13 @@ impl OctezRollupConfigBuilder {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub struct OctezRollupConfig {
     pub binary_path: PathBuf,
     pub octez_client_base_dir: PathBuf,
     pub octez_node_endpoint: Endpoint,
+    // TODO: https://linear.app/tezos/issue/JSTZ-243/include-rollup-data-dir-in-config
+    #[serde(skip_serializing)]
     pub data_dir: RollupDataDir,
     pub address: SmartRollupHash,
     pub operator: String,
@@ -255,6 +257,39 @@ mod test {
         assert_eq!(
             rollup_config.kernel_debug_file,
             Some(PathBuf::from("/tmp/kernel_debug.log"))
+        );
+    }
+
+    #[test]
+    fn serialize_config() {
+        let config = OctezRollupConfigBuilder::new(
+            Endpoint::localhost(1234),
+            PathBuf::from("/base_dir"),
+            SmartRollupHash::from_str("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK").unwrap(),
+            "operator".to_owned(),
+            PathBuf::from("/tmp/boot_sector.hex"),
+        )
+        .set_kernel_debug_file(Path::new("/tmp/kernel_debug.log"))
+        .set_data_dir(RollupDataDir::TempWithPreImages {
+            preimages_dir: PathBuf::from("/tmp/pre_images"),
+        })
+        .build()
+        .unwrap();
+
+        let json = serde_json::to_value(config.clone()).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!({
+                "binary_path": "octez-smart-rollup-node",
+                "octez_client_base_dir": "/base_dir",
+                "octez_node_endpoint": "http://localhost:1234",
+                "pvm_kind": "wasm_2_0_0",
+                "address": "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+                "operator": "operator",
+                "boot_sector_file": "/tmp/boot_sector.hex",
+                "rpc_endpoint": format!("http://127.0.0.1:{}", config.rpc_endpoint.port()),
+                "kernel_debug_file": "/tmp/kernel_debug.log"
+            })
         );
     }
 }
