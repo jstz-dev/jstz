@@ -13,7 +13,7 @@ use tokio::process::{Child, Command};
 
 const DEFAULT_BINARY_PATH: &str = "octez-smart-rollup-node";
 
-#[derive(Clone, PartialEq, Debug, Deserialize)]
+#[derive(Clone, PartialEq, Debug, Deserialize, Serialize)]
 pub enum RollupDataDir {
     /// Path to the rollup data directory. This directory
     /// should contain the kernel pre image files under `wasm_2_0_0/`
