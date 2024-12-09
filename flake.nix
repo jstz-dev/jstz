@@ -77,6 +77,7 @@
               ++ [
                 ./nix/patches/0001-fix-octez-rust-deps-for-nix.patch
                 ./nix/patches/0002-allow-floats-in-wasm-rollup.patch
+                ./nix/patches/0003-skip-kernel-check.patch
               ];
 
             # Network access for fetching cargo dependencies is disabled in sandboxed
