@@ -24,6 +24,19 @@ index 62b8ef3104..3cc1efb96f 100644
            kernel
            m
        in
+diff --git a/src/lib_scoru_wasm/hooks.ml b/src/lib_scoru_wasm/hooks.ml
+index 5215f86a4d7..a048e5a42f2 100644
+--- a/src/lib_scoru_wasm/hooks.ml
++++ b/src/lib_scoru_wasm/hooks.ml
+@@ -15,7 +15,7 @@ type t = {
+ 
+ let no_hooks =
+   {
+-    fast_exec_invalid_kernel = `Check_with_hook None;
++    fast_exec_invalid_kernel = `No_check;
+     fast_exec_panicked = None;
+     fast_exec_completed = None;
+     fast_exec_fallback = true;
 diff --git a/src/lib_wasm_debugger/wasm_debugger.ml b/src/lib_wasm_debugger/wasm_debugger.ml
 index 4a0748f917..612bd3e500 100644
 --- a/src/lib_wasm_debugger/wasm_debugger.ml
