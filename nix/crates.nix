@@ -151,14 +151,14 @@ in {
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
         # FIXME(https://linear.app/tezos/issue/JSTZ-237):
         # Fix tests that only fail in CI/Nix
-        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --features \"ignore-flaky-tests\"";
+        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --features \"skip-rollup-tests\"";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
       // {
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
         # Generate coverage reports for codecov
-        cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out";
+        cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out --features \"skip-rollup-tests\"";
       });
 
     cargo-clippy = craneLib.cargoClippy (commonWorkspace

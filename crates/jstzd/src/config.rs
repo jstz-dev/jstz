@@ -9,7 +9,9 @@ use crate::{
 use anyhow::{Context, Result};
 use jstz_node::config::JstzNodeConfig;
 use octez::r#async::endpoint::Endpoint;
-use octez::r#async::protocol::{BootstrapContract, ProtocolParameter};
+use octez::r#async::protocol::{
+    BootstrapContract, BootstrapSmartRollup, ProtocolParameter, SmartRollupPvmKind,
+};
 use octez::r#async::{
     baker::{BakerBinaryPath, OctezBakerConfig, OctezBakerConfigBuilder},
     client::{OctezClientConfig, OctezClientConfigBuilder},
@@ -41,6 +43,11 @@ pub(crate) const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
 pub struct BootstrapContractFile;
+
+#[derive(Embed)]
+#[folder = "$CARGO_MANIFEST_DIR/resources/jstz_rollup"]
+#[include = "*.json"]
+struct BootstrapRollupFile;
 
 #[derive(Deserialize, Default)]
 struct Config {
@@ -185,8 +192,20 @@ async fn build_protocol_params(
         contracts.push(contract);
     }
 
-    // TODO: insert jstz rollup
-    builder.set_bootstrap_contracts(contracts).build()
+    builder
+        .set_bootstrap_smart_rollups([BootstrapSmartRollup::new(
+            JSTZ_ROLLUP_ADDRESS,
+            SmartRollupPvmKind::Wasm,
+            &tokio::fs::read_to_string(jstz_rollup_path::kernel_installer_path()).await?,
+            serde_json::from_slice(
+                &BootstrapRollupFile::get("parameters_ty.json")
+                    .ok_or(anyhow::anyhow!("file not found"))?
+                    .data,
+            )?,
+        )
+        .unwrap()])
+        .set_bootstrap_contracts(contracts)
+        .build()
 }
 
 #[cfg(test)]

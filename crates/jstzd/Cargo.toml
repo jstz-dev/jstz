@@ -47,7 +47,7 @@ rand.workspace = true
 tezos_crypto_rs.workspace = true
 
 [features]
-ignore-flaky-tests = []
+skip-rollup-tests = []
 
 [[bin]]
 name = "jstzd"
