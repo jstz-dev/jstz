@@ -1,5 +1,8 @@
 use assert_cmd::prelude::{CommandCargoExt, OutputAssertExt};
+use octez::unused_port;
 use predicates::prelude::predicate;
+use std::thread;
+use std::time::Duration;
 use std::{io::Write, process::Command};
 use tempfile::NamedTempFile;
 
@@ -13,26 +16,50 @@ fn unknown_command() {
         .stderr(predicate::str::contains("unrecognized subcommand \'test\'"));
 }
 
-#[test]
-fn default_config() {
-    let mut cmd = Command::cargo_bin("jstzd").unwrap();
-
-    cmd.arg("run")
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("ready"));
-}
-
+#[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[test]
 fn valid_config_file() {
-    let mut cmd = Command::cargo_bin("jstzd").unwrap();
+    let port = unused_port();
     let mut tmp_file = NamedTempFile::new().unwrap();
-    tmp_file.write_all(r#"{"protocol":{"bootstrap_accounts":[["edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2","6000000000"]]}}"#.as_bytes()).unwrap();
+    tmp_file.write_all(format!(r#"{{"protocol":{{"bootstrap_accounts":[["edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2","15000000000"]]}},"server_port":{}}}"#, port).as_bytes()).unwrap();
 
-    cmd.args(["run", &tmp_file.path().to_string_lossy()])
-        .assert()
-        .success()
-        .stdout(predicate::str::contains("ready"));
+    let handle = thread::spawn(move || {
+        Command::cargo_bin("jstzd")
+            .unwrap()
+            .args(["run", &tmp_file.path().to_string_lossy()])
+            .assert()
+            .success()
+            // baker log writes to stderr
+            .stderr(predicate::str::contains(
+                "block ready for delegate: activator",
+            ));
+    });
+
+    let client = reqwest::blocking::Client::new();
+    for _ in 0..30 {
+        thread::sleep(Duration::from_secs(1));
+        if let Ok(r) = client
+            .get(&format!("http://localhost:{port}/health"))
+            .send()
+        {
+            if r.status().is_success() {
+                break;
+            }
+        }
+    }
+
+    // wait for 5 more seconds to ensure that the baker starts baking in order to
+    // observe the expected log line above
+    thread::sleep(Duration::from_secs(5));
+    assert!(client
+        .put(&format!("http://localhost:{port}/shutdown"))
+        .send()
+        .unwrap()
+        .status()
+        .is_success());
+    handle
+        .join()
+        .expect("jstzd should have been taken down without any error");
 }
 
 #[test]
