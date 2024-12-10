@@ -366,6 +366,7 @@ struct OutputProof {
     pub proof: String,
 }
 
+#[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[tokio::test(flavor = "multi_thread")]
 async fn execute_rollup_outbox_message() {
     let rollup_address = "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao";

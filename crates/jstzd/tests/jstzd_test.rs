@@ -33,7 +33,7 @@ pub const JSTZ_ROLLUP_OPERATOR_PK: &str =
     "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
 pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "bootstrap1";
 
-#[cfg_attr(feature = "ignore-flaky-tests", ignore)]
+#[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[tokio::test(flavor = "multi_thread")]
 async fn jstzd_test() {
     let octez_node_rpc_endpoint = Endpoint::localhost(unused_port());
