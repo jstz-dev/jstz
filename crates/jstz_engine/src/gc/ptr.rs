@@ -5,6 +5,7 @@
 use std::{cell::UnsafeCell, marker::PhantomPinned, mem, pin::Pin, ptr, sync::Arc};
 
 use mozjs::{
+    gc::Handle,
     jsapi::{
         jsid, HeapBigIntWriteBarriers, HeapObjectWriteBarriers, HeapScriptWriteBarriers,
         HeapStringWriteBarriers, HeapValueWriteBarriers, JSFunction, JSObject, JSScript,
@@ -122,6 +123,16 @@ impl<T: WriteBarrieredPtr> GcPtr<T> {
             *self_ptr = next;
             T::write_barrier(self_ptr, prev, next)
         }
+    }
+
+    /// Retrieves a SpiderMonkey Rooted Handle to the underlying value.
+    ///
+    /// # Safety
+    ///
+    /// This is only safe to do on a rooted object (which [`GcPtr`] is not,
+    /// it needs to be additionally rooted).
+    pub unsafe fn handle(&self) -> Handle<T> {
+        Handle::from_marked_location(self.inner_ptr.get() as *const _)
     }
 }
 

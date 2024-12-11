@@ -75,10 +75,10 @@ impl<'a, C: Compartment> Script<'a, C> {
     // Add support for error handling / exceptions instead of using `Option`
     // TODO(https://linear.app/tezos/issue/JSTZ-211):
     // TODO: `JSVal` is not safe, we should return a safe wrapper instead
-    pub fn evaluate<'b, S>(&self, cx: &'b mut Context<S>) -> Option<JSVal>
+    pub fn evaluate<'cx, S>(&self, cx: &'cx mut Context<S>) -> Option<JSVal>
     where
         S: InCompartment<C> + CanAlloc,
-        'a: 'b,
+        'a: 'cx,
     {
         // TODO(https://linear.app/tezos/issue/JSTZ-196):
         // Remove this once we have a proper way to root values

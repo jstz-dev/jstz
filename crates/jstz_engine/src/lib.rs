@@ -1,8 +1,10 @@
 mod compartment;
 mod context;
 mod gc;
+mod object;
 mod realm;
 mod script;
+mod value;
 
 pub(crate) trait AsRawPtr {
     type Ptr;
