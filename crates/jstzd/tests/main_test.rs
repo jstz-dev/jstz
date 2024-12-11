@@ -18,6 +18,26 @@ fn unknown_command() {
 
 #[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[test]
+fn default_config() {
+    // Since the server's port number is unknown when jstzd runs on default config,
+    // here it's assumed that if the child process is still alive after 10 seconds,
+    // it means that jstzd successfully launched
+    let mut child = Command::cargo_bin("jstzd")
+        .unwrap()
+        .arg("run")
+        .spawn()
+        .unwrap();
+    thread::sleep(Duration::from_secs(10));
+    assert!(child.try_wait().unwrap().is_none());
+    Command::new("kill")
+        .args(["-s", "TERM", &child.id().to_string()])
+        .spawn()
+        .unwrap();
+    assert!(child.wait().is_ok());
+}
+
+#[cfg_attr(feature = "skip-rollup-tests", ignore)]
+#[test]
 fn valid_config_file() {
     let port = unused_port();
     let mut tmp_file = NamedTempFile::new().unwrap();
@@ -74,4 +94,23 @@ fn bad_config_file() {
         .stderr(predicate::str::contains(
             "should have at least one bootstrap account with at least 6000 tez",
         ));
+}
+
+#[test]
+fn terminate_with_sigint() {
+    // Since the server's port number is unknown when jstzd runs on default config,
+    // here it's assumed that if the child process is still alive after 10 seconds,
+    // it means that jstzd successfully launched
+    let mut child = Command::cargo_bin("jstzd")
+        .unwrap()
+        .arg("run")
+        .spawn()
+        .unwrap();
+    thread::sleep(Duration::from_secs(10));
+    assert!(child.try_wait().unwrap().is_none());
+    Command::new("kill")
+        .args(["-s", "INT", &child.id().to_string()])
+        .spawn()
+        .unwrap();
+    assert!(child.wait().is_ok());
 }
