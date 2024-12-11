@@ -19,7 +19,9 @@
 //!
 //! For further details, see the [GC Implementation Guide](https://udn.realityripple.com/docs/Mozilla/Projects/SpiderMonkey/Internals/Garbage_collection).
 
-mod ptr;
-mod trace;
+pub mod ptr;
+pub mod root;
+pub mod trace;
 
+pub use root::Prolong;
 pub use trace::{Finalize, Trace, Tracer};
