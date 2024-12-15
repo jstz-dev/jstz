@@ -8,7 +8,7 @@
     "@jstz-dev/jstz": "^0.0.0"
   },
   "devDependencies": {
-    "esbuild": "^0.20.2"
+    "esbuild": "^0.23.0"
   },
   "scripts": {
     "check:types": "tsc --noEmit",
