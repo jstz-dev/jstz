@@ -1,10 +1,12 @@
+use std::fmt::Display;
 use std::fs::File;
 use std::path::PathBuf;
 
 use anyhow::Result;
+use serde_with::SerializeDisplay;
 use tempfile::NamedTempFile;
 
-#[derive(Debug)]
+#[derive(Debug, SerializeDisplay)]
 pub enum FileWrapper {
     TempFile(NamedTempFile),
     File((File, PathBuf)),
@@ -29,6 +31,16 @@ impl TryFrom<PathBuf> for FileWrapper {
                 .open(&path)?,
             path,
         )))
+    }
+}
+
+impl Display for FileWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            FileWrapper::File(p) => p.1.to_string_lossy(),
+            FileWrapper::TempFile(p) => p.path().to_string_lossy(),
+        };
+        write!(f, "{}", s)
     }
 }
 
@@ -100,5 +112,40 @@ mod tests {
             }
             _ => panic!("should be a temp file"),
         }
+    }
+
+    #[test]
+    fn display_file() {
+        let path = NamedTempFile::new().unwrap().into_temp_path();
+        let file = FileWrapper::try_from(path.to_path_buf()).unwrap();
+        assert_eq!(file.to_string(), serde_json::json!(path.to_string_lossy()));
+    }
+
+    #[test]
+    fn display_tempfile() {
+        let tmp_file = NamedTempFile::new().unwrap();
+        let path = tmp_file.path().to_path_buf();
+        let expected = path.to_str().unwrap();
+        let file = FileWrapper::TempFile(tmp_file);
+        assert_eq!(file.to_string(), expected);
+    }
+
+    #[test]
+    fn serialize_file() {
+        let path = NamedTempFile::new().unwrap().into_temp_path();
+        let file = FileWrapper::try_from(path.to_path_buf()).unwrap();
+        assert_eq!(
+            serde_json::to_value(&file).unwrap(),
+            serde_json::json!(path.to_string_lossy())
+        );
+    }
+
+    #[test]
+    fn serialize_tempfile() {
+        let tmp_file = NamedTempFile::new().unwrap();
+        let expected = serde_json::json!(tmp_file.path().to_string_lossy());
+        let file = FileWrapper::TempFile(tmp_file);
+        let serialized = serde_json::to_value(&file).unwrap();
+        assert_eq!(serialized, expected);
     }
 }
