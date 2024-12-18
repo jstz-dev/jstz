@@ -58,6 +58,7 @@ impl Task for OctezRollup {
             &config.octez_client_base_dir,
             &config.octez_node_endpoint,
             &config.rpc_endpoint,
+            &config.log_file,
         );
         let inner = ChildWrapper::new_shared(rollup.run(
             &config.address,

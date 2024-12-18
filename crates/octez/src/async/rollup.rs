@@ -1,12 +1,15 @@
 use crate::unused_port;
 
+use super::file::FileWrapper;
 use super::{bootstrap::SmartRollupPvmKind, endpoint::Endpoint};
 use anyhow::Result;
 use http::Uri;
 use serde::{Deserialize, Serialize};
+use std::process::Stdio;
 use std::{
     path::{Path, PathBuf},
     str::FromStr,
+    sync::Arc,
 };
 use tezos_crypto_rs::hash::SmartRollupHash;
 use tokio::process::{Child, Command};
@@ -54,6 +57,8 @@ pub struct OctezRollupConfigBuilder {
     pub rpc_endpoint: Option<Endpoint>,
     /// The path to the kernel debug file
     kernel_debug_file: Option<PathBuf>,
+    /// Path to the log file.
+    log_file: Option<PathBuf>,
 }
 
 impl OctezRollupConfigBuilder {
@@ -75,6 +80,7 @@ impl OctezRollupConfigBuilder {
             boot_sector_file,
             rpc_endpoint: None,
             kernel_debug_file: None,
+            log_file: None,
         }
     }
 
@@ -98,6 +104,11 @@ impl OctezRollupConfigBuilder {
         self
     }
 
+    pub fn set_log_file(mut self, path: &Path) -> Self {
+        self.log_file = Some(path.into());
+        self
+    }
+
     pub fn build(self) -> Result<OctezRollupConfig> {
         Ok(OctezRollupConfig {
             binary_path: self
@@ -115,6 +126,10 @@ impl OctezRollupConfigBuilder {
                 Endpoint::try_from(uri).unwrap()
             }),
             kernel_debug_file: self.kernel_debug_file,
+            log_file: Arc::new(match self.log_file {
+                Some(v) => FileWrapper::try_from(v)?,
+                None => FileWrapper::default(),
+            }),
         })
     }
 }
@@ -133,6 +148,7 @@ pub struct OctezRollupConfig {
     pub rpc_endpoint: Endpoint,
     pub pvm_kind: SmartRollupPvmKind,
     pub kernel_debug_file: Option<PathBuf>,
+    pub log_file: Arc<FileWrapper>,
 }
 
 pub struct OctezRollup {
@@ -142,6 +158,7 @@ pub struct OctezRollup {
     octez_client_base_dir: PathBuf,
     octez_node_endpoint: Endpoint,
     rpc_endpoint: Endpoint,
+    log_file: Arc<FileWrapper>,
 }
 
 impl OctezRollup {
@@ -151,6 +168,7 @@ impl OctezRollup {
         octez_client_base_dir: &Path,
         octez_node_endpoint: &Endpoint,
         rpc_endpoint: &Endpoint,
+        log_file: &Arc<FileWrapper>,
     ) -> Self {
         Self {
             binary_path: binary_path.to_path_buf(),
@@ -158,20 +176,24 @@ impl OctezRollup {
             octez_client_base_dir: octez_client_base_dir.to_path_buf(),
             octez_node_endpoint: octez_node_endpoint.clone(),
             rpc_endpoint: rpc_endpoint.clone(),
+            log_file: log_file.clone(),
         }
     }
 }
 
 impl OctezRollup {
-    fn command(&self) -> Command {
+    fn command(&self) -> Result<Command> {
         let mut command = Command::new(self.binary_path.to_string_lossy().as_ref());
-        command.args([
-            "--endpoint",
-            &self.octez_node_endpoint.to_string(),
-            "--base-dir",
-            &self.octez_client_base_dir.to_string_lossy(),
-        ]);
         command
+            .args([
+                "--endpoint",
+                &self.octez_node_endpoint.to_string(),
+                "--base-dir",
+                &self.octez_client_base_dir.to_string_lossy(),
+            ])
+            .stdout(Stdio::from(self.log_file.as_file().try_clone()?))
+            .stderr(Stdio::from(self.log_file.as_file().try_clone()?));
+        Ok(command)
     }
 
     pub fn run(
@@ -181,7 +203,7 @@ impl OctezRollup {
         boot_sector_file: Option<&Path>,
         kernel_debug_file: Option<&Path>,
     ) -> Result<Child> {
-        let mut command = self.command();
+        let mut command = self.command()?;
         command.args([
             "run",
             "operator",
@@ -262,6 +284,7 @@ mod test {
 
     #[test]
     fn serialize_config() {
+        let log_file = tempfile::NamedTempFile::new().unwrap().into_temp_path();
         let config = OctezRollupConfigBuilder::new(
             Endpoint::localhost(1234),
             PathBuf::from("/base_dir"),
@@ -273,6 +296,7 @@ mod test {
         .set_data_dir(RollupDataDir::TempWithPreImages {
             preimages_dir: PathBuf::from("/tmp/pre_images"),
         })
+        .set_log_file(log_file.to_path_buf().as_path())
         .build()
         .unwrap();
 
@@ -288,7 +312,8 @@ mod test {
                 "operator": "operator",
                 "boot_sector_file": "/tmp/boot_sector.hex",
                 "rpc_endpoint": format!("http://127.0.0.1:{}", config.rpc_endpoint.port()),
-                "kernel_debug_file": "/tmp/kernel_debug.log"
+                "kernel_debug_file": "/tmp/kernel_debug.log",
+                "log_file": log_file.to_string_lossy()
             })
         );
     }
