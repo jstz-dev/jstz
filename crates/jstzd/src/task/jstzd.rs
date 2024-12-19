@@ -21,6 +21,7 @@ use axum::{
     routing::{get, put},
     Router,
 };
+use indicatif::{ProgressBar, ProgressStyle};
 use jstz_node::config::JstzNodeConfig;
 use octez::r#async::{
     baker::OctezBakerConfig,
@@ -36,6 +37,7 @@ use tokio::{
     net::TcpListener,
     sync::{oneshot, RwLock},
     task::JoinHandle,
+    time::{sleep, Duration},
 };
 
 trait IntoShared {
@@ -163,6 +165,12 @@ impl Task for Jstzd {
     }
 
     async fn health_check(&self) -> Result<bool> {
+        self.health_check_inner().await.0
+    }
+}
+
+impl Jstzd {
+    async fn health_check_inner(&self) -> (Result<bool>, Vec<Result<bool>>) {
         let check_results = futures::future::join_all([
             self.octez_node.read().await.health_check(),
             self.baker.read().await.health_check(),
@@ -173,22 +181,23 @@ impl Task for Jstzd {
 
         let mut healthy = true;
         let mut err = vec![];
-        for result in check_results {
+        for result in &check_results {
             match result {
                 Err(e) => err.push(e),
-                Ok(v) => healthy = healthy && v,
+                Ok(v) => healthy = healthy && *v,
             }
         }
 
         if !err.is_empty() {
-            bail!("failed to perform health check: {:?}", err)
+            (
+                Err(anyhow::anyhow!("failed to perform health check: {:?}", err)),
+                check_results,
+            )
         } else {
-            Ok(healthy)
+            (Ok(healthy), check_results)
         }
     }
-}
 
-impl Jstzd {
     async fn import_activator(octez_client: &OctezClient) -> Result<()> {
         octez_client
             .import_secret_key(ACTIVATOR_ACCOUNT_ALIAS, ACTIVATOR_ACCOUNT_SK)
@@ -316,7 +325,7 @@ impl JstzdServer {
         shutdown(&mut lock).await
     }
 
-    pub async fn run(&mut self) -> Result<()> {
+    pub async fn run(&mut self, print_info: bool) -> Result<()> {
         let jstzd = Self::spawn_jstzd(
             self.inner
                 .state
@@ -330,6 +339,7 @@ impl JstzdServer {
                     "cannot run jstzd server without jstzd config"
                 ))?
                 .clone(),
+            print_info,
         )
         .await?;
         self.inner.state.write().await.jstzd.replace(jstzd);
@@ -380,12 +390,49 @@ impl JstzdServer {
         }
     }
 
-    async fn spawn_jstzd(jstzd_config: JstzdConfig) -> Result<Jstzd> {
+    async fn spawn_jstzd(jstzd_config: JstzdConfig, print_info: bool) -> Result<Jstzd> {
         let mut jstzd = Jstzd::spawn(jstzd_config).await?;
 
-        let jstzd_healthy = retry(60, 500, || async { jstzd.health_check().await }).await;
+        let progress_bar = match print_info {
+            true => {
+                let v = ProgressBar::new(4);
+                v.set_style(ProgressStyle::default_bar().template(
+                    "{spinner:.green} [{bar:40.cyan/blue}] {pos:>7}/{len:7} {msg}",
+                )?);
+                Some(v)
+            }
+            false => None,
+        };
+
+        let res = jstzd.health_check_inner().await;
+        let mut jstzd_healthy = res.0.unwrap_or_default();
+        let mut curr_progress = 0;
+        for _ in 0..120 {
+            let (overall_result, individual_results) = jstzd.health_check_inner().await;
+            jstzd_healthy = overall_result.unwrap_or_default();
+            if let Some(ref bar) = progress_bar {
+                let count = individual_results
+                    .into_iter()
+                    .fold(0, |acc, v| acc + v.unwrap_or_default() as u64);
+                if count > curr_progress {
+                    curr_progress = count;
+                    bar.set_position(curr_progress);
+                }
+
+                if jstzd_healthy {
+                    bar.finish_and_clear();
+                    break;
+                }
+            }
+
+            sleep(Duration::from_millis(500)).await;
+        }
+
         if !jstzd_healthy {
             let _ = jstzd.kill().await;
+            if let Some(b) = progress_bar {
+                b.abandon();
+            }
             bail!("jstzd never turns healthy");
         }
         Ok(jstzd)

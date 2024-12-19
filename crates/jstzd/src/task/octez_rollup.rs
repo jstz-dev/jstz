@@ -82,7 +82,7 @@ impl Task for OctezRollup {
         let res =
             reqwest::get(format!("{}/health/", &self.config.rpc_endpoint.to_string()))
                 .await?;
-        let body = res.json::<HealthCheckResponse>().await?;
-        return Ok(body.healthy);
+        //let body = res.json::<HealthCheckResponse>().await?;
+        return Ok(res.status().is_success());
     }
 }

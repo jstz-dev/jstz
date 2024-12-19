@@ -7,12 +7,27 @@ pub use config::BOOTSTRAP_CONTRACT_NAMES;
 pub mod jstz_rollup_path {
     include!(concat!(env!("OUT_DIR"), "/jstz_rollup_path.rs"));
 }
+use console::style;
 use std::process::exit;
 use tokio::signal::unix::{signal, SignalKind};
 
 include!("../build_config.rs");
 pub const JSTZ_ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 pub const JSTZ_NATIVE_BRIDGE_ADDRESS: &str = "KT1GFiPkkTjd14oHe6MrBPiRh5djzRkVWcni";
+const SANDBOX_BANNER: &str = r#"
+           __________
+           \  jstz  /
+            )______(
+            |""""""|_.-._,.---------.,_.-._
+            |      | | |               | | ''-.
+            |      |_| |_             _| |_..-'
+            |______| '-' `'---------'` '-'
+            )""""""(
+           /________\
+           `'------'`
+         .------------.
+        /______________\
+"#;
 
 /// The `main` function for running jstzd
 pub async fn main(config_path: &Option<String>) {
@@ -28,9 +43,20 @@ pub async fn main(config_path: &Option<String>) {
     }
 }
 
+fn print_banner() {
+    println!("{}", style(SANDBOX_BANNER).bold());
+    println!(
+        "        {} {}",
+        env!("CARGO_PKG_VERSION"),
+        style(env!("CARGO_PKG_REPOSITORY")).blue().bold()
+    );
+    println!();
+}
+
 async fn run(port: u16, config: JstzdConfig) {
     let mut server = JstzdServer::new(config, port);
-    if let Err(e) = server.run().await {
+    print_banner();
+    if let Err(e) = server.run(true).await {
         eprintln!("failed to run jstzd server: {:?}", e);
         let _ = server.stop().await;
         exit(1);
