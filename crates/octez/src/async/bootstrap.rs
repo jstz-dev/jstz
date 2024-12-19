@@ -106,9 +106,13 @@ impl BootstrapAccount {
     pub fn amount(&self) -> u64 {
         self.amount_mutez
     }
+
+    pub fn address(&self) -> String {
+        self.public_key.hash()
+    }
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct BootstrapAccounts {
     accounts: HashMap<String, BootstrapAccount>,
 }

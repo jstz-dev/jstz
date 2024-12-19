@@ -28,9 +28,10 @@ use octez::r#async::{
     client::{OctezClient, OctezClientConfig},
     endpoint::Endpoint,
     node_config::OctezNodeConfig,
-    protocol::ProtocolParameter,
+    protocol::{BootstrapAccount, ProtocolParameter},
     rollup::OctezRollupConfig,
 };
+use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
 use serde::Serialize;
 use std::sync::Arc;
 use tokio::{
@@ -391,7 +392,7 @@ impl JstzdServer {
     }
 
     async fn spawn_jstzd(jstzd_config: JstzdConfig, print_info: bool) -> Result<Jstzd> {
-        let mut jstzd = Jstzd::spawn(jstzd_config).await?;
+        let mut jstzd = Jstzd::spawn(jstzd_config.clone()).await?;
 
         let progress_bar = match print_info {
             true => {
@@ -435,8 +436,44 @@ impl JstzdServer {
             }
             bail!("jstzd never turns healthy");
         }
+
+        if print_info {
+            let mut table = format_sandbox_bootstrap_accounts(
+                jstzd_config.protocol_params().bootstrap_accounts(),
+            );
+
+            table.set_format({
+                let mut format = *FORMAT_DEFAULT;
+                format.indent(2);
+                format
+            });
+
+            println!("{}", table);
+        }
+
         Ok(jstzd)
     }
+}
+
+fn format_sandbox_bootstrap_accounts(accounts: Vec<&BootstrapAccount>) -> Table {
+    let mut table = Table::new();
+    table.set_titles(Row::new(vec![
+        Cell::new("Address"),
+        Cell::new("XTZ Balance"),
+    ]));
+
+    for (i, bootstrap_account) in accounts.iter().enumerate() {
+        table.add_row(Row::new(vec![
+            Cell::new(&format!(
+                "(bootstrap{}) {}",
+                i + 1,
+                bootstrap_account.address()
+            )),
+            Cell::new(&bootstrap_account.amount().to_string()),
+        ]));
+    }
+
+    table
 }
 
 async fn health_check(state: &ServerState) -> bool {

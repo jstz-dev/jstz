@@ -2,7 +2,10 @@ use crate::{error::Result, Error};
 use std::fmt::{self, Display};
 
 use serde::{Deserialize, Serialize};
-use tezos_crypto_rs::hash::{PublicKeyEd25519, PublicKeyP256, PublicKeySecp256k1};
+use tezos_crypto_rs::{
+    hash::{PublicKeyEd25519, PublicKeyP256, PublicKeySecp256k1},
+    PublicKeyWithHash,
+};
 use utoipa::ToSchema;
 
 // FIXME: https://linear.app/tezos/issue/JSTZ-169/support-bls-in-risc-v
@@ -37,6 +40,14 @@ impl PublicKey {
             PublicKey::Ed25519(pk) => pk.to_base58_check(),
             PublicKey::Secp256k1(pk) => pk.to_base58_check(),
             PublicKey::P256(pk) => pk.to_base58_check(),
+        }
+    }
+
+    pub fn hash(&self) -> String {
+        match self {
+            PublicKey::Ed25519(pk) => pk.pk_hash().to_string(),
+            PublicKey::Secp256k1(pk) => pk.pk_hash().to_string(),
+            PublicKey::P256(pk) => pk.pk_hash().to_string(),
         }
     }
 
