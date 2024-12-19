@@ -40,13 +40,14 @@ impl Task for OctezNode {
             Some(v) => Directory::Path(v.clone()),
             None => Directory::default(),
         };
-        let log_file = match &config.log_file {
+        let log_file = Arc::new(match &config.log_file {
             Some(v) => FileWrapper::try_from(v.clone())?,
             None => FileWrapper::default(),
-        };
+        });
         let node = node::OctezNode {
             octez_node_bin: Some(config.binary_path.clone()),
             octez_node_dir: (&data_dir).into(),
+            log_file: log_file.clone(),
         };
 
         let status = node.generate_identity().await?.wait().await?;
@@ -71,11 +72,9 @@ impl Task for OctezNode {
         }
 
         Ok(OctezNode {
-            inner: ChildWrapper::new_shared(
-                node.run(log_file.as_file(), &config.run_options)?,
-            ),
+            inner: ChildWrapper::new_shared(node.run(&config.run_options)?),
             config,
-            _log_file: Arc::new(log_file),
+            _log_file: log_file,
             _data_dir: Arc::new(data_dir),
         })
     }
