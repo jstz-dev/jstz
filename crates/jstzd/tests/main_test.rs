@@ -41,7 +41,9 @@ fn default_config() {
 fn valid_config_file() {
     let port = unused_port();
     let mut tmp_file = NamedTempFile::new().unwrap();
-    tmp_file.write_all(format!(r#"{{"protocol":{{"bootstrap_accounts":[["edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2","15000000000"]]}},"server_port":{}}}"#, port).as_bytes()).unwrap();
+    tmp_file
+        .write_all(format!(r#"{{"server_port":{}}}"#, port).as_bytes())
+        .unwrap();
 
     let handle = thread::spawn(move || {
         Command::cargo_bin("jstzd")
@@ -82,14 +84,14 @@ fn valid_config_file() {
 fn bad_config_file() {
     let mut cmd = Command::cargo_bin("jstzd").unwrap();
     let mut tmp_file = NamedTempFile::new().unwrap();
-    tmp_file.write_all("{}".as_bytes()).unwrap();
+    tmp_file
+        .write_all("{\"protocol\":{\"protocol\":\"foo\"}}".as_bytes())
+        .unwrap();
 
     cmd.args(["run", &tmp_file.path().to_string_lossy()])
         .assert()
         .failure()
-        .stderr(predicate::str::contains(
-            "should have at least one bootstrap account with at least 6000 tez",
-        ));
+        .stderr(predicate::str::contains("failed to build config"));
 }
 
 #[test]
