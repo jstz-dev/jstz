@@ -412,6 +412,7 @@ mod tests {
 
     #[test]
     fn populate_baker_config() {
+        let log_file = NamedTempFile::new().unwrap().into_temp_path();
         let tmp_dir = tempdir().unwrap();
         let node_config = OctezNodeConfigBuilder::new()
             .set_rpc_endpoint(&Endpoint::localhost(5678))
@@ -421,7 +422,7 @@ mod tests {
             .set_base_dir(tmp_dir.path().to_path_buf())
             .build()
             .unwrap();
-        let baker_builder = OctezBakerConfigBuilder::new();
+        let baker_builder = OctezBakerConfigBuilder::new().set_log_file(&log_file);
         let protocol_params = ProtocolParameterBuilder::new()
             .set_protocol(Protocol::ParisC)
             .set_bootstrap_accounts([
@@ -445,14 +446,17 @@ mod tests {
                 .set_binary_path(BakerBinaryPath::Env(Protocol::ParisC))
                 .set_octez_client_base_dir(tmp_dir.path().to_str().unwrap())
                 .set_octez_node_endpoint(&Endpoint::localhost(5678))
+                .set_log_file(&log_file)
                 .build()
                 .unwrap()
         );
 
         // baker path is provided in the config, so the builder takes that path and ignores protocol_params
-        let baker_builder = OctezBakerConfigBuilder::new().set_binary_path(
-            BakerBinaryPath::Custom(PathBuf::from_str("/foo/bar").unwrap()),
-        );
+        let baker_builder = OctezBakerConfigBuilder::new()
+            .set_binary_path(BakerBinaryPath::Custom(
+                PathBuf::from_str("/foo/bar").unwrap(),
+            ))
+            .set_log_file(&log_file);
         let baker_config = super::populate_baker_config(
             baker_builder,
             &node_config,
@@ -468,6 +472,7 @@ mod tests {
                 ))
                 .set_octez_client_base_dir(tmp_dir.path().to_str().unwrap())
                 .set_octez_node_endpoint(&Endpoint::localhost(5678))
+                .set_log_file(&log_file)
                 .build()
                 .unwrap()
         );

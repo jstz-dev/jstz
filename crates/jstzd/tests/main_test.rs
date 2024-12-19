@@ -48,11 +48,7 @@ fn valid_config_file() {
             .unwrap()
             .args(["run", &tmp_file.path().to_string_lossy()])
             .assert()
-            .success()
-            // baker log writes to stderr
-            .stderr(predicate::str::contains(
-                "block ready for delegate: activator",
-            ));
+            .success();
     });
 
     let client = reqwest::blocking::Client::new();

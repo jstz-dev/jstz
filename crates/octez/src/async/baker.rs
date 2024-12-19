@@ -1,10 +1,16 @@
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
-use std::{fmt::Display, path::PathBuf, str::FromStr};
+use std::{
+    fmt::Display,
+    path::{Path, PathBuf},
+    process::Stdio,
+    str::FromStr,
+    sync::Arc,
+};
 use tokio::process::{Child, Command};
 
-use super::{endpoint::Endpoint, protocol::Protocol};
+use super::{endpoint::Endpoint, file::FileWrapper, protocol::Protocol};
 
 #[derive(PartialEq, Debug, Clone, SerializeDisplay, DeserializeFromStr)]
 pub enum BakerBinaryPath {
@@ -45,6 +51,7 @@ pub struct OctezBakerConfig {
     binary_path: BakerBinaryPath,
     octez_client_base_dir: PathBuf,
     octez_node_endpoint: Endpoint,
+    log_file: Arc<FileWrapper>,
 }
 
 #[derive(Default, Deserialize, Debug, PartialEq)]
@@ -52,6 +59,8 @@ pub struct OctezBakerConfigBuilder {
     binary_path: Option<BakerBinaryPath>,
     octez_client_base_dir: Option<PathBuf>,
     octez_node_endpoint: Option<Endpoint>,
+    /// Path to the log file.
+    log_file: Option<PathBuf>,
 }
 
 impl OctezBakerConfigBuilder {
@@ -86,6 +95,11 @@ impl OctezBakerConfigBuilder {
         &self.octez_node_endpoint
     }
 
+    pub fn set_log_file(mut self, path: &Path) -> Self {
+        self.log_file.replace(path.into());
+        self
+    }
+
     pub fn build(self) -> Result<OctezBakerConfig> {
         Ok(OctezBakerConfig {
             binary_path: self.binary_path.ok_or(anyhow!("binary path not set"))?,
@@ -95,6 +109,10 @@ impl OctezBakerConfigBuilder {
             octez_node_endpoint: self
                 .octez_node_endpoint
                 .ok_or(anyhow!("octez_node_endpoint not set"))?,
+            log_file: Arc::new(match self.log_file {
+                Some(v) => FileWrapper::try_from(v)?,
+                None => FileWrapper::default(),
+            }),
         })
     }
 }
@@ -105,16 +123,19 @@ pub struct OctezBaker;
 impl OctezBaker {
     pub async fn run(config: OctezBakerConfig) -> Result<Child> {
         let mut command = Command::new(config.binary_path.to_string());
-        command.args([
-            "--base-dir",
-            &config.octez_client_base_dir.to_string_lossy(),
-            "--endpoint",
-            &config.octez_node_endpoint.to_string(),
-            "run",
-            "remotely",
-            "--liquidity-baking-toggle-vote",
-            "pass",
-        ]);
+        command
+            .args([
+                "--base-dir",
+                &config.octez_client_base_dir.to_string_lossy(),
+                "--endpoint",
+                &config.octez_node_endpoint.to_string(),
+                "run",
+                "remotely",
+                "--liquidity-baking-toggle-vote",
+                "pass",
+            ])
+            .stdout(Stdio::from(config.log_file.as_file().try_clone()?))
+            .stderr(Stdio::from(config.log_file.as_file().try_clone()?));
         Ok(command.spawn()?)
     }
 }
@@ -126,7 +147,7 @@ mod test {
     use super::*;
     use crate::r#async::endpoint::Endpoint;
     use http::Uri;
-    use tempfile::TempDir;
+    use tempfile::{NamedTempFile, TempDir};
 
     #[test]
     fn test_octez_baker_config_builder() {
@@ -182,10 +203,12 @@ mod test {
         let base_dir = TempDir::new().unwrap();
         let endpoint =
             Endpoint::try_from(Uri::from_static("http://localhost:8732")).unwrap();
+        let log_file = NamedTempFile::new().unwrap().into_temp_path();
         let config = OctezBakerConfigBuilder::new()
             .set_binary_path(BakerBinaryPath::Env(Protocol::Alpha))
             .set_octez_client_base_dir(base_dir.path().to_str().unwrap())
             .set_octez_node_endpoint(&endpoint)
+            .set_log_file(log_file.to_path_buf().as_path())
             .build()
             .unwrap();
         assert_eq!(
@@ -193,7 +216,8 @@ mod test {
             serde_json::json!({
                 "octez_client_base_dir": base_dir.path().to_string_lossy(),
                 "octez_node_endpoint": "http://localhost:8732",
-                "binary_path": "octez-baker-alpha"
+                "binary_path": "octez-baker-alpha",
+                "log_file": log_file.to_string_lossy()
             })
         )
     }
