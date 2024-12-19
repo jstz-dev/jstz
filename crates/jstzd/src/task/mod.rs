@@ -1,5 +1,4 @@
 mod child_wrapper;
-mod file;
 pub mod jstz_node;
 pub mod jstzd;
 pub mod octez_baker;
