@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsStr,
     fmt,
+    fs::File,
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -14,6 +15,7 @@ use tempfile::tempdir;
 use tezos_crypto_rs::hash::{BlockHash, ContractKt1Hash, OperationHash, SmartRollupHash};
 use tokio::process::Command;
 
+use super::file::FileWrapper;
 use super::{directory::Directory, endpoint::Endpoint, node_config::OctezNodeConfig};
 
 const DEFAULT_BINARY_PATH: &str = "octez-client";
@@ -26,6 +28,7 @@ pub struct OctezClientConfig {
     base_dir: Arc<Directory>,
     octez_node_endpoint: Endpoint,
     disable_unsafe_disclaimer: bool,
+    log_file: Arc<FileWrapper>,
 }
 
 impl OctezClientConfig {
@@ -35,6 +38,10 @@ impl OctezClientConfig {
 
     pub fn octez_node_endpoint(&self) -> &Endpoint {
         &self.octez_node_endpoint
+    }
+
+    pub fn log_file(&self) -> &File {
+        self.log_file.as_file()
     }
 }
 
@@ -47,6 +54,8 @@ pub struct OctezClientConfigBuilder {
     octez_node_endpoint: Endpoint,
     #[serde(default)]
     disable_unsafe_disclaimer: bool,
+    /// Path to the log file.
+    log_file: Option<PathBuf>,
 }
 
 impl OctezClientConfigBuilder {
@@ -56,6 +65,7 @@ impl OctezClientConfigBuilder {
             base_dir: None,
             octez_node_endpoint,
             disable_unsafe_disclaimer: false,
+            log_file: None,
         }
     }
 
@@ -81,6 +91,11 @@ impl OctezClientConfigBuilder {
         self
     }
 
+    pub fn set_log_file(mut self, path: PathBuf) -> Self {
+        self.log_file.replace(path);
+        self
+    }
+
     pub fn build(self) -> Result<OctezClientConfig> {
         self.validate_binary_path()?;
         Ok(OctezClientConfig {
@@ -91,6 +106,10 @@ impl OctezClientConfigBuilder {
             }),
             octez_node_endpoint: self.octez_node_endpoint,
             disable_unsafe_disclaimer: self.disable_unsafe_disclaimer,
+            log_file: Arc::new(match self.log_file {
+                Some(v) => FileWrapper::try_from(v)?,
+                None => FileWrapper::default(),
+            }),
         })
     }
 
@@ -255,6 +274,7 @@ pub struct OctezClient {
     base_dir: Arc<Directory>,
     octez_node_endpoint: Endpoint,
     disable_unsafe_disclaimer: bool,
+    log_file: Arc<FileWrapper>,
 }
 
 impl OctezClient {
@@ -264,6 +284,7 @@ impl OctezClient {
             base_dir: config.base_dir,
             octez_node_endpoint: config.octez_node_endpoint,
             disable_unsafe_disclaimer: config.disable_unsafe_disclaimer,
+            log_file: config.log_file.clone(),
         }
     }
 }
@@ -284,7 +305,10 @@ impl OctezClient {
         if self.disable_unsafe_disclaimer {
             command.env("TEZOS_CLIENT_UNSAFE_DISABLE_DISCLAIMER", "Y");
         }
-        command.args(args);
+        command
+            .args(args)
+            .stdout(self.log_file.as_file().try_clone()?)
+            .stderr(self.log_file.as_file().try_clone()?);
         Ok(command)
     }
 
@@ -1009,17 +1033,19 @@ mod test {
         let tmp_dir = TempDir::new().unwrap();
         let base_dir = tmp_dir.path().to_path_buf();
         let binary_path = tmp_file.path().to_path_buf();
+        let log_file = NamedTempFile::new().unwrap().into_temp_path();
         assert_eq!(
             serde_json::to_value(
                 OctezClientConfigBuilder::new(endpoint)
                     .set_base_dir(base_dir.clone())
                     .set_binary_path(binary_path.clone())
                     .set_disable_unsafe_disclaimer(false)
+                    .set_log_file(log_file.to_path_buf())
                     .build()
                     .unwrap()
             )
             .unwrap(),
-            serde_json::json!({ "base_dir": base_dir.to_string_lossy(), "binary_path": binary_path.to_string_lossy(), "disable_unsafe_disclaimer": false, "octez_node_endpoint": "http://localhost:8888" })
+            serde_json::json!({ "base_dir": base_dir.to_string_lossy(), "binary_path": binary_path.to_string_lossy(), "disable_unsafe_disclaimer": false, "octez_node_endpoint": "http://localhost:8888", "log_file": log_file.to_string_lossy() })
         );
     }
 }
