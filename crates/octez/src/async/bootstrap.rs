@@ -106,6 +106,10 @@ impl BootstrapAccount {
     pub fn amount(&self) -> u64 {
         self.amount_mutez
     }
+
+    pub fn address(&self) -> String {
+        self.public_key.hash()
+    }
 }
 
 #[derive(Default, Debug, PartialEq, Clone)]
@@ -445,6 +449,7 @@ mod tests {
         let account = BootstrapAccount::new(ACCOUNT_PUBLIC_KEY, 1000).unwrap();
         assert_eq!(account.public_key.to_string(), ACCOUNT_PUBLIC_KEY);
         assert_eq!(account.amount_mutez, 1000);
+        assert_eq!(account.address(), "tz1hGHtks3PnX4SnpqcDNMg5P3AQhTiH1WE4");
     }
 
     #[test]
