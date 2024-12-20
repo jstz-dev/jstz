@@ -1,9 +1,10 @@
 use super::child_wrapper::{ChildWrapper, SharedChildWrapper};
-use super::{file::FileWrapper, Task};
+use super::Task;
 use anyhow::Result;
 use async_trait::async_trait;
 use octez::r#async::directory::Directory;
 use octez::r#async::endpoint::Endpoint;
+use octez::r#async::file::FileWrapper;
 use octez::r#async::node;
 use octez::r#async::node_config::OctezNodeConfig;
 use std::path::PathBuf;
