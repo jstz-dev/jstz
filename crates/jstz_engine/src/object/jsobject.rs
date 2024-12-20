@@ -1,22 +1,22 @@
-use std::{
-    marker::PhantomData,
-    pin::{pin, Pin},
-    sync::Arc,
-};
+use std::{marker::PhantomData, pin::Pin, sync::Arc};
 
 use mozjs::{
-    jsapi::{JSObject, JS_HasPropertyById, JS_NewPlainObject},
-    jsval::JSVal,
+    jsapi::{
+        JSObject, JS_GetPropertyById, JS_HasPropertyById, JS_NewPlainObject,
+        JS_SetPropertyById,
+    },
+    jsval::UndefinedValue,
+    rooted,
     rust::IntoHandle,
 };
 
 use crate::{
     compartment::Compartment,
     context::{CanAlloc, Context, InCompartment},
-    gc::ptr::GcPtr,
+    ffi::AsRawPtr,
+    gc::ptr::{GcPtr, Handle, HandleMut},
     letroot,
     value::JsValue,
-    AsRawPtr,
 };
 
 use super::property::IntoPropertyKey;
@@ -30,6 +30,14 @@ pub struct JsObject<'a, C: Compartment> {
 }
 
 impl<'a, C: Compartment> JsObject<'a, C> {
+    pub(crate) unsafe fn handle(&self) -> Handle<*mut JSObject> {
+        self.inner_ptr.handle()
+    }
+
+    pub(crate) unsafe fn handle_mut(&self) -> HandleMut<*mut JSObject> {
+        self.inner_ptr.handle_mut()
+    }
+
     pub fn new<S>(cx: &'a mut Context<S>) -> Self
     where
         S: InCompartment<C> + CanAlloc,
@@ -56,8 +64,8 @@ impl<'a, C: Compartment> JsObject<'a, C> {
             if unsafe {
                 JS_HasPropertyById(
                     cx.as_raw_ptr(),
-                    self.inner_ptr.handle().into_handle(),
-                    pkey.as_raw_handle().into_handle(),
+                    self.handle(),
+                    pkey.handle(),
                     &mut found,
                 )
             } {
@@ -81,6 +89,45 @@ impl<'a, C: Compartment> JsObject<'a, C> {
         S: InCompartment<C> + CanAlloc,
         K: IntoPropertyKey<'cx, C>,
     {
-        None
+        letroot!(pkey = key.into_key(cx)?; [cx]);
+        letroot!(rval = JsValue::undefined(cx); [cx]);
+
+        let res = unsafe {
+            JS_GetPropertyById(
+                cx.as_raw_ptr(),
+                self.handle(),
+                pkey.handle(),
+                rval.handle_mut(),
+            )
+        };
+
+        if res {
+            Some(rval.into_inner(cx))
+        } else {
+            None
+        }
+    }
+
+    pub fn set<'b, 'cx, S, K>(
+        &self,
+        key: K,
+        value: &JsValue<'b, C>,
+        cx: &'cx mut Context<S>,
+    ) where
+        'a: 'cx,
+        'b: 'cx,
+        S: InCompartment<C> + CanAlloc,
+        K: IntoPropertyKey<'cx, C>,
+    {
+        letroot!(pkey = key.into_key(cx).unwrap(); [cx]);
+
+        unsafe {
+            JS_SetPropertyById(
+                cx.as_raw_ptr(),
+                self.handle().into(),
+                pkey.handle().into(),
+                value.handle().into(),
+            )
+        };
     }
 }

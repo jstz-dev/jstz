@@ -1,12 +1,15 @@
 use std::{marker::PhantomData, pin::Pin, sync::Arc};
 
-use mozjs::{gc::Handle, jsapi::jsid};
+use mozjs::jsapi::jsid;
 
 use crate::{
     compartment::Compartment,
     context::{CanAlloc, Context, InCompartment},
     custom_trace,
-    gc::{ptr::GcPtr, Finalize, Prolong, Trace},
+    gc::{
+        ptr::{GcPtr, Handle, HandleMut},
+        Finalize, Prolong, Trace,
+    },
 };
 
 pub struct PropertyKey<'a, C: Compartment> {
@@ -25,8 +28,12 @@ unsafe impl<'a, 'b, C: Compartment> Prolong<'a> for PropertyKey<'b, C> {
 }
 
 impl<'a, C: Compartment> PropertyKey<'a, C> {
-    pub(crate) unsafe fn as_raw_handle(&self) -> Handle<jsid> {
+    pub(crate) unsafe fn handle(&self) -> Handle<jsid> {
         self.inner_ptr.handle()
+    }
+
+    pub(crate) unsafe fn handle_mut(&self) -> HandleMut<jsid> {
+        self.inner_ptr.handle_mut()
     }
 }
 

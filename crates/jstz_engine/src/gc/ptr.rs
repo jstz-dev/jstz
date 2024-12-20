@@ -5,7 +5,6 @@
 use std::{cell::UnsafeCell, marker::PhantomPinned, mem, pin::Pin, ptr, sync::Arc};
 
 use mozjs::{
-    gc::Handle,
     jsapi::{
         jsid, HeapBigIntWriteBarriers, HeapObjectWriteBarriers, HeapScriptWriteBarriers,
         HeapStringWriteBarriers, HeapValueWriteBarriers, JSFunction, JSObject, JSScript,
@@ -15,6 +14,10 @@ use mozjs::{
     jsid::VoidId,
     jsval::{JSVal, UndefinedValue},
 };
+
+pub use mozjs::jsapi::{Handle, MutableHandle as HandleMut};
+
+use crate::ffi::AsRawPtr;
 
 /// A GC barrier is a mechanism used to ensure that the garbage collector maintains
 /// a valid set of reachable objects.
@@ -133,6 +136,24 @@ impl<T: WriteBarrieredPtr> GcPtr<T> {
     /// it needs to be additionally rooted).
     pub unsafe fn handle(&self) -> Handle<T> {
         Handle::from_marked_location(self.inner_ptr.get() as *const _)
+    }
+
+    /// Retrieves a SpiderMonkey Rooted Mutable Handle to the underlying value.
+    ///
+    /// # Safety
+    ///
+    /// This is only safe to do on a rooted object (which [`GcPtr`] is not,
+    /// it needs to be additionally rooted).
+    pub unsafe fn handle_mut(&self) -> HandleMut<T> {
+        HandleMut::from_marked_location(self.inner_ptr.get())
+    }
+}
+
+impl<T: WriteBarrieredPtr> AsRawPtr for GcPtr<T> {
+    type Ptr = T;
+
+    unsafe fn as_raw_ptr(&self) -> Self::Ptr {
+        self.get()
     }
 }
 

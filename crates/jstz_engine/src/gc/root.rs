@@ -85,11 +85,14 @@ use std::{
         NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
     },
     ops::Deref,
-    path::{Path, PathBuf},
+    path::PathBuf,
     pin::Pin,
     ptr::NonNull,
+    rc::Rc,
     sync::Arc,
 };
+
+use crate::context::Context;
 
 use super::{Trace, Tracer};
 
@@ -221,6 +224,18 @@ pub struct Rooted<'a, T: Trace + 'a> {
     pinned: Pin<&'a mut Root<T>>,
 }
 
+impl<'a, T: Trace + 'a> Rooted<'a, T> {
+    pub fn into_inner<'cx, U, S>(self, _: &'cx mut Context<S>) -> U
+    where
+        T: Prolong<'cx, Aged = U>,
+        'cx: 'a,
+    {
+        let root = unsafe { Pin::into_inner_unchecked(self.pinned) };
+
+        unsafe { root.value.take().unwrap().extend_lifetime() }
+    }
+}
+
 impl<'a, T: Trace> Deref for Rooted<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
@@ -318,6 +333,16 @@ impl_move_prolong!(
     NonZeroI128,
     NonZeroU128
 );
+
+// SAFETY: The inner type of `Pin` is correctly prolonged.
+unsafe impl<'a, P: Prolong<'a>> Prolong<'a> for Pin<P> {
+    type Aged = Pin<P::Aged>;
+}
+
+// SAFETY: The inner type of `Rc` is correctly prolonged.
+unsafe impl<'a, T: Prolong<'a>> Prolong<'a> for Rc<T> {
+    type Aged = Arc<T::Aged>;
+}
 
 // SAFETY: The inner type of `Arc` is correctly prolonged.
 unsafe impl<'a, T: Prolong<'a>> Prolong<'a> for Arc<T> {

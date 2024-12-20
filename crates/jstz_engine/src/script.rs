@@ -23,8 +23,9 @@ use crate::{
     compartment::Compartment,
     context::{CanAlloc, Context, InCompartment},
     custom_trace,
+    ffi::AsRawPtr,
     gc::{ptr::GcPtr, Finalize, Prolong, Trace},
-    letroot, AsRawPtr,
+    letroot,
 };
 
 #[derive(Debug)]
