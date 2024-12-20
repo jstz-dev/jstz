@@ -1,15 +1,11 @@
 mod compartment;
 mod context;
+mod ffi;
 mod gc;
+mod object;
 mod realm;
 mod script;
-
-pub(crate) trait AsRawPtr {
-    type Ptr;
-
-    /// Get the raw pointer to the underlying object.
-    unsafe fn as_raw_ptr(&self) -> Self::Ptr;
-}
+mod value;
 
 #[cfg(test)]
 mod test {
