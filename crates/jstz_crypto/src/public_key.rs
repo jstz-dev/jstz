@@ -2,7 +2,10 @@ use crate::{error::Result, Error};
 use std::fmt::{self, Display};
 
 use serde::{Deserialize, Serialize};
-use tezos_crypto_rs::hash::{PublicKeyEd25519, PublicKeyP256, PublicKeySecp256k1};
+use tezos_crypto_rs::{
+    hash::{PublicKeyEd25519, PublicKeyP256, PublicKeySecp256k1},
+    PublicKeyWithHash,
+};
 use utoipa::ToSchema;
 
 // FIXME: https://linear.app/tezos/issue/JSTZ-169/support-bls-in-risc-v
@@ -37,6 +40,14 @@ impl PublicKey {
             PublicKey::Ed25519(pk) => pk.to_base58_check(),
             PublicKey::Secp256k1(pk) => pk.to_base58_check(),
             PublicKey::P256(pk) => pk.to_base58_check(),
+        }
+    }
+
+    pub fn hash(&self) -> String {
+        match self {
+            PublicKey::Ed25519(pk) => pk.pk_hash().to_string(),
+            PublicKey::Secp256k1(pk) => pk.pk_hash().to_string(),
+            PublicKey::P256(pk) => pk.pk_hash().to_string(),
         }
     }
 
@@ -104,5 +115,21 @@ mod test {
         assert_eq!(PublicKey::from_base58(TZ1).unwrap().to_string(), TZ1);
         assert_eq!(PublicKey::from_base58(TZ2).unwrap().to_string(), TZ2);
         assert_eq!(PublicKey::from_base58(TZ3).unwrap().to_string(), TZ3);
+    }
+
+    #[test]
+    fn hash() {
+        assert_eq!(
+            PublicKey::from_base58(TZ1).unwrap().hash(),
+            "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU"
+        );
+        assert_eq!(
+            PublicKey::from_base58(TZ2).unwrap().hash(),
+            "tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh"
+        );
+        assert_eq!(
+            PublicKey::from_base58(TZ3).unwrap().hash(),
+            "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C"
+        );
     }
 }
