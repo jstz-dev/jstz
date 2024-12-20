@@ -28,10 +28,12 @@ use octez::r#async::{
     client::{OctezClient, OctezClientConfig},
     endpoint::Endpoint,
     node_config::OctezNodeConfig,
-    protocol::ProtocolParameter,
+    protocol::{BootstrapAccount, ProtocolParameter},
     rollup::OctezRollupConfig,
 };
+use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
 use serde::Serialize;
+use std::io::{stdout, Write};
 use std::sync::Arc;
 use tokio::{
     net::TcpListener,
@@ -391,7 +393,7 @@ impl JstzdServer {
     }
 
     async fn spawn_jstzd(jstzd_config: JstzdConfig, print_info: bool) -> Result<Jstzd> {
-        let mut jstzd = Jstzd::spawn(jstzd_config).await?;
+        let mut jstzd = Jstzd::spawn(jstzd_config.clone()).await?;
 
         let progress_bar = create_progress_bar(print_info);
         let mut jstzd_healthy = false;
@@ -415,6 +417,14 @@ impl JstzdServer {
             abandon_progress_bar(progress_bar.as_ref());
             bail!("jstzd never turns healthy");
         }
+
+        if print_info {
+            print_bootstrap_accounts(
+                &mut stdout(),
+                jstzd_config.protocol_params().bootstrap_accounts(),
+            );
+        }
+
         Ok(jstzd)
     }
 }
@@ -460,6 +470,29 @@ fn abandon_progress_bar(progress_bar: Option<&ProgressBar>) {
     if let Some(b) = progress_bar {
         b.abandon();
     }
+}
+
+fn print_bootstrap_accounts(writer: &mut impl Write, accounts: Vec<&BootstrapAccount>) {
+    let mut table = Table::new();
+    table.set_titles(Row::new(vec![
+        Cell::new("Address"),
+        Cell::new("XTZ Balance (mutez)"),
+    ]));
+
+    for bootstrap_account in accounts {
+        table.add_row(Row::new(vec![
+            Cell::new(&bootstrap_account.address()),
+            Cell::new(&bootstrap_account.amount().to_string()),
+        ]));
+    }
+
+    table.set_format({
+        let mut format = *FORMAT_DEFAULT;
+        format.indent(2);
+        format
+    });
+
+    let _ = writeln!(writer, "{}", table);
 }
 
 async fn health_check(state: &ServerState) -> bool {
@@ -533,6 +566,7 @@ async fn config_handler(
 #[cfg(test)]
 mod tests {
     use indicatif::ProgressBar;
+    use octez::r#async::protocol::BootstrapAccount;
 
     #[test]
     fn collect_progress() {
@@ -575,5 +609,38 @@ mod tests {
         let bar = ProgressBar::new(3);
         super::abandon_progress_bar(Some(&bar));
         assert!(bar.is_finished());
+    }
+
+    #[test]
+    fn print_bootstrap_accounts() {
+        let mut buf = vec![];
+        super::print_bootstrap_accounts(
+            &mut buf,
+            vec![
+                &BootstrapAccount::new(
+                    "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv",
+                    1,
+                )
+                .unwrap(),
+                &BootstrapAccount::new(
+                    "edpkuFrRoDSEbJYgxRtLx2ps82UdaYc1WwfS9sE11yhauZt5DgCHbU",
+                    2,
+                )
+                .unwrap(),
+            ],
+        );
+        let s = String::from_utf8(buf).unwrap();
+        assert_eq!(
+            s,
+            r#"  +--------------------------------------+---------------------+
+  | Address                              | XTZ Balance (mutez) |
+  +======================================+=====================+
+  | tz1hGHtks3PnX4SnpqcDNMg5P3AQhTiH1WE4 | 1                   |
+  +--------------------------------------+---------------------+
+  | tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv | 2                   |
+  +--------------------------------------+---------------------+
+
+"#
+        );
     }
 }
