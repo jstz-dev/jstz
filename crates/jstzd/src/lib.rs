@@ -7,12 +7,28 @@ pub use config::BOOTSTRAP_CONTRACT_NAMES;
 pub mod jstz_rollup_path {
     include!(concat!(env!("OUT_DIR"), "/jstz_rollup_path.rs"));
 }
+use console::style;
+use std::io::{stdout, Write};
 use std::process::exit;
 use tokio::signal::unix::{signal, SignalKind};
 
 include!("../build_config.rs");
 pub const JSTZ_ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 pub const JSTZ_NATIVE_BRIDGE_ADDRESS: &str = "KT1GFiPkkTjd14oHe6MrBPiRh5djzRkVWcni";
+const JSTZ_BANNER: &str = r#"
+           __________
+           \  jstz  /
+            )______(
+            |""""""|_.-._,.---------.,_.-._
+            |      | | |               | | ''-.
+            |      |_| |_             _| |_..-'
+            |______| '-' `'---------'` '-'
+            )""""""(
+           /________\
+           `'------'`
+         .------------.
+        /______________\
+"#;
 
 /// The `main` function for running jstzd
 pub async fn main(config_path: &Option<String>) {
@@ -28,9 +44,22 @@ pub async fn main(config_path: &Option<String>) {
     }
 }
 
+// requiring a writer here so that we can test this function
+fn print_banner(writer: &mut impl Write) {
+    let _ = writeln!(writer, "{}", style(JSTZ_BANNER).bold());
+    let _ = writeln!(
+        writer,
+        "        {} {}",
+        env!("CARGO_PKG_VERSION"),
+        style(env!("CARGO_PKG_REPOSITORY")).blue().bold()
+    );
+    let _ = writeln!(writer);
+}
+
 async fn run(port: u16, config: JstzdConfig) {
     let mut server = JstzdServer::new(config, port);
-    if let Err(e) = server.run().await {
+    print_banner(&mut stdout());
+    if let Err(e) = server.run(true).await {
         eprintln!("failed to run jstzd server: {:?}", e);
         let _ = server.stop().await;
         exit(1);
@@ -46,4 +75,17 @@ async fn run(port: u16, config: JstzdConfig) {
     };
     println!("Shutting down");
     server.stop().await.unwrap();
+}
+
+#[cfg(test)]
+mod lib_test {
+    #[test]
+    fn print_banner() {
+        let mut buf = vec![];
+        super::print_banner(&mut buf);
+        let s = String::from_utf8(buf).unwrap();
+        assert!(s.contains(super::JSTZ_BANNER));
+        assert!(s.contains(env!("CARGO_PKG_VERSION")));
+        assert!(s.contains(env!("CARGO_PKG_REPOSITORY")));
+    }
 }
