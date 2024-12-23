@@ -40,7 +40,7 @@
     };
 
     octez-v21 = {
-      url = "gitlab:tezos/tezos/octez-v21.0-rc2";
+      url = "gitlab:tezos/tezos/f3159792c250a46dd56eaaaf468219e0c9ac725a";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
