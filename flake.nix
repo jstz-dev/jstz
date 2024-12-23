@@ -40,7 +40,7 @@
     };
 
     octez-v21 = {
-      url = "gitlab:tezos/tezos/octez-v21.0-rc2";
+      url = "gitlab:tezos/tezos/f3159792c250a46dd56eaaaf468219e0c9ac725a";
       inputs.nixpkgs.follows = "nixpkgs";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
@@ -92,9 +92,9 @@
             # The latter is slower but doesn't require an explicit `hash` and is therefore
             # more maintainable (since this derivation isn't built in CI).
             cargoDeps = rustPlatform.importCargoLock {
-              lockFile = "${old.src}/src/rust_deps/Cargo.lock";
+              lockFile = "${old.src}/src/rustzcash_deps/Cargo.lock";
             };
-            cargoRoot = "src/rust_deps";
+            cargoRoot = "src/rustzcash_deps";
 
             nativeBuildInputs =
               (old.nativeBuildInputs or [])
