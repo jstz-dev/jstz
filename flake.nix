@@ -92,9 +92,9 @@
             # The latter is slower but doesn't require an explicit `hash` and is therefore
             # more maintainable (since this derivation isn't built in CI).
             cargoDeps = rustPlatform.importCargoLock {
-              lockFile = "${old.src}/src/rust_deps/Cargo.lock";
+              lockFile = "${old.src}/src/rustzcash_deps/Cargo.lock";
             };
-            cargoRoot = "src/rust_deps";
+            cargoRoot = "src/rustzcash_deps";
 
             nativeBuildInputs =
               (old.nativeBuildInputs or [])
