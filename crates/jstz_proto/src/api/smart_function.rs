@@ -12,6 +12,7 @@ use jstz_core::{
     host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
     value::IntoJs,
 };
+use jstz_crypto::hash::JstzHash;
 
 use crate::{
     context::account::{Account, Address, Amount, ParsedCode},
@@ -260,7 +261,7 @@ mod test {
         runtime::{self, with_js_hrt_and_tx},
         Runtime,
     };
-    use jstz_crypto::hash::Blake2b;
+    use jstz_crypto::hash::{Blake2b, JstzHash};
     use jstz_mock::host::JstzMockHost;
     use serde_json::json;
 

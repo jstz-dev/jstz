@@ -1,6 +1,7 @@
 use anyhow::{anyhow, bail, Context, Result};
 use jstz_crypto::{
-    public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
+    hash::JstzHash, public_key::PublicKey, public_key_hash::PublicKeyHash,
+    secret_key::SecretKey,
 };
 use regex::Regex;
 use serde::{Deserialize, Serialize};

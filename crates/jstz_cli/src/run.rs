@@ -2,6 +2,7 @@ use std::str::FromStr;
 
 use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
+use jstz_crypto::hash::JstzHash;
 use jstz_proto::context::account::Address;
 use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{

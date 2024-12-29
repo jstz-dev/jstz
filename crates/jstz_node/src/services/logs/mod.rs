@@ -7,6 +7,7 @@ use axum::{
     Json,
 };
 use broadcaster::InfallibleSSeStream;
+use jstz_crypto::hash::JstzHash;
 #[cfg(feature = "persistent-logging")]
 use jstz_proto::request_logger::{
     RequestEvent, REQUEST_END_PREFIX, REQUEST_START_PREFIX,

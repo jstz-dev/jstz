@@ -21,6 +21,7 @@ use jstz_core::{
     host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
     Module, Realm,
 };
+use jstz_crypto::hash::JstzHash;
 use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
@@ -615,6 +616,7 @@ pub mod jstz_run {
     mod test {
         use http::{header, HeaderMap, Method, Uri};
         use jstz_core::kv::Transaction;
+        use jstz_crypto::hash::JstzHash;
         use jstz_mock::host::JstzMockHost;
         use serde_json::json;
         use tezos_crypto_rs::hash::ContractKt1Hash;

@@ -5,7 +5,7 @@ use boa_engine::{
     JsResult, JsValue, NativeFunction,
 };
 use jstz_core::runtime;
-use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_crypto::{hash::JstzHash, public_key_hash::PublicKeyHash};
 use jstz_proto::context::account::Account;
 
 fn get_public_key_hash(account: &str) -> JsResult<PublicKeyHash> {

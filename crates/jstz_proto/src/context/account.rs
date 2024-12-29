@@ -243,6 +243,7 @@ impl Account {
 #[cfg(test)]
 mod test {
     use super::*;
+    use jstz_crypto::hash::JstzHash;
     use tezos_smart_rollup_mock::MockHost;
 
     #[test]

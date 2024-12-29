@@ -1,3 +1,4 @@
+use jstz_crypto::hash::JstzHash;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
@@ -190,6 +191,7 @@ pub fn read_message(
 
 #[cfg(test)]
 mod test {
+    use jstz_crypto::hash::JstzHash;
     use jstz_crypto::public_key_hash::PublicKeyHash;
     use jstz_mock::message::native_deposit::MockNativeDeposit;
     use jstz_mock::{host::JstzMockHost, message::fa_deposit::MockFaDeposit};

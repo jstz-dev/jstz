@@ -1,5 +1,6 @@
 use std::{fmt, str::FromStr};
 
+use crate::hash::JstzHash;
 use boa_gc::{empty_trace, Finalize, Trace};
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::{
@@ -61,9 +62,8 @@ impl FromStr for PublicKeyHash {
         PublicKeyHash::from_base58(s)
     }
 }
-
-impl PublicKeyHash {
-    pub fn to_base58(&self) -> String {
+impl<'a> JstzHash<'a> for PublicKeyHash {
+    fn to_base58(&self) -> String {
         match self {
             PublicKeyHash::Tz1(inner) => inner.to_b58check(),
             PublicKeyHash::Tz2(inner) => inner.to_b58check(),
@@ -71,7 +71,7 @@ impl PublicKeyHash {
         }
     }
 
-    pub fn from_base58(data: &str) -> Result<Self> {
+    fn from_base58(data: &str) -> Result<Self> {
         match &data[..3] {
             "tz1" => Ok(PublicKeyHash::Tz1(ContractTz1Hash::from_base58_check(
                 data,
@@ -86,7 +86,7 @@ impl PublicKeyHash {
         }
     }
 
-    pub fn as_bytes(&self) -> &[u8] {
+    fn as_bytes(&self) -> &[u8] {
         match self {
             PublicKeyHash::Tz1(inner) => inner.as_ref(),
             PublicKeyHash::Tz2(inner) => inner.as_ref(),
@@ -99,7 +99,7 @@ impl PublicKeyHash {
     // Tz1 and the signature scheme. We currently depend on it to generate
     // new smart contract address but it should only be suitable in testing.
     // #[cfg(test)]
-    pub fn digest(data: &[u8]) -> Result<Self> {
+    fn digest(data: &[u8]) -> Result<Self> {
         let out_len = ContractTz1Hash::hash_size();
         let bytes = blake2b::digest(data, out_len).expect("failed to create hash");
         Ok(PublicKeyHash::Tz1(ContractTz1Hash::try_from_bytes(&bytes)?))
@@ -124,6 +124,7 @@ impl From<&PublicKey> for PublicKeyHash {
 
 #[cfg(test)]
 mod test {
+    use crate::hash::JstzHash;
     use std::str::FromStr;
 
     use tezos_crypto_rs::hash::{

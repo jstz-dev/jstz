@@ -12,6 +12,7 @@ use jstz_core::{
     accessor, host::HostRuntime, kv::Transaction, native::Accessor, runtime,
     value::IntoJs,
 };
+use jstz_crypto::hash::JstzHash;
 
 use crate::{
     context::account::{Account, Address, Amount},

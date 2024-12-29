@@ -10,6 +10,7 @@ pub enum Error {
     InvalidSignature,
     InvalidPublicKeyHash,
     InvalidPublicKey,
+    InvalidSmartFunctionHash,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;

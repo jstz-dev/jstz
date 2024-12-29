@@ -41,6 +41,7 @@ pub fn try_parse_fa_deposit(
 #[cfg(test)]
 mod test {
 
+    use jstz_crypto::hash::JstzHash;
     use jstz_proto::operation::external::FaDeposit;
     use tezos_smart_rollup::{
         michelson::{

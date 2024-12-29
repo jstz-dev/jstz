@@ -333,7 +333,7 @@ pub enum OutboxError {
 
 #[cfg(test)]
 mod test {
-    use jstz_crypto::public_key_hash::PublicKeyHash;
+    use jstz_crypto::{hash::JstzHash, public_key_hash::PublicKeyHash};
     use tezos_data_encoding::nom::NomReader;
     use tezos_smart_rollup::{
         michelson::{
@@ -387,10 +387,8 @@ mod test {
     fn flush_empty_snapshot_flushes_rollup_queue() {
         let mut host = MockHost::default();
 
-        let accounts = [
-            PublicKeyHash::digest(b"account1").unwrap(),
-            PublicKeyHash::digest(b"account2").unwrap(),
-        ];
+        let digest = PublicKeyHash::digest(b"account1");
+        let accounts = [digest.unwrap(), PublicKeyHash::digest(b"account2").unwrap()];
         let withdrawals: Vec<OutboxMessage> = accounts
             .clone()
             .into_iter()
