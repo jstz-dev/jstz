@@ -1,7 +1,12 @@
 use std::{
     array::TryFromSliceError,
     fmt::{self, Display},
+    str::FromStr,
 };
+
+pub use crate::error::{Error, Result};
+use core::hash::Hash as CoreHash;
+use std::fmt::Debug;
 
 use boa_gc::{empty_trace, Finalize, Trace};
 use derive_more::{Display, Error};
@@ -16,7 +21,7 @@ use utoipa::ToSchema;
     Eq,
     PartialOrd,
     Ord,
-    Hash,
+    CoreHash,
     Serialize,
     Deserialize,
     Default,
@@ -61,7 +66,7 @@ impl Blake2b {
     }
 
     // Deserialises a hex encoded Blake2b hash string
-    pub fn try_parse(hex_encode: String) -> Result<Self, Blake2bError> {
+    pub fn try_parse(hex_encode: String) -> core::result::Result<Self, Blake2bError> {
         let data = hex::decode(hex_encode).map_err(Blake2bError::DecodeError)?;
         let data: [u8; 32] = data
             .as_slice()
@@ -75,4 +80,30 @@ impl Blake2b {
 pub enum Blake2bError {
     DecodeError(FromHexError),
     InvalidLength(TryFromSliceError),
+}
+
+pub trait Hash<'a>:
+    Sized
+    + Debug
+    + Clone
+    + PartialEq
+    + Eq
+    + PartialOrd
+    + Ord
+    + CoreHash
+    + Serialize
+    + Deserialize<'a>
+    + Finalize
+    + ToSchema
+    + Trace
+    + FromStr
+    + Display
+{
+    fn to_base58(&self) -> String;
+
+    fn from_base58(data: &str) -> Result<Self>;
+
+    fn as_bytes(&self) -> &[u8];
+
+    fn digest(data: &[u8]) -> Result<Self>;
 }

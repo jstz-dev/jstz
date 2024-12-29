@@ -6,6 +6,7 @@ use crate::{
     term::styles,
     utils::AddressOrAlias,
 };
+use jstz_crypto::hash::Hash;
 use log::debug;
 
 pub async fn exec(

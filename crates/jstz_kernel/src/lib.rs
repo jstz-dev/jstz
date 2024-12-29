@@ -59,6 +59,7 @@ pub fn entry(rt: &mut impl Runtime) {
 mod test {
 
     use jstz_core::kv::Transaction;
+    use jstz_crypto::hash::Hash;
     use jstz_mock::{
         host::{JstzMockHost, MOCK_SOURCE},
         message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},

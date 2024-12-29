@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use anyhow::{bail, Result};
 use jstz_api::KvValue;
+use jstz_crypto::hash::Hash;
 use jstz_proto::{
     context::account::{Address, Nonce},
     operation::{OperationHash, SignedOperation},

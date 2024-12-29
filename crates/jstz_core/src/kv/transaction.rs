@@ -609,7 +609,7 @@ impl JsTransaction {
 
 #[cfg(test)]
 mod test {
-    use jstz_crypto::public_key_hash::PublicKeyHash;
+    use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
     use serde::{Deserialize, Serialize};
     use tezos_data_encoding::nom::NomReader;
     use tezos_smart_rollup::{

@@ -6,7 +6,7 @@ use std::{
 };
 
 use derive_more::{From, TryInto};
-use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+use jstz_crypto::{hash::Hash, public_key::PublicKey, secret_key::SecretKey};
 use jstz_proto::context::account::Address;
 use log::debug;
 use octez::{OctezClient, OctezNode, OctezRollupNode};
