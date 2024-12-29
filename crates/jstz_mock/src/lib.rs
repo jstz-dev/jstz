@@ -1,3 +1,4 @@
+use jstz_crypto::hash::Hash;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
     michelson::{

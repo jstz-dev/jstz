@@ -2,7 +2,7 @@ use derive_more::{Display, Error, From};
 use http::{header::CONTENT_TYPE, HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::{michelson::ticket::TicketHash, prelude::debug_msg};
 use utoipa::ToSchema;

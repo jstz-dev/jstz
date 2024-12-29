@@ -1,3 +1,4 @@
+use jstz_crypto::hash::Hash;
 use log::{debug, info};
 
 use crate::{

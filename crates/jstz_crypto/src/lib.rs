@@ -6,6 +6,7 @@ pub mod public_key;
 pub mod public_key_hash;
 pub mod secret_key;
 pub mod signature;
+pub mod smart_function_hash;
 
 use tezos_crypto_rs::hash::SeedEd25519;
 

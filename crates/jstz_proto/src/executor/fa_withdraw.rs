@@ -4,7 +4,7 @@ use jstz_core::{
     host::HostRuntime,
     kv::{outbox::OutboxMessage, Transaction},
 };
-use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tezos_crypto_rs::hash::ContractKt1Hash;
