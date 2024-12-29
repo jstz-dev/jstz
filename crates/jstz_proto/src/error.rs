@@ -41,6 +41,7 @@ pub enum Error {
     TicketHashError(TicketHashError),
     TicketAmountTooLarge,
     ZeroAmountNotAllowed,
+    AddressTypeMismatch,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -108,6 +109,9 @@ impl From<Error> for JsError {
                 .into(),
             Error::ZeroAmountNotAllowed => JsNativeError::eval()
                 .with_message("ZeroAmountNotAllowed")
+                .into(),
+            Error::AddressTypeMismatch => JsNativeError::eval()
+                .with_message("AddressTypeMismatch")
                 .into(),
         }
     }
