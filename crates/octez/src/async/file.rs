@@ -18,6 +18,18 @@ impl Default for FileWrapper {
     }
 }
 
+impl PartialEq for FileWrapper {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (FileWrapper::File((_, p1)), FileWrapper::File((_, p2))) => p1 == p2,
+            (FileWrapper::TempFile(v1), FileWrapper::TempFile(v2)) => {
+                v1.path() == v2.path()
+            }
+            _ => false,
+        }
+    }
+}
+
 impl TryFrom<PathBuf> for FileWrapper {
     type Error = anyhow::Error;
 
@@ -60,7 +72,7 @@ mod tests {
         path::PathBuf,
     };
 
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, TempPath};
 
     use super::FileWrapper;
 
@@ -147,5 +159,27 @@ mod tests {
         let file = FileWrapper::TempFile(tmp_file);
         let serialized = serde_json::to_value(&file).unwrap();
         assert_eq!(serialized, expected);
+    }
+
+    #[test]
+    fn partial_eq() {
+        let (tmp_file, tmp_path) = NamedTempFile::new().unwrap().into_parts();
+        let file1 = FileWrapper::try_from(tmp_path.to_path_buf()).unwrap();
+        let file2 = FileWrapper::try_from(tmp_path.to_path_buf()).unwrap();
+
+        let path = tmp_path.to_path_buf();
+        let file3 = FileWrapper::TempFile(NamedTempFile::from_parts(
+            tmp_file.try_clone().unwrap(),
+            TempPath::from_path(path.clone()),
+        ));
+        let file4 = FileWrapper::TempFile(NamedTempFile::from_parts(
+            tmp_file.try_clone().unwrap(),
+            TempPath::from_path(path),
+        ));
+
+        assert_eq!(file1, file1);
+        assert_eq!(file1, file2);
+        assert_eq!(file3, file4);
+        assert_ne!(file2, file3);
     }
 }
