@@ -51,7 +51,7 @@ async fn jstzd_test() {
     )
     .await;
 
-    jstzd.run().await.unwrap();
+    jstzd.run(false).await.unwrap();
     ensure_jstzd_components_are_up(&jstzd, &octez_node_rpc_endpoint, jstzd_port).await;
 
     ensure_rollup_is_logging_to(kernel_debug_file).await;
@@ -78,7 +78,7 @@ async fn jstzd_test() {
 
     // calling `run` after calling `stop` should fail because all states should have been cleared
     assert_eq!(
-        jstzd.run().await.unwrap_err().to_string(),
+        jstzd.run(false).await.unwrap_err().to_string(),
         "cannot run jstzd server without jstzd config"
     );
 }
