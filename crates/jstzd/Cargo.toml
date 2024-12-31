@@ -13,9 +13,11 @@ async-trait.workspace = true
 axum.workspace = true
 bollard.workspace = true
 clap.workspace = true
+console.workspace = true
 futures.workspace = true
 futures-util.workspace = true
 http.workspace = true
+indicatif.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_node = {path = "../jstz_node"}
 octez = { path = "../octez" }
