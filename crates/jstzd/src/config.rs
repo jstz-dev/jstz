@@ -77,7 +77,7 @@ pub(crate) async fn build_config(
 ) -> Result<(u16, JstzdConfig)> {
     let mut config = match config_path {
         Some(p) => parse_config(p).await?,
-        None => default_config(),
+        None => Config::default(),
     };
     let octez_node_config = config.octez_node.build()?;
     let octez_client_config = match config.octez_client {
@@ -128,15 +128,6 @@ pub(crate) async fn build_config(
             protocol_params,
         ),
     ))
-}
-
-fn default_config() -> Config {
-    let mut config = Config::default();
-    config.protocol.set_bootstrap_accounts([
-        BootstrapAccount::new(ROLLUP_OPERATOR_PK, 60_000_000_000).unwrap(),
-        BootstrapAccount::new(ACTIVATOR_PK, 40_000_000_000).unwrap(),
-    ]);
-    config
 }
 
 fn populate_baker_config(
@@ -192,6 +183,20 @@ async fn build_protocol_params(
         contracts.push(contract);
     }
 
+    // Insert necessary bootstrap accounts. These accounts will be overwriten
+    // when bootstrap accounts in users' parameter file collide with these bootstrap accounts.
+    let mut accounts = builder
+        .bootstrap_accounts()
+        .iter()
+        .map(|v| (*v).to_owned())
+        .collect::<Vec<BootstrapAccount>>();
+    for account in [
+        BootstrapAccount::new(ROLLUP_OPERATOR_PK, 60_000_000_000).unwrap(),
+        BootstrapAccount::new(ACTIVATOR_PK, 40_000_000_000).unwrap(),
+    ] {
+        accounts.push(account);
+    }
+
     builder
         .set_bootstrap_smart_rollups([BootstrapSmartRollup::new(
             JSTZ_ROLLUP_ADDRESS,
@@ -205,6 +210,7 @@ async fn build_protocol_params(
         )
         .unwrap()])
         .set_bootstrap_contracts(contracts)
+        .set_bootstrap_accounts(accounts)
         .build()
 }
 
@@ -234,17 +240,21 @@ mod tests {
 
     use super::Config;
 
-    async fn read_bootstrap_contracts_from_param_file(
-        path: PathBuf,
-    ) -> Vec<BootstrapContract> {
+    async fn read_param_file(path: &PathBuf) -> serde_json::Value {
         let mut buf = String::new();
-        tokio::fs::File::open(&path)
+        tokio::fs::File::open(path)
             .await
             .unwrap()
             .read_to_string(&mut buf)
             .await
             .unwrap();
-        let params_json = serde_json::from_str::<serde_json::Value>(&buf).unwrap();
+        serde_json::from_str::<serde_json::Value>(&buf).unwrap()
+    }
+
+    async fn read_bootstrap_contracts_from_param_file(
+        path: &PathBuf,
+    ) -> Vec<BootstrapContract> {
+        let params_json = read_param_file(path).await;
         params_json
             .as_object()
             .unwrap()
@@ -255,6 +265,22 @@ mod tests {
             .iter()
             .map(|v| serde_json::from_value::<BootstrapContract>(v.to_owned()).unwrap())
             .collect::<Vec<BootstrapContract>>()
+    }
+
+    async fn read_bootstrap_accounts_from_param_file(
+        path: &PathBuf,
+    ) -> Vec<BootstrapAccount> {
+        let params_json = read_param_file(path).await;
+        params_json
+            .as_object()
+            .unwrap()
+            .get("bootstrap_accounts")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| serde_json::from_value::<BootstrapAccount>(v.to_owned()).unwrap())
+            .collect::<Vec<BootstrapAccount>>()
     }
 
     #[tokio::test]
@@ -478,20 +504,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn default_config() {
-        let config = super::default_config();
-        let accounts = config.protocol.bootstrap_accounts();
-        assert_eq!(accounts.len(), 2);
-        let expected_accounts = [
-            BootstrapAccount::new(super::ROLLUP_OPERATOR_PK, 60_000_000_000).unwrap(),
-            BootstrapAccount::new(super::ACTIVATOR_PK, 40_000_000_000).unwrap(),
-        ];
-        assert!(expected_accounts
-            .iter()
-            .all(|expected| { accounts.iter().any(|account| **account == *expected) }));
-    }
-
     #[tokio::test]
     async fn build_config() {
         let mut tmp_file = NamedTempFile::new().unwrap();
@@ -519,15 +531,16 @@ mod tests {
         );
         assert_eq!(port, super::DEFAULT_JSTZD_SERVER_PORT);
 
-        let contracts = read_bootstrap_contracts_from_param_file(
-            config
-                .protocol_params()
-                .parameter_file()
-                .path()
-                .to_path_buf(),
-        )
-        .await;
+        let config_path = config
+            .protocol_params()
+            .parameter_file()
+            .path()
+            .to_path_buf();
+        let contracts = read_bootstrap_contracts_from_param_file(&config_path).await;
         assert_eq!(contracts.len(), 2);
+
+        let accounts = read_bootstrap_accounts_from_param_file(&config_path).await;
+        assert_eq!(accounts.len(), 3);
 
         assert_eq!(
             config.octez_rollup_config().address.to_base58_check(),
@@ -654,7 +667,7 @@ mod tests {
         .unwrap()]);
         let params = super::build_protocol_params(builder).await.unwrap();
         let mut addresses = read_bootstrap_contracts_from_param_file(
-            params.parameter_file().path().to_path_buf(),
+            &params.parameter_file().path().to_path_buf(),
         )
         .await
         .iter()
@@ -685,7 +698,7 @@ mod tests {
             .set_bootstrap_contracts([dummy_contract.clone()]);
         let params = super::build_protocol_params(builder).await.unwrap();
         let mut contracts = read_bootstrap_contracts_from_param_file(
-            params.parameter_file().path().to_path_buf(),
+            &params.parameter_file().path().to_path_buf(),
         )
         .await;
         assert_eq!(contracts.len(), 2);
