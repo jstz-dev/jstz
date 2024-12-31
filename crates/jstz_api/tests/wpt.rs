@@ -282,6 +282,9 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
         }
     }
 
+    // Execute promises after all sync tests have completed after `eval` returns
+    rt.run_jobs();
+
     // Return the test harness report
 
     let test_harness_report = {
@@ -305,7 +308,7 @@ fn run_wpt_test(
             return Ok(WptReportTest::new(WptTestStatus::Err, vec![]));
         };
 
-        let status = report.status.clone().unwrap_or(WptTestStatus::Null);
+        let status = report.status.clone().unwrap();
 
         let subtests = report.subtests.clone();
 
