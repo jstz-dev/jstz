@@ -108,6 +108,7 @@ pub struct ProtocolParameterFile;
 #[derive(Clone)]
 pub struct ProtocolParameter {
     protocol: Protocol,
+    bootstrap_accounts: BootstrapAccounts,
     parameter_file: Arc<tempfile::NamedTempFile>,
 }
 
@@ -118,6 +119,10 @@ impl ProtocolParameter {
 
     pub fn parameter_file(&self) -> &tempfile::NamedTempFile {
         &self.parameter_file
+    }
+
+    pub fn bootstrap_accounts(&self) -> Vec<&BootstrapAccount> {
+        self.bootstrap_accounts.accounts()
     }
 }
 
@@ -217,7 +222,7 @@ impl ProtocolParameterBuilder {
             "Failed to convert loaded json file into a json object"
         ))?;
 
-        self.merge_bootstrap_accounts(json)?;
+        let merged_bootstrap_accounts = self.merge_bootstrap_accounts(json)?;
         self.bootstrap_accounts = BootstrapAccounts::default();
         self.merge_bootstrap_contracts(json)?;
         self.bootstrap_contracts = BootstrapContracts::default();
@@ -231,6 +236,7 @@ impl ProtocolParameterBuilder {
         Ok(ProtocolParameter {
             protocol,
             parameter_file: Arc::new(output_file),
+            bootstrap_accounts: merged_bootstrap_accounts,
         })
     }
 
@@ -276,7 +282,7 @@ impl ProtocolParameterBuilder {
     fn merge_bootstrap_accounts(
         &mut self,
         json: &mut serde_json::Map<String, Value>,
-    ) -> anyhow::Result<()> {
+    ) -> anyhow::Result<BootstrapAccounts> {
         let mut accounts = BootstrapAccounts::default();
         if let Some(value) = json.get("bootstrap_accounts") {
             let existing_accounts = serde_json::from_value(value.clone())?;
@@ -303,9 +309,9 @@ impl ProtocolParameterBuilder {
 
         json.insert(
             "bootstrap_accounts".to_owned(),
-            serde_json::to_value(accounts)?,
+            serde_json::to_value(&accounts)?,
         );
-        Ok(())
+        Ok(accounts)
     }
 
     fn merge_bootstrap_contracts(
@@ -793,5 +799,20 @@ mod tests {
             .unwrap_err()
             .to_string()
             .contains("unknown protocol 'foobar'"));
+    }
+
+    #[test]
+    fn bootstrap_accounts_in_parameters() {
+        let account = BootstrapAccount::new(
+            ACCOUNT_PUBLIC_KEY,
+            ProtocolParameterBuilder::MIN_BOOTSTRAP_ACCOUNT_BALANCE_MUTEZ,
+        )
+        .unwrap();
+        let params = ProtocolParameterBuilder::new()
+            .set_bootstrap_accounts([account.clone()])
+            .build()
+            .unwrap();
+        let accounts = params.bootstrap_accounts();
+        assert_eq!(accounts, vec![&account]);
     }
 }

@@ -108,7 +108,7 @@ impl BootstrapAccount {
     }
 }
 
-#[derive(Default, Debug, PartialEq)]
+#[derive(Default, Debug, PartialEq, Clone)]
 pub struct BootstrapAccounts {
     accounts: HashMap<String, BootstrapAccount>,
 }
