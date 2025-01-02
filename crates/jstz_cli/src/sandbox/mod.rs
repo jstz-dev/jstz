@@ -7,7 +7,7 @@ mod consts;
 
 pub use consts::*;
 
-use crate::config::Config;
+use crate::{config::Config, utils::using_jstzd};
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
@@ -48,6 +48,11 @@ pub async fn restart(detach: bool) -> Result<()> {
 }
 
 pub async fn exec(command: Command) -> Result<()> {
+    if using_jstzd() {
+        return Err(anyhow::anyhow!(
+            "Jstz sandbox is not available when environment variable `USE_JSTZD` is truthy."
+        ));
+    }
     match command {
         Command::Start { detach, background } => start(detach, background).await,
         Command::Stop => stop(),
