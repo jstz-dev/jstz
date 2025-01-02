@@ -69,26 +69,16 @@ impl SmartFunction {
         function_code: ParsedCode,
         initial_balance: Amount,
     ) -> Result<String> {
-        // 1. Check if the associated account has sufficient balance
-        {
-            let balance = Account::balance(hrt, tx, &self.address)?;
-
-            if balance < initial_balance {
-                return Err(Error::BalanceOverflow);
-            }
-        } // The mutable borrow of `tx` in `balance` is released here
+        let balance = Account::balance(hrt, tx, &self.address)?;
+        if balance < initial_balance {
+            return Err(Error::BalanceOverflow);
+        }
 
         // 2. Deploy the smart function
         let address =
             Script::deploy(hrt, tx, &self.address, function_code, initial_balance)?; // The mutable borrow of `tx` in `Script::deploy` is released here
 
-        // 3. Increment nonce of current account
-        {
-            let nonce = Account::nonce(hrt, tx, &self.address)?;
-            nonce.increment();
-        } // The mutable borrow of `tx` in `Account::nonce` is released here
-
-        // 4. Transfer the balance to the associated account
+        // 3. Transfer the balance to the associated account
         Account::transfer(hrt, tx, &self.address, &address, initial_balance)?;
 
         Ok(address.to_string())
@@ -218,12 +208,12 @@ impl jstz_core::Api for SmartFunctionApi {
         .function(
             NativeFunction::from_fn_ptr(Self::call),
             js_string!("call"),
-            2,
+            1,
         )
         .function(
             NativeFunction::from_fn_ptr(Self::create),
             js_string!("create"),
-            1,
+            2,
         )
         .build();
 
@@ -238,7 +228,7 @@ impl jstz_core::Api for SmartFunctionApi {
         context
             .register_global_builtin_callable(
                 js_string!("fetch"),
-                2,
+                1,
                 NativeFunction::from_copy_closure_with_captures(
                     |_, args, this, ctx| Self::fetch(&this.address, args, ctx),
                     SmartFunction {
