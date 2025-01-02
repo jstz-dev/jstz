@@ -23,7 +23,7 @@ pub async fn exec(
     // maximum size of code until the DAL is implemented
     const MAX_CODE_LENGTH: usize = 3915;
 
-    let mut cfg = Config::load()?;
+    let mut cfg = Config::load().await?;
     // Load sandbox if the selected network is Dev and sandbox is not already loaded
     if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {
         bail_user_error!(
@@ -33,8 +33,8 @@ pub async fn exec(
     }
 
     // Get the current user and check if we are logged in
-    account::login_quick(&mut cfg)?;
-    cfg.reload()?;
+    account::login_quick(&mut cfg).await?;
+    cfg.reload().await?;
     let (user_name, user) = cfg.accounts.current_user().ok_or(anyhow!(
         "Failed to setup the account. Please run `{}`.",
         styles::command("jstz login")
