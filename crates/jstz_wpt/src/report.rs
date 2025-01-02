@@ -156,7 +156,6 @@ pub enum WptTestStatus {
     Err = 1,
     Timeout = 2,
     PreconditionFailed = 3,
-    Null = 4,
 }
 
 impl TryFrom<u8> for WptTestStatus {
