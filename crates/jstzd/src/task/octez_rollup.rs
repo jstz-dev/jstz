@@ -60,12 +60,18 @@ impl Task for OctezRollup {
             &config.rpc_endpoint,
             &config.log_file,
         );
-        let inner = ChildWrapper::new_shared(rollup.run(
-            &config.address,
-            &config.operator,
-            Some(&config.boot_sector_file),
-            config.kernel_debug_file.as_deref(),
-        )?);
+        let inner = ChildWrapper::new_shared(
+            rollup.run(
+                &config.address,
+                &config.operator,
+                Some(&config.boot_sector_file),
+                config
+                    .kernel_debug_file
+                    .as_ref()
+                    .map(|v| v.path())
+                    .as_deref(),
+            )?,
+        );
         Ok(Self {
             inner,
             config,

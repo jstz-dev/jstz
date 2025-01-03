@@ -1,8 +1,11 @@
 use std::fmt::Display;
 use std::fs::File;
 use std::path::PathBuf;
+use std::str::FromStr;
 
 use anyhow::Result;
+use serde::de::Visitor;
+use serde::Deserialize;
 use serde_with::SerializeDisplay;
 use tempfile::NamedTempFile;
 
@@ -53,6 +56,36 @@ impl Display for FileWrapper {
             FileWrapper::TempFile(p) => p.path().to_string_lossy(),
         };
         write!(f, "{}", s)
+    }
+}
+
+struct FileWrapperVisitor;
+
+impl<'de> Visitor<'de> for FileWrapperVisitor {
+    type Value = FileWrapper;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("a valid file path")
+    }
+
+    fn visit_str<E>(self, v: &str) -> std::result::Result<Self::Value, E>
+    where
+        E: serde::de::Error,
+    {
+        FileWrapper::try_from(
+            PathBuf::from_str(v)
+                .map_err(|e| E::custom(format!("failed to parse path '{v}': {:?}", e)))?,
+        )
+        .map_err(|e| E::custom(format!("failed to open file '{v}': {:?}", e)))
+    }
+}
+
+impl<'de> Deserialize<'de> for FileWrapper {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        deserializer.deserialize_str(FileWrapperVisitor)
     }
 }
 
@@ -204,5 +237,19 @@ mod tests {
         let path = tmp_file.path().to_path_buf();
         let file = FileWrapper::TempFile(tmp_file);
         assert_eq!(file.path(), path);
+    }
+
+    #[test]
+    fn deserialize() {
+        let path = NamedTempFile::new().unwrap().into_temp_path();
+        let file = serde_json::from_str::<FileWrapper>(&format!(
+            "\"{}\"",
+            path.to_string_lossy()
+        ))
+        .unwrap();
+        match file {
+            FileWrapper::File((_, p)) => assert_eq!(p, path.to_path_buf()),
+            _ => panic!("should not be FileWrapper::TempFile"),
+        }
     }
 }
