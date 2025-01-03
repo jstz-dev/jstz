@@ -468,8 +468,16 @@ impl<'a, V> Entry<'a, V> {
     where
         V: Value + Default,
     {
+        self.or_insert_with(|| V::default())
+    }
+
+    pub fn or_insert_with<F>(self, default: F) -> &'a mut V
+    where
+        V: Value + Default,
+        F: FnOnce() -> V,
+    {
         match self {
-            Entry::Vacant(vacant_entry) => vacant_entry.insert(Default::default()),
+            Entry::Vacant(vacant_entry) => vacant_entry.insert(default()),
             Entry::Occupied(occupied_entry) => occupied_entry.into_mut(),
         }
     }
@@ -897,5 +905,67 @@ mod test {
                 .into()
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use serde::{Deserialize, Serialize};
+    use tezos_smart_rollup_mock::MockHost;
+
+    use super::*;
+    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    struct TestValue(i32);
+
+    #[test]
+    fn test_entry_or_insert_default() {
+        let hrt = &MockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+
+        // Create a test path
+        let try_from = OwnedPath::try_from("/test".to_string());
+        let path = try_from.unwrap();
+
+        // Test or_insert_default on vacant entry
+        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let value = entry.or_insert_default();
+        assert_eq!(value.0, 0);
+
+        // Test or_insert_default on occupied entry
+        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        entry.or_insert_default().0 = 42;
+        // Get entry again, should return existing value
+        let entry = tx.entry::<TestValue>(hrt, path).unwrap();
+        let value = entry.or_insert_default();
+        assert_eq!(value.0, 42);
+    }
+
+    #[test]
+    fn test_entry_or_insert_with() {
+        let hrt = &MockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+
+        let path = OwnedPath::try_from("/test".to_string()).unwrap();
+
+        // Test or_insert_with on vacant entry
+        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let value = entry.or_insert_with(|| TestValue(100));
+        assert_eq!(value.0, 100); // Custom value should be used
+
+        // Test or_insert_with on occupied entry
+        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let value = entry.or_insert_with(|| TestValue(200));
+        assert_eq!(value.0, 100); // Should keep existing value, not call closure
+
+        // Test closure is not called for occupied entry
+        let mut called = false;
+        let entry = tx.entry::<TestValue>(hrt, path).unwrap();
+        let _value = entry.or_insert_with(|| {
+            called = true;
+            TestValue(300)
+        });
+        assert!(!called, "Closure should not be called for occupied entry");
     }
 }
