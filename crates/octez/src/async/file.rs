@@ -63,11 +63,19 @@ impl FileWrapper {
             FileWrapper::TempFile(v) => v.as_file(),
         }
     }
+
+    pub fn path(&self) -> PathBuf {
+        match self {
+            FileWrapper::File((_, p)) => p.to_owned(),
+            FileWrapper::TempFile(v) => v.path().to_path_buf(),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use std::{
+        fs::File,
         io::{Read, Write},
         path::PathBuf,
     };
@@ -181,5 +189,20 @@ mod tests {
         assert_eq!(file1, file2);
         assert_eq!(file3, file4);
         assert_ne!(file2, file3);
+    }
+
+    #[test]
+    fn path() {
+        let path = NamedTempFile::new().unwrap().into_temp_path();
+        let file = FileWrapper::File((File::create(&path).unwrap(), path.to_path_buf()));
+        assert_eq!(file.path(), path.to_path_buf());
+    }
+
+    #[test]
+    fn path_tempfile() {
+        let tmp_file = NamedTempFile::new().unwrap();
+        let path = tmp_file.path().to_path_buf();
+        let file = FileWrapper::TempFile(tmp_file);
+        assert_eq!(file.path(), path);
     }
 }
