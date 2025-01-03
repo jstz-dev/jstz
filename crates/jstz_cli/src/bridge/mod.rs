@@ -51,7 +51,7 @@ pub async fn exec(command: Command) -> Result<()> {
             to,
             amount,
             network,
-        } => deposit::exec(from, to, amount, network),
+        } => deposit::exec(from, to, amount, network).await,
         Command::Withdraw {
             to,
             amount,

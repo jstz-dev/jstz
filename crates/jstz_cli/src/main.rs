@@ -131,11 +131,11 @@ async fn exec(command: Command) -> Result<()> {
             network,
             trace,
         } => run::exec(url, http_method, gas_limit, json_data, network, trace).await,
-        Command::Repl { account } => repl::exec(account),
+        Command::Repl { account } => repl::exec(account).await,
         Command::Logs(logs) => logs::exec(logs).await,
-        Command::Login { alias } => account::login(alias),
-        Command::Logout {} => account::logout(),
-        Command::WhoAmI {} => account::whoami(),
+        Command::Login { alias } => account::login(alias).await,
+        Command::Logout {} => account::logout().await,
+        Command::WhoAmI {} => account::whoami().await,
         Command::Kv(kv_command) => kv::exec(kv_command).await,
     }
 }

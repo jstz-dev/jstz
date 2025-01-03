@@ -32,8 +32,8 @@ impl User {
     }
 }
 
-fn add_smart_function(alias: String, address: Address) -> Result<()> {
-    let mut cfg = Config::load()?;
+async fn add_smart_function(alias: String, address: Address) -> Result<()> {
+    let mut cfg = Config::load().await?;
 
     if cfg.accounts.contains(&alias) {
         bail_user_error!(
@@ -50,8 +50,8 @@ fn add_smart_function(alias: String, address: Address) -> Result<()> {
     Ok(())
 }
 
-fn create_account(alias: String, passphrase: Option<String>) -> Result<()> {
-    let mut cfg = Config::load()?;
+async fn create_account(alias: String, passphrase: Option<String>) -> Result<()> {
+    let mut cfg = Config::load().await?;
 
     if cfg.accounts.contains(&alias) {
         bail_user_error!(
@@ -80,8 +80,8 @@ fn create_account(alias: String, passphrase: Option<String>) -> Result<()> {
     Ok(())
 }
 
-fn delete_account(alias: String) -> Result<()> {
-    let mut cfg = Config::load()?;
+async fn delete_account(alias: String) -> Result<()> {
+    let mut cfg = Config::load().await?;
 
     if !cfg.accounts.contains(&alias) {
         bail_user_error!("The account '{}' does not exist.", alias);
@@ -106,8 +106,8 @@ fn delete_account(alias: String) -> Result<()> {
     Ok(())
 }
 
-pub fn login(alias: String) -> Result<()> {
-    let mut cfg = Config::load()?;
+pub async fn login(alias: String) -> Result<()> {
+    let mut cfg = Config::load().await?;
 
     if cfg.accounts.current_alias().is_some()
         && !Confirm::new()
@@ -169,20 +169,20 @@ pub fn login(alias: String) -> Result<()> {
     }
 }
 
-pub fn login_quick(cfg: &mut Config) -> Result<()> {
+pub async fn login_quick(cfg: &mut Config) -> Result<()> {
     if cfg.accounts.current_user().is_none() {
         let account_alias: String = Input::new()
                 .with_prompt("You are not logged in. Please type the account name that you want to log into or create as new")
                 .interact()?;
 
-        login(account_alias)?;
+        login(account_alias).await?;
         info!("");
     }
     Ok(())
 }
 
-pub fn logout() -> Result<()> {
-    let mut cfg = Config::load()?;
+pub async fn logout() -> Result<()> {
+    let mut cfg = Config::load().await?;
 
     if cfg.accounts.current_alias().is_none() {
         bail_user_error!("You are not logged in. Please run `jstz login`.");
@@ -196,8 +196,8 @@ pub fn logout() -> Result<()> {
     Ok(())
 }
 
-pub fn whoami() -> Result<()> {
-    let cfg = Config::load()?;
+pub async fn whoami() -> Result<()> {
+    let cfg = Config::load().await?;
 
     let (alias, user) = cfg.accounts.current_user().ok_or(user_error!(
         "You are not logged in. Please run `jstz login`."
@@ -213,8 +213,8 @@ pub fn whoami() -> Result<()> {
     Ok(())
 }
 
-fn list_accounts(long: bool) -> Result<()> {
-    let cfg = Config::load()?;
+async fn list_accounts(long: bool) -> Result<()> {
+    let cfg = Config::load().await?;
 
     info!("Accounts:");
     for (alias, account) in cfg.accounts.iter() {
@@ -248,7 +248,7 @@ async fn get_code(
     account: Option<AddressOrAlias>,
     network: Option<NetworkName>,
 ) -> Result<()> {
-    let cfg = Config::load()?;
+    let cfg = Config::load().await?;
 
     debug!("Getting code.. {:?}.", network);
 
@@ -269,7 +269,7 @@ async fn get_balance(
     account: Option<AddressOrAlias>,
     network: Option<NetworkName>,
 ) -> Result<()> {
-    let cfg = Config::load()?;
+    let cfg = Config::load().await?;
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
     debug!("resolved `account` -> {:?}", address);
@@ -339,10 +339,10 @@ pub enum Command {
 
 pub async fn exec(command: Command) -> Result<()> {
     match command {
-        Command::Alias { alias, address } => add_smart_function(alias, address),
-        Command::Create { alias, passphrase } => create_account(alias, passphrase),
-        Command::Delete { alias } => delete_account(alias),
-        Command::List { long } => list_accounts(long),
+        Command::Alias { alias, address } => add_smart_function(alias, address).await,
+        Command::Create { alias, passphrase } => create_account(alias, passphrase).await,
+        Command::Delete { alias } => delete_account(alias).await,
+        Command::List { long } => list_accounts(long).await,
         Command::Code { account, network } => get_code(account, network).await,
         Command::Balance { account, network } => get_balance(account, network).await,
     }
