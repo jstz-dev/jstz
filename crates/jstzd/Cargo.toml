@@ -21,6 +21,7 @@ indicatif.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_node = {path = "../jstz_node"}
 octez = { path = "../octez" }
+prettytable.workspace = true
 regex.workspace = true
 reqwest.workspace = true
 rust-embed.workspace = true
