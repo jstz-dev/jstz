@@ -14,8 +14,6 @@ use std::{marker::PhantomData, path::Path, pin::Pin, sync::Arc};
 
 use mozjs::{
     jsapi::{Compile1, Handle, JSScript, JS_ExecuteScript},
-    jsval::{JSVal, UndefinedValue},
-    rooted,
     rust::CompileOptionsWrapper,
 };
 
@@ -28,6 +26,7 @@ use crate::{
         Finalize, Prolong, Trace,
     },
     letroot,
+    value::JsValue,
 };
 
 #[derive(Debug)]
@@ -76,16 +75,12 @@ impl<'a, C: Compartment> Script<'a, C> {
 
     // TODO(https://linear.app/tezos/issue/JSTZ-210):
     // Add support for error handling / exceptions instead of using `Option`
-    // TODO(https://linear.app/tezos/issue/JSTZ-211):
-    // TODO: `JSVal` is not safe, we should return a safe wrapper instead
-    pub fn evaluate<'b, S>(&self, cx: &'b mut Context<S>) -> Option<JSVal>
+    pub fn evaluate<'cx, S>(&self, cx: &'cx mut Context<S>) -> Option<JsValue<'cx, C>>
     where
         S: InCompartment<C> + CanAlloc,
-        'a: 'b,
+        'cx: 'a,
     {
-        // TODO(https://linear.app/tezos/issue/JSTZ-196):
-        // Remove this once we have a proper way to root values
-        rooted!(in(unsafe { cx.as_raw_ptr() }) let mut rval = UndefinedValue());
+        letroot!(rval = JsValue::undefined(cx); [cx]);
 
         if unsafe {
             JS_ExecuteScript(
@@ -94,20 +89,20 @@ impl<'a, C: Compartment> Script<'a, C> {
                     ptr: self.script.get_unsafe(),
                     _phantom_0: PhantomData,
                 },
-                rval.handle_mut().into(),
+                rval.handle_mut(),
             )
         } {
-            Some(rval.get())
+            Some(rval.into_inner(cx))
         } else {
             None
         }
     }
 
-    pub fn compile_and_evaluate<S>(
+    pub fn compile_and_evaluate<'cx, S>(
         path: &Path,
         src: &str,
-        cx: &mut Context<S>,
-    ) -> Option<JSVal>
+        cx: &'cx mut Context<S>,
+    ) -> Option<JsValue<'cx, C>>
     where
         S: InCompartment<C> + CanAlloc,
     {
@@ -144,7 +139,7 @@ mod test {
 
     use mozjs::rust::{JSEngine, Runtime};
 
-    use crate::{context::Context, letroot, script::Script};
+    use crate::{context::Context, gc::ptr::AsRawPtr, letroot, script::Script};
 
     #[test]
     fn test_compile_and_evaluate() {
@@ -172,8 +167,9 @@ mod test {
         assert!(res.is_some());
 
         let rval = res.unwrap();
+        let raw_rval = unsafe { rval.as_raw_ptr() };
         /* Should get a number back from the example source. */
-        assert!(rval.is_int32());
-        assert_eq!(rval.to_int32(), 42);
+        assert!(raw_rval.is_int32());
+        assert_eq!(raw_rval.to_int32(), 42);
     }
 }
