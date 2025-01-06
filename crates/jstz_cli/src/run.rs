@@ -67,9 +67,9 @@ pub async fn exec(
     trace: bool,
 ) -> Result<()> {
     // 1. Get the current user (checking if we are logged in)
-    let mut cfg = Config::load()?;
-    account::login_quick(&mut cfg)?;
-    cfg.reload()?;
+    let mut cfg = Config::load().await?;
+    account::login_quick(&mut cfg).await?;
+    cfg.reload().await?;
 
     let (_, user) = cfg.accounts.current_user().ok_or(anyhow!(
         "Failed to setup the account. Please run `{}`.",

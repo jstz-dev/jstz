@@ -225,7 +225,7 @@ impl Sandbox {
 
     fn remove_sandbox_from_config(&mut self) -> Result<()> {
         let mut config = self.config.borrow_mut();
-        config.reload()?;
+        config.reload_sync()?;
         config.sandbox = None;
         config.save()
     }
@@ -769,7 +769,7 @@ pub fn stop_sandbox(restart: bool) -> Result<()> {
         bail_user_error!("Stopping the sandbox is not supported in this environment. Please run CTRL+C to stop the sandbox.");
     }
 
-    let cfg = Config::load()?;
+    let cfg = Config::load_sync()?;
 
     match cfg.sandbox {
         Some(sandbox_cfg) => {
@@ -812,7 +812,7 @@ pub async fn main(detach: bool, background: bool, cfg: &mut Config) -> Result<()
         run_progress_bar(cfg, Some(child))?;
 
         // Reload the config to get the pid of the sandbox
-        cfg.reload()?;
+        cfg.reload_sync()?;
         info!(
             "Sandbox pid: {}.   Use `{}` to stop the sandbox background process.",
             cfg.sandbox()?.pid,

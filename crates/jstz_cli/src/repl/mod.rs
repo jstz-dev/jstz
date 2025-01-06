@@ -104,8 +104,8 @@ const DEFAULT_SMART_FUNCTION_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZ
 const DEFAULT_GAS_LIMIT: usize = usize::MAX;
 const DEFAULT_RANDOM_SEED: u64 = 42;
 
-pub fn exec(account: Option<AddressOrAlias>) -> Result<()> {
-    let cfg = Config::load()?;
+pub async fn exec(account: Option<AddressOrAlias>) -> Result<()> {
+    let cfg = Config::load().await?;
 
     let address = match account {
         Some(account) => account.resolve(&cfg)?.clone(),

@@ -31,7 +31,7 @@ pub enum Command {
 }
 
 pub async fn start(detach: bool, background: bool) -> Result<()> {
-    let mut cfg = Config::load()?;
+    let mut cfg = Config::load_sync()?;
 
     daemon::main(detach, background, &mut cfg).await?;
     Ok(())
