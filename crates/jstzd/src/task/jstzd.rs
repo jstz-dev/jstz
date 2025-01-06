@@ -61,15 +61,15 @@ struct Jstzd {
 
 #[derive(Clone, Serialize)]
 pub struct JstzdConfig {
-    #[serde(rename(serialize = "octez-node"))]
+    #[serde(rename(serialize = "octez_node"))]
     octez_node_config: OctezNodeConfig,
-    #[serde(rename(serialize = "octez-baker"))]
+    #[serde(rename(serialize = "octez_baker"))]
     baker_config: OctezBakerConfig,
-    #[serde(rename(serialize = "octez-client"))]
+    #[serde(rename(serialize = "octez_client"))]
     octez_client_config: OctezClientConfig,
-    #[serde(rename(serialize = "octez-rollup"))]
+    #[serde(rename(serialize = "octez_rollup"))]
     octez_rollup_config: OctezRollupConfig,
-    #[serde(rename(serialize = "jstz-node"))]
+    #[serde(rename(serialize = "jstz_node"))]
     jstz_node_config: JstzNodeConfig,
     #[serde(skip_serializing)]
     protocol_params: ProtocolParameter,
@@ -566,7 +566,21 @@ async fn config_handler(
 #[cfg(test)]
 mod tests {
     use indicatif::ProgressBar;
-    use octez::r#async::protocol::BootstrapAccount;
+    use std::path::PathBuf;
+    use std::str::FromStr;
+
+    use jstz_node::config::JstzNodeConfig;
+    use octez::r#async::{
+        baker::{BakerBinaryPath, OctezBakerConfigBuilder},
+        client::OctezClientConfigBuilder,
+        endpoint::Endpoint,
+        node_config::OctezNodeConfigBuilder,
+        protocol::{BootstrapAccount, ProtocolParameterBuilder},
+        rollup::OctezRollupConfigBuilder,
+    };
+    use tezos_crypto_rs::hash::SmartRollupHash;
+
+    use super::JstzdConfig;
 
     #[test]
     fn collect_progress() {
@@ -641,6 +655,60 @@ mod tests {
   +--------------------------------------+---------------------+
 
 "#
+        );
+    }
+
+    #[test]
+    fn serialize_config() {
+        let config = JstzdConfig::new(
+            OctezNodeConfigBuilder::new().build().unwrap(),
+            OctezBakerConfigBuilder::new()
+                .set_binary_path(BakerBinaryPath::Custom(
+                    PathBuf::from_str("bin").unwrap(),
+                ))
+                .set_octez_client_base_dir("base_dir")
+                .set_octez_node_endpoint(&Endpoint::default())
+                .build()
+                .unwrap(),
+            OctezClientConfigBuilder::new(Endpoint::default())
+                .build()
+                .unwrap(),
+            OctezRollupConfigBuilder::new(
+                Endpoint::default(),
+                PathBuf::from("/foo"),
+                SmartRollupHash::from_str("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK")
+                    .unwrap(),
+                "foo".to_owned(),
+                PathBuf::from("/foo"),
+            )
+            .build()
+            .unwrap(),
+            JstzNodeConfig::new(
+                &Endpoint::default(),
+                &Endpoint::default(),
+                &PathBuf::from("/foo"),
+            ),
+            ProtocolParameterBuilder::new()
+                .set_bootstrap_accounts([BootstrapAccount::new(
+                    "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv",
+                    6_000_000_000,
+                )
+                .unwrap()])
+                .build()
+                .unwrap(),
+        );
+        let value = serde_json::to_value(config).unwrap();
+        let mut keys = value.as_object().unwrap().keys().collect::<Vec<&String>>();
+        keys.sort();
+        assert_eq!(
+            keys,
+            [
+                "jstz_node",
+                "octez_baker",
+                "octez_client",
+                "octez_node",
+                "octez_rollup",
+            ]
         );
     }
 }
