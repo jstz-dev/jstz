@@ -75,8 +75,21 @@
 //! since `'b : 'a`.
 
 use std::{
-    cell::Cell, ffi::c_void, marker::PhantomPinned, mem, ops::Deref, pin::Pin,
+    any::TypeId,
+    cell::Cell,
+    ffi::c_void,
+    marker::PhantomPinned,
+    mem,
+    num::{
+        NonZeroI128, NonZeroI16, NonZeroI32, NonZeroI64, NonZeroI8, NonZeroIsize,
+        NonZeroU128, NonZeroU16, NonZeroU32, NonZeroU64, NonZeroU8, NonZeroUsize,
+    },
+    ops::Deref,
+    path::PathBuf,
+    pin::Pin,
     ptr::NonNull,
+    rc::Rc,
+    sync::Arc,
 };
 
 use super::{Trace, Tracer};
@@ -271,4 +284,93 @@ pub unsafe trait Prolong<'a> {
         std::mem::forget(self);
         result
     }
+}
+
+macro_rules! impl_move_prolong {
+    ($($T:ty),*) => {
+        $(
+            // SAFETY:
+            // All of these types can be moved safely
+            unsafe impl<'a> Prolong<'a> for $T {
+                type Aged = $T;
+            }
+        )*
+    }
+}
+
+impl_move_prolong!(
+    (),
+    bool,
+    isize,
+    usize,
+    i8,
+    u8,
+    i16,
+    u16,
+    i32,
+    u32,
+    i64,
+    u64,
+    i128,
+    u128,
+    f32,
+    f64,
+    char,
+    TypeId,
+    String,
+    PathBuf,
+    NonZeroIsize,
+    NonZeroUsize,
+    NonZeroI8,
+    NonZeroU8,
+    NonZeroI16,
+    NonZeroU16,
+    NonZeroI32,
+    NonZeroU32,
+    NonZeroI64,
+    NonZeroU64,
+    NonZeroI128,
+    NonZeroU128
+);
+
+// SAFETY: The inner type of the reference is correctly prolonged.
+//         The lifetime of the reference is correctly prolonged.
+unsafe impl<'a, 'b, T: Prolong<'a, Aged: 'a>> Prolong<'a> for &'b T {
+    type Aged = &'a T::Aged;
+}
+
+// SAFETY: The inner type of the reference is correctly prolonged.
+//         The lifetime of the reference is correctly prolonged.
+unsafe impl<'a, 'b, T: Prolong<'a, Aged: 'a>> Prolong<'a> for &'b mut T {
+    type Aged = &'a mut T::Aged;
+}
+
+// SAFETY: The inner type of `Pin` is correctly prolonged.
+unsafe impl<'a, P: Prolong<'a>> Prolong<'a> for Pin<P> {
+    type Aged = Pin<P::Aged>;
+}
+
+// SAFETY: The inner type of `Rc` is correctly prolonged.
+unsafe impl<'a, T: Prolong<'a>> Prolong<'a> for Rc<T> {
+    type Aged = Rc<T::Aged>;
+}
+
+// SAFETY: The inner type of `Arc` is correctly prolonged.
+unsafe impl<'a, T: Prolong<'a>> Prolong<'a> for Arc<T> {
+    type Aged = Arc<T::Aged>;
+}
+
+// SAFETY: The inner type of the `Box` is correctly prolonged.
+unsafe impl<'a, T: Prolong<'a>> Prolong<'a> for Box<T> {
+    type Aged = Box<T::Aged>;
+}
+
+// SAFETY: The inner type of `Vec` is correctly prolonged.
+unsafe impl<'a, T: Prolong<'a>> Prolong<'a> for Vec<T> {
+    type Aged = Vec<T::Aged>;
+}
+
+// SAFETY: The inner type of `Option` is correctly prolonged.
+unsafe impl<'a, T: Prolong<'a>> Prolong<'a> for Option<T> {
+    type Aged = Option<T::Aged>;
 }
