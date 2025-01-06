@@ -3,6 +3,7 @@ mod context;
 mod gc;
 mod realm;
 mod script;
+mod value;
 
 #[cfg(test)]
 mod test {
