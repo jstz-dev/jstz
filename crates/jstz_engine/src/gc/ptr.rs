@@ -15,6 +15,13 @@ use mozjs::{
     jsval::{JSVal, UndefinedValue},
 };
 
+pub trait AsRawPtr {
+    type Ptr;
+
+    /// Get the raw pointer to the underlying object.
+    unsafe fn as_raw_ptr(&self) -> Self::Ptr;
+}
+
 /// A GC barrier is a mechanism used to ensure that the garbage collector maintains
 /// a valid set of reachable objects.
 ///
