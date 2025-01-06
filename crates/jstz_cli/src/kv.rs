@@ -12,7 +12,7 @@ async fn get(
     key: String,
     network: Option<NetworkName>,
 ) -> Result<()> {
-    let cfg = Config::load()?;
+    let cfg = Config::load().await?;
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
     debug!("resolved `account` -> {:?}", address);
@@ -36,7 +36,7 @@ async fn list(
     key: Option<String>,
     network: Option<NetworkName>,
 ) -> Result<()> {
-    let cfg = Config::load()?;
+    let cfg = Config::load().await?;
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
     debug!("resolved `account` -> {:?}", address);

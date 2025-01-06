@@ -14,7 +14,7 @@ pub async fn exec(
     amount: f64,
     network: Option<NetworkName>,
 ) -> Result<()> {
-    let cfg = Config::load()?;
+    let cfg = Config::load().await?;
 
     // Check network
     if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {

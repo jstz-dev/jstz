@@ -9,13 +9,13 @@ use crate::{
     utils::AddressOrAlias,
 };
 
-pub fn exec(
+pub async fn exec(
     from: String,
     to: AddressOrAlias,
     amount: u64,
     network: Option<NetworkName>,
 ) -> Result<()> {
-    let cfg = Config::load()?;
+    let cfg = Config::load().await?;
 
     // Check network
     if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {

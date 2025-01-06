@@ -288,13 +288,23 @@ impl Config {
         jstz_home_dir().join("config.json")
     }
 
-    pub fn reload(&mut self) -> Result<()> {
-        *self = Self::load()?;
+    pub async fn reload(&mut self) -> Result<()> {
+        *self = Self::load().await?;
+        Ok(())
+    }
+
+    pub fn reload_sync(&mut self) -> Result<()> {
+        *self = Self::load_sync()?;
         Ok(())
     }
 
     /// Load the configuration from the file
-    pub fn load() -> Result<Self> {
+    pub async fn load() -> Result<Self> {
+        Self::load_sync()
+    }
+
+    /// Load the configuration from the file
+    pub fn load_sync() -> Result<Self> {
         let path = Self::path();
 
         let config = if path.exists() {
