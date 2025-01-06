@@ -102,6 +102,8 @@ pub struct TestsResult {
 #[derive(Default, Debug, Trace, Finalize, JsData)]
 pub struct TestHarnessReport {
     #[unsafe_ignore_trace]
+    // `status` is an Option because it is set at the end of a test suite
+    // and we need a placeholder for it before that.
     status: Option<WptTestStatus>,
     #[unsafe_ignore_trace]
     subtests: Vec<WptSubtest>,
@@ -282,6 +284,9 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
         }
     }
 
+    // Execute promises after all sync tests have completed after `eval` returns
+    rt.run_jobs();
+
     // Return the test harness report
 
     let test_harness_report = {
@@ -305,7 +310,10 @@ fn run_wpt_test(
             return Ok(WptReportTest::new(WptTestStatus::Err, vec![]));
         };
 
-        let status = report.status.clone().unwrap_or(WptTestStatus::Null);
+        // It should be safe to unwrap here because each test suite should have a
+        // status code attached after it completes. If unwrap fails, it means something
+        // is wrong and we should fix that
+        let status = report.status.clone().unwrap();
 
         let subtests = report.subtests.clone();
 
