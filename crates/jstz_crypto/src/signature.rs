@@ -8,7 +8,7 @@ use utoipa::ToSchema;
 #[derive(
     Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ToSchema,
 )]
-#[serde(untagged)]
+//#[serde(untagged)]
 pub enum Signature {
     #[schema(
         title = "Ed25519 signature", 

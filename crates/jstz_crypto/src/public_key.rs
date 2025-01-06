@@ -12,7 +12,7 @@ use utoipa::ToSchema;
 // Add BLS support
 /// Tezos public key
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
-#[serde(untagged)]
+//#[serde(untagged)]
 pub enum PublicKey {
     #[schema(
         title = "Ed25519",

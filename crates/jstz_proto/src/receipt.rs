@@ -11,7 +11,7 @@ use utoipa::ToSchema;
 
 // pub type ReceiptResult<T> = std::result::Result<T, ReceiptError>;
 #[derive(Debug, Clone, ToSchema, Serialize, Deserialize)]
-#[serde(tag = "_type", content = "inner")]
+//#[serde(tag = "_type", content = "inner")]
 pub enum ReceiptResult {
     #[schema(title = "Success")]
     Success(ReceiptContent),
@@ -73,7 +73,7 @@ pub struct DepositReceipt {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(tag = "_type")]
+//#[serde(tag = "_type")]
 pub enum ReceiptContent {
     #[schema(title = "DeployFunction")]
     DeployFunction(DeployFunctionReceipt),

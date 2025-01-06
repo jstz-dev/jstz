@@ -29,7 +29,7 @@ use crate::{
     Finalize,
     ToSchema,
 )]
-#[serde(untagged)]
+//#[serde(untagged)]
 pub enum PublicKeyHash {
     #[schema(
         title = "Tz1",

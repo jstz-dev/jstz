@@ -6,7 +6,7 @@ use tezos_crypto_rs::hash::SecretKeyEd25519;
 use crate::{error::Result, signature::Signature};
 
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
-#[serde(untagged)]
+//#[serde(untagged)]
 pub enum SecretKey {
     Ed25519(SecretKeyEd25519),
 }
