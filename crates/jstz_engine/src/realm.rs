@@ -33,8 +33,10 @@ use crate::{
     compartment::{self, Compartment},
     context::{CanAccess, CanAlloc, Context, InCompartment},
     custom_trace,
-    gc::{ptr::GcPtr, Finalize, Prolong, Trace},
-    AsRawPtr,
+    gc::{
+        ptr::{AsRawPtr, GcPtr},
+        Finalize, Prolong, Trace,
+    },
 };
 
 /// A JavaScript realm with lifetime of at least `'a` allocated in compartment `C`.

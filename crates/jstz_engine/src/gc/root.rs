@@ -92,7 +92,12 @@ use std::{
     sync::Arc,
 };
 
-use super::{Trace, Tracer};
+use crate::context::Context;
+
+use super::{
+    ptr::{AsRawHandle, AsRawHandleMut, AsRawPtr, Handle, HandleMut},
+    Trace, Tracer,
+};
 
 /// Shadow stack implementation. This is a singly linked list of on stack rooted values
 #[derive(Debug)]
@@ -237,6 +242,56 @@ impl<'a, T: Trace> Deref for Rooted<'a, T> {
     type Target = T;
     fn deref(&self) -> &Self::Target {
         self.pinned.value.as_ref().unwrap()
+    }
+}
+
+impl<'a, T: Trace> Rooted<'a, T> {
+    pub fn handle(&self) -> Handle<T::Ptr>
+    where
+        T: AsRawHandle,
+    {
+        // SAFETY: self is guaranteed to be rooted, therefore it safe to acquire a handle
+        unsafe { self.as_raw_handle() }
+    }
+
+    pub fn handle_mut(&self) -> HandleMut<T::Ptr>
+    where
+        T: AsRawHandleMut,
+    {
+        // SAFETY: self is guaranteed to be rooted, therefore it safe to acquire a handle
+        unsafe { self.as_raw_handle_mut() }
+    }
+
+    pub fn into_inner<'cx, U, S>(self, _: &'cx mut Context<S>) -> U
+    where
+        T: Prolong<'cx, Aged = U>,
+        'cx: 'a,
+    {
+        // SAFETY: We are safe to unpin the root since we're about to drop it
+        let root = unsafe { Pin::into_inner_unchecked(self.pinned) };
+
+        // SAFETY: 'cx outlives the root 'a, so it is safe to extend the lifetime
+        unsafe { root.value.take().unwrap().extend_lifetime() }
+    }
+}
+
+impl<'a, T: AsRawPtr + Trace> AsRawPtr for Rooted<'a, T> {
+    type Ptr = T::Ptr;
+
+    unsafe fn as_raw_ptr(&self) -> Self::Ptr {
+        self.pinned.value.as_ref().unwrap().as_raw_ptr()
+    }
+}
+
+impl<'a, T: AsRawHandle + Trace> AsRawHandle for Rooted<'a, T> {
+    unsafe fn as_raw_handle(&self) -> Handle<Self::Ptr> {
+        self.pinned.value.as_ref().unwrap().as_raw_handle()
+    }
+}
+
+impl<'a, T: AsRawHandleMut + Trace> AsRawHandleMut for Rooted<'a, T> {
+    unsafe fn as_raw_handle_mut(&self) -> HandleMut<Self::Ptr> {
+        self.pinned.value.as_ref().unwrap().as_raw_handle_mut()
     }
 }
 

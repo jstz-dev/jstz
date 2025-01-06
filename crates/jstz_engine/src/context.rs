@@ -31,11 +31,11 @@ use mozjs::{
 use crate::{
     compartment::{self, Compartment},
     gc::{
+        ptr::AsRawPtr,
         root::{unsafe_ffi_trace_context_roots, Root, ShadowStack},
         Trace,
     },
     realm::Realm,
-    AsRawPtr,
 };
 
 /// The context of a JavaScript runtime with a state `S`.
@@ -188,7 +188,7 @@ mod test {
         rust::{JSEngine, Runtime},
     };
 
-    use crate::AsRawPtr;
+    use crate::gc::ptr::AsRawPtr;
 
     use super::Context;
 
