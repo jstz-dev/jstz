@@ -92,6 +92,8 @@ use std::{
     sync::Arc,
 };
 
+use crate::context::Context;
+
 use super::{
     ptr::{AsRawHandle, AsRawHandleMut, AsRawPtr, Handle, HandleMut},
     Trace, Tracer,
@@ -258,6 +260,18 @@ impl<'a, T: Trace> Rooted<'a, T> {
     {
         // SAFETY: self is guaranteed to be rooted, therefore it safe to acquire a handle
         unsafe { self.as_raw_handle_mut() }
+    }
+
+    pub fn into_inner<'cx, U, S>(self, _: &'cx mut Context<S>) -> U
+    where
+        T: Prolong<'cx, Aged = U>,
+        'cx: 'a,
+    {
+        // SAFETY: We are safe to unpin the root since we're about to drop it
+        let root = unsafe { Pin::into_inner_unchecked(self.pinned) };
+
+        // SAFETY: 'cx outlives the root 'a, so it is safe to extend the lifetime
+        unsafe { root.value.take().unwrap().extend_lifetime() }
     }
 }
 
