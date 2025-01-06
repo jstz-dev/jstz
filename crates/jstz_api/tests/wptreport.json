@@ -30,7 +30,7 @@
                         "message": null
                       }
                     ],
-                    "status": "Null",
+                    "status": "Ok",
                     "metrics": {
                       "passed": 4,
                       "failed": 0,
@@ -82,7 +82,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 6,
                   "failed": 0,
@@ -170,7 +170,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 6,
                   "failed": 0,
@@ -216,7 +216,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 6,
                   "failed": 0,
@@ -245,11 +245,17 @@
           "Test": {
             "variations": [
               {
-                "subtests": [],
-                "status": "Null",
+                "subtests": [
+                  {
+                    "name": "idl_test setup",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
                   "passed": 0,
-                  "failed": 0,
+                  "failed": 1,
                   "timed_out": 0
                 }
               }
@@ -432,7 +438,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 34,
                   "failed": 0,
@@ -446,11 +452,72 @@
           "Test": {
             "variations": [
               {
-                "subtests": [],
-                "status": "Null",
+                "subtests": [
+                  {
+                    "name": "csiso2022kr - non-empty input decodes to one replacement character.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "csiso2022kr - empty input decodes to empty output.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "hz-gb-2312 - non-empty input decodes to one replacement character.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "hz-gb-2312 - empty input decodes to empty output.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "iso-2022-cn - non-empty input decodes to one replacement character.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "iso-2022-cn - empty input decodes to empty output.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "iso-2022-cn-ext - non-empty input decodes to one replacement character.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "iso-2022-cn-ext - empty input decodes to empty output.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "iso-2022-kr - non-empty input decodes to one replacement character.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "iso-2022-kr - empty input decodes to empty output.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "replacement - non-empty input decodes to one replacement character.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "replacement - empty input decodes to empty output.",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
                   "passed": 0,
-                  "failed": 0,
+                  "failed": 12,
                   "timed_out": 0
                 }
               }
@@ -478,7 +545,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 3,
                   "failed": 0,
@@ -509,7 +576,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 3,
                   "failed": 0,
@@ -535,7 +602,7 @@
                     "message": "not a constructor"
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 1,
                   "failed": 1,
@@ -561,7 +628,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 2,
                   "failed": 0,
@@ -665,7 +732,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 2,
                   "failed": 0,
@@ -861,7 +928,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 36,
                   "failed": 0,
@@ -897,7 +964,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 4,
                   "failed": 0,
@@ -2023,7 +2090,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 222,
                   "failed": 0,
@@ -2199,7 +2266,7 @@
                     "message": "not a constructor"
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 16,
                   "failed": 16,
@@ -2265,7 +2332,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 10,
                   "failed": 0,
@@ -2676,7 +2743,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 79,
                   "failed": 0,
@@ -2727,7 +2794,7 @@
                     "message": null
                   }
                 ],
-                "status": "Null",
+                "status": "Ok",
                 "metrics": {
                   "passed": 7,
                   "failed": 0,
@@ -2741,11 +2808,82 @@
           "Test": {
             "variations": [
               {
-                "subtests": [],
-                "status": "Null",
+                "subtests": [
+                  {
+                    "name": "UTF-7 should not be supported",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "utf-7 should not be supported",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "UTF-32 with BOM should decode as UTF-16LE",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "UTF-32 with no BOM should decode as UTF-8",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "utf-32 with BOM should decode as UTF-16LE",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "utf-32 with no BOM should decode as UTF-8",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "UTF-32LE with BOM should decode as UTF-16LE",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "UTF-32LE with no BOM should decode as UTF-8",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "utf-32le with BOM should decode as UTF-16LE",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "utf-32le with no BOM should decode as UTF-8",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "UTF-32be with no BOM should decode as UTF-8",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "UTF-32be with BOM should decode as UTF-8",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "utf-32be with no BOM should decode as UTF-8",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  },
+                  {
+                    "name": "utf-32be with BOM should decode as UTF-8",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: XMLHttpRequest is not defined\""
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
                   "passed": 0,
-                  "failed": 0,
+                  "failed": 14,
                   "timed_out": 0
                 }
               }
@@ -2886,7 +3024,7 @@
                             "message": "Response is not defined"
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 23,
                           "failed": 1,
@@ -3055,12 +3193,167 @@
                             "name": "XMLHttpRequest with value %20",
                             "status": "Fail",
                             "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %00",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %01",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %02",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %03",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %04",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %05",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %06",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %07",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %08",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %09",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %0A",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %0D",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %0E",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %0F",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %10",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %11",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %12",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %13",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %14",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %15",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %16",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %17",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %18",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %19",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %1A",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %1B",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %1C",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %1D",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %1E",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %1F",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value %20",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 0,
-                          "failed": 31,
+                          "failed": 62,
                           "timed_out": 0
                         }
                       }
@@ -3091,12 +3384,32 @@
                             "name": "XMLHttpRequest with all valid values",
                             "status": "Fail",
                             "message": "XMLHttpRequest is not defined"
+                          },
+                          {
+                            "name": "fetch() with value x%00x needs to throw",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value x%0Ax needs to throw",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with value x%0Dx needs to throw",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "fetch() with all valid values",
+                            "status": "Fail",
+                            "message": "Invalid header value"
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 0,
-                          "failed": 4,
+                          "failed": 8,
                           "timed_out": 0
                         }
                       }
@@ -3224,7 +3537,7 @@
                             "message": null
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 23,
                           "failed": 0,
@@ -3260,7 +3573,7 @@
                             "message": null
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 4,
                           "failed": 0,
@@ -3306,7 +3619,7 @@
                             "message": null
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 6,
                           "failed": 0,
@@ -3412,7 +3725,7 @@
                             "message": null
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 18,
                           "failed": 0,
@@ -3461,12 +3774,17 @@
                             "name": "\"no-cors\" Headers object cannot have content-type set to text/plain;ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss, text/plain",
                             "status": "Fail",
                             "message": "Request is not defined"
+                          },
+                          {
+                            "name": "Loading data…",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 0,
-                          "failed": 7,
+                          "failed": 8,
                           "timed_out": 0
                         }
                       }
@@ -3494,7 +3812,7 @@
                             "message": "Invalid header value"
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 0,
                           "failed": 3,
@@ -3575,7 +3893,7 @@
                             "message": "assert_equals: expected 9 but got 8"
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 9,
                           "failed": 4,
@@ -3631,7 +3949,7 @@
                             "message": null
                           }
                         ],
-                        "status": "Null",
+                        "status": "Ok",
                         "metrics": {
                           "passed": 8,
                           "failed": 0,
