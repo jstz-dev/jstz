@@ -15,11 +15,33 @@ use mozjs::{
     jsval::{JSVal, UndefinedValue},
 };
 
+pub use mozjs::jsapi::{Handle, MutableHandle as HandleMut};
+
 pub trait AsRawPtr {
     type Ptr;
 
     /// Get the raw pointer to the underlying object.
     unsafe fn as_raw_ptr(&self) -> Self::Ptr;
+}
+
+pub trait AsRawHandle: AsRawPtr {
+    /// Retrieves a SpiderMonkey Rooted Handle to the underlying value.
+    ///
+    /// # Safety
+    ///
+    /// This is only safe to do on a rooted object (which [`GcPtr`] is not,
+    /// it needs to be additionally rooted).
+    unsafe fn as_raw_handle(&self) -> Handle<Self::Ptr>;
+}
+
+pub trait AsRawHandleMut: AsRawHandle {
+    /// Retrieves a SpiderMonkey Rooted Handle to the underlying value.
+    ///
+    /// # Safety
+    ///
+    /// This is only safe to do on a rooted object (which [`GcPtr`] is not,
+    /// it needs to be additionally rooted).
+    unsafe fn as_raw_handle_mut(&self) -> HandleMut<Self::Ptr>;
 }
 
 /// A GC barrier is a mechanism used to ensure that the garbage collector maintains
@@ -129,6 +151,26 @@ impl<T: WriteBarrieredPtr> GcPtr<T> {
             *self_ptr = next;
             T::write_barrier(self_ptr, prev, next)
         }
+    }
+}
+
+impl<T: WriteBarrieredPtr> AsRawPtr for GcPtr<T> {
+    type Ptr = T;
+
+    unsafe fn as_raw_ptr(&self) -> Self::Ptr {
+        self.get()
+    }
+}
+
+impl<T: WriteBarrieredPtr> AsRawHandle for GcPtr<T> {
+    unsafe fn as_raw_handle(&self) -> Handle<Self::Ptr> {
+        Handle::from_marked_location(self.inner_ptr.get() as *const _)
+    }
+}
+
+impl<T: WriteBarrieredPtr> AsRawHandleMut for GcPtr<T> {
+    unsafe fn as_raw_handle_mut(&self) -> HandleMut<Self::Ptr> {
+        HandleMut::from_marked_location(self.inner_ptr.get())
     }
 }
 
