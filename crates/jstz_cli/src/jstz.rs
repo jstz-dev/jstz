@@ -1,10 +1,10 @@
 use std::time::Duration;
 
-use anyhow::{bail, Result};
+use anyhow::{anyhow, bail, Result};
 use jstz_api::KvValue;
-use jstz_crypto::hash::Hash;
 use jstz_proto::{
-    context::account::{Address, Nonce},
+    context::account::Nonce,
+    context::new_account::NewAddress,
     operation::{OperationHash, SignedOperation},
     receipt::Receipt,
 };
@@ -28,7 +28,7 @@ impl JstzClient {
         }
     }
 
-    pub fn logs_stream(&self, address: &Address) -> EventSource {
+    pub fn logs_stream(&self, address: &NewAddress) -> EventSource {
         let url = format!("{}/logs/{}/stream", self.endpoint, address);
         EventSource::get(url)
     }
@@ -50,7 +50,10 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_nonce(&self, address: &Address) -> Result<Nonce> {
+    pub async fn get_nonce(&self, address: &NewAddress) -> Result<Nonce> {
+        address
+            .check_is_user()
+            .map_err(|e| anyhow!(format!("{}", e)))?;
         let response = self
             .get(&format!("{}/accounts/{}/nonce", self.endpoint, address))
             .await?;
@@ -68,7 +71,13 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_code(&self, address: &Address) -> Result<Option<String>> {
+    pub async fn get_code(&self, address: &NewAddress) -> Result<Option<String>> {
+        // TODO: https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
+        // validate address type === smart function
+        // address
+        //     .check_is_smart_function()
+        //     .map_err(|e| user_error!("{}", e))?;
+
         let response = self
             .get(&format!("{}/accounts/{}/code", self.endpoint, address))
             .await?;
@@ -86,7 +95,7 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_balance(&self, address: &Address) -> Result<u64> {
+    pub async fn get_balance(&self, address: &NewAddress) -> Result<u64> {
         let response = self
             .get(&format!("{}/accounts/{}/balance", self.endpoint, address))
             .await?;
@@ -105,7 +114,7 @@ impl JstzClient {
 
     pub async fn get_value(
         &self,
-        address: &Address,
+        address: &NewAddress,
         key: &str,
     ) -> Result<Option<KvValue>> {
         let response = self
@@ -128,7 +137,7 @@ impl JstzClient {
 
     pub async fn get_subkey_list(
         &self,
-        address: &Address,
+        address: &NewAddress,
         key: &Option<String>,
     ) -> Result<Option<Vec<String>>> {
         let url = match key {

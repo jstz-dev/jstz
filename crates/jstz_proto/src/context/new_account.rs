@@ -5,6 +5,7 @@ use std::{
 
 use crate::error::{Error, Result};
 use boa_gc::{empty_trace, Finalize, Trace};
+use jstz_crypto::hash::Hash;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::{Deserialize, Serialize};
@@ -49,11 +50,7 @@ impl FromStr for NewAddress {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
-        match &s[..3] {
-            "KT1" => Ok(NewAddress::SmartFunction(SmartFunctionHash::from_str(s)?)),
-            "tz1" | "tz2" | "tz3" => Ok(NewAddress::User(PublicKeyHash::from_str(s)?)),
-            _ => Err(Error::InvalidAddress),
-        }
+        Self::from_base58(s)
     }
 }
 
@@ -69,6 +66,30 @@ impl NewAddress {
         match self {
             Self::SmartFunction(_) => Ok(()),
             _ => Err(Error::AddressTypeMismatch),
+        }
+    }
+}
+
+impl NewAddress {
+    pub fn from_base58(data: &str) -> Result<Self> {
+        if data.len() < 3 {
+            return Err(Error::InvalidAddress);
+        }
+        match &data[..3] {
+            "KT1" => Ok(NewAddress::SmartFunction(SmartFunctionHash::from_base58(
+                data,
+            )?)),
+            "tz1" | "tz2" | "tz3" => {
+                Ok(NewAddress::User(PublicKeyHash::from_base58(data)?))
+            }
+            _ => Err(Error::InvalidAddress),
+        }
+    }
+
+    pub fn to_base58(&self) -> String {
+        match self {
+            Self::User(hash) => hash.to_base58(),
+            Self::SmartFunction(hash) => hash.to_base58(),
         }
     }
 }
@@ -175,5 +196,75 @@ mod test {
         // Test KT1 display
         let kt1_addr = NewAddress::from_str(KT1).unwrap();
         assert_eq!(kt1_addr.to_string(), KT1);
+    }
+
+    #[test]
+    fn test_from_base58() {
+        // Test valid addresses
+        let tz1_addr = NewAddress::from_base58(TZ1).unwrap();
+        assert!(matches!(
+            tz1_addr,
+            NewAddress::User(pkh) if pkh.to_base58() == TZ1
+        ));
+
+        let kt1_addr = NewAddress::from_base58(KT1).unwrap();
+        assert!(matches!(
+            kt1_addr,
+            NewAddress::SmartFunction(hash) if hash.to_base58() == KT1
+        ));
+
+        // Test invalid prefixes
+        assert!(matches!(
+            NewAddress::from_base58("tx1abc123"),
+            Err(Error::InvalidAddress)
+        ));
+
+        // Test invalid formats
+        assert!(NewAddress::from_base58("tz1invalid").is_err());
+        assert!(NewAddress::from_base58("KT1invalid").is_err());
+
+        // Test empty string
+        assert!(matches!(
+            NewAddress::from_base58(""),
+            Err(Error::InvalidAddress)
+        ));
+
+        // Test string too short for prefix check
+        assert!(matches!(
+            NewAddress::from_base58("tz"),
+            Err(Error::InvalidAddress)
+        ));
+    }
+
+    #[test]
+    fn test_from_base58_error() {
+        let invalid_checksum = "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjV"; // Changed last char
+        let result = NewAddress::from_base58(invalid_checksum);
+        assert!(result.is_err());
+
+        let invalid_kt1 = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU6"; // Changed last char
+        let result = NewAddress::from_base58(invalid_kt1);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_to_base58() {
+        // Test User addresses
+        let tz1_addr = NewAddress::from_str(TZ1).unwrap();
+        assert_eq!(tz1_addr.to_base58(), TZ1);
+
+        let tz2_addr = NewAddress::from_str(TZ2).unwrap();
+        assert_eq!(tz2_addr.to_base58(), TZ2);
+
+        let tz3_addr = NewAddress::from_str(TZ3).unwrap();
+        assert_eq!(tz3_addr.to_base58(), TZ3);
+
+        // Test SmartFunction address
+        let kt1_addr = NewAddress::from_str(KT1).unwrap();
+        assert_eq!(kt1_addr.to_base58(), KT1);
+
+        // Test roundtrip
+        let addr = NewAddress::from_base58(&kt1_addr.to_base58()).unwrap();
+        assert_eq!(addr, kt1_addr);
     }
 }
