@@ -75,6 +75,11 @@ impl<'a> JsStr<'a> {
         None
     }
 
+    pub fn as_str(&self) -> Option<&str> {
+        self.as_latin1()
+            .and_then(|bytes| std::str::from_utf8(bytes).ok())
+    }
+
     /// Check if the [`JsStr`] is empty.
     #[inline]
     #[must_use]
