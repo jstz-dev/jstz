@@ -1,6 +1,7 @@
 mod compartment;
 mod context;
 mod gc;
+mod object;
 mod realm;
 mod script;
 mod string;
