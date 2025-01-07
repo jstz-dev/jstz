@@ -6,7 +6,7 @@ use anyhow::{anyhow, Result};
 use jstz_api::js_log::LogLevel;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::{
-    context::account::Address, js_logger::LogRecord, request_logger::RequestEvent,
+    context::new_account::NewAddress, js_logger::LogRecord, request_logger::RequestEvent,
 };
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
@@ -103,7 +103,7 @@ impl Db {
 
     pub async fn logs_by_address(
         &self,
-        function_address: Address,
+        function_address: NewAddress,
         limit: usize,
         offset: usize,
     ) -> QueryResponseResult {
@@ -117,7 +117,7 @@ impl Db {
 
     pub async fn logs_by_address_and_request_id(
         &self,
-        function_address: Address,
+        function_address: NewAddress,
         request_id: String,
     ) -> QueryResponseResult {
         let conn = self.connection().await?;

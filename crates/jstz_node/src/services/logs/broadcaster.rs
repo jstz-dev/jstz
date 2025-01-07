@@ -2,7 +2,7 @@ use std::{collections::HashMap, convert::Infallible, sync::Arc, time::Duration};
 
 use axum::response::{sse, Sse};
 use futures_util::future;
-use jstz_proto::context::account::Address;
+use jstz_proto::context::new_account::NewAddress;
 use parking_lot::Mutex;
 use tokio::sync::mpsc::{self, Sender};
 use tokio::time::interval;
@@ -14,7 +14,7 @@ pub type InfallibleSSeStream = ReceiverStream<Result<sse::Event, Infallible>>;
 /// Broadcasts messages to all connected clients through Server-sent Events
 /// <https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events>.
 pub struct Broadcaster {
-    clients: Mutex<HashMap<Address, Vec<Sender<InfallibleSseEvent>>>>, // TODO: Use a read-write lock instead?
+    clients: Mutex<HashMap<NewAddress, Vec<Sender<InfallibleSseEvent>>>>, // TODO: Use a read-write lock instead?
 }
 
 // Pings clients every 10 seconds
@@ -47,7 +47,7 @@ impl Broadcaster {
     async fn remove_stale_clients(&self) {
         let clients = self.clients.lock().clone();
 
-        let mut responsive_clients: HashMap<Address, Vec<Sender<InfallibleSseEvent>>> =
+        let mut responsive_clients: HashMap<NewAddress, Vec<Sender<InfallibleSseEvent>>> =
             HashMap::new();
 
         for (contract_address, senders) in clients {
@@ -72,7 +72,7 @@ impl Broadcaster {
     /// Registers client with broadcaster, returning an SSE response body.
     pub async fn new_client(
         &self,
-        contract_address: Address,
+        function_address: NewAddress,
     ) -> Sse<InfallibleSSeStream> {
         let (tx, rx) = mpsc::channel(10);
 
@@ -82,7 +82,7 @@ impl Broadcaster {
 
         self.clients
             .lock()
-            .entry(contract_address)
+            .entry(function_address)
             .or_default()
             .push(tx);
 
@@ -96,7 +96,7 @@ impl Broadcaster {
     }
 
     /// Broadcasts `msg` to all clients.
-    pub async fn broadcast(&self, contract_address: &Address, msg: &str) {
+    pub async fn broadcast(&self, contract_address: &NewAddress, msg: &str) {
         let clients = self.clients.lock().clone();
 
         if let Some(clients) = clients.get(contract_address) {
