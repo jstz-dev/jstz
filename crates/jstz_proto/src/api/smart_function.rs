@@ -76,9 +76,13 @@ impl SmartFunction {
 
         // 2. Deploy the smart function
         let address =
-            Script::deploy(hrt, tx, &self.address, function_code, initial_balance)?; // The mutable borrow of `tx` in `Script::deploy` is released here
+            Script::deploy(hrt, tx, &self.address, function_code, initial_balance)?;
 
-        // 3. Transfer the balance to the associated account
+        // 3. Increment nonce of current account
+        let nonce = Account::nonce(hrt, tx, &self.address)?;
+        nonce.increment();
+
+        // 4. Transfer the balance to the associated account
         Account::transfer(hrt, tx, &self.address, &address, initial_balance)?;
 
         Ok(address.to_string())
