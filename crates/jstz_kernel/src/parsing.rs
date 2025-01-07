@@ -1,15 +1,21 @@
+use jstz_crypto::hash::Hash;
 use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use jstz_proto::context::account::Address;
 use jstz_proto::operation::external::FaDeposit;
-use jstz_proto::{context::account::Address, Result};
+use jstz_proto::{context::new_account::NewAddress, Result};
 use num_traits::ToPrimitive;
 use tezos_smart_rollup::michelson::{ticket::FA2_1Ticket, MichelsonContract};
 use tezos_smart_rollup::types::{Contract, PublicKeyHash as TezosPublicKeyHash};
 
-pub fn try_parse_contract(contract: &Contract) -> Result<Address> {
+pub fn try_parse_contract(contract: &Contract) -> Result<NewAddress> {
     match contract {
         Contract::Implicit(TezosPublicKeyHash::Ed25519(tz1)) => {
-            Ok(PublicKeyHash::Tz1(tz1.clone()))
+            Ok(NewAddress::User(PublicKeyHash::Tz1(tz1.clone())))
         }
+        Contract::Originated(contract_kt1_hash) => Ok(NewAddress::SmartFunction(
+            SmartFunctionHash::Kt1(contract_kt1_hash.clone()),
+        )),
         _ => Err(jstz_proto::Error::InvalidAddress),
     }
 }
@@ -20,15 +26,22 @@ pub fn try_parse_fa_deposit(
     receiver: MichelsonContract,
     proxy_contract: Option<MichelsonContract>,
 ) -> Result<FaDeposit> {
+    // TODO: use NewAddress after jstz-proto is updated
+    // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
     let receiver = try_parse_contract(&receiver.0)?;
+    let receiver = Address::from_base58(&receiver.to_base58())?;
     let proxy_smart_function = (proxy_contract)
         .map(|c| try_parse_contract(&c.0))
+        .transpose()?;
+    let proxy_smart_function = proxy_smart_function
+        .map(|p| Address::from_base58(&p.to_base58()))
         .transpose()?;
     let amount = ticket
         .amount()
         .to_u64()
         .ok_or(jstz_proto::Error::TicketAmountTooLarge)?;
     let ticket_hash = ticket.hash()?;
+
     Ok(FaDeposit {
         inbox_id,
         amount,
@@ -41,7 +54,7 @@ pub fn try_parse_fa_deposit(
 #[cfg(test)]
 mod test {
 
-    use jstz_crypto::hash::Hash;
+    use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
     use jstz_proto::operation::external::FaDeposit;
     use tezos_smart_rollup::{
         michelson::{
@@ -58,6 +71,10 @@ mod test {
         pkh: &jstz_crypto::public_key_hash::PublicKeyHash,
     ) -> MichelsonContract {
         MichelsonContract(Contract::from_b58check(&pkh.to_base58()).unwrap())
+    }
+
+    fn jstz_sfh_to_michelson(sfh: &SmartFunctionHash) -> MichelsonContract {
+        MichelsonContract(Contract::from_b58check(&sfh.to_base58()).unwrap())
     }
 
     #[test]
@@ -89,6 +106,28 @@ mod test {
         assert_eq!(expected, fa_deposit)
     }
 
+    //TODO: this should pass after jstz-proto is updated
+    // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
+    #[test]
+    fn try_parse_fa_deposit_should_fail_for_smart_function() {
+        let amount = 10;
+        let ticket: FA2_1Ticket = Ticket::new(
+            Contract::from_b58check("KT1NgXQ6Mwu3XKFDcKdYFS6dkkY3iNKdBKEc").unwrap(),
+            MichelsonPair(
+                MichelsonNat::from(100_u32),
+                MichelsonOption(Some(MichelsonBytes(b"12345".to_vec()))),
+            ),
+            amount,
+        )
+        .unwrap();
+        let receiver = jstz_sfh_to_michelson(&jstz_mock::sf_account1());
+        let proxy_contract = Some(jstz_sfh_to_michelson(&jstz_mock::sf_account1()));
+        let inbox_id = 41717;
+
+        let fa_deposit = try_parse_fa_deposit(inbox_id, ticket, receiver, proxy_contract);
+        assert!(fa_deposit.is_err());
+    }
+
     #[test]
     fn try_parse_contract_tz1_should_pass() {
         let value = try_parse_contract(
@@ -96,6 +135,15 @@ mod test {
         )
         .expect("Expected to be parsable");
         assert_eq!("tz1ha7kscNYSgJ76k5gZD8mhBueCv3gqfMsA", value.to_base58());
+    }
+
+    #[test]
+    fn try_parse_contract_kt1_should_pass() {
+        let value = try_parse_contract(
+            &Contract::from_b58check("KT1EfTusMLoeCAAGd9MZJn5yKzFr6kJU5U91").unwrap(),
+        )
+        .expect("Expected to be parsable");
+        assert_eq!("KT1EfTusMLoeCAAGd9MZJn5yKzFr6kJU5U91", value.to_base58());
     }
 
     #[test]
@@ -118,14 +166,6 @@ mod test {
     fn try_parse_contract_tz4_should_fail() {
         try_parse_contract(
             &Contract::from_b58check("tz4DWZXsrP3bdPaZ5B3M3iLVoRMAyxw9oKLH").unwrap(),
-        )
-        .expect_err("Expected to fail");
-    }
-
-    #[test]
-    fn try_parse_contract_kt1_should_fail() {
-        try_parse_contract(
-            &Contract::from_b58check("KT1EfTusMLoeCAAGd9MZJn5yKzFr6kJU5U91").unwrap(),
         )
         .expect_err("Expected to fail");
     }

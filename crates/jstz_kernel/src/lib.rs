@@ -66,6 +66,7 @@ mod test {
     };
     use jstz_proto::context::{
         account::{Account, ParsedCode},
+        new_account::NewAddress,
         ticket_table::TicketTable,
     };
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
@@ -137,13 +138,15 @@ mod test {
                     TicketTable::get_balance(host.rt(), tx, &proxy, &ticket_hash)
                         .unwrap();
                 assert_eq!(300, proxy_balance);
-                let receiver_balance = TicketTable::get_balance(
-                    host.rt(),
-                    tx,
-                    &try_parse_contract(&deposit.receiver).unwrap(),
-                    &ticket_hash,
-                )
-                .unwrap();
+                // TODO: use new address after jstz-proto is updated
+                // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
+                let owner = match try_parse_contract(&deposit.receiver).unwrap() {
+                    NewAddress::User(pkh) => pkh,
+                    NewAddress::SmartFunction(_) => panic!("Unexpected owner"),
+                };
+                let receiver_balance =
+                    TicketTable::get_balance(host.rt(), tx, &owner, &ticket_hash)
+                        .unwrap();
                 assert_eq!(0, receiver_balance);
             }
             _ => panic!("Unexpected receiver"),
@@ -167,13 +170,15 @@ mod test {
                     TicketTable::get_balance(host.rt(), &mut tx, &proxy, &ticket_hash)
                         .unwrap();
                 assert_eq!(0, proxy_balance);
-                let receiver_balance = TicketTable::get_balance(
-                    host.rt(),
-                    &mut tx,
-                    &try_parse_contract(&deposit.receiver).unwrap(),
-                    &ticket_hash,
-                )
-                .unwrap();
+                // TODO: use new address after jstz-proto is updated
+                // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
+                let owner = match try_parse_contract(&deposit.receiver).unwrap() {
+                    NewAddress::User(pkh) => pkh,
+                    NewAddress::SmartFunction(_) => panic!("Unexpected owner"),
+                };
+                let receiver_balance =
+                    TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash)
+                        .unwrap();
                 assert_eq!(300, receiver_balance);
             }
             _ => panic!("Unexpected receiver"),
