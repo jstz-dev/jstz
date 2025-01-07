@@ -2870,6 +2870,7 @@ name = "jstz_engine"
 version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
+ "bitflags 2.6.0",
  "indoc",
  "mozjs",
  "tezos-smart-rollup",

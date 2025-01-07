@@ -8,6 +8,7 @@ use script::Script;
 
 mod context;
 pub mod gc;
+mod object;
 mod realm;
 mod script;
 mod string;
