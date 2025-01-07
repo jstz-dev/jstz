@@ -3,8 +3,8 @@ use std::future::IntoFuture;
 use anyhow::Result;
 use boa_engine::{
     js_string, object::FunctionObjectBuilder, property::PropertyDescriptor,
-    value::TryFromJs, Context, JsArgs, JsData, JsNativeError, JsResult, JsValue,
-    NativeFunction, Source,
+    value::TryFromJs, Context, JsArgs, JsData, JsNativeError, JsObject, JsResult,
+    JsValue, NativeFunction, Source,
 };
 use boa_gc::{Finalize, Trace};
 use derive_more::{From, Into};
@@ -14,6 +14,8 @@ use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptReportTest, WptServe, WptSubtest,
     WptSubtestStatus, WptTestStatus,
 };
+
+const TEST_SUBSET_SIZE: u8 = 5;
 
 macro_rules! impl_try_from_js_for_enum {
     ($ty:ty) => {
@@ -248,6 +250,42 @@ pub fn register_apis(context: &mut Context) {
     jstz_api::file::FileApi.init(context);
 }
 
+fn insert_global_properties(rt: &mut Runtime) {
+    // Define self
+    rt.global_object().insert_property(
+        js_string!("self"),
+        PropertyDescriptor::builder()
+            .value(rt.global_object().clone())
+            .configurable(true)
+            .writable(true)
+            .enumerable(true)
+            .build(),
+    );
+
+    // Define a dummy `location` object so that subsetTest can run
+    let location = JsObject::with_null_proto();
+
+    // `location.search` is used by wpt to determine how many tests in a subset test can run.
+    // Limiting this with a small enough `TEST_SUBSET_SIZE` here because those subsets
+    // can contain thousands of tests.
+    location
+        .create_data_property(
+            js_string!("search"),
+            js_string!(format!("?0-{TEST_SUBSET_SIZE}")),
+            rt.context(),
+        )
+        .unwrap();
+    rt.global_object().insert_property(
+        js_string!("location"),
+        PropertyDescriptor::builder()
+            .value(location)
+            .configurable(true)
+            .writable(true)
+            .enumerable(true)
+            .build(),
+    );
+}
+
 pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
     let mut rt: Runtime = Runtime::new(usize::MAX)?;
 
@@ -260,16 +298,7 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
     // Register APIs
     register_apis(&mut rt);
 
-    // Define self
-    rt.global_object().insert_property(
-        js_string!("self"),
-        PropertyDescriptor::builder()
-            .value(rt.global_object().clone())
-            .configurable(true)
-            .writable(true)
-            .enumerable(true)
-            .build(),
-    );
+    insert_global_properties(&mut rt);
 
     // Run the bundle, evaluating each script in order
     // Instead of loading the TestHarnessReport script, we initialize it manually

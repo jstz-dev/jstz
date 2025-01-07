@@ -96,37 +96,141 @@
           "Test": {
             "variations": [
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Invalid label \"invalid-invalidLabel\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\0unicode-1-1-utf-8\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"unicode-1-1-utf-8\\0\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\0unicode-1-1-utf-8\\0\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\vunicode-1-1-utf-8\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Invalid label \"invalid-invalidLabel\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\0unicode-1-1-utf-8\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"unicode-1-1-utf-8\\0\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\0unicode-1-1-utf-8\\0\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\vunicode-1-1-utf-8\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Invalid label \"invalid-invalidLabel\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\0unicode-1-1-utf-8\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"unicode-1-1-utf-8\\0\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\0unicode-1-1-utf-8\\0\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\vunicode-1-1-utf-8\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Invalid label \"invalid-invalidLabel\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\0unicode-1-1-utf-8\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"unicode-1-1-utf-8\\0\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\0unicode-1-1-utf-8\\0\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Invalid label \"\\vunicode-1-1-utf-8\" should be rejected by TextDecoder.",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
@@ -642,73 +746,281 @@
           "Test": {
             "variations": [
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Not throw: IBM866 has a pointer 0",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 1",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 2",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 3",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 4",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Not throw: IBM866 has a pointer 0",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 1",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 2",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 3",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 4",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Not throw: IBM866 has a pointer 0",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 1",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 2",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 3",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 4",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Not throw: IBM866 has a pointer 0",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 1",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 2",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 3",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 4",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Not throw: IBM866 has a pointer 0",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 1",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 2",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 3",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 4",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Not throw: IBM866 has a pointer 0",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 1",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 2",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 3",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 4",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Not throw: IBM866 has a pointer 0",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 1",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 2",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 3",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 4",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
               },
               {
-                "subtests": [],
-                "status": "Err",
+                "subtests": [
+                  {
+                    "name": "Not throw: IBM866 has a pointer 0",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 1",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 2",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 3",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Not throw: IBM866 has a pointer 4",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
                 "metrics": {
-                  "passed": 0,
+                  "passed": 5,
                   "failed": 0,
                   "timed_out": 0
                 }
