@@ -1,6 +1,9 @@
 use boa_engine::JsError;
 use jstz_proto::{
-    context::account::ParsedCode,
+    context::{
+        account::{Address, ParsedCode},
+        new_account::NewAddress,
+    },
     operation::{Content, DeployFunction, Operation, SignedOperation},
     receipt::{ReceiptContent, ReceiptResult},
 };
@@ -69,8 +72,14 @@ pub async fn exec(
     let code: ParsedCode = code
         .try_into()
         .map_err(|err: JsError| user_error!("{err}"))?;
+    // TODO: use NewAddress after jstz-proto is updated
+    // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
+    let source: Result<Address> = match user.address.clone() {
+        NewAddress::User(address) => Ok(address),
+        _ => bail!("address type mismatch - expected user address"),
+    };
     let op = Operation {
-        source: user.address.clone(),
+        source: source?,
         nonce,
         content: Content::DeployFunction(DeployFunction {
             function_code: code,
@@ -124,7 +133,14 @@ pub async fn exec(
     );
 
     if let Some(name) = name {
-        cfg.accounts.insert(name, SmartFunction { address });
+        cfg.accounts.insert(
+            name,
+            SmartFunction {
+                // TODO: use sf address after jstz-proto is updated
+                // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
+                address: NewAddress::User(address),
+            },
+        );
     }
 
     cfg.save()?;

@@ -1,10 +1,10 @@
-use std::collections::hash_map::Entry;
+use std::{collections::hash_map::Entry, str::FromStr};
 
 use bip39::{Language, Mnemonic, MnemonicType};
 use clap::Subcommand;
 use dialoguer::{Confirm, Input};
-use jstz_crypto::keypair_from_passphrase;
-use jstz_proto::context::account::Address;
+use jstz_crypto::{keypair_from_passphrase, public_key_hash::PublicKeyHash};
+use jstz_proto::context::new_account::NewAddress;
 use log::{debug, info, warn};
 
 use crate::{
@@ -22,7 +22,7 @@ impl User {
     pub fn from_passphrase(passphrase: String) -> Result<Self> {
         let (sk, pk) = keypair_from_passphrase(passphrase.as_str())?;
 
-        let address = Address::from(&pk);
+        let address = NewAddress::User(PublicKeyHash::from(&pk));
 
         Ok(Self {
             address,
@@ -32,9 +32,13 @@ impl User {
     }
 }
 
-async fn add_smart_function(alias: String, address: Address) -> Result<()> {
+async fn add_smart_function(alias: String, address: NewAddress) -> Result<()> {
     let mut cfg = Config::load().await?;
-
+    // TODO: https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
+    // validate address type === smart function
+    // address
+    //     .check_is_smart_function()
+    //     .map_err(|e| user_error!("{}", e))?;
     if cfg.accounts.contains(&alias) {
         bail_user_error!(
             "The smart function '{}' already exists. Please choose another name.",
@@ -333,8 +337,17 @@ pub enum Command {
         alias: String,
         /// Address of the smart function.
         #[arg(value_name = "ADDRESS")]
-        address: Address,
+        #[arg(value_parser = parse_smart_function_address)]
+        address: NewAddress,
     },
+}
+
+fn parse_smart_function_address(s: &str) -> Result<NewAddress> {
+    let address = NewAddress::from_str(s).map_err(|e| user_error!("{}", e))?;
+    address
+        .check_is_smart_function()
+        .map_err(|e| user_error!("{}", e))?;
+    Ok(address)
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -345,5 +358,22 @@ pub async fn exec(command: Command) -> Result<()> {
         Command::List { long } => list_accounts(long).await,
         Command::Code { account, network } => get_code(account, network).await,
         Command::Balance { account, network } => get_balance(account, network).await,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_pasrse_smart_function_address() {
+        let address =
+            parse_smart_function_address("KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5").unwrap();
+        assert!(matches!(address, NewAddress::SmartFunction(_)));
+    }
+
+    #[test]
+    fn test_pasrse_smart_function_throws_error_for_user_address() {
+        let result = parse_smart_function_address("tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU");
+        assert!(result.is_err_and(|e| e.to_string().contains("AddressTypeMismatch")));
     }
 }

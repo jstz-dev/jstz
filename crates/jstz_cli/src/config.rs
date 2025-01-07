@@ -1,17 +1,16 @@
+use derive_more::{From, TryInto};
+use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+use jstz_proto::context::new_account::NewAddress;
+use log::debug;
+use octez::{OctezClient, OctezNode, OctezRollupNode};
+use serde::{Deserialize, Serialize};
+use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::{
     collections::{hash_map, HashMap},
     env, fmt, fs,
     path::PathBuf,
     str::FromStr,
 };
-
-use derive_more::{From, TryInto};
-use jstz_crypto::{hash::Hash, public_key::PublicKey, secret_key::SecretKey};
-use jstz_proto::context::account::Address;
-use log::debug;
-use octez::{OctezClient, OctezNode, OctezRollupNode};
-use serde::{Deserialize, Serialize};
-use serde_with::{DeserializeFromStr, SerializeDisplay};
 
 use crate::{
     error::{bail, user_error, Result},
@@ -48,7 +47,7 @@ pub enum Account {
 }
 
 impl Account {
-    pub fn address(&self) -> &Address {
+    pub fn address(&self) -> &NewAddress {
         match self {
             Account::User(user) => &user.address,
             Account::SmartFunction(sf) => &sf.address,
@@ -58,14 +57,14 @@ impl Account {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
-    pub address: Address,
+    pub address: NewAddress,
     pub secret_key: SecretKey,
     pub public_key: PublicKey,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SmartFunction {
-    pub address: Address,
+    pub address: NewAddress,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -147,7 +146,7 @@ impl AccountConfig {
 }
 
 impl AddressOrAlias {
-    pub fn resolve(&self, cfg: &Config) -> Result<Address> {
+    pub fn resolve(&self, cfg: &Config) -> Result<NewAddress> {
         match self {
             AddressOrAlias::Address(address) => Ok(address.clone()),
             AddressOrAlias::Alias(alias) => {
@@ -164,7 +163,7 @@ impl AddressOrAlias {
     pub fn resolve_or_use_current_user(
         account: Option<AddressOrAlias>,
         cfg: &Config,
-    ) -> Result<Address> {
+    ) -> Result<NewAddress> {
         match account {
             Some(account) => account.resolve(cfg),
             None => cfg
@@ -181,7 +180,7 @@ impl AddressOrAlias {
         &self,
         cfg: &Config,
         network: &Option<NetworkName>,
-    ) -> Result<Address> {
+    ) -> Result<NewAddress> {
         match self {
             AddressOrAlias::Address(address) => Ok(address.clone()),
             AddressOrAlias::Alias(alias) => {
@@ -194,7 +193,9 @@ impl AddressOrAlias {
                         alias
                     ))?;
 
-                let address = Address::from_base58(&alias_info.address)?;
+                let address = NewAddress::from_base58(&alias_info.address)
+                    .map_err(|e| user_error!("{}", e))?;
+
                 Ok(address)
             }
         }

@@ -1,3 +1,6 @@
+use crate::error::{Error, Result};
+use anyhow::anyhow;
+use jstz_proto::context::new_account::NewAddress;
 use std::{
     env,
     fmt::{self, Display},
@@ -6,13 +9,11 @@ use std::{
     str::FromStr,
 };
 
-use jstz_proto::context::account::Address;
-
-use crate::error::{Error, Result};
+const JSTZ_ADDRESS_PREFIXES: [&str; 4] = ["tz1", "tz2", "tz3", "KT1"];
 
 #[derive(Clone, Debug)]
 pub enum AddressOrAlias {
-    Address(Address),
+    Address(NewAddress),
     Alias(String),
 }
 
@@ -20,8 +21,16 @@ impl FromStr for AddressOrAlias {
     type Err = Error;
 
     fn from_str(address_or_alias: &str) -> Result<Self> {
-        if address_or_alias.starts_with("tz1") {
-            Ok(Self::Address(address_or_alias.parse()?))
+        let is_jstz_address = JSTZ_ADDRESS_PREFIXES
+            .iter()
+            .any(|prefix| address_or_alias.starts_with(prefix));
+
+        if is_jstz_address {
+            Ok(Self::Address(
+                address_or_alias
+                    .parse::<NewAddress>()
+                    .map_err(|e| anyhow!("{}", e))?,
+            ))
         } else {
             Ok(Self::Alias(address_or_alias.to_string()))
         }
@@ -77,4 +86,44 @@ pub fn using_jstzd() -> bool {
         env::var("USE_JSTZD").as_ref().map(String::as_str),
         Ok("true") | Ok("1")
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const TEST_KT1: &str = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5";
+    const TEST_TZ1: &str = "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU";
+    const TEST_ALIAS: &str = "my_contract";
+
+    #[test]
+    fn test_parse_address_or_alias() {
+        // Test valid KT1 address
+        let result = AddressOrAlias::from_str(TEST_KT1).unwrap();
+        assert!(matches!(
+            result,
+            AddressOrAlias::Address(NewAddress::SmartFunction(_))
+        ));
+
+        // Test valid tz1 address
+        let result = AddressOrAlias::from_str(TEST_TZ1).unwrap();
+        assert!(matches!(
+            result,
+            AddressOrAlias::Address(NewAddress::User(_))
+        ));
+
+        // Test alias
+        let result = AddressOrAlias::from_str(TEST_ALIAS).unwrap();
+        assert!(matches!(
+            result,
+            AddressOrAlias::Alias(alias) if alias == TEST_ALIAS
+        ));
+    }
+
+    #[test]
+    fn test_parse_invalid_address() {
+        // Test invalid address format
+        let result = AddressOrAlias::from_str("KT1invalid");
+        assert!(result.is_err());
+    }
 }

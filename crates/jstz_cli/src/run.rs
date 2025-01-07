@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
-use jstz_crypto::hash::Hash;
 use jstz_proto::context::account::Address;
+use jstz_proto::context::new_account::NewAddress;
 use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
@@ -117,8 +117,15 @@ pub async fn exec(
 
     debug!("Body: {:?}", body);
 
+    // TODO: use NewAddress after jstz-proto is updated
+    // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
+    let user_address: Result<Address> = match user.address.clone() {
+        NewAddress::User(address) => Ok(address),
+        _ => bail!("address type mismatch - expected user address"),
+    };
+
     let op = Operation {
-        source: user.address.clone(),
+        source: user_address?,
         nonce,
         content: OperationContent::RunFunction(RunFunction {
             uri: url,
@@ -194,7 +201,7 @@ pub async fn exec(
     Ok(())
 }
 
-async fn spawn_trace(address: &Address, jstz_client: &JstzClient) -> Result<()> {
+async fn spawn_trace(address: &NewAddress, jstz_client: &JstzClient) -> Result<()> {
     let event_source = jstz_client.logs_stream(address);
     // need to use mpsc instead of oneshot because of the loop
     let (tx, mut rx) = mpsc::channel::<()>(1);
