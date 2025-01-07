@@ -1,4 +1,4 @@
-use jstz_crypto::hash::Hash;
+use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
     michelson::{
@@ -40,6 +40,10 @@ pub fn account2() -> jstz_crypto::public_key_hash::PublicKeyHash {
 
 pub fn kt1_account1() -> ContractKt1Hash {
     ContractKt1Hash::try_from("KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV").unwrap()
+}
+
+pub fn sf_account1() -> SmartFunctionHash {
+    SmartFunctionHash::from_base58("KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV").unwrap()
 }
 
 pub fn ticket_hash1() -> TicketHash {
