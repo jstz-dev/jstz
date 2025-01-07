@@ -19,8 +19,12 @@ use crate::{
     sandbox::{
         SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT,
     },
-    utils::AddressOrAlias,
+    utils::{using_jstzd, AddressOrAlias},
 };
+
+// hardcoding it here instead of importing from jstzd simply to avoid adding jstzd
+// as a new depedency of jstz_cli just for this so that build time remains the same
+const JSTZD_SERVER_BASE_URL: &str = "http://127.0.0.1:55555";
 
 pub fn jstz_home_dir() -> PathBuf {
     if let Ok(value) = env::var("JSTZ_HOME") {
@@ -209,6 +213,29 @@ impl<'a> Iterator for AccountsIter<'a> {
     }
 }
 
+// A subset of jstzd::task::jstzd::JstzdConfig
+#[derive(Deserialize, Debug, Clone)]
+struct JstzdConfig {
+    octez_node: OctezNodeConfig,
+    octez_client: OctezClientConfig,
+    jstz_node: JstzNodeConfig,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct OctezClientConfig {
+    base_dir: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct OctezNodeConfig {
+    rpc_endpoint: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+struct JstzNodeConfig {
+    endpoint: String,
+}
+
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Config {
     /// Path to octez installation
@@ -226,9 +253,11 @@ pub struct Config {
     /// Sandbox logs dir
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sandbox_logs_dir: Option<PathBuf>,
+    #[serde(skip)]
+    jstzd_config: Option<JstzdConfig>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SandboxConfig {
     /// Directory of the octez client (initialized when sandbox is running)
     pub octez_client_dir: PathBuf,
@@ -267,7 +296,7 @@ impl FromStr for NetworkName {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 struct Network {
     pub octez_node_rpc_endpoint: String,
     pub jstz_node_endpoint: String,
@@ -300,7 +329,13 @@ impl Config {
 
     /// Load the configuration from the file
     pub async fn load() -> Result<Self> {
-        Self::load_sync()
+        let mut config = Self::load_sync()?;
+
+        if using_jstzd() {
+            config.fill_in_jstzd_config(Self::fetch_jstzd_config().await?)?;
+        }
+
+        Ok(config)
     }
 
     /// Load the configuration from the file
@@ -321,6 +356,28 @@ impl Config {
         debug!("Config (on load): {:?}", config);
 
         Ok(config)
+    }
+
+    fn fill_in_jstzd_config(&mut self, jstzd_config: JstzdConfig) -> Result<()> {
+        self.sandbox = Some(SandboxConfig {
+            octez_client_dir: PathBuf::from_str(&jstzd_config.octez_client.base_dir)?,
+            octez_node_dir: PathBuf::new(),
+            octez_rollup_node_dir: PathBuf::new(),
+            pid: 0,
+        });
+        self.jstzd_config = Some(jstzd_config);
+        Ok(())
+    }
+
+    async fn fetch_jstzd_config() -> Result<JstzdConfig> {
+        let r = reqwest::Client::new();
+        let c = r
+            .get(format!("{JSTZD_SERVER_BASE_URL}/config/"))
+            .send()
+            .await?
+            .json::<JstzdConfig>()
+            .await?;
+        Ok(c)
     }
 
     /// Save the configuration to the file
@@ -460,16 +517,125 @@ impl Config {
 
                 Ok(network.clone())
             }
-            NetworkName::Dev => Ok(Network {
-                octez_node_rpc_endpoint: format!(
-                    "http://{}:{}",
-                    SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT
-                ),
-                jstz_node_endpoint: format!(
-                    "http://{}:{}",
-                    SANDBOX_LOCAL_HOST_ADDR, SANDBOX_JSTZ_NODE_PORT,
-                ),
-            }),
+            NetworkName::Dev => match self.jstzd_config.as_ref() {
+                Some(jstzd_config) => {
+                    // Assuming that when jstzd config is available, the cli is being used
+                    // against jstzd, so we take values from jstzd config
+                    Ok(Network {
+                        octez_node_rpc_endpoint: jstzd_config
+                            .octez_node
+                            .rpc_endpoint
+                            .clone(),
+                        jstz_node_endpoint: jstzd_config.jstz_node.endpoint.clone(),
+                    })
+                }
+                None => Ok(Network {
+                    octez_node_rpc_endpoint: format!(
+                        "http://{}:{}",
+                        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT
+                    ),
+                    jstz_node_endpoint: format!(
+                        "http://{}:{}",
+                        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_JSTZ_NODE_PORT,
+                    ),
+                }),
+            },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{collections::HashMap, path::PathBuf, str::FromStr};
+
+    use super::{
+        Config, JstzNodeConfig, JstzdConfig, Network, NetworkConfig, NetworkName,
+        OctezClientConfig, OctezNodeConfig, SandboxConfig,
+    };
+
+    fn dummy_jstzd_config() -> JstzdConfig {
+        JstzdConfig {
+            octez_client: OctezClientConfig {
+                base_dir: "/base".to_owned(),
+            },
+            octez_node: OctezNodeConfig {
+                rpc_endpoint: "http://octez.node.endpoint/".to_owned(),
+            },
+            jstz_node: JstzNodeConfig {
+                endpoint: "http://jstz.node.endpoint/".to_owned(),
+            },
+        }
+    }
+
+    #[test]
+    fn fill_in_jstzd_config() {
+        let mut config = Config::default();
+        assert!(config.sandbox().is_err());
+
+        config.fill_in_jstzd_config(dummy_jstzd_config()).unwrap();
+        assert_eq!(
+            config.sandbox().unwrap(),
+            &SandboxConfig {
+                octez_client_dir: PathBuf::from_str("/base").unwrap(),
+                octez_node_dir: PathBuf::new(),
+                octez_rollup_node_dir: PathBuf::new(),
+                pid: 0
+            }
+        );
+    }
+
+    #[test]
+    fn lookup_network_with_jstzd() {
+        let mut config = Config::default();
+        config.fill_in_jstzd_config(dummy_jstzd_config()).unwrap();
+        let jstzd_config = config.jstzd_config.as_ref().unwrap();
+        assert_eq!(
+            config.lookup_network(&NetworkName::Dev).unwrap(),
+            Network {
+                octez_node_rpc_endpoint: jstzd_config.octez_node.rpc_endpoint.clone(),
+                jstz_node_endpoint: jstzd_config.jstz_node.endpoint.clone()
+            }
+        )
+    }
+
+    #[test]
+    fn lookup_network_dev() {
+        let config = Config::default();
+        assert_eq!(
+            config.lookup_network(&NetworkName::Dev).unwrap(),
+            Network {
+                octez_node_rpc_endpoint: "http://127.0.0.1:18730".to_owned(),
+                jstz_node_endpoint: "http://127.0.0.1:8933".to_owned()
+            }
+        )
+    }
+
+    #[test]
+    fn lookup_network_custom() {
+        let dummy_network = Network {
+            octez_node_rpc_endpoint: "a".to_owned(),
+            jstz_node_endpoint: "b".to_owned(),
+        };
+        let config = Config {
+            networks: NetworkConfig {
+                networks: HashMap::from([("foo".to_owned(), dummy_network.clone())]),
+                ..Default::default()
+            },
+            ..Default::default()
+        };
+
+        assert_eq!(
+            config
+                .lookup_network(&NetworkName::Custom("foo".to_string()))
+                .unwrap(),
+            dummy_network
+        );
+        assert_eq!(
+            config
+                .lookup_network(&NetworkName::Custom("bar".to_string()))
+                .unwrap_err()
+                .to_string(),
+            "Network 'bar' not found in the config file."
+        );
     }
 }
