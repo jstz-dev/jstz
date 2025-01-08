@@ -1,4 +1,4 @@
-use crate::{compartment::Compartment, gc::ptr::AsRawPtr};
+use crate::gc::{compartment::Compartment, ptr::AsRawPtr};
 
 use super::JsValue;
 

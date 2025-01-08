@@ -93,11 +93,11 @@ impl<'a> Ref<'a> {
 #[macro_export]
 macro_rules! alloc_compartment {
     ($name:ident) => {
-        let compartment_id = unsafe { $crate::compartment::Id::new() };
+        let compartment_id = unsafe { $crate::gc::compartment::Id::new() };
         #[allow(unused)]
         let compartment_region =
-            unsafe { $crate::compartment::Region::new(&compartment_id) };
-        let $name = unsafe { $crate::compartment::Ref::new(compartment_id) };
+            unsafe { $crate::gc::compartment::Region::new(&compartment_id) };
+        let $name = unsafe { $crate::gc::compartment::Ref::new(compartment_id) };
     };
 }
 

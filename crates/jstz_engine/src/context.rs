@@ -29,8 +29,8 @@ use mozjs::{
 };
 
 use crate::{
-    compartment::Compartment,
     gc::{
+        compartment::Compartment,
         ptr::AsRawPtr,
         root::{unsafe_ffi_trace_context_roots, Root, ShadowStack},
         Trace,
