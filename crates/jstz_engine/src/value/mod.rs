@@ -3,12 +3,11 @@ use std::{marker::PhantomData, pin::Pin, sync::Arc};
 use mozjs::jsval::{JSVal, UndefinedValue};
 
 use crate::{
-    compartment::Compartment,
     context::{CanAlloc, Context, InCompartment},
     custom_trace,
     gc::{
         ptr::{AsRawHandle, AsRawHandleMut, AsRawPtr, GcPtr, Handle, HandleMut},
-        Finalize, Prolong, Trace,
+        Compartment, Finalize, Prolong, Trace,
     },
 };
 

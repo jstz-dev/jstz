@@ -8,12 +8,11 @@ use mozjs::jsapi::{
 };
 
 use crate::{
-    compartment::Compartment,
     context::{CanAlloc, Context, InCompartment},
     custom_trace,
     gc::{
         ptr::{AsRawHandle, AsRawHandleMut, AsRawPtr, GcPtr, Handle, HandleMut},
-        Finalize, Prolong, Trace,
+        Compartment, Finalize, Prolong, Trace,
     },
 };
 

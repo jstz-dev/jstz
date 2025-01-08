@@ -1,4 +1,3 @@
-mod compartment;
 mod context;
 mod gc;
 mod object;
