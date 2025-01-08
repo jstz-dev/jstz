@@ -456,6 +456,17 @@
   },
   "components": {
     "schemas": {
+      "Address": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PublicKeyHash"
+          },
+          {
+            "$ref": "#/components/schemas/SmartFunctionHash"
+          }
+        ],
+        "description": "Tezos Address"
+      },
       "Blake2b": {
         "type": "array",
         "items": {
@@ -539,7 +550,7 @@
         ],
         "properties": {
           "address": {
-            "$ref": "#/components/schemas/PublicKeyHash"
+            "$ref": "#/components/schemas/Address"
           }
         }
       },
@@ -551,7 +562,7 @@
         ],
         "properties": {
           "account": {
-            "$ref": "#/components/schemas/PublicKeyHash"
+            "$ref": "#/components/schemas/Address"
           },
           "updated_balance": {
             "type": "integer",
@@ -568,7 +579,7 @@
         ],
         "properties": {
           "receiver": {
-            "$ref": "#/components/schemas/PublicKeyHash"
+            "$ref": "#/components/schemas/Address"
           },
           "run_function": {
             "oneOf": [
@@ -596,7 +607,7 @@
             "$ref": "#/components/schemas/String"
           },
           "source": {
-            "$ref": "#/components/schemas/PublicKeyHash"
+            "$ref": "#/components/schemas/Address"
           }
         }
       },
@@ -624,7 +635,7 @@
         ],
         "properties": {
           "address": {
-            "$ref": "#/components/schemas/PublicKeyHash"
+            "$ref": "#/components/schemas/Address"
           },
           "level": {
             "$ref": "#/components/schemas/LogLevel"
@@ -1001,6 +1012,23 @@
             "$ref": "#/components/schemas/Signature"
           }
         }
+      },
+      "SmartFunctionHash": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "KT1",
+            "required": [
+              "Kt1"
+            ],
+            "properties": {
+              "Kt1": {
+                "type": "string"
+              }
+            },
+            "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
+          }
+        ]
       },
       "String": {
         "type": "string"

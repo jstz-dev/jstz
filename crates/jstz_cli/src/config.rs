@@ -57,6 +57,8 @@ impl Account {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
+    // TODO: change to PublicKeyHash
+    // https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
     pub address: NewAddress,
     pub secret_key: SecretKey,
     pub public_key: PublicKey,
@@ -64,6 +66,8 @@ pub struct User {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SmartFunction {
+    // TODO: change to SmartFunctionHash
+    // https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
     pub address: NewAddress,
 }
 

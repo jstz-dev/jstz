@@ -2,7 +2,6 @@ use jstz_core::{
     host::HostRuntime,
     kv::{outbox::OutboxMessage, Transaction},
 };
-use jstz_crypto::hash::Hash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::{
     michelson::{ticket::FA2_1Ticket, MichelsonOption, MichelsonPair},
@@ -12,7 +11,10 @@ use tezos_smart_rollup::{
 use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::{
-    context::account::{Account, Address, Amount},
+    context::{
+        account::{Account, Amount},
+        new_account::NewAddress,
+    },
     Error, Result,
 };
 
@@ -21,12 +23,12 @@ const BURN_ENTRYPOINT: &str = "burn";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Withdrawal {
     pub amount: Amount,
-    pub receiver: Address,
+    pub receiver: NewAddress,
 }
 
 fn create_withdrawal(
     amount: Amount,
-    receiver: &Address,
+    receiver: &NewAddress,
     ticketer: &ContractKt1Hash,
 ) -> Result<OutboxMessage> {
     let receiver_pkh = receiver.to_base58();
@@ -48,7 +50,7 @@ fn create_withdrawal(
 fn withdraw(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    source: &Address,
+    source: &NewAddress,
     withdrawal: Withdrawal,
     ticketer: &ContractKt1Hash,
 ) -> Result<()> {
@@ -68,7 +70,7 @@ fn withdraw(
 pub(crate) fn execute_withdraw(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    source: &Address,
+    source: &NewAddress,
     withdrawal: Withdrawal,
     ticketer: &ContractKt1Hash,
 ) -> Result<()> {
@@ -89,7 +91,11 @@ mod test {
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tezos_smart_rollup_mock::MockHost;
 
-    use crate::{context::account::Account, executor::withdraw::execute_withdraw, Error};
+    use crate::{
+        context::{account::Account, new_account::NewAddress},
+        executor::withdraw::execute_withdraw,
+        Error,
+    };
 
     use super::Withdrawal;
 
@@ -97,10 +103,10 @@ mod test {
     fn execute_withdraw_fails_on_insufficient_funds() {
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
-        let source = jstz_mock::account1();
+        let source = NewAddress::User(jstz_mock::account1());
         let withdrawal = Withdrawal {
             amount: 11,
-            receiver: jstz_mock::account2(),
+            receiver: NewAddress::User(jstz_mock::account2()),
         };
         let ticketer =
             ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER).unwrap();
@@ -122,10 +128,10 @@ mod test {
     fn execute_withdraw_succeeds() {
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
-        let source = jstz_mock::account1();
+        let source = NewAddress::User(jstz_mock::account1());
         let withdrawal = Withdrawal {
             amount: 10,
-            receiver: jstz_mock::account2(),
+            receiver: NewAddress::User(jstz_mock::account2()),
         };
         let ticketer =
             ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER).unwrap();

@@ -1,17 +1,23 @@
 use crate::{
-    context::account::{Account, Address, Amount, Nonce, ParsedCode},
+    context::{
+        account::{Account, Amount, Nonce, ParsedCode},
+        new_account::NewAddress,
+    },
     Error, Result,
 };
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::{hash::Blake2b, public_key::PublicKey, signature::Signature};
+use jstz_crypto::{
+    hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
+    signature::Signature,
+};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
 pub struct Operation {
-    pub source: Address,
+    pub source: PublicKeyHash,
     pub nonce: Nonce,
     pub content: Content,
 }
@@ -20,7 +26,7 @@ pub type OperationHash = Blake2b;
 
 impl Operation {
     /// Returns the source of the operation
-    pub fn source(&self) -> &Address {
+    pub fn source(&self) -> &PublicKeyHash {
         &self.source
     }
 
@@ -36,7 +42,7 @@ impl Operation {
         rt: &impl HostRuntime,
         tx: &mut Transaction,
     ) -> Result<()> {
-        let next_nonce = Account::nonce(rt, tx, &self.source)?;
+        let next_nonce = Account::nonce(rt, tx, &NewAddress::User(self.source.clone()))?;
 
         if self.nonce == *next_nonce {
             next_nonce.increment();
@@ -170,7 +176,7 @@ pub mod external {
         // Amount to deposit
         pub amount: Amount,
         // Receiver address
-        pub receiver: Address,
+        pub receiver: NewAddress,
     }
 
     #[derive(Debug, PartialEq, Eq)]
@@ -181,9 +187,9 @@ pub mod external {
         // Amount to deposit
         pub amount: Amount,
         // Final deposit receiver address
-        pub receiver: Address,
+        pub receiver: NewAddress,
         // Optional proxy contract
-        pub proxy_smart_function: Option<Address>,
+        pub proxy_smart_function: Option<NewAddress>,
         // Ticket hash
         pub ticket_hash: TicketHash,
     }

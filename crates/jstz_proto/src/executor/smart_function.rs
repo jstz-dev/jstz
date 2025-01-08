@@ -21,12 +21,15 @@ use jstz_core::{
     host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
     Module, Realm,
 };
-use jstz_crypto::hash::Hash;
+use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
 use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     api::{self, TraceData},
-    context::account::{Account, Address, Amount, ParsedCode},
+    context::{
+        account::{Account, Amount, ParsedCode},
+        new_account::NewAddress,
+    },
     js_logger::JsonLogger,
     operation::{OperationHash, RunFunction},
     receipt,
@@ -39,7 +42,10 @@ pub mod headers {
     use super::*;
     pub const REFERRER: &str = "Referer";
 
-    pub fn test_and_set_referrer(request: &Request, referer: &Address) -> JsResult<()> {
+    pub fn test_and_set_referrer(
+        request: &Request,
+        referer: &NewAddress,
+    ) -> JsResult<()> {
         if request.headers().deref().contains_key(REFERRER) {
             return Err(JsError::from_native(
                 JsNativeError::error().with_message("Referer already set"),
@@ -107,7 +113,7 @@ fn try_apply_to_value_or_promise(
     }
 }
 
-fn compute_seed(address: &Address, operation_hash: &OperationHash) -> u64 {
+fn compute_seed(address: &NewAddress, operation_hash: &OperationHash) -> u64 {
     let mut seed: u64 = 0;
     for byte in operation_hash.as_array().iter().chain(address.as_bytes()) {
         seed = seed.rotate_left(8).bitxor(*byte as u64)
@@ -127,13 +133,19 @@ pub fn register_web_apis(realm: &Realm, context: &mut Context) {
 
 pub fn register_jstz_apis(
     realm: &Realm,
-    address: &Address,
+    address: &NewAddress,
     seed: u64,
     context: &mut Context,
 ) {
+    // TODO: remove once smart function address is supported
+    // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
+    let pkh = match address {
+        NewAddress::User(pkh) => pkh,
+        _ => panic!("Smart function address is not supported yet"),
+    };
     realm.register_api(
         jstz_api::KvApi {
-            address: address.clone(),
+            address: pkh.clone(),
         },
         context,
     );
@@ -181,7 +193,7 @@ impl Script {
     pub fn load(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        address: &Address,
+        address: &NewAddress,
         context: &mut Context,
     ) -> Result<Self> {
         let src =
@@ -200,7 +212,7 @@ impl Script {
 
     fn register_apis(
         &self,
-        address: &Address,
+        address: &NewAddress,
         operation_hash: &OperationHash,
         context: &mut Context,
     ) {
@@ -217,7 +229,7 @@ impl Script {
     /// and evaluating the module of the script
     pub fn init(
         &self,
-        address: &Address,
+        address: &NewAddress,
         operation_hash: &OperationHash,
         context: &mut Context,
     ) -> JsPromise {
@@ -230,13 +242,17 @@ impl Script {
     pub fn deploy(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        source: &Address,
+        source: &NewAddress,
         code: ParsedCode,
         balance: Amount,
-    ) -> Result<Address> {
+    ) -> Result<NewAddress> {
         let nonce = Account::nonce(hrt, tx, source)?;
 
-        let address = Address::digest(format!("{}{}{}", source, code, nonce).as_bytes())?;
+        // TODO: use sf address
+        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
+        let address = NewAddress::User(PublicKeyHash::digest(
+            format!("{}{}{}", source, code, nonce).as_bytes(),
+        )?);
 
         let account = Account::create(hrt, tx, &address, balance, Some(code));
         if account.is_ok() {
@@ -255,7 +271,7 @@ impl Script {
     /// Runs the script
     pub fn run(
         &self,
-        address: &Address,
+        address: &NewAddress,
         operation_hash: &OperationHash,
         request: &JsValue,
         context: &mut Context,
@@ -313,7 +329,7 @@ impl Script {
 
     /// Loads, initializes and runs the script
     pub fn load_init_run(
-        address: Address,
+        address: NewAddress,
         operation_hash: OperationHash,
         request: &JsValue,
         context: &mut Context,
@@ -389,7 +405,7 @@ impl HostScript {
     }
 
     pub fn run(
-        self_address: &Address,
+        self_address: &NewAddress,
         request: &mut GcRefMut<'_, ErasedObject, Request>,
         context: &mut Context,
     ) -> JsResult<JsValue> {
@@ -447,7 +463,7 @@ pub mod run {
     pub fn execute(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &Address,
+        source: &NewAddress,
         run: operation::RunFunction,
         operation_hash: OperationHash,
     ) -> Result<receipt::RunFunctionReceipt> {
@@ -464,7 +480,8 @@ pub mod run {
         register_web_apis(&rt.realm().clone(), rt);
 
         // 2. Extract address from request
-        let address = Address::from_base58(uri.host().ok_or(Error::InvalidAddress)?)?;
+        //TODO: check if this is sf address
+        let address = NewAddress::from_base58(uri.host().ok_or(Error::InvalidAddress)?)?;
 
         // 3. Deserialize request
         let http_request = create_http_request(uri, method, headers, body)?;
@@ -561,7 +578,7 @@ pub mod jstz_run {
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         ticketer: &ContractKt1Hash,
-        source: &Address,
+        source: &NewAddress,
         run: RunFunction,
     ) -> Result<receipt::RunFunctionReceipt> {
         let uri = run.uri.clone();
@@ -603,7 +620,7 @@ pub mod jstz_run {
     pub fn execute_without_ticketer(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &Address,
+        source: &NewAddress,
         run: RunFunction,
     ) -> Result<receipt::RunFunctionReceipt> {
         let ticketer_path = OwnedPath::from(&RefPath::assert_from(b"/ticketer"));
@@ -632,7 +649,7 @@ pub mod jstz_run {
             Error,
         };
 
-        use super::execute;
+        use super::{execute, NewAddress};
 
         fn withdraw_request() -> RunFunction {
             RunFunction {
@@ -662,7 +679,7 @@ pub mod jstz_run {
                 ticketer: jstz_mock::kt1_account1(),
             };
             let routing_info = RoutingInfo {
-                receiver: jstz_mock::account2(),
+                receiver: NewAddress::User(jstz_mock::account2()),
                 proxy_l1_contract: jstz_mock::kt1_account1(),
             };
             let fa_withdrawal = FaWithdraw {
@@ -687,7 +704,7 @@ pub mod jstz_run {
         fn execute_fails_on_invalid_host() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = jstz_mock::account1();
+            let source = NewAddress::User(jstz_mock::account1());
             let req = RunFunction {
                 uri: Uri::try_from("tezos://example.com/withdraw").unwrap(),
                 ..withdraw_request()
@@ -703,7 +720,7 @@ pub mod jstz_run {
         fn execute_fails_on_unsupported_path() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = jstz_mock::account1();
+            let source = NewAddress::User(jstz_mock::account1());
             let req = RunFunction {
                 uri: Uri::try_from("tezos://jstz/blahblah").unwrap(),
                 ..withdraw_request()
@@ -719,7 +736,7 @@ pub mod jstz_run {
         fn execute_wthdraw_fails_on_invalid_request_method() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = jstz_mock::account1();
+            let source = NewAddress::User(jstz_mock::account1());
             let req = RunFunction {
                 method: Method::GET,
                 ..withdraw_request()
@@ -738,7 +755,7 @@ pub mod jstz_run {
         fn execute_wthdraw_fails_on_invalid_request_body() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = jstz_mock::account1();
+            let source = NewAddress::User(jstz_mock::account1());
             let req = RunFunction {
                 body: Some(
                     json!({
@@ -769,7 +786,7 @@ pub mod jstz_run {
         fn execute_withdraw_succeeds() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = jstz_mock::account1();
+            let source = NewAddress::User(jstz_mock::account1());
 
             tx.begin();
             Account::add_balance(&host, &mut tx, &source, 10).unwrap();
@@ -794,7 +811,7 @@ pub mod jstz_run {
         fn execute_without_ticketer_succeeds() {
             let mut host = JstzMockHost::default();
             let mut tx = Transaction::default();
-            let source = jstz_mock::account1();
+            let source = NewAddress::User(jstz_mock::account1());
             let rt = host.rt();
 
             tx.begin();
@@ -817,7 +834,7 @@ pub mod jstz_run {
         fn execute_fa_withdraw_fails_on_invalid_request_method() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = jstz_mock::account1();
+            let source = NewAddress::User(jstz_mock::account1());
             let req = RunFunction {
                 method: Method::GET,
                 ..fa_withdraw_request()
@@ -836,7 +853,7 @@ pub mod jstz_run {
         fn execute_fa_withdraw_fails_on_invalid_request_body() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = jstz_mock::account1();
+            let source = NewAddress::User(jstz_mock::account1());
             let req = RunFunction {
                 body: Some(
                     json!({
@@ -867,7 +884,7 @@ pub mod jstz_run {
         fn execute_fa_withdraw_succeeds() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = jstz_mock::account1();
+            let source = NewAddress::User(jstz_mock::account1());
 
             let ticket = TicketInfo {
                 id: 1234,
@@ -905,7 +922,7 @@ pub mod deploy {
     pub fn execute(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        source: &Address,
+        source: &NewAddress,
         deployment: operation::DeployFunction,
     ) -> Result<receipt::DeployFunctionReceipt> {
         let operation::DeployFunction {

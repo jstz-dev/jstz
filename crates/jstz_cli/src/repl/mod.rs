@@ -1,6 +1,5 @@
 use std::{borrow::Cow, fmt::Write};
 
-use anyhow::bail;
 use boa_engine::{js_string, Context, JsResult, JsValue, Source};
 use jstz_api::{js_log::set_js_logger, stream::StreamApi};
 use jstz_core::{
@@ -8,10 +7,7 @@ use jstz_core::{
     kv::Transaction,
     runtime::{self, Runtime},
 };
-use jstz_proto::{
-    context::new_account::NewAddress,
-    executor::smart_function::{register_jstz_apis, register_web_apis},
-};
+use jstz_proto::executor::smart_function::{register_jstz_apis, register_web_apis};
 use log::{debug, error, info, warn};
 use rustyline::{
     completion::Completer, error::ReadlineError, highlight::Highlighter, hint::Hinter,
@@ -118,12 +114,6 @@ pub async fn exec(account: Option<AddressOrAlias>) -> Result<()> {
             .expect("`DEFAULT_SMART_FUNCTION_ADDRESS` is an invalid address."),
     };
     debug!("resolved `account` -> {:?}", address);
-    // TODO: use NewAddress after jstz-proto is updated
-    // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
-    let address = match address {
-        NewAddress::User(address) => address,
-        _ => bail!("address type mismatch - expected user address"),
-    };
 
     // 1. Setup editor
     let mut rl = Editor::<JsHighlighter, _>::new()?;

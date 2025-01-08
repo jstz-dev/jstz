@@ -6,7 +6,8 @@ use serde::Deserialize;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::{api::TraceData, context::account::Address};
+use crate::api::TraceData;
+use crate::context::new_account::NewAddress;
 
 pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
 
@@ -14,7 +15,7 @@ pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
 
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct LogRecord {
-    pub address: Address,
+    pub address: NewAddress,
     pub request_id: String,
     pub level: LogLevel,
     pub text: String,

@@ -1,5 +1,5 @@
 use crate::{
-    context::account::Address,
+    context::new_account::NewAddress,
     executor::{fa_deposit::FaDepositReceipt, fa_withdraw::FaWithdrawReceipt},
     operation::OperationHash,
     Result,
@@ -49,7 +49,7 @@ impl Receipt {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct DeployFunctionReceipt {
-    pub address: Address,
+    pub address: NewAddress,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
@@ -68,7 +68,7 @@ pub struct RunFunctionReceipt {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub struct DepositReceipt {
-    pub account: Address,
+    pub account: NewAddress,
     pub updated_balance: u64,
 }
 
