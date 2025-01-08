@@ -1,6 +1,5 @@
 use octez::unused_port;
 use rust_embed::Embed;
-use std::path::Path;
 
 use crate::task::jstzd::JstzdConfig;
 use crate::{
@@ -15,6 +14,7 @@ use octez::r#async::protocol::{
 use octez::r#async::{
     baker::{BakerBinaryPath, OctezBakerConfig, OctezBakerConfigBuilder},
     client::{OctezClientConfig, OctezClientConfigBuilder},
+    file::FileWrapper,
     node_config::{OctezNodeConfig, OctezNodeConfigBuilder},
     protocol::{BootstrapAccount, ProtocolParameterBuilder},
     rollup::{OctezRollupConfigBuilder, RollupDataDir},
@@ -24,7 +24,6 @@ use tezos_crypto_rs::hash::SmartRollupHash;
 use tokio::io::AsyncReadExt;
 
 const DEFAULT_JSTZD_SERVER_PORT: u16 = 55555;
-const KERNEL_DEBUG_FILE: &str = "kernel.log";
 const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
@@ -93,8 +92,9 @@ pub(crate) async fn build_config(
         &protocol_params,
     )?;
 
-    let kernel_debug_file = Path::new(KERNEL_DEBUG_FILE);
     let octez_node_endpoint = octez_node_config.rpc_endpoint.clone();
+    let kernel_debug_file = FileWrapper::default();
+    let kernel_debug_file_path = kernel_debug_file.path();
     let octez_rollup_config = OctezRollupConfigBuilder::new(
         octez_node_endpoint,
         octez_client_config.base_dir().into(),
@@ -113,7 +113,7 @@ pub(crate) async fn build_config(
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
-        kernel_debug_file,
+        &kernel_debug_file_path,
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
@@ -236,7 +236,7 @@ mod tests {
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tokio::io::AsyncReadExt;
 
-    use super::{jstz_rollup_path, ACTIVATOR_PK, JSTZ_ROLLUP_ADDRESS, KERNEL_DEBUG_FILE};
+    use super::{jstz_rollup_path, ACTIVATOR_PK, JSTZ_ROLLUP_ADDRESS};
 
     use super::Config;
 
@@ -547,16 +547,6 @@ mod tests {
             JSTZ_ROLLUP_ADDRESS
         );
         assert_eq!(
-            config
-                .octez_rollup_config()
-                .kernel_debug_file
-                .as_ref()
-                .unwrap()
-                .to_str()
-                .unwrap(),
-            KERNEL_DEBUG_FILE,
-        );
-        assert_eq!(
             config.octez_rollup_config().data_dir,
             RollupDataDir::TempWithPreImages {
                 preimages_dir: jstz_rollup_path::preimages_path(),
@@ -565,10 +555,6 @@ mod tests {
         assert_eq!(
             config.octez_rollup_config().boot_sector_file,
             jstz_rollup_path::kernel_installer_path()
-        );
-        assert_eq!(
-            config.jstz_node_config().kernel_log_file.to_str().unwrap(),
-            KERNEL_DEBUG_FILE
         );
 
         assert_eq!(

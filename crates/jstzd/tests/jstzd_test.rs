@@ -14,6 +14,7 @@ use jstzd::{BOOTSTRAP_CONTRACT_NAMES, JSTZ_ROLLUP_ADDRESS};
 use octez::r#async::baker::{BakerBinaryPath, OctezBakerConfigBuilder};
 use octez::r#async::client::{OctezClient, OctezClientConfigBuilder};
 use octez::r#async::endpoint::Endpoint;
+use octez::r#async::file::FileWrapper;
 use octez::r#async::node_config::{OctezNodeConfigBuilder, OctezNodeRunOptionsBuilder};
 use octez::r#async::protocol::{
     BootstrapAccount, BootstrapContract, BootstrapSmartRollup, ProtocolParameterBuilder,
@@ -43,7 +44,7 @@ async fn jstzd_test() {
     .unwrap();
     let jstz_node_rpc_endpoint = Endpoint::localhost(unused_port());
     let jstzd_port = unused_port();
-    let (mut jstzd, config, kernel_debug_file) = create_jstzd_server(
+    let (mut jstzd, config) = create_jstzd_server(
         &octez_node_rpc_endpoint,
         &rollup_rpc_endpoint,
         &jstz_node_rpc_endpoint,
@@ -54,7 +55,16 @@ async fn jstzd_test() {
     jstzd.run(false).await.unwrap();
     ensure_jstzd_components_are_up(&jstzd, &octez_node_rpc_endpoint, jstzd_port).await;
 
-    ensure_rollup_is_logging_to(kernel_debug_file).await;
+    match config
+        .octez_rollup_config()
+        .kernel_debug_file
+        .as_ref()
+        .unwrap()
+        .as_ref()
+    {
+        FileWrapper::TempFile(v) => ensure_rollup_is_logging_to(v).await,
+        _ => panic!("kernel_debug_file should be a temp file"),
+    }
 
     let octez_client = OctezClient::new(config.octez_client_config().clone());
     check_bootstrap_contracts(&octez_client).await;
@@ -88,7 +98,7 @@ async fn create_jstzd_server(
     rollup_rpc_endpoint: &Endpoint,
     jstz_node_rpc_endpoint: &Endpoint,
     jstzd_port: u16,
-) -> (JstzdServer, JstzdConfig, NamedTempFile) {
+) -> (JstzdServer, JstzdConfig) {
     let run_options = OctezNodeRunOptionsBuilder::new()
         .set_synchronisation_threshold(0)
         .set_network("sandbox")
@@ -140,7 +150,8 @@ async fn create_jstzd_server(
         .set_octez_node_endpoint(&octez_node_config.rpc_endpoint)
         .build()
         .expect("Failed to build baker config");
-    let kernel_debug_file = NamedTempFile::new().unwrap();
+    let kernel_debug_file = FileWrapper::default();
+    let kernel_debug_file_path = kernel_debug_file.path();
     let rollup_config = OctezRollupConfigBuilder::new(
         octez_node_rpc_endpoint.clone(),
         octez_client_config.base_dir().into(),
@@ -152,13 +163,13 @@ async fn create_jstzd_server(
         preimages_dir: rollup_preimages_dir,
     })
     .set_rpc_endpoint(rollup_rpc_endpoint)
-    .set_kernel_debug_file(kernel_debug_file.path())
+    .set_kernel_debug_file(kernel_debug_file)
     .build()
     .expect("failed to build rollup config");
     let jstz_node_config = JstzNodeConfig::new(
         jstz_node_rpc_endpoint,
         &rollup_config.rpc_endpoint,
-        kernel_debug_file.path(),
+        &kernel_debug_file_path,
     );
     let config = JstzdConfig::new(
         octez_node_config,
@@ -168,11 +179,7 @@ async fn create_jstzd_server(
         jstz_node_config,
         protocol_params,
     );
-    (
-        JstzdServer::new(config.clone(), jstzd_port),
-        config,
-        kernel_debug_file,
-    )
+    (JstzdServer::new(config.clone(), jstzd_port), config)
 }
 
 async fn ensure_jstzd_components_are_up(
@@ -344,7 +351,7 @@ async fn check_bootstrap_contracts(octez_client: &OctezClient) {
         );
     }
 }
-async fn ensure_rollup_is_logging_to(kernel_debug_file: NamedTempFile) {
+async fn ensure_rollup_is_logging_to(kernel_debug_file: &NamedTempFile) {
     let mut file = kernel_debug_file.reopen().unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
