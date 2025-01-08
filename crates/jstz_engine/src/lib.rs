@@ -1,3 +1,4 @@
+mod bigint;
 mod context;
 mod gc;
 mod object;
