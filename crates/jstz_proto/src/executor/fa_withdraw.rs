@@ -4,7 +4,6 @@ use jstz_core::{
     host::HostRuntime,
     kv::{outbox::OutboxMessage, Transaction},
 };
-use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -18,10 +17,7 @@ use tezos_smart_rollup::{
 use utoipa::ToSchema;
 
 use crate::{
-    context::{
-        account::{Address, Amount},
-        ticket_table::TicketTable,
-    },
+    context::{account::Amount, new_account::NewAddress, ticket_table::TicketTable},
     Error, Result,
 };
 
@@ -36,7 +32,7 @@ pub struct FaWithdraw {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoutingInfo {
-    pub receiver: Address,
+    pub receiver: NewAddress,
     pub proxy_l1_contract: ContractKt1Hash,
 }
 
@@ -85,7 +81,7 @@ type OutboxMessageId = String;
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
 #[serde(tag = "_type")]
 pub struct FaWithdrawReceipt {
-    pub source: PublicKeyHash,
+    pub source: NewAddress,
     pub outbox_message_id: OutboxMessageId,
 }
 
@@ -122,7 +118,7 @@ fn create_fa_withdrawal_message(
 fn withdraw_from_ticket_owner(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    ticket_owner: &Address,
+    ticket_owner: &NewAddress,
     routing_info: &RoutingInfo,
     amount: Amount,
     ticket: Ticket,
@@ -148,7 +144,7 @@ impl FaWithdraw {
         self,
         rt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &Address,
+        source: &NewAddress,
     ) -> Result<FaWithdrawReceipt> {
         if self.amount == 0 {
             Err(Error::ZeroAmountNotAllowed)?
@@ -173,7 +169,7 @@ impl FaWithdraw {
         self,
         rt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &Address,
+        source: &NewAddress,
         // TODO: https://linear.app/tezos/issue/JSTZ-114/fa-withdraw-gas-calculation
         // Properly consume gas
         _gas_limit: u64,
@@ -210,7 +206,7 @@ mod test {
             ticketer: jstz_mock::kt1_account1(),
         };
         let routing_info = RoutingInfo {
-            receiver: jstz_mock::account2(),
+            receiver: NewAddress::User(jstz_mock::account2()),
             proxy_l1_contract: jstz_mock::kt1_account1(),
         };
         FaWithdraw {
@@ -224,7 +220,7 @@ mod test {
     fn execute_fa_withdraw_succeeds() {
         let mut rt = MockHost::default();
         let mut tx = Transaction::default();
-        let source = jstz_mock::account1();
+        let source = NewAddress::User(jstz_mock::account1());
         let fa_withdrawal = create_fa_withdrawal();
         let FaWithdraw {
             amount,
@@ -292,7 +288,7 @@ mod test {
     fn execute_fa_withdraw_fails_on_insufficient_funds() {
         let mut rt = MockHost::default();
         let mut tx = Transaction::default();
-        let source = jstz_mock::account1();
+        let source = NewAddress::User(jstz_mock::account1());
         let fa_withdrawal = create_fa_withdrawal();
 
         tx.begin();
@@ -319,14 +315,14 @@ mod test {
     fn execute_fa_withdraw_fails_on_zero_amount() {
         let mut rt = MockHost::default();
         let mut tx = Transaction::default();
-        let source = jstz_mock::account1();
+        let source = NewAddress::User(jstz_mock::account1());
         let ticket_info = TicketInfo {
             id: 1234,
             content: Some(b"random ticket content".to_vec()),
             ticketer: jstz_mock::kt1_account1(),
         };
         let routing_info = RoutingInfo {
-            receiver: jstz_mock::account2(),
+            receiver: NewAddress::User(jstz_mock::account2()),
             proxy_l1_contract: jstz_mock::kt1_account1(),
         };
         let fa_withdrawal = FaWithdraw {

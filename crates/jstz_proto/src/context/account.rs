@@ -9,12 +9,11 @@ use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
 };
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 use utoipa::ToSchema;
 
-pub type Address = PublicKeyHash;
+use super::new_account::NewAddress;
 
 pub type Amount = u64;
 
@@ -76,7 +75,7 @@ pub struct Account {
 const ACCOUNTS_PATH: RefPath = RefPath::assert_from(b"/jstz_account");
 
 impl Account {
-    pub fn path(pkh: &Address) -> Result<OwnedPath> {
+    pub fn path(pkh: &NewAddress) -> Result<OwnedPath> {
         let account_path = OwnedPath::try_from(format!("/{}", pkh))?;
 
         Ok(path::concat(&ACCOUNTS_PATH, &account_path)?)
@@ -85,7 +84,7 @@ impl Account {
     fn get_mut<'a, 'b>(
         hrt: &impl HostRuntime,
         tx: &'b mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
     ) -> Result<&'b mut Self>
     where
         'a: 'b,
@@ -98,7 +97,7 @@ impl Account {
         self,
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
     ) -> Result<()> {
         match tx.entry::<Self>(hrt, Self::path(addr)?)? {
             Entry::Occupied(ntry) => {
@@ -112,20 +111,20 @@ impl Account {
             }
         }
     }
+
     pub fn nonce<'a>(
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
     ) -> Result<&'a mut Nonce> {
         let account = Self::get_mut(hrt, tx, addr)?;
-
         Ok(&mut account.nonce)
     }
 
     pub fn function_code<'a>(
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
     ) -> Result<Option<&'a mut String>> {
         let account = Self::get_mut(hrt, tx, addr)?;
         let function_code = account.function_code.as_mut().map(|code| &mut code.0);
@@ -135,11 +134,10 @@ impl Account {
     pub fn set_function_code(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
         function_code: String,
     ) -> Result<()> {
         let account = Self::get_mut(hrt, tx, addr)?;
-
         account.function_code = Some(function_code.try_into()?);
         Ok(())
     }
@@ -147,17 +145,16 @@ impl Account {
     pub fn balance(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
     ) -> Result<Amount> {
         let account = Self::get_mut(hrt, tx, addr)?;
-
         Ok(account.amount)
     }
 
     pub fn add_balance(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
         amount: Amount,
     ) -> Result<u64> {
         let account = Self::get_mut(hrt, tx, addr)?;
@@ -173,7 +170,7 @@ impl Account {
     pub fn sub_balance(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
         amount: Amount,
     ) -> Result<u64> {
         let account = Self::get_mut(hrt, tx, addr)?;
@@ -187,11 +184,10 @@ impl Account {
     pub fn set_balance(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
         amount: Amount,
     ) -> Result<()> {
         let account = Self::get_mut(hrt, tx, addr)?;
-
         account.amount = amount;
         Ok(())
     }
@@ -199,7 +195,7 @@ impl Account {
     pub fn create(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
         amount: Amount,
         function_code: Option<ParsedCode>,
     ) -> Result<()> {
@@ -214,8 +210,8 @@ impl Account {
     pub fn transfer(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        src: &Address,
-        dst: &Address,
+        src: &NewAddress,
+        dst: &NewAddress,
         amt: Amount,
     ) -> Result<()> {
         {
@@ -243,7 +239,7 @@ impl Account {
 #[cfg(test)]
 mod test {
     use super::*;
-    use jstz_crypto::hash::Hash;
+    use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
     use tezos_smart_rollup_mock::MockHost;
 
     #[test]
@@ -258,7 +254,7 @@ mod test {
 
         // Act
         let amt = {
-            tx.entry::<Account>(hrt, Account::path(&pkh)?)?
+            tx.entry::<Account>(hrt, Account::path(&NewAddress::User(pkh))?)?
                 .or_insert_default()
                 .amount
         };
@@ -279,8 +275,10 @@ mod test {
 
         tx.begin();
 
-        let pkh = PublicKeyHash::from_base58("tz1XQjK1b3P72kMcHsoPhnAg3dvX1n8Ainty")
-            .expect("Could not parse pkh");
+        let pkh = NewAddress::User(
+            PublicKeyHash::from_base58("tz1XQjK1b3P72kMcHsoPhnAg3dvX1n8Ainty")
+                .expect("Could not parse pkh"),
+        );
 
         Account::create(hrt, tx, &pkh, 10, None).unwrap();
         Account::sub_balance(hrt, tx, &pkh, 10).unwrap();

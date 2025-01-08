@@ -12,10 +12,12 @@ use jstz_core::{
     accessor, host::HostRuntime, kv::Transaction, native::Accessor, runtime,
     value::IntoJs,
 };
-use jstz_crypto::hash::Hash;
 
 use crate::{
-    context::account::{Account, Address, Amount},
+    context::{
+        account::{Account, Amount},
+        new_account::NewAddress,
+    },
     error::Result,
 };
 
@@ -25,7 +27,7 @@ use crate::{
 
 #[derive(JsData)]
 struct Ledger {
-    address: Address,
+    address: NewAddress,
 }
 
 impl Finalize for Ledger {}
@@ -42,7 +44,7 @@ impl Ledger {
     fn balance(
         rt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &Address,
+        addr: &NewAddress,
     ) -> Result<u64> {
         let balance = Account::balance(rt, tx, addr)?;
 
@@ -53,7 +55,7 @@ impl Ledger {
         &self,
         rt: &impl HostRuntime,
         tx: &mut Transaction,
-        dst: &Address,
+        dst: &NewAddress,
         amount: Amount,
     ) -> Result<()> {
         Account::transfer(rt, tx, &self.address, dst, amount)?;
@@ -63,10 +65,10 @@ impl Ledger {
 }
 
 pub struct LedgerApi {
-    pub address: Address,
+    pub address: NewAddress,
 }
 
-pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<Address> {
+pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<NewAddress> {
     let pkh_string = value
         .as_string()
         .ok_or_else(|| {
@@ -75,7 +77,7 @@ pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<Address> {
         })
         .map(JsString::to_std_string_escaped)?;
 
-    Ok(Address::from_base58(&pkh_string)?)
+    NewAddress::from_base58(&pkh_string)
 }
 
 impl Ledger {

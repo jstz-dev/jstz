@@ -1,13 +1,12 @@
 use derive_more::{Display, Error, From};
 use jstz_core::kv::{Entry, Transaction};
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use tezos_smart_rollup::{
     host::Runtime,
     michelson::ticket::TicketHash,
     storage::path::{self, OwnedPath, RefPath},
 };
 
-use super::account::Amount;
+use super::{account::Amount, new_account::NewAddress};
 
 use crate::error::Result;
 
@@ -23,7 +22,7 @@ const TICKET_TABLE_PATH: RefPath = RefPath::assert_from(b"/ticket_table");
 pub struct TicketTable;
 
 impl TicketTable {
-    fn path(ticket_hash: &TicketHash, owner: &PublicKeyHash) -> Result<OwnedPath> {
+    fn path(ticket_hash: &TicketHash, owner: &NewAddress) -> Result<OwnedPath> {
         let ticket_hash_path = OwnedPath::try_from(format!("/{}", ticket_hash))?;
         let owner_path = OwnedPath::try_from(format!("/{}", owner))?;
 
@@ -36,7 +35,7 @@ impl TicketTable {
     pub fn get_balance(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
-        owner: &PublicKeyHash,
+        owner: &NewAddress,
         ticket_hash: &TicketHash,
     ) -> Result<Amount> {
         let path = Self::path(ticket_hash, owner)?;
@@ -54,7 +53,7 @@ impl TicketTable {
     pub fn add(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
-        owner: &PublicKeyHash,
+        owner: &NewAddress,
         ticket_hash: &TicketHash,
         amount: Amount, // TODO: check if its the correct size
     ) -> Result<Amount> {
@@ -81,7 +80,7 @@ impl TicketTable {
     pub fn sub(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
-        owner: &PublicKeyHash,
+        owner: &NewAddress,
         ticket_hash: &TicketHash,
         amount: u64,
     ) -> Result<Amount> {
@@ -102,15 +101,33 @@ impl TicketTable {
 
 #[cfg(test)]
 mod test {
-    use super::TicketTable;
+    use super::*;
     use jstz_core::kv::Transaction;
+    use jstz_crypto::{
+        hash::Hash, public_key_hash::PublicKeyHash,
+        smart_function_hash::SmartFunctionHash,
+    };
     use jstz_mock::host::JstzMockHost;
     use tezos_smart_rollup_mock::MockHost;
+
+    fn user_address() -> NewAddress {
+        NewAddress::User(
+            PublicKeyHash::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx")
+                .expect("Could not parse pkh"),
+        )
+    }
+
+    fn smart_function_address() -> NewAddress {
+        NewAddress::SmartFunction(
+            SmartFunctionHash::from_base58("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
+                .expect("Could not parse smart function hash"),
+        )
+    }
 
     #[test]
     fn path_format() {
         let ticket_hash = jstz_mock::ticket_hash1();
-        let owner = jstz_mock::account1();
+        let owner = user_address();
         let result = TicketTable::path(&ticket_hash, &owner).unwrap();
         let expected = "/ticket_table/4db276d5f50bc2ad959b0f08bb34fbdf4fbe4bf95a689ffb9e922038430840d7/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
         assert_eq!(expected, result.to_string());
@@ -122,7 +139,7 @@ mod test {
         let mut tx = Transaction::default();
 
         tx.begin();
-        let owner = jstz_mock::account1();
+        let owner = user_address();
         let ticket_hash = jstz_mock::ticket_hash1();
         let amount = 100;
         TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
@@ -144,7 +161,7 @@ mod test {
         let mut tx = Transaction::default();
 
         tx.begin();
-        let owner = jstz_mock::account1();
+        let owner = user_address();
         let ticket_hash = jstz_mock::ticket_hash1();
         let amount = u64::MAX;
         TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
@@ -159,7 +176,7 @@ mod test {
         let mut tx = Transaction::default();
 
         tx.begin();
-        let owner = jstz_mock::account1();
+        let owner = user_address();
         let ticket_hash = jstz_mock::ticket_hash1();
         let amount = 100;
         TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
@@ -177,7 +194,7 @@ mod test {
         let mut tx = Transaction::default();
 
         tx.begin();
-        let owner = jstz_mock::account1();
+        let owner = user_address();
         let ticket_hash = jstz_mock::ticket_hash1();
         let amount = 100;
         let err = TicketTable::sub(host.rt(), &mut tx, &owner, &ticket_hash, amount)
@@ -192,7 +209,7 @@ mod test {
     fn update_tickets_in_succession() {
         let mut rt = MockHost::default();
         let mut tx = Transaction::default();
-        let owner = jstz_mock::account1();
+        let owner = user_address();
         let ticket_hash = jstz_mock::ticket_hash1();
 
         let add_100 = 100;
@@ -216,5 +233,34 @@ mod test {
         let result =
             TicketTable::get_balance(&mut rt, &mut tx, &owner, &ticket_hash).unwrap();
         assert_eq!(130, result)
+    }
+
+    #[test]
+    fn smart_function_ticket_operations() {
+        let mut host = JstzMockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+
+        let owner = smart_function_address();
+        let ticket_hash = jstz_mock::ticket_hash1();
+
+        // Test initial balance is 0
+        let balance =
+            TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash).unwrap();
+        assert_eq!(0, balance);
+
+        // Test adding tickets
+        let amount = 100;
+        TicketTable::add(host.rt(), &mut tx, &owner, &ticket_hash, amount).unwrap();
+        let balance =
+            TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash).unwrap();
+        assert_eq!(100, balance);
+
+        // Test subtracting tickets
+        let sub_amount = 30;
+        TicketTable::sub(host.rt(), &mut tx, &owner, &ticket_hash, sub_amount).unwrap();
+        let balance =
+            TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash).unwrap();
+        assert_eq!(70, balance);
     }
 }

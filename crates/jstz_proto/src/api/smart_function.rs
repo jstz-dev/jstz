@@ -12,10 +12,12 @@ use jstz_core::{
     host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
     value::IntoJs,
 };
-use jstz_crypto::hash::Hash;
 
 use crate::{
-    context::account::{Account, Address, Amount, ParsedCode},
+    context::{
+        account::{Account, Amount, ParsedCode},
+        new_account::NewAddress,
+    },
     executor::{
         smart_function::{headers, HostScript, Script},
         JSTZ_HOST,
@@ -28,7 +30,7 @@ use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
 #[derive(JsData)]
 pub struct TraceData {
-    pub address: Address,
+    pub address: NewAddress,
     pub operation_hash: OperationHash,
 }
 
@@ -40,7 +42,7 @@ unsafe impl Trace for TraceData {
 
 #[derive(JsData)]
 struct SmartFunction {
-    address: Address,
+    address: NewAddress,
 }
 impl Finalize for SmartFunction {}
 
@@ -90,7 +92,7 @@ impl SmartFunction {
 
     // Invariant: The function should always be called within a js_host_context
     fn call(
-        self_address: &Address,
+        self_address: &NewAddress,
         request: &JsNativeObject<Request>,
         operation_hash: OperationHash,
         context: &mut Context,
@@ -100,7 +102,7 @@ impl SmartFunction {
         match request_deref.url().domain() {
             Some(JSTZ_HOST) => HostScript::run(self_address, &mut request_deref, context),
             Some(address) => {
-                let address = Address::from_base58(address).map_err(|_| {
+                let address = NewAddress::from_base58(address).map_err(|_| {
                     JsError::from_native(
                         JsNativeError::error().with_message("Invalid host"),
                     )
@@ -119,14 +121,14 @@ impl SmartFunction {
 }
 
 pub struct SmartFunctionApi {
-    pub address: Address,
+    pub address: NewAddress,
 }
 
 impl SmartFunctionApi {
     const NAME: &'static str = "SmartFunction";
 
     fn fetch(
-        address: &Address,
+        address: &NewAddress,
         args: &[JsValue],
         context: &mut Context,
     ) -> JsResult<JsValue> {
@@ -255,13 +257,17 @@ mod test {
         runtime::{self, with_js_hrt_and_tx},
         Runtime,
     };
-    use jstz_crypto::hash::{Blake2b, Hash};
+    use jstz_crypto::{
+        hash::{Blake2b, Hash},
+        public_key_hash::PublicKeyHash,
+    };
     use jstz_mock::host::JstzMockHost;
     use serde_json::json;
 
     use crate::{
         context::{
-            account::{Account, Address, ParsedCode},
+            account::{Account, ParsedCode},
+            new_account::NewAddress,
             ticket_table::TicketTable,
         },
         executor::smart_function::{self, register_web_apis, Script},
@@ -281,11 +287,15 @@ mod test {
 
         register_web_apis(&realm, context);
 
-        let self_address = Address::digest(b"random bytes").unwrap();
+        // TODO: Use sf address instead
+        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
+        let self_address =
+            NewAddress::User(PublicKeyHash::digest(b"random bytes").unwrap());
         let amount = 100;
 
         let operation_hash = Blake2b::from(b"operation_hash".as_ref());
-        let receiver = Address::digest(b"receiver address").unwrap();
+        let receiver =
+            NewAddress::User(PublicKeyHash::digest(b"receiver address").unwrap());
         let http_request = http::Request::builder()
             .method(Method::POST)
             .uri("tezos://jstz/withdraw")
@@ -326,7 +336,7 @@ mod test {
         let mut mock_host = JstzMockHost::default();
         let host = mock_host.rt();
         let mut tx = Transaction::default();
-        let source = jstz_mock::account1();
+        let source = NewAddress::User(jstz_mock::account1());
         let code = r#"
         export default (request) => {
             const withdrawRequest = new Request("tezos://jstz/withdraw", {
@@ -395,8 +405,8 @@ mod test {
 
     #[test]
     fn host_script_fa_withdraw_from_smart_function_succeeds() {
-        let receiver = jstz_mock::account1();
-        let source = jstz_mock::account2();
+        let receiver = NewAddress::User(jstz_mock::account1());
+        let source = NewAddress::User(jstz_mock::account2());
         let ticketer = jstz_mock::kt1_account1();
         let ticketer_string = ticketer.clone();
         let l1_proxy_contract = ticketer.clone();

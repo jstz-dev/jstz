@@ -9,6 +9,7 @@ use jstz_crypto::hash::Hash;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 #[derive(
     Debug,
@@ -21,13 +22,13 @@ use serde::{Deserialize, Serialize};
     Serialize,
     Deserialize,
     Finalize,
-    // TODO: Add back when renamed
-    // https://linear.app/tezos/issue/JSTZ-253/remove-old-accountrs
-    // ToSchema,
+    ToSchema,
 )]
 #[serde(untagged)]
-/// TODO: rename to Address
+// TODO: rename to Address
 // https://linear.app/tezos/issue/JSTZ-253/remove-old-accountrs
+#[schema(as = Address)]
+#[schema(description = "Tezos Address")]
 pub enum NewAddress {
     User(PublicKeyHash),
     SmartFunction(SmartFunctionHash),
@@ -90,6 +91,13 @@ impl NewAddress {
         match self {
             Self::User(hash) => hash.to_base58(),
             Self::SmartFunction(hash) => hash.to_base58(),
+        }
+    }
+
+    pub fn as_bytes(&self) -> &[u8] {
+        match self {
+            NewAddress::User(hash) => hash.as_bytes(),
+            NewAddress::SmartFunction(hash) => hash.as_bytes(),
         }
     }
 }
@@ -266,5 +274,22 @@ mod test {
         // Test roundtrip
         let addr = NewAddress::from_base58(&kt1_addr.to_base58()).unwrap();
         assert_eq!(addr, kt1_addr);
+    }
+
+    #[test]
+    fn test_as_bytes() {
+        // Test User address bytes
+        let tz1_addr = NewAddress::from_str(TZ1).unwrap();
+        let tz1_bytes = tz1_addr.as_bytes();
+        assert!(!tz1_bytes.is_empty());
+
+        // Test SmartFunction address bytes
+        let kt1_addr = NewAddress::from_str(KT1).unwrap();
+        let kt1_bytes = kt1_addr.as_bytes();
+        assert!(!kt1_bytes.is_empty());
+
+        // Verify that converting back to base58 works
+        assert_eq!(tz1_addr.to_base58(), TZ1);
+        assert_eq!(kt1_addr.to_base58(), KT1);
     }
 }

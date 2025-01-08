@@ -3,7 +3,7 @@ use std::fmt::{self, Display};
 use jstz_core::{host::HostRuntime, runtime};
 use serde::{Deserialize, Serialize};
 
-use crate::context::account::Address;
+use crate::context::new_account::NewAddress;
 
 pub const REQUEST_START_PREFIX: &str = "[JSTZ:SMART_FUNCTION:REQUEST_START] ";
 pub const REQUEST_END_PREFIX: &str = "[JSTZ:SMART_FUNCTION:REQUEST_END] ";
@@ -12,11 +12,11 @@ pub const REQUEST_END_PREFIX: &str = "[JSTZ:SMART_FUNCTION:REQUEST_END] ";
 #[serde(tag = "type")]
 pub enum RequestEvent {
     Start {
-        address: Address,
+        address: NewAddress,
         request_id: String,
     },
     End {
-        address: Address,
+        address: NewAddress,
         request_id: String,
         // TODO: Add more fields
     },
@@ -36,7 +36,7 @@ impl RequestEvent {
     }
 }
 
-pub fn log_request_start(address: Address, request_id: String) {
+pub fn log_request_start(address: NewAddress, request_id: String) {
     let request_log = RequestEvent::Start {
         address,
         request_id,
@@ -48,7 +48,7 @@ pub fn log_request_start(address: Address, request_id: String) {
     });
 }
 
-pub fn log_request_end(address: Address, request_id: String) {
+pub fn log_request_end(address: NewAddress, request_id: String) {
     let request_log = RequestEvent::End {
         address,
         request_id,

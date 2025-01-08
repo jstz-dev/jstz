@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
-use jstz_proto::context::account::Address;
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::context::new_account::NewAddress;
 use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{
@@ -117,9 +117,9 @@ pub async fn exec(
 
     debug!("Body: {:?}", body);
 
-    // TODO: use NewAddress after jstz-proto is updated
-    // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
-    let user_address: Result<Address> = match user.address.clone() {
+    // TODO: remove
+    //  https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
+    let user_address: Result<PublicKeyHash> = match user.address.clone() {
         NewAddress::User(address) => Ok(address),
         _ => bail!("address type mismatch - expected user address"),
     };

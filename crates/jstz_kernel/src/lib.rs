@@ -94,7 +94,9 @@ mod test {
                 let amount = Account::balance(
                     host.rt(),
                     tx,
-                    &jstz_crypto::public_key_hash::PublicKeyHash::Tz1(tz1),
+                    &NewAddress::User(jstz_crypto::public_key_hash::PublicKeyHash::Tz1(
+                        tz1,
+                    )),
                 )
                 .unwrap();
                 assert_eq!(amount, 100);
@@ -115,13 +117,22 @@ mod test {
         let proxy = crate::executor::smart_function::Script::deploy(
             host.rt(),
             tx,
-            &jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
-                .unwrap(),
+            &NewAddress::User(
+                jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
+                    .unwrap(),
+            ),
             parsed_code,
             100,
         )
         .unwrap();
         tx.commit(host.rt()).unwrap();
+
+        // TODO: use sf address
+        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
+        let proxy = match proxy {
+            NewAddress::User(pkh) => pkh,
+            NewAddress::SmartFunction(_) => panic!("Unexpected proxy"),
+        };
 
         let deposit = MockFaDeposit {
             proxy_contract: Some(proxy),
@@ -134,16 +145,15 @@ mod test {
         match deposit.proxy_contract {
             Some(proxy) => {
                 tx.begin();
-                let proxy_balance =
-                    TicketTable::get_balance(host.rt(), tx, &proxy, &ticket_hash)
-                        .unwrap();
+                let proxy_balance = TicketTable::get_balance(
+                    host.rt(),
+                    tx,
+                    &NewAddress::User(proxy),
+                    &ticket_hash,
+                )
+                .unwrap();
                 assert_eq!(300, proxy_balance);
-                // TODO: use new address after jstz-proto is updated
-                // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
-                let owner = match try_parse_contract(&deposit.receiver).unwrap() {
-                    NewAddress::User(pkh) => pkh,
-                    NewAddress::SmartFunction(_) => panic!("Unexpected owner"),
-                };
+                let owner = try_parse_contract(&deposit.receiver).unwrap();
                 let receiver_balance =
                     TicketTable::get_balance(host.rt(), tx, &owner, &ticket_hash)
                         .unwrap();
@@ -166,16 +176,15 @@ mod test {
             Some(proxy) => {
                 let mut tx = Transaction::default();
                 tx.begin();
-                let proxy_balance =
-                    TicketTable::get_balance(host.rt(), &mut tx, &proxy, &ticket_hash)
-                        .unwrap();
+                let proxy_balance = TicketTable::get_balance(
+                    host.rt(),
+                    &mut tx,
+                    &NewAddress::User(proxy),
+                    &ticket_hash,
+                )
+                .unwrap();
                 assert_eq!(0, proxy_balance);
-                // TODO: use new address after jstz-proto is updated
-                // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
-                let owner = match try_parse_contract(&deposit.receiver).unwrap() {
-                    NewAddress::User(pkh) => pkh,
-                    NewAddress::SmartFunction(_) => panic!("Unexpected owner"),
-                };
+                let owner = try_parse_contract(&deposit.receiver).unwrap();
                 let receiver_balance =
                     TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash)
                         .unwrap();

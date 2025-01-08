@@ -158,10 +158,8 @@ impl LogsService {
                                 #[cfg(not(feature = "persistent-logging"))]
                                 #[allow(irrefutable_let_patterns)]
                                 if let Line::Js(log) = line {
-                                    // TODO: use smart function address once jstz-proto is updated
-                                    // https://linear.app/tezos/issue/JSTZ-261/use-newaddress-for-jstz-proto
                                     broadcaster
-                                        .broadcast(&NewAddress::User(log.address.clone()), &line_str[LOG_PREFIX.len()..])
+                                        .broadcast(&log.address.clone(), &line_str[LOG_PREFIX.len()..])
                                        .await;
                                 }
                             }
