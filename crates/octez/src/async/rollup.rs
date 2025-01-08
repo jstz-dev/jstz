@@ -56,7 +56,8 @@ pub struct OctezRollupConfigBuilder {
     /// if None, use localhost with random port
     pub rpc_endpoint: Option<Endpoint>,
     /// The path to the kernel debug file
-    kernel_debug_file: Option<PathBuf>,
+    #[serde(skip_deserializing)]
+    kernel_debug_file: Option<FileWrapper>,
     /// Path to the log file.
     log_file: Option<PathBuf>,
 }
@@ -99,8 +100,8 @@ impl OctezRollupConfigBuilder {
         self
     }
 
-    pub fn set_kernel_debug_file(mut self, kernel_debug_file: &Path) -> Self {
-        self.kernel_debug_file = Some(kernel_debug_file.to_path_buf());
+    pub fn set_kernel_debug_file(mut self, kernel_debug_file: FileWrapper) -> Self {
+        self.kernel_debug_file.replace(kernel_debug_file);
         self
     }
 
@@ -125,7 +126,7 @@ impl OctezRollupConfigBuilder {
                 let uri = Uri::from_str(&format!("127.0.0.1:{}", unused_port())).unwrap();
                 Endpoint::try_from(uri).unwrap()
             }),
-            kernel_debug_file: self.kernel_debug_file,
+            kernel_debug_file: self.kernel_debug_file.map(Arc::new),
             log_file: Arc::new(match self.log_file {
                 Some(v) => FileWrapper::try_from(v)?,
                 None => FileWrapper::default(),
@@ -147,7 +148,7 @@ pub struct OctezRollupConfig {
     pub boot_sector_file: PathBuf,
     pub rpc_endpoint: Endpoint,
     pub pvm_kind: SmartRollupPvmKind,
-    pub kernel_debug_file: Option<PathBuf>,
+    pub kernel_debug_file: Option<Arc<FileWrapper>>,
     pub log_file: Arc<FileWrapper>,
 }
 
@@ -237,9 +238,13 @@ impl OctezRollup {
 
 #[cfg(test)]
 mod test {
+    use tempfile::NamedTempFile;
+
     use super::*;
     #[test]
     fn builds_rollup_config() {
+        let kernel_debug_file = NamedTempFile::new().unwrap();
+        let kernel_debug_file_path = kernel_debug_file.path().to_path_buf();
         let rollup_config = OctezRollupConfigBuilder::new(
             Endpoint::localhost(1234),
             PathBuf::from("/base_dir"),
@@ -247,7 +252,7 @@ mod test {
             "operator".to_owned(),
             PathBuf::from("/tmp/boot_sector.hex"),
         )
-        .set_kernel_debug_file(Path::new("/tmp/kernel_debug.log"))
+        .set_kernel_debug_file(FileWrapper::TempFile(kernel_debug_file))
         .build()
         .unwrap();
         assert_eq!(rollup_config.pvm_kind, SmartRollupPvmKind::Wasm);
@@ -277,13 +282,15 @@ mod test {
             format!("http://127.0.0.1:{}", port)
         );
         assert_eq!(
-            rollup_config.kernel_debug_file,
-            Some(PathBuf::from("/tmp/kernel_debug.log"))
+            rollup_config.kernel_debug_file.map(|v| v.path()),
+            Some(kernel_debug_file_path)
         );
     }
 
     #[test]
     fn serialize_config() {
+        let kernel_debug_file = NamedTempFile::new().unwrap();
+        let kernel_debug_file_path = kernel_debug_file.path().to_path_buf();
         let log_file = tempfile::NamedTempFile::new().unwrap().into_temp_path();
         let config = OctezRollupConfigBuilder::new(
             Endpoint::localhost(1234),
@@ -292,7 +299,7 @@ mod test {
             "operator".to_owned(),
             PathBuf::from("/tmp/boot_sector.hex"),
         )
-        .set_kernel_debug_file(Path::new("/tmp/kernel_debug.log"))
+        .set_kernel_debug_file(FileWrapper::TempFile(kernel_debug_file))
         .set_data_dir(RollupDataDir::TempWithPreImages {
             preimages_dir: PathBuf::from("/tmp/pre_images"),
         })
@@ -312,7 +319,7 @@ mod test {
                 "operator": "operator",
                 "boot_sector_file": "/tmp/boot_sector.hex",
                 "rpc_endpoint": format!("http://127.0.0.1:{}", config.rpc_endpoint.port()),
-                "kernel_debug_file": "/tmp/kernel_debug.log",
+                "kernel_debug_file": kernel_debug_file_path.to_string_lossy(),
                 "log_file": log_file.to_string_lossy()
             })
         );
