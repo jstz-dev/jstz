@@ -5,6 +5,7 @@ mod object;
 mod realm;
 mod script;
 mod string;
+mod symbol;
 mod value;
 
 #[cfg(test)]
