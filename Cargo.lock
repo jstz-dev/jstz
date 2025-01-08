@@ -2650,6 +2650,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "indoc"
+version = "2.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b248f5224d1d606005e02c97f5aa4e88eeb230488bcc03bc9ca4d7991399f2b5"
+
+[[package]]
 name = "inlinable_string"
 version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2864,6 +2870,7 @@ name = "jstz_engine"
 version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
+ "indoc",
  "mozjs",
  "tezos-smart-rollup",
  "trybuild",
