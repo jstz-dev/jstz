@@ -5,9 +5,9 @@ use gc::ptr::AsRawPtr;
 use mozjs::jsval::JSVal;
 use mozjs::rust::{JSEngineHandle, Runtime};
 use script::Script;
-pub mod compartment;
+
 mod context;
-mod gc;
+pub mod gc;
 mod realm;
 mod script;
 mod value;
