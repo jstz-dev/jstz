@@ -1,5 +1,6 @@
-use std::{marker::PhantomData, mem::MaybeUninit, pin::Pin, slice, sync::Arc};
+use std::{marker::PhantomData, mem::MaybeUninit, slice};
 
+use indoc::indoc;
 use mozjs::{
     jsapi::{
         jsid, GetPropertyKeys, JSObject, JS_DefinePropertyById2, JS_DeletePropertyById,
@@ -11,12 +12,11 @@ use mozjs::{
 
 use crate::{
     context::{CanAccess, CanAlloc, Context, InCompartment},
-    custom_trace,
     gc::{
-        ptr::{AsRawHandle, AsRawHandleMut, AsRawPtr, GcPtr, Handle, HandleMut},
-        Compartment, Finalize, Prolong, Trace,
+        ptr::{AsRawHandle, AsRawPtr, GcPtr},
+        Compartment,
     },
-    letroot,
+    gcptr_wrapper, letroot,
     value::JsValue,
 };
 
@@ -24,61 +24,18 @@ mod property;
 
 use property::{IntoPropertyKey, PropertyFlags, PropertyIteratorFlags, PropertyKey};
 
-/// [`JsObject`] represents an ordinary object in the JavaScript engine.
-///
-/// More information:
-///  - [MDN documentation](mdn)
-///
-/// [mdn]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object
-pub struct JsObject<'a, C: Compartment> {
-    inner_ptr: Pin<Arc<GcPtr<*mut JSObject>>>,
-    marker: PhantomData<(&'a (), C)>,
-}
+gcptr_wrapper!(
+    indoc! {"
+        [`JsObject`] represents an ordinary object in the JavaScript engine.
 
-impl<'a, C: Compartment> Finalize for JsObject<'a, C> {
-    fn finalize(&self) {
-        self.inner_ptr.finalize()
-    }
-}
+        More information:
+        - [MDN documentation](mdn)
 
-unsafe impl<'a, C: Compartment> Trace for JsObject<'a, C> {
-    custom_trace!(this, mark, {
-        mark(&this.inner_ptr);
-    });
-}
-
-impl<'a, C: Compartment> Clone for JsObject<'a, C> {
-    fn clone(&self) -> Self {
-        Self {
-            inner_ptr: self.inner_ptr.clone(),
-            marker: PhantomData,
-        }
-    }
-}
-
-impl<'a, C: Compartment> AsRawPtr for JsObject<'a, C> {
-    type Ptr = *mut JSObject;
-
-    unsafe fn as_raw_ptr(&self) -> Self::Ptr {
-        self.inner_ptr.as_raw_ptr()
-    }
-}
-
-impl<'a, C: Compartment> AsRawHandle for JsObject<'a, C> {
-    unsafe fn as_raw_handle(&self) -> Handle<Self::Ptr> {
-        self.inner_ptr.as_raw_handle()
-    }
-}
-
-impl<'a, C: Compartment> AsRawHandleMut for JsObject<'a, C> {
-    unsafe fn as_raw_handle_mut(&self) -> HandleMut<Self::Ptr> {
-        self.inner_ptr.as_raw_handle_mut()
-    }
-}
-
-unsafe impl<'a, 'b, C: Compartment> Prolong<'a> for JsObject<'b, C> {
-    type Aged = JsObject<'a, C>;
-}
+        [mdn]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object
+    "},
+    JsObject,
+    *mut JSObject
+);
 
 impl<'a, C: Compartment> JsObject<'a, C> {
     pub fn new<S>(cx: &'a mut Context<S>) -> Self
@@ -368,7 +325,7 @@ impl<'a, C: Compartment> Iterator for ObjectKeysIterator<'a, C> {
         if self.index < self.len {
             let raw_key = self.raw_keys_slice[self.index];
             self.index += 1;
-            Some(PropertyKey::from_raw(raw_key))
+            Some(unsafe { PropertyKey::from_raw(raw_key) })
         } else {
             None
         }

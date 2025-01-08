@@ -1,5 +1,6 @@
-use std::{ffi::c_char, marker::PhantomData, pin::Pin, ptr, sync::Arc};
+use std::{ffi::c_char, ptr};
 
+use indoc::indoc;
 use mozjs::jsapi::{
     JSString, JS_ConcatStrings, JS_DeprecatedStringHasLatin1Chars, JS_GetEmptyString,
     JS_GetLatin1StringCharsAndLength, JS_GetStringCharAt, JS_GetStringLength,
@@ -9,67 +10,28 @@ use mozjs::jsapi::{
 
 use crate::{
     context::{CanAccess, CanAlloc, Context, InCompartment},
-    custom_trace,
-    gc::{
-        ptr::{AsRawHandle, AsRawHandleMut, AsRawPtr, GcPtr, Handle, HandleMut},
-        Compartment, Finalize, Prolong, Trace,
-    },
-    letroot,
+    gc::{ptr::AsRawPtr, Compartment},
+    gcptr_wrapper, letroot,
 };
 
 mod str;
 
 use str::{JsStr, JsStrVariant};
 
-pub struct JsString<'a, C: Compartment> {
-    inner_ptr: Pin<Arc<GcPtr<*mut JSString>>>,
-    marker: PhantomData<(&'a (), C)>,
-}
+gcptr_wrapper!(
+    indoc! {"
+        A Latin1 or UTF-16-encoded string. 
 
-impl<'a, C: Compartment> Clone for JsString<'a, C> {
-    fn clone(&self) -> Self {
-        Self {
-            inner_ptr: self.inner_ptr.clone(),
-            marker: PhantomData,
-        }
-    }
-}
+        More information:
+         - [MDN documentation](mdn)
+         - [EMCAScript reference](spec)
 
-impl<'a, C: Compartment> AsRawPtr for JsString<'a, C> {
-    type Ptr = *mut JSString;
-
-    unsafe fn as_raw_ptr(&self) -> Self::Ptr {
-        self.inner_ptr.as_raw_ptr()
-    }
-}
-
-impl<'a, C: Compartment> AsRawHandle for JsString<'a, C> {
-    unsafe fn as_raw_handle(&self) -> Handle<Self::Ptr> {
-        self.inner_ptr.as_raw_handle()
-    }
-}
-
-impl<'a, C: Compartment> AsRawHandleMut for JsString<'a, C> {
-    unsafe fn as_raw_handle_mut(&self) -> HandleMut<Self::Ptr> {
-        self.inner_ptr.as_raw_handle_mut()
-    }
-}
-
-unsafe impl<'a, 'b, C: Compartment> Prolong<'a> for JsString<'b, C> {
-    type Aged = JsString<'a, C>;
-}
-
-impl<'a, C: Compartment> Finalize for JsString<'a, C> {
-    fn finalize(&self) {
-        self.inner_ptr.finalize()
-    }
-}
-
-unsafe impl<'a, C: Compartment> Trace for JsString<'a, C> {
-    custom_trace!(this, mark, {
-        mark(&this.inner_ptr);
-    });
-}
+        [mdn]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String
+        [spec]: https://tc39.es/ecma262/#sec-ecmascript-language-types-string-type
+    "},
+    JsString,
+    *mut JSString
+);
 
 impl<'a, C: Compartment> JsString<'a, C> {
     /// Creates a new empty [`JsString`]
@@ -98,13 +60,6 @@ impl<'a, C: Compartment> JsString<'a, C> {
                     slice.len(),
                 )),
             }
-        }
-    }
-
-    pub(crate) unsafe fn from_raw(ptr: *mut JSString) -> Self {
-        Self {
-            inner_ptr: GcPtr::pinned(ptr),
-            marker: PhantomData,
         }
     }
 

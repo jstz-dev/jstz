@@ -1,6 +1,5 @@
-use std::{marker::PhantomData, pin::Pin, sync::Arc};
-
 use bitflags::bitflags;
+use indoc::indoc;
 use mozjs::jsapi::{
     jsid, JSITER_FORAWAITOF, JSITER_HIDDEN, JSITER_OWNONLY, JSITER_PRIVATE,
     JSITER_SYMBOLS, JSITER_SYMBOLSONLY, JSPROP_ENUMERATE, JSPROP_PERMANENT,
@@ -9,56 +8,25 @@ use mozjs::jsapi::{
 
 use crate::{
     context::{CanAlloc, Context, InCompartment},
-    custom_trace,
-    gc::{
-        ptr::{AsRawHandle, AsRawHandleMut, AsRawPtr, GcPtr, Handle, HandleMut},
-        Compartment, Finalize, Prolong, Trace,
-    },
+    gc::Compartment,
+    gcptr_wrapper,
 };
 
-pub struct PropertyKey<'a, C: Compartment> {
-    inner_ptr: Pin<Arc<GcPtr<jsid>>>,
-    marker: PhantomData<(&'a (), C)>,
-}
+gcptr_wrapper!(
+    indoc! {"
+        A key associated with a Property Descriptor, typically the name of a field, method or accessor. 
+        This can either be a [`JsString`] or a [`JsSymbol`]. 
 
-impl<'a, C: Compartment> PropertyKey<'a, C> {
-    pub(crate) fn from_raw(raw: jsid) -> Self {
-        Self {
-            inner_ptr: GcPtr::pinned(raw),
-            marker: PhantomData,
-        }
-    }
-}
+        More information:
+         - [MDN documentation](mdn)
+         - [EMCAScript reference][spec]
 
-impl<'a, C: Compartment> Finalize for PropertyKey<'a, C> {}
-
-unsafe impl<'a, C: Compartment> Trace for PropertyKey<'a, C> {
-    custom_trace!(this, mark, mark(&this.inner_ptr));
-}
-
-unsafe impl<'a, 'b, C: Compartment> Prolong<'a> for PropertyKey<'b, C> {
-    type Aged = PropertyKey<'a, C>;
-}
-
-impl<'a, C: Compartment> AsRawPtr for PropertyKey<'a, C> {
-    type Ptr = jsid;
-
-    unsafe fn as_raw_ptr(&self) -> Self::Ptr {
-        self.inner_ptr.as_raw_ptr()
-    }
-}
-
-impl<'a, C: Compartment> AsRawHandle for PropertyKey<'a, C> {
-    unsafe fn as_raw_handle(&self) -> Handle<Self::Ptr> {
-        self.inner_ptr.as_raw_handle()
-    }
-}
-
-impl<'a, C: Compartment> AsRawHandleMut for PropertyKey<'a, C> {
-    unsafe fn as_raw_handle_mut(&self) -> HandleMut<Self::Ptr> {
-        self.inner_ptr.as_raw_handle_mut()
-    }
-}
+        [mdn]: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/defineProperty
+        [spec]: https://tc39.es/ecma262/#property-key
+    "},
+    PropertyKey,
+    jsid
+);
 
 pub trait IntoPropertyKey {
     /// Converts `self` into a new [`PropertyKey`].
