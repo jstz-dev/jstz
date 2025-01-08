@@ -15,4 +15,5 @@ description = "A memory-safe JavaScript engine API in Rust"
 [dependencies]
 anyhow.workspace = true
 bitflags.workspace = true
+indoc.workspace = true
 mozjs.workspace = true

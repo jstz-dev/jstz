@@ -30,10 +30,10 @@ use mozjs::{
 };
 
 use crate::{
-    compartment::{self, Compartment},
     context::{CanAccess, CanAlloc, Context, InCompartment},
     custom_trace,
     gc::{
+        compartment::{self, Compartment},
         ptr::{AsRawPtr, GcPtr},
         Finalize, Prolong, Trace,
     },

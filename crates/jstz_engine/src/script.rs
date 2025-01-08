@@ -18,12 +18,11 @@ use mozjs::{
 };
 
 use crate::{
-    compartment::Compartment,
     context::{CanAlloc, Context, InCompartment},
     custom_trace,
     gc::{
         ptr::{AsRawPtr, GcPtr},
-        Finalize, Prolong, Trace,
+        Compartment, Finalize, Prolong, Trace,
     },
     letroot,
     value::JsValue,
