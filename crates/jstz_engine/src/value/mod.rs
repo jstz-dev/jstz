@@ -17,6 +17,15 @@ pub struct JsValue<'a, C: Compartment> {
     marker: PhantomData<(&'a (), C)>,
 }
 
+impl<'a, C: Compartment> Clone for JsValue<'a, C> {
+    fn clone(&self) -> Self {
+        Self {
+            inner_ptr: self.inner_ptr.clone(),
+            marker: self.marker,
+        }
+    }
+}
+
 impl<'a, C: Compartment> AsRawPtr for JsValue<'a, C> {
     type Ptr = JSVal;
 
