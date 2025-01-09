@@ -21,7 +21,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: [x86_64, linux, nix]
+    runs-on: [arm64, macos, nix]
     needs: [commitlint]
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
       # Coverage is part of nix flake check, but we want to upload it to Codecov
       # So we run it again (it's cached) and upload the result
       - name: Coverage
-        run: nix --accept-flake-config --log-format raw -L build .#checks.x86_64-linux.cargo-llvm-cov
+        run: nix --accept-flake-config --log-format raw -L build .#checks.aarch64-darwin.cargo-llvm-cov
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4.2.0
         with:
