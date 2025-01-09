@@ -168,7 +168,7 @@ pub async fn exec(
         }
     }
 
-    jstz_client.post_operation(&signed_op).await?;
+    jstz_client.post_operation(signed_op).await?;
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 
     debug!("Receipt: {:?}", receipt);

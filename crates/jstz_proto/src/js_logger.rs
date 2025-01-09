@@ -4,7 +4,6 @@ use boa_engine::prelude::Context;
 use jstz_core::{host::HostRuntime, host_defined, runtime};
 use serde::Deserialize;
 use serde::Serialize;
-use utoipa::ToSchema;
 
 use crate::{api::TraceData, context::account::Address};
 
@@ -12,7 +11,7 @@ pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
 
 pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
 
-#[derive(Serialize, Deserialize, ToSchema)]
+#[derive(Serialize, Deserialize)]
 pub struct LogRecord {
     pub address: Address,
     pub request_id: String,

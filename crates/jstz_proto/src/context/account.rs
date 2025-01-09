@@ -12,16 +12,13 @@ use jstz_core::{
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
-use utoipa::ToSchema;
 
 pub type Address = PublicKeyHash;
 
 pub type Amount = u64;
 
-#[derive(
-    Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema,
-)]
-pub struct Nonce(u64);
+#[derive(Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Nonce(pub u64);
 
 impl Nonce {
     pub fn next(&self) -> Nonce {
@@ -40,12 +37,8 @@ impl Display for Nonce {
 }
 
 // Invariant: if code is present it parses successfully
-#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[schema(
-    format = "javascript",
-    example = "export default (request) => new Response('Hello world!')"
-)]
-pub struct ParsedCode(String);
+#[derive(Default, PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
+pub struct ParsedCode(pub String);
 impl From<ParsedCode> for String {
     fn from(ParsedCode(code): ParsedCode) -> Self {
         code

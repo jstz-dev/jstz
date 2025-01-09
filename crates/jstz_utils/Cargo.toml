@@ -1,0 +1,19 @@
+[package]
+name = "jstz_utils"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description.workspace = true
+
+[dependencies]
+proc-macro2 = { version = "1.0.91", default-features = false }
+quote = "1.0"
+syn = { version = "2.0", features = ["full"] }
+
+[lib]
+crate_type = ["proc-macro"]

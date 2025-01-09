@@ -99,7 +99,7 @@ pub async fn exec(
     debug!("Signed operation: {:?}", signed_op);
 
     // 3. Send operation to jstz-node
-    jstz_client.post_operation(&signed_op).await?;
+    jstz_client.post_operation(signed_op).await?;
     let receipt = jstz_client.wait_for_operation_receipt(&hash).await?;
 
     debug!("Receipt: {:?}", receipt);

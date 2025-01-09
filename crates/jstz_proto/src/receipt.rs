@@ -7,15 +7,11 @@ use crate::{
 use http::{HeaderMap, StatusCode};
 use jstz_api::http::body::HttpBody;
 use serde::{Deserialize, Serialize};
-use utoipa::ToSchema;
 
 // pub type ReceiptResult<T> = std::result::Result<T, ReceiptError>;
-#[derive(Debug, Clone, ToSchema, Serialize, Deserialize)]
-#[serde(tag = "_type", content = "inner")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ReceiptResult {
-    #[schema(title = "Success")]
     Success(ReceiptContent),
-    #[schema(title = "Failure")]
     Failed(String),
 }
 
@@ -28,9 +24,9 @@ impl From<Result<ReceiptContent>> for ReceiptResult {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Receipt {
-    hash: OperationHash,
+    pub hash: OperationHash,
     pub result: ReceiptResult,
 }
 
@@ -47,42 +43,33 @@ impl Receipt {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DeployFunctionReceipt {
     pub address: Address,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RunFunctionReceipt {
-    #[schema(schema_with = crate::operation::openapi::http_body_schema)]
     pub body: HttpBody,
     /// Valid status code
     #[serde(with = "http_serde::status_code")]
-    #[schema(value_type = usize)]
     pub status_code: StatusCode,
     /// Any valid HTTP headers
     #[serde(with = "http_serde::header_map")]
-    #[schema(schema_with = crate::operation::openapi::http_headers)]
     pub headers: HeaderMap,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DepositReceipt {
     pub account: Address,
     pub updated_balance: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(tag = "_type")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ReceiptContent {
-    #[schema(title = "DeployFunction")]
     DeployFunction(DeployFunctionReceipt),
-    #[schema(title = "RunFunction")]
     RunFunction(RunFunctionReceipt),
-    #[schema(title = "Deposit")]
     Deposit(DepositReceipt),
-    #[schema(title = "FaDeposit")]
     FaDeposit(FaDepositReceipt),
-    #[schema(title = "FaWithdraw")]
     FaWithdraw(FaWithdrawReceipt),
 }

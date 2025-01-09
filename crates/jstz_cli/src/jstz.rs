@@ -2,6 +2,10 @@ use std::time::Duration;
 
 use anyhow::{anyhow, bail, Result};
 use jstz_api::KvValue;
+use jstz_node::types::{
+    kv::KvValue as KvValueApi, operation::SignedOperation as SignedOperationApi,
+    receipt::Receipt as ReceiptApi,
+};
 use jstz_proto::{
     context::account::Nonce,
     context::new_account::NewAddress,
@@ -42,9 +46,9 @@ impl JstzClient {
             .await?;
 
         if response.status().is_success() {
-            let receipt = response.json::<Receipt>().await?;
+            let receipt = response.json::<ReceiptApi>().await?;
 
-            Ok(Some(receipt))
+            Ok(Some(receipt.into()))
         } else {
             Ok(None)
         }
@@ -126,8 +130,8 @@ impl JstzClient {
 
         match response.status() {
             StatusCode::OK => {
-                let kv = response.json::<KvValue>().await?;
-                Ok(Some(kv))
+                let kv = response.json::<KvValueApi>().await?;
+                Ok(Some(kv.into()))
             }
             StatusCode::NOT_FOUND => Ok(None),
             // For any other status, return a generic error
@@ -183,11 +187,12 @@ impl JstzClient {
         }
     }
 
-    pub async fn post_operation(&self, operation: &SignedOperation) -> Result<()> {
+    pub async fn post_operation(&self, operation: SignedOperation) -> Result<()> {
+        let op: SignedOperationApi = operation.into();
         let response = self
             .client
             .post(&format!("{}/operations", self.endpoint))
-            .json(operation)
+            .json(&op)
             .send()
             .await?;
 

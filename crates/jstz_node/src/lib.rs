@@ -21,6 +21,7 @@ use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 pub mod config;
+pub mod types;
 
 #[derive(Clone)]
 pub struct AppState {

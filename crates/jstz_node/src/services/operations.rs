@@ -1,12 +1,18 @@
 use super::error::{ServiceError, ServiceResult};
 use super::{AppState, Service};
+use crate::types::{
+    operation::{Operation, OperationHash, SignedOperation},
+    receipt::Receipt,
+};
 use anyhow::anyhow;
 use axum::{
     extract::{Path, State},
     Json,
 };
-use jstz_proto::operation::{Operation, OperationHash, SignedOperation};
-use jstz_proto::receipt::Receipt;
+use jstz_proto::operation::{
+    Operation as OperationInternal, SignedOperation as SignedOperationInternal,
+};
+use jstz_proto::receipt::Receipt as ReceiptInternal;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
 
@@ -32,8 +38,9 @@ async fn inject(
     State(AppState { rollup_client, .. }): State<AppState>,
     Json(operation): Json<SignedOperation>,
 ) -> ServiceResult<()> {
-    let encoded_operation = bincode::serialize(&operation)
-        .map_err(|_| anyhow!("Failed to serialize operation"))?;
+    let op: SignedOperationInternal = operation.into();
+    let encoded_operation =
+        bincode::serialize(&op).map_err(|_| anyhow!("Failed to serialize operation"))?;
     let address = rollup_client.get_rollup_address().await?;
     let message_frame = ExternalMessageFrame::Targetted {
         address,
@@ -70,12 +77,12 @@ async fn receipt(
     let value = rollup_client.get_value(&key).await?;
 
     let receipt = match value {
-        Some(value) => bincode::deserialize::<Receipt>(&value)
+        Some(value) => bincode::deserialize::<ReceiptInternal>(&value)
             .map_err(|_| anyhow!("Failed to deserialize receipt"))?,
         None => Err(ServiceError::NotFound)?,
     };
 
-    Ok(Json(receipt))
+    Ok(Json(receipt.into()))
 }
 
 /// Returns the hash of an Operation
@@ -92,7 +99,8 @@ async fn receipt(
 async fn hash_operation(
     Json(operation): Json<Operation>,
 ) -> ServiceResult<Json<OperationHash>> {
-    Ok(Json(operation.hash()))
+    let op: OperationInternal = operation.into();
+    Ok(Json(op.hash().into()))
 }
 
 impl Service for OperationsService {

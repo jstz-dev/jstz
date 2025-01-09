@@ -15,7 +15,6 @@ use tezos_smart_rollup::{
     },
     types::Contract,
 };
-use utoipa::ToSchema;
 
 use crate::{
     context::{
@@ -82,8 +81,7 @@ impl TryFrom<FA2_1Ticket> for Ticket {
 
 type OutboxMessageId = String;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
-#[serde(tag = "_type")]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct FaWithdrawReceipt {
     pub source: PublicKeyHash,
     pub outbox_message_id: OutboxMessageId,

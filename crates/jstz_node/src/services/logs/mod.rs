@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::types::js_logger::LogRecord;
 use anyhow;
 use axum::{
     extract::{Path, Query, State},
@@ -14,7 +15,7 @@ use jstz_proto::request_logger::{
 };
 use jstz_proto::{
     context::account::Address,
-    js_logger::{LogRecord, LOG_PREFIX},
+    js_logger::{LogRecord as LogRecordInternal, LOG_PREFIX},
 };
 use serde::Deserialize;
 use tokio::task::JoinHandle;
@@ -160,7 +161,7 @@ impl LogsService {
                                 #[allow(irrefutable_let_patterns)]
                                 if let Line::Js(log) = line {
                                     broadcaster
-                                        .broadcast(&log.address, &line_str[LOG_PREFIX.len()..])
+                                        .broadcast(&log.address.into(), &line_str[LOG_PREFIX.len()..])
                                        .await;
                                 }
                             }
@@ -179,7 +180,9 @@ impl LogsService {
 
     fn parse_line(line: &str) -> Option<Line> {
         if let Some(log) = line.strip_prefix(LOG_PREFIX) {
-            return LogRecord::try_from_string(log).map(Line::Js);
+            return LogRecordInternal::try_from_string(log)
+                .map(|v| v.into())
+                .map(Line::Js);
         }
 
         #[cfg(feature = "persistent-logging")]

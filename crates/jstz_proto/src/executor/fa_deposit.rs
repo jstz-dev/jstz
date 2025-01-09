@@ -5,7 +5,6 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::{michelson::ticket::TicketHash, prelude::debug_msg};
-use utoipa::ToSchema;
 
 use crate::{
     context::{account::Amount, ticket_table::TicketTable},
@@ -22,8 +21,7 @@ const FA_DEPOSIT_GAS_LIMIT: usize = usize::MAX;
 const NULL_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
 const DEPOSIT_URI: &str = "/-/deposit";
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[serde(tag = "_type")]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FaDepositReceipt {
     pub receiver: PublicKeyHash,
     pub ticket_balance: Amount,

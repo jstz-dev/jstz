@@ -2881,9 +2881,12 @@ dependencies = [
  "env_logger",
  "futures-util",
  "hex",
+ "http 1.1.0",
+ "http-serde",
  "jstz_api",
  "jstz_crypto",
  "jstz_proto",
+ "jstz_utils",
  "log",
  "octez",
  "parking_lot",
@@ -2961,6 +2964,15 @@ dependencies = [
  "jstz_proto",
  "serde-wasm-bindgen",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "jstz_utils"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
 ]
 
 [[package]]
@@ -3899,9 +3911,9 @@ dependencies = [
 
 [[package]]
 name = "proc-macro2"
-version = "1.0.89"
+version = "1.0.92"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f139b0662de085916d1fb67d2b4169d1addddda1919e696f3252b740b629986e"
+checksum = "37d3544b3f2748c54e147655edb5025752e2303145b5aefb3c3ea2c78b973bb0"
 dependencies = [
  "unicode-ident",
 ]

@@ -8,7 +8,6 @@ use tezos_crypto_rs::{
     hash::{ContractTz1Hash, ContractTz2Hash, ContractTz3Hash, HashTrait},
     PublicKeyWithHash,
 };
-use utoipa::ToSchema;
 
 use crate::{
     error::{Error, Result},
@@ -17,37 +16,11 @@ use crate::{
 
 /// Tezos Address
 #[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Serialize,
-    Deserialize,
-    Finalize,
-    ToSchema,
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Finalize,
 )]
-#[serde(untagged)]
 pub enum PublicKeyHash {
-    #[schema(
-        title = "Tz1",
-        value_type = String,
-        example = json!("tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU")
-    )]
     Tz1(ContractTz1Hash),
-    #[schema(
-        title = "Tz2",
-        value_type = String,
-        example =  json!("tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh")
-    )]
     Tz2(ContractTz2Hash),
-    #[schema(
-        title = "Tz3",
-        value_type = String,
-        example = json!("tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C")
-    )]
     Tz3(ContractTz3Hash),
 }
 

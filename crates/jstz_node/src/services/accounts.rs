@@ -1,10 +1,14 @@
+use crate::types::{
+    account::{Nonce, ParsedCode},
+    kv::KvValue,
+};
 use anyhow::anyhow;
 use axum::{
     extract::{Path, Query, State},
     Json,
 };
-use jstz_api::KvValue;
-use jstz_proto::context::account::{Account, Nonce, ParsedCode};
+use jstz_api::KvValue as KvValueInternal;
+use jstz_proto::context::account::Account;
 use serde::Deserialize;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -55,7 +59,7 @@ async fn get_nonce(
         }
         None => Err(ServiceError::NotFound)?,
     };
-    Ok(Json(account_nonce))
+    Ok(Json(account_nonce.into()))
 }
 
 /// Get code of an account
@@ -87,7 +91,7 @@ async fn get_code(
     .ok_or_else(|| {
         ServiceError::BadRequest("Account is not a smart function".to_string())
     })?;
-    Ok(Json(account_code))
+    Ok(Json(account_code.into()))
 }
 
 /// Get balance of an account
@@ -140,11 +144,11 @@ async fn get_kv_value(
     let key = construct_storage_key(&address, &key);
     let value = rollup_client.get_value(&key).await?;
     let kv_value = match value {
-        Some(value) => bincode::deserialize::<KvValue>(&value)
+        Some(value) => bincode::deserialize::<KvValueInternal>(&value)
             .map_err(|_| anyhow!("Failed to deserialize account"))?,
         None => Err(ServiceError::NotFound)?,
     };
-    Ok(Json(kv_value))
+    Ok(Json(kv_value.into()))
 }
 
 /// Get array of KV subkeys under a given key path

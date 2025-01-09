@@ -91,8 +91,9 @@ fn add_discriminator(one_of: &mut OneOf) {
 #[cfg(test)]
 mod test {
 
-    use jstz_crypto::public_key_hash::PublicKeyHash;
-    use jstz_proto::{operation::Content, receipt::ReceiptContent};
+    use crate::types::{
+        operation::Content, public_key_hash::PublicKeyHash, receipt::ReceiptContent,
+    };
     use utoipa::{
         openapi::{
             schema::{ArrayItems, SchemaType},

@@ -2,7 +2,6 @@ use boa_gc::{empty_trace, Finalize, Trace};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::str::FromStr;
-use utoipa::ToSchema;
 
 use crate::{
     error::{Error, Result},
@@ -14,24 +13,9 @@ use tezos_crypto_rs::{
 };
 
 #[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Serialize,
-    Deserialize,
-    Finalize,
-    ToSchema,
+    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, Finalize,
 )]
 pub enum SmartFunctionHash {
-    #[schema(
-        title = "KT1",
-        value_type = String,
-        example = json!("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
-    )]
     Kt1(ContractKt1Hash),
 }
 
