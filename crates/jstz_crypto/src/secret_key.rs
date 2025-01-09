@@ -70,8 +70,7 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
-    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
+    #[ignore = "Feature not needed"]
     fn bin_round_trip() {
         let sk = SecretKey::from_base58(SK).unwrap();
         let bin = bincode::serialize(&sk).unwrap();

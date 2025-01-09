@@ -1,36 +1,23 @@
 use crate::{error::Result, Error};
-use std::fmt::{self, Display};
+use std::{
+    fmt::{self, Display},
+    str::FromStr,
+};
 
+use jstz_macro::SerdeCrypto;
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::{
     hash::{PublicKeyEd25519, PublicKeyP256, PublicKeySecp256k1},
     PublicKeyWithHash,
 };
-use utoipa::ToSchema;
 
 // FIXME: https://linear.app/tezos/issue/JSTZ-169/support-bls-in-risc-v
 // Add BLS support
 /// Tezos public key
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
-#[serde(untagged)]
+#[derive(Debug, PartialEq, Eq, Clone, SerdeCrypto)]
 pub enum PublicKey {
-    #[schema(
-        title = "Ed25519",
-        value_type = String,
-        example = json!("edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi")
-    )]
     Ed25519(PublicKeyEd25519),
-    #[schema(
-        title = "Secp256k1",
-        value_type = String,
-        example = json!("sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY")
-    )]
     Secp256k1(PublicKeySecp256k1),
-    #[schema(
-        title = "P256",
-        value_type = String,
-        example = json!("p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1")
-    )]
     P256(PublicKeyP256),
 }
 
@@ -70,9 +57,64 @@ impl PublicKey {
     }
 }
 
+impl FromStr for PublicKey {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        Self::from_base58(s)
+    }
+}
+
 impl Display for PublicKey {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.to_base58())
+    }
+}
+
+mod openapi {
+    use serde_json::json;
+    use utoipa::{
+        openapi::{schema::Schema, ObjectBuilder, OneOfBuilder, RefOr, Type},
+        PartialSchema, ToSchema,
+    };
+
+    use super::PublicKey;
+
+    impl ToSchema for PublicKey {
+        fn name() -> std::borrow::Cow<'static, str> {
+            std::borrow::Cow::Borrowed("PublicKey")
+        }
+    }
+
+    impl PartialSchema for PublicKey {
+        fn schema() -> RefOr<Schema> {
+            let one_of = OneOfBuilder::new()
+                .item(
+                    ObjectBuilder::new()
+                        .title(Some("Ed25519"))
+                        .schema_type(Type::String)
+                        .build(),
+                )
+                .item(
+                    ObjectBuilder::new()
+                        .title(Some("Secp256k1"))
+                        .schema_type(Type::String)
+                        .build(),
+                )
+                .item(
+                    ObjectBuilder::new()
+                        .title(Some("P256"))
+                        .schema_type(Type::String)
+                        .build(),
+                )
+                .examples([
+                    json!("edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"),
+                    json!("sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY"),
+                    json!("p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1"),
+                ])
+                .build();
+            RefOr::T(Schema::OneOf(one_of))
+        }
     }
 }
 
@@ -134,13 +176,9 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
-    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
     fn bin_round_trip() {
         let pk = PublicKey::from_base58(TZ1).unwrap();
         let bin = bincode::serialize(&pk).unwrap();
-        // Error message:
-        //      Result::unwrap()` on an `Err` value: DeserializeAnyNotSupported
         let decoded = bincode::deserialize::<PublicKey>(bin.as_ref()).unwrap();
         assert_eq!(pk, decoded);
     }

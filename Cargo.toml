@@ -9,6 +9,7 @@ members = [
   "crates/jstz_kernel",
   "crates/jstz_mock",
   "crates/jstz_node",
+  "crates/jstz_macro",
   "crates/jstz_proto",
   "crates/jstz_rollup",
   "crates/jstz_sdk",

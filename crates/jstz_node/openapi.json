@@ -681,41 +681,43 @@
         "oneOf": [
           {
             "type": "string",
-            "title": "Ed25519",
-            "example": "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"
+            "title": "Ed25519"
           },
           {
             "type": "string",
-            "title": "Secp256k1",
-            "example": "sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY"
+            "title": "Secp256k1"
           },
           {
             "type": "string",
-            "title": "P256",
-            "example": "p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1"
+            "title": "P256"
           }
         ],
-        "description": "Tezos public key"
+        "examples": [
+          "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+          "sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY",
+          "p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1"
+        ]
       },
       "PublicKeyHash": {
         "oneOf": [
           {
             "type": "string",
-            "title": "Tz1",
-            "example": "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU"
+            "title": "Tz1"
           },
           {
             "type": "string",
-            "title": "Tz2",
-            "example": "tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh"
+            "title": "Tz2"
           },
           {
             "type": "string",
-            "title": "Tz3",
-            "example": "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C"
+            "title": "Tz3"
           }
         ],
-        "description": "Tezos Address"
+        "examples": [
+          "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU",
+          "tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh",
+          "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C"
+        ]
       },
       "Receipt": {
         "type": "object",
@@ -979,19 +981,21 @@
         "oneOf": [
           {
             "type": "string",
-            "title": "Ed25519 signature",
-            "example": "edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB"
+            "title": "Ed25519"
           },
           {
             "type": "string",
-            "title": "Secp256k1 signature",
-            "example": "spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H"
+            "title": "Secp256k1"
           },
           {
             "type": "string",
-            "title": "P256 signature",
-            "example": "p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH"
+            "title": "P256"
           }
+        ],
+        "examples": [
+          "edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB",
+          "spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H",
+          "p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH"
         ]
       },
       "SignedOperation": {

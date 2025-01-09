@@ -1,53 +1,40 @@
 use std::{fmt, str::FromStr};
 
 use crate::hash::Hash;
+use crate::{
+    error::{Error, Result},
+    public_key::PublicKey,
+};
 use boa_gc::{empty_trace, Finalize, Trace};
+use jstz_macro::SerdeCrypto;
 use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::{
     blake2b,
     hash::{ContractTz1Hash, ContractTz2Hash, ContractTz3Hash, HashTrait},
     PublicKeyWithHash,
 };
-use utoipa::ToSchema;
-
-use crate::{
-    error::{Error, Result},
-    public_key::PublicKey,
-};
 
 /// Tezos Address
-#[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Serialize,
-    Deserialize,
-    Finalize,
-    ToSchema,
-)]
-#[serde(untagged)]
+// FIXME: utoipa schema needs to be manually written to support untagged
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Finalize, SerdeCrypto)]
 pub enum PublicKeyHash {
-    #[schema(
-        title = "Tz1",
-        value_type = String,
-        example = json!("tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU")
-    )]
+    // #[schema(
+    //     title = "Tz1",
+    //     value_type = String,
+    //     example = json!("tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU")
+    // )]
     Tz1(ContractTz1Hash),
-    #[schema(
-        title = "Tz2",
-        value_type = String,
-        example =  json!("tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh")
-    )]
+    // #[schema(
+    //     title = "Tz2",
+    //     value_type = String,
+    //     example =  json!("tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh")
+    // )]
     Tz2(ContractTz2Hash),
-    #[schema(
-        title = "Tz3",
-        value_type = String,
-        example = json!("tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C")
-    )]
+    // #[schema(
+    //     title = "Tz3",
+    //     value_type = String,
+    //     example = json!("tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C")
+    // )]
     Tz3(ContractTz3Hash),
 }
 
@@ -118,6 +105,53 @@ impl From<&PublicKey> for PublicKeyHash {
             PublicKey::Ed25519(pk) => PublicKeyHash::Tz1(pk.pk_hash()),
             PublicKey::Secp256k1(pk) => PublicKeyHash::Tz2(pk.pk_hash()),
             PublicKey::P256(pk) => PublicKeyHash::Tz3(pk.pk_hash()),
+        }
+    }
+}
+
+mod openapi {
+    use serde_json::json;
+    use utoipa::{
+        openapi::{schema::Schema, ObjectBuilder, OneOfBuilder, RefOr, Type},
+        PartialSchema, ToSchema,
+    };
+
+    use super::PublicKeyHash;
+
+    impl ToSchema for PublicKeyHash {
+        fn name() -> std::borrow::Cow<'static, str> {
+            std::borrow::Cow::Borrowed("PublicKeyHash")
+        }
+    }
+
+    impl PartialSchema for PublicKeyHash {
+        fn schema() -> RefOr<Schema> {
+            let one_of = OneOfBuilder::new()
+                .item(
+                    ObjectBuilder::new()
+                        .title(Some("Tz1"))
+                        .schema_type(Type::String)
+                        .build(),
+                )
+                .item(
+                    ObjectBuilder::new()
+                        .title(Some("Tz2"))
+                        .schema_type(Type::String)
+                        .build(),
+                )
+                .item(
+                    ObjectBuilder::new()
+                        .title(Some("Tz3"))
+                        .schema_type(Type::String)
+                        .build(),
+                )
+                .examples([
+                    json!("tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU"),
+                    json!("tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh"),
+                    json!("tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C"),
+                ])
+                .build();
+            RefOr::T(Schema::OneOf(one_of))
         }
     }
 }
@@ -204,14 +238,18 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
-    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
+    fn json_round_trip() {
+        let pkh = PublicKeyHash::from_base58(TZ1).unwrap();
+        let json = serde_json::to_string(&pkh).unwrap();
+        let decoded: PublicKeyHash = serde_json::from_str(&json).unwrap();
+        assert_eq!(pkh, decoded);
+    }
+
+    #[test]
     fn bin_round_trip() {
         let pkh = PublicKeyHash::from_base58(TZ1).unwrap();
         let bin = bincode::serialize(&pkh).unwrap();
-        // Error message:
-        //      Result::unwrap()` on an `Err` value: DeserializeAnyNotSupported
-        let decoded = bincode::deserialize::<PublicKeyHash>(bin.as_ref()).unwrap();
+        let decoded = bincode::deserialize::<PublicKeyHash>(bin.as_slice()).unwrap();
         assert_eq!(pkh, decoded);
     }
 }

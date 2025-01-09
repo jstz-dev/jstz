@@ -12,11 +12,14 @@ description.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+bincode.workspace = true
 boa_gc.workspace = true
 derive_more.workspace = true
 hex.workspace = true
+jstz_macro = { path = "../jstz_macro" }
 serde.workspace = true
 serde_json.workspace = true
+serde_with.workspace = true
 tezos_crypto_rs.workspace = true
 utoipa.workspace = true
 

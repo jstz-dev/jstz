@@ -1,33 +1,16 @@
-use std::fmt::Display;
+use std::{fmt::Display, str::FromStr};
 
 use crate::{public_key::PublicKey, Error, Result};
+use jstz_macro::SerdeCrypto;
 use serde::{Deserialize, Serialize};
+use tezos_crypto_rs::hash::{Ed25519Signature, P256Signature, Secp256k1Signature};
 use tezos_crypto_rs::{CryptoError, PublicKeySignatureVerifier};
-use utoipa::ToSchema;
 
-#[derive(
-    Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ToSchema,
-)]
-#[serde(untagged)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, SerdeCrypto)]
 pub enum Signature {
-    #[schema(
-        title = "Ed25519 signature", 
-        value_type = String,
-        example = json!("edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB")
-    )]
-    Ed25519(tezos_crypto_rs::hash::Ed25519Signature),
-    #[schema(
-        title = "Secp256k1 signature", 
-        value_type = String,
-        example = json!("spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H")
-    )]
-    Secp256k1(tezos_crypto_rs::hash::Secp256k1Signature),
-    #[schema(
-        title = "P256 signature", 
-        value_type = String,
-        example = json!("p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH")
-    )]
-    P256(tezos_crypto_rs::hash::P256Signature),
+    Ed25519(Ed25519Signature),
+    Secp256k1(Secp256k1Signature),
+    P256(P256Signature),
 }
 
 impl Signature {
@@ -36,6 +19,23 @@ impl Signature {
             Signature::Ed25519(sig) => sig.to_base58_check(),
             Signature::Secp256k1(sig) => sig.to_base58_check(),
             Signature::P256(sig) => sig.to_base58_check(),
+        }
+    }
+}
+
+impl FromStr for Signature {
+    type Err = Error;
+
+    fn from_str(data: &str) -> Result<Signature> {
+        match &data[..5] {
+            "edsig" => Ok(Signature::Ed25519(Ed25519Signature::from_base58_check(
+                data,
+            )?)),
+            "spsig" => Ok(Signature::Secp256k1(Secp256k1Signature::from_base58_check(
+                data,
+            )?)),
+            "p2sig" => Ok(Signature::P256(P256Signature::from_base58_check(data)?)),
+            _ => Err(Error::InvalidSignature),
         }
     }
 }
@@ -74,9 +74,56 @@ impl Display for Signature {
     }
 }
 
+mod openapi {
+    use serde_json::json;
+    use utoipa::{
+        openapi::{schema::Schema, ObjectBuilder, OneOfBuilder, RefOr, Type},
+        PartialSchema, ToSchema,
+    };
+
+    use super::Signature;
+
+    impl ToSchema for Signature {
+        fn name() -> std::borrow::Cow<'static, str> {
+            std::borrow::Cow::Borrowed("Signature")
+        }
+    }
+
+    impl PartialSchema for Signature {
+        fn schema() -> RefOr<Schema> {
+            let one_of = OneOfBuilder::new()
+                .item(
+                    ObjectBuilder::new()
+                        .title(Some("Ed25519"))
+                        .schema_type(Type::String)
+                        .build(),
+                )
+                .item(
+                    ObjectBuilder::new()
+                        .title(Some("Secp256k1"))
+                        .schema_type(Type::String)
+                        .build(),
+                )
+                .item(
+                    ObjectBuilder::new()
+                        .title(Some("P256"))
+                        .schema_type(Type::String)
+                        .build(),
+                )
+                .examples([
+                    json!("edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB"),
+                    json!("spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H"),
+                    json!("p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH"),
+                ])
+                .build();
+            RefOr::T(Schema::OneOf(one_of))
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::{public_key::PublicKey, secret_key::SecretKey};
+    use crate::{public_key::PublicKey, secret_key::SecretKey, signature::Signature};
 
     #[test]
     fn verify_ed25519() {
@@ -103,5 +150,31 @@ mod test {
         let message = b"Hello, world!";
         let signature = sk.sign(message).unwrap();
         assert_eq!(signature.to_string(), "edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB");
+    }
+
+    #[test]
+    fn json_round_trip() {
+        let sk = SecretKey::from_base58(
+            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+        )
+        .unwrap();
+        let message = b"Hello, world!";
+        let signature = sk.sign(message).unwrap();
+        let json = serde_json::to_string(&signature).unwrap();
+        let decoded: Signature = serde_json::from_str(&json).unwrap();
+        assert_eq!(signature, decoded);
+    }
+
+    #[test]
+    fn bin_round_trip() {
+        let sk = SecretKey::from_base58(
+            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+        )
+        .unwrap();
+        let message = b"Hello, world!";
+        let signature = sk.sign(message).unwrap();
+        let bin = bincode::serialize(&signature).unwrap();
+        let decoded = bincode::deserialize::<Signature>(bin.as_slice()).unwrap();
+        assert_eq!(signature, decoded);
     }
 }
