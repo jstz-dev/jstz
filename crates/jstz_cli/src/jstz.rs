@@ -1,10 +1,9 @@
 use std::time::Duration;
 
 use anyhow::{anyhow, bail, Result};
-use jstz_api::KvValue;
 use jstz_proto::{
-    context::account::Nonce,
-    context::new_account::NewAddress,
+    api::KvValue,
+    context::{account::Nonce, new_account::NewAddress},
     operation::{OperationHash, SignedOperation},
     receipt::Receipt,
 };

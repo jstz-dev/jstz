@@ -4,8 +4,8 @@ use boa_engine::{
     js_string, object::ObjectInitializer, Context, JsArgs, JsObject, JsResult, JsValue,
     NativeFunction,
 };
-use jstz_api::{Kv, KvValue};
 use jstz_core::runtime;
+use jstz_proto::api::{Kv, KvValue};
 
 pub struct KvApi;
 
