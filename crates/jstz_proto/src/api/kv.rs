@@ -6,10 +6,11 @@ use boa_engine::{
 };
 use boa_gc::{Finalize, Trace};
 use jstz_core::{host::HostRuntime, kv::Transaction, runtime, Result};
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 use utoipa::ToSchema;
+
+use crate::context::new_account::NewAddress;
 
 #[derive(Debug, Trace, Finalize, JsData)]
 pub struct Kv {
@@ -101,7 +102,7 @@ macro_rules! preamble {
 }
 
 pub struct KvApi {
-    pub address: PublicKeyHash,
+    pub address: NewAddress,
 }
 
 impl KvApi {

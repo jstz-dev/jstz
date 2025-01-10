@@ -3,8 +3,10 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
-use jstz_api::KvValue;
-use jstz_proto::context::account::{Account, Nonce, ParsedCode};
+use jstz_proto::{
+    api::KvValue,
+    context::account::{Account, Nonce, ParsedCode},
+};
 use serde::Deserialize;
 use utoipa_axum::{router::OpenApiRouter, routes};
 

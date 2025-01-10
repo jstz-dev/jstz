@@ -137,15 +137,9 @@ pub fn register_jstz_apis(
     seed: u64,
     context: &mut Context,
 ) {
-    // TODO: remove once smart function address is supported
-    // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-    let pkh = match address {
-        NewAddress::User(pkh) => pkh,
-        _ => panic!("Smart function address is not supported yet"),
-    };
     realm.register_api(
-        jstz_api::KvApi {
-            address: pkh.clone(),
+        api::KvApi {
+            address: address.clone(),
         },
         context,
     );
