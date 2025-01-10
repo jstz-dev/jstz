@@ -1,3 +1,4 @@
+use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
 use octez::unused_port;
 use rust_embed::Embed;
 
@@ -78,6 +79,7 @@ pub(crate) async fn build_config(
         Some(p) => parse_config(p).await?,
         None => Config::default(),
     };
+    patch_octez_node_config(&mut config.octez_node);
     let octez_node_config = config.octez_node.build()?;
     let octez_client_config = match config.octez_client {
         Some(v) => v,
@@ -128,6 +130,22 @@ pub(crate) async fn build_config(
             protocol_params,
         ),
     ))
+}
+
+fn patch_octez_node_config(builder: &mut OctezNodeConfigBuilder) {
+    let mut option_builder = OctezNodeRunOptionsBuilder::new();
+    if let Some(v) = builder.run_options() {
+        option_builder
+            .set_network(v.network())
+            .set_synchronisation_threshold(v.synchronisation_threshold());
+        if let Some(mode) = v.history_mode() {
+            option_builder.set_history_mode(mode.clone());
+        }
+    }
+    if option_builder.history_mode().is_none() {
+        option_builder.set_history_mode(OctezNodeHistoryMode::Rolling(15));
+    }
+    builder.set_run_options(&option_builder.build());
 }
 
 fn populate_baker_config(
@@ -566,6 +584,11 @@ mod tests {
     #[tokio::test]
     async fn build_config_with_default_config() {
         let (_, config) = super::build_config(&None).await.unwrap();
+        assert_eq!(
+            config.octez_node_config().run_options.history_mode(),
+            Some(&OctezNodeHistoryMode::Rolling(15))
+        );
+
         let mut buf = String::new();
         config
             .protocol_params()
@@ -701,5 +724,43 @@ mod tests {
         // the first contract should be overwritten by the dummy contract
         let exchanger_contract = contracts.first().unwrap();
         assert_eq!(exchanger_contract, &dummy_contract);
+    }
+
+    #[test]
+    fn patch_octez_node_config() {
+        let mut builder = OctezNodeConfigBuilder::default();
+        super::patch_octez_node_config(&mut builder);
+        assert_eq!(
+            builder.run_options().unwrap().history_mode(),
+            Some(&OctezNodeHistoryMode::Rolling(15))
+        );
+
+        // should fill in history mode but not overwrite existing run options
+        let mut builder = OctezNodeConfigBuilder::default();
+        builder.set_run_options(
+            &OctezNodeRunOptionsBuilder::new()
+                .set_network("test")
+                .set_synchronisation_threshold(3)
+                .build(),
+        );
+        super::patch_octez_node_config(&mut builder);
+        let run_options = builder.run_options().unwrap();
+        assert_eq!(
+            run_options.history_mode(),
+            Some(&OctezNodeHistoryMode::Rolling(15))
+        );
+        assert_eq!(run_options.network(), "test");
+        assert_eq!(run_options.synchronisation_threshold(), 3);
+
+        // should not overwrite existing run options
+        let mut builder = OctezNodeConfigBuilder::default();
+        let run_options = OctezNodeRunOptionsBuilder::new()
+            .set_network("test")
+            .set_synchronisation_threshold(3)
+            .set_history_mode(OctezNodeHistoryMode::Archive)
+            .build();
+        builder.set_run_options(&run_options);
+        super::patch_octez_node_config(&mut builder);
+        assert_eq!(builder.run_options().unwrap(), &run_options);
     }
 }
