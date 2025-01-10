@@ -107,6 +107,20 @@ impl Default for OctezNodeRunOptions {
     }
 }
 
+impl OctezNodeRunOptions {
+    pub fn synchronisation_threshold(&self) -> u8 {
+        self.synchronisation_threshold
+    }
+
+    pub fn network(&self) -> &str {
+        &self.network
+    }
+
+    pub fn history_mode(&self) -> Option<&OctezNodeHistoryMode> {
+        self.history_mode.as_ref()
+    }
+}
+
 #[derive(Default)]
 pub struct OctezNodeRunOptionsBuilder {
     synchronisation_threshold: Option<u8>,
@@ -134,6 +148,10 @@ impl OctezNodeRunOptionsBuilder {
     pub fn set_history_mode(&mut self, mode: OctezNodeHistoryMode) -> &mut Self {
         self.history_mode.replace(mode);
         self
+    }
+
+    pub fn history_mode(&self) -> Option<&OctezNodeHistoryMode> {
+        self.history_mode.as_ref()
     }
 
     pub fn build(&mut self) -> OctezNodeRunOptions {
@@ -225,6 +243,10 @@ impl OctezNodeConfigBuilder {
         self
     }
 
+    pub fn run_options(&self) -> Option<&OctezNodeRunOptions> {
+        self.run_options.as_ref()
+    }
+
     /// Builds a config set based on values collected.
     pub fn build(&mut self) -> Result<OctezNodeConfig> {
         Ok(OctezNodeConfig {
@@ -260,15 +282,17 @@ mod tests {
     fn config_builder() {
         let mut run_options_builder = OctezNodeRunOptionsBuilder::new();
         let run_options = run_options_builder.set_network("sandbox").build();
-        let config = OctezNodeConfigBuilder::new()
+        let mut builder = OctezNodeConfigBuilder::new();
+        builder
             .set_binary_path("/tmp/binary")
             .set_data_dir("/tmp/something")
             .set_network("network")
             .set_rpc_endpoint(&Endpoint::localhost(8888))
             .set_log_file("/log_file")
-            .set_run_options(&run_options)
-            .build()
-            .unwrap();
+            .set_run_options(&run_options);
+        assert_eq!(builder.run_options(), Some(&run_options));
+
+        let config = builder.build().unwrap();
         assert_eq!(config.binary_path, PathBuf::from("/tmp/binary"));
         assert_eq!(config.data_dir, Some(PathBuf::from("/tmp/something")));
         assert_eq!(config.network, "network".to_owned());
@@ -350,6 +374,10 @@ mod tests {
             .set_synchronisation_threshold(3)
             .build();
         assert_eq!(
+            run_options.history_mode().unwrap(),
+            &OctezNodeHistoryMode::Full(5)
+        );
+        assert_eq!(
             run_options.history_mode.unwrap(),
             OctezNodeHistoryMode::Full(5)
         );
@@ -372,6 +400,21 @@ mod tests {
         assert!(run_options.history_mode.is_none());
         assert_eq!(run_options.network, "sandbox");
         assert_eq!(run_options.synchronisation_threshold, 0);
+    }
+
+    #[test]
+    fn run_option_getter() {
+        let run_options = OctezNodeRunOptions {
+            synchronisation_threshold: 1,
+            network: "foo".to_owned(),
+            history_mode: Some(OctezNodeHistoryMode::Full(2)),
+        };
+        assert_eq!(
+            run_options.history_mode(),
+            Some(&OctezNodeHistoryMode::Full(2))
+        );
+        assert_eq!(run_options.network(), "foo");
+        assert_eq!(run_options.synchronisation_threshold(), 1);
     }
 
     #[test]
