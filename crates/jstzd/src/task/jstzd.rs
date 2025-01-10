@@ -350,7 +350,7 @@ impl JstzdServer {
             .route("/health", get(health_check_handler))
             .route("/shutdown", put(shutdown_handler))
             .route("/config/:config_type", get(config_handler))
-            .route("/config/", get(all_config_handler))
+            .route("/config", get(all_config_handler))
             .with_state(self.inner.state.clone());
         let listener = TcpListener::bind(("0.0.0.0", self.port)).await?;
 
