@@ -1,5 +1,5 @@
 use anyhow::Result;
-use jstz_crypto::smart_function_hash::Kt1;
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_kernel::TICKETER;
 use std::{
     env, fs,
@@ -123,7 +123,7 @@ fn make_kernel_installer(kernel_file: &Path, preimages_dir: &Path) -> Result<Str
         // 2. Set `jstz` ticketer as the bridge contract address
         OwnedConfigInstruction::set_instr(
             OwnedBytes(bincode::encode_to_vec(
-                Kt1(ContractKt1Hash::from_base58_check(EXCHANGER_ADDRESS)?),
+                SmartFunctionHash(ContractKt1Hash::from_base58_check(EXCHANGER_ADDRESS)?),
                 bincode::config::legacy(),
             )?),
             OwnedPath::from(TICKETER),
