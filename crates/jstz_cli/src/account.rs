@@ -342,11 +342,10 @@ pub enum Command {
     },
 }
 
+// TODO: use sf address
+// // TODO: https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
 fn parse_smart_function_address(s: &str) -> Result<NewAddress> {
     let address = NewAddress::from_str(s).map_err(|e| user_error!("{}", e))?;
-    address
-        .check_is_smart_function()
-        .map_err(|e| user_error!("{}", e))?;
     Ok(address)
 }
 
@@ -369,11 +368,5 @@ mod tests {
         let address =
             parse_smart_function_address("KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5").unwrap();
         assert!(matches!(address, NewAddress::SmartFunction(_)));
-    }
-
-    #[test]
-    fn test_pasrse_smart_function_throws_error_for_user_address() {
-        let result = parse_smart_function_address("tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU");
-        assert!(result.is_err_and(|e| e.to_string().contains("AddressTypeMismatch")));
     }
 }

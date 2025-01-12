@@ -56,22 +56,6 @@ impl FromStr for NewAddress {
 }
 
 impl NewAddress {
-    pub fn check_is_user(&self) -> Result<()> {
-        match self {
-            Self::User(_) => Ok(()),
-            _ => Err(Error::AddressTypeMismatch),
-        }
-    }
-
-    pub fn check_is_smart_function(&self) -> Result<()> {
-        match self {
-            Self::SmartFunction(_) => Ok(()),
-            _ => Err(Error::AddressTypeMismatch),
-        }
-    }
-}
-
-impl NewAddress {
     pub fn from_base58(data: &str) -> Result<Self> {
         if data.len() < 3 {
             return Err(Error::InvalidAddress);
@@ -162,29 +146,6 @@ mod test {
 
         // Test invalid KT1
         assert!(NewAddress::from_str("KT1invalid").is_err());
-    }
-
-    #[test]
-    fn test_type_checks() {
-        // Test tz1 type checks
-        let tz1_addr = NewAddress::from_str(TZ1).unwrap();
-        assert!(tz1_addr.check_is_user().is_ok());
-        assert!(tz1_addr.check_is_smart_function().is_err());
-
-        // Test tz2 type checks
-        let tz2_addr = NewAddress::from_str(TZ2).unwrap();
-        assert!(tz2_addr.check_is_user().is_ok());
-        assert!(tz2_addr.check_is_smart_function().is_err());
-
-        // Test tz3 type checks
-        let tz3_addr = NewAddress::from_str(TZ3).unwrap();
-        assert!(tz3_addr.check_is_user().is_ok());
-        assert!(tz3_addr.check_is_smart_function().is_err());
-
-        // Test KT1 type checks
-        let kt1_addr = NewAddress::from_str(KT1).unwrap();
-        assert!(kt1_addr.check_is_user().is_err());
-        assert!(kt1_addr.check_is_smart_function().is_ok());
     }
 
     #[test]
