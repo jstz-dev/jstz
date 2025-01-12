@@ -42,6 +42,7 @@ pub enum Error {
     TicketAmountTooLarge,
     ZeroAmountNotAllowed,
     AddressTypeMismatch,
+    AccountExists,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -113,6 +114,9 @@ impl From<Error> for JsError {
             Error::AddressTypeMismatch => JsNativeError::eval()
                 .with_message("AddressTypeMismatch")
                 .into(),
+            Error::AccountExists => {
+                JsNativeError::eval().with_message("AccountExists").into()
+            }
         }
     }
 }
