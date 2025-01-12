@@ -20,7 +20,7 @@ pub type Amount = u64;
 #[derive(
     Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema,
 )]
-pub struct Nonce(u64);
+pub struct Nonce(pub u64);
 
 impl Nonce {
     pub fn next(&self) -> Nonce {
@@ -44,7 +44,7 @@ impl Display for Nonce {
     format = "javascript",
     example = "export default (request) => new Response('Hello world!')"
 )]
-pub struct ParsedCode(String);
+pub struct ParsedCode(pub String);
 impl From<ParsedCode> for String {
     fn from(ParsedCode(code): ParsedCode) -> Self {
         code

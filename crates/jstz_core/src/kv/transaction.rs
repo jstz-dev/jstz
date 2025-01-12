@@ -473,7 +473,7 @@ impl<'a, V> Entry<'a, V> {
 
     pub fn or_insert_with<F>(self, default: F) -> &'a mut V
     where
-        V: Value + Default,
+        V: Value,
         F: FnOnce() -> V,
     {
         match self {
