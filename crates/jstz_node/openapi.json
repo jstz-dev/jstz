@@ -648,17 +648,6 @@
           }
         }
       },
-      "NewAddress": {
-        "oneOf": [
-          {
-            "$ref": "#/components/schemas/PublicKeyHash"
-          },
-          {
-            "$ref": "#/components/schemas/SmartFunctionHash"
-          }
-        ],
-        "description": "TODO: rename to Address"
-      },
       "Nonce": {
         "type": "integer",
         "format": "int64",
