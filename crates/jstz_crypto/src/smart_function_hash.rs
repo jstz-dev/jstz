@@ -13,9 +13,11 @@ use tezos_crypto_rs::{
     blake2b,
     hash::{ContractKt1Hash, HashTrait},
 };
-use utoipa::ToSchema;
+use utoipa::{schema, ToSchema};
 
 #[derive(
+    Deref,
+    From,
     Debug,
     Clone,
     PartialEq,
@@ -25,24 +27,15 @@ use utoipa::ToSchema;
     Deserialize,
     Finalize,
     ToSchema,
-    Encode,
-    Decode,
 )]
-pub enum SmartFunctionHash {
-    #[schema(
-        title = "KT1",
-        value_type = String,
-        example = json!("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
-    )]
-    Kt1(Kt1),
-}
-
-#[derive(
-    Deref, From, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Finalize,
+#[schema(
+    title = "KT1",
+    value_type = String,
+    example = json!("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
 )]
-pub struct Kt1(pub ContractKt1Hash);
+pub struct SmartFunctionHash(pub ContractKt1Hash);
 
-impl_bincode_for_hash!(Kt1, ContractKt1Hash);
+impl_bincode_for_hash!(SmartFunctionHash, ContractKt1Hash);
 
 unsafe impl Trace for SmartFunctionHash {
     empty_trace!();
@@ -59,22 +52,20 @@ impl FromStr for SmartFunctionHash {
 impl<'a> Hash<'a> for SmartFunctionHash {
     fn to_base58(&self) -> String {
         match self {
-            SmartFunctionHash::Kt1(inner) => inner.to_b58check(),
+            SmartFunctionHash(inner) => inner.to_b58check(),
         }
     }
 
     fn from_base58(data: &str) -> Result<Self> {
         match &data[..3] {
-            "KT1" => Ok(SmartFunctionHash::Kt1(
-                ContractKt1Hash::from_base58_check(data)?.into(),
-            )),
+            "KT1" => Ok(SmartFunctionHash(ContractKt1Hash::from_base58_check(data)?)),
             _ => Err(Error::InvalidSmartFunctionHash),
         }
     }
 
     fn as_bytes(&self) -> &[u8] {
         match self {
-            SmartFunctionHash::Kt1(inner) => inner.as_ref(),
+            SmartFunctionHash(inner) => inner.as_ref(),
         }
     }
 
@@ -83,9 +74,7 @@ impl<'a> Hash<'a> for SmartFunctionHash {
     fn digest(data: &[u8]) -> Result<Self> {
         let out_len = ContractKt1Hash::hash_size();
         let bytes = blake2b::digest(data, out_len)?;
-        Ok(SmartFunctionHash::Kt1(
-            ContractKt1Hash::try_from_bytes(&bytes)?.into(),
-        ))
+        Ok(SmartFunctionHash(ContractKt1Hash::try_from_bytes(&bytes)?))
     }
 }
 
@@ -108,7 +97,7 @@ mod test {
     fn from_str_valid() {
         let hash = SmartFunctionHash::from_str(KT1_VALID).unwrap();
         match hash {
-            SmartFunctionHash::Kt1(inner) => {
+            SmartFunctionHash(inner) => {
                 assert_eq!(inner.to_b58check(), KT1_VALID);
             }
         }
