@@ -64,6 +64,33 @@ fn main() {
         "cargo:warning=Build script output directory: {}",
         out_dir.display()
     );
+    if let Ok(p) = env::var("KERNEL_DEST_DIR") {
+        println!(
+            "cargo:warning=Copying content in output directory to: {}",
+            p
+        );
+        fs::create_dir_all(&p).unwrap_or_else(|e| {
+            panic!("Failed to create destination directory '{}': {:?}", &p, e)
+        });
+        copy_dir_all(out_dir, &p).unwrap_or_else(|e| {
+            panic!("Failed to copy kernel files to '{}': {:?}", &p, e)
+        });
+    }
+}
+
+fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
+    fs::create_dir_all(&dst)?;
+    for entry_ in fs::read_dir(src)? {
+        let entry = entry_?;
+        let src_path = entry.path();
+        let dst_path = dst.as_ref().join(entry.file_name());
+        if src_path.is_dir() {
+            copy_dir_all(src_path, dst_path)?;
+        } else {
+            fs::copy(src_path, dst_path)?;
+        }
+    }
+    Ok(())
 }
 
 /// Builds the kernel installer and generates preimages
@@ -151,12 +178,18 @@ fn generate_path_getter_code(out_dir: &Path, fn_name: &str, path_suffix: &str) -
         r#"
         const {}_PATH: &str = "{}";
         pub fn {}_path() -> std::path::PathBuf {{
-            std::path::PathBuf::from({}_PATH)
+            let path = std::path::PathBuf::from({}_PATH);
+            if path.exists() {{
+                path
+            }} else {{
+                std::path::PathBuf::from("/usr/share/jstzd/{}")
+            }}
         }}
         "#,
         &name_upper,
         out_dir.join(path_suffix).to_str().expect("Invalid path"),
         fn_name,
         &name_upper,
+        path_suffix
     )
 }
