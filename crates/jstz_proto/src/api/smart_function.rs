@@ -15,8 +15,8 @@ use jstz_core::{
 
 use crate::{
     context::{
-        account::{Account, Amount, ParsedCode},
         new_account::NewAddress,
+        new_account::{Account, Amount, ParsedCode},
     },
     executor::{
         smart_function::{headers, HostScript, Script},
@@ -260,14 +260,15 @@ mod test {
     use jstz_crypto::{
         hash::{Blake2b, Hash},
         public_key_hash::PublicKeyHash,
+        smart_function_hash::SmartFunctionHash,
     };
     use jstz_mock::host::JstzMockHost;
     use serde_json::json;
 
     use crate::{
         context::{
-            account::{Account, ParsedCode},
             new_account::NewAddress,
+            new_account::{Account, ParsedCode},
             ticket_table::TicketTable,
         },
         executor::smart_function::{self, register_web_apis, Script},
@@ -289,8 +290,9 @@ mod test {
 
         // TODO: Use sf address instead
         // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        let self_address =
-            NewAddress::User(PublicKeyHash::digest(b"random bytes").unwrap());
+        let self_address = NewAddress::SmartFunction(
+            SmartFunctionHash::digest(b"random bytes").unwrap(),
+        );
         let amount = 100;
 
         let operation_hash = Blake2b::from(b"operation_hash".as_ref());

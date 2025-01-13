@@ -6,7 +6,10 @@ use axum::{
 use jstz_core::BinEncodable;
 use jstz_proto::{
     api::KvValue,
-    context::account::{Account, Nonce, ParsedCode},
+    context::new_account::{
+        Account, Nonce, ParsedCode, SmartFunctionAccount, UserAccount,
+        ACCOUNTS_PATH_PREFIX,
+    },
 };
 use serde::Deserialize;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -28,6 +31,10 @@ fn construct_storage_key(address: &str, key: &Option<String>) -> String {
 
 fn deserialize_account(data: &[u8]) -> ServiceResult<Account> {
     Ok(Account::decode(data).map_err(|_| anyhow!("Failed to deserialize account"))?)
+}
+
+fn construct_accounts_key(address: &str) -> String {
+    format!("{}/{}", ACCOUNTS_PATH_PREFIX, address)
 }
 
 #[derive(Deserialize)]
@@ -52,10 +59,13 @@ async fn get_nonce(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
-    let key = format!("/jstz_account/{}", address);
+    let key = construct_accounts_key(&address);
     let value = rollup_client.get_value(&key).await?;
     let account_nonce = match value {
-        Some(value) => deserialize_account(value.as_slice())?.nonce,
+        Some(value) => match deserialize_account(value.as_slice())? {
+            Account::User(UserAccount { nonce, .. }) => nonce,
+            Account::SmartFunction(SmartFunctionAccount { nonce, .. }) => nonce,
+        },
         None => Err(ServiceError::NotFound)?,
     };
     Ok(Json(account_nonce))
@@ -77,15 +87,19 @@ async fn get_code(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<ParsedCode>> {
-    let key = format!("/jstz_account/{}", address);
+    let key = construct_accounts_key(&address);
     let value = rollup_client.get_value(&key).await?;
     let account_code = match value {
-        Some(value) => deserialize_account(value.as_slice())?.function_code,
+        Some(value) => match deserialize_account(value.as_slice())? {
+            Account::User { .. } => Err(ServiceError::BadRequest(
+                "Account is not a smart function".to_string(),
+            ))?,
+            Account::SmartFunction(SmartFunctionAccount { function_code, .. }) => {
+                function_code
+            }
+        },
         None => Err(ServiceError::NotFound)?,
-    }
-    .ok_or_else(|| {
-        ServiceError::BadRequest("Account is not a smart function".to_string())
-    })?;
+    };
     Ok(Json(account_code))
 }
 
@@ -104,10 +118,13 @@ async fn get_balance(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<u64>> {
-    let key = format!("/jstz_account/{}", address);
+    let key = construct_accounts_key(&address);
     let value = rollup_client.get_value(&key).await?;
     let account_balance = match value {
-        Some(value) => deserialize_account(value.as_slice())?.amount,
+        Some(value) => match deserialize_account(value.as_slice())? {
+            Account::User(UserAccount { amount, .. }) => amount,
+            Account::SmartFunction(SmartFunctionAccount { amount, .. }) => amount,
+        },
         None => Err(ServiceError::NotFound)?,
     };
     Ok(Json(account_balance))

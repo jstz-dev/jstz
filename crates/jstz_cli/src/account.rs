@@ -346,6 +346,9 @@ pub enum Command {
 // // TODO: https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
 fn parse_smart_function_address(s: &str) -> Result<NewAddress> {
     let address = NewAddress::from_str(s).map_err(|e| user_error!("{}", e))?;
+    if !matches!(address, NewAddress::SmartFunction(_)) {
+        bail_user_error!("Invalid smart function address: {}", s);
+    }
     Ok(address)
 }
 
@@ -368,5 +371,11 @@ mod tests {
         let address =
             parse_smart_function_address("KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5").unwrap();
         assert!(matches!(address, NewAddress::SmartFunction(_)));
+    }
+
+    #[test]
+    fn test_parse_user_address() {
+        let address = parse_smart_function_address("tz1VJk1a4Y4FdZyFtsm6zL2k9KjYtS5tYF9");
+        assert!(address.is_err());
     }
 }

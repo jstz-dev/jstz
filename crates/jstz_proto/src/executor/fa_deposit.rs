@@ -9,7 +9,7 @@ use tezos_smart_rollup::{michelson::ticket::TicketHash, prelude::debug_msg};
 use utoipa::ToSchema;
 
 use crate::{
-    context::{account::Amount, new_account::NewAddress, ticket_table::TicketTable},
+    context::{new_account::Amount, new_account::NewAddress, ticket_table::TicketTable},
     executor::smart_function,
     operation::{external::FaDeposit, RunFunction},
     receipt::Receipt,
@@ -175,23 +175,23 @@ mod test {
     use std::io::empty;
 
     use jstz_core::kv::Transaction;
-    use jstz_crypto::public_key_hash::PublicKeyHash;
+    use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
         context::{
-            account::ParsedCode, new_account::NewAddress, ticket_table::TicketTable,
+            new_account::NewAddress, new_account::ParsedCode, ticket_table::TicketTable,
         },
         executor::fa_deposit::{FaDeposit, FaDepositReceipt},
         receipt::{Receipt, ReceiptContent, ReceiptResult},
     };
 
-    fn mock_fa_deposit(proxy: Option<PublicKeyHash>) -> FaDeposit {
+    fn mock_fa_deposit(proxy: Option<SmartFunctionHash>) -> FaDeposit {
         FaDeposit {
             inbox_id: 34,
             amount: 42,
             receiver: NewAddress::User(jstz_mock::account2()),
-            proxy_smart_function: proxy.map(NewAddress::User),
+            proxy_smart_function: proxy.map(NewAddress::SmartFunction),
             ticket_hash: jstz_mock::ticket_hash1(),
         }
     }
@@ -299,12 +299,12 @@ mod test {
 
         // TODO: use sf address
         // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        let proxy_pkh = match proxy.clone() {
-            NewAddress::User(pkh) => pkh,
-            NewAddress::SmartFunction(_) => panic!("Unexpected proxy"),
+        let proxy_sfh = match proxy.clone() {
+            NewAddress::User(_) => panic!("proxy is not a user address"),
+            NewAddress::SmartFunction(sfh) => sfh,
         };
 
-        let fa_deposit = mock_fa_deposit(Some(proxy_pkh.clone()));
+        let fa_deposit = mock_fa_deposit(Some(proxy_sfh.clone()));
         let ticket_hash = fa_deposit.ticket_hash.clone();
 
         let Receipt { result: inner, .. } =
@@ -356,17 +356,17 @@ mod test {
 
         // TODO: use sf address
         // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        let proxy_pkh = match proxy.clone() {
-            NewAddress::User(pkh) => pkh,
-            NewAddress::SmartFunction(_) => panic!("Unexpected proxy"),
+        let proxy_sfh = match proxy.clone() {
+            NewAddress::User(_) => panic!("proxy is not a user address"),
+            NewAddress::SmartFunction(sfh) => sfh,
         };
 
-        let fa_deposit1 = mock_fa_deposit(Some(proxy_pkh.clone()));
+        let fa_deposit1 = mock_fa_deposit(Some(proxy_sfh.clone()));
         let ticket_hash = fa_deposit1.ticket_hash.clone();
 
         let _ = super::execute(&mut host, &mut tx, fa_deposit1);
 
-        let fa_deposit2 = mock_fa_deposit(Some(proxy_pkh.clone()));
+        let fa_deposit2 = mock_fa_deposit(Some(proxy_sfh.clone()));
 
         let Receipt { result: inner, .. } =
             super::execute(&mut host, &mut tx, fa_deposit2);
@@ -415,8 +415,8 @@ mod test {
         // TODO: use sf address
         // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
         let proxy = match proxy {
-            NewAddress::User(pkh) => pkh,
-            NewAddress::SmartFunction(_) => panic!("Unexpected proxy"),
+            NewAddress::User(_) => panic!("proxy is not a user address"),
+            NewAddress::SmartFunction(sfh) => sfh,
         };
 
         let fa_deposit = mock_fa_deposit(Some(proxy.clone()));
@@ -438,7 +438,7 @@ mod test {
                 let proxy_balance = TicketTable::get_balance(
                     &mut host,
                     &mut tx,
-                    &NewAddress::User(proxy),
+                    &NewAddress::SmartFunction(proxy),
                     &ticket_hash,
                 )
                 .unwrap();

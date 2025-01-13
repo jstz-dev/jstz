@@ -21,14 +21,13 @@ use jstz_core::{
     host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
     Module, Realm,
 };
-use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
 use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     api::{self, TraceData},
     context::{
-        account::{Account, Amount, ParsedCode},
         new_account::NewAddress,
+        new_account::{Account, Amount, ParsedCode},
     },
     js_logger::JsonLogger,
     operation::{OperationHash, RunFunction},
@@ -190,10 +189,9 @@ impl Script {
         address: &NewAddress,
         context: &mut Context,
     ) -> Result<Self> {
-        let src =
-            Account::function_code(hrt, tx, address)?.ok_or(Error::InvalidAddress)?;
+        let src = Account::function_code(hrt, tx, address)?;
 
-        Ok(Self::parse(Source::from_bytes(&src), context)?)
+        Ok(Self::parse(Source::from_bytes(src), context)?)
     }
 
     pub fn parse<R: ReadChar>(
@@ -240,26 +238,22 @@ impl Script {
         code: ParsedCode,
         balance: Amount,
     ) -> Result<NewAddress> {
-        let nonce = Account::nonce(hrt, tx, source)?;
+        let address = Account::create_smart_function(hrt, tx, source, balance, code);
 
-        // TODO: use sf address
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        let address = NewAddress::User(PublicKeyHash::digest(
-            format!("{}{}{}", source, code, nonce).as_bytes(),
-        )?);
-
-        let account = Account::create(hrt, tx, &address, balance, Some(code));
-        if account.is_ok() {
-            debug_msg!(hrt, "[📜] Smart function deployed: {address}\n");
-        } else if let Err(Error::InvalidAddress) = account {
-            debug_msg!(hrt, "[📜] Smart function was already deployed: {address}\n");
+        if address.is_ok() {
+            debug_msg!(
+                hrt,
+                "[📜] Smart function deployed: {}\n",
+                address.as_ref().unwrap()
+            );
+        } else if let Err(Error::AccountExists) = address {
+            debug_msg!(hrt, "[📜] Smart function was already deployed\n");
         } else {
             // Unreachable?
             debug_msg!(hrt, "[📜] Smart function deployment failed. \n");
-            account?
         }
 
-        Ok(address)
+        address
     }
 
     /// Runs the script
@@ -928,5 +922,37 @@ pub mod deploy {
         let address = Script::deploy(hrt, tx, source, function_code, account_credit)?;
 
         Ok(receipt::DeployFunctionReceipt { address })
+    }
+
+    #[cfg(test)]
+    mod test {
+        use super::*;
+        use jstz_core::kv::Transaction;
+        use jstz_mock::host::JstzMockHost;
+        use operation::DeployFunction;
+        use receipt::DeployFunctionReceipt;
+
+        #[test]
+        fn execute_deploy_deploys_smart_function_with_kt1_account1() {
+            let mut host = JstzMockHost::default();
+            let mut tx = Transaction::default();
+            let source = NewAddress::User(jstz_mock::account1());
+            let hrt = host.rt();
+            tx.begin();
+
+            let deployment = DeployFunction {
+                function_code: "".to_string().try_into().unwrap(),
+                account_credit: 0,
+            };
+            let result = deploy::execute(hrt, &mut tx, &source, deployment);
+            assert!(result.is_ok());
+            let receipt = result.unwrap();
+            assert!(matches!(
+                receipt,
+                DeployFunctionReceipt {
+                    address: NewAddress::SmartFunction(..),
+                }
+            ));
+        }
     }
 }

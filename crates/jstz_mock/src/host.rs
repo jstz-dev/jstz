@@ -20,7 +20,7 @@ pub const MOCK_RECEIVER: &str = "tz1PCXYfph1FQBy1jBEXVAhzgzoBww4vkjC8";
 pub const MOCK_SENDER: &str = "KT1R7WEtNNim3YgkxPt8wPMczjH3eyhbJMtz";
 pub const MOCK_SOURCE: &str = "tz1WXDeZmSpaCCJqes9GknbeUtdKhJJ8QDA2";
 
-pub const MOCK_PROXY: &str = "tz1ZpKsSVbrQmUeFEjMFK7zWaZ1N9AudDWqy";
+pub const MOCK_PROXY: &str = "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton";
 pub const MOCK_PROXY_FUNCTION: &str = r#"
         export default (request) => {
             const url = new URL(request.url)

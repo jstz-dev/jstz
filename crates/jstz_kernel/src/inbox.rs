@@ -192,7 +192,7 @@ pub fn read_message(
 #[cfg(test)]
 mod test {
     use jstz_crypto::hash::Hash;
-    use jstz_crypto::public_key_hash::PublicKeyHash;
+    use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_mock::message::native_deposit::MockNativeDeposit;
     use jstz_mock::{host::JstzMockHost, message::fa_deposit::MockFaDeposit};
     use jstz_proto::context::new_account::NewAddress;
@@ -294,11 +294,13 @@ mod test {
             assert_eq!(300, amount);
             assert_eq!(fa_deposit.receiver.to_b58check(), receiver.to_base58());
             assert_eq!(
-                Some(PublicKeyHash::from_base58(jstz_mock::host::MOCK_PROXY).unwrap()),
+                Some(
+                    SmartFunctionHash::from_base58(jstz_mock::host::MOCK_PROXY).unwrap()
+                ),
                 proxy_smart_function.map(|p| {
                     match p {
-                        NewAddress::User(pkh) => pkh,
-                        NewAddress::SmartFunction(_) => panic!("Unexpected proxy"),
+                        NewAddress::User(_) => panic!("Unexpected proxy"),
+                        NewAddress::SmartFunction(sfh) => sfh,
                     }
                 })
             );
