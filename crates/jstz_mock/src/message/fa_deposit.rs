@@ -23,7 +23,7 @@ pub struct MockFaDeposit {
     pub ticket_amount: u32,
     pub ticket_content: (u32, Option<Vec<u8>>),
     pub smart_rollup: Option<SmartRollupAddress>,
-    pub proxy_contract: Option<jstz_crypto::public_key_hash::PublicKeyHash>, // proxy must be tz1 for nows
+    pub proxy_contract: Option<jstz_crypto::smart_function_hash::SmartFunctionHash>,
 }
 
 impl Default for MockFaDeposit {
@@ -47,8 +47,10 @@ impl Default for MockFaDeposit {
             // use sf hash
             // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
             proxy_contract: Some(
-                jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_PROXY)
-                    .unwrap(),
+                jstz_crypto::smart_function_hash::SmartFunctionHash::from_base58(
+                    MOCK_PROXY,
+                )
+                .unwrap(),
             ),
         }
     }

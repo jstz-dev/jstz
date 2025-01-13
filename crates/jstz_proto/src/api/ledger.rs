@@ -15,8 +15,8 @@ use jstz_core::{
 
 use crate::{
     context::{
-        account::{Account, Amount},
         new_account::NewAddress,
+        new_account::{Account, Amount},
     },
     error::Result,
 };

@@ -1,7 +1,7 @@
 use crate::{
     context::{
-        account::{Account, Amount, Nonce, ParsedCode},
         new_account::NewAddress,
+        new_account::{Account, Amount, Nonce, ParsedCode},
     },
     Error, Result,
 };
@@ -244,7 +244,7 @@ pub mod openapi {
 #[cfg(test)]
 mod test {
     use super::{DeployFunction, RunFunction};
-    use crate::{context::account::ParsedCode, operation::Content};
+    use crate::{context::new_account::ParsedCode, operation::Content};
     use http::{HeaderMap, Method, Uri};
     use jstz_core::BinEncodable;
     use serde_json::json;

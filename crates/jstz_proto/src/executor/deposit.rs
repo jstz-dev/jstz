@@ -2,7 +2,7 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::hash::Blake2b;
 
 use crate::{
-    context::account::Account,
+    context::new_account::Account,
     operation::external::Deposit,
     receipt::{DepositReceipt, Receipt},
 };

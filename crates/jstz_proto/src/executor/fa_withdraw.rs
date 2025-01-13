@@ -18,7 +18,7 @@ use tezos_smart_rollup::{
 use utoipa::ToSchema;
 
 use crate::{
-    context::{account::Amount, new_account::NewAddress, ticket_table::TicketTable},
+    context::{new_account::Amount, new_account::NewAddress, ticket_table::TicketTable},
     Error, Result,
 };
 
