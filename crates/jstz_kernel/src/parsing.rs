@@ -8,8 +8,6 @@ use tezos_smart_rollup::types::{Contract, PublicKeyHash as TezosPublicKeyHash};
 
 pub fn try_parse_contract(contract: &Contract) -> Result<NewAddress> {
     match contract {
-        // TODO: remove implicit account?
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
         Contract::Implicit(TezosPublicKeyHash::Ed25519(tz1)) => {
             Ok(NewAddress::User(PublicKeyHash::Tz1(tz1.clone().into())))
         }

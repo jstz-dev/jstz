@@ -1,7 +1,7 @@
 use boa_engine::JsError;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::{
-    context::{account::ParsedCode, new_account::NewAddress},
+    context::{new_account::NewAddress, new_account::ParsedCode},
     operation::{Content, DeployFunction, Operation, SignedOperation},
     receipt::{ReceiptContent, ReceiptResult},
 };

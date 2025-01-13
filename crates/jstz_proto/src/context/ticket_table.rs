@@ -6,7 +6,7 @@ use tezos_smart_rollup::{
     storage::path::{self, OwnedPath, RefPath},
 };
 
-use super::{account::Amount, new_account::NewAddress};
+use super::{new_account::Amount, new_account::NewAddress};
 
 use crate::error::Result;
 

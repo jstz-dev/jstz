@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::{bail, Result};
 use jstz_proto::{
     api::KvValue,
-    context::{account::Nonce, new_account::NewAddress},
+    context::{new_account::NewAddress, new_account::Nonce},
     operation::{OperationHash, SignedOperation},
     receipt::Receipt,
 };

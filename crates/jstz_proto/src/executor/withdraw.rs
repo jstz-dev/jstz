@@ -12,8 +12,8 @@ use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::{
     context::{
-        account::{Account, Amount},
         new_account::NewAddress,
+        new_account::{Account, Amount},
     },
     Error, Result,
 };
@@ -92,7 +92,7 @@ mod test {
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
-        context::{account::Account, new_account::NewAddress},
+        context::{new_account::Account, new_account::NewAddress},
         executor::withdraw::execute_withdraw,
         Error,
     };

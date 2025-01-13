@@ -6,7 +6,10 @@ use axum::{
 use jstz_core::BINCODE_CONFIGURATION;
 use jstz_proto::{
     api::KvValue,
-    context::account::{Account, Nonce, ParsedCode},
+    context::new_account::{
+        Account, Nonce, ParsedCode, SmartFunctionAccount, UserAccount,
+        ACCOUNTS_PATH_PREFIX,
+    },
 };
 use serde::Deserialize;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -24,6 +27,10 @@ fn construct_storage_key(address: &str, key: &Option<String>) -> String {
         Some(value) if !value.is_empty() => format!("/jstz_kv/{}/{}", address, value),
         _ => format!("/jstz_kv/{}", address),
     }
+}
+
+fn construct_accounts_key(address: &str) -> String {
+    format!("{}/{}", ACCOUNTS_PATH_PREFIX, address)
 }
 
 #[derive(Deserialize)]
@@ -48,14 +55,17 @@ async fn get_nonce(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
-    let key = format!("/jstz_account/{}", address);
+    let key = construct_accounts_key(&address);
     let value = rollup_client.get_value(&key).await?;
     let account_nonce = match value {
         Some(value) => {
             let account: Account =
                 bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
                     .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            account.nonce
+            match account {
+                Account::User(UserAccount { nonce, .. }) => nonce,
+                Account::SmartFunction(SmartFunctionAccount { nonce, .. }) => nonce,
+            }
         }
         None => Err(ServiceError::NotFound)?,
     };
@@ -78,20 +88,24 @@ async fn get_code(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<ParsedCode>> {
-    let key = format!("/jstz_account/{}", address);
+    let key = construct_accounts_key(&address);
     let value = rollup_client.get_value(&key).await?;
     let account_code = match value {
         Some(value) => {
             let account: Account =
                 bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
                     .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            account.function_code
+            match account {
+                Account::User { .. } => Err(ServiceError::BadRequest(
+                    "Account is not a smart function".to_string(),
+                ))?,
+                Account::SmartFunction(SmartFunctionAccount {
+                    function_code, ..
+                }) => function_code,
+            }
         }
         None => Err(ServiceError::NotFound)?,
-    }
-    .ok_or_else(|| {
-        ServiceError::BadRequest("Account is not a smart function".to_string())
-    })?;
+    };
     Ok(Json(account_code))
 }
 
@@ -110,7 +124,7 @@ async fn get_balance(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<u64>> {
-    let key = format!("/jstz_account/{}", address);
+    let key = construct_accounts_key(&address);
     let value = rollup_client.get_value(&key).await?;
     let account_balance = match value {
         Some(value) => {
@@ -119,7 +133,10 @@ async fn get_balance(
                 BINCODE_CONFIGURATION,
             )
             .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            account.amount
+            match account {
+                Account::User(UserAccount { amount, .. }) => amount,
+                Account::SmartFunction(SmartFunctionAccount { amount, .. }) => amount,
+            }
         }
         None => Err(ServiceError::NotFound)?,
     };

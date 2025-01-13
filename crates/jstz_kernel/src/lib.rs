@@ -65,8 +65,8 @@ mod test {
         message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
     };
     use jstz_proto::context::{
-        account::{Account, ParsedCode},
         new_account::NewAddress,
+        new_account::{Account, ParsedCode},
         ticket_table::TicketTable,
     };
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
@@ -127,11 +127,9 @@ mod test {
         .unwrap();
         tx.commit(host.rt()).unwrap();
 
-        // TODO: use sf address
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
         let proxy = match proxy {
-            NewAddress::User(pkh) => pkh,
-            NewAddress::SmartFunction(_) => panic!("Unexpected proxy"),
+            NewAddress::User(_) => panic!("proxy is not a user address"),
+            NewAddress::SmartFunction(sfh) => sfh,
         };
 
         let deposit = MockFaDeposit {
@@ -148,7 +146,7 @@ mod test {
                 let proxy_balance = TicketTable::get_balance(
                     host.rt(),
                     tx,
-                    &NewAddress::User(proxy),
+                    &NewAddress::SmartFunction(proxy),
                     &ticket_hash,
                 )
                 .unwrap();
@@ -179,7 +177,7 @@ mod test {
                 let proxy_balance = TicketTable::get_balance(
                     host.rt(),
                     &mut tx,
-                    &NewAddress::User(proxy),
+                    &NewAddress::SmartFunction(proxy),
                     &ticket_hash,
                 )
                 .unwrap();
