@@ -178,12 +178,18 @@ fn generate_path_getter_code(out_dir: &Path, fn_name: &str, path_suffix: &str) -
         r#"
         const {}_PATH: &str = "{}";
         pub fn {}_path() -> std::path::PathBuf {{
-            std::path::PathBuf::from({}_PATH)
+            let path = std::path::PathBuf::from({}_PATH);
+            if path.exists() {{
+                path
+            }} else {{
+                std::path::PathBuf::from("/usr/share/jstzd/{}")
+            }}
         }}
         "#,
         &name_upper,
         out_dir.join(path_suffix).to_str().expect("Invalid path"),
         fn_name,
         &name_upper,
+        path_suffix
     )
 }
