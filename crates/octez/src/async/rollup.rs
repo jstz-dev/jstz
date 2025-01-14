@@ -221,6 +221,8 @@ impl OctezRollup {
             &self.rpc_endpoint.port().to_string(),
             "--acl-override",
             "allow-all",
+            #[cfg(feature = "disable-slow-pvm")]
+            "--unsafe-disable-wasm-kernel-checks",
         ]);
         if let Some(boot_sector_file) = boot_sector_file {
             command.args(["--boot-sector-file", &boot_sector_file.to_string_lossy()]);

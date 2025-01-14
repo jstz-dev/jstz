@@ -31,3 +31,4 @@ tokio.workspace = true
 
 [features]
 disable-alpha = []
+disable-slow-pvm = []
