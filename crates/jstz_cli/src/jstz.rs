@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{bail, Result};
 use jstz_proto::{
     api::KvValue,
     context::{account::Nonce, new_account::NewAddress},
@@ -50,9 +50,6 @@ impl JstzClient {
     }
 
     pub async fn get_nonce(&self, address: &NewAddress) -> Result<Nonce> {
-        address
-            .check_is_user()
-            .map_err(|e| anyhow!(format!("{}", e)))?;
         let response = self
             .get(&format!("{}/accounts/{}/nonce", self.endpoint, address))
             .await?;
