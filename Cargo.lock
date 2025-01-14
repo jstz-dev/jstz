@@ -325,6 +325,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "bincode"
+version = "2.0.0-rc.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f11ea1a0346b94ef188834a65c068a03aec181c94896d481d7a0a40d85b0ce95"
+dependencies = [
+ "bincode_derive",
+ "serde",
+]
+
+[[package]]
+name = "bincode_derive"
+version = "2.0.0-rc.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e30759b3b99a1b802a7a3aa21c85c3ded5c28e1c83170d82d70f08bbf7f3e4c"
+dependencies = [
+ "virtue",
+]
+
+[[package]]
 name = "bindgen"
 version = "0.69.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2795,7 +2814,7 @@ name = "jstz_core"
 version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
- "bincode",
+ "bincode 2.0.0-rc.3",
  "boa_engine",
  "boa_gc",
  "chrono",
@@ -2819,7 +2838,7 @@ name = "jstz_crypto"
 version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
- "bincode",
+ "bincode 2.0.0-rc.3",
  "boa_gc",
  "derive_more",
  "hex",
@@ -2841,7 +2860,7 @@ dependencies = [
 name = "jstz_kernel"
 version = "0.1.0-alpha.0"
 dependencies = [
- "bincode",
+ "bincode 2.0.0-rc.3",
  "boa_engine",
  "http 1.1.0",
  "http-serde",
@@ -2875,7 +2894,7 @@ dependencies = [
  "anyhow",
  "axum",
  "base64 0.21.7",
- "bincode",
+ "bincode 2.0.0-rc.3",
  "clap 4.5.20",
  "derive_more",
  "dirs 3.0.2",
@@ -2883,6 +2902,7 @@ dependencies = [
  "futures-util",
  "hex",
  "jstz_api",
+ "jstz_core",
  "jstz_crypto",
  "jstz_proto",
  "log",
@@ -2913,7 +2933,7 @@ dependencies = [
 name = "jstz_proto"
 version = "0.1.0-alpha.0"
 dependencies = [
- "bincode",
+ "bincode 2.0.0-rc.3",
  "boa_engine",
  "boa_gc",
  "derive_more",
@@ -2939,7 +2959,7 @@ name = "jstz_rollup"
 version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
- "bincode",
+ "bincode 2.0.0-rc.3",
  "clap 4.5.20",
  "derive_more",
  "dirs 3.0.2",
@@ -2991,7 +3011,7 @@ dependencies = [
  "async-dropper-simple",
  "async-trait",
  "axum",
- "bincode",
+ "bincode 2.0.0-rc.3",
  "bollard",
  "clap 4.5.20",
  "console",
@@ -4906,7 +4926,7 @@ version = "5.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "874dcfa363995604333cf947ae9f751ca3af4522c60886774c4963943b4746b1"
 dependencies = [
- "bincode",
+ "bincode 1.3.3",
  "bitflags 1.3.2",
  "flate2",
  "fnv",
@@ -5802,6 +5822,12 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "virtue"
+version = "0.0.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9dcc60c0624df774c82a0ef104151231d37da4962957d691c011c852b2473314"
 
 [[package]]
 name = "wait-timeout"

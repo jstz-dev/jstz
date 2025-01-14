@@ -1,3 +1,4 @@
+use bincode::{Decode, Encode};
 use derive_more::{Display, Error, From};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{
@@ -78,7 +79,7 @@ impl TryFrom<FA2_1Ticket> for Ticket {
 
 type OutboxMessageId = String;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Encode, Decode)]
 #[serde(tag = "_type")]
 pub struct FaWithdrawReceipt {
     pub source: NewAddress,

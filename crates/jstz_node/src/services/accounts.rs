@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
+use jstz_core::BINCODE_CONFIGURATION;
 use jstz_proto::{
     api::KvValue,
     context::account::{Account, Nonce, ParsedCode},
@@ -51,9 +52,10 @@ async fn get_nonce(
     let value = rollup_client.get_value(&key).await?;
     let account_nonce = match value {
         Some(value) => {
-            bincode::deserialize::<Account>(&value)
-                .map_err(|_| anyhow!("Failed to deserialize account"))?
-                .nonce
+            let account: Account =
+                bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
+                    .map_err(|_| anyhow!("Failed to deserialize account"))?;
+            account.nonce
         }
         None => Err(ServiceError::NotFound)?,
     };
@@ -80,9 +82,10 @@ async fn get_code(
     let value = rollup_client.get_value(&key).await?;
     let account_code = match value {
         Some(value) => {
-            bincode::deserialize::<Account>(&value)
-                .map_err(|_| anyhow!("Failed to deserialize account"))?
-                .function_code
+            let account: Account =
+                bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
+                    .map_err(|_| anyhow!("Failed to deserialize account"))?;
+            account.function_code
         }
         None => Err(ServiceError::NotFound)?,
     }
@@ -111,9 +114,12 @@ async fn get_balance(
     let value = rollup_client.get_value(&key).await?;
     let account_balance = match value {
         Some(value) => {
-            bincode::deserialize::<Account>(&value)
-                .map_err(|_| anyhow!("Failed to deserialize account"))?
-                .amount
+            let account: Account = bincode::serde::decode_borrowed_from_slice(
+                value.as_slice(),
+                BINCODE_CONFIGURATION,
+            )
+            .map_err(|_| anyhow!("Failed to deserialize account"))?;
+            account.amount
         }
         None => Err(ServiceError::NotFound)?,
     };
@@ -142,8 +148,12 @@ async fn get_kv_value(
     let key = construct_storage_key(&address, &key);
     let value = rollup_client.get_value(&key).await?;
     let kv_value = match value {
-        Some(value) => bincode::deserialize::<KvValue>(&value)
-            .map_err(|_| anyhow!("Failed to deserialize account"))?,
+        Some(value) => {
+            let value: KvValue =
+                bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
+                    .map_err(|_| anyhow!("Failed to deserialize account"))?;
+            value
+        }
         None => Err(ServiceError::NotFound)?,
     };
     Ok(Json(kv_value))

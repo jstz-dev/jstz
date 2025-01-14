@@ -5,6 +5,7 @@ use crate::{
     },
     Error, Result,
 };
+use bincode::{Decode, Encode};
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
@@ -15,9 +16,10 @@ use jstz_crypto::{
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode)]
 pub struct Operation {
     pub source: PublicKeyHash,
+    #[bincode(with_serde)]
     pub nonce: Nonce,
     pub content: Content,
 }
@@ -123,16 +125,18 @@ pub struct RunFunction {
     pub gas_limit: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
+#[derive(
+    Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
+)]
 #[serde(tag = "_type")]
 pub enum Content {
     #[schema(title = "DeployFunction")]
-    DeployFunction(DeployFunction),
+    DeployFunction(#[bincode(with_serde)] DeployFunction),
     #[schema(title = "RunFunction")]
-    RunFunction(RunFunction),
+    RunFunction(#[bincode(with_serde)] RunFunction),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode)]
 pub struct SignedOperation {
     pub public_key: PublicKey,
     signature: Signature,
@@ -289,12 +293,16 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
-    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
     fn test_run_function_bin_round_trip() {
         let run_function = run_function_content();
-        let binary = bincode::serialize(&run_function).unwrap();
-        let bin_decoded = bincode::deserialize::<Content>(binary.as_ref()).unwrap();
+        let binary =
+            bincode::encode_to_vec(&run_function, jstz_core::BINCODE_CONFIGURATION)
+                .unwrap();
+        let (bin_decoded, _): (Content, _) = bincode::decode_from_slice(
+            binary.as_slice(),
+            jstz_core::BINCODE_CONFIGURATION,
+        )
+        .unwrap();
         assert_eq!(run_function, bin_decoded);
     }
 
@@ -315,12 +323,16 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
-    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
     fn test_deploy_function_bin_round_trip() {
         let deploy_function = deploy_function_content();
-        let binary = bincode::serialize(&deploy_function).unwrap();
-        let bin_decoded = bincode::deserialize::<Content>(binary.as_ref()).unwrap();
+        let binary =
+            bincode::encode_to_vec(&deploy_function, jstz_core::BINCODE_CONFIGURATION)
+                .unwrap();
+        let (bin_decoded, _): (Content, _) = bincode::decode_from_slice(
+            binary.as_slice(),
+            jstz_core::BINCODE_CONFIGURATION,
+        )
+        .unwrap();
         assert_eq!(deploy_function, bin_decoded);
     }
 }

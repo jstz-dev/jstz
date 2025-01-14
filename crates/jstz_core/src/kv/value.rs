@@ -1,37 +1,30 @@
 use std::any::Any;
 use std::fmt::Debug;
 
-use bincode::Options;
 use derive_more::{Deref, DerefMut};
+use erased_serde::serialize_trait_object;
 use serde::de::DeserializeOwned;
 
-use crate::{Error, Result};
+use crate::{Error, Result, BINCODE_CONFIGURATION};
 
-fn bincode_options() -> impl bincode::Options {
-    bincode::DefaultOptions::new()
-        .with_fixint_encoding()
-        .allow_trailing_bytes()
+pub fn serialize<T: ?Sized + serde::Serialize>(value: &T) -> Result<Vec<u8>> {
+    let result =
+        bincode::serde::encode_to_vec(value, BINCODE_CONFIGURATION).map_err(|err| {
+            Error::SerializationError {
+                description: format!("{err}"),
+            }
+        })?;
+
+    Ok(result)
 }
 
-pub fn serialize<T: erased_serde::Serialize + ?Sized>(value: &T) -> Result<Vec<u8>> {
-    let mut writer = Vec::new();
-    let mut bincode_serializer = bincode::Serializer::new(&mut writer, bincode_options());
-
-    value
-        .erased_serialize(&mut <dyn erased_serde::Serializer>::erase(
-            &mut bincode_serializer,
-        ))
+pub(crate) fn deserialize<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
+    let (result, _) = bincode::serde::decode_from_slice(bytes, BINCODE_CONFIGURATION)
         .map_err(|err| Error::SerializationError {
             description: format!("{err}"),
         })?;
 
-    Ok(writer)
-}
-
-pub(crate) fn deserialize<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
-    bincode::deserialize(bytes).map_err(|err| Error::SerializationError {
-        description: format!("{err}"),
-    })
+    Ok(result)
 }
 
 /// A key-value 'value' is a value that is can be dynamically
@@ -41,6 +34,8 @@ pub trait Value: Any + Debug + erased_serde::Serialize {
     fn as_any_mut(&mut self) -> &mut dyn Any;
     fn clone_box(&self) -> Box<dyn Value>;
 }
+
+serialize_trait_object!(Value);
 
 impl<T> Value for T
 where

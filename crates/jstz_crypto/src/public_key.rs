@@ -1,7 +1,8 @@
-use crate::{error::Result, Error};
-use std::fmt::{self, Display};
-
+use crate::{error::Result, impl_bincode_for_hash, Error};
+use bincode::{Decode, Encode};
+use derive_more::{Deref, From};
 use serde::{Deserialize, Serialize};
+use std::fmt::{self, Display};
 use tezos_crypto_rs::{
     hash::{PublicKeyEd25519, PublicKeyP256, PublicKeySecp256k1},
     PublicKeyWithHash,
@@ -11,7 +12,19 @@ use utoipa::ToSchema;
 // FIXME: https://linear.app/tezos/issue/JSTZ-169/support-bls-in-risc-v
 // Add BLS support
 /// Tezos public key
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
+#[derive(
+    From,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    Encode,
+    Decode,
+)]
 #[serde(untagged)]
 pub enum PublicKey {
     #[schema(
@@ -19,20 +32,35 @@ pub enum PublicKey {
         value_type = String,
         example = json!("edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi")
     )]
-    Ed25519(PublicKeyEd25519),
+    Ed25519(Ed25519),
     #[schema(
         title = "Secp256k1",
         value_type = String,
         example = json!("sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY")
     )]
-    Secp256k1(PublicKeySecp256k1),
+    Secp256k1(Secp256k1),
     #[schema(
         title = "P256",
         value_type = String,
         example = json!("p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1")
     )]
-    P256(PublicKeyP256),
+    P256(P256),
 }
+
+// Newtype wrappers
+#[derive(Deref, From, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Ed25519(pub PublicKeyEd25519);
+
+#[derive(Deref, From, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct Secp256k1(pub PublicKeySecp256k1);
+
+#[derive(Deref, From, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct P256(pub PublicKeyP256);
+
+// Bincode implementation
+impl_bincode_for_hash!(Ed25519, PublicKeyEd25519);
+impl_bincode_for_hash!(Secp256k1, PublicKeySecp256k1);
+impl_bincode_for_hash!(P256, PublicKeyP256);
 
 impl PublicKey {
     pub fn to_base58(&self) -> String {
@@ -55,15 +83,15 @@ impl PublicKey {
         match &data[..4] {
             "edpk" => {
                 let pk = PublicKeyEd25519::from_base58_check(data)?;
-                Ok(PublicKey::Ed25519(pk))
+                Ok(PublicKey::Ed25519(pk.into()))
             }
             "sppk" => {
                 let pk = PublicKeySecp256k1::from_base58_check(data)?;
-                Ok(PublicKey::Secp256k1(pk))
+                Ok(PublicKey::Secp256k1(pk.into()))
             }
             "p2pk" => {
                 let pk = PublicKeyP256::from_base58_check(data)?;
-                Ok(PublicKey::P256(pk))
+                Ok(PublicKey::P256(pk.into()))
             }
             _ => Err(Error::InvalidPublicKey),
         }
@@ -134,14 +162,24 @@ mod test {
     }
 
     #[test]
-    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
-    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
+    fn json_round_trip() {
+        let pk = PublicKey::from_base58(TZ1).unwrap();
+        let json = serde_json::to_value(&pk).unwrap();
+        assert_eq!(
+            json,
+            serde_json::json!("edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi")
+        );
+        let decoded: PublicKey = serde_json::from_value(json).unwrap();
+        assert_eq!(pk, decoded);
+    }
+
+    #[test]
     fn bin_round_trip() {
         let pk = PublicKey::from_base58(TZ1).unwrap();
-        let bin = bincode::serialize(&pk).unwrap();
-        // Error message:
-        //      Result::unwrap()` on an `Err` value: DeserializeAnyNotSupported
-        let decoded = bincode::deserialize::<PublicKey>(bin.as_ref()).unwrap();
+        let bin = bincode::encode_to_vec(&pk, bincode::config::legacy()).unwrap();
+        let (decoded, _): (PublicKey, _) =
+            bincode::decode_from_slice(bin.as_slice(), bincode::config::legacy())
+                .unwrap();
         assert_eq!(pk, decoded);
     }
 }

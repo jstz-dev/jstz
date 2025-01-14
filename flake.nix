@@ -201,6 +201,7 @@
                 cargo-sort
                 cargo-nextest
                 cargo-llvm-cov
+                cargo-expand
 
                 # JavaScript/TypeScript toolchain
                 nodejs

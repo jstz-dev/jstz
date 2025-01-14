@@ -5,6 +5,7 @@ use axum::{
     extract::{Path, State},
     Json,
 };
+use jstz_core::BINCODE_CONFIGURATION;
 use jstz_proto::operation::{Operation, OperationHash, SignedOperation};
 use jstz_proto::receipt::Receipt;
 use tezos_data_encoding::enc::BinWriter;
@@ -32,7 +33,7 @@ async fn inject(
     State(AppState { rollup_client, .. }): State<AppState>,
     Json(operation): Json<SignedOperation>,
 ) -> ServiceResult<()> {
-    let encoded_operation = bincode::serialize(&operation)
+    let encoded_operation = bincode::encode_to_vec(&operation, BINCODE_CONFIGURATION)
         .map_err(|_| anyhow!("Failed to serialize operation"))?;
     let address = rollup_client.get_rollup_address().await?;
     let message_frame = ExternalMessageFrame::Targetted {
@@ -70,8 +71,11 @@ async fn receipt(
     let value = rollup_client.get_value(&key).await?;
 
     let receipt = match value {
-        Some(value) => bincode::deserialize::<Receipt>(&value)
-            .map_err(|_| anyhow!("Failed to deserialize receipt"))?,
+        Some(value) => bincode::serde::decode_borrowed_from_slice(
+            value.as_slice(),
+            BINCODE_CONFIGURATION,
+        )
+        .map_err(|_| anyhow!("Failed to deserialize receipt"))?,
         None => Err(ServiceError::NotFound)?,
     };
 

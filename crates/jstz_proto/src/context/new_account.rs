@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::error::{Error, Result};
+use bincode::{Decode, Encode};
 use boa_gc::{empty_trace, Finalize, Trace};
 use jstz_crypto::hash::Hash;
 use jstz_crypto::public_key_hash::PublicKeyHash;
@@ -16,13 +17,13 @@ use utoipa::ToSchema;
     Clone,
     PartialEq,
     Eq,
-    PartialOrd,
-    Ord,
     Hash,
     Serialize,
     Deserialize,
     Finalize,
     ToSchema,
+    Encode,
+    Decode,
 )]
 #[serde(untagged)]
 // TODO: rename to Address

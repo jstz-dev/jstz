@@ -1,3 +1,4 @@
+use bincode::{Decode, Encode};
 use derive_more::{Display, Error, From};
 use http::{header::CONTENT_TYPE, HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
@@ -22,11 +23,12 @@ const FA_DEPOSIT_GAS_LIMIT: usize = usize::MAX;
 const NULL_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
 const DEPOSIT_URI: &str = "/-/deposit";
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 #[serde(tag = "_type")]
 pub struct FaDepositReceipt {
     pub receiver: NewAddress,
     pub ticket_balance: Amount,
+    #[bincode(with_serde)]
     pub run_function: Option<crate::receipt::RunFunctionReceipt>,
 }
 

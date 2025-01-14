@@ -41,7 +41,7 @@ tezos-smart-rollup-host.workspace = true
 tezos-smart-rollup-installer.workspace = true
 tezos-smart-rollup-installer-config.workspace = true
 jstz_kernel = { path = "../jstz_kernel" }
-
+jstz_crypto = { path = "../jstz_crypto" }
 
 [dev-dependencies]
 assert_cmd.workspace = true

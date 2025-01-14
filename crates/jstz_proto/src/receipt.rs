@@ -4,13 +4,13 @@ use crate::{
     operation::OperationHash,
     Result,
 };
+use bincode::{Decode, Encode};
 use http::{HeaderMap, StatusCode};
 use jstz_api::http::body::HttpBody;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-// pub type ReceiptResult<T> = std::result::Result<T, ReceiptError>;
-#[derive(Debug, Clone, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, Clone, ToSchema, Serialize, Deserialize, Encode, Decode)]
 #[serde(tag = "_type", content = "inner")]
 pub enum ReceiptResult {
     #[schema(title = "Success")]
@@ -28,8 +28,9 @@ impl From<Result<ReceiptContent>> for ReceiptResult {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 pub struct Receipt {
+    #[bincode(with_serde)]
     hash: OperationHash,
     pub result: ReceiptResult,
 }
@@ -47,7 +48,7 @@ impl Receipt {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 pub struct DeployFunctionReceipt {
     pub address: NewAddress,
 }
@@ -66,19 +67,19 @@ pub struct RunFunctionReceipt {
     pub headers: HeaderMap,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 pub struct DepositReceipt {
     pub account: NewAddress,
     pub updated_balance: u64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 #[serde(tag = "_type")]
 pub enum ReceiptContent {
     #[schema(title = "DeployFunction")]
     DeployFunction(DeployFunctionReceipt),
     #[schema(title = "RunFunction")]
-    RunFunction(RunFunctionReceipt),
+    RunFunction(#[bincode(with_serde)] RunFunctionReceipt),
     #[schema(title = "Deposit")]
     Deposit(DepositReceipt),
     #[schema(title = "FaDeposit")]

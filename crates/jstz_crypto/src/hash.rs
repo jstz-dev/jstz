@@ -88,9 +88,6 @@ pub trait Hash<'a>:
     + Clone
     + PartialEq
     + Eq
-    + PartialOrd
-    + Ord
-    + CoreHash
     + Serialize
     + Deserialize<'a>
     + Finalize
