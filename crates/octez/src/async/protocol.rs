@@ -55,6 +55,7 @@ impl Display for ProtocolConstants {
 
 #[derive(PartialEq, Eq, Debug, Clone, SerializeDisplay, DeserializeFromStr)]
 pub enum Protocol {
+    #[cfg(not(feature = "disable-alpha"))]
     Alpha,
     ParisC,
     Quebec,
@@ -65,7 +66,9 @@ impl FromStr for Protocol {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            #[cfg(not(feature = "disable-alpha"))]
             "alpha" => Ok(Protocol::Alpha),
+            #[cfg(not(feature = "disable-alpha"))]
             "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK" => Ok(Protocol::Alpha),
             "parisC" => Ok(Protocol::ParisC),
             "PsParisCZo7KAh1Z1smVd9ZMZ1HHn5gkzbM94V3PLCpknFWhUAi" => Ok(Protocol::ParisC),
@@ -77,7 +80,11 @@ impl FromStr for Protocol {
 
 impl Default for Protocol {
     fn default() -> Self {
-        Self::Alpha
+        #[cfg(not(feature = "disable-alpha"))]
+        return Self::Alpha;
+
+        #[cfg(feature = "disable-alpha")]
+        Self::ParisC
     }
 }
 
@@ -90,6 +97,7 @@ impl Display for Protocol {
 impl Protocol {
     pub fn hash(&self) -> &'static str {
         match self {
+            #[cfg(not(feature = "disable-alpha"))]
             Protocol::Alpha => "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
             Protocol::ParisC => "PsParisCZo7KAh1Z1smVd9ZMZ1HHn5gkzbM94V3PLCpknFWhUAi",
             Protocol::Quebec => "PsQubecQubecQubecQubecQubecQubecQubecQubecQubec",
@@ -446,14 +454,14 @@ mod tests {
         .unwrap();
         builder
             .set_constants(ProtocolConstants::Sandbox)
-            .set_protocol(Protocol::Alpha)
+            .set_protocol(Protocol::ParisC)
             .set_source_path("/test/path")
             .set_bootstrap_accounts([account.clone()])
             .set_bootstrap_contracts([contract.clone()])
             .set_bootstrap_smart_rollups([rollup.clone()]);
         assert_eq!(builder.constants.unwrap(), ProtocolConstants::Sandbox);
         assert_eq!(builder.source_path.unwrap().to_str().unwrap(), "/test/path");
-        assert_eq!(builder.protocol.unwrap().hash(), Protocol::Alpha.hash());
+        assert_eq!(builder.protocol.unwrap().hash(), Protocol::ParisC.hash());
         assert_eq!(builder.bootstrap_accounts.accounts().len(), 1);
         assert_eq!(
             *builder.bootstrap_accounts.accounts().last().unwrap(),
@@ -474,7 +482,10 @@ mod tests {
         // and write an output file, so we check if the result is ok here
         match builder.build() {
             Ok(p) => {
+                #[cfg(not(feature = "disable-alpha"))]
                 assert_eq!(p.protocol(), Protocol::Alpha);
+                #[cfg(feature = "disable-alpha")]
+                assert_eq!(p.protocol(), Protocol::ParisC);
             }
             _ => panic!("builder.build should not fail"),
         }
@@ -761,8 +772,8 @@ mod tests {
     #[test]
     fn serialize_protocol() {
         assert_eq!(
-            serde_json::to_string(&Protocol::Alpha).unwrap(),
-            "\"ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK\""
+            serde_json::to_string(&Protocol::ParisC).unwrap(),
+            "\"PsParisCZo7KAh1Z1smVd9ZMZ1HHn5gkzbM94V3PLCpknFWhUAi\""
         )
     }
 
@@ -780,6 +791,7 @@ mod tests {
 
     #[test]
     fn deserialize_protocol() {
+        #[cfg(not(feature = "disable-alpha"))]
         assert_eq!(
             serde_json::from_str::<Protocol>(
                 "\"ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK\""
@@ -787,6 +799,7 @@ mod tests {
             .unwrap(),
             Protocol::Alpha
         );
+        #[cfg(not(feature = "disable-alpha"))]
         assert_eq!(
             serde_json::from_str::<Protocol>("\"alpha\"").unwrap(),
             Protocol::Alpha
