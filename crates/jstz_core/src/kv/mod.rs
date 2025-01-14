@@ -68,7 +68,7 @@ impl Storage {
     /// Insert a key-value pair into the persistent store
     pub fn insert<V>(rt: &mut impl Runtime, key: &impl Path, value: &V) -> Result<()>
     where
-        V: Value + ?Sized,
+        V: Value + ?Sized + serde::Serialize,
     {
         rt.store_write(key, &value::serialize(value)?, 0)?;
         Ok(())

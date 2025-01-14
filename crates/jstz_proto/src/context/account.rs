@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::error::{Error, Result};
+use bincode::{Decode, Encode};
 use boa_engine::{Context, JsError, JsResult, Module, Source};
 use jstz_core::{
     host::HostRuntime,
@@ -65,10 +66,13 @@ impl TryFrom<String> for ParsedCode {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct Account {
+    #[bincode(with_serde)]
     pub nonce: Nonce,
+    #[bincode(with_serde)]
     pub amount: Amount,
+    #[bincode(with_serde)]
     pub function_code: Option<ParsedCode>,
 }
 

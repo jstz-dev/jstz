@@ -1,5 +1,6 @@
 use std::ops::Deref;
 
+use bincode::{Decode, Encode};
 use boa_engine::{
     js_string, object::ObjectInitializer, property::Attribute, Context, JsArgs, JsData,
     JsError, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
@@ -21,10 +22,10 @@ const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
 
 // TODO: Figure out a more effective way of serializing values using json
 /// A value stored in the Key-Value store. Always valid JSON.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 #[serde(try_from = "String", into = "String")]
 #[schema(value_type = String, format = "json")]
-pub struct KvValue(pub serde_json::Value);
+pub struct KvValue(#[bincode(with_serde)] pub serde_json::Value);
 
 impl From<KvValue> for String {
     fn from(val: KvValue) -> Self {

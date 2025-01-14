@@ -30,7 +30,7 @@ impl SecretKey {
 
     pub fn sign(&self, message: impl AsRef<[u8]>) -> Result<Signature> {
         let SecretKey::Ed25519(sk) = self;
-        Ok(Signature::Ed25519(sk.sign(message)?))
+        Ok(Signature::Ed25519(sk.sign(message)?.into()))
     }
 }
 
@@ -67,17 +67,5 @@ mod test {
             "edsk3YuM4VFTRxq4LmWzf293iEdgramaDhgVnx3ij3CzgQTeDRcb1Q"
         );
         assert_eq!(serde_json::to_string(&sk).expect("Should not fail"), json);
-    }
-
-    #[test]
-    #[ignore = "Fails because deserialization cannot handle untagged crypto enums"]
-    // FIXME: https://linear.app/tezos/issue/JSTZ-272/fix-binary-round-trip-for-tezos-cryptos
-    fn bin_round_trip() {
-        let sk = SecretKey::from_base58(SK).unwrap();
-        let bin = bincode::serialize(&sk).unwrap();
-        // Error message:
-        //      Result::unwrap()` on an `Err` value: DeserializeAnyNotSupported
-        let decoded = bincode::deserialize::<SecretKey>(bin.as_ref()).unwrap();
-        assert_eq!(sk, decoded);
     }
 }

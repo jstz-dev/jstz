@@ -12,6 +12,7 @@ description.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+bincode.workspace = true
 boa_gc.workspace = true
 derive_more.workspace = true
 hex.workspace = true

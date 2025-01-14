@@ -1,30 +1,32 @@
-use boa_gc::{empty_trace, Finalize, Trace};
-use serde::{Deserialize, Serialize};
-use std::fmt;
-use std::str::FromStr;
-use utoipa::ToSchema;
-
 use crate::{
     error::{Error, Result},
     hash::Hash,
+    impl_bincode_for_hash,
 };
+use bincode::{Decode, Encode};
+use boa_gc::{empty_trace, Finalize, Trace};
+use derive_more::{Deref, From};
+use serde::{Deserialize, Serialize};
+use std::fmt;
+use std::str::FromStr;
 use tezos_crypto_rs::{
     blake2b,
     hash::{ContractKt1Hash, HashTrait},
 };
+use utoipa::ToSchema;
 
 #[derive(
     Debug,
     Clone,
     PartialEq,
     Eq,
-    PartialOrd,
-    Ord,
     Hash,
     Serialize,
     Deserialize,
     Finalize,
     ToSchema,
+    Encode,
+    Decode,
 )]
 pub enum SmartFunctionHash {
     #[schema(
@@ -32,8 +34,15 @@ pub enum SmartFunctionHash {
         value_type = String,
         example = json!("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
     )]
-    Kt1(ContractKt1Hash),
+    Kt1(Kt1),
 }
+
+#[derive(
+    Deref, From, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Finalize,
+)]
+pub struct Kt1(pub ContractKt1Hash);
+
+impl_bincode_for_hash!(Kt1, ContractKt1Hash);
 
 unsafe impl Trace for SmartFunctionHash {
     empty_trace!();
@@ -56,9 +65,9 @@ impl<'a> Hash<'a> for SmartFunctionHash {
 
     fn from_base58(data: &str) -> Result<Self> {
         match &data[..3] {
-            "KT1" => Ok(SmartFunctionHash::Kt1(ContractKt1Hash::from_base58_check(
-                data,
-            )?)),
+            "KT1" => Ok(SmartFunctionHash::Kt1(
+                ContractKt1Hash::from_base58_check(data)?.into(),
+            )),
             _ => Err(Error::InvalidSmartFunctionHash),
         }
     }
@@ -74,9 +83,9 @@ impl<'a> Hash<'a> for SmartFunctionHash {
     fn digest(data: &[u8]) -> Result<Self> {
         let out_len = ContractKt1Hash::hash_size();
         let bytes = blake2b::digest(data, out_len)?;
-        Ok(SmartFunctionHash::Kt1(ContractKt1Hash::try_from_bytes(
-            &bytes,
-        )?))
+        Ok(SmartFunctionHash::Kt1(
+            ContractKt1Hash::try_from_bytes(&bytes)?.into(),
+        ))
     }
 }
 

@@ -95,7 +95,7 @@ mod test {
                     host.rt(),
                     tx,
                     &NewAddress::User(jstz_crypto::public_key_hash::PublicKeyHash::Tz1(
-                        tz1,
+                        tz1.into(),
                     )),
                 )
                 .unwrap();

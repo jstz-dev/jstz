@@ -25,6 +25,7 @@ env_logger.workspace = true
 futures-util.workspace = true
 hex.workspace = true
 jstz_api = { path = "../jstz_api" }
+jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
 log.workspace = true

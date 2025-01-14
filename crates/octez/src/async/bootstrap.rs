@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct BootstrapAccount {
     public_key: PublicKey,
     amount_mutez: u64,

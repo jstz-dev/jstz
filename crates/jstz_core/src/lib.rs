@@ -1,5 +1,6 @@
 pub mod error;
 
+use bincode::config::{Configuration, Fixint, LittleEndian};
 use boa_engine::Context;
 
 pub use error::{Error, Result};
@@ -21,3 +22,6 @@ pub trait Api {
 
 pub use realm::{Module, Realm};
 pub use runtime::Runtime;
+
+pub static BINCODE_CONFIGURATION: Configuration<LittleEndian, Fixint> =
+    bincode::config::legacy();

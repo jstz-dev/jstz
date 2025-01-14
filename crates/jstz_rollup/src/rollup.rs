@@ -42,9 +42,10 @@ pub fn make_installer(
         ),
         // 2. Set `jstz` ticketer as the bridge contract address
         OwnedConfigInstruction::set_instr(
-            OwnedBytes(bincode::serialize(&ContractKt1Hash::from_base58_check(
-                exchanger,
-            )?)?),
+            OwnedBytes(bincode::serde::encode_to_vec(
+                &ContractKt1Hash::from_base58_check(exchanger)?,
+                bincode::config::legacy(),
+            )?),
             OwnedPath::from(TICKETER_PATH),
         ),
     ]);
