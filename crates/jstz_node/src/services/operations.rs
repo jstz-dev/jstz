@@ -71,11 +71,8 @@ async fn receipt(
     let value = rollup_client.get_value(&key).await?;
 
     let receipt = match value {
-        Some(value) => bincode::serde::decode_borrowed_from_slice(
-            value.as_slice(),
-            BINCODE_CONFIGURATION,
-        )
-        .map_err(|_| anyhow!("Failed to deserialize receipt"))?,
+        Some(value) => jstz_core::deserialize::<Receipt>(value.as_slice())
+            .map_err(|_| anyhow!("Failed to deserialize receipt"))?,
         None => Err(ServiceError::NotFound)?,
     };
 

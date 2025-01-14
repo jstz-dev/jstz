@@ -3,7 +3,6 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
-use jstz_core::BINCODE_CONFIGURATION;
 use jstz_proto::{
     api::KvValue,
     context::account::{Account, Nonce, ParsedCode},
@@ -24,6 +23,11 @@ fn construct_storage_key(address: &str, key: &Option<String>) -> String {
         Some(value) if !value.is_empty() => format!("/jstz_kv/{}/{}", address, value),
         _ => format!("/jstz_kv/{}", address),
     }
+}
+
+fn deserialize_account(data: &[u8]) -> ServiceResult<Account> {
+    Ok(jstz_core::deserialize::<Account>(data)
+        .map_err(|_| anyhow!("Failed to deserialize account"))?)
 }
 
 #[derive(Deserialize)]
@@ -51,12 +55,7 @@ async fn get_nonce(
     let key = format!("/jstz_account/{}", address);
     let value = rollup_client.get_value(&key).await?;
     let account_nonce = match value {
-        Some(value) => {
-            let account: Account =
-                bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
-                    .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            account.nonce
-        }
+        Some(value) => deserialize_account(value.as_slice())?.nonce,
         None => Err(ServiceError::NotFound)?,
     };
     Ok(Json(account_nonce))
@@ -81,12 +80,7 @@ async fn get_code(
     let key = format!("/jstz_account/{}", address);
     let value = rollup_client.get_value(&key).await?;
     let account_code = match value {
-        Some(value) => {
-            let account: Account =
-                bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
-                    .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            account.function_code
-        }
+        Some(value) => deserialize_account(value.as_slice())?.function_code,
         None => Err(ServiceError::NotFound)?,
     }
     .ok_or_else(|| {
@@ -113,14 +107,7 @@ async fn get_balance(
     let key = format!("/jstz_account/{}", address);
     let value = rollup_client.get_value(&key).await?;
     let account_balance = match value {
-        Some(value) => {
-            let account: Account = bincode::serde::decode_borrowed_from_slice(
-                value.as_slice(),
-                BINCODE_CONFIGURATION,
-            )
-            .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            account.amount
-        }
+        Some(value) => deserialize_account(value.as_slice())?.amount,
         None => Err(ServiceError::NotFound)?,
     };
     Ok(Json(account_balance))
@@ -148,12 +135,8 @@ async fn get_kv_value(
     let key = construct_storage_key(&address, &key);
     let value = rollup_client.get_value(&key).await?;
     let kv_value = match value {
-        Some(value) => {
-            let value: KvValue =
-                bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
-                    .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            value
-        }
+        Some(value) => jstz_core::deserialize::<KvValue>(value.as_slice())
+            .map_err(|_| anyhow!("Failed to deserialize kv value"))?,
         None => Err(ServiceError::NotFound)?,
     };
     Ok(Json(kv_value))

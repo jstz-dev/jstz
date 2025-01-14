@@ -3,7 +3,6 @@
 //! This module provides a persistent transactional key-value store.
 
 use boa_gc::{Finalize, Trace};
-use serde::de::DeserializeOwned;
 use tezos_smart_rollup_host::runtime::ValueType;
 use tezos_smart_rollup_host::{path::Path, runtime::Runtime};
 
@@ -42,10 +41,10 @@ pub struct Storage;
 
 impl Storage {
     /// Retrieve a value from the persistent store if it exists
-    pub fn get<V>(rt: &impl Runtime, key: &impl Path) -> Result<Option<V>>
-    where
-        V: Value + DeserializeOwned,
-    {
+    pub fn get<V: bincode::Decode>(
+        rt: &impl Runtime,
+        key: &impl Path,
+    ) -> Result<Option<V>> {
         match rt.store_has(key)? {
             Some(ValueType::Value | ValueType::ValueWithSubtree) => {
                 let bytes = rt.store_read_all(key)?;
@@ -66,11 +65,12 @@ impl Storage {
     }
 
     /// Insert a key-value pair into the persistent store
-    pub fn insert<V>(rt: &mut impl Runtime, key: &impl Path, value: &V) -> Result<()>
-    where
-        V: Value + ?Sized + serde::Serialize,
-    {
-        rt.store_write(key, &value::serialize(value)?, 0)?;
+    pub fn insert<V: Value + ?Sized>(
+        rt: &mut impl Runtime,
+        key: &impl Path,
+        value: &V,
+    ) -> Result<()> {
+        rt.store_write(key, value.encode()?.as_slice(), 0)?;
         Ok(())
     }
 

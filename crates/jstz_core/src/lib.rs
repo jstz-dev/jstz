@@ -23,5 +23,7 @@ pub trait Api {
 pub use realm::{Module, Realm};
 pub use runtime::Runtime;
 
+pub use crate::kv::value::{deserialize, serialize};
+
 pub static BINCODE_CONFIGURATION: Configuration<LittleEndian, Fixint> =
     bincode::config::legacy();

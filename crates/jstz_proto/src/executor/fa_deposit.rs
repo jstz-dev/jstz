@@ -24,7 +24,6 @@ const NULL_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
 const DEPOSIT_URI: &str = "/-/deposit";
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
-#[serde(tag = "_type")]
 pub struct FaDepositReceipt {
     pub receiver: NewAddress,
     pub ticket_balance: Amount,

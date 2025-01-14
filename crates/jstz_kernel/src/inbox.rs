@@ -106,8 +106,9 @@ fn read_transfer(
 }
 
 fn read_external_message(rt: &mut impl Runtime, bytes: &[u8]) -> Option<ExternalMessage> {
-    let (msg, _): (ExternalMessage, _) =
-        bincode::serde::decode_from_slice(bytes, BINCODE_CONFIGURATION).ok()?;
+    let result: Result<(ExternalMessage, usize), bincode::error::DecodeError> =
+        bincode::decode_from_slice(bytes, BINCODE_CONFIGURATION);
+    let (msg, _): (ExternalMessage, _) = result.ok()?;
 
     debug_msg!(rt, "External message: {msg:?}\n");
     Some(msg)
