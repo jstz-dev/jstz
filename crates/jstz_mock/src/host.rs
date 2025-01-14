@@ -2,6 +2,7 @@ use std::io::empty;
 
 use jstz_core::{host::HostRuntime, kv::Storage};
 
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
     michelson::{
@@ -67,8 +68,10 @@ impl JstzMockHost {
         self.0.add_transfer(payload, &metadata)
     }
 
-    pub fn get_ticketer(&self) -> ContractKt1Hash {
-        ContractKt1Hash::from_base58_check(NATIVE_TICKETER).unwrap()
+    pub fn get_ticketer(&self) -> SmartFunctionHash {
+        ContractKt1Hash::from_base58_check(NATIVE_TICKETER)
+            .unwrap()
+            .into()
     }
 
     pub fn rt(&mut self) -> &mut MockHost {
@@ -79,7 +82,10 @@ impl JstzMockHost {
 impl Default for JstzMockHost {
     fn default() -> Self {
         let mut mock_host = MockHost::default();
-        let ticketer = ContractKt1Hash::from_base58_check(NATIVE_TICKETER).unwrap();
+        let ticketer: SmartFunctionHash =
+            ContractKt1Hash::from_base58_check(NATIVE_TICKETER)
+                .unwrap()
+                .into();
         Storage::insert(&mut mock_host, &TICKETER_PATH, &ticketer)
             .expect("Could not insert ticketer");
         mock_host.set_debug_handler(empty());

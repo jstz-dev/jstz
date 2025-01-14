@@ -532,6 +532,7 @@ pub mod run {
 
 pub mod jstz_run {
     use jstz_core::kv::Storage;
+    use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use serde::Deserialize;
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tezos_smart_rollup::storage::path::{OwnedPath, RefPath};
@@ -618,7 +619,7 @@ pub mod jstz_run {
         run: RunFunction,
     ) -> Result<receipt::RunFunctionReceipt> {
         let ticketer_path = OwnedPath::from(&RefPath::assert_from(b"/ticketer"));
-        let ticketer: ContractKt1Hash =
+        let ticketer: SmartFunctionHash =
             Storage::get(hrt, &ticketer_path)?.expect("ticketer should be set");
         execute(hrt, tx, &ticketer, source, run)
     }
