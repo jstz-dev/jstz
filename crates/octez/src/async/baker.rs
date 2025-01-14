@@ -23,6 +23,7 @@ impl FromStr for BakerBinaryPath {
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         Ok(match s {
+            #[cfg(not(feature = "disable-alpha"))]
             "octez-baker-alpha" => BakerBinaryPath::Env(Protocol::Alpha),
             "octez-baker-PsParisC" => BakerBinaryPath::Env(Protocol::ParisC),
             "octez-baker-PsQuebec" => BakerBinaryPath::Env(Protocol::Quebec),
@@ -34,6 +35,7 @@ impl FromStr for BakerBinaryPath {
 impl Display for BakerBinaryPath {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            #[cfg(not(feature = "disable-alpha"))]
             BakerBinaryPath::Env(Protocol::Alpha) => write!(f, "octez-baker-alpha"),
             BakerBinaryPath::Env(Protocol::ParisC) => {
                 write!(f, "octez-baker-PsParisC")
@@ -179,6 +181,7 @@ mod test {
 
     #[test]
     fn serialize_baker_path() {
+        #[cfg(not(feature = "disable-alpha"))]
         assert_eq!(
             serde_json::to_string(&BakerBinaryPath::Env(Protocol::Alpha)).unwrap(),
             "\"octez-baker-alpha\""
@@ -205,7 +208,7 @@ mod test {
             Endpoint::try_from(Uri::from_static("http://localhost:8732")).unwrap();
         let log_file = NamedTempFile::new().unwrap().into_temp_path();
         let config = OctezBakerConfigBuilder::new()
-            .set_binary_path(BakerBinaryPath::Env(Protocol::Alpha))
+            .set_binary_path(BakerBinaryPath::Env(Protocol::ParisC))
             .set_octez_client_base_dir(base_dir.path().to_str().unwrap())
             .set_octez_node_endpoint(&endpoint)
             .set_log_file(log_file.to_path_buf().as_path())
@@ -216,7 +219,7 @@ mod test {
             serde_json::json!({
                 "octez_client_base_dir": base_dir.path().to_string_lossy(),
                 "octez_node_endpoint": "http://localhost:8732",
-                "binary_path": "octez-baker-alpha",
+                "binary_path": "octez-baker-PsParisC",
                 "log_file": log_file.to_string_lossy()
             })
         )
@@ -224,6 +227,7 @@ mod test {
 
     #[test]
     fn baker_path_from_str() {
+        #[cfg(not(feature = "disable-alpha"))]
         assert_eq!(
             BakerBinaryPath::from_str("octez-baker-alpha").unwrap(),
             BakerBinaryPath::Env(Protocol::Alpha)
@@ -240,6 +244,7 @@ mod test {
 
     #[test]
     fn deserialize_baker_path() {
+        #[cfg(not(feature = "disable-alpha"))]
         assert_eq!(
             serde_json::from_str::<BakerBinaryPath>("\"octez-baker-alpha\"").unwrap(),
             BakerBinaryPath::Env(Protocol::Alpha)

@@ -28,3 +28,6 @@ tempfile.workspace = true
 tezos_crypto_rs.workspace = true
 tezos-smart-rollup-encoding.workspace = true
 tokio.workspace = true
+
+[features]
+disable-alpha = []
