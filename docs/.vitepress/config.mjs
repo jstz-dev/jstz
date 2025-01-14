@@ -29,6 +29,7 @@ export default defineConfig({
           { text: "Quick Start", link: "/quick_start" },
           { text: "CLI", link: "/cli" },
           { text: "Asset Bridge", link: "/bridge" },
+          { text: "jstzd", link: "/jstzd" },
         ],
       },
 

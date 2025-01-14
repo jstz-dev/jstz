@@ -11,9 +11,9 @@ let url: URL = new URL(`tezos://${my_function.address}/entrypoint`);
 let url2: URL = new URL("../entrypoint_2", url.href);
 ```
 
-Each `jstz` smart function is assigned a unique address, akin to an IP address, starting with `tz1` when the function is deployed.
+Each `jstz` smart function is assigned a unique address, akin to an IP address, starting with `KT1` when the function is deployed.
 To decode these addresses, `jstz` employs its own URL scheme `tezos://`.
-An example URL for a `jstz` smart function would therefore be `tezos://tz1w42Gt5zkiGaHPm1ya4MgLomgkL1k7Dy7q/`.
+An example URL for a `jstz` smart function would therefore be `tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/`.
 
 It's important to note that if the base URL or the resulting URL is not valid, the constructor will raise a `TypeError` exception.
 To check whether URLs can be parsed correctly, you can use the static method [`URL.canParse()`](#canParse).
@@ -31,11 +31,11 @@ if (URL.canParse(relativePath, baseUrl)) {
 You can also modify a URL by setting its properties.
 
 ```typescript
-let url = new URL("tezos://tz1FakeFakeFakeFakeFakeFakeFakeDDy7q/"); // not a valid address, we'll have to change it
+let url = new URL("tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/"); // not a valid address, we'll have to change it
 url.hostname = Ledger.selfAddress;
 url.pathname = "accounts";
 url.hash = "#id";
-console.log(url.href); // tezos://tz1../accounts#id
+console.log(url.href); // tezos://KT1../accounts#id
 ```
 
 The [`URLSearchParams`](./url_search_params.md) API may be used to build and manipulate search parameters. To get the search parameters from the URL, you can make use of the `.searchParams` instance property.
@@ -76,7 +76,7 @@ The host, a string containing the hostname (see below), followed by a ':' and th
 
 ### `URL.hostname: string`
 
-The hostname of the URL. In `jstz` this will usually be a `tz1` address of a smart function.
+The hostname of the URL. In `jstz` this will usually be a `KT1` address of a smart function.
 
 ### `URL.href: string` {#href}
 
