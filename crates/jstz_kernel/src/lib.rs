@@ -1,4 +1,5 @@
 use jstz_core::kv::{Storage, Transaction};
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_proto::{executor, Result};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
@@ -13,7 +14,7 @@ pub mod parsing;
 
 pub const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
 
-fn read_ticketer(rt: &impl Runtime) -> Option<ContractKt1Hash> {
+fn read_ticketer(rt: &impl Runtime) -> Option<SmartFunctionHash> {
     Storage::get(rt, &TICKETER).ok()?
 }
 

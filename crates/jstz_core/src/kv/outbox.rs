@@ -1,4 +1,5 @@
 use crate::error::Result;
+use bincode::{Decode, Encode};
 use derive_more::{Display, Error, From};
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::{
@@ -222,7 +223,7 @@ impl PersistentOutboxQueue {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub(crate) struct OutboxQueueMeta {
     /// Combined queue length of the rollup and snapshots'
     /// outbox queues

@@ -57,17 +57,17 @@ pub enum PublicKeyHash {
 #[derive(
     Deref, From, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Finalize,
 )]
-pub struct Tz1(ContractTz1Hash);
+pub struct Tz1(pub ContractTz1Hash);
 
 #[derive(
     Deref, From, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Finalize,
 )]
-pub struct Tz2(ContractTz2Hash);
+pub struct Tz2(pub ContractTz2Hash);
 
 #[derive(
     Deref, From, Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, Finalize,
 )]
-pub struct Tz3(ContractTz3Hash);
+pub struct Tz3(pub ContractTz3Hash);
 
 // Bincode implementation
 impl_bincode_for_hash!(Tz1, ContractTz1Hash);

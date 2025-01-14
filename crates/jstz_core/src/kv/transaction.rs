@@ -4,8 +4,8 @@ use std::{
     mem,
 };
 
+use bincode::Decode;
 use derive_more::{Deref, DerefMut};
-use serde::de::DeserializeOwned;
 
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
@@ -224,7 +224,7 @@ impl Transaction {
 
     fn lookup<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&SnapshotValue>>
     where
-        V: Value + DeserializeOwned,
+        V: Value + Decode,
     {
         if let Some(&snapshot_idx) =
             self.lookup_map.get(&key).and_then(|history| history.last())
@@ -250,7 +250,7 @@ impl Transaction {
         key: Key,
     ) -> Result<Option<&mut SnapshotValue>>
     where
-        V: Value + DeserializeOwned,
+        V: Value + Decode,
     {
         if let Some(&snapshot_idx) =
             self.lookup_map.get(&key).and_then(|history| history.last())
@@ -275,7 +275,7 @@ impl Transaction {
     /// key-value store if it exists.
     pub fn get<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&V>>
     where
-        V: Value + DeserializeOwned,
+        V: Value + Decode,
     {
         self.lookup::<V>(rt, key)
             .map(|entry_opt| entry_opt.map(|entry| entry.as_ref()).transpose())?
@@ -285,7 +285,7 @@ impl Transaction {
     /// key-value store if it exists.
     pub fn get_mut<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&mut V>>
     where
-        V: Value + DeserializeOwned,
+        V: Value + Decode,
     {
         self.lookup_mut::<V>(rt, key)
             .map(|entry_opt| entry_opt.map(|entry| entry.as_mut()).transpose())?
@@ -326,7 +326,7 @@ impl Transaction {
         key: Key,
     ) -> Result<Entry<'b, V>>
     where
-        V: Value + DeserializeOwned,
+        V: Value + Decode,
         'a: 'b,
     {
         // A mutable lookup ensures the key is in the current snapshot
@@ -617,6 +617,7 @@ impl JsTransaction {
 
 #[cfg(test)]
 mod test {
+    use bincode::{Decode, Encode};
     use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
     use serde::{Deserialize, Serialize};
     use tezos_data_encoding::nom::NomReader;
@@ -664,7 +665,7 @@ mod test {
         let hrt = &mut MockHost::default();
         let tx = &mut Transaction::default();
 
-        #[derive(Clone, Serialize, Deserialize, Debug, Default)]
+        #[derive(Clone, Serialize, Deserialize, Debug, Default, Encode, Decode)]
         struct Account {
             amount: u64,
         }
@@ -910,11 +911,12 @@ mod test {
 
 #[cfg(test)]
 mod tests {
+    use bincode::Encode;
     use serde::{Deserialize, Serialize};
     use tezos_smart_rollup_mock::MockHost;
 
     use super::*;
-    #[derive(Debug, Default, Clone, Serialize, Deserialize)]
+    #[derive(Debug, Default, Clone, Serialize, Deserialize, Encode, Decode)]
     struct TestValue(i32);
 
     #[test]
