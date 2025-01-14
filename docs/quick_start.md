@@ -99,7 +99,7 @@ In addition to several [standard Web APIs](./api/index.md#web-platform-apis), `j
 
 - **Self address**.
 
-  Upon deployment, each smart function is allocated a unique `tz1` address, akin to an IP address for the function.
+  Upon deployment, each smart function is allocated a unique `KT1` address, akin to an IP address for the function.
   `Ledger.selfAddress` contains the (self) address of the smart function.
 
 - **Referer header**.
@@ -203,8 +203,8 @@ $ jstz deploy dist/index.js
 You are not logged in. Please type the account name that you want to log into or create as new: alan
 Logged in to account alan with address tz1N8BsvfrSjGdomFi5V9RwwYLasgD8s4pxF
 
-Smart function deployed by alan at address: tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W
-Run with `jstz run tezos://tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W/ --data <args> --trace`
+Smart function deployed by alan at address: KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw
+Run with `jstz run tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/ --data <args> --trace`
 
 </code>
 </pre>
@@ -232,9 +232,9 @@ Since this is your first deployment, you need to:
    `jstz account create` can be used to create a new account.
    :::
 
-Upon successful deployment, your smart function will be assigned a unique `tz1` address, serving as its identifier, similar to an IP address.
+Upon successful deployment, your smart function will be assigned a unique `KT1` address, serving as its identifier, similar to an IP address.
 
-In the example above, the smart function was deployed to `tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W`. The smart function will be accessible through a URL of the format `tezos://tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W/`.
+In the example above, the smart function was deployed to `KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw`. The smart function will be accessible through a URL of the format `tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/`.
 
 ### Optional: Funding Accounts
 
@@ -244,7 +244,7 @@ The [`jstz bridge deposit`](bridge.md) command is used to transfer funds from a 
 Within the sandbox environment, there are pre-funded L1 accounts `bootstrap1` through `bootstrap5` that you can use.
 
 ```sh
-jstz bridge deposit --from bootstrap1 --to tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W --amount 10000000
+jstz bridge deposit --from bootstrap1 --to KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw --amount 10000000
 ```
 
 ## 3. Running and debugging your Smart Function
@@ -252,7 +252,7 @@ jstz bridge deposit --from bootstrap1 --to tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W 
 After a successful deployment, you will be able to run the smart function with the provided command to run your smart function similarly to the following:
 
 ```sh
-jstz run tezos://tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W/ --data '{"message":"Please, give me some tez."}'
+jstz run tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/ --data '{"message":"Please, give me some tez."}'
 ```
 
 <details>
@@ -260,8 +260,8 @@ jstz run tezos://tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W/ --data '{"message":"Pleas
 Output
 </summary>
 <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
-<code style="color: #FFF;">$jstz run tezos://tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W/ --data '{"message":"Please, give me some tez."}'
-▐ Running function at tezos://tz1Tp5wSRWiVJwLoT8WqN1yRapdq6UmdRf6W/ 
+<code style="color: #FFF;">$jstz run tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/ --data '{"message":"Please, give me some tez."}'
+▐ Running function at tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/ 
 Status code: 200 OK
 Headers: {"content-type": "text/plain;charset=UTF-8"}
 Body: Thank you for your polite request. You received 1 tez!
