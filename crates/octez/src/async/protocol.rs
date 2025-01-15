@@ -72,7 +72,8 @@ impl FromStr for Protocol {
             "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK" => Ok(Protocol::Alpha),
             "parisC" => Ok(Protocol::ParisC),
             "PsParisCZo7KAh1Z1smVd9ZMZ1HHn5gkzbM94V3PLCpknFWhUAi" => Ok(Protocol::ParisC),
-            "PsQubecQubecQubecQubecQubecQubecQubecQubecQubec" => Ok(Protocol::Quebec),
+            "quebec" => Ok(Protocol::Quebec),
+            "PsQuebecnLByd3JwTiGadoG4nGWi3HYiLXUjkibeFV8dCFeVMUg" => Ok(Protocol::Quebec),
             _ => Err(anyhow::anyhow!("unknown protocol '{}'", s)),
         }
     }
@@ -84,7 +85,7 @@ impl Default for Protocol {
         return Self::Alpha;
 
         #[cfg(feature = "disable-alpha")]
-        Self::ParisC
+        Self::Quebec
     }
 }
 
@@ -100,7 +101,7 @@ impl Protocol {
             #[cfg(not(feature = "disable-alpha"))]
             Protocol::Alpha => "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
             Protocol::ParisC => "PsParisCZo7KAh1Z1smVd9ZMZ1HHn5gkzbM94V3PLCpknFWhUAi",
-            Protocol::Quebec => "PsQubecQubecQubecQubecQubecQubecQubecQubecQubec",
+            Protocol::Quebec => "PsQuebecnLByd3JwTiGadoG4nGWi3HYiLXUjkibeFV8dCFeVMUg",
         }
     }
 
@@ -774,7 +775,11 @@ mod tests {
         assert_eq!(
             serde_json::to_string(&Protocol::ParisC).unwrap(),
             "\"PsParisCZo7KAh1Z1smVd9ZMZ1HHn5gkzbM94V3PLCpknFWhUAi\""
-        )
+        );
+        assert_eq!(
+            serde_json::to_string(&Protocol::Quebec).unwrap(),
+            "\"PsQuebecnLByd3JwTiGadoG4nGWi3HYiLXUjkibeFV8dCFeVMUg\""
+        );
     }
 
     #[test]
@@ -807,6 +812,17 @@ mod tests {
         assert_eq!(
             serde_json::from_str::<Protocol>("\"parisC\"").unwrap(),
             Protocol::ParisC
+        );
+        assert_eq!(
+            serde_json::from_str::<Protocol>("\"quebec\"").unwrap(),
+            Protocol::Quebec
+        );
+        assert_eq!(
+            serde_json::from_str::<Protocol>(
+                "\"PsQuebecnLByd3JwTiGadoG4nGWi3HYiLXUjkibeFV8dCFeVMUg\""
+            )
+            .unwrap(),
+            Protocol::Quebec
         );
         assert!(serde_json::from_str::<Protocol>("\"foobar\"")
             .unwrap_err()
