@@ -5,7 +5,7 @@ use boa_engine::{
     JsResult, JsValue, NativeFunction,
 };
 use jstz_core::runtime;
-use jstz_proto::context::{account::Account, new_account::NewAddress};
+use jstz_proto::context::{new_account::Account, new_account::NewAddress};
 
 fn try_parse_address(account: &str) -> JsResult<NewAddress> {
     NewAddress::from_base58(account).map_err(|_| {
@@ -62,8 +62,8 @@ impl AccountApi {
 
         runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<JsValue> {
             match Account::function_code(hrt.deref(), tx, &address)? {
-                Some(value) => Ok(JsValue::String(value.to_string().into())),
-                None => Ok(JsValue::null()),
+                "" => Ok(JsValue::null()),
+                value => Ok(JsValue::String(value.to_string().into())),
             }
         })
     }

@@ -1014,21 +1014,9 @@
         }
       },
       "SmartFunctionHash": {
-        "oneOf": [
-          {
-            "type": "object",
-            "title": "KT1",
-            "required": [
-              "Kt1"
-            ],
-            "properties": {
-              "Kt1": {
-                "type": "string"
-              }
-            },
-            "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
-          }
-        ]
+        "type": "string",
+        "title": "KT1",
+        "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
       },
       "String": {
         "type": "string"
