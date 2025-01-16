@@ -5,6 +5,7 @@ use axum::{
     extract::{Path, State},
     Json,
 };
+use jstz_core::kv::Value;
 use jstz_core::BINCODE_CONFIGURATION;
 use jstz_proto::operation::{Operation, OperationHash, SignedOperation};
 use jstz_proto::receipt::Receipt;
@@ -71,7 +72,7 @@ async fn receipt(
     let value = rollup_client.get_value(&key).await?;
 
     let receipt = match value {
-        Some(value) => jstz_core::deserialize::<Receipt>(value.as_slice())
+        Some(value) => <Receipt as Value>::decode(value.as_slice())
             .map_err(|_| anyhow!("Failed to deserialize receipt"))?,
         None => Err(ServiceError::NotFound)?,
     };

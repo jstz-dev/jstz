@@ -1,28 +1,7 @@
+use crate::{Error, Result, BINCODE_CONFIGURATION};
+use derive_more::{Deref, DerefMut};
 use std::any::Any;
 use std::fmt::Debug;
-
-use derive_more::{Deref, DerefMut};
-
-use crate::{Error, Result, BINCODE_CONFIGURATION};
-
-pub fn serialize<T: bincode::Encode>(value: &T) -> Result<Vec<u8>> {
-    bincode::encode_to_vec(value, BINCODE_CONFIGURATION).map_err(|err| {
-        Error::SerializationError {
-            description: format!("{err}"),
-        }
-    })
-}
-
-pub fn deserialize<T: bincode::Decode>(bytes: &[u8]) -> Result<T> {
-    let (result, _) =
-        bincode::decode_from_slice(bytes, BINCODE_CONFIGURATION).map_err(|err| {
-            Error::SerializationError {
-                description: format!("{err}"),
-            }
-        })?;
-
-    Ok(result)
-}
 
 /// A key-value 'value' is a value that is can be dynamically
 /// coerced (using `Any`) and serialized.
@@ -30,12 +9,15 @@ pub trait Value: Any + Debug {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
     fn clone_box(&self) -> Box<dyn Value>;
-    fn encode(&self) -> Vec<u8>;
+    fn encode(&self) -> Result<Vec<u8>>;
+    fn decode(bytes: &[u8]) -> Result<Self>
+    where
+        Self: Sized;
 }
 
 impl<T> Value for T
 where
-    T: Any + Debug + Clone + bincode::Encode,
+    T: Any + Debug + Clone + bincode::Encode + bincode::Decode,
 {
     fn as_any(&self) -> &dyn Any {
         self
@@ -49,8 +31,20 @@ where
         Box::new(self.clone())
     }
 
-    fn encode(&self) -> Vec<u8> {
-        bincode::encode_to_vec(self, BINCODE_CONFIGURATION).unwrap()
+    fn encode(&self) -> Result<Vec<u8>> {
+        bincode::encode_to_vec(self, BINCODE_CONFIGURATION).map_err(|err| {
+            Error::SerializationError {
+                description: format!("{err}"),
+            }
+        })
+    }
+
+    fn decode(bytes: &[u8]) -> Result<Self> {
+        let (value, _) = bincode::decode_from_slice(bytes, BINCODE_CONFIGURATION)
+            .map_err(|err| Error::SerializationError {
+                description: format!("{err}"),
+            })?;
+        Ok(value)
     }
 }
 
