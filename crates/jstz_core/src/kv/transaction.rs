@@ -4,7 +4,6 @@ use std::{
     mem,
 };
 
-use bincode::Decode;
 use derive_more::{Deref, DerefMut};
 
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
@@ -73,30 +72,21 @@ impl SnapshotValue {
         Self(BoxedValue::new(value))
     }
 
-    pub fn as_ref<V>(&self) -> Result<&V>
-    where
-        V: Value,
-    {
+    pub fn as_ref<V: Value>(&self) -> Result<&V> {
         Ok(self
             .as_any()
             .downcast_ref()
             .ok_or(KvError::DowncastFailed)?)
     }
 
-    pub fn as_mut<V>(&mut self) -> Result<&mut V>
-    where
-        V: Value,
-    {
+    pub fn as_mut<V: Value>(&mut self) -> Result<&mut V> {
         Ok(self
             .as_any_mut()
             .downcast_mut()
             .ok_or(KvError::DowncastFailed)?)
     }
 
-    pub fn into_value<V>(self) -> Result<V>
-    where
-        V: Value,
-    {
+    pub fn into_value<V: Value>(self) -> Result<V> {
         let value = self.0.downcast().map_err(|_| KvError::DowncastFailed)?;
         *value
     }
@@ -222,10 +212,11 @@ impl Transaction {
         Ok(())
     }
 
-    fn lookup<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&SnapshotValue>>
-    where
-        V: Value + Decode,
-    {
+    fn lookup<V: Value>(
+        &mut self,
+        rt: &impl Runtime,
+        key: Key,
+    ) -> Result<Option<&SnapshotValue>> {
         if let Some(&snapshot_idx) =
             self.lookup_map.get(&key).and_then(|history| history.last())
         {
@@ -244,14 +235,11 @@ impl Transaction {
         }
     }
 
-    fn lookup_mut<V>(
+    fn lookup_mut<V: Value>(
         &mut self,
         rt: &impl Runtime,
         key: Key,
-    ) -> Result<Option<&mut SnapshotValue>>
-    where
-        V: Value + Decode,
-    {
+    ) -> Result<Option<&mut SnapshotValue>> {
         if let Some(&snapshot_idx) =
             self.lookup_map.get(&key).and_then(|history| history.last())
         {
@@ -273,20 +261,19 @@ impl Transaction {
 
     /// Returns a reference to the value corresponding to the key in the
     /// key-value store if it exists.
-    pub fn get<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&V>>
-    where
-        V: Value + Decode,
-    {
+    pub fn get<V: Value>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&V>>
+where {
         self.lookup::<V>(rt, key)
             .map(|entry_opt| entry_opt.map(|entry| entry.as_ref()).transpose())?
     }
 
     /// Returns a mutable reference to the value corresponding to the key in the
     /// key-value store if it exists.
-    pub fn get_mut<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&mut V>>
-    where
-        V: Value + Decode,
-    {
+    pub fn get_mut<V: Value>(
+        &mut self,
+        rt: &impl Runtime,
+        key: Key,
+    ) -> Result<Option<&mut V>> {
         self.lookup_mut::<V>(rt, key)
             .map(|entry_opt| entry_opt.map(|entry| entry.as_mut()).transpose())?
     }
@@ -306,10 +293,7 @@ impl Transaction {
     }
 
     /// Insert a key-value pair into the key-value store.
-    pub fn insert<V>(&mut self, key: Key, value: V) -> Result<()>
-    where
-        V: Value,
-    {
+    pub fn insert<V: Value>(&mut self, key: Key, value: V) -> Result<()> {
         self.current_snapshot_insert(key, SnapshotValue::new(value))
     }
 
@@ -326,7 +310,7 @@ impl Transaction {
         key: Key,
     ) -> Result<Entry<'b, V>>
     where
-        V: Value + Decode,
+        V: Value,
         'a: 'b,
     {
         // A mutable lookup ensures the key is in the current snapshot
@@ -911,7 +895,7 @@ mod test {
 
 #[cfg(test)]
 mod tests {
-    use bincode::Encode;
+    use bincode::{Decode, Encode};
     use serde::{Deserialize, Serialize};
     use tezos_smart_rollup_mock::MockHost;
 
