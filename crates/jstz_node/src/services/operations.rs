@@ -5,8 +5,9 @@ use axum::{
     extract::{Path, State},
     Json,
 };
+
 use jstz_core::BinEncodable;
-use jstz_proto::operation::{Operation, OperationHash, SignedOperation};
+use jstz_proto::operation::{Operation, SignedOperation};
 use jstz_proto::receipt::Receipt;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
@@ -17,6 +18,8 @@ use utoipa_axum::routes;
 pub struct OperationsService;
 
 const OPERATIONS_TAG: &str = "Operations";
+
+type HexEncodedOperationHash = String;
 
 /// Inject an operation into Jstz
 #[utoipa::path(
@@ -80,21 +83,21 @@ async fn receipt(
     Ok(Json(receipt))
 }
 
-/// Returns the hash of an Operation
+/// Returns the hex encoded hash of an Operation
 #[utoipa::path(
         post,
         path = "/hash",
         tag = OPERATIONS_TAG,
         responses(
-            (status = 200, body = OperationHash),
+            (status = 200, body = HexEncodedOperationHash),
             (status = 400),
             (status = 500)
         )
     )]
 async fn hash_operation(
     Json(operation): Json<Operation>,
-) -> ServiceResult<Json<OperationHash>> {
-    Ok(Json(operation.hash()))
+) -> ServiceResult<Json<HexEncodedOperationHash>> {
+    Ok(Json(format!("{}", operation.hash())))
 }
 
 impl Service for OperationsService {

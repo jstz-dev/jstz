@@ -159,20 +159,20 @@ impl NewAddress {
 pub const ACCOUNTS_PATH_PREFIX: &str = "/jstz_account";
 const ACCOUNTS_PATH: RefPath = RefPath::assert_from(ACCOUNTS_PATH_PREFIX.as_bytes());
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, Encode, Decode, ToSchema)]
 pub struct UserAccount {
     pub amount: Amount,
     pub nonce: Nonce,
 }
 
-#[derive(Debug, Default, Clone, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Default, Clone, Serialize, Deserialize, Encode, Decode, ToSchema)]
 pub struct SmartFunctionAccount {
     pub amount: Amount,
     pub nonce: Nonce,
     pub function_code: ParsedCode,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode, ToSchema)]
 pub enum Account {
     User(UserAccount),
     SmartFunction(SmartFunctionAccount),

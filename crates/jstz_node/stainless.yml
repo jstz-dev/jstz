@@ -3,7 +3,7 @@
 organization:
   # Name of your organization or company, used to determine the name of the client
   # and headings.
-  name: jstz client # Strangely, the organisation name is used as the name of the root class
+  name: jstz # Strangely, the organisation name is used as the name of the root class
   docs: https://jstz-dev.github.io/jstz/
   contact: contact@trili.tech
 
@@ -13,9 +13,11 @@ targets:
   node:
     readme_title: Jstz Client
     package_name: "@jstz-dev/client"
-    production_repo: null
+    production_repo: "jstz-dev/jstz-client"
     publish:
       npm: false
+    browser:
+      state: "allow"
 
 # `client_settings` define settings for the API client, such as extra constructor
 # arguments (used for authentication), retry behavior, idempotency, etc.
@@ -39,71 +41,45 @@ pagination: []
 #   https://app.stainlessapi.com/docs/guides/configure#resources
 resources:
   accounts:
-    # Subresources define resources that are nested within another for more powerful
-    # logical groupings, e.g. `cards.payments`.
-    subresources:
-      balance:
-        # Configure the methods defined in this resource. Each key in the object is the
-        # name of the method and the value is either an endpoint (for example, `get /foo`)
-        # or an object with more detail.
-        #
-        # [reference]: https://app.stainlessapi.com/docs/reference/config#method
-        methods:
-          retrieve: get /accounts/{address}/balance
-      code:
-        # Configure the models--named types--defined in the resource. Each key in the
-        # object is the name of the model and the value is either the name of a schema in
-        # `#/components/schemas` or an object with more detail.
-        #
-        # [reference]: https://app.stainlessapi.com/docs/reference/config#model
-        models:
-          parsedCode: ParsedCode
-        methods:
-          retrieve: get /accounts/{address}/code
-      kv:
-        models:
-          kvValue: KvValue
-        methods:
-          retrieve: get /accounts/{address}/kv
-        subresources:
-          subkeys:
-            methods:
-              list:
-                type: http
-                endpoint: get /accounts/{address}/kv/subkeys
-                paginated: false
-      nonce:
-        models:
-          nonce: Nonce
-        methods:
-          retrieve: get /accounts/{address}/nonce
-
-  logs:
     models:
-      logRecord: LogRecord
+      account: Account
+      code: ParsedCode
+      kvValue: KvValue
+      nonce: Nonce
     methods:
-      stream: get /logs/{address}/stream
+      get: get /accounts/{address}
+      get_balance: get /accounts/{address}/balance
+      get_code: get /accounts/{address}/code
+      get_nonce: get /accounts/{address}/nonce
+      get_kv: get /accounts/{address}/kv
+      get_subkeys:
+        type: http
+        endpoint: get /accounts/{address}/kv/subkeys
+        paginated: false
     subresources:
-      persistent_requests:
-        methods:
-          list:
-            type: http
-            endpoint: get /logs/{address}/persistent/requests
-            paginated: false
-          retrieve: get /logs/{address}/persistent/requests/{request_id}
-
+      logs:
+        models:
+          logRecord: LogRecord
+      methods:
+        stream: get /logs/{address}/stream
+      subresources:
+        persistent:
+          methods:
+            get: get /logs/{address}/persistent/requests/{request_id}
+            list:
+              type: http
+              endpoint: get /logs/{address}/persistent/requests
+              paginated: false
   operations:
+    models:
+      operation: Operation
+      signed_operation: SignedOperation
+      receipt: Receipt
     methods:
       inject: post /operations
       hash: post /operations/hash
-    subresources:
-      receipt:
-        models:
-          receipt: Receipt
-        methods:
-          retrieve: get /operations/{operation_hash}/receipt
-
-  crypto:
+      get_receipt: get /operations/{operation_hash}/receipt
+  $shared:
     models:
       publicKey: PublicKey
       publicKeyHash: PublicKeyHash
