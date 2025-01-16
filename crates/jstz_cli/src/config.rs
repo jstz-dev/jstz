@@ -23,7 +23,7 @@ use crate::{
 
 // hardcoding it here instead of importing from jstzd simply to avoid adding jstzd
 // as a new depedency of jstz_cli just for this so that build time remains the same
-const JSTZD_SERVER_BASE_URL: &str = "http://127.0.0.1:55555";
+const JSTZD_SERVER_BASE_URL: &str = "http://127.0.0.1:54321";
 
 pub fn jstz_home_dir() -> PathBuf {
     if let Ok(value) = env::var("JSTZ_HOME") {
