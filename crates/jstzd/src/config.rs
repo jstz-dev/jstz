@@ -210,7 +210,7 @@ async fn build_protocol_params(
         .collect::<Vec<BootstrapAccount>>();
     for account in [
         BootstrapAccount::new(ROLLUP_OPERATOR_PK, 60_000_000_000).unwrap(),
-        BootstrapAccount::new(ACTIVATOR_PK, 40_000_000_000).unwrap(),
+        BootstrapAccount::new(ACTIVATOR_PK, 50_000_000_000).unwrap(),
     ] {
         accounts.push(account);
     }
