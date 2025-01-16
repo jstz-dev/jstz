@@ -1,0 +1,24 @@
+name: Build npm package for jstz CLI
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  build-cli-mac:
+    name: Build CLI for MacOS Arm64
+    runs-on: macos
+    steps:
+      - uses: jstz-dev/jstz/.github/actions/build-cli@main
+        with:
+          kind: macos_arm64
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+  build-cli-linux:
+    name: Build CLI for Linux AMD64
+    runs-on: [x86_64, linux, nix]
+    steps:
+      - uses: jstz-dev/jstz/.github/actions/build-cli@main
+        with:
+          kind: linux_amd64
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
