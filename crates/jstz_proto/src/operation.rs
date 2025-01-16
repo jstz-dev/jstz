@@ -117,7 +117,7 @@ pub struct RunFunction {
     pub method: Method,
     /// Any valid HTTP headers
     #[serde(with = "http_serde::header_map")]
-    #[schema(schema_with= openapi::http_headers)]
+    #[schema(schema_with = openapi::http_headers)]
     pub headers: HeaderMap,
     #[schema(schema_with = openapi::http_body_schema)]
     pub body: HttpBody,

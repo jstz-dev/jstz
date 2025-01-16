@@ -9,6 +9,7 @@
     "build": "tsc --outDir dist"
   },
   "dependencies": {
+    "@jstz-dev/client": "github:jstz-dev/jstz-client#ryan-jstz-201@patch-client",
     "jstz_sdk": "file:../../crates/jstz_sdk/pkg"
   }
 }
