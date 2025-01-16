@@ -19,7 +19,17 @@ use super::new_account::NewAddress;
 pub type Amount = u64;
 
 #[derive(
-    Clone, Copy, Default, Debug, PartialEq, Eq, Serialize, Deserialize, ToSchema,
+    Clone,
+    Copy,
+    Default,
+    Debug,
+    PartialEq,
+    Eq,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    Encode,
+    Decode,
 )]
 pub struct Nonce(pub u64);
 
@@ -66,7 +76,7 @@ impl TryFrom<String> for ParsedCode {
     }
 }
 
-#[derive(Default, Debug, Clone, Serialize, Deserialize, Encode, Decode)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 pub struct Account {
     #[bincode(with_serde)]
     pub nonce: Nonce,

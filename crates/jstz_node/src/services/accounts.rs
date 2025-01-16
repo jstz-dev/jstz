@@ -37,6 +37,30 @@ struct KvQuery {
 
 pub struct AccountsService;
 
+/// Get account
+#[utoipa::path(
+    get,
+    path = "/{address}",
+    tag = ACCOUNTS_TAG,
+    responses(
+        (status = 200, body = Account),
+        (status = 404),
+        (status = 500)
+    )
+)]
+async fn get_account(
+    State(AppState { rollup_client, .. }): State<AppState>,
+    Path(address): Path<String>,
+) -> ServiceResult<Json<Account>> {
+    let key = format!("/jstz_account/{}", address);
+    let value = rollup_client.get_value(&key).await?;
+    let account = match value {
+        Some(value) => deserialize_account(value.as_slice())?,
+        None => Err(ServiceError::NotFound)?,
+    };
+    Ok(Json(account))
+}
+
 /// Get nonce of an account
 #[utoipa::path(
     get,
@@ -173,6 +197,7 @@ async fn get_kv_subkeys(
 impl Service for AccountsService {
     fn router_with_openapi() -> OpenApiRouter<AppState> {
         let routes = OpenApiRouter::new()
+            .routes(routes!(get_account))
             .routes(routes!(get_nonce))
             .routes(routes!(get_code))
             .routes(routes!(get_balance))
