@@ -1,5 +1,4 @@
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
-use octez::unused_port;
 use rust_embed::Embed;
 
 use crate::task::jstzd::JstzdConfig;
@@ -24,7 +23,8 @@ use serde::Deserialize;
 use tezos_crypto_rs::hash::SmartRollupHash;
 use tokio::io::AsyncReadExt;
 
-const DEFAULT_JSTZD_SERVER_PORT: u16 = 55555;
+const DEFAULT_JSTZD_SERVER_PORT: u16 = 54321;
+const DEFAULT_JSTZ_NODE_PORT: u16 = 8933;
 const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
@@ -111,7 +111,7 @@ pub(crate) async fn build_config(
     .build()
     .unwrap();
 
-    let jstz_node_rpc_endpoint = Endpoint::localhost(unused_port());
+    let jstz_node_rpc_endpoint = Endpoint::localhost(DEFAULT_JSTZ_NODE_PORT);
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
