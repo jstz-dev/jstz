@@ -26,12 +26,41 @@ fn construct_storage_key(address: &str, key: &Option<String>) -> String {
     }
 }
 
+fn deserialize_account(value: &[u8]) -> Result<Account, anyhow::Error> {
+    bincode::serde::decode_borrowed_from_slice(value, BINCODE_CONFIGURATION)
+        .map_err(|_| anyhow!("Failed to deserialize account"))
+}
+
 #[derive(Deserialize)]
 struct KvQuery {
     key: Option<String>,
 }
 
 pub struct AccountsService;
+
+/// Get account
+#[utoipa::path(
+    get,
+    path = "/{address}",
+    tag = ACCOUNTS_TAG,
+    responses(
+        (status = 200, body = Account),
+        (status = 404),
+        (status = 500)
+    )
+)]
+async fn get_account(
+    State(AppState { rollup_client, .. }): State<AppState>,
+    Path(address): Path<String>,
+) -> ServiceResult<Json<Account>> {
+    let key = format!("/jstz_account/{}", address);
+    let value = rollup_client.get_value(&key).await?;
+    let account = match value {
+        Some(value) => deserialize_account(value.as_slice())?,
+        None => Err(ServiceError::NotFound)?,
+    };
+    Ok(Json(account))
+}
 
 /// Get nonce of an account
 #[utoipa::path(
@@ -51,12 +80,7 @@ async fn get_nonce(
     let key = format!("/jstz_account/{}", address);
     let value = rollup_client.get_value(&key).await?;
     let account_nonce = match value {
-        Some(value) => {
-            let account: Account =
-                bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
-                    .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            account.nonce
-        }
+        Some(value) => deserialize_account(value.as_slice())?.nonce,
         None => Err(ServiceError::NotFound)?,
     };
     Ok(Json(account_nonce))
@@ -81,12 +105,7 @@ async fn get_code(
     let key = format!("/jstz_account/{}", address);
     let value = rollup_client.get_value(&key).await?;
     let account_code = match value {
-        Some(value) => {
-            let account: Account =
-                bincode::serde::decode_borrowed_from_slice(&value, BINCODE_CONFIGURATION)
-                    .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            account.function_code
-        }
+        Some(value) => deserialize_account(value.as_slice())?.function_code,
         None => Err(ServiceError::NotFound)?,
     }
     .ok_or_else(|| {
@@ -113,14 +132,7 @@ async fn get_balance(
     let key = format!("/jstz_account/{}", address);
     let value = rollup_client.get_value(&key).await?;
     let account_balance = match value {
-        Some(value) => {
-            let account: Account = bincode::serde::decode_borrowed_from_slice(
-                value.as_slice(),
-                BINCODE_CONFIGURATION,
-            )
-            .map_err(|_| anyhow!("Failed to deserialize account"))?;
-            account.amount
-        }
+        Some(value) => deserialize_account(value.as_slice())?.amount,
         None => Err(ServiceError::NotFound)?,
     };
     Ok(Json(account_balance))
@@ -190,6 +202,7 @@ async fn get_kv_subkeys(
 impl Service for AccountsService {
     fn router_with_openapi() -> OpenApiRouter<AppState> {
         let routes = OpenApiRouter::new()
+            .routes(routes!(get_account))
             .routes(routes!(get_nonce))
             .routes(routes!(get_code))
             .routes(routes!(get_balance))

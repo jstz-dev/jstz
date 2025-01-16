@@ -14,6 +14,43 @@
     "version": "0.1.0-alpha.0"
   },
   "paths": {
+    "/accounts/{address}": {
+      "get": {
+        "tags": [
+          "Accounts"
+        ],
+        "summary": "Get account",
+        "operationId": "get_account",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/accounts/{address}/balance": {
       "get": {
         "tags": [
@@ -383,7 +420,7 @@
         "tags": [
           "Operations"
         ],
-        "summary": "Returns the hash of an Operation",
+        "summary": "Returns the hex encoded hash of an Operation",
         "operationId": "hash_operation",
         "requestBody": {
           "content": {
@@ -401,7 +438,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Blake2b"
+                  "$ref": "#/components/schemas/String"
                 }
               }
             }
@@ -456,6 +493,31 @@
   },
   "components": {
     "schemas": {
+      "Account": {
+        "type": "object",
+        "required": [
+          "nonce",
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/u64"
+          },
+          "function_code": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ParsedCode"
+              }
+            ]
+          },
+          "nonce": {
+            "$ref": "#/components/schemas/Nonce"
+          }
+        }
+      },
       "Address": {
         "oneOf": [
           {
