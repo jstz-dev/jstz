@@ -1,9 +1,5 @@
+mod bin_encodable;
 pub mod error;
-
-use bincode::config::{Configuration, Fixint, LittleEndian};
-use boa_engine::Context;
-
-pub use error::{Error, Result};
 pub mod future;
 pub mod host;
 pub mod iterators;
@@ -14,6 +10,10 @@ pub mod realm;
 pub mod runtime;
 pub mod value;
 
+pub use bin_encodable::*;
+use boa_engine::Context;
+pub use error::{Error, Result};
+
 /// A generic runtime API
 pub trait Api {
     /// Initialize a runtime API
@@ -22,8 +22,3 @@ pub trait Api {
 
 pub use realm::{Module, Realm};
 pub use runtime::Runtime;
-
-pub use crate::kv::value::{deserialize, serialize};
-
-pub static BINCODE_CONFIGURATION: Configuration<LittleEndian, Fixint> =
-    bincode::config::legacy();

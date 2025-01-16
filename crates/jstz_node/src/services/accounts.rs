@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, Query, State},
     Json,
 };
+use jstz_core::BinEncodable;
 use jstz_proto::{
     api::KvValue,
     context::account::{Account, Nonce, ParsedCode},
@@ -26,8 +27,7 @@ fn construct_storage_key(address: &str, key: &Option<String>) -> String {
 }
 
 fn deserialize_account(data: &[u8]) -> ServiceResult<Account> {
-    Ok(jstz_core::deserialize::<Account>(data)
-        .map_err(|_| anyhow!("Failed to deserialize account"))?)
+    Ok(Account::decode(data).map_err(|_| anyhow!("Failed to deserialize account"))?)
 }
 
 #[derive(Deserialize)]
@@ -135,7 +135,7 @@ async fn get_kv_value(
     let key = construct_storage_key(&address, &key);
     let value = rollup_client.get_value(&key).await?;
     let kv_value = match value {
-        Some(value) => jstz_core::deserialize::<KvValue>(value.as_slice())
+        Some(value) => KvValue::decode(value.as_slice())
             .map_err(|_| anyhow!("Failed to deserialize kv value"))?,
         None => Err(ServiceError::NotFound)?,
     };

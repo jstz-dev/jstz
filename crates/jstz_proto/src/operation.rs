@@ -246,6 +246,7 @@ mod test {
     use super::{DeployFunction, RunFunction};
     use crate::{context::account::ParsedCode, operation::Content};
     use http::{HeaderMap, Method, Uri};
+    use jstz_core::BinEncodable;
     use serde_json::json;
 
     fn run_function_content() -> Content {
@@ -295,14 +296,8 @@ mod test {
     #[test]
     fn test_run_function_bin_round_trip() {
         let run_function = run_function_content();
-        let binary =
-            bincode::encode_to_vec(&run_function, jstz_core::BINCODE_CONFIGURATION)
-                .unwrap();
-        let (bin_decoded, _): (Content, _) = bincode::decode_from_slice(
-            binary.as_slice(),
-            jstz_core::BINCODE_CONFIGURATION,
-        )
-        .unwrap();
+        let binary = run_function.encode().unwrap();
+        let bin_decoded = Content::decode(binary.as_slice()).unwrap();
         assert_eq!(run_function, bin_decoded);
     }
 
@@ -325,14 +320,8 @@ mod test {
     #[test]
     fn test_deploy_function_bin_round_trip() {
         let deploy_function = deploy_function_content();
-        let binary =
-            bincode::encode_to_vec(&deploy_function, jstz_core::BINCODE_CONFIGURATION)
-                .unwrap();
-        let (bin_decoded, _): (Content, _) = bincode::decode_from_slice(
-            binary.as_slice(),
-            jstz_core::BINCODE_CONFIGURATION,
-        )
-        .unwrap();
+        let binary = deploy_function.encode().unwrap();
+        let bin_decoded = Content::decode(binary.as_slice()).unwrap();
         assert_eq!(deploy_function, bin_decoded);
     }
 }

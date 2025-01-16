@@ -41,14 +41,11 @@ pub struct Storage;
 
 impl Storage {
     /// Retrieve a value from the persistent store if it exists
-    pub fn get<V: bincode::Decode>(
-        rt: &impl Runtime,
-        key: &impl Path,
-    ) -> Result<Option<V>> {
+    pub fn get<V: Value>(rt: &impl Runtime, key: &impl Path) -> Result<Option<V>> {
         match rt.store_has(key)? {
             Some(ValueType::Value | ValueType::ValueWithSubtree) => {
                 let bytes = rt.store_read_all(key)?;
-                let value = value::deserialize(&bytes)?;
+                let value = V::decode(&bytes)?;
                 Ok(Some(value))
             }
             _ => Ok(None),
