@@ -19,6 +19,7 @@ ansi_term.workspace = true
 anyhow.workspace = true
 boa_engine.workspace = true
 boa_gc.workspace = true
+bollard.workspace = true
 bs58.workspace = true
 clap.workspace = true 
 clap_complete.workspace = true
