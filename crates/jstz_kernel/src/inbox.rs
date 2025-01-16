@@ -1,4 +1,4 @@
-use jstz_core::BINCODE_CONFIGURATION;
+use jstz_core::BinEncodable;
 use jstz_proto::context::new_account::NewAddress;
 use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
@@ -106,10 +106,7 @@ fn read_transfer(
 }
 
 fn read_external_message(rt: &mut impl Runtime, bytes: &[u8]) -> Option<ExternalMessage> {
-    let result: Result<(ExternalMessage, usize), bincode::error::DecodeError> =
-        bincode::decode_from_slice(bytes, BINCODE_CONFIGURATION);
-    let (msg, _): (ExternalMessage, _) = result.ok()?;
-
+    let msg = ExternalMessage::decode(bytes).ok()?;
     debug_msg!(rt, "External message: {msg:?}\n");
     Some(msg)
 }
