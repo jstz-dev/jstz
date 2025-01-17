@@ -1,6 +1,8 @@
 use std::ops::Deref;
 
-use bincode::{Decode, Encode};
+use crate::context::new_account::NewAddress;
+use bincode::error::{DecodeError, EncodeError};
+use bincode::{de::Decoder, enc::Encoder, Decode, Encode};
 use boa_engine::{
     js_string, object::ObjectInitializer, property::Attribute, Context, JsArgs, JsData,
     JsError, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
@@ -11,8 +13,6 @@ use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 use utoipa::ToSchema;
 
-use crate::context::new_account::NewAddress;
-
 #[derive(Debug, Trace, Finalize, JsData)]
 pub struct Kv {
     prefix: String,
@@ -22,22 +22,29 @@ const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
 
 // TODO: Figure out a more effective way of serializing values using json
 /// A value stored in the Key-Value store. Always valid JSON.
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
-#[serde(try_from = "String", into = "String")]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 #[schema(value_type = String, format = "json")]
-pub struct KvValue(#[bincode(with_serde)] pub serde_json::Value);
+pub struct KvValue(pub serde_json::Value);
 
-impl From<KvValue> for String {
-    fn from(val: KvValue) -> Self {
-        val.0.to_string()
+impl Decode for KvValue {
+    fn decode<D: Decoder>(decoder: &mut D) -> std::result::Result<KvValue, DecodeError> {
+        let bytes: Vec<u8> = Decode::decode(decoder)?;
+        let value = serde_json::from_slice(&bytes).map_err(|e| {
+            DecodeError::OtherString(format!("error deserializing kv value: {e}"))
+        })?;
+        Ok(Self(value))
     }
 }
 
-impl TryFrom<String> for KvValue {
-    type Error = serde_json::Error;
-
-    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
-        Ok(Self(serde_json::from_str(&value)?))
+impl Encode for KvValue {
+    fn encode<E: Encoder>(
+        &self,
+        encoder: &mut E,
+    ) -> std::result::Result<(), EncodeError> {
+        let bytes = serde_json::to_vec(&self.0).map_err(|e| {
+            EncodeError::OtherString(format!("error serializing kv value: {e}"))
+        })?;
+        Encode::encode(&bytes, encoder)
     }
 }
 
@@ -176,5 +183,66 @@ impl jstz_core::Api for KvApi {
         context
             .register_global_property(js_string!(Self::NAME), storage, Attribute::all())
             .expect("The storage object shouldn't exist yet");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jstz_core::BinEncodable;
+    use serde_json::json;
+
+    #[test]
+    fn test_kv_value_roundtrip() {
+        let test_cases = vec![
+            // Null
+            KvValue(json!(null)),
+            // Boolean
+            KvValue(json!(true)),
+            KvValue(json!(false)),
+            // Numbers
+            KvValue(json!(42)),
+            KvValue(json!(-17.5)),
+            KvValue(json!(0)),
+            // String
+            KvValue(json!("hello world")),
+            KvValue(json!("")),
+            // Array
+            KvValue(json!([])),
+            KvValue(json!([1, 2, 3])),
+            KvValue(json!(["a", "b", null, true, 1.5])),
+            // Object
+            KvValue(json!({})),
+            KvValue(json!({
+                "string": "value",
+                "number": 42,
+                "bool": true,
+                "null": null,
+                "array": [1, 2, 3],
+                "nested": {
+                    "a": "b",
+                    "c": [true, null]
+                }
+            })),
+        ];
+
+        for value in test_cases {
+            let bytes =
+                <KvValue as BinEncodable>::encode(&value).expect("Failed to encode");
+            let decoded =
+                <KvValue as BinEncodable>::decode(&bytes).expect("Failed to decode");
+            assert_eq!(
+                value.0, decoded.0,
+                "Value did not match after roundtrip: {:?}",
+                value.0
+            );
+        }
+    }
+
+    #[test]
+    fn test_kv_value_decode_error() {
+        let invalid_bytes = b"invalid";
+        let result = <KvValue as BinEncodable>::decode(invalid_bytes);
+        assert!(result.is_err());
     }
 }
