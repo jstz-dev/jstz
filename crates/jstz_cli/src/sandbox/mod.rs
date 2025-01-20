@@ -1,13 +1,15 @@
-use anyhow::{bail, Ok, Result};
-use clap::Subcommand;
-
+mod consts;
+mod container;
 pub mod daemon;
 
-mod consts;
-
-pub use consts::*;
-
 use crate::{config::Config, utils::using_jstzd};
+use anyhow::{bail, Result};
+use clap::Subcommand;
+pub use consts::*;
+use container::*;
+
+const SANDBOX_CONTAINER_NAME: &str = "jstz-sandbox";
+const SANDBOX_IMAGE: &str = "ghcr.io/jstz-dev/jstz/jstzd:0.1.0";
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
@@ -30,32 +32,51 @@ pub enum Command {
     },
 }
 
-pub async fn start(detach: bool, background: bool) -> Result<()> {
+pub async fn start(detach: bool, background: bool, use_container: bool) -> Result<()> {
     let mut cfg = Config::load_sync()?;
 
-    daemon::main(detach, background, &mut cfg).await?;
+    match use_container {
+        true => {
+            start_container(SANDBOX_CONTAINER_NAME, SANDBOX_IMAGE, detach, &mut cfg)
+                .await?
+        }
+        _ => daemon::main(detach, background, &mut cfg).await?,
+    };
     Ok(())
 }
 
-pub fn stop() -> Result<()> {
-    daemon::stop_sandbox(false)?;
-    Ok(())
+pub async fn stop(use_container: bool) -> Result<bool> {
+    let mut cfg = Config::load_sync()?;
+    match use_container {
+        true => stop_container(SANDBOX_CONTAINER_NAME, &mut cfg).await,
+        _ => {
+            daemon::stop_sandbox(false)?;
+            Ok(true)
+        }
+    }
 }
 
-pub async fn restart(detach: bool) -> Result<()> {
-    daemon::stop_sandbox(true)?;
-    start(detach, false).await
+pub async fn restart(detach: bool, use_container: bool) -> Result<()> {
+    if !stop(use_container).await? {
+        return Ok(());
+    }
+    start(detach, false, use_container).await
 }
 
-pub async fn exec(command: Command) -> Result<()> {
+pub async fn exec(use_container: bool, command: Command) -> Result<()> {
     if using_jstzd() {
         bail!(
             "Jstz sandbox is not available when environment variable `USE_JSTZD` is truthy."
         );
     }
     match command {
-        Command::Start { detach, background } => start(detach, background).await,
-        Command::Stop => stop(),
-        Command::Restart { detach } => restart(detach).await,
+        Command::Start { detach, background } => {
+            start(detach, background, use_container).await
+        }
+        Command::Stop => {
+            stop(use_container).await?;
+            Ok(())
+        }
+        Command::Restart { detach } => restart(detach, use_container).await,
     }
 }
