@@ -1,0 +1,33 @@
+name: Build CLI binary
+inputs:
+  platform:
+    description: Platform that the binary can run on, e.g. linux, macos
+    required: true
+  arch:
+    description: Architecture of CPU that the binary can run on, e.g. arm64, amd64
+    required: true
+  repo_token:
+    description: API token that gives access to manage the target repo
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+    - run: nix --version
+      shell: bash
+    - name: Format
+      shell: bash
+      run: nix --accept-flake-config fmt -- --fail-on-change
+    - name: Prevent blst
+      shell: bash
+      run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
+    - name: Build
+      shell: bash
+      run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_cli
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ inputs.repo_token }}
+        file: result/bin/jstz
+        asset_name: jstz_${{ inputs.platform }}_${{ inputs.arch }}
+        tag: ${{ github.ref_name }}
