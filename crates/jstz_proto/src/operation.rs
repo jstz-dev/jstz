@@ -1,24 +1,18 @@
 use crate::{
-    context::{
-        new_account::NewAddress,
-        new_account::{Account, Amount, Nonce, ParsedCode},
-    },
+    context::new_account::{Account, Amount, NewAddress, Nonce, ParsedCode, UserAddress},
     Error, Result,
 };
 use bincode::{Decode, Encode};
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::{
-    hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
-    signature::Signature,
-};
+use jstz_crypto::{hash::Blake2b, public_key::PublicKey, signature::Signature};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode)]
 pub struct Operation {
-    pub source: PublicKeyHash,
+    pub source: UserAddress,
     #[bincode(with_serde)]
     pub nonce: Nonce,
     pub content: Content,
@@ -28,7 +22,7 @@ pub type OperationHash = Blake2b;
 
 impl Operation {
     /// Returns the source of the operation
-    pub fn source(&self) -> &PublicKeyHash {
+    pub fn source(&self) -> &UserAddress {
         &self.source
     }
 

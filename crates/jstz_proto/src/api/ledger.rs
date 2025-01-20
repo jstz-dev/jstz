@@ -14,10 +14,7 @@ use jstz_core::{
 };
 
 use crate::{
-    context::{
-        new_account::NewAddress,
-        new_account::{Account, Amount},
-    },
+    context::new_account::{Account, Amount, NewAddress, SmartFunctionAddress},
     error::Result,
 };
 
@@ -27,7 +24,7 @@ use crate::{
 
 #[derive(JsData)]
 struct Ledger {
-    address: NewAddress,
+    address: SmartFunctionAddress,
 }
 
 impl Finalize for Ledger {}
@@ -58,14 +55,20 @@ impl Ledger {
         dst: &NewAddress,
         amount: Amount,
     ) -> Result<()> {
-        Account::transfer(rt, tx, &self.address, dst, amount)?;
+        Account::transfer(
+            rt,
+            tx,
+            &NewAddress::SmartFunction(self.address.clone()),
+            dst,
+            amount,
+        )?;
 
         Ok(())
     }
 }
 
 pub struct LedgerApi {
-    pub address: NewAddress,
+    pub address: SmartFunctionAddress,
 }
 
 pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<NewAddress> {

@@ -297,14 +297,7 @@ mod test {
         )
         .unwrap();
 
-        // TODO: use sf address
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        let proxy_sfh = match proxy.clone() {
-            NewAddress::User(_) => panic!("proxy is not a user address"),
-            NewAddress::SmartFunction(sfh) => sfh,
-        };
-
-        let fa_deposit = mock_fa_deposit(Some(proxy_sfh.clone()));
+        let fa_deposit = mock_fa_deposit(Some(proxy.clone()));
         let ticket_hash = fa_deposit.ticket_hash.clone();
 
         let Receipt { result: inner, .. } =
@@ -317,11 +310,15 @@ mod test {
                 run_function,
             })) => {
                 assert_eq!(42, ticket_balance);
-                assert_eq!(proxy, receiver);
+                assert_eq!(NewAddress::SmartFunction(proxy.clone()), receiver);
                 assert!(run_function.is_some());
-                let balance =
-                    TicketTable::get_balance(&mut host, &mut tx, &proxy, &ticket_hash)
-                        .unwrap();
+                let balance = TicketTable::get_balance(
+                    &mut host,
+                    &mut tx,
+                    &NewAddress::SmartFunction(proxy),
+                    &ticket_hash,
+                )
+                .unwrap();
                 assert_eq!(42, balance);
             }
             _ => panic!("Expected success"),
@@ -354,19 +351,12 @@ mod test {
         )
         .unwrap();
 
-        // TODO: use sf address
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        let proxy_sfh = match proxy.clone() {
-            NewAddress::User(_) => panic!("proxy is not a user address"),
-            NewAddress::SmartFunction(sfh) => sfh,
-        };
-
-        let fa_deposit1 = mock_fa_deposit(Some(proxy_sfh.clone()));
+        let fa_deposit1 = mock_fa_deposit(Some(proxy.clone()));
         let ticket_hash = fa_deposit1.ticket_hash.clone();
 
         let _ = super::execute(&mut host, &mut tx, fa_deposit1);
 
-        let fa_deposit2 = mock_fa_deposit(Some(proxy_sfh.clone()));
+        let fa_deposit2 = mock_fa_deposit(Some(proxy.clone()));
 
         let Receipt { result: inner, .. } =
             super::execute(&mut host, &mut tx, fa_deposit2);
@@ -378,11 +368,15 @@ mod test {
                 run_function,
             })) => {
                 assert_eq!(84, ticket_balance);
-                assert_eq!(proxy, receiver);
+                assert_eq!(NewAddress::SmartFunction(proxy.clone()), receiver);
                 assert!(run_function.is_some());
-                let balance =
-                    TicketTable::get_balance(&mut host, &mut tx, &proxy, &ticket_hash)
-                        .unwrap();
+                let balance = TicketTable::get_balance(
+                    &mut host,
+                    &mut tx,
+                    &NewAddress::SmartFunction(proxy),
+                    &ticket_hash,
+                )
+                .unwrap();
                 assert_eq!(84, balance);
             }
             _ => panic!("Expected success"),
@@ -411,13 +405,6 @@ mod test {
             100,
         )
         .unwrap();
-
-        // TODO: use sf address
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        let proxy = match proxy {
-            NewAddress::User(_) => panic!("proxy is not a user address"),
-            NewAddress::SmartFunction(sfh) => sfh,
-        };
 
         let fa_deposit = mock_fa_deposit(Some(proxy.clone()));
         let expected_receiver = fa_deposit.receiver.clone();

@@ -131,7 +131,14 @@ pub async fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     let realm = rt.realm().clone();
 
     register_web_apis(&realm, &mut rt);
-    register_jstz_apis(&realm, &address, DEFAULT_RANDOM_SEED, &mut rt);
+    register_jstz_apis(
+        &realm,
+        address
+            .as_smart_function()
+            .ok_or(anyhow!("expected smart function address"))?,
+        DEFAULT_RANDOM_SEED,
+        &mut rt,
+    );
 
     // realm.register_api(ConsoleApi, rt.context());
     realm.register_api(StreamApi, rt.context());

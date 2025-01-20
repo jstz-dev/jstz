@@ -1,6 +1,5 @@
 use std::ops::Deref;
 
-use crate::context::new_account::NewAddress;
 use bincode::error::{DecodeError, EncodeError};
 use bincode::{de::Decoder, enc::Encoder, Decode, Encode};
 use boa_engine::{
@@ -12,6 +11,8 @@ use jstz_core::{host::HostRuntime, kv::Transaction, runtime, Result};
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 use utoipa::ToSchema;
+
+use crate::context::new_account::SmartFunctionAddress;
 
 #[derive(Debug, Trace, Finalize, JsData)]
 pub struct Kv {
@@ -110,7 +111,7 @@ macro_rules! preamble {
 }
 
 pub struct KvApi {
-    pub address: NewAddress,
+    pub address: SmartFunctionAddress,
 }
 
 impl KvApi {

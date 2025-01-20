@@ -1,6 +1,6 @@
 use derive_more::{From, TryInto};
 use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
-use jstz_proto::context::new_account::NewAddress;
+use jstz_proto::context::new_account::{NewAddress, SmartFunctionAddress, UserAddress};
 use log::debug;
 use octez::{OctezClient, OctezNode, OctezRollupNode};
 use serde::{Deserialize, Serialize};
@@ -47,28 +47,24 @@ pub enum Account {
 }
 
 impl Account {
-    pub fn address(&self) -> &NewAddress {
+    pub fn address(&self) -> NewAddress {
         match self {
-            Account::User(user) => &user.address,
-            Account::SmartFunction(sf) => &sf.address,
+            Account::User(user) => NewAddress::User(user.address.clone()),
+            Account::SmartFunction(sf) => NewAddress::SmartFunction(sf.address.clone()),
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
-    // TODO: change to PublicKeyHash
-    // https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
-    pub address: NewAddress,
+    pub address: UserAddress,
     pub secret_key: SecretKey,
     pub public_key: PublicKey,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SmartFunction {
-    // TODO: change to SmartFunctionHash
-    // https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
-    pub address: NewAddress,
+    pub address: SmartFunctionAddress,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -159,7 +155,7 @@ impl AddressOrAlias {
                     .get(alias)
                     .ok_or_else(|| user_error!("User/smart function '{}' not found. Please provide a valid address or alias.", alias))?;
 
-                Ok(account.address().clone())
+                Ok(account.address())
             }
         }
     }
@@ -176,7 +172,7 @@ impl AddressOrAlias {
                 .ok_or(user_error!(
                     "You are not logged in. Please run `jstz login`."
                 ))
-                .map(|(_, user)| user.address.clone()),
+                .map(|(_, user)| NewAddress::User(user.address.clone())),
         }
     }
 
