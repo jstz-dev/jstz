@@ -2,8 +2,7 @@ use std::str::FromStr;
 
 use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
-use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_proto::context::new_account::NewAddress;
+use jstz_proto::context::new_account::{Addressable, NewAddress};
 use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
@@ -100,7 +99,9 @@ pub async fn exec(
     debug!("Resolved URL: {}", url_object.to_string());
 
     // 3. Construct the signed operation
-    let nonce = jstz_client.get_nonce(&user.address).await?;
+    let nonce = jstz_client
+        .get_nonce(&NewAddress::User(user.address.clone()))
+        .await?;
 
     // SAFETY: `url` is a valid URI since URLs are a subset of  URIs and `url_object` is a valid URL.
     let url: Uri = url_object
@@ -117,15 +118,8 @@ pub async fn exec(
 
     debug!("Body: {:?}", body);
 
-    // TODO: remove
-    //  https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
-    let user_address: Result<PublicKeyHash> = match user.address.clone() {
-        NewAddress::User(address) => Ok(address),
-        _ => bail!("address type mismatch - expected user address"),
-    };
-
     let op = Operation {
-        source: user_address?,
+        source: user.address.clone(),
         nonce,
         content: OperationContent::RunFunction(RunFunction {
             uri: url,

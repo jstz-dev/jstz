@@ -91,9 +91,7 @@ pub trait Hash<'a>:
     + Serialize
     + Deserialize<'a>
     + Finalize
-    // TODO: Add back when renamed
-    // https://linear.app/tezos/issue/JSTZ-253/remove-old-accountrs
-    // ToSchema,
+    + ToSchema
     + Trace
     + FromStr
     + Display

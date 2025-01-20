@@ -5,10 +5,19 @@ use boa_engine::{
     JsResult, JsValue, NativeFunction,
 };
 use jstz_core::runtime;
-use jstz_proto::context::{new_account::Account, new_account::NewAddress};
+use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+use jstz_proto::context::new_account::{Account, NewAddress};
 
 fn try_parse_address(account: &str) -> JsResult<NewAddress> {
     NewAddress::from_base58(account).map_err(|_| {
+        JsNativeError::typ()
+            .with_message("Could not parse the address.")
+            .into()
+    })
+}
+
+fn try_parse_smart_function_address(account: &str) -> JsResult<SmartFunctionHash> {
+    SmartFunctionHash::from_base58(account).map_err(|_| {
         JsNativeError::typ()
             .with_message("Could not parse the address.")
             .into()
@@ -58,7 +67,7 @@ impl AccountApi {
     ) -> JsResult<JsValue> {
         let account: String = args.get_or_undefined(0).try_js_into(context)?;
 
-        let address = try_parse_address(account.as_str())?;
+        let address = try_parse_smart_function_address(account.as_str())?;
 
         runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<JsValue> {
             match Account::function_code(hrt.deref(), tx, &address)? {
@@ -76,7 +85,7 @@ impl AccountApi {
         let account: String = args.get_or_undefined(0).try_js_into(context)?;
         let code: String = args.get_or_undefined(1).try_js_into(context)?;
 
-        let address = try_parse_address(account.as_str())?;
+        let address = try_parse_smart_function_address(account.as_str())?;
 
         runtime::with_js_hrt_and_tx(|hrt, tx| {
             Account::set_function_code(hrt.deref(), tx, &address, code)
@@ -115,6 +124,8 @@ impl AccountApi {
 
 #[cfg(test)]
 mod tests {
+    use jstz_proto::context::new_account::Addressable;
+
     use super::*;
 
     const TEST_TZ1: &str = "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU";

@@ -2,12 +2,12 @@ use std::fmt::{self, Display};
 
 use boa_engine::prelude::Context;
 use jstz_core::{host::HostRuntime, host_defined, runtime};
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::Deserialize;
 use serde::Serialize;
 use utoipa::ToSchema;
 
 use crate::api::TraceData;
-use crate::context::new_account::NewAddress;
 
 pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
 
@@ -15,7 +15,7 @@ pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
 
 #[derive(Serialize, Deserialize, ToSchema)]
 pub struct LogRecord {
-    pub address: NewAddress,
+    pub address: SmartFunctionHash,
     pub request_id: String,
     pub level: LogLevel,
     pub text: String,

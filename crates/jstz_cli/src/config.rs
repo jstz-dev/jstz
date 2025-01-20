@@ -1,5 +1,8 @@
 use derive_more::{From, TryInto};
-use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+use jstz_crypto::{
+    public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
+    smart_function_hash::SmartFunctionHash,
+};
 use jstz_proto::context::new_account::NewAddress;
 use log::debug;
 use octez::{OctezClient, OctezNode, OctezRollupNode};
@@ -47,28 +50,24 @@ pub enum Account {
 }
 
 impl Account {
-    pub fn address(&self) -> &NewAddress {
+    pub fn address(&self) -> NewAddress {
         match self {
-            Account::User(user) => &user.address,
-            Account::SmartFunction(sf) => &sf.address,
+            Account::User(user) => user.address.clone().into(),
+            Account::SmartFunction(sf) => sf.address.clone().into(),
         }
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
-    // TODO: change to PublicKeyHash
-    // https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
-    pub address: NewAddress,
+    pub address: PublicKeyHash,
     pub secret_key: SecretKey,
     pub public_key: PublicKey,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SmartFunction {
-    // TODO: change to SmartFunctionHash
-    // https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
-    pub address: NewAddress,
+    pub address: SmartFunctionHash,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -159,7 +158,7 @@ impl AddressOrAlias {
                     .get(alias)
                     .ok_or_else(|| user_error!("User/smart function '{}' not found. Please provide a valid address or alias.", alias))?;
 
-                Ok(account.address().clone())
+                Ok(account.address())
             }
         }
     }
@@ -176,7 +175,7 @@ impl AddressOrAlias {
                 .ok_or(user_error!(
                     "You are not logged in. Please run `jstz login`."
                 ))
-                .map(|(_, user)| user.address.clone()),
+                .map(|(_, user)| user.address.clone().into()),
         }
     }
 

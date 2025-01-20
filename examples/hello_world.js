@@ -3,7 +3,7 @@ const handler = async (request) => {
     try {
         const message = await request.text()
         console.log(message);
-        console.log(\`My address is \${Ledger.selfAddress()}\`)
+        console.log(\`My address is \${Ledger.selfAddress}\`)
         const response = new Response("Success!");
         return response;
     } catch (error) { console.error("child function error", error)
@@ -14,7 +14,7 @@ export default handler`;
 
 const handler = async () => {
   console.log("Hello JS 👋");
-  console.log(`My address is ${Ledger.selfAddress()}`);
+  console.log(`My address is ${Ledger.selfAddress}`);
 
   try {
     const newSmartFunction = await SmartFunction.create(smartFunctionCode);
@@ -33,7 +33,7 @@ const handler = async () => {
   }
 
   console.log("The root smart function has control again!");
-  console.log(`And to confirm, my address is ${Ledger.selfAddress()}`);
+  console.log(`And to confirm, my address is ${Ledger.selfAddress}`);
   const response = new Response("😸");
   return response;
 };

@@ -18,7 +18,10 @@ use tezos_smart_rollup::{
 use utoipa::ToSchema;
 
 use crate::{
-    context::{new_account::Amount, new_account::NewAddress, ticket_table::TicketTable},
+    context::{
+        new_account::{Addressable, Amount, NewAddress},
+        ticket_table::TicketTable,
+    },
     Error, Result,
 };
 
@@ -118,7 +121,7 @@ fn create_fa_withdrawal_message(
 fn withdraw_from_ticket_owner(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    ticket_owner: &NewAddress,
+    ticket_owner: &impl Addressable,
     routing_info: &RoutingInfo,
     amount: Amount,
     ticket: Ticket,

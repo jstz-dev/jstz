@@ -1,10 +1,10 @@
-use std::{collections::hash_map::Entry, str::FromStr};
+use std::collections::hash_map::Entry;
 
 use bip39::{Language, Mnemonic, MnemonicType};
 use clap::Subcommand;
 use dialoguer::{Confirm, Input};
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_crypto::{keypair_from_passphrase, public_key_hash::PublicKeyHash};
-use jstz_proto::context::new_account::NewAddress;
 use log::{debug, info, warn};
 
 use crate::{
@@ -22,7 +22,7 @@ impl User {
     pub fn from_passphrase(passphrase: String) -> Result<Self> {
         let (sk, pk) = keypair_from_passphrase(passphrase.as_str())?;
 
-        let address = NewAddress::User(PublicKeyHash::from(&pk));
+        let address = PublicKeyHash::from(&pk);
 
         Ok(Self {
             address,
@@ -32,13 +32,8 @@ impl User {
     }
 }
 
-async fn add_smart_function(alias: String, address: NewAddress) -> Result<()> {
+async fn add_smart_function(alias: String, address: SmartFunctionHash) -> Result<()> {
     let mut cfg = Config::load().await?;
-    // TODO: https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-    // validate address type === smart function
-    // address
-    //     .check_is_smart_function()
-    //     .map_err(|e| user_error!("{}", e))?;
     if cfg.accounts.contains(&alias) {
         bail_user_error!(
             "The smart function '{}' already exists. Please choose another name.",
@@ -257,10 +252,13 @@ async fn get_code(
     debug!("Getting code.. {:?}.", network);
 
     let address = AddressOrAlias::resolve_or_use_current_user(account, &cfg)?;
+    let sf_address = address
+        .as_smart_function()
+        .ok_or(user_error!("Address is not a smart function"))?;
     debug!("resolved `account` -> {:?}", address);
     let code = cfg
         .jstz_client(&network)?
-        .get_code(&address)
+        .get_code(sf_address)
         .await?
         .ok_or(user_error!("No code found for account {}", address))?;
 
@@ -336,20 +334,9 @@ pub enum Command {
         #[arg(value_name = "ALIAS")]
         alias: String,
         /// Address of the smart function.
-        #[arg(value_name = "ADDRESS")]
-        #[arg(value_parser = parse_smart_function_address)]
-        address: NewAddress,
+        #[arg(value_name = "KT1 ADDRESS")]
+        address: SmartFunctionHash,
     },
-}
-
-// TODO: use sf address
-// // TODO: https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-fn parse_smart_function_address(s: &str) -> Result<NewAddress> {
-    let address = NewAddress::from_str(s).map_err(|e| user_error!("{}", e))?;
-    if !matches!(address, NewAddress::SmartFunction(_)) {
-        bail_user_error!("Invalid smart function address: {}", s);
-    }
-    Ok(address)
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -360,22 +347,5 @@ pub async fn exec(command: Command) -> Result<()> {
         Command::List { long } => list_accounts(long).await,
         Command::Code { account, network } => get_code(account, network).await,
         Command::Balance { account, network } => get_balance(account, network).await,
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn test_pasrse_smart_function_address() {
-        let address =
-            parse_smart_function_address("KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5").unwrap();
-        assert!(matches!(address, NewAddress::SmartFunction(_)));
-    }
-
-    #[test]
-    fn test_parse_user_address() {
-        let address = parse_smart_function_address("tz1VJk1a4Y4FdZyFtsm6zL2k9KjYtS5tYF9");
-        assert!(address.is_err());
     }
 }
