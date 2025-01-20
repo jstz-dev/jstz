@@ -7,6 +7,7 @@ use jstz_core::{
     kv::Transaction,
     runtime::{self, Runtime},
 };
+use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use jstz_proto::executor::smart_function::{register_jstz_apis, register_web_apis};
 use log::{debug, error, info, warn};
 use rustyline::{
@@ -100,7 +101,7 @@ impl Completer for JsHighlighter {
     type Candidate = String;
 }
 
-const DEFAULT_SMART_FUNCTION_ADDRESS: &str = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
+const DEFAULT_SMART_FUNCTION_ADDRESS: &str = "KT1KRj5VMNmhxobTJBPq7u2kacqbxu9Cntx6";
 const DEFAULT_GAS_LIMIT: usize = usize::MAX;
 const DEFAULT_RANDOM_SEED: u64 = 42;
 
@@ -108,10 +109,14 @@ pub async fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     let cfg = Config::load().await?;
 
     let address = match account {
-        Some(account) => account.resolve(&cfg)?.clone(),
-        None => DEFAULT_SMART_FUNCTION_ADDRESS
-            .parse()
-            .expect("`DEFAULT_SMART_FUNCTION_ADDRESS` is an invalid address."),
+        Some(account) => account
+            .resolve(&cfg)?
+            .as_smart_function()
+            .expect("expected smart function address")
+            .clone(),
+        None => SmartFunctionHash::from_base58(DEFAULT_SMART_FUNCTION_ADDRESS)
+            .expect("`DEFAULT_SMART_FUNCTION_ADDRESS` is an invalid address.")
+            .clone(),
     };
     debug!("resolved `account` -> {:?}", address);
 

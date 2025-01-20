@@ -7,6 +7,7 @@ use crate::{
 use bincode::{Decode, Encode};
 use http::{HeaderMap, StatusCode};
 use jstz_api::http::body::HttpBody;
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -50,7 +51,7 @@ impl Receipt {
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 pub struct DeployFunctionReceipt {
-    pub address: NewAddress,
+    pub address: SmartFunctionHash,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]

@@ -11,10 +11,7 @@ use tezos_smart_rollup::{
 use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::{
-    context::{
-        new_account::NewAddress,
-        new_account::{Account, Amount},
-    },
+    context::new_account::{Account, Addressable, Amount, NewAddress},
     Error, Result,
 };
 
@@ -50,7 +47,7 @@ fn create_withdrawal(
 fn withdraw(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    source: &NewAddress,
+    source: &impl Addressable,
     withdrawal: Withdrawal,
     ticketer: &ContractKt1Hash,
 ) -> Result<()> {
@@ -70,7 +67,7 @@ fn withdraw(
 pub(crate) fn execute_withdraw(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    source: &NewAddress,
+    source: &impl Addressable,
     withdrawal: Withdrawal,
     ticketer: &ContractKt1Hash,
 ) -> Result<()> {

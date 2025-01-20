@@ -44,8 +44,6 @@ impl Default for MockFaDeposit {
             ticket_amount: 300,
             ticket_content: (12345, Some(b"123967145810851823941234".to_vec())),
             smart_rollup,
-            // use sf hash
-            // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
             proxy_contract: Some(
                 jstz_crypto::smart_function_hash::SmartFunctionHash::from_base58(
                     MOCK_PROXY,

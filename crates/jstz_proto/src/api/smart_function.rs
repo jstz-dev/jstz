@@ -12,12 +12,10 @@ use jstz_core::{
     host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
     value::IntoJs,
 };
+use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 
 use crate::{
-    context::{
-        new_account::NewAddress,
-        new_account::{Account, Amount, ParsedCode},
-    },
+    context::new_account::{Account, Amount, NewAddress, ParsedCode},
     executor::{
         smart_function::{headers, HostScript, Script},
         JSTZ_HOST,
@@ -30,7 +28,7 @@ use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
 #[derive(JsData)]
 pub struct TraceData {
-    pub address: NewAddress,
+    pub address: SmartFunctionHash,
     pub operation_hash: OperationHash,
 }
 
@@ -42,7 +40,7 @@ unsafe impl Trace for TraceData {
 
 #[derive(JsData)]
 struct SmartFunction {
-    address: NewAddress,
+    address: SmartFunctionHash,
 }
 impl Finalize for SmartFunction {}
 
@@ -71,28 +69,34 @@ impl SmartFunction {
         function_code: ParsedCode,
         initial_balance: Amount,
     ) -> Result<String> {
-        let balance = Account::balance(hrt, tx, &self.address)?;
+        let deployer = &self.address;
+        let balance = Account::balance(hrt, tx, deployer)?;
         if balance < initial_balance {
             return Err(Error::BalanceOverflow);
         }
 
         // 2. Deploy the smart function
-        let address =
-            Script::deploy(hrt, tx, &self.address, function_code, initial_balance)?;
+        let deployed = NewAddress::SmartFunction(Script::deploy(
+            hrt,
+            tx,
+            deployer,
+            function_code,
+            initial_balance,
+        )?);
 
         // 3. Increment nonce of current account
-        let nonce = Account::nonce(hrt, tx, &self.address)?;
+        let nonce = Account::nonce(hrt, tx, deployer)?;
         nonce.increment();
 
         // 4. Transfer the balance to the associated account
-        Account::transfer(hrt, tx, &self.address, &address, initial_balance)?;
+        Account::transfer(hrt, tx, deployer, &deployed, initial_balance)?;
 
-        Ok(address.to_string())
+        Ok(deployed.to_string())
     }
 
     // Invariant: The function should always be called within a js_host_context
     fn call(
-        self_address: &NewAddress,
+        self_address: &SmartFunctionHash,
         request: &JsNativeObject<Request>,
         operation_hash: OperationHash,
         context: &mut Context,
@@ -101,17 +105,26 @@ impl SmartFunction {
         let mut request_deref = request.deref_mut();
         match request_deref.url().domain() {
             Some(JSTZ_HOST) => HostScript::run(self_address, &mut request_deref, context),
-            Some(address) => {
-                let address = NewAddress::from_base58(address).map_err(|_| {
-                    JsError::from_native(
-                        JsNativeError::error().with_message("Invalid host"),
-                    )
-                })?;
-                // 2. Set the referer of the request to the current smart function address
-                headers::test_and_set_referrer(&request_deref, self_address)?;
+            Some(callee_address) => {
+                let callee_address = SmartFunctionHash::from_base58(callee_address)
+                    .map_err(|_| {
+                        JsError::from_native(
+                            JsNativeError::error().with_message("Invalid host"),
+                        )
+                    })?;
+                // 2. Set the referrer of the request to the current smart function address
+                headers::test_and_set_referrer(
+                    &request_deref,
+                    &NewAddress::SmartFunction(self_address.clone()),
+                )?;
 
                 // 3. Load, init and run!
-                Script::load_init_run(address, operation_hash, request.inner(), context)
+                Script::load_init_run(
+                    callee_address,
+                    operation_hash,
+                    request.inner(),
+                    context,
+                )
             }
             None => Err(JsError::from_native(
                 JsNativeError::error().with_message("Invalid host"),
@@ -121,14 +134,14 @@ impl SmartFunction {
 }
 
 pub struct SmartFunctionApi {
-    pub address: NewAddress,
+    pub address: SmartFunctionHash,
 }
 
 impl SmartFunctionApi {
     const NAME: &'static str = "SmartFunction";
 
     fn fetch(
-        address: &NewAddress,
+        address: &SmartFunctionHash,
         args: &[JsValue],
         context: &mut Context,
     ) -> JsResult<JsValue> {
@@ -288,11 +301,8 @@ mod test {
 
         register_web_apis(&realm, context);
 
-        // TODO: Use sf address instead
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        let self_address = NewAddress::SmartFunction(
-            SmartFunctionHash::digest(b"random bytes").unwrap(),
-        );
+        let self_address = SmartFunctionHash::digest(b"random bytes").unwrap();
+
         let amount = 100;
 
         let operation_hash = Blake2b::from(b"operation_hash".as_ref());
@@ -504,9 +514,13 @@ mod test {
 
         assert_eq!(1, outbox.len());
         tx.begin();
-        let balance =
-            TicketTable::get_balance(host, &mut tx, &token_smart_function, &ticket_hash)
-                .unwrap();
+        let balance = TicketTable::get_balance(
+            host,
+            &mut tx,
+            &NewAddress::SmartFunction(token_smart_function),
+            &ticket_hash,
+        )
+        .unwrap();
         assert_eq!(10, balance);
 
         // Trying a second fa withdraw should fail with insufficient funds

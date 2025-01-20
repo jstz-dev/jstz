@@ -613,7 +613,7 @@
         ],
         "properties": {
           "address": {
-            "$ref": "#/components/schemas/Address"
+            "$ref": "#/components/schemas/SmartFunctionHash"
           }
         }
       },
@@ -698,7 +698,7 @@
         ],
         "properties": {
           "address": {
-            "$ref": "#/components/schemas/Address"
+            "$ref": "#/components/schemas/SmartFunctionHash"
           },
           "level": {
             "$ref": "#/components/schemas/LogLevel"

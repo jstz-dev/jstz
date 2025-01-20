@@ -6,7 +6,7 @@ use tezos_smart_rollup::{
     storage::path::{self, OwnedPath, RefPath},
 };
 
-use super::{new_account::Amount, new_account::NewAddress};
+use super::new_account::{Addressable, Amount};
 
 use crate::error::Result;
 
@@ -22,9 +22,9 @@ const TICKET_TABLE_PATH: RefPath = RefPath::assert_from(b"/ticket_table");
 pub struct TicketTable;
 
 impl TicketTable {
-    fn path(ticket_hash: &TicketHash, owner: &NewAddress) -> Result<OwnedPath> {
+    fn path(ticket_hash: &TicketHash, owner: &impl Addressable) -> Result<OwnedPath> {
         let ticket_hash_path = OwnedPath::try_from(format!("/{}", ticket_hash))?;
-        let owner_path = OwnedPath::try_from(format!("/{}", owner))?;
+        let owner_path = OwnedPath::try_from(format!("/{}", owner.to_base58()))?;
 
         Ok(path::concat(
             &TICKET_TABLE_PATH,
@@ -35,7 +35,7 @@ impl TicketTable {
     pub fn get_balance(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
-        owner: &NewAddress,
+        owner: &impl Addressable,
         ticket_hash: &TicketHash,
     ) -> Result<Amount> {
         let path = Self::path(ticket_hash, owner)?;
@@ -53,7 +53,7 @@ impl TicketTable {
     pub fn add(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
-        owner: &NewAddress,
+        owner: &impl Addressable,
         ticket_hash: &TicketHash,
         amount: Amount, // TODO: check if its the correct size
     ) -> Result<Amount> {
@@ -80,7 +80,7 @@ impl TicketTable {
     pub fn sub(
         rt: &mut impl Runtime,
         tx: &mut Transaction,
-        owner: &NewAddress,
+        owner: &impl Addressable,
         ticket_hash: &TicketHash,
         amount: u64,
     ) -> Result<Amount> {
@@ -101,6 +101,8 @@ impl TicketTable {
 
 #[cfg(test)]
 mod test {
+    use crate::context::new_account::NewAddress;
+
     use super::*;
     use jstz_core::kv::Transaction;
     use jstz_crypto::{

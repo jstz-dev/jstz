@@ -7,13 +7,11 @@ use axum::{
     Json,
 };
 use broadcaster::InfallibleSSeStream;
+use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+use jstz_proto::js_logger::{LogRecord, LOG_PREFIX};
 #[cfg(feature = "persistent-logging")]
 use jstz_proto::request_logger::{
     RequestEvent, REQUEST_END_PREFIX, REQUEST_START_PREFIX,
-};
-use jstz_proto::{
-    context::new_account::NewAddress,
-    js_logger::{LogRecord, LOG_PREFIX},
 };
 use serde::Deserialize;
 use tokio::task::JoinHandle;
@@ -229,13 +227,8 @@ async fn stream_log(
     State(AppState { broadcaster, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Sse<InfallibleSSeStream>> {
-    let address = NewAddress::from_base58(&address)
+    let address = SmartFunctionHash::from_base58(&address)
         .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
-    // TODO: Add a check to see if the address is smart function
-    // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-    // address
-    //     .check_is_smart_function()
-    //     .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
     Ok(broadcaster.new_client(address).await)
 }
 

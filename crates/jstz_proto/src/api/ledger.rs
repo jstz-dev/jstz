@@ -12,12 +12,10 @@ use jstz_core::{
     accessor, host::HostRuntime, kv::Transaction, native::Accessor, runtime,
     value::IntoJs,
 };
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 
 use crate::{
-    context::{
-        new_account::NewAddress,
-        new_account::{Account, Amount},
-    },
+    context::new_account::{Account, Amount, NewAddress},
     error::Result,
 };
 
@@ -27,7 +25,7 @@ use crate::{
 
 #[derive(JsData)]
 struct Ledger {
-    address: NewAddress,
+    address: SmartFunctionHash,
 }
 
 impl Finalize for Ledger {}
@@ -65,7 +63,7 @@ impl Ledger {
 }
 
 pub struct LedgerApi {
-    pub address: NewAddress,
+    pub address: SmartFunctionHash,
 }
 
 pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<NewAddress> {

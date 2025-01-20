@@ -1,8 +1,5 @@
 use crate::{
-    context::{
-        new_account::NewAddress,
-        new_account::{Account, Amount, Nonce, ParsedCode},
-    },
+    context::new_account::{Account, Amount, NewAddress, Nonce, ParsedCode},
     Error, Result,
 };
 use bincode::{Decode, Encode};
@@ -44,7 +41,7 @@ impl Operation {
         rt: &impl HostRuntime,
         tx: &mut Transaction,
     ) -> Result<()> {
-        let next_nonce = Account::nonce(rt, tx, &NewAddress::User(self.source.clone()))?;
+        let next_nonce = Account::nonce(rt, tx, &self.source)?;
 
         if self.nonce == *next_nonce {
             next_nonce.increment();

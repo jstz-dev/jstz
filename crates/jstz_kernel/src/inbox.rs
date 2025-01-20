@@ -195,7 +195,7 @@ mod test {
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_mock::message::native_deposit::MockNativeDeposit;
     use jstz_mock::{host::JstzMockHost, message::fa_deposit::MockFaDeposit};
-    use jstz_proto::context::new_account::NewAddress;
+    use jstz_proto::context::new_account::{Addressable, NewAddress};
     use jstz_proto::operation::external;
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
     use tezos_smart_rollup::types::SmartRollupAddress;

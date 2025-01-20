@@ -128,11 +128,6 @@ mod test {
         .unwrap();
         tx.commit(host.rt()).unwrap();
 
-        let proxy = match proxy {
-            NewAddress::User(_) => panic!("proxy is not a user address"),
-            NewAddress::SmartFunction(sfh) => sfh,
-        };
-
         let deposit = MockFaDeposit {
             proxy_contract: Some(proxy),
             ..MockFaDeposit::default()
