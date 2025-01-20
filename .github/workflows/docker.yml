@@ -1,6 +1,10 @@
 name: Build docker image for subsequent jobs
 
 on:
+  push:
+    tags:
+      - "*"
+
   # For manually rebuilding the images
   workflow_dispatch:
     inputs:
@@ -25,6 +29,9 @@ on:
       jstz-node:
         description: "jstz-node docker image tag"
         value: ${{ jobs.build-docker.outputs.jstz-node }}
+      jstzd:
+        description: "jstzd docker image tag"
+        value: ${{ jobs.build-docker.outputs.jstzd }}
 
 env:
   DOCKER_REGISTRY: ghcr.io
@@ -53,7 +60,7 @@ jobs:
   build-docker:
     name: Build (Docker)
     needs: [build-kernel]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -61,18 +68,22 @@ jobs:
       jstz-cli: ${{ steps.jstz-cli-tag.outputs.tag || '' }}
       jstz-rollup: ${{ steps.jstz-rollup-tag.outputs.tag || '' }}
       jstz-node: ${{ steps.jstz-node-tag.outputs.tag || '' }}
+      jstzd: ${{ steps.jstzd-tag.outputs.tag || '' }}
     strategy:
       matrix:
         include:
+          - image: jstzd
+            dockerfile: ./crates/jstzd/Dockerfile
+            platforms: linux/arm64
           - image: jstz-cli
             dockerfile: ./crates/jstz_cli/Dockerfile
-            platforms: linux/amd64, linux/arm64
+            platforms: linux/arm64
           - image: jstz-node
             dockerfile: ./crates/jstz_node/Dockerfile
-            platforms: linux/amd64
+            platforms: linux/arm64
           - image: jstz-rollup
             dockerfile: ./crates/jstz_rollup/Dockerfile
-            platforms: linux/amd64
+            platforms: linux/arm64
     steps:
       - uses: actions/checkout@v4
       - name: Set up QEMU
@@ -97,7 +108,7 @@ jobs:
           images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_BASE }}/${{ matrix.image }}
           tags: |
             type=ref,event=tag
-            {{date 'YYYYMMDD'}}
+            {{sha}}
       - # Extract tags for jstz
         run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
         id: jstz-cli-tag
@@ -110,6 +121,10 @@ jobs:
         run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
         id: jstz-rollup-tag
         if: matrix.image == 'jstz-rollup'
+      - # Extract tags for jstzd
+        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
+        id: jstzd-tag
+        if: matrix.image == 'jstzd'
       - name: Build and push Docker image
         uses: docker/build-push-action@v6.3.0
         with:
