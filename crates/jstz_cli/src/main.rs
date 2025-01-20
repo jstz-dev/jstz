@@ -69,8 +69,13 @@ enum Command {
     Bridge(bridge::Command),
 
     /// 🏝️  Start/Stop/Restart the local jstz sandbox
-    #[command(subcommand)]
-    Sandbox(sandbox::Command),
+    Sandbox {
+        /// Start/Stop/Restart the sandbox in a docker container
+        #[clap(long)]
+        container: bool,
+        #[command(subcommand)]
+        command: sandbox::Command,
+    },
     /// ⚡️ Start a REPL session with jstz's JavaScript runtime {n}
     Repl {
         /// Sets the address of the REPL environment.
@@ -114,7 +119,9 @@ async fn exec(command: Command) -> Result<()> {
     match command {
         Command::Docs => docs::exec(),
         Command::Completions { shell } => completions::exec(shell),
-        Command::Sandbox(sandbox_command) => sandbox::exec(sandbox_command).await,
+        Command::Sandbox { container, command } => {
+            sandbox::exec(container, command).await
+        }
         Command::Bridge(bridge_command) => bridge::exec(bridge_command).await,
         Command::Account(account_command) => account::exec(account_command).await,
         Command::Deploy {

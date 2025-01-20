@@ -2757,6 +2757,7 @@ dependencies = [
  "anyhow",
  "boa_engine",
  "boa_gc",
+ "bollard",
  "bs58",
  "clap 4.5.20",
  "clap_complete",
