@@ -1,10 +1,9 @@
 use crate::{
-    bridge::convert_tez_to_mutez,
     config::{Config, NetworkName},
     error::{bail_user_error, Result},
     run,
     term::styles,
-    utils::AddressOrAlias,
+    utils::{convert_tez_to_mutez, AddressOrAlias},
 };
 use log::debug;
 

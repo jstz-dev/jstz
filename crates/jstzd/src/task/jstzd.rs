@@ -427,6 +427,17 @@ impl JstzdServer {
 
         Ok(jstzd)
     }
+
+    pub async fn get_config(&self) -> JstzdConfig {
+        self.inner
+            .state
+            .read()
+            .await
+            .jstzd_config
+            .as_ref()
+            .unwrap()
+            .clone()
+    }
 }
 
 fn collect_progress(individual_results: Vec<Result<bool>>) -> u64 {

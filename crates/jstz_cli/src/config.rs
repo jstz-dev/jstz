@@ -74,9 +74,9 @@ pub struct SmartFunction {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct AccountConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
-    current_alias: Option<String>,
+    pub current_alias: Option<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    accounts: HashMap<String, Account>,
+    pub accounts: HashMap<String, Account>,
 }
 
 impl AccountConfig {
@@ -246,6 +246,9 @@ pub struct Config {
     /// Path to octez installation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub octez_path: Option<PathBuf>,
+    /// The octez client directory to use
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub octez_client_dir: Option<PathBuf>,
     /// Sandbox config (None if sandbox is not running)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sandbox: Option<SandboxConfig>,
@@ -302,7 +305,7 @@ impl FromStr for NetworkName {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-struct Network {
+pub struct Network {
     pub octez_node_rpc_endpoint: String,
     pub jstz_node_endpoint: String,
 }
@@ -311,9 +314,9 @@ struct Network {
 pub struct NetworkConfig {
     // if None, the users have to specify the network in the command
     #[serde(skip_serializing_if = "Option::is_none")]
-    default_network: Option<NetworkName>,
+    pub default_network: Option<NetworkName>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    networks: HashMap<String, Network>,
+    pub networks: HashMap<String, Network>,
 }
 
 impl Config {
@@ -482,6 +485,9 @@ impl Config {
         &self,
         network_name: &Option<NetworkName>,
     ) -> Result<Option<PathBuf>> {
+        if self.octez_client_dir.is_some() {
+            return Ok(self.octez_client_dir.clone());
+        }
         let sandbox = self.sandbox()?;
         Ok(match self.network_name(network_name)? {
             NetworkName::Dev => Some(sandbox.octez_client_dir.clone()),
@@ -545,6 +551,23 @@ impl Config {
                     ),
                 }),
             },
+        }
+    }
+
+    pub fn new(
+        octez_client_dir: Option<PathBuf>,
+        sandbox: Option<SandboxConfig>,
+        accounts: AccountConfig,
+        networks: NetworkConfig,
+    ) -> Self {
+        Self {
+            octez_path: None,
+            octez_client_dir,
+            sandbox,
+            accounts,
+            networks,
+            sandbox_logs_dir: None,
+            jstzd_config: None,
         }
     }
 }
