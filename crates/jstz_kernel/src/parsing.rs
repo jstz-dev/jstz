@@ -27,10 +27,14 @@ pub fn try_parse_fa_deposit(
     let receiver = try_parse_contract(&receiver.0)?;
 
     let proxy_smart_function = (proxy_contract)
-        .map(|c| try_parse_contract(&c.0))
+        .map(|c| {
+            let addr: NewAddress = try_parse_contract(&c.0)?;
+            if let NewAddress::SmartFunction(_) = addr {
+                return Ok(addr);
+            }
+            Err(jstz_proto::Error::AddressTypeMismatch)
+        })
         .transpose()?;
-    //TODO: validate sf address
-    // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
 
     let amount = ticket
         .amount()
@@ -104,8 +108,6 @@ mod test {
         assert_eq!(expected, fa_deposit)
     }
 
-    //TODO: this should fail after validation is added
-    //  https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
     #[test]
     fn try_parse_fa_deposit_should_fail_for_invalid_proxy_address() {
         let amount = 10;
@@ -122,9 +124,10 @@ mod test {
         let proxy_contract = Some(jstz_pkh_to_michelson(&jstz_mock::account1()));
         let inbox_id = 41717;
 
-        let _fa_deposit =
-            try_parse_fa_deposit(inbox_id, ticket, receiver, proxy_contract);
-        // assert_eq!(fa_deposit.is_err());
+        let fa_deposit = try_parse_fa_deposit(inbox_id, ticket, receiver, proxy_contract);
+        // assert!(fa_deposit.is_err_and(|e| e === jstz_proto::Error::AddressTypeMismatch));
+        assert!(fa_deposit
+            .is_err_and(|e| { matches!(e, jstz_proto::Error::AddressTypeMismatch) }));
     }
 
     #[test]

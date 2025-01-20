@@ -21,13 +21,13 @@ use jstz_core::{
     host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
     Module, Realm,
 };
+use jstz_crypto::hash::Hash;
 use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     api::{self, TraceData},
-    context::{
-        new_account::NewAddress,
-        new_account::{Account, Amount, ParsedCode},
+    context::new_account::{
+        Account, Amount, NewAddress, ParsedCode, SmartFunctionAddress,
     },
     js_logger::JsonLogger,
     operation::{OperationHash, RunFunction},
@@ -112,7 +112,7 @@ fn try_apply_to_value_or_promise(
     }
 }
 
-fn compute_seed(address: &NewAddress, operation_hash: &OperationHash) -> u64 {
+fn compute_seed(address: &SmartFunctionAddress, operation_hash: &OperationHash) -> u64 {
     let mut seed: u64 = 0;
     for byte in operation_hash.as_array().iter().chain(address.as_bytes()) {
         seed = seed.rotate_left(8).bitxor(*byte as u64)
@@ -132,7 +132,7 @@ pub fn register_web_apis(realm: &Realm, context: &mut Context) {
 
 pub fn register_jstz_apis(
     realm: &Realm,
-    address: &NewAddress,
+    address: &SmartFunctionAddress,
     seed: u64,
     context: &mut Context,
 ) {
@@ -186,7 +186,7 @@ impl Script {
     pub fn load(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        address: &NewAddress,
+        address: &SmartFunctionAddress,
         context: &mut Context,
     ) -> Result<Self> {
         let src = Account::function_code(hrt, tx, address)?;
@@ -204,7 +204,7 @@ impl Script {
 
     fn register_apis(
         &self,
-        address: &NewAddress,
+        address: &SmartFunctionAddress,
         operation_hash: &OperationHash,
         context: &mut Context,
     ) {
@@ -221,7 +221,7 @@ impl Script {
     /// and evaluating the module of the script
     pub fn init(
         &self,
-        address: &NewAddress,
+        address: &SmartFunctionAddress,
         operation_hash: &OperationHash,
         context: &mut Context,
     ) -> JsPromise {
@@ -237,7 +237,7 @@ impl Script {
         source: &NewAddress,
         code: ParsedCode,
         balance: Amount,
-    ) -> Result<NewAddress> {
+    ) -> Result<SmartFunctionAddress> {
         let address = Account::create_smart_function(hrt, tx, source, balance, code);
 
         if address.is_ok() {
@@ -259,7 +259,7 @@ impl Script {
     /// Runs the script
     pub fn run(
         &self,
-        address: &NewAddress,
+        address: &SmartFunctionAddress,
         operation_hash: &OperationHash,
         request: &JsValue,
         context: &mut Context,
@@ -317,7 +317,7 @@ impl Script {
 
     /// Loads, initializes and runs the script
     pub fn load_init_run(
-        address: NewAddress,
+        address: SmartFunctionAddress,
         operation_hash: OperationHash,
         request: &JsValue,
         context: &mut Context,
@@ -393,7 +393,7 @@ impl HostScript {
     }
 
     pub fn run(
-        self_address: &NewAddress,
+        self_address: &SmartFunctionAddress,
         request: &mut GcRefMut<'_, ErasedObject, Request>,
         context: &mut Context,
     ) -> JsResult<JsValue> {
@@ -403,7 +403,12 @@ impl HostScript {
             tx.begin();
 
             // 2. Execute jstz host smart function
-            let result = jstz_run::execute_without_ticketer(hrt, tx, self_address, run);
+            let result = jstz_run::execute_without_ticketer(
+                hrt,
+                tx,
+                &NewAddress::SmartFunction(self_address.clone()),
+                run,
+            );
 
             // 3. Commit or rollback the transaction
             match result {
@@ -468,8 +473,8 @@ pub mod run {
         register_web_apis(&rt.realm().clone(), rt);
 
         // 2. Extract address from request
-        //TODO: check if this is sf address
-        let address = NewAddress::from_base58(uri.host().ok_or(Error::InvalidAddress)?)?;
+        let sf_address =
+            SmartFunctionAddress::from_base58(uri.host().ok_or(Error::InvalidAddress)?)?;
 
         // 3. Deserialize request
         let http_request = create_http_request(uri, method, headers, body)?;
@@ -488,7 +493,7 @@ pub mod run {
             runtime::enter_js_host_context(hrt, tx, || {
                 jstz_core::future::block_on(async move {
                     let result = Script::load_init_run(
-                        address,
+                        sf_address,
                         operation_hash,
                         request.inner(),
                         rt,
@@ -526,7 +531,6 @@ pub mod run {
 
 pub mod jstz_run {
     use jstz_core::kv::Storage;
-    use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use serde::Deserialize;
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tezos_smart_rollup::storage::path::{OwnedPath, RefPath};
@@ -613,7 +617,7 @@ pub mod jstz_run {
         run: RunFunction,
     ) -> Result<receipt::RunFunctionReceipt> {
         let ticketer_path = OwnedPath::from(&RefPath::assert_from(b"/ticketer"));
-        let ticketer: SmartFunctionHash =
+        let ticketer: SmartFunctionAddress =
             Storage::get(hrt, &ticketer_path)?.expect("ticketer should be set");
         execute(hrt, tx, &ticketer, source, run)
     }
@@ -930,7 +934,6 @@ pub mod deploy {
         use jstz_core::kv::Transaction;
         use jstz_mock::host::JstzMockHost;
         use operation::DeployFunction;
-        use receipt::DeployFunctionReceipt;
 
         #[test]
         fn execute_deploy_deploys_smart_function_with_kt1_account1() {
@@ -946,13 +949,8 @@ pub mod deploy {
             };
             let result = deploy::execute(hrt, &mut tx, &source, deployment);
             assert!(result.is_ok());
-            let receipt = result.unwrap();
-            assert!(matches!(
-                receipt,
-                DeployFunctionReceipt {
-                    address: NewAddress::SmartFunction(..),
-                }
-            ));
+            let receipt = result;
+            assert!(receipt.is_ok());
         }
     }
 }

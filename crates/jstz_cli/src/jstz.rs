@@ -3,7 +3,7 @@ use std::time::Duration;
 use anyhow::{bail, Result};
 use jstz_proto::{
     api::KvValue,
-    context::{new_account::NewAddress, new_account::Nonce},
+    context::new_account::{NewAddress, Nonce, SmartFunctionAddress},
     operation::{OperationHash, SignedOperation},
     receipt::Receipt,
 };
@@ -67,13 +67,10 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_code(&self, address: &NewAddress) -> Result<Option<String>> {
-        // TODO: https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        // validate address type === smart function
-        // address
-        //     .check_is_smart_function()
-        //     .map_err(|e| user_error!("{}", e))?;
-
+    pub async fn get_code(
+        &self,
+        address: &SmartFunctionAddress,
+    ) -> Result<Option<String>> {
         let response = self
             .get(&format!("{}/accounts/{}/code", self.endpoint, address))
             .await?;
@@ -84,7 +81,7 @@ impl JstzClient {
                 Ok(code)
             }
             StatusCode::NOT_FOUND => {
-                bail!("Account '{}' not found", address.to_base58())
+                bail!("Account '{}' not found", address)
             }
             // For any other status, return a generic error
             _ => bail!("Failed to get the code"),

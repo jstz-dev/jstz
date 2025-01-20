@@ -81,6 +81,9 @@ impl TryFrom<String> for ParsedCode {
     }
 }
 
+pub type SmartFunctionAddress = SmartFunctionHash;
+pub type UserAddress = PublicKeyHash;
+
 #[derive(
     Debug,
     Clone,
@@ -101,7 +104,7 @@ impl TryFrom<String> for ParsedCode {
 #[serde(untagged)]
 pub enum NewAddress {
     User(PublicKeyHash),
-    SmartFunction(SmartFunctionHash),
+    SmartFunction(SmartFunctionAddress),
 }
 
 unsafe impl Trace for NewAddress {
@@ -126,6 +129,13 @@ impl FromStr for NewAddress {
 }
 
 impl NewAddress {
+    pub fn as_smart_function(&self) -> Option<&SmartFunctionAddress> {
+        match self {
+            Self::SmartFunction(sfh) => Some(sfh),
+            Self::User(_) => None,
+        }
+    }
+
     pub fn from_base58(data: &str) -> Result<Self> {
         if data.len() < 3 {
             return Err(Error::InvalidAddress);
@@ -179,7 +189,7 @@ pub enum Account {
 }
 
 impl Account {
-    fn path(addr: &NewAddress) -> Result<OwnedPath> {
+    fn path(addr: &impl Display) -> Result<OwnedPath> {
         let account_path = OwnedPath::try_from(format!("/{}", addr))?;
         Ok(path::concat(&ACCOUNTS_PATH, &account_path)?)
     }
@@ -191,6 +201,16 @@ impl Account {
                 Self::SmartFunction(SmartFunctionAccount::default())
             }
         }
+    }
+
+    fn get_mut_smart_function<'a>(
+        hrt: &impl HostRuntime,
+        tx: &'a mut Transaction,
+        addr: &SmartFunctionAddress,
+    ) -> Result<&'a mut Self> {
+        let account_entry = tx.entry::<Self>(hrt, Self::path(addr)?)?;
+        Ok(account_entry
+            .or_insert_with(|| Self::SmartFunction(SmartFunctionAccount::default())))
     }
 
     fn get_mut<'a>(
@@ -206,15 +226,9 @@ impl Account {
         self,
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &NewAddress,
+        path: OwnedPath,
     ) -> Result<()> {
-        match (&self, addr) {
-            (Account::User(_), NewAddress::User(_))
-            | (Account::SmartFunction(_), NewAddress::SmartFunction(_)) => {}
-            _ => return Err(Error::AddressTypeMismatch),
-        }
-
-        match tx.entry::<Self>(hrt, Self::path(addr)?)? {
+        match tx.entry::<Self>(hrt, path)? {
             Entry::Occupied(_) => Err(Error::AccountExists),
             Entry::Vacant(entry) => {
                 entry.insert(self);
@@ -253,30 +267,26 @@ impl Account {
         creator: &NewAddress,
         amount: Amount,
         function_code: ParsedCode,
-        // TODO: return smart function hash
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-    ) -> Result<NewAddress> {
+    ) -> Result<SmartFunctionAddress> {
         let nonce = Self::nonce(hrt, tx, creator)?;
-        let address = NewAddress::SmartFunction(SmartFunctionHash::digest(
+        let address = SmartFunctionHash::digest(
             format!("{}{}{}", creator, function_code, nonce).as_bytes(),
-        )?);
+        )?;
         let account = SmartFunctionAccount {
             amount,
             nonce: Nonce::default(),
             function_code,
         };
-        Self::SmartFunction(account).try_insert(hrt, tx, &address)?;
+        Self::SmartFunction(account).try_insert(hrt, tx, Self::path(&address)?)?;
         Ok(address)
     }
 
     pub fn function_code<'a>(
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
-        // TODO: use smart function hash
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        addr: &NewAddress,
+        addr: &SmartFunctionAddress,
     ) -> Result<&'a str> {
-        let account = Self::get_mut(hrt, tx, addr)?;
+        let account = Self::get_mut_smart_function(hrt, tx, addr)?;
         match account {
             Self::SmartFunction(SmartFunctionAccount { function_code, .. }) => {
                 Ok(&function_code.0)
@@ -290,12 +300,10 @@ impl Account {
     pub fn set_function_code(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        // TODO: use smart function hash
-        // https://linear.app/tezos/issue/JSTZ-260/add-validation-check-for-address-type
-        addr: &NewAddress,
+        addr: &SmartFunctionAddress,
         new_function_code: String,
     ) -> Result<()> {
-        let account = Self::get_mut(hrt, tx, addr)?;
+        let account = Self::get_mut_smart_function(hrt, tx, addr)?;
         match account {
             Self::SmartFunction(SmartFunctionAccount { function_code, .. }) => {
                 *function_code = new_function_code.try_into()?;
@@ -728,19 +736,19 @@ mod test {
             let (host, mut tx) = setup_test_env();
             let (user_addr, sf_addr) = create_test_addresses();
 
-            // Test type mismatch
-            assert!(matches!(
-                Account::function_code(&host, &mut tx, &user_addr),
-                Err(Error::AddressTypeMismatch)
-            ));
+            // Extract the smart function hash for testing
+            let sf_hash = match &sf_addr {
+                NewAddress::SmartFunction(hash) => hash,
+                _ => panic!("Expected SmartFunction address"),
+            };
 
             // Test empty initial code
-            let code = Account::function_code(&host, &mut tx, &sf_addr).unwrap();
+            let code = Account::function_code(&host, &mut tx, sf_hash).unwrap();
             assert_eq!(code, "");
 
             // Test empty function code
             assert!(
-                Account::set_function_code(&host, &mut tx, &sf_addr, "".to_string())
+                Account::set_function_code(&host, &mut tx, sf_hash, "".to_string())
                     .is_ok()
             );
 
@@ -749,12 +757,15 @@ mod test {
             assert!(Account::set_function_code(
                 &host,
                 &mut tx,
-                &sf_addr,
+                sf_hash,
                 valid_code.clone()
             )
             .is_ok());
-            let updated_code = Account::function_code(&host, &mut tx, &sf_addr).unwrap();
+            let updated_code = Account::function_code(&host, &mut tx, sf_hash).unwrap();
             assert_eq!(updated_code, valid_code);
+
+            let account = Account::get_mut(&host, &mut tx, &user_addr).unwrap();
+            assert!(matches!(account, Account::User(_)));
         }
 
         #[test]
@@ -767,7 +778,9 @@ mod test {
                 amount: 100,
                 nonce: Nonce(0),
             });
-            assert!(user_account.try_insert(&host, &mut tx, &user_addr).is_ok());
+            assert!(user_account
+                .try_insert(&host, &mut tx, Account::path(&user_addr).unwrap())
+                .is_ok());
 
             let retrieved_user = Account::get_mut(&host, &mut tx, &user_addr).unwrap();
             match retrieved_user {
@@ -784,7 +797,9 @@ mod test {
                 nonce: Nonce(0),
                 function_code: ParsedCode("test_code".to_string()),
             });
-            assert!(sf_account.try_insert(&host, &mut tx, &sf_addr).is_ok());
+            assert!(sf_account
+                .try_insert(&host, &mut tx, Account::path(&sf_addr).unwrap())
+                .is_ok());
 
             let retrieved_sf = Account::get_mut(&host, &mut tx, &sf_addr).unwrap();
             match retrieved_sf {
@@ -802,7 +817,11 @@ mod test {
                 nonce: Nonce(1),
             });
             assert!(matches!(
-                duplicate_user.try_insert(&host, &mut tx, &user_addr),
+                duplicate_user.try_insert(
+                    &host,
+                    &mut tx,
+                    Account::path(&user_addr).unwrap()
+                ),
                 Err(Error::AccountExists)
             ));
 
@@ -812,28 +831,8 @@ mod test {
                 function_code: ParsedCode("another_code".to_string()),
             });
             assert!(matches!(
-                duplicate_sf.try_insert(&host, &mut tx, &sf_addr),
+                duplicate_sf.try_insert(&host, &mut tx, Account::path(&sf_addr).unwrap()),
                 Err(Error::AccountExists)
-            ));
-
-            // Test inserting with mismatched types
-            let mismatched_user = Account::User(UserAccount {
-                amount: 500,
-                nonce: Nonce(0),
-            });
-            assert!(matches!(
-                mismatched_user.try_insert(&host, &mut tx, &sf_addr),
-                Err(Error::AddressTypeMismatch)
-            ));
-
-            let mismatched_sf = Account::SmartFunction(SmartFunctionAccount {
-                amount: 600,
-                nonce: Nonce(0),
-                function_code: ParsedCode("code".to_string()),
-            });
-            assert!(matches!(
-                mismatched_sf.try_insert(&host, &mut tx, &user_addr),
-                Err(Error::AddressTypeMismatch)
             ));
         }
 
@@ -863,7 +862,7 @@ mod test {
             let amount = 100;
 
             // Create smart function account
-            let address = Account::create_smart_function(
+            let sf_hash = Account::create_smart_function(
                 &host,
                 &mut tx,
                 &creator,
@@ -872,9 +871,8 @@ mod test {
             )
             .unwrap();
 
-            assert!(matches!(address, NewAddress::SmartFunction(_)));
-
-            let account = Account::get_mut(&host, &mut tx, &address).unwrap();
+            let sf_addr = NewAddress::SmartFunction(sf_hash);
+            let account = Account::get_mut(&host, &mut tx, &sf_addr).unwrap();
             match account {
                 Account::SmartFunction(sf_account) => {
                     assert_eq!(sf_account.amount, amount);

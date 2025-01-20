@@ -1,5 +1,4 @@
 use boa_engine::JsError;
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::{
     context::{new_account::NewAddress, new_account::ParsedCode},
     operation::{Content, DeployFunction, Operation, SignedOperation},
@@ -54,7 +53,9 @@ pub async fn exec(
     // 2. Construct operation
     let jstz_client = cfg.jstz_client(&network)?;
 
-    let nonce = jstz_client.get_nonce(&user.address).await?;
+    let nonce = jstz_client
+        .get_nonce(&NewAddress::User(user.address.clone()))
+        .await?;
 
     debug!("Nonce: {:?}", nonce);
 
@@ -70,14 +71,9 @@ pub async fn exec(
     let code: ParsedCode = code
         .try_into()
         .map_err(|err: JsError| user_error!("{err}"))?;
-    // TODO: remove
-    //  https://linear.app/tezos/issue/JSTZ-268/cli-use-publickeyhash-and-smartfunctionhash-in-user
-    let source: Result<PublicKeyHash> = match user.address.clone() {
-        NewAddress::User(address) => Ok(address),
-        _ => bail!("address type mismatch - expected user address"),
-    };
+
     let op = Operation {
-        source: source?,
+        source: user.address.clone(),
         nonce,
         content: Content::DeployFunction(DeployFunction {
             function_code: code,
