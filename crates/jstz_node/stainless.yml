@@ -59,17 +59,17 @@ resources:
     subresources:
       logs:
         models:
-          logRecord: LogRecord
-      methods:
-        stream: get /logs/{address}/stream
-      subresources:
-        persistent:
-          methods:
-            get: get /logs/{address}/persistent/requests/{request_id}
-            list:
-              type: http
-              endpoint: get /logs/{address}/persistent/requests
-              paginated: false
+          log: LogRecord
+        methods:
+          stream: get /logs/{address}/stream
+        subresources:
+          persistent:
+            methods:
+              get: get /logs/{address}/persistent/requests/{request_id}
+              list:
+                type: http
+                endpoint: get /logs/{address}/persistent/requests
+                paginated: false
   operations:
     models:
       operation: Operation
