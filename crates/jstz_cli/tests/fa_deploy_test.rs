@@ -15,6 +15,7 @@ use serde_json::json;
 use std::{fs, path::Path, process::Command, str::FromStr};
 use tempfile::TempDir;
 
+#[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[tokio::test(flavor = "multi_thread")]
 async fn fa_deploy_test() {
     std::env::remove_var("USE_JSTZD");
@@ -48,7 +49,7 @@ async fn fa_deploy_test() {
 
     // 2. Deploy Jstz FA2.1 contract
     let jstz_fa_path = format!(
-        "{}/tests/resources/fa2.1/jstz_fa_token.js",
+        "{}/tests/resources/fa2.1/jstz_fa_token.minjs",
         std::env::var("CARGO_MANIFEST_DIR").unwrap()
     );
     let jstz_config = build_config_from_jstzd(&jstzd_config);

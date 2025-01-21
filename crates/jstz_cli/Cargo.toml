@@ -76,6 +76,9 @@ jstzd = { path = "../jstzd" }
 assert_cmd.workspace = true
 predicates.workspace = true
 
+[features]
+skip-rollup-tests = []
+
 [[bin]]
 name = "jstz"
 path = "src/main.rs"
