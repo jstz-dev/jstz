@@ -6,13 +6,13 @@ on:
       - "*"
 
 jobs:
-  mac:
+  macos-arm64:
     name: Build CLI for MacOS Arm64
     runs-on: macos
     steps:
       - uses: jstz-dev/jstz/.github/actions/build-cli@main
         with:
-          platform: macos
+          platform: darwin # To match the platform name in Node.js. This will be referenced by the npm package
           arch: arm64
           repo_token: ${{ secrets.GITHUB_TOKEN }}
   linux-amd64:
@@ -22,7 +22,7 @@ jobs:
       - uses: jstz-dev/jstz/.github/actions/build-cli@main
         with:
           platform: linux
-          arch: amd64
+          arch: x64 # To match the arch name in Node.js. This will be referenced by the npm package
           repo_token: ${{ secrets.GITHUB_TOKEN }}
   linux-arm64:
     # cannot easily build with nix on arm64 because mozjs does not have prebuilds for linux arm64
