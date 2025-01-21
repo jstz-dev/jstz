@@ -24,3 +24,43 @@ jobs:
           platform: linux
           arch: amd64
           repo_token: ${{ secrets.GITHUB_TOKEN }}
+  linux-arm64:
+    # cannot easily build with nix on arm64 because mozjs does not have prebuilds for linux arm64
+    # so we need to use make build-cli here
+    name: Build CLI for Linux Arm64
+    runs-on: ubuntu-24.04-arm
+    # need to build in an alpine container so that cargo can build with musl
+    container:
+      image: alpine
+      volumes:
+        - /:/host
+    steps:
+      # hack for github actions to work with arm64
+      # https://github.com/actions/runner/issues/801#issuecomment-2394425757
+      - name: Patch native Alpine NodeJS into Runner environment
+        run: |
+          apk add nodejs
+          sed -i "s:ID=alpine:ID=NotpineForGHA:" /etc/os-release
+          cd /host/home/runner/runners/*/externals/
+          rm -rf node20/*
+          mkdir node20/bin
+          ln -s /usr/bin/node node20/bin/node
+        shell: sh
+      - name: Install dependencies
+        shell: sh
+        run: apk add make musl-dev libcrypto3 openssl-dev clang gcc musl-dev libstdc++ libffi-dev g++ openssl-libs-static bash curl
+        # curl and bash are required by dtolnay/rust-toolchain
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.80.0
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Build
+        shell: sh
+        run: make build-cli
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/jstz
+          asset_name: jstz_linux_arm64
+          tag: ${{ github.ref_name }}
