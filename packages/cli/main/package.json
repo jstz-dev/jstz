@@ -1,0 +1,11 @@
+{
+  "name": "@jstz-dev/cli",
+  "version": "0.1.0",
+  "dependencies": {},
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "bin": {
+    "jstz": "run.mjs"
+  }
+}
