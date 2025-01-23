@@ -33,7 +33,7 @@ console.log(Ledger.balance(Ledger.selfAddress)); // 0
 
 ### `type Address = string`
 
-An address is a string of 36 characters, starting with `tz1`.
+An address is a string of 36 characters, starting with `KT1`.
 
 ## Instance Properties
 
