@@ -71,6 +71,7 @@ pub(crate) async fn start_container(
         octez_node_dir: PathBuf::new(),
         octez_rollup_node_dir: PathBuf::new(),
         pid: 0,
+        container: true,
     });
     cfg.save()?;
 
