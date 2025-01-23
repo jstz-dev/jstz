@@ -272,6 +272,9 @@ pub struct SandboxConfig {
     pub octez_rollup_node_dir: PathBuf,
     /// Pid of the pid
     pub pid: u32,
+    /// Flag indicating if the sandbox is using jstzd in a container
+    #[serde(default)]
+    pub container: bool,
 }
 
 #[derive(SerializeDisplay, DeserializeFromStr, Debug, Clone, PartialEq, Eq, Hash)]
@@ -363,12 +366,14 @@ impl Config {
         Ok(config)
     }
 
+    // for running jstzd in the host environment only
     fn fill_in_jstzd_config(&mut self, jstzd_config: JstzdConfig) -> Result<()> {
         self.sandbox = Some(SandboxConfig {
             octez_client_dir: PathBuf::from_str(&jstzd_config.octez_client.base_dir)?,
             octez_node_dir: PathBuf::new(),
             octez_rollup_node_dir: PathBuf::new(),
             pid: 0,
+            container: false,
         });
         self.jstzd_config = Some(jstzd_config);
         Ok(())
@@ -584,7 +589,8 @@ mod tests {
                 octez_client_dir: PathBuf::from_str("/base").unwrap(),
                 octez_node_dir: PathBuf::new(),
                 octez_rollup_node_dir: PathBuf::new(),
-                pid: 0
+                pid: 0,
+                container: false
             }
         );
     }
