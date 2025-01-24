@@ -181,11 +181,11 @@ async fn create_config_file_and_client_dir() -> Result<(PathBuf, PathBuf)> {
         .into_path();
     let content = serde_json::to_string(&serde_json::json!({
         "octez_client": {
-            "octez_node_endpoint": format!("http://localhost:{SANDBOX_OCTEZ_NODE_RPC_PORT}"),
+            "octez_node_endpoint": format!("http://0.0.0.0:{SANDBOX_OCTEZ_NODE_RPC_PORT}"),
             "base_dir": JSTZD_OCTEZ_CLIENT_DIR_PATH,
         },
         "octez_node": {
-            "rpc_endpoint": format!("localhost:{SANDBOX_OCTEZ_NODE_RPC_PORT}")
+            "rpc_endpoint": format!("0.0.0.0:{SANDBOX_OCTEZ_NODE_RPC_PORT}")
         },
     })).context("Failed to serialise sandbox config")?;
     let config_file_path = NamedTempFile::new()
@@ -239,6 +239,7 @@ fn new_create_container_config(
             mounts: create_mounts(mounts),
             port_bindings: create_port_bindings(ports.as_ref()),
             auto_remove: Some(true),
+            network_mode: Some("bridge".to_string()),
             ..Default::default()
         }),
         attach_stdin: Some(true),
@@ -439,6 +440,7 @@ mod tests {
                             host_port: Some("1234".to_owned()),
                         }])
                     )])),
+                    network_mode: Some("bridge".to_owned()),
                     auto_remove: Some(true),
                     ..Default::default()
                 }),
@@ -478,11 +480,11 @@ mod tests {
             value,
             serde_json::json!({
                 "octez_client": {
-                    "octez_node_endpoint": format!("http://localhost:{SANDBOX_OCTEZ_NODE_RPC_PORT}"),
+                    "octez_node_endpoint": format!("http://0.0.0.0:{SANDBOX_OCTEZ_NODE_RPC_PORT}"),
                     "base_dir": super::JSTZD_OCTEZ_CLIENT_DIR_PATH,
                 },
                 "octez_node": {
-                    "rpc_endpoint": format!("localhost:{SANDBOX_OCTEZ_NODE_RPC_PORT}")
+                    "rpc_endpoint": format!("0.0.0.0:{SANDBOX_OCTEZ_NODE_RPC_PORT}")
                 },
             })
         );
