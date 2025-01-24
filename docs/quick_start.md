@@ -130,6 +130,14 @@ npm install
 jstz sandbox start
 ```
 
+To run a containerized sandbox, make sure docker is installed in your system and run:
+
+```sh
+jstz sandbox --container start
+```
+
+Note: in case you get an error about the configuration file improperly configured, please clean up the `~/.jstz/` folder.
+
 <details>
 <summary>Output</summary>
 <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
@@ -220,7 +228,7 @@ Since this is your first deployment, you need to:
    **(Only for non-Docker users)**
 
    The `--detach` (`-d`) flag starts the sandbox in the background, allowing you to continue working in the same terminal.
-   The sandbox can be stopped or reset using `jstz sandbox stop` or `jstz sandbox restart`.
+   The sandbox can be stopped or reset using `jstz sandbox stop` or `jstz sandbox restart`. if you are running the containerized sandbox, use `jstz sandbox --container stop` or `jstz sandbox --container restart`.
    :::
 
 2. **Login / Signup**.
@@ -241,7 +249,8 @@ In the example above, the smart function was deployed to `KT19mYzcaYk55KttezwP4T
 For the example smart function to send tez successfully, its account must have sufficient funds.
 The [`jstz bridge deposit`](bridge.md) command is used to transfer funds from a Layer 1 address to a jstz account.
 
-Within the sandbox environment, there are pre-funded L1 accounts `bootstrap1` through `bootstrap5` that you can use.
+Within the sandbox environment, there are pre-funded
+accounts `bootstrap1` through `bootstrap5` that you can use (for the containerized sandbox, please check the [jstzd](jstzd.md) documentation).
 
 ```sh
 jstz bridge deposit --from bootstrap1 --to KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw --amount 10000000

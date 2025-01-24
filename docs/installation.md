@@ -10,7 +10,13 @@ Ensure `docker` is installed on your system. If not, please follow [this guide](
 To download and install `jstz`, run the following command in your terminal:
 
 ```sh
-source <(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/jstz-dev/jstz/main/scripts/install-jstz-cli.sh)
+npm install -g 'https://gitpkg.vercel.app/jstz-dev/jstz/packages/cli/main?0.1.0'
+```
+
+or
+
+```sh
+yarn global add 'https://gitpkg.vercel.app/jstz-dev/jstz/packages/cli/main?0.1.0'
 ```
 
 Congratulations! 🎉 `jstz` is now installed and configured on your system.
