@@ -2,8 +2,8 @@ import * as jstz from "jstz_sdk";
 
 // FIXME: https://linear.app/tezos/issue/JSTZ-287/publish-client-lib-to-jstz-dev-scope
 // Change to import from "@jstz-dev/client" when published to scope
-import { Jstz as JstzClient } from "@zcabter/client";
-import JstzType from "@zcabter/client";
+import { Jstz as JstzClient } from "@zcabter/jstz-client";
+import JstzType from "@zcabter/jstz-client";
 
 export type Address = string;
 
