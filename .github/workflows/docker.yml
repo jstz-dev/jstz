@@ -34,6 +34,17 @@ on:
         value: ${{ jobs.build-image.outputs.tag }}
 
 jobs:
+  set-octez-tag:
+    name: Set octez tag for workflows triggered by tags
+    runs-on: ubuntu-latest
+    outputs:
+      octez-tag: ${{ steps.run.outputs.OCTEZ_TAG }}
+    steps:
+      - id: run
+        run: |
+          input_tag=${{ inputs.octez-tag }}
+          octez_tag=${input_tag:-"master_d21359af_20241220171048"}
+          echo "OCTEZ_TAG=${octez_tag}" >> ${GITHUB_OUTPUT}
   build-kernel:
     name: Build (Kernel)
     runs-on: [x86_64, linux, nix]
@@ -54,7 +65,7 @@ jobs:
           path: result/lib/jstz_kernel.wasm
   build-image:
     name: Build image
-    needs: [build-kernel]
+    needs: [build-kernel, set-octez-tag]
     strategy:
       matrix:
         include:
@@ -68,7 +79,7 @@ jobs:
             dockerfile: ./crates/jstz_node/Dockerfile
     uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
     with:
-      octez-tag: ${{ inputs.octez-tag }}
+      octez-tag: ${{ needs.set-octez-tag.outputs.octez-tag }}
       docker_registry: ghcr.io
       docker_image_base: jstz-dev/jstz
       image: ${{ matrix.image }}
