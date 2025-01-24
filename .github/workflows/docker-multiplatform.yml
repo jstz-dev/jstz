@@ -1,0 +1,117 @@
+name: Build multiplatform docker image
+
+on:
+  workflow_call:
+    inputs:
+      octez-tag:
+        description: "tezos/tezos docker tag to be used"
+        required: true
+        type: string
+      docker_registry:
+        description: Docker registry
+        required: true
+        type: string
+      docker_image_base:
+        description: Docker image base
+        required: true
+        type: string
+      image:
+        description: Image
+        required: true
+        type: string
+      dockerfile:
+        description: Dockerfile
+        required: true
+        type: string
+      kernel_artifact_name:
+        description: Kernel artifact name
+        required: true
+        type: string
+    outputs:
+      tag:
+        description: "docker image tag"
+        value: ${{ jobs.merge.outputs.tag }}
+
+jobs:
+  build-docker-arm64:
+    name: Build (Docker arm64)
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Build
+        uses: jstz-dev/jstz/.github/actions/build-docker-image@main
+        with:
+          platform: linux
+          arch: arm64
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          octez-tag: ${{ inputs.octez-tag }}
+          docker_registry: ${{ inputs.docker_registry }}
+          docker_registry_username: ${{ github.actor }}
+          docker_registry_password: ${{ secrets.GITHUB_TOKEN }}
+          docker_image_base: ${{ inputs.docker_image_base }}
+          image: ${{ inputs.image }}
+          dockerfile: ${{ inputs.dockerfile }}
+          kernel_artefact_name: ${{ inputs.kernel_artifact_name }}
+  build-docker-amd64:
+    name: Build (Docker amd64)
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Build
+        uses: jstz-dev/jstz/.github/actions/build-docker-image@main
+        with:
+          platform: linux
+          arch: amd64
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          octez-tag: ${{ inputs.octez-tag }}
+          docker_registry: ${{ inputs.docker_registry }}
+          docker_registry_username: ${{ github.actor }}
+          docker_registry_password: ${{ secrets.GITHUB_TOKEN }}
+          docker_image_base: ${{ inputs.docker_image_base }}
+          image: ${{ inputs.image }}
+          dockerfile: ${{ inputs.dockerfile }}
+          kernel_artefact_name: ${{ inputs.kernel_artifact_name }}
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - build-docker-amd64
+      - build-docker-arm64
+    outputs:
+      tag: ${{ fromJson(steps.meta.outputs.json).tags[0] }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/digests/${{ inputs.image }}
+          pattern: digests-${{ inputs.image }}-*
+          merge-multiple: true
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: ${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}
+          tags: |
+            type=ref,event=tag
+            {{sha}}
+      - name: Create manifest list and push
+        working-directory: ${{ runner.temp }}/digests/${{ inputs.image }}
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}') \
+            $(printf '${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}@sha256:%s ' *)
+      - name: Inspect image
+        id: inspect-image
+        run: |
+          docker buildx imagetools inspect "${{ fromJson(steps.meta.outputs.json).tags[0] }}"
