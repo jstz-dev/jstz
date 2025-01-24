@@ -22,20 +22,16 @@ on:
     outputs:
       jstz-cli:
         description: "jstz docker image tag"
-        value: ${{ jobs.build-docker.outputs.jstz-cli }}
+        value: ${{ jobs.build-image.outputs.tag }}
       jstz-rollup:
         description: "jstz-rollup docker image tag"
-        value: ${{ jobs.build-docker.outputs.jstz-rollup }}
+        value: ${{ jobs.build-image.outputs.tag }}
       jstz-node:
         description: "jstz-node docker image tag"
-        value: ${{ jobs.build-docker.outputs.jstz-node }}
+        value: ${{ jobs.build-image.outputs.tag }}
       jstzd:
         description: "jstzd docker image tag"
-        value: ${{ jobs.build-docker.outputs.jstzd }}
-
-env:
-  DOCKER_REGISTRY: ghcr.io
-  DOCKER_IMAGE_BASE: jstz-dev/jstz
+        value: ${{ jobs.build-image.outputs.tag }}
 
 jobs:
   build-kernel:
@@ -56,86 +52,26 @@ jobs:
         with:
           name: jstz-kernel
           path: result/lib/jstz_kernel.wasm
-
-  build-docker:
-    name: Build (Docker)
+  build-image:
+    name: Build image
     needs: [build-kernel]
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      jstz-cli: ${{ steps.jstz-cli-tag.outputs.tag || '' }}
-      jstz-rollup: ${{ steps.jstz-rollup-tag.outputs.tag || '' }}
-      jstz-node: ${{ steps.jstz-node-tag.outputs.tag || '' }}
-      jstzd: ${{ steps.jstzd-tag.outputs.tag || '' }}
     strategy:
       matrix:
         include:
-          - image: jstzd
-            dockerfile: ./crates/jstzd/Dockerfile
-            platforms: linux/arm64
-          - image: jstz-cli
-            dockerfile: ./crates/jstz_cli/Dockerfile
-            platforms: linux/arm64
-          - image: jstz-node
-            dockerfile: ./crates/jstz_node/Dockerfile
-            platforms: linux/arm64
           - image: jstz-rollup
             dockerfile: ./crates/jstz_rollup/Dockerfile
-            platforms: linux/arm64
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.DOCKER_REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Download jstz-kernel artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: jstz-kernel
-          path: jstz_kernel
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_BASE }}/${{ matrix.image }}
-          tags: |
-            type=ref,event=tag
-            {{sha}}
-      - # Extract tags for jstz
-        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
-        id: jstz-cli-tag
-        if: matrix.image == 'jstz-cli'
-      - # Extract tags for jstz-node
-        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
-        id: jstz-node-tag
-        if: matrix.image == 'jstz-node'
-      - # Extract tags for jstz-rollup
-        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
-        id: jstz-rollup-tag
-        if: matrix.image == 'jstz-rollup'
-      - # Extract tags for jstzd
-        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
-        id: jstzd-tag
-        if: matrix.image == 'jstzd'
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6.3.0
-        with:
-          context: .
-          file: ${{ matrix.dockerfile }}
-          push: true
-          build-args: |
-            OCTEZ_TAG=${{ inputs.octez-tag }}
-            KERNEL_PATH=./jstz_kernel/jstz_kernel.wasm
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ matrix.platforms }}
+          - image: jstzd
+            dockerfile: ./crates/jstzd/Dockerfile
+          - image: jstz-cli
+            dockerfile: ./crates/jstz_cli/Dockerfile
+          - image: jstz-node
+            dockerfile: ./crates/jstz_node/Dockerfile
+    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
+    with:
+      octez-tag: ${{ inputs.octez-tag }}
+      docker_registry: ghcr.io
+      docker_image_base: jstz-dev/jstz
+      image: ${{ matrix.image }}
+      dockerfile: ${{ matrix.dockerfile }}
+      kernel_artifact_name: jstz-kernel
+    secrets: inherit
