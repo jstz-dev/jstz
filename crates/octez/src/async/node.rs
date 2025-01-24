@@ -46,6 +46,8 @@ impl OctezNode {
                 // the node executable does not accept the scheme part
                 "--rpc-addr",
                 &rpc_endpoint.to_authority(),
+                "--allow-all-rpc",
+                &rpc_endpoint.to_authority(),
                 "--connections",
                 num_connections.to_string().as_str(),
                 "--net-addr",

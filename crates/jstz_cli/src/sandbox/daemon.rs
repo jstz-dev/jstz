@@ -616,6 +616,7 @@ pub async fn run_sandbox(cfg: &mut Config) -> Result<()> {
         octez_client_dir: TempDir::with_prefix("octez_client")?.into_path(), // into_path() causes temp directories to be persisted!
         octez_node_dir: TempDir::with_prefix("octez_node")?.into_path(),
         octez_rollup_node_dir: TempDir::with_prefix("octez_rollup_node")?.into_path(),
+        container: false,
     };
 
     cfg.sandbox = Some(sandbox_cfg);
