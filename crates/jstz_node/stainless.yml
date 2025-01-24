@@ -27,7 +27,7 @@ client_settings:
 # `environments` are a map of the name of the environment (e.g. "sandbox",
 # "production") to the corresponding url to use.
 environments:
-  production: https://localhost:8933
+  production: http://localhost:8933
 
 # `pagination` defines [pagination schemes] which provides a template to match
 # endpoints and generate next-page and auto-pagination helpers in the SDKs.
