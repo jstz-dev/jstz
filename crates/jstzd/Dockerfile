@@ -11,7 +11,7 @@ ADD . .
 ARG KERNEL_PATH
 COPY $KERNEL_PATH crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 # release build is required for rust-embed to pack the resource files into the executable
-RUN KERNEL_DEST_DIR=/jstzd_kernel_files RUSTFLAGS='-C target-feature=-crt-static' cargo build --jobs 1 --bin jstzd --release --features build-image
+RUN KERNEL_DEST_DIR=/jstzd_kernel_files RUSTFLAGS='-C target-feature=-crt-static' cargo build --bin jstzd --release --features build-image
 
 FROM alpine AS jstzd
 # libcrypto3, openssl, and musl are needed for jstz-rollup binary
