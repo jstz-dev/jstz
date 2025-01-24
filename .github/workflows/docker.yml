@@ -10,7 +10,7 @@ on:
     inputs:
       octez-tag:
         description: "tezos/tezos docker tag to be used"
-        required: true
+        required: false
         type: string
 
   workflow_call:
@@ -77,7 +77,7 @@ jobs:
             dockerfile: ./crates/jstz_cli/Dockerfile
           - image: jstz-node
             dockerfile: ./crates/jstz_node/Dockerfile
-    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
+    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@huanchengchang-jstz-286-1-test
     with:
       octez-tag: ${{ needs.set-octez-tag.outputs.octez-tag }}
       docker_registry: ghcr.io
