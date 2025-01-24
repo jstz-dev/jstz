@@ -16,14 +16,14 @@ use crate::{
     error::{bail, user_error, Result},
     jstz::JstzClient,
     sandbox::{
-        SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT,
+        JSTZD_SERVER_BASE_URL, SANDBOX_JSTZ_NODE_PORT, SANDBOX_LOCAL_HOST_ADDR,
+        SANDBOX_OCTEZ_NODE_RPC_PORT,
     },
     utils::{using_jstzd, AddressOrAlias},
 };
 
 // hardcoding it here instead of importing from jstzd simply to avoid adding jstzd
 // as a new depedency of jstz_cli just for this so that build time remains the same
-const JSTZD_SERVER_BASE_URL: &str = "http://127.0.0.1:54321";
 
 pub fn jstz_home_dir() -> PathBuf {
     if let Ok(value) = env::var("JSTZ_HOME") {
@@ -539,16 +539,27 @@ impl Config {
                         jstz_node_endpoint: jstzd_config.jstz_node.endpoint.clone(),
                     })
                 }
-                None => Ok(Network {
-                    octez_node_rpc_endpoint: format!(
-                        "http://{}:{}",
-                        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT
-                    ),
-                    jstz_node_endpoint: format!(
-                        "http://{}:{}",
-                        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_JSTZ_NODE_PORT,
-                    ),
-                }),
+                None => {
+                    // Since for some reason docker does not forward 127.0.0.1 to containers
+                    // (but [::1] works,) we need to use localhost here, assuming that users'
+                    // localhost gets resolved to the working IP address. This only applies
+                    // when the sandbox container is in use. Once the old sandbox is removed,
+                    // we won't need this match.
+                    let addr = match self.sandbox().is_ok_and(|c| c.container) {
+                        true => "localhost",
+                        _ => SANDBOX_LOCAL_HOST_ADDR,
+                    };
+                    Ok(Network {
+                        octez_node_rpc_endpoint: format!(
+                            "http://{}:{}",
+                            addr, SANDBOX_OCTEZ_NODE_RPC_PORT
+                        ),
+                        jstz_node_endpoint: format!(
+                            "http://{}:{}",
+                            addr, SANDBOX_JSTZ_NODE_PORT,
+                        ),
+                    })
+                }
             },
         }
     }
@@ -617,6 +628,25 @@ mod tests {
             Network {
                 octez_node_rpc_endpoint: "http://127.0.0.1:18730".to_owned(),
                 jstz_node_endpoint: "http://127.0.0.1:8933".to_owned()
+            }
+        )
+    }
+
+    #[test]
+    fn lookup_network_dev_sandbox_container() {
+        let mut config = Config::default();
+        config.sandbox.replace(SandboxConfig {
+            octez_client_dir: PathBuf::new(),
+            octez_node_dir: PathBuf::new(),
+            octez_rollup_node_dir: PathBuf::new(),
+            pid: 0,
+            container: true,
+        });
+        assert_eq!(
+            config.lookup_network(&NetworkName::Dev).unwrap(),
+            Network {
+                octez_node_rpc_endpoint: "http://localhost:18730".to_owned(),
+                jstz_node_endpoint: "http://localhost:8933".to_owned()
             }
         )
     }

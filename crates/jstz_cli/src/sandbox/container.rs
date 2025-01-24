@@ -55,7 +55,11 @@ pub(crate) async fn start_container(
         container_name,
         image,
         mounts,
-        Some(vec![SANDBOX_OCTEZ_NODE_RPC_PORT, SANDBOX_JSTZ_NODE_PORT]),
+        Some(vec![
+            SANDBOX_OCTEZ_NODE_RPC_PORT,
+            SANDBOX_JSTZ_NODE_PORT,
+            54321,
+        ]),
         Some(vec!["run".to_owned(), JSTZD_CONFIG_PATH.to_owned()]),
     )
     .await
