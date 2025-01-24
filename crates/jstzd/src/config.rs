@@ -6,6 +6,7 @@ use crate::{
     jstz_rollup_path, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS,
 };
 use anyhow::{Context, Result};
+use http::Uri;
 use jstz_node::config::JstzNodeConfig;
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{
@@ -24,7 +25,7 @@ use tezos_crypto_rs::hash::SmartRollupHash;
 use tokio::io::AsyncReadExt;
 
 const DEFAULT_JSTZD_SERVER_PORT: u16 = 54321;
-const DEFAULT_JSTZ_NODE_PORT: u16 = 8933;
+const DEFAULT_JSTZ_NODE_ENDPOINT: &str = "0.0.0.0:8933";
 const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
@@ -111,7 +112,8 @@ pub(crate) async fn build_config(
     .build()
     .unwrap();
 
-    let jstz_node_rpc_endpoint = Endpoint::localhost(DEFAULT_JSTZ_NODE_PORT);
+    let jstz_node_rpc_endpoint =
+        Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
