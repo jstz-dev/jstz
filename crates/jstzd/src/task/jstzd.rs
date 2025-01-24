@@ -16,9 +16,9 @@ use anyhow::{bail, Context, Result};
 use async_dropper_simple::{AsyncDrop, AsyncDropper};
 use async_trait::async_trait;
 use axum::{
-    extract::{Path, State},
+    extract::{Json, Path, State},
     response::IntoResponse,
-    routing::{get, put},
+    routing::{get, post, put},
     Router,
 };
 use indicatif::{ProgressBar, ProgressStyle};
@@ -32,7 +32,7 @@ use octez::r#async::{
     rollup::OctezRollupConfig,
 };
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::io::{stdout, Write};
 use std::sync::Arc;
 use tokio::{
@@ -351,6 +351,7 @@ impl JstzdServer {
             .route("/shutdown", put(shutdown_handler))
             .route("/config/:config_type", get(config_handler))
             .route("/config/", get(all_config_handler))
+            .route("/contract_call", post(call_contract_handler))
             .with_state(self.inner.state.clone());
         let listener = TcpListener::bind(("0.0.0.0", self.port)).await?;
 
@@ -560,6 +561,37 @@ async fn config_handler(
             Err(_) => http::StatusCode::INTERNAL_SERVER_ERROR.into_response(),
         },
         None => http::StatusCode::NOT_FOUND.into_response(),
+    }
+}
+
+#[derive(Deserialize)]
+struct TransferRequest {
+    from: String,
+    contract: String,
+    amount: f64,
+    entrypoint: String,
+    arg: String,
+}
+
+async fn call_contract_handler(
+    state: State<Shared<ServerState>>,
+    Json(payload): Json<TransferRequest>,
+) -> http::StatusCode {
+    let lock = state.read().await;
+    let c = lock.jstzd_config.as_ref().unwrap().octez_client_config();
+    match OctezClient::new(c.clone())
+        .call_contract(
+            &payload.from,
+            &payload.contract,
+            payload.amount,
+            &payload.entrypoint,
+            &payload.arg,
+            Some(100f64),
+        )
+        .await
+    {
+        Ok(_) => http::StatusCode::OK,
+        _ => http::StatusCode::BAD_REQUEST,
     }
 }
 

@@ -3,7 +3,7 @@ use log::{debug, info};
 use crate::{
     config::{Config, NetworkName},
     error::{bail_user_error, Result},
-    sandbox::SANDBOX_BOOTSTRAP_ACCOUNTS,
+    sandbox::{JSTZD_SERVER_BASE_URL, SANDBOX_BOOTSTRAP_ACCOUNTS},
     term::styles,
     utils::{using_jstzd, AddressOrAlias},
 };
@@ -43,20 +43,38 @@ pub async fn exec(
     let pkh = to_pkh.to_base58();
     debug!("resolved `to` -> {}", &pkh);
 
-    let contract = match using_jstzd() || cfg.sandbox().is_ok_and(|c| c.container) {
-        // Since jstz contracts are loaded as bootstrap contracts in jstzd,
-        // octez-client does not recognise them by alias, but addresses
-        // remain constant for bootstrap contracts, so we can use the KT1 address here
-        true => NATIVE_BRIDGE_ADDRESS,
-        _ => "jstz_native_bridge",
-    };
-    // Execute the octez-client command
-    if cfg
-        .octez_client(&network)?
-        .call_contract(&from, contract, "deposit", &format!("\"{}\"", &pkh), amount)
-        .is_err()
-    {
-        bail_user_error!("Failed to deposit XTZ. Please check whether the addresses and network are correct.");
+    if cfg.sandbox().is_ok_and(|c| c.container) {
+        let client = reqwest::Client::new();
+        let res = client
+            .post(format!("{JSTZD_SERVER_BASE_URL}/contract_call"))
+            .json(&serde_json::json!({
+                "from": from,
+                "contract": NATIVE_BRIDGE_ADDRESS,
+                "amount": amount,
+                "entrypoint": "deposit",
+                "arg": format!("\"{pkh}\"")
+            }))
+            .send()
+            .await?;
+        if !res.status().is_success() {
+            bail_user_error!("Failed to deposit XTZ. Please check whether the addresses and network are correct.");
+        }
+    } else {
+        let contract = match using_jstzd() {
+            // Since jstz contracts are loaded as bootstrap contracts in jstzd,
+            // octez-client does not recognise them by alias, but addresses
+            // remain constant for bootstrap contracts, so we can use the KT1 address here
+            true => NATIVE_BRIDGE_ADDRESS,
+            _ => "jstz_native_bridge",
+        };
+        // Execute the octez-client command
+        if cfg
+            .octez_client(&network)?
+            .call_contract(&from, contract, "deposit", &format!("\"{}\"", &pkh), amount)
+            .is_err()
+        {
+            bail_user_error!("Failed to deposit XTZ. Please check whether the addresses and network are correct.");
+        }
     }
 
     info!(
