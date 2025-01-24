@@ -147,7 +147,7 @@ impl FaWithdraw {
         self,
         rt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &NewAddress,
+        source: &impl Addressable,
     ) -> Result<FaWithdrawReceipt> {
         if self.amount == 0 {
             Err(Error::ZeroAmountNotAllowed)?
@@ -161,7 +161,7 @@ impl FaWithdraw {
         let outbox_message_id =
             withdraw_from_ticket_owner(rt, tx, source, &routing_info, amount, ticket)?;
         Ok(FaWithdrawReceipt {
-            source: source.clone(),
+            source: source.clone().into(),
             outbox_message_id,
         })
     }
@@ -172,7 +172,7 @@ impl FaWithdraw {
         self,
         rt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &NewAddress,
+        source: &impl Addressable,
         // TODO: https://linear.app/tezos/issue/JSTZ-114/fa-withdraw-gas-calculation
         // Properly consume gas
         _gas_limit: u64,
