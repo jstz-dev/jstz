@@ -88,7 +88,7 @@ pub enum AddressKind {
 
 // Represents the address in jstz, which can be converted to a base58 string.
 // This is required to avoid unnecessary cloning when getting the key path for the Account.
-pub trait Addressable: Into<NewAddress> {
+pub trait Addressable: Into<NewAddress> + Clone {
     fn kind(&self) -> AddressKind;
     fn to_base58(&self) -> String;
 }

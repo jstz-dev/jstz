@@ -402,12 +402,7 @@ impl HostScript {
             // 1. Begin a new transaction
             tx.begin();
             // 2. Execute jstz host smart function
-            let result = jstz_run::execute_without_ticketer(
-                hrt,
-                tx,
-                &self_address.clone().into(),
-                run,
-            );
+            let result = jstz_run::execute_without_ticketer(hrt, tx, self_address, run);
 
             // 3. Commit or rollback the transaction
             match result {
@@ -572,7 +567,7 @@ pub mod jstz_run {
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         ticketer: &ContractKt1Hash,
-        source: &NewAddress,
+        source: &impl Addressable,
         run: RunFunction,
     ) -> Result<receipt::RunFunctionReceipt> {
         let uri = run.uri.clone();
@@ -614,7 +609,7 @@ pub mod jstz_run {
     pub fn execute_without_ticketer(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &NewAddress,
+        source: &impl Addressable,
         run: RunFunction,
     ) -> Result<receipt::RunFunctionReceipt> {
         let ticketer_path = OwnedPath::from(&RefPath::assert_from(b"/ticketer"));
