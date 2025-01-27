@@ -26,7 +26,7 @@ use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     api::{self, TraceData},
-    context::account::{Account, Address, Addressable, Amount, ParsedCode},
+    context::account::{Account, Addressable, Amount, ParsedCode},
     js_logger::JsonLogger,
     operation::{OperationHash, RunFunction},
     receipt,
@@ -41,7 +41,10 @@ pub mod headers {
     use super::*;
     pub const REFERRER: &str = "Referer";
 
-    pub fn test_and_set_referrer(request: &Request, referer: &Address) -> JsResult<()> {
+    pub fn test_and_set_referrer(
+        request: &Request,
+        referrer: &impl Addressable,
+    ) -> JsResult<()> {
         if request.headers().deref().contains_key(REFERRER) {
             return Err(JsError::from_native(
                 JsNativeError::error().with_message("Referer already set"),
@@ -51,7 +54,7 @@ pub mod headers {
         request
             .headers()
             .deref_mut()
-            .set(REFERRER, &referer.to_base58())
+            .set(REFERRER, &referrer.to_base58())
     }
 }
 
@@ -449,7 +452,7 @@ pub mod run {
     pub fn execute(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &Address,
+        source: &impl Addressable,
         run: operation::RunFunction,
         operation_hash: OperationHash,
     ) -> Result<receipt::RunFunctionReceipt> {
@@ -626,7 +629,7 @@ pub mod jstz_run {
         use tezos_smart_rollup_mock::MockHost;
 
         use crate::{
-            context::ticket_table::TicketTable,
+            context::{account::Address, ticket_table::TicketTable},
             executor::{
                 fa_withdraw::{FaWithdraw, RoutingInfo, TicketInfo},
                 smart_function::jstz_run::{execute_without_ticketer, Account},
@@ -635,7 +638,7 @@ pub mod jstz_run {
             Error,
         };
 
-        use super::{execute, Address};
+        use super::execute;
 
         fn withdraw_request() -> RunFunction {
             RunFunction {
@@ -908,7 +911,7 @@ pub mod deploy {
     pub fn execute(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        source: &Address,
+        source: &impl Addressable,
         deployment: operation::DeployFunction,
     ) -> Result<receipt::DeployFunctionReceipt> {
         let operation::DeployFunction {
@@ -923,6 +926,8 @@ pub mod deploy {
 
     #[cfg(test)]
     mod test {
+        use crate::context::account::Address;
+
         use super::*;
         use jstz_core::kv::Transaction;
         use jstz_mock::host::JstzMockHost;
