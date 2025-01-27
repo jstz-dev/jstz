@@ -9,7 +9,7 @@ use tezos_smart_rollup::{michelson::ticket::TicketHash, prelude::debug_msg};
 use utoipa::ToSchema;
 
 use crate::{
-    context::{new_account::Amount, new_account::NewAddress, ticket_table::TicketTable},
+    context::{account::Address, account::Amount, ticket_table::TicketTable},
     executor::smart_function,
     operation::{external::FaDeposit, RunFunction},
     receipt::Receipt,
@@ -25,7 +25,7 @@ const DEPOSIT_URI: &str = "/-/deposit";
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 pub struct FaDepositReceipt {
-    pub receiver: NewAddress,
+    pub receiver: Address,
     pub ticket_balance: Amount,
     #[bincode(with_serde)]
     pub run_function: Option<crate::receipt::RunFunctionReceipt>,
@@ -40,7 +40,7 @@ pub enum FaDepositError {
 fn deposit_to_receiver(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    receiver: &NewAddress,
+    receiver: &Address,
     ticket_hash: &TicketHash,
     amount: Amount,
 ) -> Result<FaDepositReceipt> {
@@ -54,7 +54,7 @@ fn deposit_to_receiver(
 
 fn new_run_function(
     http_body: HttpBody,
-    proxy_contract: &NewAddress,
+    proxy_contract: &Address,
 ) -> Result<RunFunction> {
     let mut headers = HeaderMap::new();
     headers.insert(
@@ -81,17 +81,12 @@ fn deposit_to_proxy_contract(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
     deposit: &FaDeposit,
-    proxy_contract: &NewAddress,
+    proxy_contract: &Address,
 ) -> Result<FaDepositReceipt> {
     let run = new_run_function(deposit.to_http_body(), proxy_contract)?;
     let source = PublicKeyHash::from_base58(NULL_ADDRESS)?;
-    let result = smart_function::run::execute(
-        rt,
-        tx,
-        &NewAddress::User(source),
-        run,
-        deposit.hash(),
-    );
+    let result =
+        smart_function::run::execute(rt, tx, &Address::User(source), run, deposit.hash());
     match result {
         Ok(run_receipt) => {
             if run_receipt.status_code.is_success() {
@@ -179,9 +174,7 @@ mod test {
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
-        context::{
-            new_account::NewAddress, new_account::ParsedCode, ticket_table::TicketTable,
-        },
+        context::{account::Address, account::ParsedCode, ticket_table::TicketTable},
         executor::fa_deposit::{FaDeposit, FaDepositReceipt},
         receipt::{Receipt, ReceiptContent, ReceiptResult},
     };
@@ -190,8 +183,8 @@ mod test {
         FaDeposit {
             inbox_id: 34,
             amount: 42,
-            receiver: NewAddress::User(jstz_mock::account2()),
-            proxy_smart_function: proxy.map(NewAddress::SmartFunction),
+            receiver: Address::User(jstz_mock::account2()),
+            proxy_smart_function: proxy.map(Address::SmartFunction),
             ticket_hash: jstz_mock::ticket_hash1(),
         }
     }
@@ -276,7 +269,7 @@ mod test {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
         let mut tx = Transaction::default();
-        let source = NewAddress::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account1());
         let code = r#"
         export default (request) => {
             const url = new URL(request.url)
@@ -310,12 +303,12 @@ mod test {
                 run_function,
             })) => {
                 assert_eq!(42, ticket_balance);
-                assert_eq!(NewAddress::SmartFunction(proxy.clone()), receiver);
+                assert_eq!(Address::SmartFunction(proxy.clone()), receiver);
                 assert!(run_function.is_some());
                 let balance = TicketTable::get_balance(
                     &mut host,
                     &mut tx,
-                    &NewAddress::SmartFunction(proxy),
+                    &Address::SmartFunction(proxy),
                     &ticket_hash,
                 )
                 .unwrap();
@@ -330,7 +323,7 @@ mod test {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
         let mut tx = Transaction::default();
-        let source = NewAddress::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account1());
         let code = r#"
         export default (request) => {
             const url = new URL(request.url)
@@ -368,12 +361,12 @@ mod test {
                 run_function,
             })) => {
                 assert_eq!(84, ticket_balance);
-                assert_eq!(NewAddress::SmartFunction(proxy.clone()), receiver);
+                assert_eq!(Address::SmartFunction(proxy.clone()), receiver);
                 assert!(run_function.is_some());
                 let balance = TicketTable::get_balance(
                     &mut host,
                     &mut tx,
-                    &NewAddress::SmartFunction(proxy),
+                    &Address::SmartFunction(proxy),
                     &ticket_hash,
                 )
                 .unwrap();
@@ -389,7 +382,7 @@ mod test {
         host.set_debug_handler(empty());
         let mut tx = Transaction::default();
         tx.begin();
-        let source = NewAddress::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account1());
         let code = r#"
         export default (request) => {
             const url = new URL(request.url)
@@ -425,7 +418,7 @@ mod test {
                 let proxy_balance = TicketTable::get_balance(
                     &mut host,
                     &mut tx,
-                    &NewAddress::SmartFunction(proxy),
+                    &Address::SmartFunction(proxy),
                     &ticket_hash,
                 )
                 .unwrap();

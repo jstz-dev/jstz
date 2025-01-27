@@ -26,7 +26,7 @@ use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     api::{self, TraceData},
-    context::new_account::{Account, Addressable, Amount, NewAddress, ParsedCode},
+    context::account::{Account, Address, Addressable, Amount, ParsedCode},
     js_logger::JsonLogger,
     operation::{OperationHash, RunFunction},
     receipt,
@@ -36,15 +36,12 @@ use crate::{
 
 pub mod headers {
 
-    use crate::context::new_account::Addressable;
+    use crate::context::account::Addressable;
 
     use super::*;
     pub const REFERRER: &str = "Referer";
 
-    pub fn test_and_set_referrer(
-        request: &Request,
-        referer: &NewAddress,
-    ) -> JsResult<()> {
+    pub fn test_and_set_referrer(request: &Request, referer: &Address) -> JsResult<()> {
         if request.headers().deref().contains_key(REFERRER) {
             return Err(JsError::from_native(
                 JsNativeError::error().with_message("Referer already set"),
@@ -452,7 +449,7 @@ pub mod run {
     pub fn execute(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &NewAddress,
+        source: &Address,
         run: operation::RunFunction,
         operation_hash: OperationHash,
     ) -> Result<receipt::RunFunctionReceipt> {
@@ -638,7 +635,7 @@ pub mod jstz_run {
             Error,
         };
 
-        use super::{execute, NewAddress};
+        use super::{execute, Address};
 
         fn withdraw_request() -> RunFunction {
             RunFunction {
@@ -668,7 +665,7 @@ pub mod jstz_run {
                 ticketer: jstz_mock::kt1_account1(),
             };
             let routing_info = RoutingInfo {
-                receiver: NewAddress::User(jstz_mock::account2()),
+                receiver: Address::User(jstz_mock::account2()),
                 proxy_l1_contract: jstz_mock::kt1_account1(),
             };
             let fa_withdrawal = FaWithdraw {
@@ -693,7 +690,7 @@ pub mod jstz_run {
         fn execute_fails_on_invalid_host() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
             let req = RunFunction {
                 uri: Uri::try_from("tezos://example.com/withdraw").unwrap(),
                 ..withdraw_request()
@@ -709,7 +706,7 @@ pub mod jstz_run {
         fn execute_fails_on_unsupported_path() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
             let req = RunFunction {
                 uri: Uri::try_from("tezos://jstz/blahblah").unwrap(),
                 ..withdraw_request()
@@ -725,7 +722,7 @@ pub mod jstz_run {
         fn execute_wthdraw_fails_on_invalid_request_method() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
             let req = RunFunction {
                 method: Method::GET,
                 ..withdraw_request()
@@ -744,7 +741,7 @@ pub mod jstz_run {
         fn execute_wthdraw_fails_on_invalid_request_body() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
             let req = RunFunction {
                 body: Some(
                     json!({
@@ -775,7 +772,7 @@ pub mod jstz_run {
         fn execute_withdraw_succeeds() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
 
             tx.begin();
             Account::add_balance(&host, &mut tx, &source, 10).unwrap();
@@ -800,7 +797,7 @@ pub mod jstz_run {
         fn execute_without_ticketer_succeeds() {
             let mut host = JstzMockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
             let rt = host.rt();
 
             tx.begin();
@@ -823,7 +820,7 @@ pub mod jstz_run {
         fn execute_fa_withdraw_fails_on_invalid_request_method() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
             let req = RunFunction {
                 method: Method::GET,
                 ..fa_withdraw_request()
@@ -842,7 +839,7 @@ pub mod jstz_run {
         fn execute_fa_withdraw_fails_on_invalid_request_body() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
             let req = RunFunction {
                 body: Some(
                     json!({
@@ -873,7 +870,7 @@ pub mod jstz_run {
         fn execute_fa_withdraw_succeeds() {
             let mut host = MockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
 
             let ticket = TicketInfo {
                 id: 1234,
@@ -911,7 +908,7 @@ pub mod deploy {
     pub fn execute(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
-        source: &NewAddress,
+        source: &Address,
         deployment: operation::DeployFunction,
     ) -> Result<receipt::DeployFunctionReceipt> {
         let operation::DeployFunction {
@@ -935,7 +932,7 @@ pub mod deploy {
         fn execute_deploy_deploys_smart_function_with_kt1_account1() {
             let mut host = JstzMockHost::default();
             let mut tx = Transaction::default();
-            let source = NewAddress::User(jstz_mock::account1());
+            let source = Address::User(jstz_mock::account1());
             let hrt = host.rt();
             tx.begin();
 

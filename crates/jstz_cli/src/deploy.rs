@@ -1,6 +1,6 @@
 use boa_engine::JsError;
 use jstz_proto::{
-    context::new_account::ParsedCode,
+    context::account::ParsedCode,
     operation::{Content, DeployFunction, Operation, SignedOperation},
     receipt::{ReceiptContent, ReceiptResult},
 };

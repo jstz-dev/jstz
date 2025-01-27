@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::bail;
 use http::{HeaderMap, Method, Uri};
-use jstz_proto::context::new_account::{Addressable, NewAddress};
+use jstz_proto::context::account::{Address, Addressable};
 use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
@@ -100,7 +100,7 @@ pub async fn exec(
 
     // 3. Construct the signed operation
     let nonce = jstz_client
-        .get_nonce(&NewAddress::User(user.address.clone()))
+        .get_nonce(&Address::User(user.address.clone()))
         .await?;
 
     // SAFETY: `url` is a valid URI since URLs are a subset of  URIs and `url_object` is a valid URL.
@@ -195,7 +195,7 @@ pub async fn exec(
     Ok(())
 }
 
-async fn spawn_trace(address: &NewAddress, jstz_client: &JstzClient) -> Result<()> {
+async fn spawn_trace(address: &Address, jstz_client: &JstzClient) -> Result<()> {
     let event_source = jstz_client.logs_stream(address);
     // need to use mpsc instead of oneshot because of the loop
     let (tx, mut rx) = mpsc::channel::<()>(1);

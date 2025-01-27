@@ -11,7 +11,7 @@ use tezos_smart_rollup::{
 use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::{
-    context::new_account::{Account, Addressable, Amount, NewAddress},
+    context::account::{Account, Address, Addressable, Amount},
     Error, Result,
 };
 
@@ -20,12 +20,12 @@ const BURN_ENTRYPOINT: &str = "burn";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Withdrawal {
     pub amount: Amount,
-    pub receiver: NewAddress,
+    pub receiver: Address,
 }
 
 fn create_withdrawal(
     amount: Amount,
-    receiver: &NewAddress,
+    receiver: &Address,
     ticketer: &ContractKt1Hash,
 ) -> Result<OutboxMessage> {
     let receiver_pkh = receiver.to_base58();
@@ -89,7 +89,7 @@ mod test {
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
-        context::{new_account::Account, new_account::NewAddress},
+        context::{account::Account, account::Address},
         executor::withdraw::execute_withdraw,
         Error,
     };
@@ -100,10 +100,10 @@ mod test {
     fn execute_withdraw_fails_on_insufficient_funds() {
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
-        let source = NewAddress::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account1());
         let withdrawal = Withdrawal {
             amount: 11,
-            receiver: NewAddress::User(jstz_mock::account2()),
+            receiver: Address::User(jstz_mock::account2()),
         };
         let ticketer =
             ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER).unwrap();
@@ -125,10 +125,10 @@ mod test {
     fn execute_withdraw_succeeds() {
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
-        let source = NewAddress::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account1());
         let withdrawal = Withdrawal {
             amount: 10,
-            receiver: NewAddress::User(jstz_mock::account2()),
+            receiver: Address::User(jstz_mock::account2()),
         };
         let ticketer =
             ContractKt1Hash::from_base58_check(jstz_mock::host::NATIVE_TICKETER).unwrap();

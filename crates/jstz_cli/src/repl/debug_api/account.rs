@@ -6,10 +6,10 @@ use boa_engine::{
 };
 use jstz_core::runtime;
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use jstz_proto::context::new_account::{Account, NewAddress};
+use jstz_proto::context::account::{Account, Address};
 
-fn try_parse_address(account: &str) -> JsResult<NewAddress> {
-    NewAddress::from_base58(account).map_err(|_| {
+fn try_parse_address(account: &str) -> JsResult<Address> {
+    Address::from_base58(account).map_err(|_| {
         JsNativeError::typ()
             .with_message("Could not parse the address.")
             .into()
@@ -124,7 +124,7 @@ impl AccountApi {
 
 #[cfg(test)]
 mod tests {
-    use jstz_proto::context::new_account::Addressable;
+    use jstz_proto::context::account::Addressable;
 
     use super::*;
 
@@ -135,12 +135,12 @@ mod tests {
     fn test_try_parse_address() {
         // Test valid tz1 address
         let result = try_parse_address(TEST_TZ1).unwrap();
-        assert!(matches!(result, NewAddress::User(_)));
+        assert!(matches!(result, Address::User(_)));
         assert_eq!(result.to_base58(), TEST_TZ1);
 
         // Test valid KT1 address
         let result = try_parse_address(TEST_KT1).unwrap();
-        assert!(matches!(result, NewAddress::SmartFunction(_)));
+        assert!(matches!(result, Address::SmartFunction(_)));
         assert_eq!(result.to_base58(), TEST_KT1);
     }
 

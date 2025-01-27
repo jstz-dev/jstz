@@ -6,7 +6,7 @@ use axum::{
 use jstz_core::BinEncodable;
 use jstz_proto::{
     api::KvValue,
-    context::new_account::{
+    context::account::{
         Account, Nonce, ParsedCode, SmartFunctionAccount, UserAccount,
         ACCOUNTS_PATH_PREFIX,
     },

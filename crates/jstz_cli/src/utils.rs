@@ -1,6 +1,6 @@
 use crate::error::{Error, Result};
 use anyhow::anyhow;
-use jstz_proto::context::new_account::NewAddress;
+use jstz_proto::context::account::Address;
 use std::{
     env,
     fmt::{self, Display},
@@ -13,7 +13,7 @@ const JSTZ_ADDRESS_PREFIXES: [&str; 4] = ["tz1", "tz2", "tz3", "KT1"];
 
 #[derive(Clone, Debug)]
 pub enum AddressOrAlias {
-    Address(NewAddress),
+    Address(Address),
     Alias(String),
 }
 
@@ -28,7 +28,7 @@ impl FromStr for AddressOrAlias {
         if is_jstz_address {
             Ok(Self::Address(
                 address_or_alias
-                    .parse::<NewAddress>()
+                    .parse::<Address>()
                     .map_err(|e| anyhow!("{}", e))?,
             ))
         } else {
@@ -102,15 +102,12 @@ mod tests {
         let result = AddressOrAlias::from_str(TEST_KT1).unwrap();
         assert!(matches!(
             result,
-            AddressOrAlias::Address(NewAddress::SmartFunction(_))
+            AddressOrAlias::Address(Address::SmartFunction(_))
         ));
 
         // Test valid tz1 address
         let result = AddressOrAlias::from_str(TEST_TZ1).unwrap();
-        assert!(matches!(
-            result,
-            AddressOrAlias::Address(NewAddress::User(_))
-        ));
+        assert!(matches!(result, AddressOrAlias::Address(Address::User(_))));
 
         // Test alias
         let result = AddressOrAlias::from_str(TEST_ALIAS).unwrap();

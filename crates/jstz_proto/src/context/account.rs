@@ -88,18 +88,18 @@ pub enum AddressKind {
 
 // Represents the address in jstz, which can be converted to a base58 string.
 // This is required to avoid unnecessary cloning when getting the key path for the Account.
-pub trait Addressable: Into<NewAddress> + Clone {
+pub trait Addressable: Into<Address> + Clone {
     fn kind(&self) -> AddressKind;
     fn to_base58(&self) -> String;
 }
 
-impl From<SmartFunctionHash> for NewAddress {
+impl From<SmartFunctionHash> for Address {
     fn from(sfh: SmartFunctionHash) -> Self {
         Self::SmartFunction(sfh)
     }
 }
 
-impl From<PublicKeyHash> for NewAddress {
+impl From<PublicKeyHash> for Address {
     fn from(pkh: PublicKeyHash) -> Self {
         Self::User(pkh)
     }
@@ -138,21 +138,18 @@ impl Addressable for PublicKeyHash {
     Encode,
     Decode,
 )]
-// TODO: rename to Address
-// https://linear.app/tezos/issue/JSTZ-253/remove-old-accountrs
-#[schema(as = Address)]
 #[schema(description = "Tezos Address")]
 #[serde(untagged)]
-pub enum NewAddress {
+pub enum Address {
     User(PublicKeyHash),
     SmartFunction(SmartFunctionHash),
 }
 
-unsafe impl Trace for NewAddress {
+unsafe impl Trace for Address {
     empty_trace!();
 }
 
-impl Display for NewAddress {
+impl Display for Address {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::User(hash) => hash.fmt(f),
@@ -161,7 +158,7 @@ impl Display for NewAddress {
     }
 }
 
-impl FromStr for NewAddress {
+impl FromStr for Address {
     type Err = Error;
 
     fn from_str(s: &str) -> Result<Self> {
@@ -169,7 +166,7 @@ impl FromStr for NewAddress {
     }
 }
 
-impl Addressable for NewAddress {
+impl Addressable for Address {
     fn kind(&self) -> AddressKind {
         match self {
             Self::User(_) => AddressKind::User,
@@ -185,7 +182,7 @@ impl Addressable for NewAddress {
     }
 }
 
-impl NewAddress {
+impl Address {
     pub fn as_smart_function(&self) -> Option<&SmartFunctionHash> {
         match self {
             Self::SmartFunction(sfh) => Some(sfh),
@@ -198,20 +195,18 @@ impl NewAddress {
             return Err(Error::InvalidAddress);
         }
         match &data[..3] {
-            "KT1" => Ok(NewAddress::SmartFunction(SmartFunctionHash::from_base58(
+            "KT1" => Ok(Address::SmartFunction(SmartFunctionHash::from_base58(
                 data,
             )?)),
-            "tz1" | "tz2" | "tz3" => {
-                Ok(NewAddress::User(PublicKeyHash::from_base58(data)?))
-            }
+            "tz1" | "tz2" | "tz3" => Ok(Address::User(PublicKeyHash::from_base58(data)?)),
             _ => Err(Error::InvalidAddress),
         }
     }
 
     pub fn as_bytes(&self) -> &[u8] {
         match self {
-            NewAddress::User(hash) => hash.as_bytes(),
-            NewAddress::SmartFunction(hash) => hash.as_bytes(),
+            Address::User(hash) => hash.as_bytes(),
+            Address::SmartFunction(hash) => hash.as_bytes(),
         }
     }
 }
@@ -443,31 +438,31 @@ mod test {
         #[test]
         fn test_from_str_all_types() {
             // Test tz1 (Ed25519)
-            let tz1_addr = NewAddress::from_str(TZ1).unwrap();
+            let tz1_addr = Address::from_str(TZ1).unwrap();
             assert!(matches!(
                 &tz1_addr,
-                NewAddress::User(ref pkh) if <PublicKeyHash as Hash>::to_base58(pkh) == TZ1
+                Address::User(ref pkh) if <PublicKeyHash as Hash>::to_base58(pkh) == TZ1
             ));
 
             // Test tz2 (Secp256k1)
-            let tz2_addr = NewAddress::from_str(TZ2).unwrap();
+            let tz2_addr = Address::from_str(TZ2).unwrap();
             assert!(matches!(
                 &tz2_addr,
-                NewAddress::User(ref pkh) if <PublicKeyHash as Hash>::to_base58(pkh) == TZ2
+                Address::User(ref pkh) if <PublicKeyHash as Hash>::to_base58(pkh) == TZ2
             ));
 
             // Test tz3 (P256)
-            let tz3_addr = NewAddress::from_str(TZ3).unwrap();
+            let tz3_addr = Address::from_str(TZ3).unwrap();
             assert!(matches!(
                 &tz3_addr,
-                NewAddress::User(ref pkh) if <PublicKeyHash as Hash>::to_base58(pkh) == TZ3
+                Address::User(ref pkh) if <PublicKeyHash as Hash>::to_base58(pkh) == TZ3
             ));
 
             // Test KT1 (Smart Function)
-            let kt1_addr = NewAddress::from_str(KT1).unwrap();
+            let kt1_addr = Address::from_str(KT1).unwrap();
             assert!(matches!(
                 &kt1_addr,
-                NewAddress::SmartFunction(ref hash) if <SmartFunctionHash as Hash>::to_base58(hash) == KT1
+                Address::SmartFunction(ref hash) if <SmartFunctionHash as Hash>::to_base58(hash) == KT1
             ));
         }
 
@@ -475,76 +470,76 @@ mod test {
         fn test_invalid_addresses() {
             // Test invalid prefix
             assert!(matches!(
-                NewAddress::from_str("tx1abc123"),
+                Address::from_str("tx1abc123"),
                 Err(Error::InvalidAddress)
             ));
 
             // Test invalid tz1
-            assert!(NewAddress::from_str("tz1invalid").is_err());
+            assert!(Address::from_str("tz1invalid").is_err());
 
             // Test invalid tz2
-            assert!(NewAddress::from_str("tz2invalid").is_err());
+            assert!(Address::from_str("tz2invalid").is_err());
 
             // Test invalid tz3
-            assert!(NewAddress::from_str("tz3invalid").is_err());
+            assert!(Address::from_str("tz3invalid").is_err());
 
             // Test invalid KT1
-            assert!(NewAddress::from_str("KT1invalid").is_err());
+            assert!(Address::from_str("KT1invalid").is_err());
         }
 
         #[test]
         fn test_display() {
             // Test tz1 display
-            let tz1_addr = NewAddress::from_str(TZ1).unwrap();
+            let tz1_addr = Address::from_str(TZ1).unwrap();
             assert_eq!(tz1_addr.to_string(), TZ1);
 
             // Test tz2 display
-            let tz2_addr = NewAddress::from_str(TZ2).unwrap();
+            let tz2_addr = Address::from_str(TZ2).unwrap();
             assert_eq!(tz2_addr.to_string(), TZ2);
 
             // Test tz3 display
-            let tz3_addr = NewAddress::from_str(TZ3).unwrap();
+            let tz3_addr = Address::from_str(TZ3).unwrap();
             assert_eq!(tz3_addr.to_string(), TZ3);
 
             // Test KT1 display
-            let kt1_addr = NewAddress::from_str(KT1).unwrap();
+            let kt1_addr = Address::from_str(KT1).unwrap();
             assert_eq!(kt1_addr.to_string(), KT1);
         }
 
         #[test]
         fn test_from_base58() {
             // Test valid addresses
-            let tz1_addr = NewAddress::from_base58(TZ1).unwrap();
+            let tz1_addr = Address::from_base58(TZ1).unwrap();
             assert!(matches!(
                 &tz1_addr,
-                NewAddress::User(ref pkh) if <PublicKeyHash as Hash>::to_base58(pkh) == TZ1
+                Address::User(ref pkh) if <PublicKeyHash as Hash>::to_base58(pkh) == TZ1
             ));
 
-            let kt1_addr = NewAddress::from_base58(KT1).unwrap();
+            let kt1_addr = Address::from_base58(KT1).unwrap();
             assert!(matches!(
                 &kt1_addr,
-                NewAddress::SmartFunction(ref hash) if <SmartFunctionHash as Hash>::to_base58(hash) == KT1
+                Address::SmartFunction(ref hash) if <SmartFunctionHash as Hash>::to_base58(hash) == KT1
             ));
 
             // Test invalid prefixes
             assert!(matches!(
-                NewAddress::from_base58("tx1abc123"),
+                Address::from_base58("tx1abc123"),
                 Err(Error::InvalidAddress)
             ));
 
             // Test invalid formats
-            assert!(NewAddress::from_base58("tz1invalid").is_err());
-            assert!(NewAddress::from_base58("KT1invalid").is_err());
+            assert!(Address::from_base58("tz1invalid").is_err());
+            assert!(Address::from_base58("KT1invalid").is_err());
 
             // Test empty string
             assert!(matches!(
-                NewAddress::from_base58(""),
+                Address::from_base58(""),
                 Err(Error::InvalidAddress)
             ));
 
             // Test string too short for prefix check
             assert!(matches!(
-                NewAddress::from_base58("tz"),
+                Address::from_base58("tz"),
                 Err(Error::InvalidAddress)
             ));
         }
@@ -552,44 +547,44 @@ mod test {
         #[test]
         fn test_from_base58_error() {
             let invalid_checksum = "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjV"; // Changed last char
-            let result = NewAddress::from_base58(invalid_checksum);
+            let result = Address::from_base58(invalid_checksum);
             assert!(result.is_err());
 
             let invalid_kt1 = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU6"; // Changed last char
-            let result = NewAddress::from_base58(invalid_kt1);
+            let result = Address::from_base58(invalid_kt1);
             assert!(result.is_err());
         }
 
         #[test]
         fn test_to_base58() {
             // Test User addresses
-            let tz1_addr = NewAddress::from_str(TZ1).unwrap();
+            let tz1_addr = Address::from_str(TZ1).unwrap();
             assert_eq!(tz1_addr.to_base58(), TZ1);
 
-            let tz2_addr = NewAddress::from_str(TZ2).unwrap();
+            let tz2_addr = Address::from_str(TZ2).unwrap();
             assert_eq!(tz2_addr.to_base58(), TZ2);
 
-            let tz3_addr = NewAddress::from_str(TZ3).unwrap();
+            let tz3_addr = Address::from_str(TZ3).unwrap();
             assert_eq!(tz3_addr.to_base58(), TZ3);
 
             // Test SmartFunction address
-            let kt1_addr = NewAddress::from_str(KT1).unwrap();
+            let kt1_addr = Address::from_str(KT1).unwrap();
             assert_eq!(kt1_addr.to_base58(), KT1);
 
             // Test roundtrip
-            let addr = NewAddress::from_base58(&kt1_addr.to_base58()).unwrap();
+            let addr = Address::from_base58(&kt1_addr.to_base58()).unwrap();
             assert_eq!(addr, kt1_addr);
         }
 
         #[test]
         fn test_as_bytes() {
             // Test User address bytes
-            let tz1_addr = NewAddress::from_str(TZ1).unwrap();
+            let tz1_addr = Address::from_str(TZ1).unwrap();
             let tz1_bytes = tz1_addr.as_bytes();
             assert!(!tz1_bytes.is_empty());
 
             // Test SmartFunction address bytes
-            let kt1_addr = NewAddress::from_str(KT1).unwrap();
+            let kt1_addr = Address::from_str(KT1).unwrap();
             let kt1_bytes = kt1_addr.as_bytes();
             assert!(!kt1_bytes.is_empty());
 
@@ -609,9 +604,9 @@ mod test {
             (host, tx)
         }
 
-        fn create_test_addresses() -> (NewAddress, NewAddress) {
-            let user_addr = NewAddress::from_str(TZ1).unwrap();
-            let sf_addr = NewAddress::from_str(KT1).unwrap();
+        fn create_test_addresses() -> (Address, Address) {
+            let user_addr = Address::from_str(TZ1).unwrap();
+            let sf_addr = Address::from_str(KT1).unwrap();
             (user_addr, sf_addr)
         }
 
@@ -627,7 +622,7 @@ mod test {
             assert_eq!(sf_path.to_string(), format!("/jstz_account/{}", KT1));
 
             // Test path validation
-            let addr = NewAddress::User(
+            let addr = Address::User(
                 PublicKeyHash::from_base58("tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU")
                     .unwrap(),
             );
@@ -778,7 +773,7 @@ mod test {
 
             // Extract the smart function hash for testing
             let sf_hash = match &sf_addr {
-                NewAddress::SmartFunction(hash) => hash,
+                Address::SmartFunction(hash) => hash,
                 _ => panic!("Expected SmartFunction address"),
             };
 
@@ -911,7 +906,7 @@ mod test {
             )
             .unwrap();
 
-            let sf_addr = NewAddress::SmartFunction(sf_hash);
+            let sf_addr = Address::SmartFunction(sf_hash);
             let account = Account::get_mut(&host, &mut tx, &sf_addr).unwrap();
             match account {
                 Account::SmartFunction(sf_account) => {

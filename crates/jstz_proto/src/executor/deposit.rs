@@ -2,7 +2,7 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::hash::Blake2b;
 
 use crate::{
-    context::new_account::Account,
+    context::account::Account,
     operation::external::Deposit,
     receipt::{DepositReceipt, Receipt},
 };
@@ -35,7 +35,7 @@ mod test {
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
-        context::new_account::NewAddress,
+        context::account::Address,
         operation::external::Deposit,
         receipt::{DepositReceipt, ReceiptContent, ReceiptResult},
     };
@@ -50,7 +50,7 @@ mod test {
         let deposit = Deposit {
             inbox_id: 1,
             amount: 20,
-            receiver: NewAddress::User(receiver.clone()),
+            receiver: Address::User(receiver.clone()),
         };
         tx.begin();
         let receipt = execute(&mut host, &mut tx, deposit);
@@ -59,7 +59,7 @@ mod test {
             ReceiptResult::Success(ReceiptContent::Deposit(DepositReceipt {
                 account,
                 updated_balance,
-            })) if account == NewAddress::User(receiver) && updated_balance == 20
+            })) if account == Address::User(receiver) && updated_balance == 20
         ));
         let raw_json_payload = r#"{"hash":[39,12,7,148,87,7,176,168,111,219,214,147,14,123,179,202,232,151,138,59,207,182,101,158,128,98,239,57,236,88,195,42],"result":{"_type":"Success","inner":{"_type":"Deposit","account":"tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx","updated_balance":20}}}"#;
         assert_eq!(raw_json_payload, serde_json::to_string(&receipt).unwrap());

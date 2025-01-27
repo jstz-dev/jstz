@@ -6,7 +6,7 @@ use crate::{
     term::styles,
     utils::AddressOrAlias,
 };
-use jstz_proto::context::new_account::Addressable;
+use jstz_proto::context::account::Addressable;
 use log::debug;
 
 pub async fn exec(
