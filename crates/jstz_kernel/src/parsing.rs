@@ -1,17 +1,17 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_proto::operation::external::FaDeposit;
-use jstz_proto::{context::new_account::NewAddress, Result};
+use jstz_proto::{context::account::Address, Result};
 use num_traits::ToPrimitive;
 use tezos_smart_rollup::michelson::{ticket::FA2_1Ticket, MichelsonContract};
 use tezos_smart_rollup::types::{Contract, PublicKeyHash as TezosPublicKeyHash};
 
-pub fn try_parse_contract(contract: &Contract) -> Result<NewAddress> {
+pub fn try_parse_contract(contract: &Contract) -> Result<Address> {
     match contract {
         Contract::Implicit(TezosPublicKeyHash::Ed25519(tz1)) => {
-            Ok(NewAddress::User(PublicKeyHash::Tz1(tz1.clone().into())))
+            Ok(Address::User(PublicKeyHash::Tz1(tz1.clone().into())))
         }
-        Contract::Originated(contract_kt1_hash) => Ok(NewAddress::SmartFunction(
+        Contract::Originated(contract_kt1_hash) => Ok(Address::SmartFunction(
             SmartFunctionHash(contract_kt1_hash.clone()),
         )),
         _ => Err(jstz_proto::Error::InvalidAddress),
@@ -28,7 +28,7 @@ pub fn try_parse_fa_deposit(
 
     let proxy_smart_function = (proxy_contract)
         .map(|c| {
-            if let addr @ NewAddress::SmartFunction(_) = try_parse_contract(&c.0)? {
+            if let addr @ Address::SmartFunction(_) = try_parse_contract(&c.0)? {
                 Ok(addr)
             } else {
                 Err(jstz_proto::Error::AddressTypeMismatch)
@@ -56,7 +56,7 @@ mod test {
 
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_proto::{
-        context::new_account::{Addressable, NewAddress},
+        context::account::{Address, Addressable},
         operation::external::FaDeposit,
     };
     use tezos_smart_rollup::{
@@ -102,10 +102,8 @@ mod test {
         let expected = FaDeposit {
             inbox_id,
             amount,
-            receiver: NewAddress::User(jstz_mock::account1()),
-            proxy_smart_function: Some(NewAddress::SmartFunction(
-                jstz_mock::sf_account1(),
-            )),
+            receiver: Address::User(jstz_mock::account1()),
+            proxy_smart_function: Some(Address::SmartFunction(jstz_mock::sf_account1())),
             ticket_hash,
         };
         assert_eq!(expected, fa_deposit)

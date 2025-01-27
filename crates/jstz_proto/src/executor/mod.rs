@@ -2,7 +2,7 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::{
-    context::new_account::NewAddress,
+    context::account::Address,
     operation::{self, ExternalOperation, Operation, SignedOperation},
     receipt::{self, Receipt},
     Result,
@@ -35,7 +35,7 @@ fn execute_operation_inner(
             let result = smart_function::deploy::execute(
                 hrt,
                 tx,
-                &NewAddress::User(source.clone()),
+                &Address::User(source.clone()),
                 deployment,
             )?;
 
@@ -52,13 +52,13 @@ fn execute_operation_inner(
                     hrt,
                     tx,
                     ticketer,
-                    &NewAddress::User(source.clone()),
+                    &Address::User(source.clone()),
                     run,
                 )?,
                 _ => smart_function::run::execute(
                     hrt,
                     tx,
-                    &NewAddress::User(source.clone()),
+                    &Address::User(source.clone()),
                     run,
                     operation_hash,
                 )?,

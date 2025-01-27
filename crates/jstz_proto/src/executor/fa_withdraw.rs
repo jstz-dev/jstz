@@ -19,7 +19,7 @@ use utoipa::ToSchema;
 
 use crate::{
     context::{
-        new_account::{Addressable, Amount, NewAddress},
+        account::{Address, Addressable, Amount},
         ticket_table::TicketTable,
     },
     Error, Result,
@@ -36,7 +36,7 @@ pub struct FaWithdraw {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RoutingInfo {
-    pub receiver: NewAddress,
+    pub receiver: Address,
     pub proxy_l1_contract: ContractKt1Hash,
 }
 
@@ -84,7 +84,7 @@ type OutboxMessageId = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Encode, Decode)]
 pub struct FaWithdrawReceipt {
-    pub source: NewAddress,
+    pub source: Address,
     pub outbox_message_id: OutboxMessageId,
 }
 
@@ -209,7 +209,7 @@ mod test {
             ticketer: jstz_mock::kt1_account1(),
         };
         let routing_info = RoutingInfo {
-            receiver: NewAddress::User(jstz_mock::account2()),
+            receiver: Address::User(jstz_mock::account2()),
             proxy_l1_contract: jstz_mock::kt1_account1(),
         };
         FaWithdraw {
@@ -223,7 +223,7 @@ mod test {
     fn execute_fa_withdraw_succeeds() {
         let mut rt = MockHost::default();
         let mut tx = Transaction::default();
-        let source = NewAddress::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account1());
         let fa_withdrawal = create_fa_withdrawal();
         let FaWithdraw {
             amount,
@@ -291,7 +291,7 @@ mod test {
     fn execute_fa_withdraw_fails_on_insufficient_funds() {
         let mut rt = MockHost::default();
         let mut tx = Transaction::default();
-        let source = NewAddress::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account1());
         let fa_withdrawal = create_fa_withdrawal();
 
         tx.begin();
@@ -318,14 +318,14 @@ mod test {
     fn execute_fa_withdraw_fails_on_zero_amount() {
         let mut rt = MockHost::default();
         let mut tx = Transaction::default();
-        let source = NewAddress::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account1());
         let ticket_info = TicketInfo {
             id: 1234,
             content: Some(b"random ticket content".to_vec()),
             ticketer: jstz_mock::kt1_account1(),
         };
         let routing_info = RoutingInfo {
-            receiver: NewAddress::User(jstz_mock::account2()),
+            receiver: Address::User(jstz_mock::account2()),
             proxy_l1_contract: jstz_mock::kt1_account1(),
         };
         let fa_withdrawal = FaWithdraw {

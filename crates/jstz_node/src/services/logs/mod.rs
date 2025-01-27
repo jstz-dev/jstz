@@ -50,7 +50,7 @@ mod persistent_logging {
         extract::{Path, Query, State},
         Json,
     };
-    use jstz_proto::context::new_account::NewAddress;
+    use jstz_proto::context::account::Address;
 
     pub async fn persistent_logs(
         State(AppState { db, .. }): State<AppState>,

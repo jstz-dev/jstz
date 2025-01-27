@@ -3,7 +3,7 @@ use jstz_crypto::{
     public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
     smart_function_hash::SmartFunctionHash,
 };
-use jstz_proto::context::new_account::NewAddress;
+use jstz_proto::context::account::Address;
 use log::debug;
 use octez::{OctezClient, OctezNode, OctezRollupNode};
 use serde::{Deserialize, Serialize};
@@ -50,7 +50,7 @@ pub enum Account {
 }
 
 impl Account {
-    pub fn address(&self) -> NewAddress {
+    pub fn address(&self) -> Address {
         match self {
             Account::User(user) => user.address.clone().into(),
             Account::SmartFunction(sf) => sf.address.clone().into(),
@@ -149,7 +149,7 @@ impl AccountConfig {
 }
 
 impl AddressOrAlias {
-    pub fn resolve(&self, cfg: &Config) -> Result<NewAddress> {
+    pub fn resolve(&self, cfg: &Config) -> Result<Address> {
         match self {
             AddressOrAlias::Address(address) => Ok(address.clone()),
             AddressOrAlias::Alias(alias) => {
@@ -166,7 +166,7 @@ impl AddressOrAlias {
     pub fn resolve_or_use_current_user(
         account: Option<AddressOrAlias>,
         cfg: &Config,
-    ) -> Result<NewAddress> {
+    ) -> Result<Address> {
         match account {
             Some(account) => account.resolve(cfg),
             None => cfg
@@ -183,7 +183,7 @@ impl AddressOrAlias {
         &self,
         cfg: &Config,
         network: &Option<NetworkName>,
-    ) -> Result<NewAddress> {
+    ) -> Result<Address> {
         match self {
             AddressOrAlias::Address(address) => Ok(address.clone()),
             AddressOrAlias::Alias(alias) => {
@@ -196,7 +196,7 @@ impl AddressOrAlias {
                         alias
                     ))?;
 
-                let address = NewAddress::from_base58(&alias_info.address)
+                let address = Address::from_base58(&alias_info.address)
                     .map_err(|e| user_error!("{}", e))?;
 
                 Ok(address)

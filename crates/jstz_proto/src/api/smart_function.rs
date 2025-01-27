@@ -15,7 +15,7 @@ use jstz_core::{
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 
 use crate::{
-    context::new_account::{Account, Amount, NewAddress, ParsedCode},
+    context::account::{Account, Address, Amount, ParsedCode},
     executor::{
         smart_function::{headers, HostScript, Script},
         JSTZ_HOST,
@@ -76,7 +76,7 @@ impl SmartFunction {
         }
 
         // 2. Deploy the smart function
-        let deployed = NewAddress::SmartFunction(Script::deploy(
+        let deployed = Address::SmartFunction(Script::deploy(
             hrt,
             tx,
             deployer,
@@ -115,7 +115,7 @@ impl SmartFunction {
                 // 2. Set the referrer of the request to the current smart function address
                 headers::test_and_set_referrer(
                     &request_deref,
-                    &NewAddress::SmartFunction(self_address.clone()),
+                    &Address::SmartFunction(self_address.clone()),
                 )?;
 
                 // 3. Load, init and run!
@@ -280,8 +280,8 @@ mod test {
 
     use crate::{
         context::{
-            new_account::NewAddress,
-            new_account::{Account, ParsedCode},
+            account::Address,
+            account::{Account, ParsedCode},
             ticket_table::TicketTable,
         },
         executor::smart_function::{self, register_web_apis, Script},
@@ -306,8 +306,7 @@ mod test {
         let amount = 100;
 
         let operation_hash = Blake2b::from(b"operation_hash".as_ref());
-        let receiver =
-            NewAddress::User(PublicKeyHash::digest(b"receiver address").unwrap());
+        let receiver = Address::User(PublicKeyHash::digest(b"receiver address").unwrap());
         let http_request = http::Request::builder()
             .method(Method::POST)
             .uri("tezos://jstz/withdraw")
@@ -348,7 +347,7 @@ mod test {
         let mut mock_host = JstzMockHost::default();
         let host = mock_host.rt();
         let mut tx = Transaction::default();
-        let source = NewAddress::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account1());
         let code = r#"
         export default (request) => {
             const withdrawRequest = new Request("tezos://jstz/withdraw", {
@@ -417,8 +416,8 @@ mod test {
 
     #[test]
     fn host_script_fa_withdraw_from_smart_function_succeeds() {
-        let receiver = NewAddress::User(jstz_mock::account1());
-        let source = NewAddress::User(jstz_mock::account2());
+        let receiver = Address::User(jstz_mock::account1());
+        let source = Address::User(jstz_mock::account2());
         let ticketer = jstz_mock::kt1_account1();
         let ticketer_string = ticketer.clone();
         let l1_proxy_contract = ticketer.clone();
@@ -517,7 +516,7 @@ mod test {
         let balance = TicketTable::get_balance(
             host,
             &mut tx,
-            &NewAddress::SmartFunction(token_smart_function),
+            &Address::SmartFunction(token_smart_function),
             &ticket_hash,
         )
         .unwrap();
