@@ -113,10 +113,7 @@ impl SmartFunction {
                         )
                     })?;
                 // 2. Set the referrer of the request to the current smart function address
-                headers::test_and_set_referrer(
-                    &request_deref,
-                    &Address::SmartFunction(self_address.clone()),
-                )?;
+                headers::test_and_set_referrer(&request_deref, self_address)?;
 
                 // 3. Load, init and run!
                 Script::load_init_run(

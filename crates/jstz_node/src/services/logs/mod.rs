@@ -57,7 +57,7 @@ mod persistent_logging {
         Path(address): Path<String>,
         Query(Pagination { limit, offset }): Query<Pagination>,
     ) -> ServiceResult<Json<Vec<LogRecord>>> {
-        let address = NewAddress::from_base58(&address)
+        let address = Address::from_base58(&address)
             .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
         let result = db.logs_by_address(address, offset, limit).await?;
 
@@ -69,7 +69,7 @@ mod persistent_logging {
         Path(address): Path<String>,
         Path(request_id): Path<String>,
     ) -> ServiceResult<Json<Vec<LogRecord>>> {
-        let address = NewAddress::from_base58(&address)
+        let address = Address::from_base58(&address)
             .map_err(|e| ServiceError::BadRequest(e.to_string()))?;
 
         let result = db
