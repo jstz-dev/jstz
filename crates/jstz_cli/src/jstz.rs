@@ -177,7 +177,7 @@ impl JstzClient {
     pub async fn post_operation(&self, operation: &SignedOperation) -> Result<()> {
         let response = self
             .client
-            .post(&format!("{}/operations", self.endpoint))
+            .post(format!("{}/operations", self.endpoint))
             .json(operation)
             .send()
             .await?;

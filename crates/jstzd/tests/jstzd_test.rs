@@ -74,7 +74,7 @@ async fn jstzd_test() {
     tokio::spawn(async move {
         sleep(Duration::from_secs(10)).await;
         reqwest::Client::new()
-            .put(&format!("http://localhost:{}/shutdown", jstzd_port))
+            .put(format!("http://localhost:{}/shutdown", jstzd_port))
             .send()
             .await
             .unwrap();

@@ -71,6 +71,14 @@ tokio-util.workspace = true
 tokio.workspace = true
 url.workspace = true
 
+[dev-dependencies]
+jstzd = { path = "../jstzd" }
+assert_cmd.workspace = true
+predicates.workspace = true
+
+[features]
+skip-rollup-tests = []
+
 [[bin]]
 name = "jstz"
 path = "src/main.rs"

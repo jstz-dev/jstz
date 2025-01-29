@@ -110,6 +110,26 @@ export function isMintNew(argument: unknown): argument is MintNew {
   }
 }
 
+export type BridgeDeposit = {
+  receiver: Address;
+  amount: number;
+  ticketHash: string;
+};
+export function isBridgeDeposit(argument: unknown): argument is BridgeDeposit {
+  let bridgeDeposit = argument as BridgeDeposit;
+  try {
+    return (
+      isAddress(bridgeDeposit.receiver) &&
+      Number.isInteger(bridgeDeposit.amount) &&
+      typeof bridgeDeposit.ticketHash === "string"
+    );
+  } catch {
+    return false;
+  }
+}
+
+export type AddTicketHash = { ticketHash: string; tokenId: number };
+
 function registerKey(tokenId: TokenId): string {
   return `token/${tokenId}`;
 }
@@ -190,126 +210,138 @@ function performTransfers(referer: Address, transfers: Transfers[]) {
   );
 }
 
-function performUpdateOperator(referer: Address, update: UpdateOperator) {
-  switch (update.operation) {
-    case "add_operator":
-      assertOwner(update.owner, referer);
-      setOperator(update.owner, update.operator, update.token_id);
-      break;
-    case "remove_operator":
-      assertOperator(update.owner, referer, update.token_id);
-      unsetOperator(update.owner, update.operator, update.token_id);
-  }
-}
 function performBalanceRequest(request: BalanceRequest): BalanceResponse {
   const balance = getBalance(request.owner, request.token_id);
   console.log(`${request.owner} has ${balance} of token ${request.token_id}`);
   return { request, balance };
 }
-function performBalanceOf(balanceOf: BalanceOf): BalanceResponse[] {
-  return balanceOf.requests.map(performBalanceRequest);
-}
 
-function performMintNew(mintNew: MintNew) {
-  registerToken(mintNew.token_id);
-  changeBalance(mintNew.owner, mintNew.token_id, mintNew.amount);
-}
+type RouteHandler = (
+  request: Request,
+  params: { [key: string]: string | undefined },
+) => Promise<Response>;
 
-async function handler(request: Request): Promise<Response> {
-  const url = new URL(request.url);
-  const path = url.pathname;
+class Router {
+  private routes: {
+    // method => handler
+    [method: string]: {
+      pattern: RegExp;
+      keys: string[];
+      handler: RouteHandler;
+    }[];
+  } = {};
 
-  try {
-    switch (path) {
-      case "/ping":
-        console.log("Hello from runner smart function 👋");
-        return new Response("Pong");
+  addRoute(method: string, path: string, handler: RouteHandler): void {
+    const { pattern, keys } = this.pathToRegex(path);
+    let handlers = this.routes[method] ?? [];
+    handlers.push({ pattern, keys, handler });
+    this.routes[method] = handlers;
+  }
 
-      case "/balance_of":
-        if (request.method === "GET") {
-          let balanceOf = {
-            requests: JSON.parse(
-              atob(url.searchParams.get("requests") as string),
-            ),
-          };
-          if (isBalanceOf(balanceOf)) {
-            let responses = performBalanceOf(balanceOf);
-            return Response.json(responses);
-          } else {
-            console.error("Invalid parameters", balanceOf);
-            return Response.error();
-          }
-        } else {
-          const error = "/balance_of is a GET request";
-          console.error(error);
-          return new Response(error, { status: 500 });
-        }
+  private pathToRegex(path: string): { pattern: RegExp; keys: string[] } {
+    const keys: string[] = [];
+    let pattern = path.replace(/:([a-zA-Z0-9_]+)/g, (_, key) => {
+      keys.push(key);
+      return "([^\\/]+)"; // Match dynamic parameters
+    });
+    pattern =
+      pattern !== path
+        ? pattern
+        : path.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+    const regexPattern = new RegExp(`^${pattern}$`);
+    return { pattern: regexPattern, keys };
+  }
 
-      case "/transfer":
-        if (request.method === "POST") {
-          let transfers = await request.json();
-          if (isArray(isTransfers, transfers)) {
-            performTransfers(
-              request.headers.get("Referer") as string,
-              transfers,
-            );
-            return new Response("Success!");
-          } else {
-            console.error("Invalid parameters", JSON.stringify(transfers));
-            return Response.error();
-          }
-        } else {
-          const error = "/transfer is a POST request";
-          console.error(error);
-          return new Response(error, { status: 500 });
-        }
-
-      case "/mint_new":
-        if (request.method === "POST") {
-          let mint = await request.json();
-          if (isArray(isMintNew, mint)) {
-            // TODO not anybody should be allowed to do this
-            mint.forEach(performMintNew);
-            return new Response("Success!");
-          } else {
-            console.error("Invalid parameters", JSON.stringify(mint));
-            return Response.error();
-          }
-        } else {
-          const error = "/mint_new is a POST request";
-          console.error(error);
-          return new Response(error, { status: 500 });
-        }
-
-      case "/update_operators":
-        if (request.method === "PUT") {
-          let updates = await request.json();
-          if (isArray(isUpdateOperator, updates)) {
-            updates.forEach((update: UpdateOperator) =>
-              performUpdateOperator(
-                request.headers.get("Referer") as string,
-                update,
-              ),
-            );
-            return new Response("Success!");
-          } else {
-            console.error("Invalid parameters", JSON.stringify(updates));
-            return Response.error();
-          }
-        } else {
-          const error = "/update_operators is a PUT request";
-          console.error(error);
-          return new Response(error, { status: 500 });
-        }
-
-      default:
-        const error = `Unrecognised entrypoint ${path}`;
-        console.error(error);
-        return new Response(error, { status: 404 });
+  async handleRequest(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const method = request.method;
+    const path = url.pathname;
+    for (const route of this.routes[method] ?? []) {
+      const match = path.match(route.pattern);
+      if (match) {
+        console.log(`Matched: ${method} ${url}`);
+        const params = route.keys.reduce(
+          (acc, key, index) => {
+            acc[key] = match[index + 1];
+            return acc;
+          },
+          {} as { [key: string]: string | undefined },
+        );
+        return await route.handler(request, params);
+      }
     }
-  } catch (error) {
+    const error = `Unrecognised entrypoint ${method} ${path}`;
     console.error(error);
-    throw error;
+    return new Response(error, { status: 404 });
   }
 }
+
+const getRouter = () => {
+  const router = new Router();
+
+  router.addRoute("GET", "/ping", async (request, param) => {
+    return new Response("pong");
+  });
+
+  router.addRoute("GET", "/balances/:address", async (request, params) => {
+    const owner = params.address as Address;
+    if (isAddress(owner)) {
+      const balance = getBalance(owner, 1);
+      const response: BalanceResponse = {
+        request: {
+          owner,
+          token_id: 1,
+        },
+        balance,
+      };
+      return Response.json(response);
+    } else {
+      return new Response("Not valid address", { status: 400 });
+    }
+  });
+
+  router.addRoute("POST", "/-/deposit", async (request, params) => {
+    // Check if Referer is null address
+    if (
+      (request.headers.get("Referer") as string) !==
+      "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx"
+    ) {
+      console.log(`${request.headers.get("Referer")} is not Hosta address`);
+      return new Response("Referer not set to Host address", {
+        status: 400,
+      });
+    }
+    // receiver, amount, ticketHash
+    let bridgeDeposit = await request.json();
+    if (isBridgeDeposit(bridgeDeposit)) {
+      let ticketHash = Kv.get("ticketHash") as string | null;
+      if (!ticketHash) {
+        console.log("setting ticketHash");
+        Kv.set("ticketHash", bridgeDeposit.ticketHash);
+        ticketHash = bridgeDeposit.ticketHash;
+      }
+      if (ticketHash !== bridgeDeposit.ticketHash) {
+        return new Response(
+          `Invalid ticketHash. Expected: ${ticketHash} Actual: ${bridgeDeposit.ticketHash}`,
+          { status: 400 },
+        );
+      }
+      console.log(`depositing funds to ${bridgeDeposit.receiver}`);
+      changeBalance(bridgeDeposit.receiver, 1, bridgeDeposit.amount);
+      return new Response("Success!");
+    } else {
+      console.log("Request is not a bridge deposit");
+      console.log(`Request body: ${JSON.stringify(bridgeDeposit)}`);
+      return Response.error();
+    }
+  });
+
+  return router;
+};
+
+async function handler(request: Request): Promise<Response> {
+  const router = getRouter();
+  return router.handleRequest(request);
+}
+
 export default handler;

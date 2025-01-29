@@ -56,10 +56,7 @@ fn valid_config_file() {
     let client = reqwest::blocking::Client::new();
     for _ in 0..30 {
         thread::sleep(Duration::from_secs(1));
-        if let Ok(r) = client
-            .get(&format!("http://localhost:{port}/health"))
-            .send()
-        {
+        if let Ok(r) = client.get(format!("http://localhost:{port}/health")).send() {
             if r.status().is_success() {
                 break;
             }
@@ -70,7 +67,7 @@ fn valid_config_file() {
     // observe the expected log line above
     thread::sleep(Duration::from_secs(5));
     assert!(client
-        .put(&format!("http://localhost:{port}/shutdown"))
+        .put(format!("http://localhost:{port}/shutdown"))
         .send()
         .unwrap()
         .status()

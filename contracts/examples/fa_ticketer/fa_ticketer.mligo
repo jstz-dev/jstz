@@ -80,6 +80,7 @@ module Ticketer = struct
 
   [@view]
   let get_token (() : unit) (store : storage) : Token.t = store.token
+
 end
 
 

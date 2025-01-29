@@ -1,5 +1,9 @@
-use crate::error::{Error, Result};
+use crate::{
+    config::{Config, NetworkName},
+    error::{user_error, Error, Result},
+};
 use anyhow::anyhow;
+use derive_more::Display;
 use jstz_proto::context::new_account::NewAddress;
 use std::{
     env,
@@ -8,6 +12,7 @@ use std::{
     io::{self, IsTerminal},
     str::FromStr,
 };
+use tezos_crypto_rs::hash::ContractKt1Hash;
 
 const JSTZ_ADDRESS_PREFIXES: [&str; 4] = ["tz1", "tz2", "tz3", "KT1"];
 
@@ -42,6 +47,46 @@ impl Display for AddressOrAlias {
         match self {
             Self::Address(address) => write!(f, "{}", address),
             Self::Alias(alias) => write!(f, "{}", alias),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Display)]
+pub enum OriginatedOrAlias {
+    Address(ContractKt1Hash),
+    Alias(String),
+}
+
+impl OriginatedOrAlias {
+    pub fn resolve(
+        &self,
+        cfg: &Config,
+        network: &Option<NetworkName>,
+    ) -> Result<ContractKt1Hash> {
+        match self {
+            OriginatedOrAlias::Address(kt1) => Ok(kt1.clone()),
+            OriginatedOrAlias::Alias(alias) => {
+                let address = cfg.octez_client(network)?
+                    .resolve_contract(alias).map_err(|_|user_error!(
+                        "Alias '{}' not found in octez-client. Please provide a valid address or alias.",
+                        alias
+                    ))?;
+
+                let address = ContractKt1Hash::from_base58_check(&address)?;
+                Ok(address)
+            }
+        }
+    }
+}
+
+impl FromStr for OriginatedOrAlias {
+    type Err = Error;
+
+    fn from_str(address_or_alias: &str) -> Result<Self> {
+        if address_or_alias.starts_with("KT1") {
+            Ok(Self::Address(address_or_alias.parse()?))
+        } else {
+            Ok(Self::Alias(address_or_alias.to_string()))
         }
     }
 }
@@ -86,6 +131,18 @@ pub fn using_jstzd() -> bool {
         env::var("USE_JSTZD").as_ref().map(String::as_str),
         Ok("true") | Ok("1")
     )
+}
+
+pub fn convert_tez_to_mutez(tez: f64) -> Result<u64> {
+    // 1 XTZ = 1,000,000 Mutez
+    let mutez = tez * 1_000_000.0;
+    if mutez.fract() != 0. {
+        Err(user_error!(
+            "Invalid amount: XTZ can have at most 6 decimal places"
+        ))?;
+    }
+
+    Ok(mutez as u64)
 }
 
 #[cfg(test)]
