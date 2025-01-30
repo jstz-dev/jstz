@@ -4,7 +4,7 @@ use anyhow::{bail, Result};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_proto::{
     api::KvValue,
-    context::new_account::{Addressable, NewAddress, Nonce},
+    context::account::{Address, Addressable, Nonce},
     operation::{OperationHash, SignedOperation},
     receipt::Receipt,
 };
@@ -28,7 +28,7 @@ impl JstzClient {
         }
     }
 
-    pub fn logs_stream(&self, address: &NewAddress) -> EventSource {
+    pub fn logs_stream(&self, address: &Address) -> EventSource {
         let url = format!("{}/logs/{}/stream", self.endpoint, address);
         EventSource::get(url)
     }
@@ -50,7 +50,7 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_nonce(&self, address: &NewAddress) -> Result<Nonce> {
+    pub async fn get_nonce(&self, address: &Address) -> Result<Nonce> {
         let response = self
             .get(&format!("{}/accounts/{}/nonce", self.endpoint, address))
             .await?;
@@ -86,7 +86,7 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_balance(&self, address: &NewAddress) -> Result<u64> {
+    pub async fn get_balance(&self, address: &Address) -> Result<u64> {
         let response = self
             .get(&format!("{}/accounts/{}/balance", self.endpoint, address))
             .await?;
@@ -105,7 +105,7 @@ impl JstzClient {
 
     pub async fn get_value(
         &self,
-        address: &NewAddress,
+        address: &Address,
         key: &str,
     ) -> Result<Option<KvValue>> {
         let response = self
@@ -128,7 +128,7 @@ impl JstzClient {
 
     pub async fn get_subkey_list(
         &self,
-        address: &NewAddress,
+        address: &Address,
         key: &Option<String>,
     ) -> Result<Option<Vec<String>>> {
         let url = match key {

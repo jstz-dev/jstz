@@ -1,5 +1,5 @@
 use jstz_core::BinEncodable;
-use jstz_proto::context::new_account::NewAddress;
+use jstz_proto::context::account::Address;
 use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -82,7 +82,7 @@ fn read_transfer(
             if is_valid_native_deposit(rt, &ticket, ticketer) {
                 let amount = ticket.amount().to_u64()?;
                 let address = tez_ticket.0 .0.to_b58check();
-                let receiver = NewAddress::from_base58(&address).ok()?;
+                let receiver = Address::from_base58(&address).ok()?;
                 let content = Deposit {
                     inbox_id,
                     amount,
@@ -195,7 +195,7 @@ mod test {
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_mock::message::native_deposit::MockNativeDeposit;
     use jstz_mock::{host::JstzMockHost, message::fa_deposit::MockFaDeposit};
-    use jstz_proto::context::new_account::{Addressable, NewAddress};
+    use jstz_proto::context::account::{Address, Addressable};
     use jstz_proto::operation::external;
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
     use tezos_smart_rollup::types::SmartRollupAddress;
@@ -299,8 +299,8 @@ mod test {
                 ),
                 proxy_smart_function.map(|p| {
                     match p {
-                        NewAddress::User(_) => panic!("Unexpected proxy"),
-                        NewAddress::SmartFunction(sfh) => sfh,
+                        Address::User(_) => panic!("Unexpected proxy"),
+                        Address::SmartFunction(sfh) => sfh,
                     }
                 })
             );

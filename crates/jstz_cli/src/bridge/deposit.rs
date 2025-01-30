@@ -1,4 +1,4 @@
-use jstz_proto::context::new_account::Addressable;
+use jstz_proto::context::account::Addressable;
 use log::{debug, info};
 
 use crate::{

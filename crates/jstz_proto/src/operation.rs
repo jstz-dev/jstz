@@ -1,5 +1,5 @@
 use crate::{
-    context::new_account::{Account, Amount, NewAddress, Nonce, ParsedCode},
+    context::account::{Account, Address, Amount, Nonce, ParsedCode},
     Error, Result,
 };
 use bincode::{Decode, Encode};
@@ -175,7 +175,7 @@ pub mod external {
         // Amount to deposit
         pub amount: Amount,
         // Receiver address
-        pub receiver: NewAddress,
+        pub receiver: Address,
     }
 
     #[derive(Debug, PartialEq, Eq)]
@@ -186,9 +186,9 @@ pub mod external {
         // Amount to deposit
         pub amount: Amount,
         // Final deposit receiver address
-        pub receiver: NewAddress,
+        pub receiver: Address,
         // Optional proxy contract
-        pub proxy_smart_function: Option<NewAddress>,
+        pub proxy_smart_function: Option<Address>,
         // Ticket hash
         pub ticket_hash: TicketHash,
     }
@@ -241,7 +241,7 @@ pub mod openapi {
 #[cfg(test)]
 mod test {
     use super::{DeployFunction, RunFunction};
-    use crate::{context::new_account::ParsedCode, operation::Content};
+    use crate::{context::account::ParsedCode, operation::Content};
     use http::{HeaderMap, Method, Uri};
     use jstz_core::BinEncodable;
     use serde_json::json;

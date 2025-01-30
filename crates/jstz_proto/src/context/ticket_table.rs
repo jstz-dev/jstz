@@ -6,7 +6,7 @@ use tezos_smart_rollup::{
     storage::path::{self, OwnedPath, RefPath},
 };
 
-use super::new_account::{Addressable, Amount};
+use super::account::{Addressable, Amount};
 
 use crate::error::Result;
 
@@ -101,7 +101,7 @@ impl TicketTable {
 
 #[cfg(test)]
 mod test {
-    use crate::context::new_account::NewAddress;
+    use crate::context::account::Address;
 
     use super::*;
     use jstz_core::kv::Transaction;
@@ -112,15 +112,15 @@ mod test {
     use jstz_mock::host::JstzMockHost;
     use tezos_smart_rollup_mock::MockHost;
 
-    fn user_address() -> NewAddress {
-        NewAddress::User(
+    fn user_address() -> Address {
+        Address::User(
             PublicKeyHash::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx")
                 .expect("Could not parse pkh"),
         )
     }
 
-    fn smart_function_address() -> NewAddress {
-        NewAddress::SmartFunction(
+    fn smart_function_address() -> Address {
+        Address::SmartFunction(
             SmartFunctionHash::from_base58("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
                 .expect("Could not parse smart function hash"),
         )

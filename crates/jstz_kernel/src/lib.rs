@@ -66,8 +66,8 @@ mod test {
         message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
     };
     use jstz_proto::context::{
-        new_account::NewAddress,
-        new_account::{Account, ParsedCode},
+        account::Address,
+        account::{Account, ParsedCode},
         ticket_table::TicketTable,
     };
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
@@ -95,7 +95,7 @@ mod test {
                 let amount = Account::balance(
                     host.rt(),
                     tx,
-                    &NewAddress::User(jstz_crypto::public_key_hash::PublicKeyHash::Tz1(
+                    &Address::User(jstz_crypto::public_key_hash::PublicKeyHash::Tz1(
                         tz1.into(),
                     )),
                 )
@@ -118,7 +118,7 @@ mod test {
         let proxy = crate::executor::smart_function::Script::deploy(
             host.rt(),
             tx,
-            &NewAddress::User(
+            &Address::User(
                 jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
                     .unwrap(),
             ),
@@ -142,7 +142,7 @@ mod test {
                 let proxy_balance = TicketTable::get_balance(
                     host.rt(),
                     tx,
-                    &NewAddress::SmartFunction(proxy),
+                    &Address::SmartFunction(proxy),
                     &ticket_hash,
                 )
                 .unwrap();
@@ -173,7 +173,7 @@ mod test {
                 let proxy_balance = TicketTable::get_balance(
                     host.rt(),
                     &mut tx,
-                    &NewAddress::SmartFunction(proxy),
+                    &Address::SmartFunction(proxy),
                     &ticket_hash,
                 )
                 .unwrap();

@@ -15,7 +15,7 @@ use jstz_core::{
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 
 use crate::{
-    context::new_account::{Account, Amount, NewAddress},
+    context::account::{Account, Address, Amount},
     error::Result,
 };
 
@@ -42,7 +42,7 @@ impl Ledger {
     fn balance(
         rt: &impl HostRuntime,
         tx: &mut Transaction,
-        addr: &NewAddress,
+        addr: &Address,
     ) -> Result<u64> {
         let balance = Account::balance(rt, tx, addr)?;
 
@@ -53,7 +53,7 @@ impl Ledger {
         &self,
         rt: &impl HostRuntime,
         tx: &mut Transaction,
-        dst: &NewAddress,
+        dst: &Address,
         amount: Amount,
     ) -> Result<()> {
         Account::transfer(rt, tx, &self.address, dst, amount)?;
@@ -66,7 +66,7 @@ pub struct LedgerApi {
     pub address: SmartFunctionHash,
 }
 
-pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<NewAddress> {
+pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<Address> {
     let pkh_string = value
         .as_string()
         .ok_or_else(|| {
@@ -75,7 +75,7 @@ pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<NewAddress> {
         })
         .map(JsString::to_std_string_escaped)?;
 
-    NewAddress::from_base58(&pkh_string)
+    Address::from_base58(&pkh_string)
 }
 
 impl Ledger {
