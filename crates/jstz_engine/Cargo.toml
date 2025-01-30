@@ -17,3 +17,4 @@ anyhow.workspace = true
 bitflags.workspace = true
 indoc.workspace = true
 mozjs.workspace = true
+derive_more.workspace = true

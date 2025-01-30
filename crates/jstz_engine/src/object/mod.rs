@@ -4,16 +4,17 @@ use indoc::indoc;
 use mozjs::{
     jsapi::{
         jsid, GetPropertyKeys, JSObject, JS_DefinePropertyById2, JS_DeletePropertyById,
-        JS_GetPropertyById, JS_HasOwnPropertyById, JS_HasPropertyById, JS_NewPlainObject,
-        JS_SetPropertyById,
+        JS_GetPropertyById, JS_HasOwnPropertyById, JS_HasPropertyById, JS_IndexToId,
+        JS_NewPlainObject, JS_SetPropertyById, JS,
     },
     rust::IdVector,
 };
 
 use crate::{
+    array::ArrayIndex,
     context::{CanAccess, CanAlloc, Context, InCompartment},
     gc::{
-        ptr::{AsRawHandle, AsRawPtr, GcPtr},
+        ptr::{AsRawHandle, AsRawHandleMut, AsRawPtr, GcPtr},
         Compartment,
     },
     gcptr_wrapper, letroot,
@@ -328,6 +329,20 @@ impl<'a, C: Compartment> Iterator for ObjectKeysIterator<'a, C> {
             Some(unsafe { PropertyKey::from_raw(raw_key) })
         } else {
             None
+        }
+    }
+}
+
+impl IntoPropertyKey for ArrayIndex {
+    fn into_key<C: Compartment, S>(self, cx: &mut Context<S>) -> Option<PropertyKey<C>>
+    where
+        S: InCompartment<C> + CanAlloc,
+    {
+        unsafe {
+            let raw_id = JS::PropertyKey { asBits_: 0 };
+            letroot!(rooted_id = PropertyKey::from_raw(raw_id); [cx]);
+            JS_IndexToId(cx.as_raw_ptr(), *self, rooted_id.as_raw_handle_mut());
+            Some(rooted_id.into_inner(cx))
         }
     }
 }
