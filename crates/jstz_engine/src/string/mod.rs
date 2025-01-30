@@ -14,7 +14,7 @@ use crate::{
     gcptr_wrapper, letroot,
 };
 
-mod str;
+pub mod str;
 
 use str::{JsStr, JsStrVariant};
 

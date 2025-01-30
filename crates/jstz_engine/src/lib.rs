@@ -1,3 +1,4 @@
+mod array;
 mod bigint;
 mod context;
 mod gc;
