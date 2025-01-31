@@ -54,7 +54,7 @@ pub struct DeployFunctionReceipt {
     pub address: SmartFunctionHash,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
 pub struct RunFunctionReceipt {
     #[schema(schema_with = crate::operation::openapi::http_body_schema)]
     pub body: HttpBody,
