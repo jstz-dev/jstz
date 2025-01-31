@@ -29,7 +29,7 @@ use url::Url;
 
 use super::{
     body::{Body, BodyWithType, HttpBody},
-    header::{Headers, HeadersClass},
+    header::{Header, Headers, HeadersClass},
 };
 
 pub enum RequestInfo {
@@ -78,6 +78,10 @@ impl Request {
             headers,
             url,
         })
+    }
+
+    pub fn header(&self, key: &str) -> JsResult<Header> {
+        self.headers().deref().get(key)
     }
 }
 
