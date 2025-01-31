@@ -29,7 +29,7 @@ use url::Url;
 
 use super::{
     body::{Body, BodyWithType, HttpBody},
-    header::{Headers, HeadersClass},
+    header::{Header, Headers, HeadersClass},
 };
 
 pub enum RequestInfo {
@@ -78,6 +78,10 @@ impl Request {
             headers,
             url,
         })
+    }
+
+    pub fn extract_header(&self, key: &str) -> JsResult<Header> {
+        self.headers().deref().get(key)
     }
 }
 
@@ -232,10 +236,10 @@ impl Request {
 
         // 1. Let `headers` be a copy of `this`'s headers and its associated header list.
         // 2. If `init["headers"]` exists, then set `headers` to `init["headers"]`.
-        // 3. Empty `this`’s headers’s header list.
+        // 3. Empty `this`'s headers's header list.
         // 4. If `headers` is a Headers object, then
-        //    for each `header` of its header list, append header to this’s headers.
-        // 5. Otherwise, fill this’s headers with headers.
+        //    for each `header` of its header list, append header to this's headers.
+        // 5. Otherwise, fill this's headers with headers.
         //
         // Note: This is equivalent to the `into_headers()` function
         //       and setting the headers object of `request`.
