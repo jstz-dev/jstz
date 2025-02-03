@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use boa_engine::{
     js_string,
     object::{builtins::JsPromise, ErasedObject, ObjectInitializer},
@@ -64,7 +62,7 @@ impl SmartFunction {
 
     fn create(
         &self,
-        hrt: &impl HostRuntime,
+        hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         function_code: ParsedCode,
         initial_balance: Amount,
@@ -191,12 +189,7 @@ impl SmartFunctionApi {
         let promise = JsPromise::new(
             move |resolvers, context| {
                 let address = runtime::with_js_hrt_and_tx(|hrt, tx| {
-                    smart_function.create(
-                        hrt.deref(),
-                        tx,
-                        parsed_code,
-                        initial_balance as Amount,
-                    )
+                    smart_function.create(hrt, tx, parsed_code, initial_balance as Amount)
                 })?;
 
                 resolvers.resolve.call(
@@ -463,7 +456,7 @@ mod test {
                     else {{
                         return Response.error();
                     }}
-                    
+
                 }}
             "#,
         );

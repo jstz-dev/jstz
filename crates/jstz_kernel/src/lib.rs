@@ -115,13 +115,15 @@ mod test {
         let parsed_code =
             ParsedCode::try_from(jstz_mock::host::MOCK_PROXY_FUNCTION.to_string())
                 .unwrap();
+        let addr = Address::User(
+            jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
+                .unwrap(),
+        );
+        Account::set_balance(host.rt(), tx, &addr, 200).unwrap();
         let proxy = crate::executor::smart_function::Script::deploy(
             host.rt(),
             tx,
-            &Address::User(
-                jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
-                    .unwrap(),
-            ),
+            &addr,
             parsed_code,
             100,
         )

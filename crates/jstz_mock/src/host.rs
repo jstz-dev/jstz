@@ -2,6 +2,8 @@ use std::io::empty;
 
 use jstz_core::{host::HostRuntime, kv::Storage};
 
+use crate::message::MockInternalMessage;
+use derive_more::{Deref, DerefMut};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
@@ -12,8 +14,6 @@ use tezos_smart_rollup::{
     storage::path::RefPath,
 };
 use tezos_smart_rollup_mock::{MockHost, TransferMetadata};
-
-use crate::message::MockInternalMessage;
 
 pub const NATIVE_TICKETER: &str = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5";
 pub const MOCK_RECEIVER: &str = "tz1PCXYfph1FQBy1jBEXVAhzgzoBww4vkjC8";
@@ -43,6 +43,7 @@ pub type RollupType = MichelsonOr<
 >;
 
 // Wrapper over Mockhost to simplify setup of mock scenarios
+#[derive(Deref, DerefMut)]
 pub struct JstzMockHost(MockHost);
 
 impl JstzMockHost {
