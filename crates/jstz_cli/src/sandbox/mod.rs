@@ -9,7 +9,7 @@ pub use consts::*;
 use container::*;
 
 const SANDBOX_CONTAINER_NAME: &str = "jstz-sandbox";
-const SANDBOX_IMAGE: &str = "ghcr.io/jstz-dev/jstz/jstzd:0.1.0";
+const SANDBOX_IMAGE: &str = "ghcr.io/jstz-dev/jstz/jstzd:0.1.1-alpha.0";
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
