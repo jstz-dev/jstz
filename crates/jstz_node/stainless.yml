@@ -12,7 +12,7 @@ organization:
 targets:
   node:
     readme_title: Jstz Client
-    package_name: "@jstz-dev/client"
+    package_name: "@jstz-dev/jstz-client"
     production_repo: "jstz-dev/jstz-client"
     publish:
       npm: false

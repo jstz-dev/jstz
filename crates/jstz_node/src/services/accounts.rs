@@ -12,6 +12,7 @@ use jstz_proto::{
     },
 };
 use serde::Deserialize;
+use utoipa::IntoParams;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use super::{
@@ -37,7 +38,7 @@ fn construct_accounts_key(address: &str) -> String {
     format!("{}/{}", ACCOUNTS_PATH_PREFIX, address)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
 struct KvQuery {
     key: Option<String>,
 }
@@ -164,6 +165,7 @@ async fn get_balance(
 /// the empty key path will be used.
 #[utoipa::path(
     get,
+    params(KvQuery),
     path = "/{address}/kv",
     tag = ACCOUNTS_TAG,
     responses(
@@ -193,6 +195,7 @@ async fn get_kv_value(
 /// the empty key path will be used.
 #[utoipa::path(
     get,
+    params(KvQuery),
     path = "/{address}/kv/subkeys",
     tag = ACCOUNTS_TAG,
     responses(
