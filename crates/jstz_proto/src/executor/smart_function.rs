@@ -307,14 +307,13 @@ impl Script {
             result,
             |value, _context| {
                 runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<()> {
-                    let response = Response::try_from_js(value)?;
-
-                    // If status code is 2xx, commit transaction
-                    if response.ok() {
-                        tx.commit(hrt)?;
-                    } else {
-                        tx.rollback()?;
-                    }
+                    match Response::try_from_js(value) {
+                        // commit if the value returned is a response with a 2xx status code
+                        Ok(response) if response.ok() => {
+                            tx.commit(hrt)?;
+                        }
+                        _ => tx.rollback()?,
+                    };
 
                     Ok(())
                 })
