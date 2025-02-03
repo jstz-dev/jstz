@@ -282,11 +282,11 @@ mod test {
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
         let proxy = crate::executor::smart_function::Script::deploy(
-            &host,
+            &mut host,
             &mut tx,
             &source,
             parsed_code,
-            100,
+            0,
         )
         .unwrap();
 
@@ -336,11 +336,11 @@ mod test {
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
         let proxy = crate::executor::smart_function::Script::deploy(
-            &host,
+            &mut host,
             &mut tx,
             &source,
             parsed_code,
-            100,
+            0,
         )
         .unwrap();
 
@@ -391,11 +391,11 @@ mod test {
         "#;
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         let proxy = crate::executor::smart_function::Script::deploy(
-            &host,
+            &mut host,
             &mut tx,
             &source,
             parsed_code,
-            100,
+            0,
         )
         .unwrap();
 

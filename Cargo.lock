@@ -2882,6 +2882,7 @@ dependencies = [
 name = "jstz_mock"
 version = "0.1.0-alpha.0"
 dependencies = [
+ "derive_more",
  "jstz_core",
  "jstz_crypto",
  "tezos-smart-rollup",

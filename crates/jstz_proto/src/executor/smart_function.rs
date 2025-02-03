@@ -232,28 +232,37 @@ impl Script {
 
     /// Deploys a script
     pub fn deploy(
-        hrt: &impl HostRuntime,
+        hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         source: &impl Addressable,
         code: ParsedCode,
         balance: Amount,
     ) -> Result<SmartFunctionHash> {
-        let address = Account::create_smart_function(hrt, tx, source, balance, code);
+        // SAFETY: Smart function creation and sub_balance must be atomic
+        tx.begin();
+        let address = Account::create_smart_function(hrt, tx, source, balance, code)
+            .and_then(|address| {
+                Account::sub_balance(hrt, tx, source, balance)?;
+                Ok(address)
+            });
 
-        if address.is_ok() {
-            debug_msg!(
-                hrt,
-                "[📜] Smart function deployed: {}\n",
-                address.as_ref().unwrap()
-            );
-        } else if let Err(Error::AccountExists) = address {
-            debug_msg!(hrt, "[📜] Smart function was already deployed\n");
-        } else {
-            // Unreachable?
-            debug_msg!(hrt, "[📜] Smart function deployment failed. \n");
+        match address {
+            Ok(address) => {
+                tx.commit(hrt)?;
+                debug_msg!(hrt, "[📜] Smart function deployed: {}\n", address);
+                Ok(address)
+            }
+            Err(err @ Error::AccountExists) => {
+                tx.rollback()?;
+                debug_msg!(hrt, "[📜] Smart function was already deployed\n");
+                Err(err)
+            }
+            Err(err) => {
+                tx.rollback()?;
+                debug_msg!(hrt, "[📜] Smart function deployment failed. \n");
+                Err(err)
+            }
         }
-
-        address
     }
 
     /// Runs the script
@@ -909,7 +918,7 @@ pub mod deploy {
     use crate::{operation, receipt};
 
     pub fn execute(
-        hrt: &impl HostRuntime,
+        hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         source: &impl Addressable,
         deployment: operation::DeployFunction,
