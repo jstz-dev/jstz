@@ -31,7 +31,7 @@ enum Command {
         /// Function code.
         #[arg(value_name = "CODE|PATH", default_value = None, value_hint = clap::ValueHint::FilePath)]
         code: Option<String>,
-        /// Initial balance of the function.
+        /// Initial balance of the function in XTZ.
         #[arg(short, long, default_value_t = 0)]
         balance: u64,
         /// Name (or alias) of the function.
@@ -63,6 +63,9 @@ enum Command {
         /// Flag for logging.
         #[arg(short, long)]
         trace: bool,
+        /// Include response headers in the output
+        #[arg(name = "include", short, long)]
+        include_response_headers: bool,
     },
     /// 🌉 Move XTZ between L1 and jstz with the jstz bridge {n}
     #[command(subcommand)]
@@ -137,7 +140,19 @@ async fn exec(command: Command) -> Result<()> {
             json_data,
             network,
             trace,
-        } => run::exec(url, http_method, gas_limit, json_data, network, trace).await,
+            include_response_headers,
+        } => {
+            run::exec(
+                url,
+                http_method,
+                gas_limit,
+                json_data,
+                network,
+                trace,
+                include_response_headers,
+            )
+            .await
+        }
         Command::Repl { account } => repl::exec(account).await,
         Command::Logs(logs) => logs::exec(logs).await,
         Command::Login { alias } => account::login(alias).await,

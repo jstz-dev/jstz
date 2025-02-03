@@ -11,6 +11,9 @@ use std::{
 
 const JSTZ_ADDRESS_PREFIXES: [&str; 4] = ["tz1", "tz2", "tz3", "KT1"];
 
+// 1 tez = 1,000,000 mutez
+pub const MUTEZ_PER_TEZ: u64 = 1_000_000;
+
 #[derive(Clone, Debug)]
 pub enum AddressOrAlias {
     Address(Address),
