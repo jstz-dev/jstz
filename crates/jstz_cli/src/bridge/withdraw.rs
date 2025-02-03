@@ -33,5 +33,14 @@ pub async fn exec(
     let gas_limit = 10; // TODO: set proper gas limit
     let withdraw = jstz_proto::executor::withdraw::Withdrawal { amount, receiver };
     let json_data = serde_json::to_string(&withdraw)?;
-    run::exec(url, http_method, gas_limit, Some(json_data), network, false).await
+    run::exec(
+        url,
+        http_method,
+        gas_limit,
+        Some(json_data),
+        network,
+        false,
+        false,
+    )
+    .await
 }

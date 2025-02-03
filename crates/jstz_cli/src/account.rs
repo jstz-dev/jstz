@@ -7,6 +7,7 @@ use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_crypto::{keypair_from_passphrase, public_key_hash::PublicKeyHash};
 use log::{debug, info, warn};
 
+use crate::utils::MUTEZ_PER_TEZ;
 use crate::{
     config::{Account, Config, NetworkName, SmartFunction, User},
     error::{bail_user_error, user_error, Result},
@@ -277,9 +278,9 @@ async fn get_balance(
     debug!("resolved `account` -> {:?}", address);
 
     let balance = cfg.jstz_client(&network)?.get_balance(&address).await?;
-    let tez_balance = balance as f64 / u64::pow(10, 6) as f64;
+    let tez_balance = balance as f64 / MUTEZ_PER_TEZ as f64;
 
-    info!("Balance of {} is {}ꜩ", address, tez_balance);
+    info!("{}ꜩ", tez_balance);
 
     Ok(())
 }

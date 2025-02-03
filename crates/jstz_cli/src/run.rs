@@ -9,7 +9,7 @@ use jstz_proto::{
     receipt::{ReceiptContent, ReceiptResult},
 };
 use log::{debug, info};
-use spinners::{Spinner, Spinners};
+use serde_json::Value;
 use tokio::sync::mpsc;
 use url::Url;
 
@@ -64,6 +64,7 @@ pub async fn exec(
     json_data: Option<String>,
     network: Option<NetworkName>,
     trace: bool,
+    include_response_headers: bool,
 ) -> Result<()> {
     // 1. Get the current user (checking if we are logged in)
     let mut cfg = Config::load().await?;
@@ -89,7 +90,7 @@ pub async fn exec(
     let resolved_host = parsed_host.resolve(&cfg)?;
 
     if host != resolved_host.as_str() {
-        info!("Resolved host '{}' to '{}'.", host, resolved_host);
+        debug!("Resolved host '{}' to '{}'.", host, resolved_host);
 
         url_object
             .set_host(Some(&resolved_host.to_string()))
@@ -144,16 +145,10 @@ pub async fn exec(
     debug!("Signed operation: {:?}", signed_op);
 
     // 4. Send message to jstz node
-    println!(
+    debug!(
         "Running function at {} ",
         styles::url(&url_object.to_string())
     );
-
-    let mut spinner = if trace {
-        None
-    } else {
-        Some(Spinner::new(Spinners::BoxBounce2, "".into()))
-    };
 
     if trace {
         if let Host::AddressOrAlias(address_or_alias) = parsed_host {
@@ -179,15 +174,35 @@ pub async fn exec(
         ReceiptResult::Failed(err) => bail_user_error!("{err}"),
     };
 
-    if let Some(spinner) = spinner.as_mut() {
-        spinner.stop_with_symbol(&format!("Status code: {}", status_code));
-    } else {
-        info!("Status code: {}", status_code);
+    if include_response_headers {
+        info!("{}", status_code);
+        for (key, value) in headers.iter() {
+            let header_value = value.to_str();
+            if let Ok(hval) = header_value {
+                info!("{}: {}", key, hval);
+            } else {
+                debug!(
+                    "Failed to parse header\nkey: '{}'\nvalue: {:?} ",
+                    key, value
+                );
+            }
+        }
+        info!("\n")
     }
 
-    info!("Headers: {:?}", headers);
     if let Some(body) = body {
-        info!("Body: {}", String::from_utf8_lossy(&body));
+        let json = serde_json::from_slice::<Value>(&body)
+            .and_then(|s| serde_json::to_string_pretty(&s));
+        if json.is_ok() {
+            info!("{}", json.unwrap());
+        } else {
+            let body = String::from_utf8(body);
+            if body.is_ok() {
+                info!("{}", body.unwrap());
+            } else {
+                info!("{:?}", body);
+            }
+        }
     }
 
     cfg.save()?;

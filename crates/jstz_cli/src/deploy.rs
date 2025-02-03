@@ -11,7 +11,7 @@ use crate::{
     config::{Config, NetworkName, SmartFunction},
     error::{anyhow, bail, bail_user_error, user_error, Result},
     term::styles,
-    utils::read_file_or_input_or_piped,
+    utils::{read_file_or_input_or_piped, MUTEZ_PER_TEZ},
 };
 
 pub async fn exec(
@@ -75,7 +75,7 @@ pub async fn exec(
         nonce,
         content: Content::DeployFunction(DeployFunction {
             function_code: code,
-            account_credit: balance,
+            account_credit: balance * MUTEZ_PER_TEZ,
         }),
     };
 
