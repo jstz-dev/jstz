@@ -4,33 +4,61 @@ const ONE_TEZ = 1000000;
 // Maximum amount of tez a requester can receive
 const MAX_TEZ = 10000;
 
-const getRecievedTez = (requester: Address): number => {
+const getReceivedTez = (requester: Address): number => {
   let receivedTez: number | null = Kv.get(`received/${requester}`);
   receivedTez = receivedTez === null ? 0 : receivedTez;
   console.debug(`Requestor already received ${receivedTez} tez`);
   return receivedTez;
 };
 
-const setRecievedTez = (requester: Address, received: number): void => {
+const setReceivedTez = (requester: Address, received: number): void => {
   Kv.set(`received/${requester}`, received + 1);
+};
+
+const addPoliteMessage = (requester: Address, message: string): void => {
+  let length: number | null = Kv.get(`messages/${requester}/length`);
+  if (length === null) {
+    length = 0;
+  }
+  Kv.set(`messages/${requester}/${length}`, message);
+  Kv.set(`messages/${requester}/length`, length + 1);
+};
+
+const getPoliteMessages = (requester: Address): string[] => {
+  let length: number | null = Kv.get(`messages/${requester}/length`);
+  if (length === null) {
+    return [];
+  } else {
+    let messages: string[] = [];
+    for (let index = 0; index < length; index++) {
+      const message: string | null = Kv.get(`messages/${requester}/${index}`);
+      if (message !== null) messages.push(message);
+    }
+    return messages;
+  }
 };
 
 const handler = async (request: Request): Promise<Response> => {
   // Extract the requester's address and message from the request
   const requester = request.headers.get("Referer") as Address;
+  console.log("After referer");
   const { message } = await request.json();
 
   console.log(`${requester} says: ${message}`);
 
   // Check if the requester is polite, and decline the request if not
   if (!message.toLowerCase().includes("please")) {
-    return new Response("Sorry, I only fulfill polite requests");
+    return new Response(
+      JSON.stringify("Sorry, I only fulfill polite requests"),
+    );
   }
 
   // If the requester already received too much tez, decline the request
-  const recievedTez = getRecievedTez(requester);
+  const recievedTez = getReceivedTez(requester);
   if (recievedTez >= MAX_TEZ) {
-    return new Response("Sorry, you already received too much tez");
+    return new Response(
+      JSON.stringify("Sorry, you already received too much tez"),
+    );
   }
 
   // Process the request and send the 1 tez = 1 million mutez to the requester if you can
@@ -41,12 +69,16 @@ const handler = async (request: Request): Promise<Response> => {
     Ledger.transfer(requester, ONE_TEZ);
   } else {
     return new Response(
-      "Sorry, I don't have enough tez to fulfill your request",
+      JSON.stringify("Sorry, I don't have enough tez to fulfill your request"),
     );
   }
-  setRecievedTez(requester, recievedTez + 1);
 
-  return new Response("Thank you for your polite request. You received 1 tez!");
+  setReceivedTez(requester, recievedTez + 1);
+  addPoliteMessage(requester, message);
+
+  return new Response(
+    JSON.stringify("Thank you for your polite request. You received 1 tez!"),
+  );
 };
 
 export default handler;
