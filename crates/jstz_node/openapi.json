@@ -140,6 +140,17 @@
         "operationId": "get_kv_value",
         "parameters": [
           {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          {
             "name": "address",
             "in": "path",
             "required": true,
@@ -177,6 +188,17 @@
         "description": "Get array of KV subkeys under a given key path for an account. If `key` is not provided,\nthe empty key path will be used.",
         "operationId": "get_kv_subkeys",
         "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
           {
             "name": "address",
             "in": "path",
