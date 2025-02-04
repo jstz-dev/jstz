@@ -228,8 +228,8 @@ $ jstz deploy dist/index.js
 You are not logged in. Please type the account name that you want to log into or create as new: alan
 Logged in to account alan with address tz1N8BsvfrSjGdomFi5V9RwwYLasgD8s4pxF
 
-Smart function deployed by alan at address: KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv
-Run with `jstz run tezos://KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv/ --data <args> --trace`
+Smart function deployed by alan at address: KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw
+Run with `jstz run tezos://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/ --data <args> --trace`
 
 </code>
 </pre>
@@ -259,7 +259,7 @@ Since this is your first deployment, you need to:
 
 Upon successful deployment, your smart function will be assigned a unique `KT1` address, serving as its identifier, similar to an IP address.
 
-In the example above, the smart function was deployed to `KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv`. The smart function will be accessible through a URL of the format `tezos://KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv/`.
+In the example above, the smart function was deployed to `KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw`. The smart function will be accessible through a URL of the format `tezos://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/`.
 
 ### Optional: Funding Accounts
 
@@ -270,7 +270,7 @@ Within the sandbox environment, there are pre-funded
 accounts `bootstrap1` through `bootstrap5` that you can use (for the containerized sandbox, please check the [jstzd](jstzd.md) documentation).
 
 ```sh
-jstz bridge deposit --from bootstrap1 --to KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv --amount 1000 -n dev
+jstz bridge deposit --from bootstrap1 --to KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw --amount 1000 -n dev
 ```
 
 ## 3. Running and debugging your Smart Function
@@ -278,7 +278,7 @@ jstz bridge deposit --from bootstrap1 --to KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv 
 After a successful deployment, you will be able to run the smart function with the provided command to run your smart function similarly to the following:
 
 ```sh
-jstz run tezos://KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv/ --data '{"message":"Please, give me some tez."}' -n dev
+jstz run tezos://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/ --data '{"message":"Please, give me some tez."}' -n dev
 ```
 
 <details>
@@ -324,14 +324,14 @@ To use the cli app, you need to be logged in and provide the `get-tez` smart fun
 
 ```sh
 jstz login <alias>
-node dist/bundle.js KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv
+node dist/bundle.js KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw
 ```
 
 This app has 2 functions - you can request for tez from the get-tez smart contract and inspect the history of your polite requests by issuing the "Show" command
 
 ```sh
 # Example
-$ node dist/bundle.js KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv
+$ node dist/bundle.js KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw
 🤖: Please ask for tez politely. Type "show" to see past messages. Ctrl+C to quit
 Please give me some tez
 🤖: Thank you for your polite request. You received 1 tez!
@@ -362,7 +362,7 @@ import * as jstz_sdk from "jstz_sdk"; // <- signing library
 The signing library is a temporary solution while we build out the secure signing interface. Essentially, it is a wasm program directly compiled from the core Jstz rust code. Although semantically correct, we discourage using this library in production because it involves copying around users' secret key which is not secure.
 :::
 
-Next, the `buildRequest(..)` function contructs a `RunFunction` operation that targets the `tezos://KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv` url.
+Next, the `buildRequest(..)` function contructs a `RunFunction` operation that targets the `tezos://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw` url.
 
 ```typescript
 // line 13
