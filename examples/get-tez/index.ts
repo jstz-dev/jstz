@@ -24,24 +24,9 @@ const addPoliteMessage = (requester: Address, message: string): void => {
   Kv.set(`messages/${requester}/length`, length + 1);
 };
 
-const getPoliteMessages = (requester: Address): string[] => {
-  let length: number | null = Kv.get(`messages/${requester}/length`);
-  if (length === null) {
-    return [];
-  } else {
-    let messages: string[] = [];
-    for (let index = 0; index < length; index++) {
-      const message: string | null = Kv.get(`messages/${requester}/${index}`);
-      if (message !== null) messages.push(message);
-    }
-    return messages;
-  }
-};
-
 const handler = async (request: Request): Promise<Response> => {
   // Extract the requester's address and message from the request
   const requester = request.headers.get("Referer") as Address;
-  console.log("After referer");
   const { message } = await request.json();
 
   console.log(`${requester} says: ${message}`);
