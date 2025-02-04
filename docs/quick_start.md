@@ -2,7 +2,7 @@
 
 This guide will instruct you in writing and deploying your first _smart function_ in under 10 minutes.
 
-It assumes that you have already [installed `jstz`](installation.md) and have a basic familiarity with [JavaScript](https://www.youtube.com/watch?v=lkIFF4maKMU) and have `npm` (`>= 9.6.7`) installed.
+It assumes that you have already [installed `jstz`](installation.md), have a basic familiarity with [JavaScript](https://www.youtube.com/watch?v=lkIFF4maKMU) and have `npm` installed.
 
 ## What is jstz?
 
@@ -42,6 +42,15 @@ const setReceivedTez = (requester: Address, received: number): void => {
   Kv.set(`received/${requester}`, received + 1);
 };
 
+const addPoliteMessage = (requester: Address, message: string): void => {
+  let length: number | null = Kv.get(`messages/${requester}/length`);
+  if (length === null) {
+    length = 0;
+  }
+  Kv.set(`messages/${requester}/${length}`, message);
+  Kv.set(`messages/${requester}/length`, length + 1);
+};
+
 const handler = async (request: Request): Promise<Response> => {
   // Extract the requester's address and message from the request
   const requester = request.headers.get("Referer") as Address;
@@ -51,13 +60,17 @@ const handler = async (request: Request): Promise<Response> => {
 
   // Check if the requester is polite, and decline the request if not
   if (!message.toLowerCase().includes("please")) {
-    return new Response("Sorry, I only fulfill polite requests");
+    return new Response(
+      JSON.stringify("Sorry, I only fulfill polite requests"),
+    );
   }
 
   // If the requester already received too much tez, decline the request
-  const receivedTez = getReceivedTez(requester);
-  if (receivedTez >= MAX_TEZ) {
-    return new Response("Sorry, you already received too much tez");
+  const recievedTez = getReceivedTez(requester);
+  if (recievedTez >= MAX_TEZ) {
+    return new Response(
+      JSON.stringify("Sorry, you already received too much tez"),
+    );
   }
 
   // Process the request and send the 1 tez = 1 million mutez to the requester if you can
@@ -68,12 +81,16 @@ const handler = async (request: Request): Promise<Response> => {
     Ledger.transfer(requester, ONE_TEZ);
   } else {
     return new Response(
-      "Sorry, I don't have enough tez to fulfill your request",
+      JSON.stringify("Sorry, I don't have enough tez to fulfill your request"),
     );
   }
-  setReceivedTez(requester, receivedTez + 1);
 
-  return new Response("Thank you for your polite request. You received 1 tez!");
+  setReceivedTez(requester, recievedTez + 1);
+  addPoliteMessage(requester, message);
+
+  return new Response(
+    JSON.stringify("Thank you for your polite request. You received 1 tez!"),
+  );
 };
 
 export default handler;
@@ -121,7 +138,7 @@ In addition to several [standard Web APIs](./api/index.md#web-platform-apis), `j
   Smart functions can invoke other smart functions using `fetch`, similar to network requests in JavaScript.
   Additionally, new smart functions can be deployed by a smart function using the [`SmartFunction`](./api/smart_function.md) API.
 
-## 2. Deploying your Smart Function
+## 2. Deploying your Smart Function {#deploying-your-smart-function}
 
 First we must install the dependencies for our smart function and start the local sandbox.
 
@@ -193,7 +210,7 @@ Now, in a new terminal, we can compile our TypeScript code to JavaScript using a
 
 ```sh
 npm run build
-jstz deploy dist/index.js
+jstz deploy dist/index.js -n dev
 ```
 
 <details>
@@ -211,8 +228,8 @@ $ jstz deploy dist/index.js
 You are not logged in. Please type the account name that you want to log into or create as new: alan
 Logged in to account alan with address tz1N8BsvfrSjGdomFi5V9RwwYLasgD8s4pxF
 
-Smart function deployed by alan at address: KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw
-Run with `jstz run tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/ --data <args> --trace`
+Smart function deployed by alan at address: KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv
+Run with `jstz run tezos://KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv/ --data <args> --trace`
 
 </code>
 </pre>
@@ -242,7 +259,7 @@ Since this is your first deployment, you need to:
 
 Upon successful deployment, your smart function will be assigned a unique `KT1` address, serving as its identifier, similar to an IP address.
 
-In the example above, the smart function was deployed to `KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw`. The smart function will be accessible through a URL of the format `tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/`.
+In the example above, the smart function was deployed to `KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv`. The smart function will be accessible through a URL of the format `tezos://KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv/`.
 
 ### Optional: Funding Accounts
 
@@ -253,7 +270,7 @@ Within the sandbox environment, there are pre-funded
 accounts `bootstrap1` through `bootstrap5` that you can use (for the containerized sandbox, please check the [jstzd](jstzd.md) documentation).
 
 ```sh
-jstz bridge deposit --from bootstrap1 --to KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw --amount 10000000
+jstz bridge deposit --from bootstrap1 --to KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv --amount 1000 -n dev
 ```
 
 ## 3. Running and debugging your Smart Function
@@ -261,7 +278,7 @@ jstz bridge deposit --from bootstrap1 --to KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw 
 After a successful deployment, you will be able to run the smart function with the provided command to run your smart function similarly to the following:
 
 ```sh
-jstz run tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/ --data '{"message":"Please, give me some tez."}'
+jstz run tezos://KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv/ --data '{"message":"Please, give me some tez."}' -n dev
 ```
 
 <details>
@@ -270,7 +287,7 @@ Output
 </summary>
 <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
 <code style="color: #FFF;">$jstz run tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/ --data '{"message":"Please, give me some tez."}'
-▐ Running function at tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/ 
+▐ Running function at tezos://KT19mYzcaYk55KttezwP4TbMrGCDpVuPW3Jw/
 Status code: 200 OK
 Headers: {"content-type": "text/plain;charset=UTF-8"}
 Body: Thank you for your polite request. You received 1 tez!
@@ -291,3 +308,132 @@ For debugging, `jstz` provides the following tools:
 ::: tip
 The `--trace` flag for `jstz run` will tail the logs of smart function, akin to the `jstz logs trace` command.
 :::
+
+## 4. Interacting with Smart Functions in NodeJs
+
+We are going to look at an example cli app that uses the jstz client and signer to interact with the `get-tez` contract deployed earlier. To start, build the `show-tez/` example from within the `jstz/examples` folder
+
+```sh
+# git clone https://github.com/jstz-dev/jstz
+cd jstz/examples/show-tez
+npm install
+npm run build
+```
+
+To use the cli app, you need to be logged in and provide the `get-tez` smart function hash deployed in [Deploying your Smart Function](#deploying-your-smart-function)
+
+```sh
+jstz login <alias>
+node dist/bundle.js KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv
+```
+
+This app has 2 functions - you can request for tez from the get-tez smart contract and inspect the history of your polite requests by issuing the "Show" command
+
+```sh
+# Example
+$ node dist/bundle.js KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv
+🤖: Please ask for tez politely. Type "show" to see past messages. Ctrl+C to quit
+Please give me some tez
+🤖: Thank you for your polite request. You received 1 tez!
+I want tez now!
+🤖: Sorry, I only fulfill polite requests
+Ok, sorry, please give me a little more
+🤖: Thank you for your polite request. You received 1 tez!
+Show # <- show history
+[0] Please, give me some tez.
+[1] Please give me some tez
+[2] Ok, sorry, please give me a little more
+```
+
+Let's take a look at how it works. For concision, we will be focusing on the parts that are specific to jstz but feel free to jump into the codebase and take a closer look.
+
+There are 3 jstz specific imports that we need; importing the client lib, the client lib types and the sigining library.
+
+```javascript
+// line 1
+import { Jstz } from "@jstz-dev/jstz-client";
+import JstzType from "@jstz-dev/jstz-client";
+...
+import * as jstz_sdk from "jstz_sdk"; // <- signing library
+
+```
+
+::: warning
+The signing library is a temporary solution while we build out the secure signing interface. Essentially, it is a wasm program directly compiled from the core Jstz rust code. Although semantically correct, we discourage using this library in production because it involves copying around users' secret key which is not secure.
+:::
+
+Next, the `buildRequest(..)` function contructs a `RunFunction` operation that targets the `tezos://KT1SJJxRXXxdiL6c4h4LisgYopyA14JxECXv` url.
+
+```typescript
+// line 13
+function buildRequest(
+  contractAddress: string,
+  message: string,
+): JstzType.Operation.RunFunction {
+  return {
+    _type: "RunFunction",
+    body: Array.from(
+      encoder.encode(
+        JSON.stringify({
+          message: message,
+        }),
+      ),
+    ),
+    gas_limit: 55000,
+    headers: {},
+    method: "GET",
+    uri: `tezos://${contractAddress}`,
+  };
+}
+```
+
+To inject an operation, we always need to
+
+1. Build the operation content (`RunFunction` in this case)
+2. Fetch the account nonce
+3. Construct the `Operation` structure
+4. Sign the `Operation`
+5. Inject and (optionally) poll for the receipt. You can think of the receipt as a response.
+
+```typescript
+// line 87
+const runFunction = buildRequest(contractAddress, input);
+const nonce = await jstzClient.accounts.getNonce(address);
+const operation = {
+  content: runFunction,
+  nonce,
+  source: address,
+};
+const signature = jstz_sdk.sign_operation(operation, secretKey);
+const response = jstzClient.operations.injectAndPoll({
+  inner: operation,
+  public_key: publicKey,
+  signature: signature,
+});
+...
+const {
+  result: {
+    inner: { body },
+  },
+} = await response; // Async so we need to await
+```
+
+To inspect the storage, we can use the kv API. In this case, when the "show" command is issued, we query the current number of messages for the logged in user, then fetch and `console.log` each one in order
+
+```typescript
+if (input.toLocaleLowerCase() === "show") {
+  const length: number = Number.parseInt(
+    await jstzClient.accounts.getKv(contractAddress, {
+      key: `messages/${address}/length`,
+    }),
+  );
+  for (let index = 0; index < length; index++) {
+    const message = await jstzClient.accounts.getKv(contractAddress, {
+      key: `messages/${address}/${index}`,
+    });
+    console.log(`[${index}]`, message);
+  }
+}
+```
+
+And that's it! You are now equipped to battle the evil forces of centralization. Go forth and do jstz 👊!

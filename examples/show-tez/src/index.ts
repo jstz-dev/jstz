@@ -1,11 +1,11 @@
-import { Jstz } from "@zcabter/jstz-client";
-import JstzType from "@zcabter/jstz-client";
+import { Jstz } from "@jstz-dev/jstz-client";
+import JstzType from "@jstz-dev/jstz-client";
 import { readFileSync } from "fs";
 
 import * as readline from "readline";
 import untildify from "untildify";
 
-import * as jstz_sdk from "@jstz-dev/jstz";
+import * as signer from "jstz_sdk";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8");
@@ -69,14 +69,12 @@ async function main() {
       if (input.toLocaleLowerCase() === "show") {
         const length: number = Number.parseInt(
           await jstzClient.accounts.getKv(contractAddress, {
-            query: {
-              key: `messages/${address}/length`,
-            },
+            key: `messages/${address}/length`,
           }),
         );
         for (let index = 0; index < length; index++) {
           const message = await jstzClient.accounts.getKv(contractAddress, {
-            query: { key: `messages/${address}/${index}` },
+            key: `messages/${address}/${index}`,
           });
           console.log(`[${index}]`, message);
         }
@@ -91,7 +89,7 @@ async function main() {
           nonce,
           source: address,
         };
-        const signature = jstz_sdk.sign_operation(operation, secretKey);
+        const signature = signer.sign_operation(operation, secretKey);
         const response = jstzClient.operations.injectAndPoll({
           inner: operation,
           public_key: publicKey,
