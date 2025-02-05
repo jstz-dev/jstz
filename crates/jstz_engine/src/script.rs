@@ -105,7 +105,7 @@ impl<'a, C: Compartment> Script<'a, C> {
     where
         S: InCompartment<C> + CanAlloc,
     {
-        letroot!(script = Script::compile(path, src, cx)?; [cx]);
+        letroot!(script = Script::compile(path, src, cx)?; [cx]); // Script<'cx, C> ~> Script<'b, C> where 'b is the lifetime of the root
 
         script.evaluate(cx)
     }

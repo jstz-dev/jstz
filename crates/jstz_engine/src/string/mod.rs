@@ -35,7 +35,7 @@ gcptr_wrapper!(
 
 impl<'a, C: Compartment> JsString<'a, C> {
     /// Creates a new empty [`JsString`]
-    pub fn new<S>(cx: &'a Context<S>) -> Self
+    pub fn new<S>(cx: &'a mut Context<S>) -> Self
     where
         S: InCompartment<C> + CanAlloc,
     {
@@ -43,7 +43,7 @@ impl<'a, C: Compartment> JsString<'a, C> {
     }
 
     /// Creates a new [`JsString`] from `slice`.
-    pub fn from_slice<S>(slice: JsStr<'_>, cx: &'a Context<S>) -> Self
+    pub fn from_slice<S>(slice: JsStr<'_>, cx: &'a mut Context<S>) -> Self
     where
         S: InCompartment<C> + CanAlloc,
     {
@@ -74,7 +74,7 @@ impl<'a, C: Compartment> JsString<'a, C> {
     }
 
     /// Obtains a slice of a [`JsString`] as a [`JsStr`].
-    pub fn as_str<'cx, S>(&self, cx: &'cx Context<S>) -> JsStr<'cx>
+    pub fn as_str<'cx, S>(&self, cx: &'cx mut Context<S>) -> JsStr<'cx>
     where
         S: InCompartment<C> + CanAccess,
         'cx: 'a,
@@ -129,6 +129,7 @@ impl<'a, C: Compartment> JsString<'a, C> {
     where
         S: InCompartment<C> + CanAlloc,
         'cx: 'a,
+        'cx: 'b,
     {
         // SAFETY: Root both self and other to obtain handles
         //        (since `JS_ConcatStrings` will allocate and maybe GC)
@@ -145,9 +146,9 @@ impl<'a, C: Compartment> JsString<'a, C> {
     }
 
     /// Returns the UTF-16 codepoint at the given character.
-    pub fn code_point_at<'cx, S>(&self, index: usize, cx: &'cx Context<S>) -> u16
+    pub fn code_point_at<'cx, S>(&self, index: usize, cx: &'cx mut Context<S>) -> u16
     where
-        S: InCompartment<C> + CanAccess,
+        S: InCompartment<C> + CanAccess + CanAlloc,
         'cx: 'a,
     {
         unsafe {
@@ -162,7 +163,7 @@ impl<'a, C: Compartment> JsString<'a, C> {
     /// # Notes
     ///
     /// Returns `None` if `search_value` is not null-terminated
-    pub fn contains<S>(&self, search_value: &str, cx: &Context<S>) -> Option<bool>
+    pub fn contains<S>(&self, search_value: &str, cx: &mut Context<S>) -> Option<bool>
     where
         S: InCompartment<C> + CanAccess,
     {
@@ -188,7 +189,7 @@ impl<'a, C: Compartment> JsString<'a, C> {
     }
 
     /// Converts a [`JsString`] to an owned Rust string [`String`].
-    pub fn to_std_string<S>(&self, cx: &Context<S>) -> anyhow::Result<String>
+    pub fn to_std_string<S>(&self, cx: &mut Context<S>) -> anyhow::Result<String>
     where
         S: InCompartment<C> + CanAccess,
     {
