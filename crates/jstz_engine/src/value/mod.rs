@@ -78,7 +78,7 @@ unsafe impl<'a, C: Compartment> Trace for JsValue<'a, C> {
 mod test {
     use mozjs::rust::{JSEngine, Runtime};
 
-    use crate::context::Context;
+    use crate::{alloc_compartment, context::Context};
 
     use super::JsValue;
 
@@ -88,7 +88,8 @@ mod test {
         let engine = JSEngine::init().unwrap();
         let rt = Runtime::new(engine.handle());
         let rt_cx = &mut Context::from_runtime(&rt);
-        let mut cx = rt_cx.new_realm().unwrap();
+        alloc_compartment!(c);
+        let mut cx = rt_cx.new_realm(c).unwrap();
         let val = JsValue::undefined(&mut cx);
         assert!(val.is_undefined())
     }

@@ -29,12 +29,13 @@ use mozjs::{
 };
 
 use crate::{
-    compartment::{self, Compartment},
+    compartment::Compartment,
     gc::{
         ptr::AsRawPtr,
         root::{unsafe_ffi_trace_context_roots, Root, ShadowStack},
         Trace,
     },
+    letroot,
     realm::Realm,
 };
 
@@ -126,25 +127,14 @@ impl<S> Context<S> {
     }
 
     /// Enter a new realm
-    pub fn new_realm(&mut self) -> Option<Context<Entered<'_, compartment::Ref<'_>, S>>>
+    pub fn new_realm<C>(&mut self, compartment: C) -> Option<Context<Entered<'_, C, S>>>
     where
         S: CanAlloc + CanAccess,
+        C: Compartment,
     {
-        let realm = Realm::new(self)?;
+        letroot!(realm = Realm::new(compartment, self)?; [self]);
 
-        // SAFETY:
-        // We transmute the lifetime of the realm. This is equivalent to rooting the realm.
-        // This safe because entering the realm immediately roots the realm.
-        //
-        // Unfortunately we cannot truly root the realm (using [`letroot!`]) since
-        // the lifetime of the realm is bound to the lifetime of [`self`]. This is
-        // a unique case where our approach to static rooting fails.
-        unsafe {
-            let rooted_realm: Realm<'_, compartment::Ref<'_>> =
-                std::mem::transmute(realm);
-
-            Some(self.enter_realm(&rooted_realm))
-        }
+        Some(self.enter_realm(&realm))
     }
 
     /// Creates a new root
@@ -188,7 +178,7 @@ mod test {
         rust::{JSEngine, Runtime},
     };
 
-    use crate::gc::ptr::AsRawPtr;
+    use crate::{alloc_compartment, gc::ptr::AsRawPtr};
 
     use super::Context;
 
@@ -210,12 +200,14 @@ mod test {
         let cx = &mut Context::from_runtime(&rt);
 
         // Enter a new realm to evaluate the script in.
-        let mut cx1 = cx.new_realm().unwrap();
+        alloc_compartment!(c1);
+        let mut cx1 = cx.new_realm(c1).unwrap();
         let ptr = unsafe { cx1.as_raw_ptr() };
         let global1 = unsafe { JS::CurrentGlobalOrNull(cx1.as_raw_ptr()) };
         assert_eq!(global1, unsafe { JS::CurrentGlobalOrNull(ptr) });
 
-        let cx2 = cx1.new_realm().unwrap();
+        alloc_compartment!(c2);
+        let cx2 = cx1.new_realm(c2).unwrap();
         let global2 = unsafe { JS::CurrentGlobalOrNull(cx2.as_raw_ptr()) };
         assert_ne!(global1, global2);
         assert_eq!(global2, unsafe { JS::CurrentGlobalOrNull(ptr) });
