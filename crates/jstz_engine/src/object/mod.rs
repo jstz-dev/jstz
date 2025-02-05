@@ -63,17 +63,17 @@ impl<'a, C: Compartment> JsObject<'a, C> {
     ) -> Option<JsValue<'cx, C>>
     where
         'cx: 'a,
-        S: InCompartment<C> + CanAlloc,
+        S: InCompartment<C> + CanAlloc + CanAccess,
         K: IntoPropertyKey,
     {
-        letroot!(rooted_self = self.clone(); [cx]);
+        let self_handle = self.handle(cx);
         letroot!(pkey = key.into_key(cx)?; [cx]);
         letroot!(rval = JsValue::undefined(cx); [cx]);
 
         let res = unsafe {
             JS_GetPropertyById(
                 cx.as_raw_ptr(),
-                rooted_self.handle(),
+                self_handle,
                 pkey.handle(),
                 rval.handle_mut(),
             )
@@ -105,20 +105,15 @@ impl<'a, C: Compartment> JsObject<'a, C> {
     where
         'cx: 'a,
         'cx: 'b,
-        S: InCompartment<C> + CanAlloc,
+        S: InCompartment<C> + CanAlloc + CanAccess,
         K: IntoPropertyKey,
     {
-        letroot!(rooted_self = self.clone(); [cx]);
-        letroot!(rooted_value = value.clone(); [cx]);
+        let self_handle = self.handle(cx);
+        let value_handle = value.handle(cx);
         letroot!(pkey = key.into_key(cx)?; [cx]);
 
         Some(unsafe {
-            JS_SetPropertyById(
-                cx.as_raw_ptr(),
-                rooted_self.handle(),
-                pkey.handle(),
-                rooted_value.handle(),
-            )
+            JS_SetPropertyById(cx.as_raw_ptr(), self_handle, pkey.handle(), value_handle)
         })
     }
 
