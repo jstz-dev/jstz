@@ -30,7 +30,7 @@ use mozjs::{
 };
 
 use crate::{
-    compartment::{self, Compartment},
+    compartment::Compartment,
     context::{CanAccess, CanAlloc, Context, InCompartment},
     custom_trace,
     gc::{
@@ -56,8 +56,8 @@ impl<'a, C: Compartment> Clone for Realm<'a, C> {
     }
 }
 
-impl<'a> Realm<'a, compartment::Ref<'a>> {
-    pub fn new<S>(cx: &'a mut Context<S>) -> Option<Self>
+impl<'a, C: Compartment> Realm<'a, C> {
+    pub fn new<S>(_compartment: C, cx: &'a mut Context<S>) -> Option<Self>
     where
         S: CanAlloc + CanAccess,
     {

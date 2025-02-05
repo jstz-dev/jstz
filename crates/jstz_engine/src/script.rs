@@ -139,7 +139,9 @@ mod test {
 
     use mozjs::rust::{JSEngine, Runtime};
 
-    use crate::{context::Context, gc::ptr::AsRawPtr, letroot, script::Script};
+    use crate::{
+        alloc_compartment, context::Context, gc::ptr::AsRawPtr, letroot, script::Script,
+    };
 
     #[test]
     fn test_compile_and_evaluate() {
@@ -149,7 +151,8 @@ mod test {
         let rt_cx = &mut Context::from_runtime(&rt);
 
         // Enter a new realm to evaluate the script in.
-        let mut cx = rt_cx.new_realm().unwrap();
+        alloc_compartment!(c);
+        let mut cx = rt_cx.new_realm(c).unwrap();
 
         // Some example source in a string.
         let filename = PathBuf::from("inline.js");
