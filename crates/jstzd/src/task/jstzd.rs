@@ -1,7 +1,4 @@
-use crate::config::{
-    ACTIVATOR_ACCOUNT_ALIAS, ACTIVATOR_ACCOUNT_SK, ROLLUP_OPERATOR_ACCOUNT_ALIAS,
-    ROLLUP_OPERATOR_ACCOUNT_SK,
-};
+use crate::config::BOOTSTRAP_ACCOUNTS;
 
 use super::{
     child_wrapper::Shared,
@@ -33,14 +30,19 @@ use octez::r#async::{
 };
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
 use serde::{Deserialize, Serialize};
-use std::io::{stdout, Write};
 use std::sync::Arc;
+use std::{
+    collections::HashMap,
+    io::{stdout, Write},
+};
 use tokio::{
     net::TcpListener,
     sync::{oneshot, RwLock},
     task::JoinHandle,
     time::{sleep, Duration},
 };
+
+const ACTIVATOR_ACCOUNT_ALIAS: &str = "bootstrap0";
 
 trait IntoShared {
     fn into_shared(self) -> Shared<Self>;
@@ -128,8 +130,18 @@ impl Task for Jstzd {
         let octez_client = OctezClient::new(config.octez_client_config.clone());
         Self::wait_for_node(&octez_node).await?;
 
-        Self::import_activator(&octez_client).await?;
-        Self::import_rollup_operator(&octez_client).await?;
+        Self::import_accounts(
+            &octez_client,
+            HashMap::from_iter(
+                // cannot use config.protocol_params().bootstrap_accounts() here because
+                // we need secret keys
+                BOOTSTRAP_ACCOUNTS
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, (_, sk))| (format!("bootstrap{i}"), sk)),
+            ),
+        )
+        .await?;
         Self::activate_protocol(&octez_client, &config.protocol_params).await?;
         let baker = OctezBaker::spawn(config.baker_config.clone()).await?;
         Self::wait_for_block_level(&config.octez_node_config.rpc_endpoint, 3).await?;
@@ -200,24 +212,17 @@ impl Jstzd {
         }
     }
 
-    async fn import_activator(octez_client: &OctezClient) -> Result<()> {
-        octez_client
-            .import_secret_key(ACTIVATOR_ACCOUNT_ALIAS, ACTIVATOR_ACCOUNT_SK)
-            .await
-            .context(format!(
-                "Failed to import account '{}'",
-                ACTIVATOR_ACCOUNT_ALIAS
-            ))
-    }
-
-    async fn import_rollup_operator(octez_client: &OctezClient) -> Result<()> {
-        octez_client
-            .import_secret_key(ROLLUP_OPERATOR_ACCOUNT_ALIAS, ROLLUP_OPERATOR_ACCOUNT_SK)
-            .await
-            .context(format!(
-                "Failed to import account '{}'",
-                ROLLUP_OPERATOR_ACCOUNT_ALIAS
-            ))
+    async fn import_accounts(
+        octez_client: &OctezClient,
+        accounts: HashMap<String, &str>,
+    ) -> Result<()> {
+        for (alias, sk) in accounts.iter() {
+            octez_client
+                .import_secret_key(alias, sk)
+                .await
+                .context(format!("Failed to import account '{alias}'"))?;
+        }
+        Ok(())
     }
 
     async fn activate_protocol(
@@ -228,7 +233,7 @@ impl Jstzd {
             .activate_protocol(
                 protocol_params.protocol().hash(),
                 "0",
-                "activator",
+                ACTIVATOR_ACCOUNT_ALIAS,
                 protocol_params.parameter_file().path(),
             )
             .await
