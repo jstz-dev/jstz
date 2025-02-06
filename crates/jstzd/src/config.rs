@@ -26,20 +26,38 @@ use tokio::io::AsyncReadExt;
 
 const DEFAULT_JSTZD_SERVER_PORT: u16 = 54321;
 const DEFAULT_JSTZ_NODE_ENDPOINT: &str = "0.0.0.0:8933";
-const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
 ];
-
-pub(crate) const ACTIVATOR_ACCOUNT_SK: &str =
-    "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6";
-pub(crate) const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
-pub(crate) const ROLLUP_OPERATOR_ACCOUNT_SK: &str =
-    "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
-pub(crate) const ROLLUP_OPERATOR_PK: &str =
-    "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
-pub(crate) const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
+pub(crate) const BOOTSTRAP_ACCOUNTS: [(&str, &str); 6] = [
+    (
+        "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
+        "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6",
+    ),
+    (
+        "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+    ),
+    (
+        "edpktzNbDAUjUk697W7gYg2CRuBQjyPxbEg8dLccYYwKSKvkPvjtV9",
+        "unencrypted:edsk39qAm1fiMjgmPkw1EgQYkMzkJezLNewd7PLNHTkr6w9XA2zdfo",
+    ),
+    (
+        "edpkuTXkJDGcFd5nh6VvMz8phXxU3Bi7h6hqgywNFi1vZTfQNnS1RV",
+        "unencrypted:edsk4ArLQgBTLWG5FJmnGnT689VKoqhXwmDPBuGx3z4cvwU9MmrPZZ",
+    ),
+    (
+        "edpkuFrRoDSEbJYgxRtLx2ps82UdaYc1WwfS9sE11yhauZt5DgCHbU",
+        "unencrypted:edsk2uqQB9AY4FvioK2YMdfmyMrer5R8mGFyuaLLFfSRo8EoyNdht3",
+    ),
+    (
+        "edpkv8EUUH68jmo3f7Um5PezmfGrRF24gnfLpH3sVNwJnV5bVCxL2n",
+        "unencrypted:edsk4QLrcijEffxV31gGdN2HU7UpyJjA8drFoNcmnB28n89YjPNRFm",
+    ),
+];
+pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
+const BOOTSTRAP_ACCOUNT_BALANCE: u64 = 100_000_000_000;
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
@@ -210,10 +228,9 @@ async fn build_protocol_params(
         .iter()
         .map(|v| (*v).to_owned())
         .collect::<Vec<BootstrapAccount>>();
-    for account in [
-        BootstrapAccount::new(ROLLUP_OPERATOR_PK, 60_000_000_000).unwrap(),
-        BootstrapAccount::new(ACTIVATOR_PK, 40_000_000_000).unwrap(),
-    ] {
+    for account in BOOTSTRAP_ACCOUNTS
+        .map(|(pk, _)| BootstrapAccount::new(pk, BOOTSTRAP_ACCOUNT_BALANCE).unwrap())
+    {
         accounts.push(account);
     }
 
@@ -238,6 +255,7 @@ async fn build_protocol_params(
 mod tests {
     use std::{io::Read, io::Write, path::PathBuf, str::FromStr};
 
+    use super::{jstz_rollup_path, Config, JSTZ_ROLLUP_ADDRESS};
     use http::Uri;
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
@@ -256,9 +274,7 @@ mod tests {
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tokio::io::AsyncReadExt;
 
-    use super::{jstz_rollup_path, ACTIVATOR_PK, JSTZ_ROLLUP_ADDRESS};
-
-    use super::Config;
+    const ACCOUNT_PUBLIC_KEY: &str = super::BOOTSTRAP_ACCOUNTS[0].0;
 
     async fn read_param_file(path: &PathBuf) -> serde_json::Value {
         let mut buf = String::new();
@@ -471,9 +487,11 @@ mod tests {
         let baker_builder = OctezBakerConfigBuilder::new().set_log_file(&log_file);
         let protocol_params = ProtocolParameterBuilder::new()
             .set_protocol(Protocol::ParisC)
-            .set_bootstrap_accounts([
-                BootstrapAccount::new(ACTIVATOR_PK, 40_000_000_000).unwrap()
-            ])
+            .set_bootstrap_accounts([BootstrapAccount::new(
+                ACCOUNT_PUBLIC_KEY,
+                40_000_000_000,
+            )
+            .unwrap()])
             .build()
             .unwrap();
         let baker_config = super::populate_baker_config(
@@ -560,7 +578,7 @@ mod tests {
         assert_eq!(contracts.len(), 2);
 
         let accounts = read_bootstrap_accounts_from_param_file(&config_path).await;
-        assert_eq!(accounts.len(), 3);
+        assert_eq!(accounts.len(), 7);
 
         assert_eq!(
             config.octez_rollup_config().address.to_base58_check(),
@@ -607,19 +625,21 @@ mod tests {
             .unwrap()
             .as_array()
             .unwrap();
-        assert_eq!(accounts.len(), 2);
+        assert_eq!(accounts.len(), 6);
 
         let bootstrap_accounts = accounts
             .iter()
             .map(|acc| serde_json::from_value::<BootstrapAccount>(acc.clone()).unwrap())
             .collect::<Vec<_>>();
 
-        assert!(bootstrap_accounts.contains(
-            &BootstrapAccount::new(super::ACTIVATOR_PK, 40_000_000_000).unwrap()
-        ));
-        assert!(bootstrap_accounts.contains(
-            &BootstrapAccount::new(super::ROLLUP_OPERATOR_PK, 60_000_000_000).unwrap()
-        ));
+        for (pk, _) in super::BOOTSTRAP_ACCOUNTS {
+            assert!(
+                bootstrap_accounts.contains(
+                    &BootstrapAccount::new(pk, super::BOOTSTRAP_ACCOUNT_BALANCE).unwrap()
+                ),
+                "account {pk} not found in bootstrap accounts"
+            );
+        }
     }
 
     #[tokio::test]
@@ -672,7 +692,7 @@ mod tests {
     async fn build_protocol_params() {
         let mut builder = ProtocolParameterBuilder::new();
         builder.set_bootstrap_accounts([BootstrapAccount::new(
-            super::ACTIVATOR_PK,
+            ACCOUNT_PUBLIC_KEY,
             40_000_000_000,
         )
         .unwrap()]);
@@ -702,7 +722,7 @@ mod tests {
         let mut builder = ProtocolParameterBuilder::new();
         builder
             .set_bootstrap_accounts([BootstrapAccount::new(
-                super::ACTIVATOR_PK,
+                ACCOUNT_PUBLIC_KEY,
                 40_000_000_000,
             )
             .unwrap()])
