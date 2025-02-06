@@ -17,7 +17,7 @@ use std::{fmt::Debug, hash::Hash, marker::PhantomData};
 ///
 /// The lifetime of the compartment id is guaranteed to be unique among all
 /// other compartments. This will ensure that when creating a compartment,
-/// a different compartment will produce a new lifetime that cannot be unified
+/// a different compartment will produce a new lifetime that cannot be coerced
 /// with an existing compartment.
 ///
 /// `Id` is [invariant](https://doc.rust-lang.org/nomicon/subtyping.html#variance) over the
@@ -54,12 +54,16 @@ impl<'a> Drop for Region<'a> {
     #[inline(always)]
     fn drop(&mut self) {
         // Purposefully blank -- this ensures `Region` has drop glue, ensuring this is dropped at
-        // the end of the scope. Importantly, this ensures the compiler considers `'a` live at the
-        // point this region is dropped.
+        // the end of the scope. Without it it, the compiler will optimize region away as it contains
+        // only PhamtomData, consequently ignoring the lifetime check. Importantly, this ensures the
+        // compiler considers `'a` live at the point this region is dropped.
     }
 }
 
 impl<'a> Region<'a> {
+    /// # Safety
+    ///
+    /// DO NOT USE. Used by [`alloc_compartment!`].
     pub unsafe fn new(_: &'a Id<'a>) -> Self {
         Self(PhantomData)
     }
@@ -78,6 +82,9 @@ pub struct Ref<'a>(Id<'a>);
 impl<'a> Compartment for Ref<'a> {}
 
 impl<'a> Ref<'a> {
+    /// # Safety
+    ///
+    /// DO NOT USE. Used by [`alloc_compartment!`].
     pub unsafe fn new(id: Id<'a>) -> Self {
         Self(id)
     }

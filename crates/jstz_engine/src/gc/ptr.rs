@@ -21,6 +21,10 @@ pub trait AsRawPtr {
     type Ptr;
 
     /// Get the raw pointer to the underlying object.
+    ///
+    /// # Safety
+    ///
+    /// Callers are responsible for handling the raw pointer safely
     unsafe fn as_raw_ptr(&self) -> Self::Ptr;
 }
 
