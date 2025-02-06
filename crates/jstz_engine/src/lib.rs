@@ -1,9 +1,9 @@
 pub mod compartment;
-pub mod context;
-pub mod gc;
-pub mod realm;
-pub mod script;
-pub mod value;
+mod context;
+mod gc;
+mod realm;
+mod script;
+mod value;
 
 #[cfg(test)]
 mod test {

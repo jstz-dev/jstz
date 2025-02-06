@@ -57,6 +57,10 @@ impl<'a, C: Compartment> Clone for Realm<'a, C> {
 }
 
 impl<'a, C: Compartment> Realm<'a, C> {
+    // Creates a new Realm in compartment C in the context of cx.
+    // The unused [_compartment] argument is potentially a witness for the lifetime
+    // of Self in C because C can be Ref<'b>. If so, then the returned Realm will be
+    // bounded by two lifetimes - the lifetime of cx ('a) and of _compartment ('b)
     pub fn new<S>(_compartment: C, cx: &'a mut Context<S>) -> Option<Self>
     where
         S: CanAlloc + CanAccess,
