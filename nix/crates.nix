@@ -160,7 +160,7 @@ in {
         # Use nextest for test harness (instead of `cargo test`)
         cargoLlvmCovCommand = "nextest";
         # Generate coverage reports for codecov
-        cargoLlvmCovExtraArgs = "--workspace --exclude-from-test \"jstz_api\" --codecov --output-path $out --features \"skip-rollup-tests\" --config-file ${src}/.config/nextest.toml";
+        cargoLlvmCovExtraArgs = "--codecov --output-path $out --features \"skip-rollup-tests\" --features \"skip-wpt\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-clippy = craneLib.cargoClippy (commonWorkspace
