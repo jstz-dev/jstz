@@ -4,7 +4,7 @@ use anyhow::Result;
 use boa_engine::{
     js_string, object::FunctionObjectBuilder, property::PropertyDescriptor,
     value::TryFromJs, Context, JsArgs, JsData, JsNativeError, JsObject, JsResult,
-    JsValue, NativeFunction, Source,
+    JsString, JsValue, NativeFunction, Source,
 };
 use boa_gc::{Finalize, Trace};
 use derive_more::{From, Into};
@@ -60,9 +60,12 @@ impl_try_from_js_for_enum!(TestStatus);
 /// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html#Test
 #[derive(Debug, TryFromJs)]
 pub struct TestResult {
-    pub name: String,
+    // Cannot rely on TryFromJs to convert JsString to String because TryFromJs<String> does not
+    // handle utf-16 characters nicely and there are some utf-16 characters in some tests.
+    // We therefore need to get JsString first and do the proper conversion.
+    pub name: JsString,
     pub status: TestStatus,
-    pub message: Option<String>,
+    pub message: Option<JsString>,
 }
 
 /// Enum of possible harness statuses
@@ -93,7 +96,7 @@ impl TryFrom<u8> for TestsStatus {
 #[derive(TryFromJs)]
 pub struct TestsResult {
     pub status: TestsStatus,
-    pub message: Option<String>,
+    pub message: Option<JsString>,
 }
 
 /// A report of a test harness run, containing the harness result and all test results
@@ -137,9 +140,10 @@ impl TestHarnessReport {
         } = result;
 
         self.subtests.push(WptSubtest {
-            name,
+            // `to_std_string_escaped` handles utf-16 characters better than `to_std_string`
+            name: name.to_std_string_escaped(),
             status: status.into(),
-            message,
+            message: message.map(|v| v.to_std_string_escaped()),
         });
     }
 }
