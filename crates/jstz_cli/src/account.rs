@@ -133,6 +133,7 @@ pub async fn login(alias: String) -> Result<()> {
 
             let passphrase: String = Input::new()
                 .with_prompt("Enter the passphrase for the new account (or leave empty to generate a random one)")
+                .allow_empty(true)
                 .interact()?;
 
             let passphrase = if passphrase.is_empty() {
