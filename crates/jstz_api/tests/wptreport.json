@@ -4,6 +4,373 @@
       "Folder": {
         "blob": {
           "Folder": {
+            "Blob-array-buffer.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Blob.arrayBuffer()",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.arrayBuffer() empty Blob data",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.arrayBuffer() non-ascii input",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.arrayBuffer() non-unicode input",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.arrayBuffer() concurrent reads",
+                        "status": "Pass",
+                        "message": null
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 5,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "Blob-constructor.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Blob interface object",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob constructor with no arguments",
+                        "status": "Fail",
+                        "message": "assert_equals: expected \"[object Blob]\" but got \"[object Object]\""
+                      },
+                      {
+                        "name": "Blob constructor with no arguments, without 'new'",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob constructor without brackets",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob constructor with undefined as first argument",
+                        "status": "Fail",
+                        "message": "assert_equals: expected \"[object Blob]\" but got \"[object Object]\""
+                      },
+                      {
+                        "name": "Passing non-objects, Dates and RegExps for blobParts should throw a TypeError.",
+                        "status": "Fail",
+                        "message": "assert_throws_js: Should throw for argument null. function \"function () { [native code] }\" did not throw"
+                      },
+                      {
+                        "name": "A plain object with @@iterator should be treated as a sequence for the blobParts argument.",
+                        "status": "Fail",
+                        "message": "object is not an Array"
+                      },
+                      {
+                        "name": "A plain object with custom @@iterator should be treated as a sequence for the blobParts argument.",
+                        "status": "Fail",
+                        "message": "object is not an Array"
+                      },
+                      {
+                        "name": "A plain object with @@iterator and a length property should be treated as a sequence for the blobParts argument.",
+                        "status": "Fail",
+                        "message": "object is not an Array"
+                      },
+                      {
+                        "name": "A String object should be treated as a sequence for the blobParts argument.",
+                        "status": "Fail",
+                        "message": "object is not an Array"
+                      },
+                      {
+                        "name": "A Uint8Array object should be treated as a sequence for the blobParts argument.",
+                        "status": "Fail",
+                        "message": "object is not an Array"
+                      },
+                      {
+                        "name": "The length getter should be invoked and any exceptions should be propagated.",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: function \"function () { [native code] }\" threw object \"TypeError: object is not an Array\" but we expected it to throw object \"[object Object]\""
+                      },
+                      {
+                        "name": "ToUint32 should be applied to the length and any exceptions should be propagated.",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: function \"function () { [native code] }\" threw object \"TypeError: object is not an Array\" but we expected it to throw object \"[object Object]\""
+                      },
+                      {
+                        "name": "Getters and value conversions should happen in order until an exception is thrown.",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: function \"function () { [native code] }\" threw object \"TypeError: object is not an Array\" but we expected it to throw object \"[object Object]\""
+                      },
+                      {
+                        "name": "ToString should be called on elements of the blobParts array and any exceptions should be propagated.",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: Throwing toString function \"function () { [native code] }\" threw object \"TypeError: Failed to convert js value into rust type `Blob`\" but we expected it to throw object \"[object Object]\""
+                      },
+                      {
+                        "name": "Changes to the blobParts array should be reflected in the returned Blob (pop).",
+                        "status": "Fail",
+                        "message": "Failed to convert js value into rust type `Blob`"
+                      },
+                      {
+                        "name": "Changes to the blobParts array should be reflected in the returned Blob (unshift).",
+                        "status": "Fail",
+                        "message": "Failed to convert js value into rust type `Blob`"
+                      },
+                      {
+                        "name": "ToString should be called on elements of the blobParts array.",
+                        "status": "Fail",
+                        "message": "Expected object"
+                      },
+                      {
+                        "name": "ArrayBuffer elements of the blobParts array should be supported.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing typed arrays as elements of the blobParts array should work.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing a Float64Array as element of the blobParts array should work.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing BigInt typed arrays as elements of the blobParts array should work.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing a FrozenArray as the blobParts array should work (FrozenArray<MessagePort>).",
+                        "status": "Fail",
+                        "message": "MessageChannel is not defined"
+                      },
+                      {
+                        "name": "Array with two blobs",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Array with two buffers",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Array with two bufferviews",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Array with mixed types",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "options properties should be accessed in lexicographic order.",
+                        "status": "Fail",
+                        "message": "cannot convert value to a String"
+                      },
+                      {
+                        "name": "Arguments should be evaluated from left to right.",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: function \"function () { [native code] }\" threw object \"TypeError: Failed to convert js value into rust type `Blob`\" but we expected it to throw object \"[object Object]\""
+                      },
+                      {
+                        "name": "Passing null (index 0) for options should use the defaults.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing null (index 0) for options should use the defaults (with newlines).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing undefined (index 1) for options should use the defaults.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing undefined (index 1) for options should use the defaults (with newlines).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing object \"[object Object]\" (index 2) for options should use the defaults.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing object \"[object Object]\" (index 2) for options should use the defaults (with newlines).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing object \"[object Object]\" (index 3) for options should use the defaults.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing object \"[object Object]\" (index 3) for options should use the defaults (with newlines).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing object \"/regex/\" (index 4) for options should use the defaults.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing object \"/regex/\" (index 4) for options should use the defaults (with newlines).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing function \"function () { [native code] }\" (index 5) for options should use the defaults.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing function \"function () { [native code] }\" (index 5) for options should use the defaults (with newlines).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Passing 123 for options should throw",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Passing 123.4 for options should throw",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Passing true for options should throw",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Passing \"abc\" for options should throw",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"a\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"A\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"text/html\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"TEXT/HTML\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"text/plain;charset=utf-8\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"å\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"𐑾\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \" image/gif \"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"\\timage/gif\\t\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"image/gif;\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"İmage/gif\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"ımage/gif\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"image/gif\\0\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"unknown/unknown\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"text/plain\"",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob with type \"image/png\"",
+                        "status": "Pass",
+                        "message": null
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 24,
+                      "failed": 38,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
             "Blob-slice-overflow.any.js": {
               "Test": {
                 "variations": [
@@ -34,6 +401,734 @@
                     "metrics": {
                       "passed": 4,
                       "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "Blob-slice.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "no-argument Blob slice",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "blob1.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "blob2.",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "null type Blob slice",
+                        "status": "Fail",
+                        "message": "assert_equals: expected \"null\" but got \"\""
+                      },
+                      {
+                        "name": "undefined type Blob slice",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "no type Blob slice",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test: slice (0,0).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (0,0).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (0,1).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (0,1).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (0,2).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (0,2).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (0,3).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (0,3).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (0,4).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (0,4).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (0,5).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (0,5).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (0,6).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (0,6).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (0,7).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (0,7).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (0,8).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (0,8).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (1,0).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (1,0).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (1,1).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (1,1).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (1,2).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (1,2).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (1,3).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (1,3).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (1,4).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (1,4).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (1,5).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (1,5).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (1,6).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (1,6).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (1,7).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (1,7).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (2,0).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (2,0).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (2,1).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (2,1).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (2,2).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (2,2).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (2,3).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (2,3).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (3,0).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (3,0).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (3,1).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (3,1).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (3,2).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (3,2).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (3,3).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (3,3).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (3,4).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (3,4).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (3,5).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (3,5).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (4,0).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (4,0).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (4,1).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (4,1).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (4,2).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (4,2).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (4,3).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (4,3).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (4,4).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (4,4).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (5,0).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (5,0).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (5,1).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (5,1).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (5,2).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (5,2).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (5,3).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (5,3).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (6,0).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (6,0).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (6,1).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (6,1).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (6,2).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (6,2).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test (7,0).",
+                        "status": "Fail",
+                        "message": "Expected object"
+                      },
+                      {
+                        "name": "Slicing test (7,1).",
+                        "status": "Fail",
+                        "message": "Expected object"
+                      },
+                      {
+                        "name": "Slicing test (7,2).",
+                        "status": "Fail",
+                        "message": "Expected object"
+                      },
+                      {
+                        "name": "Slicing test (7,3).",
+                        "status": "Fail",
+                        "message": "Expected object"
+                      },
+                      {
+                        "name": "Slicing test: slice (8,0).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (8,0).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (8,1).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (8,1).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (8,2).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (8,2).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slicing test: slice (8,3).",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Slicing test (8,3).",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Slices",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Invalid contentType (\"ÿ\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Invalid contentType (\"te\\txt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Invalid contentType (\"te\\0xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Invalid contentType (\"te\\x1fxt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Invalid contentType (\"text/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te(xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te)xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te<xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te>xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te@xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te,xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te;xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te:xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te\\\\xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te\\\"xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te/xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te[xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te]xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te?xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te=xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te{xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te}xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"te xt/plain\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"TEXT/PLAIN\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"text/plain;charset = UTF-8\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      },
+                      {
+                        "name": "Valid contentType (\"text/plain;charset=UTF-8\")",
+                        "status": "Fail",
+                        "message": "FileReader is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 44,
+                      "failed": 79,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "Blob-stream.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Blob.stream()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "Blob.stream() empty Blob",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "Blob.stream() non-unicode input",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "Blob.stream() garbage collection of blob shouldn't break streamconsumption",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "Reading Blob.stream() with BYOB reader",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 5,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "Blob-text.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Blob.text()",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.text() empty blob data",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.text() multi-element array in constructor",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.text() non-unicode",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.text() different charset param in type option",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.text() different charset param with non-ascii input",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Blob.text() invalid utf-8 input",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: Failed to convert bytes into utf8 text\""
+                      },
+                      {
+                        "name": "Blob.text() concurrent reads",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: Failed to convert bytes into utf8 text\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 6,
+                      "failed": 2,
                       "timed_out": 0
                     }
                   }

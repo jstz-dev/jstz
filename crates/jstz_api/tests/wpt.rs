@@ -360,7 +360,7 @@ async fn test_wpt() -> Result<()> {
         [
             r"^\/encoding\/[^\/]+\.any\.html$",
             r"^\/fetch\/api\/headers\/[^\/]+\.any\.html$",
-            r"^\/FileAPI\/blob\/Blob-slice-overflow.any.html$",
+            r"^\/FileAPI\/blob\/[^\/]+\.any\.html$", // Blob
         ]
         .as_ref(),
     )?;
