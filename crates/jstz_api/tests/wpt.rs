@@ -354,6 +354,7 @@ fn run_wpt_test(
     }
 }
 
+#[cfg_attr(feature = "skip-wpt", ignore)]
 #[tokio::test]
 async fn test_wpt() -> Result<()> {
     let filter = TestFilter::try_from(
