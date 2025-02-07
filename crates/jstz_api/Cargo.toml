@@ -36,3 +36,6 @@ expect-test.workspace = true
 jstz_wpt = { path = "../jstz_wpt" }
 tezos-smart-rollup-mock.workspace = true
 tokio.workspace = true
+
+[features]
+skip-wpt = []
