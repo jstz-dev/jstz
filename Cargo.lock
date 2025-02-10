@@ -910,6 +910,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "crossbeam-utils"
+version = "0.8.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d0a5c400df2834b80a4c3327b3aad3a4c4cd4de0629063962b03235697506a28"
+
+[[package]]
 name = "crossterm"
 version = "0.27.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1907,6 +1913,9 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "hmac"
@@ -2856,6 +2865,7 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "mozjs",
+ "tezos-smart-rollup",
  "trybuild",
 ]
 
@@ -3966,6 +3976,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "quanta"
+version = "0.12.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bd1fe6824cea6538803de3ff1bc0cf3949024db3d43c9643024bfb33a807c0e"
+dependencies = [
+ "crossbeam-utils",
+ "libc",
+ "once_cell",
+ "raw-cpuid",
+ "wasi",
+ "web-sys",
+ "winapi",
+]
+
+[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4100,6 +4125,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d25bf25ec5ae4a3f1b92f929810509a2f53d7dca2f50b794ff57e3face536c8f"
 dependencies = [
  "rand_core 0.6.4",
+]
+
+[[package]]
+name = "raw-cpuid"
+version = "11.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6928fa44c097620b706542d428957635951bade7143269085389d42c8a4927e"
+dependencies = [
+ "bitflags 2.6.0",
 ]
 
 [[package]]
@@ -5127,7 +5161,9 @@ dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
  "tezos-smart-rollup-host",
+ "tezos-smart-rollup-mock",
  "tezos-smart-rollup-panic-hook",
+ "tezos-smart-rollup-utils",
 ]
 
 [[package]]
@@ -5219,6 +5255,22 @@ dependencies = [
  "tezos-smart-rollup-encoding",
  "tezos-smart-rollup-host",
  "thiserror",
+]
+
+[[package]]
+name = "tezos-smart-rollup-utils"
+version = "0.2.2"
+source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+dependencies = [
+ "clap 4.5.20",
+ "hex",
+ "quanta",
+ "serde",
+ "serde_json",
+ "tezos-smart-rollup-encoding",
+ "tezos-smart-rollup-mock",
+ "tezos_crypto_rs 0.6.0",
+ "tezos_data_encoding 0.6.0",
 ]
 
 [[package]]
