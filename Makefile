@@ -60,6 +60,10 @@ build-dev-deps: build-deps
 build-sdk-wasm-pkg:
 	@cd crates/jstz_sdk && wasm-pack build --target bundler --release
 
+.PHONY: build-native-kernel
+build-native-kernel:
+	@cargo build -p jstz_engine --release --features "native-kernel"
+
 .PHONY: test
 test: test-unit test-int
 

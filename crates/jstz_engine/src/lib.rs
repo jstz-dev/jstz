@@ -1,9 +1,38 @@
+use std::path::PathBuf;
+
+use context::Context;
+use gc::ptr::AsRawPtr;
+use mozjs::jsval::JSVal;
+use mozjs::rust::{JSEngineHandle, Runtime};
+use script::Script;
 pub mod compartment;
 mod context;
 mod gc;
 mod realm;
 mod script;
 mod value;
+
+pub fn compile_and_evaluate_script(handle: JSEngineHandle, source: &str) -> JSVal {
+    let rt = Runtime::new(handle);
+    let rt_cx = &mut Context::from_runtime(&rt);
+
+    // Enter a new realm to evaluate the script in.
+    alloc_compartment!(c);
+    let mut cx = rt_cx.new_realm(c).unwrap();
+
+    // Some example source in a string.
+    let filename = PathBuf::from("inline.js");
+
+    // Compile the script
+    letroot!(script = Script::compile(&filename, source, &mut cx).unwrap(); [cx]);
+
+    // Evaluate the script
+    let res = script.evaluate(&mut cx);
+    assert!(res.is_some());
+
+    let rval = res.unwrap();
+    unsafe { rval.as_raw_ptr() }
+}
 
 #[cfg(test)]
 mod test {
