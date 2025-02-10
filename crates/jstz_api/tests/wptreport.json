@@ -5857,6 +5857,182 @@
           }
         }
       }
+    },
+    "streams": {
+      "Folder": {
+        "queuing-strategies.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "CountQueuingStrategy: Can construct a with a valid high water mark",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "CountQueuingStrategy: Constructor behaves as expected with strange arguments",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "CountQueuingStrategy: highWaterMark constructor values are converted per the unrestricted double rules",
+                    "status": "Fail",
+                    "message": "cannot convert value to a f64"
+                  },
+                  {
+                    "name": "CountQueuingStrategy: size is the same function across all instances",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "CountQueuingStrategy: size should have the right name",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "CountQueuingStrategy: subclassing should work correctly",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "CountQueuingStrategy: size should not have a prototype property",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: Can construct a with a valid high water mark",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: Constructor behaves as expected with strange arguments",
+                    "status": "Fail",
+                    "message": "Failed to convert js value into Rust type `CountQueuingStrategy`"
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: highWaterMark constructor values are converted per the unrestricted double rules",
+                    "status": "Fail",
+                    "message": "Failed to convert js value into Rust type `CountQueuingStrategy`"
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: size is the same function across all instances",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: size should have the right name",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: subclassing should work correctly",
+                    "status": "Fail",
+                    "message": "Failed to convert js value into Rust type `CountQueuingStrategy`"
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: size should not have a prototype property",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "CountQueuingStrategy: size should not be a constructor",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: size should not be a constructor",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "CountQueuingStrategy: size should have the right length",
+                    "status": "Fail",
+                    "message": "assert_equals: expected 0 but got 1"
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: size should have the right length",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "CountQueuingStrategy: size behaves as expected with strange arguments",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "ByteLengthQueuingStrategy: size behaves as expected with strange arguments",
+                    "status": "Fail",
+                    "message": "assert_throws_js: size fails with undefined function \"function () { [native code] }\" threw object \"Error: todo: ReturnByteLengthOfChunk.call_without_this()\" (\"Error\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 14,
+                  "failed": 6,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "writable-streams": {
+          "Folder": {
+            "byte-length-queuing-strategy.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Closing a writable stream with in-flight writes below the high water mark delays the close call properly",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "count-queuing-strategy.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Can construct a writable stream with a valid CountQueuingStrategy",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Correctly governs the value of a WritableStream's state property (HWM = 0)",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Correctly governs the value of a WritableStream's state property (HWM = 4)",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 3,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   }
 }

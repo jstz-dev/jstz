@@ -33,7 +33,6 @@ impl TryFromJs for Todo {
     }
 }
 
-#[allow(unused_macros)]
 macro_rules! todo {
     ($msg:literal) => {
         return boa_engine::JsResult::Err(
@@ -43,7 +42,6 @@ macro_rules! todo {
         )
     };
 }
-#[allow(unused_imports)]
 pub(crate) use todo;
 
 #[cfg(test)]
