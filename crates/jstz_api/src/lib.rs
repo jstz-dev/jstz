@@ -12,3 +12,4 @@ pub mod urlpattern;
 
 pub use console::ConsoleApi;
 pub use random::RandomApi;
+pub(crate) use todo::todo;
