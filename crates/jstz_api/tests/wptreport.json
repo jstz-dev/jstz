@@ -8882,6 +8882,961 @@
             ]
           }
         },
+        "readable-byte-streams": {
+          "Folder": {
+            "bad-buffers-and-views.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStream with byte source: enqueuing an already-detached buffer throws",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueuing a zero-length buffer throws",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueuing a zero-length view on a non-zero-length buffer throws",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respond() throws if the BYOB request's buffer has been detached (in the readable state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respond() throws if the BYOB request's buffer has been detached (in the closed state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view's buffer has been detached (in the readable state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view's buffer is zero-length (in the readable state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view is zero-length on a non-zero-length buffer (in the readable state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view has a different offset (in the readable state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view has a different offset (in the closed state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view's buffer has a different length (in the readable state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view's buffer has a different length (autoAllocateChunkSize)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view has a larger length (in the readable state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view's buffer has been detached (in the closed state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view's buffer is zero-length (in the closed state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view is non-zero-length (in the closed state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() throws if the supplied view's buffer has a different length (in the closed state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue() throws if the BYOB request's buffer has been detached (in the readable state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue() throws if the BYOB request's buffer has been detached (in the closed state)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read()ing from a closed stream still transfers the buffer",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read()ing from a stream with queued chunks still transfers the buffer",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: reading into an already-detached buffer rejects",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: reading into a zero-length buffer rejects",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: reading into a zero-length view on a non-zero-length buffer rejects",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 24,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "construct-byob-request.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "enqueue-with-detached-buffer.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "enqueue after detaching byobRequest.view.buffer should throw",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "general.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "getReader({mode: \"byob\"}) throws on non-bytes streams",
+                        "status": "Fail",
+                        "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"Error: todo: \" (\"Error\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "ReadableStream with byte source can be constructed with no errors",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "getReader({mode}) must perform ToString()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: start() throws an exception",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream with byte source: desiredSize when closed",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: desiredSize when errored",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: pull() function is not callable",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Throw if close()-ed more than once",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Throw on enqueue() after close()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: autoAllocateChunkSize cannot be 0",
+                        "status": "Fail",
+                        "message": "assert_throws_js: controller cannot be setup with autoAllocateChunkSize = 0 function \"function () { [native code] }\" threw object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\" (\"Error\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "ReadableStreamBYOBReader can be constructed directly",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStreamBYOBReader constructor requires a ReadableStream argument",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStreamBYOBReader constructor requires an unlocked ReadableStream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStreamBYOBReader constructor requires a ReadableStream with type \"bytes\"",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream constructor should not accept a strategy with a size defined if type is \"bytes\"",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw for size function function \"function () { [native code] }\" threw object \"Error: todo: try_from_js(custom_queuing_strategy)\" (\"Error\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Construct and expect start and pull being called",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: No automatic pull call if start doesn't finish",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Construct with highWaterMark of 0",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: getReader(), then releaseLock()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: getReader() with mode set to byob, then releaseLock()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Test that closing a stream does not release a reader automatically",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Test that closing a stream does not release a BYOB reader automatically",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Test that erroring a stream does not release a reader automatically",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Test that erroring a stream does not release a BYOB reader automatically",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: releaseLock() on ReadableStreamDefaultReader must reject pending read()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: releaseLock() on ReadableStreamBYOBReader must reject pending read()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Automatic pull() after start()",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Automatic pull() after start() and read()",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: autoAllocateChunkSize",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Mix of auto allocate and BYOB",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Automatic pull() after start() and read(view)",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue(), getReader(), then read()",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Push source that doesn't understand pull signal",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue() with Uint16Array, getReader(), then read()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue(), read(view) partially, then read()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: getReader(), enqueue(), close(), then read()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue(), close(), getReader(), then read()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Respond to pull() by enqueue()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Respond to pull() by enqueue() asynchronously",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Respond to multiple pull() by separate enqueue()",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view), then respond()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view), then respondWithNewView() with a transferred ArrayBuffer",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view), then respond() with too big value",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respond(3) to read(view) with 2 element Uint16Array enqueues the 1 byte remainder",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue(), getReader(), then read(view)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue(), getReader(), then cancel() (mode = not BYOB)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue(), getReader(), then cancel() (mode = BYOB)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: getReader(), read(view), then cancel()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: cancel() with partially filled pending pull() request",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue(), getReader(), then read(view) where view.buffer is not fully covered by view",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Multiple enqueue(), getReader(), then read(view)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue(), getReader(), then read(view) with a bigger view",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue(), getReader(), then read(view) with smaller views",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue() 1 byte, getReader(), then read(view) with Uint16Array",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue() 3 byte, getReader(), then read(view) with 2-element Uint16Array",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view) with Uint16Array on close()-d stream with 1 byte enqueue()-d must fail",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: A stream must be errored if close()-d before fulfilling read(view) with Uint16Array",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view), then respond() and close() in pull()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view) with Uint32Array, then fill it by multiple respond() calls",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view) with Uint32Array, then fill it by multiple enqueue() calls",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read() twice, then enqueue() twice",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Multiple read(view), close() and respond()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Multiple read(view), big enqueue()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Multiple read(view) and multiple enqueue()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view) with passing undefined as view must fail",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view) with passing an empty object as view must fail",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Even read(view) with passing ArrayBufferView like object as view must fail",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read() on an errored stream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(), then error()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view) on an errored stream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view), then error()",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Throwing in pull function must error the stream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Throwing in pull in response to read() must be ignored if the stream is errored in it",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Throwing in pull in response to read(view) function must error the stream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: Throwing in pull in response to read(view) must be ignored if the stream is errored in it",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "calling respond() twice on the same byobRequest should throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "calling respondWithNewView() twice on the same byobRequest should throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "calling respond(0) twice on the same byobRequest should throw even when closed",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "calling respond() should throw when canceled",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "pull() resolving should not resolve read()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: default reader + autoAllocateChunkSize + byobRequest interaction",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() with a smaller view",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() with a zero-length view (in the closed state)",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() with a transferred non-zero-length view (in the readable state)",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() with a transferred zero-length view (in the closed state)",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: enqueue() discards auto-allocated BYOB request",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: releaseLock() with pending read(view), read(view) on second reader, respond()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: releaseLock() with pending read(view), read(view) on second reader with 1 element Uint16Array, respond(1)",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: releaseLock() with pending read(view), read(view) on second reader with 2 element Uint8Array, respond(3)",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: releaseLock() with pending read(view), read(view) on second reader, respondWithNewView()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: releaseLock() with pending read(view), read(view) on second reader, enqueue()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: releaseLock() with pending read(view), read(view) on second reader, close(), respond(0)",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: autoAllocateChunkSize, releaseLock() with pending read(), read() on second reader, respond()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: autoAllocateChunkSize, releaseLock() with pending read(), read() on second reader, enqueue()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: autoAllocateChunkSize, releaseLock() with pending read(), read(view) on second reader, respond()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: autoAllocateChunkSize, releaseLock() with pending read(), read(view) on second reader, enqueue()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view) with 1 element Uint16Array, respond(1), releaseLock(), read(view) on second reader with 1 element Uint16Array, respond(1)",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read(view) with 1 element Uint16Array, respond(1), releaseLock(), read() on second reader, enqueue()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: autoAllocateChunkSize, read(), respondWithNewView()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 2,
+                      "failed": 97,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "non-transferable-buffers.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStream with byte source: enqueue() with a non-transferable buffer",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream with byte source: read() with a non-transferable buffer",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream with byte source: respondWithNewView() with a non-transferable buffer",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 3,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "respond-after-enqueue.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "byobRequest.respond() after enqueue() should not crash",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "byobRequest.respond() with cached byobRequest after enqueue() should not crash",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "byobRequest.respond() after enqueue() with double read should not crash",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 3,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "tee.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStream teeing with byte source: rs.tee() returns an array of two ReadableStreams",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableByteStreamControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Running templatedRSTeeCancel with ReadableStream teeing with byte source",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: should be able to read one branch to the end without affecting the other",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: chunks should be cloned for each branch",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: chunks for BYOB requests from branch 1 should be cloned to branch 2",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: errors in the source should propagate to both branches",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: canceling branch1 should not impact branch2",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: canceling branch2 should not impact branch1",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: canceling both branches should aggregate the cancel reasons into an array",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: canceling both branches in reverse order should aggregate the cancel reasons into an array",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: failing to cancel the original stream should cause cancel() to reject on branches",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: erroring a teed stream should properly handle canceled branches",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: closing the original should close the branches",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: erroring the original should immediately error the branches",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: erroring the original should error pending reads from default reader",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: erroring the original should error pending reads from BYOB reader",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: canceling branch1 should finish when branch2 reads until end of stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: canceling branch1 should finish when original stream errors",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: should not pull any chunks if no branches are reading",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: should only pull enough to fill the emptiest queue",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: should not pull when original is already errored",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: stops pulling when original stream errors while branch 1 is reading",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: stops pulling when original stream errors while branch 2 is reading",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: stops pulling when original stream errors while both branches are reading",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: canceling both branches in sequence with delay",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: failing to cancel when canceling both branches in sequence with delay",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: read from branch1 and branch2, cancel branch1, cancel branch2",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: read from branch1 and branch2, cancel branch2, cancel branch1",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: read from branch1 and branch2, cancel branch2, enqueue to branch1",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: read from branch1 and branch2, cancel branch1, respond to branch2",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: pull with BYOB reader, then pull with default reader",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: pull with default reader, then pull with BYOB reader",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: read from branch2, then read from branch1",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: read from branch1 with default reader, then close while branch2 has pending BYOB read",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: read from branch2 with default reader, then close while branch1 has pending BYOB read",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: close when both branches have pending BYOB reads",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: enqueue() and close() while both branches are pulling",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing with byte source: respond() and close() while both branches are pulling",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableByteStreamControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 1,
+                      "failed": 37,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
         "writable-streams": {
           "Folder": {
             "byte-length-queuing-strategy.any.js": {

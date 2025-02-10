@@ -51,7 +51,7 @@ impl TryFromJs for QueuingStrategy {
             JsNativeObject::<ByteLengthQueuingStrategy>::try_from(value.clone())
                 .map(Into::into)
         } else {
-            todo!("try_from_js(custom_queuing_strategy)")
+            crate::todo!("try_from_js(custom_queuing_strategy)");
         }
     }
 }
