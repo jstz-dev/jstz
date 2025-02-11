@@ -365,7 +365,7 @@ impl Script {
     }
 }
 
-const TRANSFER_HEADER_KEY: &str = "X-JSTZ-TRANSFER";
+pub const TRANSFER_HEADER_KEY: &str = "X-JSTZ-TRANSFER";
 
 pub struct HostScript;
 
@@ -495,7 +495,7 @@ impl HostScript {
 
 pub mod run {
 
-    use jstz_core::{runtime::enter_js_host_context, Runtime};
+    use jstz_core::Runtime;
 
     use super::*;
     use crate::{
@@ -503,6 +503,9 @@ pub mod run {
         operation::{self, OperationHash},
         receipt::RunFunctionReceipt,
     };
+
+    /// skips the execution of the smart function for noop requests
+    pub const NOOP_PATH: &str = "/-/noop";
 
     fn create_http_request(
         uri: http::Uri,
@@ -553,7 +556,7 @@ pub mod run {
         // Run :)
         {
             let rt = &mut *rt;
-            enter_js_host_context(hrt, tx, || {
+            runtime::enter_js_host_context(hrt, tx, || {
                 jstz_core::future::block_on(async move {
                     let result = Script::load_init_run(
                         sf_address,
@@ -605,17 +608,17 @@ pub mod run {
 
         // 4. Handle transfer if the header is present (without committing)
         tx.begin();
-        let transfer_result = enter_js_host_context(hrt, tx, || {
+        let transfer_result = runtime::enter_js_host_context(hrt, tx, || {
             HostScript::handle_transfer(&request.deref(), source, &address)
         });
         if let Err(err) = transfer_result {
             tx.rollback()?;
             return Err(err.into());
         }
-
+        let is_noop = request.deref().url().path() == NOOP_PATH;
         // 5. For smart functions, execute the smart function, otherwise commit the transaction
         match address {
-            Address::SmartFunction(sf_address) => {
+            Address::SmartFunction(sf_address) if !is_noop => {
                 // Execute smart function
                 let result = execute_smart_function(
                     hrt,
@@ -635,7 +638,7 @@ pub mod run {
                 }
                 result
             }
-            Address::User(_) => {
+            _ => {
                 tx.commit(hrt)?;
                 Ok(RunFunctionReceipt::default())
             }
@@ -720,6 +723,71 @@ pub mod run {
                 error.to_string(),
                 "EvalError: Transfer failed: InsufficientFunds"
             );
+        }
+
+        #[test]
+        fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
+            let source = Address::User(jstz_mock::account1());
+            // 1. Deploy the smart function
+            let mut jstz_mock_host = JstzMockHost::default();
+            let host = jstz_mock_host.rt();
+            let mut tx = Transaction::default();
+            let initial_balance = 1;
+            tx.begin();
+            Account::add_balance(host, &mut tx, &source, initial_balance)
+                .expect("add balance");
+            let source_balance = Account::balance(host, &mut tx, &source).unwrap();
+            assert_eq!(source_balance, initial_balance);
+            tx.commit(host).unwrap();
+
+            // 1. Deploy the smart function that refunds the balance to the source
+            let code = format!(
+                r#"
+                const handler = async () => {{
+                    await fetch(new Request("tezos://{source}", {{
+                        headers: {{"X-JSTZ-TRANSFER": "{initial_balance}"}}
+                    }}));
+                    return new Response();
+                }};
+                export default handler;
+                "#
+            );
+            let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+            tx.begin();
+            let smart_function =
+                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+            let balance_before =
+                Account::balance(host, &mut tx, &smart_function).unwrap();
+            assert_eq!(balance_before, 0);
+
+            tx.commit(host).unwrap();
+
+            // transfer should happen with `/-/noop` path
+            tx.begin();
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                TRANSFER_HEADER_KEY,
+                initial_balance.to_string().try_into().unwrap(),
+            );
+            let run_function = RunFunction {
+                uri: format!("tezos://{}/-/noop", &smart_function)
+                    .try_into()
+                    .unwrap(),
+                method: Method::GET,
+                headers,
+                body: None,
+                gas_limit: 1000,
+            };
+            let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+            execute(host, &mut tx, &source, run_function.clone(), fake_op_hash)
+                .expect("run function expected");
+            tx.commit(host).unwrap();
+
+            tx.begin();
+            let balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
+            assert_eq!(balance_after - balance_before, initial_balance);
+            assert_eq!(Account::balance(host, &mut tx, &source).unwrap(), 0);
         }
 
         #[test]

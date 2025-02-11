@@ -18,7 +18,7 @@ use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use crate::{
     context::account::{Account, Address, Amount, ParsedCode},
     executor::{
-        smart_function::{headers, HostScript, Script},
+        smart_function::{headers, run::NOOP_PATH, HostScript, Script},
         JSTZ_HOST,
     },
     operation::OperationHash,
@@ -131,8 +131,9 @@ impl SmartFunction {
                     .map(|obj| obj.inner().clone());
                 }
 
+                let is_noop = request_deref.url().path() == NOOP_PATH;
                 match callee_address {
-                    Address::SmartFunction(callee_address) => {
+                    Address::SmartFunction(callee_address) if !is_noop => {
                         // Set the referrer of the request to the current smart function address
                         headers::test_and_set_referrer(&request_deref, self_address)?;
 
@@ -144,8 +145,8 @@ impl SmartFunction {
                             context,
                         )
                     }
-                    Address::User(_) => {
-                        // Return a default response for user addresses
+                    _ => {
+                        // Return a default response if it is a noop request or user addresses
                         let response = Response::new(
                             Default::default(),
                             Default::default(),
@@ -302,6 +303,7 @@ mod test {
     };
     use jstz_mock::host::JstzMockHost;
     use serde_json::json;
+    use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
         context::{
@@ -444,10 +446,128 @@ mod test {
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
         let mut tx = Transaction::default();
-        let initial_balance: u64 = 1_028_230_587 * 1_000_000;
-        let sf_send_amount: u64 = 1;
+        let transfer_amount: u64 = 1;
+
+        let smart_function1 = deploy_transfer_sf_and_execute(
+            source.clone(),
+            host,
+            &mut tx,
+            transfer_amount,
+        );
+        // deploy a new smart function that transfers balance to a smart function address
+        let code2 = format!(
+            r#"
+            const handler = async () => {{
+                const myHeaders = new Headers();
+                myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
+                await fetch(new Request("tezos://{smart_function1}/", {{
+                    headers: myHeaders
+                }}));
+                return new Response();
+            }};
+            export default handler;
+            "#
+        );
+        let parsed_code2 = ParsedCode::try_from(code2.to_string()).unwrap();
         tx.begin();
-        Account::add_balance(host, &mut tx, &source, initial_balance).unwrap();
+        let smart_function2 =
+            Script::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
+                .unwrap();
+
+        // 6. Call the new smart function
+        let run_function = RunFunction {
+            uri: format!("tezos://{}/", &smart_function2).try_into().unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
+        let source_before = Account::balance(host, &mut tx, &source).unwrap();
+        smart_function::run::execute(host, &mut tx, &source, run_function, fake_op_hash2)
+            .unwrap();
+        tx.commit(host).unwrap();
+        tx.begin();
+        let source_after = Account::balance(host, &mut tx, &source).unwrap();
+        // 7. Assert sf2 transferred to sf1
+        assert_eq!(
+            Account::balance(host, &mut tx, &smart_function2).unwrap(),
+            0
+        );
+        assert_eq!(source_after - source_before, transfer_amount);
+    }
+
+    #[test]
+    fn transfer_xtz_from_smart_function_succeeds_with_noop() {
+        let source = Address::User(jstz_mock::account2());
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx: Transaction = Transaction::default();
+        let transfer_amount: u64 = 1;
+        tx.begin();
+        tx.commit(host).unwrap();
+        // deploy and execute smart function that transfers `transfer_amount` to the `source`
+        let smart_function = deploy_transfer_sf_and_execute(
+            source.clone(),
+            host,
+            &mut tx,
+            transfer_amount,
+        );
+
+        // deploy a new smart function that transfers balance to a smart function address
+        // without executing the sf using /-/noop path
+        let code2 = format!(
+            r#"
+            const handler = async () => {{
+                const myHeaders = new Headers();
+                myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
+                await fetch(new Request("tezos://{smart_function}/-/noop", {{
+                    headers: myHeaders
+                }}));
+                return new Response();
+            }};
+            export default handler;
+            "#
+        );
+        let parsed_code2 = ParsedCode::try_from(code2.to_string()).unwrap();
+        tx.begin();
+        let smart_function2 =
+            Script::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
+                .unwrap();
+
+        // calling the smart function2
+        let run_function = RunFunction {
+            uri: format!("tezos://{}/", &smart_function2).try_into().unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
+        let source_before = Account::balance(host, &mut tx, &source).unwrap();
+        let sf2_before = Account::balance(host, &mut tx, &smart_function2).unwrap();
+        smart_function::run::execute(host, &mut tx, &source, run_function, fake_op_hash2)
+            .unwrap();
+        tx.commit(host).unwrap();
+        // the source shouldn't received balance as sf1 isn't executed
+        tx.begin();
+        let source_after = Account::balance(host, &mut tx, &source).unwrap();
+        let sf2_after = Account::balance(host, &mut tx, &smart_function2).unwrap();
+        assert_eq!(source_after, source_before);
+        assert_eq!(sf2_before - sf2_after, transfer_amount);
+    }
+
+    // deploy a smart function that transfers `transfer_amount` to the `source`
+    // and executes it. returns the executed smart function address
+    fn deploy_transfer_sf_and_execute(
+        source: Address,
+        host: &mut MockHost,
+        tx: &mut Transaction,
+        transfer_amount: u64,
+    ) -> SmartFunctionHash {
+        let initial_sf_balance: u64 = 1_028_230_587 * 1_000_000;
+        tx.begin();
+        Account::add_balance(host, tx, &source, initial_sf_balance).unwrap();
         tx.commit(host).unwrap();
 
         // 1. Deploy the smart function that transfers the balance to user address
@@ -455,7 +575,7 @@ mod test {
             r#"
             const handler = async () => {{
                 const myHeaders = new Headers();
-                myHeaders.append("X-JSTZ-TRANSFER", "{sf_send_amount}");
+                myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
                 await fetch(new Request("tezos://{source}", {{
                     headers: myHeaders
                 }}));
@@ -467,11 +587,11 @@ mod test {
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
         let smart_function =
-            Script::deploy(host, &mut tx, &source, parsed_code.clone(), initial_balance)
+            Script::deploy(host, tx, &source, parsed_code.clone(), initial_sf_balance)
                 .unwrap();
 
-        let balance_before = Account::balance(host, &mut tx, &smart_function).unwrap();
-        assert_eq!(balance_before, initial_balance);
+        let balance_before = Account::balance(host, tx, &smart_function).unwrap();
+        assert_eq!(balance_before, initial_sf_balance);
 
         tx.commit(host).unwrap();
 
@@ -487,7 +607,7 @@ mod test {
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
         smart_function::run::execute(
             host,
-            &mut tx,
+            tx,
             &source,
             run_function.clone(),
             fake_op_hash,
@@ -497,49 +617,14 @@ mod test {
 
         // 3. Assert the transfer from the smart function to the user address
         tx.begin();
-        let balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
-        assert_eq!(balance_before - balance_after, sf_send_amount);
-        let received = Account::balance(host, &mut tx, &source).unwrap();
-        assert_eq!(received, sf_send_amount);
-        tx.commit(host).unwrap();
-
-        // 5. deploy a new smart function that transfers balance to a smart function address
-        let code2 = format!(
-            r#"
-            const handler = async () => {{
-                const myHeaders = new Headers();
-                myHeaders.append("X-JSTZ-TRANSFER", "{sf_send_amount}");
-                await fetch(new Request("tezos://{smart_function}", {{
-                    headers: myHeaders
-                }}));
-                return new Response();
-            }};
-            export default handler;
-            "#
-        );
-        let parsed_code2 = ParsedCode::try_from(code2.to_string()).unwrap();
-        tx.begin();
-        let smart_function2 =
-            Script::deploy(host, &mut tx, &source, parsed_code2, sf_send_amount).unwrap();
-
-        // 4. Call the new smart function
-        let run_function = RunFunction {
-            uri: format!("tezos://{}/", &smart_function2).try_into().unwrap(),
-            method: Method::GET,
-            headers: HeaderMap::new(),
-            body: None,
-            gas_limit: 1000,
-        };
-        let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
-        smart_function::run::execute(host, &mut tx, &source, run_function, fake_op_hash2)
-            .unwrap();
-        tx.commit(host).unwrap();
-        tx.begin();
-        // 5. Assert successful transfer
+        let balance_after = Account::balance(host, tx, &smart_function).unwrap();
+        assert_eq!(balance_before - balance_after, transfer_amount);
         assert_eq!(
-            Account::balance(host, &mut tx, &smart_function2).unwrap(),
-            0
+            Account::balance(host, tx, &source).unwrap(),
+            transfer_amount
         );
+        tx.commit(host).unwrap();
+        smart_function
     }
 
     #[test]
