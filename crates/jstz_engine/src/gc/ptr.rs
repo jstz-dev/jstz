@@ -28,6 +28,14 @@ pub trait AsRawPtr {
     unsafe fn as_raw_ptr(&self) -> Self::Ptr;
 }
 
+impl<T: AsRawPtr> AsRawPtr for &T {
+    type Ptr = T::Ptr;
+
+    unsafe fn as_raw_ptr(&self) -> Self::Ptr {
+        (*self).as_raw_ptr()
+    }
+}
+
 pub trait AsRawHandle: AsRawPtr {
     /// Retrieves a SpiderMonkey Rooted Handle to the underlying value.
     ///
@@ -38,6 +46,12 @@ pub trait AsRawHandle: AsRawPtr {
     unsafe fn as_raw_handle(&self) -> Handle<Self::Ptr>;
 }
 
+impl<T: AsRawHandle> AsRawHandle for &T {
+    unsafe fn as_raw_handle(&self) -> Handle<Self::Ptr> {
+        (*self).as_raw_handle()
+    }
+}
+
 pub trait AsRawHandleMut: AsRawHandle {
     /// Retrieves a SpiderMonkey Rooted Handle to the underlying value.
     ///
@@ -46,6 +60,12 @@ pub trait AsRawHandleMut: AsRawHandle {
     /// This is only safe to do on a rooted object (which [`GcPtr`] is not,
     /// it needs to be additionally rooted).
     unsafe fn as_raw_handle_mut(&self) -> HandleMut<Self::Ptr>;
+}
+
+impl<T: AsRawHandleMut> AsRawHandleMut for &T {
+    unsafe fn as_raw_handle_mut(&self) -> HandleMut<Self::Ptr> {
+        (*self).as_raw_handle_mut()
+    }
 }
 
 /// A GC barrier is a mechanism used to ensure that the garbage collector maintains
