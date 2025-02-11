@@ -10,25 +10,54 @@ pub enum Todo {
 
 impl Finalize for Todo {
     fn finalize(&self) {
-        todo!()
+        std::todo!()
     }
 }
 
 #[allow(unused_variables)]
 unsafe impl Trace for Todo {
-    custom_trace!(this, mark, todo!());
+    custom_trace!(this, mark, std::todo!());
 }
 
 #[allow(unused_variables)]
 impl IntoJs for Todo {
     fn into_js(self, context: &mut Context) -> JsValue {
-        todo!()
+        std::todo!()
     }
 }
 
 #[allow(unused_variables)]
 impl TryFromJs for Todo {
     fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
-        todo!()
+        std::todo!()
+    }
+}
+
+#[allow(unused_macros)]
+macro_rules! todo {
+    ($msg:literal) => {
+        return boa_engine::JsResult::Err(
+            boa_engine::JsNativeError::error()
+                .with_message(format!("todo: {}", String::from($msg)))
+                .into(),
+        )
+    };
+}
+#[allow(unused_imports)]
+pub(crate) use todo;
+
+#[cfg(test)]
+mod tests {
+    use boa_engine::{JsNativeError, JsResult};
+
+    #[test]
+    fn todo() {
+        fn test() -> JsResult<()> {
+            super::todo!("foobar");
+        }
+        assert_eq!(
+            test().unwrap_err(),
+            JsNativeError::error().with_message("todo: foobar").into()
+        );
     }
 }
