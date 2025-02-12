@@ -328,6 +328,12 @@ macro_rules! letroot {
 pub unsafe trait Prolong<'a> {
     type Aged;
 
+    /// Extends (or limits) the lifetime of `self`
+    ///
+    /// # Safety
+    ///
+    /// - The caller must ensure that the new lifetime `'a` is valid for the returned value.
+    /// - Misuse can lead to memory corruption or undefined behaviour.
     unsafe fn extend_lifetime(self) -> Self::Aged
     where
         Self: Sized,
