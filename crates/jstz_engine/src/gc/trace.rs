@@ -38,6 +38,12 @@ use super::ptr::GcPtr;
 ///   can result in Undefined Behaviour.
 pub unsafe trait Trace: Finalize {
     /// Marks all contained traceable objects.
+    ///
+    /// # Safety
+    ///
+    /// - The `trc` pointer must be valid.
+    /// - Implementations must ensure that all reachable GC-managed objects are properly marked.
+    /// - Failure to trace all reachable objects may lead to premature deallocation and use-after-free errors.
     unsafe fn trace(&self, trc: *mut Tracer);
 
     /// Runs [`Finalize::finalize`] on the object and its children.

@@ -69,9 +69,21 @@ pub trait AsRawHandleMut: AsRawHandle {
 ///
 pub unsafe trait WriteBarrieredPtr: Copy {
     /// Creates a uninitialized value
+    ///
+    /// # Safety
+    ///
+    /// - The returned value is uninitialized and must not be used before it is properly initialized.
+    /// - Using an uninitialized value in any operation (such as dereferencing) is undefined behavior.
     unsafe fn uninit() -> Self;
 
     /// Perform a write barrier on the given GC value
+    ///
+    /// # Safety
+    ///
+    /// - `v` must be a valid, properly allocated pointer to a GC-tracked value.
+    /// - `prev` and `next` must represent valid states for the GC-tracked value.
+    /// - Calling this function incorrectly could break GC invariants, leading to memory corruption,
+    ///   leaks, or use-after-free errors.
     unsafe fn write_barrier(v: *mut Self, prev: Self, next: Self);
 }
 
