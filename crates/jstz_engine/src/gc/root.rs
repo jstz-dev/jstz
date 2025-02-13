@@ -295,6 +295,56 @@ impl<'a, T: AsRawHandleMut + Trace> AsRawHandleMut for Rooted<'a, T> {
     }
 }
 
+/// A stack cell for a vector of rooted values
+pub struct RootedVec<'a, T: Trace> {
+    // We re-use `Rooted` here since `Vec` is natively traceable
+    values: Rooted<'a, Vec<T>>,
+}
+
+impl<'a, T: Trace> RootedVec<'a, T> {
+    /// DO NOT USE. Used by [`letroots!`].
+    pub fn new(values: Rooted<'a, Vec<T>>) -> Self {
+        Self { values }
+    }
+
+    /// Roots a value by adding it to the rooted vector.
+    pub fn push_root<U>(&mut self, value: U)
+    where
+        U: Prolong<'a, Aged = T>,
+    {
+        let values = unsafe {
+            // SAFETY: We never move `values`
+            self.values.pinned.as_mut().get_unchecked_mut()
+        };
+
+        // SAFETY: we can safely prolong `value`'s lifetime to the lifetime of the root
+        let extended_value = unsafe { value.extend_lifetime() };
+        // SAFETY: `value` is not `None` since it was initialized by `Root::init`.
+        values.value.as_mut().unwrap().push(extended_value);
+    }
+
+    // Roots a value by adding it to the rooted vector and returning a clone
+    // of the rooted value.
+    pub fn push_root_and_clone<U>(&mut self, value: U) -> T
+    where
+        U: Prolong<'a, Aged = T>,
+        T: Clone,
+    {
+        self.push_root(value);
+
+        // SAFETY: `value` is not `None` since it was initialized by `Root::init`
+        self.values.last().unwrap().clone()
+    }
+}
+
+impl<'a, T: Trace> Deref for RootedVec<'a, T> {
+    type Target = Vec<T>;
+
+    fn deref(&self) -> &Self::Target {
+        self.values.deref()
+    }
+}
+
 pub(crate) unsafe extern "C" fn unsafe_ffi_trace_context_roots(
     trc: *mut Tracer,
     shadow_stack: *mut c_void,
@@ -314,6 +364,20 @@ macro_rules! letroot {
 
         #[allow(unused_mut)]
         let mut $var_name = $var_name.init($value);
+    };
+}
+
+#[macro_export]
+macro_rules! letroots {
+    ($var_name: ident for $root_type: ty, [$cx: expr]) => {
+        #[allow(unused_mut)]
+        let mut $var_name = core::pin::pin!($cx.root());
+
+        #[allow(unused_mut)]
+        let mut $var_name = $var_name.init(std::vec::Vec::<$root_type>::new());
+
+        #[allow(unused_mut)]
+        let mut $var_name = $crate::gc::root::RootedVec::new($var_name);
     };
 }
 
