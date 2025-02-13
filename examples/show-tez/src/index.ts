@@ -68,9 +68,14 @@ async function main() {
     try {
       if (input.toLocaleLowerCase() === "show") {
         const length: number = Number.parseInt(
-          await jstzClient.accounts.getKv(contractAddress, {
-            key: `messages/${address}/length`,
-          }),
+          await jstzClient.accounts
+            .getKv(contractAddress, {
+              key: `messages/${address}/length`,
+            })
+            .catch(() => {
+              console.log("No messages yet.");
+              return "0";
+            }),
         );
         for (let index = 0; index < length; index++) {
           const message = await jstzClient.accounts.getKv(contractAddress, {
