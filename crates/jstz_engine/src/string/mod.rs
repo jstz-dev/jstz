@@ -27,6 +27,7 @@ use crate::{
     gc::{
         compartment::Compartment,
         ptr::{AsRawHandle, AsRawHandleMut, AsRawPtr, GcPtr, Handle, HandleMut},
+        root::Rooted,
         Finalize, Prolong, Trace,
     },
     gcptr_wrapper, letroot,
@@ -65,67 +66,18 @@ fn latin1_encodable(s: &str) -> bool {
     s.chars().all(|c| c as u32 <= 0xFF)
 }
 
-impl<'a, C: Compartment> JsString<'a, C> {
-    /// Creates a new empty [`JsString`]
-    pub fn empty<S>(cx: &mut Context<S>) -> Self
-    where
-        S: InCompartment<C> + CanAlloc,
-    {
-        unsafe { Self::from_raw(JS_GetEmptyString(cx.as_raw_ptr())) }
-    }
+/// A [`JsString`] that has been rooted in some `context`.
+///
+/// There is an implicit assumption that the `context` used in any of the
+/// fn calls is the `context` that the `&self` was rooted in. Using an
+/// alternative context is UB
+type RootedJsString<'a, C> = Rooted<'a, JsString<'a, C>>;
 
-    /// Creates a new [`JsString`] from `std_str`
-    pub fn new<S>(std_str: &'_ str, cx: &'a mut Context<S>) -> Self
-    where
-        S: InCompartment<C> + CanAlloc,
-    {
-        if std_str.is_empty() {
-            unsafe { Self::from_raw(JS_GetEmptyString(cx.as_raw_ptr())) }
-        } else if latin1_encodable(std_str) {
-            Self::from_slice(JsStr::latin1(std_str.as_bytes()), cx)
-        } else {
-            let mut buf = Vec::with_capacity(std_str.len());
-            buf.extend(std_str.encode_utf16());
-            Self::from_slice(JsStr::utf16(buf.as_slice()), cx)
-        }
-    }
-
-    /// Creates a new [`JsString`] from `slice`.
-    pub fn from_slice<S>(slice: JsStr<'_>, cx: &mut Context<S>) -> Self
-    where
-        S: InCompartment<C> + CanAlloc,
-    {
-        unsafe {
-            /* https://github.com/servo/mozjs/blob/main/mozjs-sys/mozjs/js/public/String.h#L52
-             *
-             * String creation.
-             *
-             * NB: JS_NewUCString takes ownership of bytes on success, avoiding a copy;
-             * but on error (signified by null return), it leaves chars owned by the
-             * caller. So the caller must free bytes in the error case, if it has no use
-             * for them. In contrast, all the JS_New*StringCopy* functions do not take
-             * ownership of the character memory passed to them -- they copy it.
-             */
-            match slice.variant() {
-                JsStrVariant::Latin1(slice) => JsString::from_raw(JS_NewStringCopyN(
-                    cx.as_raw_ptr(),
-                    slice.as_ptr() as *const c_char,
-                    slice.len(),
-                )),
-                JsStrVariant::Utf16(slice) => JsString::from_raw(JS_NewUCStringCopyN(
-                    cx.as_raw_ptr(),
-                    slice.as_ptr(),
-                    slice.len(),
-                )),
-            }
-        }
-    }
-
+impl<'a, C: Compartment> RootedJsString<'a, C> {
     /// Converts a [`JsString`] to an owned Rust string [`String`].
-    pub fn to_std_string<'cx, S>(&self, cx: &'cx mut Context<S>) -> anyhow::Result<String>
+    pub fn to_std_string<S>(&self, cx: &mut Context<S>) -> anyhow::Result<String>
     where
         S: InCompartment<C> + CanAccess,
-        'cx: 'a,
     {
         match self.as_str(cx).variant() {
             JsStrVariant::Latin1(slice) => Ok(String::from_utf8(slice.to_vec())?),
@@ -133,21 +85,10 @@ impl<'a, C: Compartment> JsString<'a, C> {
         }
     }
 
-    /// Checks if the string consists of only Latin-1 characters.
-    pub fn is_latin1(&self) -> bool {
-        unsafe { JS_DeprecatedStringHasLatin1Chars(self.as_raw_ptr()) }
-    }
-
-    /// Checks if the string consists of UTF-16 characters.
-    pub fn is_utf16(&self) -> bool {
-        !self.is_latin1()
-    }
-
     /// Obtains a slice of a [`JsString`] as a [`JsStr`].
     pub fn as_str<'cx, S>(&self, cx: &'cx mut Context<S>) -> JsStr<'cx>
     where
         S: InCompartment<C> + CanAccess,
-        'cx: 'a,
     {
         let mut len = 0;
 
@@ -182,46 +123,28 @@ impl<'a, C: Compartment> JsString<'a, C> {
         }
     }
 
-    /// Get the length of the [`JsString`].
-    pub fn len(&self) -> usize {
-        unsafe { JS_GetStringLength(self.as_raw_ptr()) }
-    }
-
-    /// Return true if the [`JsString`] is empty.
-    pub fn is_empty(&self) -> bool {
-        self.len() == 0
-    }
-
     /// Concatenates two [`JsString`]s into a new [`JsString`].
-    pub fn concat<'cx, 'b, S>(
+    pub fn concat<'cx, S>(
         &self,
-        other: &JsString<'b, C>,
+        other: &RootedJsString<'_, C>,
         cx: &'cx mut Context<S>,
     ) -> JsString<'cx, C>
     where
         S: InCompartment<C> + CanAlloc,
-        'cx: 'a,
-        'cx: 'b,
     {
-        // SAFETY: Root both self and other to obtain handles
-        //        (since `JS_ConcatStrings` will allocate and maybe GC)
-        letroot!(rooted_self = self.clone(); [cx]);
-        letroot!(rooted_other = other.clone(); [cx]);
-
         unsafe {
             JsString::from_raw(JS_ConcatStrings(
                 cx.as_raw_ptr(),
-                rooted_self.handle(),
-                rooted_other.handle(),
+                self.handle(),
+                other.handle(),
             ))
         }
     }
 
     /// Returns the UTF-16 codepoint at the given character.
-    pub fn code_point_at<'cx, S>(&self, index: usize, cx: &'cx mut Context<S>) -> u16
+    pub fn code_point_at<S>(&self, index: usize, cx: &Context<S>) -> u16
     where
         S: InCompartment<C> + CanAccess,
-        'cx: 'a,
     {
         unsafe {
             let mut char = 0;
@@ -235,33 +158,17 @@ impl<'a, C: Compartment> JsString<'a, C> {
     /// # Notes
     ///
     /// Returns `None` if the string failed to compare
-    pub fn equals_std<'cx, 'b, S>(
-        &'a self,
-        value: &'b str,
-        cx: &'cx mut Context<S>,
-    ) -> Option<bool>
+    pub fn equals_std<S>(&self, value: &str, cx: &mut Context<S>) -> Option<bool>
     where
         S: InCompartment<C> + CanAccess + CanAlloc,
-        'cx: 'a,
     {
-        // # Safety
-        //
-        // `self` must be rooted since Self::new may allocate and GC
-        letroot!(rooted_self = self.clone(); [cx]);
         letroot!(v = JsString::<C>::new(value, cx); [cx]);
-
-        rooted_self.equals(&v, cx)
+        self.equals(&v, cx)
     }
 
-    pub fn equals<'cx, 'b, S>(
-        &self,
-        s2: &JsString<'b, C>,
-        cx: &'cx mut Context<S>,
-    ) -> Option<bool>
+    pub fn equals<S>(&self, s2: &RootedJsString<'_, C>, cx: &Context<S>) -> Option<bool>
     where
         S: InCompartment<C> + CanAccess,
-        'cx: 'a,
-        'cx: 'b,
     {
         let mut match_success: i32 = -1;
         let result = unsafe {
@@ -278,6 +185,86 @@ impl<'a, C: Compartment> JsString<'a, C> {
         } else {
             None
         }
+    }
+}
+
+/// Note: All functions that create a JsString must take a `&'cx mut Context`
+/// and return JsString<'cx, C>. This is to enforce that the return object must
+/// be rooted or dropped before `context` can be used again
+impl<'a, C: Compartment> JsString<'a, C> {
+    /// Creates a new empty [`JsString`]
+    pub fn empty<S>(cx: &'a mut Context<S>) -> Self
+    where
+        S: InCompartment<C> + CanAlloc,
+    {
+        unsafe { Self::from_raw(JS_GetEmptyString(cx.as_raw_ptr())) }
+    }
+
+    /// Creates a new [`JsString`] from `std_str`
+    pub fn new<S>(std_str: &'_ str, cx: &'a mut Context<S>) -> Self
+    where
+        S: InCompartment<C> + CanAlloc,
+    {
+        if std_str.is_empty() {
+            unsafe { Self::from_raw(JS_GetEmptyString(cx.as_raw_ptr())) }
+        } else if latin1_encodable(std_str) {
+            Self::from_slice(JsStr::latin1(std_str.as_bytes()), cx)
+        } else {
+            let mut buf = Vec::with_capacity(std_str.len());
+            buf.extend(std_str.encode_utf16());
+            Self::from_slice(JsStr::utf16(buf.as_slice()), cx)
+        }
+    }
+
+    /// Creates a new [`JsString`] from `slice`.
+    pub fn from_slice<S>(slice: JsStr<'_>, cx: &'a mut Context<S>) -> Self
+    where
+        S: InCompartment<C> + CanAlloc,
+    {
+        unsafe {
+            /* https://github.com/servo/mozjs/blob/main/mozjs-sys/mozjs/js/public/String.h#L52
+             *
+             * String creation.
+             *
+             * NB: JS_NewUCString takes ownership of bytes on success, avoiding a copy;
+             * but on error (signified by null return), it leaves chars owned by the
+             * caller. So the caller must free bytes in the error case, if it has no use
+             * for them. In contrast, all the JS_New*StringCopy* functions do not take
+             * ownership of the character memory passed to them -- they copy it.
+             */
+            match slice.variant() {
+                JsStrVariant::Latin1(slice) => JsString::from_raw(JS_NewStringCopyN(
+                    cx.as_raw_ptr(),
+                    slice.as_ptr() as *const c_char,
+                    slice.len(),
+                )),
+                JsStrVariant::Utf16(slice) => JsString::from_raw(JS_NewUCStringCopyN(
+                    cx.as_raw_ptr(),
+                    slice.as_ptr(),
+                    slice.len(),
+                )),
+            }
+        }
+    }
+
+    /// Checks if the string consists of only Latin-1 characters.
+    pub fn is_latin1(&self) -> bool {
+        unsafe { JS_DeprecatedStringHasLatin1Chars(self.as_raw_ptr()) }
+    }
+
+    /// Checks if the string consists of UTF-16 characters.
+    pub fn is_utf16(&self) -> bool {
+        !self.is_latin1()
+    }
+
+    /// Get the length of the [`JsString`].
+    pub fn len(&self) -> usize {
+        unsafe { JS_GetStringLength(self.as_raw_ptr()) }
+    }
+
+    /// Return true if the [`JsString`] is empty.
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
     }
 }
 
@@ -308,7 +295,7 @@ mod test {
     fn from_raw() {
         setup_cx!(cx);
 
-        let js_string = unsafe { JsString::from_raw(JS_GetEmptyString(cx.as_raw_ptr())) };
+        letroot!(js_string = unsafe { JsString::from_raw(JS_GetEmptyString(cx.as_raw_ptr())) }; [cx]);
         assert!(js_string.equals_std("", &mut cx).unwrap())
     }
 
@@ -379,8 +366,8 @@ mod test {
         setup_cx!(cx);
 
         letroot!(js_string = JsString::new("a🌟", &mut cx); [cx]);
-        assert_eq!(97, js_string.code_point_at(0, &mut cx));
-        assert_eq!(55356, js_string.code_point_at(1, &mut cx));
+        assert_eq!(97, js_string.code_point_at(0, &cx));
+        assert_eq!(55356, js_string.code_point_at(1, &cx));
     }
 
     #[test]
