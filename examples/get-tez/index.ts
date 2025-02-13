@@ -12,7 +12,7 @@ const getReceivedTez = (requester: Address): number => {
 };
 
 const setReceivedTez = (requester: Address, received: number): void => {
-  Kv.set(`received/${requester}`, received + 1);
+  Kv.set(`received/${requester}`, received);
 };
 
 const addPoliteMessage = (requester: Address, message: string): void => {
