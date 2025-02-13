@@ -6,14 +6,14 @@ mod conversions;
 
 use crate::{
     context::{CanAlloc, Context, InCompartment},
-    gc::{ptr::GcPtr, Compartment},
+    gc::{compartment::Compartment, ptr::GcPtr},
     gcptr_wrapper,
 };
 
 gcptr_wrapper!(
     indoc! {"
         [`JsValue`] represents a generic JavaScript value. This is any valid ECMAScript value.
-        
+
         More information:
          - [EMCAScript reference][spec]
 
