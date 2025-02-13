@@ -10,6 +10,7 @@ mod context;
 pub mod gc;
 mod realm;
 mod script;
+mod string;
 mod value;
 
 pub fn compile_and_evaluate_script(handle: JSEngineHandle, source: &str) -> JSVal {
@@ -44,6 +45,17 @@ mod test {
     use mozjs::rooted;
     use mozjs::rust::SIMPLE_GLOBAL_CLASS;
     use mozjs::rust::{JSEngine, RealmOptions, Runtime};
+
+    #[macro_export]
+    macro_rules! setup_cx {
+        ($name: ident) => {
+            let engine = mozjs::rust::JSEngine::init().unwrap();
+            let rt = mozjs::rust::Runtime::new(engine.handle());
+            let rt_cx = &mut $crate::context::Context::from_runtime(&rt);
+            $crate::alloc_compartment!(c);
+            let mut $name = rt_cx.new_realm(c).unwrap();
+        };
+    }
 
     #[test]
     fn test_eval() {
