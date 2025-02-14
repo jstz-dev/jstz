@@ -262,6 +262,8 @@ impl<'a, T: Trace> Rooted<'a, T> {
         unsafe { self.as_raw_handle_mut() }
     }
 
+    // BUG: This breaks the invariant of popping things in the stack --
+    // stack needs to become doubly-linked
     pub fn into_inner<'cx, U, S>(self, _: &'cx mut Context<S>) -> U
     where
         T: Prolong<'cx, Aged = U>,
