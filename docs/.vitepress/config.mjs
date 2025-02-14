@@ -30,6 +30,7 @@ export default defineConfig({
           { text: "CLI", link: "/cli" },
           { text: "Asset Bridge", link: "/bridge" },
           { text: "Accounts", link: "/accounts" },
+          { text: "Architecture", link: "/architecture" },
           { text: "jstzd", link: "/jstzd" },
         ],
       },
