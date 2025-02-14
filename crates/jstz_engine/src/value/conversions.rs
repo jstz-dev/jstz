@@ -3,6 +3,7 @@ use crate::gc::{compartment::Compartment, ptr::AsRawPtr};
 use super::JsValue;
 
 impl<'a, C: Compartment> JsValue<'a, C> {
+    #[allow(dead_code)]
     pub fn is_undefined(&self) -> bool {
         unsafe { self.as_raw_ptr().is_undefined() }
     }

@@ -3,7 +3,7 @@ FROM tezos/tezos:${OCTEZ_TAG} AS octez
 USER root
 RUN mkdir /octez-bin && mv /usr/local/bin/octez-client /usr/local/bin/octez-node /usr/local/bin/octez-smart-rollup-node /usr/local/bin/octez-baker-* /octez-bin
 
-FROM rust:1.80.0-alpine AS builder
+FROM rust:1.82.0-alpine AS builder
 RUN apk --no-cache add musl-dev libcrypto3 openssl-dev clang make
 ENV OPENSSL_DIR=/usr
 WORKDIR /
