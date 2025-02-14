@@ -97,6 +97,7 @@ impl<'a, C: Compartment> Script<'a, C> {
         }
     }
 
+    #[allow(dead_code)]
     pub fn compile_and_evaluate<'cx, S>(
         path: &Path,
         src: &str,
