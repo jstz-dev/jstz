@@ -11,6 +11,7 @@ pub mod gc;
 mod realm;
 mod script;
 mod string;
+mod symbol;
 mod value;
 
 pub fn compile_and_evaluate_script(handle: JSEngineHandle, source: &str) -> JSVal {

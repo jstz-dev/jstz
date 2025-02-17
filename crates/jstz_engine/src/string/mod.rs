@@ -71,7 +71,7 @@ fn latin1_encodable(s: &str) -> bool {
 /// ALL functions in [`RootedJsString`] that interact with SpiderMonkey must take
 /// a rooted in `context` as one of its arguments. There is an implicit assumption
 /// that the `context` given is the `context` in which the JsString was rooted
-type RootedJsString<'a, C> = Rooted<'a, JsString<'a, C>>;
+pub type RootedJsString<'a, C> = Rooted<'a, JsString<'a, C>>;
 
 impl<'a, C: Compartment> RootedJsString<'a, C> {
     /// Converts a [`JsString`] to an owned Rust string [`String`].
@@ -269,7 +269,7 @@ impl<'a, C: Compartment> JsString<'a, C> {
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
 
     use mozjs::{
         jsval::StringValue,
