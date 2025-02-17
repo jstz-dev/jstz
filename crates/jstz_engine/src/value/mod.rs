@@ -2,9 +2,10 @@ use indoc::indoc;
 use mozjs::jsval::{DoubleValue, Int32Value, NullValue};
 use mozjs::jsval::{JSVal, UndefinedValue};
 
+use crate::gc::ptr::AsRawPtr;
 use crate::{
     context::{CanAlloc, Context, InCompartment},
-    gc::{ptr::AsRawPtr, Compartment},
+    gc::compartment::Compartment,
     gcptr_wrapper,
 };
 

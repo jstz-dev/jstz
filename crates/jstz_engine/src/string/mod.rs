@@ -16,7 +16,7 @@ use mozjs::{
         JSString, JS_CompareStrings, JS_ConcatStrings, JS_DeprecatedStringHasLatin1Chars,
         JS_GetEmptyString, JS_GetLatin1StringCharsAndLength, JS_GetStringCharAt,
         JS_GetStringLength, JS_GetTwoByteStringCharsAndLength, JS_NewStringCopyN,
-        JS_NewUCStringCopyN, JS_StringEqualsAscii,
+        JS_NewUCStringCopyN, JS_StringEqualsAscii, JS_StringToId,
     },
     rust::jsapi_wrapped,
 };
@@ -31,10 +31,11 @@ use crate::{
         Finalize, Prolong, Trace,
     },
     gcptr_wrapper, letroot,
+    object::property::{IntoPropertyKey, PropertyKey},
     value::JsValue,
 };
 
-mod str;
+pub mod str;
 
 use str::{JsStr, JsStrVariant};
 
@@ -186,6 +187,18 @@ impl<'a, C: Compartment> RootedJsString<'a, C> {
             None
         }
     }
+
+    pub fn to_property<S>(self, cx: &mut Context<S>) -> Option<PropertyKey<'_, C>>
+    where
+        S: InCompartment<C> + CanAlloc,
+    {
+        letroot!(id = PropertyKey::empty(cx); [cx]);
+        if unsafe { JS_StringToId(cx.as_raw_ptr(), self.handle(), id.handle_mut()) } {
+            Some(id.into_inner(cx))
+        } else {
+            None
+        }
+    }
 }
 
 /// Note: All functions that create a JsString must take a `&'cx mut Context`
@@ -232,6 +245,7 @@ impl<'a, C: Compartment> JsString<'a, C> {
              * for them. In contrast, all the JS_New*StringCopy* functions do not take
              * ownership of the character memory passed to them -- they copy it.
              */
+            // FIX: This could fail if we run out of memory
             match slice.variant() {
                 JsStrVariant::Latin1(slice) => JsString::from_raw(JS_NewStringCopyN(
                     cx.as_raw_ptr(),
