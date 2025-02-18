@@ -1,8 +1,10 @@
 use std::str::FromStr;
 
 use anyhow::bail;
-use http::{HeaderMap, Method, Uri};
+use http::{HeaderMap, HeaderValue, Method, Uri};
 use jstz_proto::context::account::{Address, Addressable};
+use jstz_proto::executor::smart_function::run::NOOP_PATH;
+use jstz_proto::executor::smart_function::TRANSFER_HEADER_KEY;
 use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
@@ -13,6 +15,7 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 use url::Url;
 
+use crate::utils::MUTEZ_PER_TEZ;
 use crate::{
     account,
     config::{Config, NetworkName},
@@ -57,7 +60,7 @@ impl TryFrom<&str> for Host {
     }
 }
 
-pub async fn exec(
+pub struct RunArgs {
     url: String,
     http_method: String,
     gas_limit: u32,
@@ -65,7 +68,91 @@ pub async fn exec(
     network: Option<NetworkName>,
     trace: bool,
     include_response_headers: bool,
+    headers: Option<HeaderMap>,
+}
+
+impl RunArgs {
+    pub fn new(url: String, http_method: String, gas_limit: u32) -> Self {
+        Self {
+            url,
+            http_method,
+            gas_limit,
+            json_data: None,
+            network: None,
+            trace: false,
+            include_response_headers: false,
+            headers: None,
+        }
+    }
+
+    pub fn set_json_data(mut self, json_data: Option<String>) -> Self {
+        self.json_data = json_data;
+        self
+    }
+
+    pub fn set_network(mut self, network: Option<NetworkName>) -> Self {
+        self.network = network;
+        self
+    }
+
+    pub fn set_trace(mut self, trace: bool) -> Self {
+        self.trace = trace;
+        self
+    }
+
+    pub fn set_include_response_headers(
+        mut self,
+        include_response_headers: bool,
+    ) -> Self {
+        self.include_response_headers = include_response_headers;
+        self
+    }
+
+    pub fn set_headers(mut self, headers: Option<HeaderMap>) -> Self {
+        self.headers = headers;
+        self
+    }
+}
+
+/// transfer is a special case of run, where we add a special header to the request
+/// to indicate that the request can be executed as a transfer.
+/// For smart function address, the execution of the function will be skipped with the `/-/noop endpoint.
+pub async fn exec_transfer(
+    amount: u64,
+    to: AddressOrAlias,
+    gas_limit: u32,
+    include_response_headers: bool,
+    network: Option<NetworkName>,
 ) -> Result<()> {
+    let cfg = Config::load().await?;
+    let mutez_amount = amount * MUTEZ_PER_TEZ;
+    let to = AddressOrAlias::resolve_or_use_current_user(Some(to), &cfg)?;
+    let url = match &to {
+        Address::User(_) => format!("tezos://{}", to),
+        // for sf address, ignore the function execution and just transfer the amount
+        Address::SmartFunction(_) => format!("tezos://{}{}", to, NOOP_PATH),
+    };
+    let mut headers = HeaderMap::new();
+    headers.insert(
+        TRANSFER_HEADER_KEY,
+        HeaderValue::from_str(&format!("{}", mutez_amount)).unwrap(),
+    );
+
+    let args = RunArgs::new(url, "POST".to_string(), gas_limit);
+    exec(
+        args.set_network(network)
+            .set_include_response_headers(include_response_headers)
+            .set_headers(Some(headers)),
+    )
+    .await
+    .map_err(|err| anyhow!("Failed to transfer {} XTZ to {}: {}", amount, to, err))?;
+
+    log::info!("Transferred {} XTZ to {}", amount, to);
+
+    Ok(())
+}
+
+pub async fn exec(args: RunArgs) -> Result<()> {
     // 1. Get the current user (checking if we are logged in)
     let mut cfg = Config::load().await?;
     account::login_quick(&mut cfg).await?;
@@ -76,15 +163,16 @@ pub async fn exec(
         styles::command("jstz login")
     ))?;
 
-    let jstz_client = cfg.jstz_client(&network)?;
+    let jstz_client = cfg.jstz_client(&args.network)?;
 
     // 2. Resolve the URL
-    let mut url_object = Url::parse(&url)
-        .map_err(|_| user_error!("Invalid URL {}.", styles::url(&url)))?;
+    let mut url_object = Url::parse(&args.url)
+        .map_err(|_| user_error!("Invalid URL {}.", styles::url(&args.url)))?;
 
-    let host = url_object
-        .host_str()
-        .ok_or(user_error!("URL {} requires a host.", styles::url(&url)))?;
+    let host = url_object.host_str().ok_or(user_error!(
+        "URL {} requires a host.",
+        styles::url(&args.url)
+    ))?;
 
     let parsed_host = Host::try_from(host)?;
     let resolved_host = parsed_host.resolve(&cfg)?;
@@ -110,12 +198,12 @@ pub async fn exec(
         .parse()
         .expect("`url_object` is an invalid URL.");
 
-    let method = Method::from_str(&http_method)
-        .map_err(|_| user_error!("Invalid HTTP method: {}", http_method))?;
+    let method = Method::from_str(&args.http_method)
+        .map_err(|_| user_error!("Invalid HTTP method: {}", args.http_method))?;
 
     debug!("Method: {:?}", method);
 
-    let body = read_file_or_input_or_piped(json_data)?.map(String::into_bytes);
+    let body = read_file_or_input_or_piped(args.json_data)?.map(String::into_bytes);
 
     debug!("Body: {:?}", body);
 
@@ -125,9 +213,10 @@ pub async fn exec(
         content: OperationContent::RunFunction(RunFunction {
             uri: url,
             method,
-            headers: HeaderMap::default(),
+            headers: args.headers.unwrap_or_default(),
             body,
-            gas_limit: gas_limit
+            gas_limit: args
+                .gas_limit
                 .try_into()
                 .map_err(|_| anyhow!("Invalid gas limit."))?,
         }),
@@ -150,7 +239,7 @@ pub async fn exec(
         styles::url(&url_object.to_string())
     );
 
-    if trace {
+    if args.trace {
         if let Host::AddressOrAlias(address_or_alias) = parsed_host {
             let address = address_or_alias.resolve(&cfg)?;
             spawn_trace(&address, &jstz_client).await?;
@@ -174,7 +263,7 @@ pub async fn exec(
         ReceiptResult::Failed(err) => bail_user_error!("{err}"),
     };
 
-    if include_response_headers {
+    if args.include_response_headers {
         info!("{}", status_code);
         for (key, value) in headers.iter() {
             let header_value = value.to_str();

@@ -42,6 +42,28 @@ enum Command {
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
+    /// 🏃 Send a request to a transfer XTZ to a deployed smart function
+    Transfer {
+        /// The amount in XTZ to transfer.
+        #[arg(value_name = "AMOUNT")]
+        amount: u64,
+
+        #[arg(value_name = "ADDRESS|ALIAS")]
+        to: AddressOrAlias,
+
+        /// The maximum amount of gas to be used
+        #[arg(short, long, default_value_t = DEFAULT_GAS_LIMIT)]
+        gas_limit: u32,
+
+        /// Include response headers in the output
+        #[arg(name = "include", short, long, default_value_t = false)]
+        include_response_headers: bool,
+
+        /// Specifies the network from the config file, defaulting to the configured default network.
+        ///  Use `dev` for the local sandbox.
+        #[arg(short, long, default_value = None)]
+        network: Option<NetworkName>,
+    },
     /// 🏃 Send a request to a deployed smart function
     Run {
         /// The URL containing the functions's address or alias.
@@ -133,6 +155,16 @@ async fn exec(command: Command) -> Result<()> {
             name,
             network,
         } => deploy::exec(code, balance, name, network).await,
+        Command::Transfer {
+            amount,
+            to,
+            gas_limit,
+            include_response_headers,
+            network,
+        } => {
+            run::exec_transfer(amount, to, gas_limit, include_response_headers, network)
+                .await
+        }
         Command::Run {
             url,
             http_method,
@@ -142,14 +174,12 @@ async fn exec(command: Command) -> Result<()> {
             trace,
             include_response_headers,
         } => {
+            let args = run::RunArgs::new(url, http_method, gas_limit);
             run::exec(
-                url,
-                http_method,
-                gas_limit,
-                json_data,
-                network,
-                trace,
-                include_response_headers,
+                args.set_json_data(json_data)
+                    .set_network(network)
+                    .set_trace(trace)
+                    .set_include_response_headers(include_response_headers),
             )
             .await
         }
