@@ -70,7 +70,7 @@ impl JsCallableWithoutThis<(Chunk,), idl::UnrestrictedDouble>
     ) -> JsResult<idl::UnrestrictedDouble> {
         match self {
             ByteLengthQueuingStrategySizeAlgorithm::ReturnByteLengthOfChunk => {
-                todo!("ReturnByteLengthOfChunk.call_without_this()")
+                crate::todo!("ReturnByteLengthOfChunk.call_without_this()");
             }
         }
     }
@@ -153,5 +153,25 @@ impl ExtractSizeAlgorithm for Option<QueuingStrategy> {
         self.as_ref()
             .map(|v| v.extract_size_algorithm())
             .unwrap_or_default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ByteLengthQueuingStrategySizeAlgorithm;
+    use crate::stream::Chunk;
+    use boa_engine::{Context, JsNativeError};
+    use jstz_core::js_fn::JsCallableWithoutThis;
+
+    #[test]
+    fn byte_length_queuing_call_without_this() {
+        assert_eq!(
+            ByteLengthQueuingStrategySizeAlgorithm::ReturnByteLengthOfChunk
+                .call_without_this((Chunk::null(),), &mut Context::default())
+                .unwrap_err(),
+            JsNativeError::error()
+                .with_message("todo: ReturnByteLengthOfChunk.call_without_this()")
+                .into()
+        );
     }
 }
