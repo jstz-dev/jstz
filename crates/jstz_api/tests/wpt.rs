@@ -252,6 +252,7 @@ pub fn register_apis(context: &mut Context) {
     jstz_api::http::header::HeadersApi.init(context);
     jstz_api::encoding::EncodingApi.init(context);
     jstz_api::file::FileApi.init(context);
+    jstz_api::stream::StreamApi.init(context);
 }
 
 fn insert_global_properties(rt: &mut Runtime) {
@@ -362,6 +363,9 @@ async fn test_wpt() -> Result<()> {
             r"^\/encoding\/[^\/]+\.any\.html$",
             r"^\/fetch\/api\/headers\/[^\/]+\.any\.html$",
             r"^\/FileAPI\/blob\/[^\/]+\.any\.html$", // Blob
+            r"^\/streams\/queuing\-strategies\.any\.html$", // CountQueuingStrategy, ByteLengthQueuingStrategy
+            r"^\/streams\/writable\-streams\/byte\-length\-queuing\-strategy\.any\.html$", // ByteLengthQueuingStrategy
+            r"^\/streams\/writable\-streams\/count\-queuing\-strategy\.any\.html$", // CountQueuingStrategy
         ]
         .as_ref(),
     )?;
