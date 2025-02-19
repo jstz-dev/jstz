@@ -5101,10 +5101,11 @@ checksum = "23d434d3f8967a09480fb04132ebe0a3e088c173e6d0ee7897abbdf4eab0f8b9"
 [[package]]
 name = "tezos-smart-rollup"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
  "hermit",
  "hex",
+ "tezos-smart-rollup-build-utils",
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
  "tezos-smart-rollup-encoding",
@@ -5118,22 +5119,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "tezos-smart-rollup-build-utils"
+version = "0.2.2"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+]
+
+[[package]]
 name = "tezos-smart-rollup-constants"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 
 [[package]]
 name = "tezos-smart-rollup-core"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
+ "tezos-smart-rollup-build-utils",
  "tezos-smart-rollup-constants",
 ]
 
 [[package]]
 name = "tezos-smart-rollup-debug"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-host",
@@ -5142,7 +5154,7 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-encoding"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
  "hex",
  "nom",
@@ -5161,10 +5173,11 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-entrypoint"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
  "cfg-if",
  "dlmalloc",
+ "tezos-smart-rollup-build-utils",
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
  "tezos-smart-rollup-host",
@@ -5176,8 +5189,9 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-host"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
+ "tezos-smart-rollup-build-utils",
  "tezos-smart-rollup-core",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
@@ -5222,18 +5236,19 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-macros"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
  "proc-macro-error2",
  "quote",
  "shellexpand",
  "syn 2.0.87",
+ "tezos-smart-rollup-build-utils",
 ]
 
 [[package]]
 name = "tezos-smart-rollup-mock"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
  "hex",
  "tezos-smart-rollup-core",
@@ -5246,16 +5261,17 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-panic-hook"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
  "rustversion",
+ "tezos-smart-rollup-build-utils",
  "tezos-smart-rollup-core",
 ]
 
 [[package]]
 name = "tezos-smart-rollup-storage"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
@@ -5267,13 +5283,14 @@ dependencies = [
 [[package]]
 name = "tezos-smart-rollup-utils"
 version = "0.2.2"
-source = "git+https://gitlab.com/tezos/tezos.git#d38a26e33e89271a4aac74fb5675ede23828b055"
+source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513616d4310f7552#9642a3e9b8e8bc3c71cbcd6f513616d4310f7552"
 dependencies = [
  "clap 4.5.20",
  "hex",
  "quanta",
  "serde",
  "serde_json",
+ "tezos-smart-rollup-build-utils",
  "tezos-smart-rollup-encoding",
  "tezos-smart-rollup-mock",
  "tezos_crypto_rs 0.6.0",
