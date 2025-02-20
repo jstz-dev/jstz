@@ -1139,6 +1139,1436 @@
         }
       }
     },
+    "compression": {
+      "Folder": {
+        "compression-bad-chunks.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "chunk of type undefined should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type undefined should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type undefined should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type null should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type null should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type null should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type numeric should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type numeric should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type numeric should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type object, not BufferSource should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type object, not BufferSource should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type object, not BufferSource should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type array should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type array should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type array should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type SharedArrayBuffer should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type SharedArrayBuffer should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type SharedArrayBuffer should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type shared Uint8Array should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type shared Uint8Array should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type shared Uint8Array should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 21,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "compression-constructor-error.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "\"a\" should cause the constructor to throw",
+                    "status": "Fail",
+                    "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: CompressionStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                  },
+                  {
+                    "name": "no input should cause the constructor to throw",
+                    "status": "Fail",
+                    "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: CompressionStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                  },
+                  {
+                    "name": "non-string input should cause the constructor to throw",
+                    "status": "Fail",
+                    "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: CompressionStream is not defined\" (\"ReferenceError\") expected instance of function \"function Error() { [native code] }\" (\"Error\")"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 3,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "compression-including-empty-chunk.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "the result of compressing [,Hello,Hello] with deflate should be 'HelloHello'",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the result of compressing [,Hello,Hello] with gzip should be 'HelloHello'",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the result of compressing [,Hello,Hello] with deflate-raw should be 'HelloHello'",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the result of compressing [Hello,,Hello] with deflate should be 'HelloHello'",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the result of compressing [Hello,,Hello] with gzip should be 'HelloHello'",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the result of compressing [Hello,,Hello] with deflate-raw should be 'HelloHello'",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the result of compressing [Hello,Hello,] with deflate should be 'HelloHello'",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the result of compressing [Hello,Hello,] with gzip should be 'HelloHello'",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the result of compressing [Hello,Hello,] with deflate-raw should be 'HelloHello'",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 9,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "compression-large-flush-output.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "deflate compression with large flush output",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "gzip compression with large flush output",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "deflate-raw compression with large flush output",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 3,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "compression-multiple-chunks.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "compressing 2 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 2 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 2 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 3 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 3 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 3 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 4 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 4 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 4 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 5 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 5 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 5 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 6 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 6 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 6 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 7 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 7 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 7 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 8 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 8 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 8 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 9 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 9 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 9 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 10 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 10 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 10 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 11 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 11 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 11 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 12 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 12 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 12 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 13 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 13 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 13 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 14 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 14 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 14 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 15 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 15 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 15 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 16 chunks with deflate should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 16 chunks with gzip should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "compressing 16 chunks with deflate-raw should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 45,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "compression-output-length.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "the length of deflated data should be shorter than that of the original data",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                  },
+                  {
+                    "name": "the length of gzipped data should be shorter than that of the original data",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                  },
+                  {
+                    "name": "the length of deflated (with -raw) data should be shorter than that of the original data",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 3,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "compression-stream.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "CompressionStream constructor should throw on invalid format",
+                    "status": "Fail",
+                    "message": "assert_throws_js: non supported format should throw function \"function () { [native code] }\" threw object \"ReferenceError: CompressionStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                  },
+                  {
+                    "name": "deflated empty data should be reinflated back to its origin",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "deflated small amount data should be reinflated back to its origin",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                  },
+                  {
+                    "name": "deflated large amount data should be reinflated back to its origin",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                  },
+                  {
+                    "name": "gzipped empty data should be reinflated back to its origin",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: CompressionStream is not defined\""
+                  },
+                  {
+                    "name": "gzipped small amount data should be reinflated back to its origin",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                  },
+                  {
+                    "name": "gzipped large amount data should be reinflated back to its origin",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 7,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "decompression-bad-chunks.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "chunk of type undefined should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type undefined should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type undefined should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type null should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type null should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type null should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type numeric should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type numeric should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type numeric should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type object, not BufferSource should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type object, not BufferSource should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type object, not BufferSource should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type array should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type array should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type array should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type SharedArrayBuffer should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type SharedArrayBuffer should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type SharedArrayBuffer should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type shared Uint8Array should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type shared Uint8Array should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type shared Uint8Array should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type invalid deflate bytes should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type invalid deflate bytes should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type invalid deflate bytes should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type invalid gzip bytes should error the stream for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type invalid gzip bytes should error the stream for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type invalid gzip bytes should error the stream for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 27,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "decompression-buffersource.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "chunk of type ArrayBuffer should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Int8Array should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint8Array should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint8ClampedArray should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Int16Array should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint16Array should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Int32Array should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint32Array should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Float32Array should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Float64Array should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type DataView should work for deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type ArrayBuffer should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Int8Array should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint8Array should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint8ClambedArray should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Int16Array should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint16Array should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Int32Array should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint32Array should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Float32Array should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Float64Array should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type DataView should work for gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type ArrayBuffer should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Int8Array should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint8Array should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint8ClampedArray should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Int16Array should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint16Array should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Int32Array should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Uint32Array should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Float32Array should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type Float64Array should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "chunk of type DataView should work for deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 33,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "decompression-constructor-error.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "\"a\" should cause the constructor to throw",
+                    "status": "Fail",
+                    "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: DecompressionStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                  },
+                  {
+                    "name": "no input should cause the constructor to throw",
+                    "status": "Fail",
+                    "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: DecompressionStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                  },
+                  {
+                    "name": "non-string input should cause the constructor to throw",
+                    "status": "Fail",
+                    "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: DecompressionStream is not defined\" (\"ReferenceError\") expected instance of function \"function Error() { [native code] }\" (\"Error\")"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 3,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "decompression-correct-input.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "decompressing deflated input should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing gzip input should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing deflated (with -raw) input should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 3,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "decompression-corrupt-input.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "the unchanged input for 'deflate' should decompress successfully",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "truncating the input for 'deflate' should give an error",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "trailing junk for 'deflate' should give an error",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'deflate' field CMF should be error for 0",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'deflate' field FLG should be success for 218",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'deflate' field FLG should be success for 1",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'deflate' field FLG should be success for 94",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'deflate' field FLG should be error for 157",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'deflate' field DATA should be success for 4",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'deflate' field DATA should be error for 5",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'deflate' field ADLER should be error for 255",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the unchanged input for 'gzip' should decompress successfully",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "truncating the input for 'gzip' should give an error",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "trailing junk for 'gzip' should give an error",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field ID should be error for 255",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field CM should be error for 0",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field FLG should be success for 1",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field FLG should be error for 2",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field MTIME should be success for 255",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field XFL should be success for 255",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field OS should be success for 128",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field DATA should be error for 3",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field DATA should be success for 4",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field CRC should be error for 0",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "format 'gzip' field ISIZE should be error for 1",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "the deflate input compressed with dictionary should give an error",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 26,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "decompression-empty-input.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "decompressing gzip empty input should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing deflate empty input should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing deflate-raw empty input should work",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 3,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "decompression-split-chunk.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 1 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 1 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 1 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 2 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 2 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 2 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 3 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 3 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 3 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 4 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 4 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 4 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 5 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 5 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 5 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 6 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 6 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 6 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 7 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 7 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 7 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 8 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 8 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 8 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 9 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 9 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 9 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 10 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 10 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 10 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 11 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 11 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 11 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 12 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 12 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 12 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 13 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 13 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 13 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 14 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 14 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 14 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 15 should work in deflate",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 15 should work in gzip",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing splitted chunk into pieces of size 15 should work in deflate-raw",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 45,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "decompression-uint8array-output.tentative.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "decompressing deflated output should give Uint8Array chunks",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  },
+                  {
+                    "name": "decompressing gzip output should give Uint8Array chunks",
+                    "status": "Fail",
+                    "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DecompressionStream is not defined\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 2,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "idlharness.https.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "idl_test setup",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
     "encoding": {
       "Folder": {
         "api-basics.any.js": {
