@@ -366,6 +366,7 @@ async fn test_wpt() -> Result<()> {
             r"^\/streams\/queuing\-strategies\.any\.html$", // CountQueuingStrategy, ByteLengthQueuingStrategy
             r"^\/streams\/writable\-streams\/byte\-length\-queuing\-strategy\.any\.html$", // ByteLengthQueuingStrategy
             r"^\/streams\/writable\-streams\/count\-queuing\-strategy\.any\.html$", // CountQueuingStrategy
+            r"^\/compression\/[^\/]+\.any\.html$", // CompressionStream, DecompressionStream
         ]
         .as_ref(),
     )?;
