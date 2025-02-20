@@ -367,6 +367,8 @@ async fn test_wpt() -> Result<()> {
             r"^\/streams\/writable\-streams\/byte\-length\-queuing\-strategy\.any\.html$", // ByteLengthQueuingStrategy
             r"^\/streams\/writable\-streams\/count\-queuing\-strategy\.any\.html$", // CountQueuingStrategy
             r"^\/compression\/[^\/]+\.any\.html$", // CompressionStream, DecompressionStream
+            // module crypto; tests have "Err" status now because `crypto` does not exist in global yet
+            r"^\/WebCryptoAPI\/.+\.any\.html$",
         ]
         .as_ref(),
     )?;

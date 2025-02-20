@@ -1139,6 +1139,1482 @@
         }
       }
     },
+    "WebCryptoAPI": {
+      "Folder": {
+        "derive_bits_keys": {
+          "Folder": {
+            "cfrg_curves_bits.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "cfrg_curves_keys.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "ecdh_bits.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "ecdh_keys.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "hkdf.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "pbkdf2.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [
+                      {
+                        "name": "setup - define tests",
+                        "status": "Fail",
+                        "message": "cannot convert 'null' or 'undefined' to object"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "digest": {
+          "Folder": {
+            "digest.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "encrypt_decrypt": {
+          "Folder": {
+            "aes_cbc.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "aes_ctr.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "aes_gcm.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "aes_gcm_256_iv.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "rsa_oaep.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "generateKey": {
+          "Folder": {
+            "failures_AES-CBC.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_AES-CTR.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_AES-GCM.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_AES-KW.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_ECDH.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_ECDSA.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_Ed25519.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_Ed448.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_HMAC.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_RSA-OAEP.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_RSA-PSS.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_RSASSA-PKCS1-v1_5.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_X25519.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "failures_X448.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_AES-CBC.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_AES-CTR.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_AES-GCM.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_AES-KW.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_ECDH.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_ECDSA.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_Ed25519.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_Ed448.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_HMAC.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_RSA-OAEP.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_RSA-PSS.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_RSASSA-PKCS1-v1_5.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  },
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_X25519.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "successes_X448.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "getRandomValues.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Float arrays",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: Float32Array function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException TypeMismatchError: property \"code\" is equal to undefined, expected 17"
+                  },
+                  {
+                    "name": "DataView",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: DataView function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException TypeMismatchError: property \"code\" is equal to undefined, expected 17"
+                  },
+                  {
+                    "name": "Integer array: Int8Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Large length: Int8Array",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: crypto.getRandomValues length over 65536 function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException QuotaExceededError: property \"code\" is equal to undefined, expected 22"
+                  },
+                  {
+                    "name": "Null arrays: Int8Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Integer array: Int16Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Large length: Int16Array",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: crypto.getRandomValues length over 65536 function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException QuotaExceededError: property \"code\" is equal to undefined, expected 22"
+                  },
+                  {
+                    "name": "Null arrays: Int16Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Integer array: Int32Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Large length: Int32Array",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: crypto.getRandomValues length over 65536 function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException QuotaExceededError: property \"code\" is equal to undefined, expected 22"
+                  },
+                  {
+                    "name": "Null arrays: Int32Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Integer array: BigInt64Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Large length: BigInt64Array",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: crypto.getRandomValues length over 65536 function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException QuotaExceededError: property \"code\" is equal to undefined, expected 22"
+                  },
+                  {
+                    "name": "Null arrays: BigInt64Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Integer array: Uint8Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Large length: Uint8Array",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: crypto.getRandomValues length over 65536 function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException QuotaExceededError: property \"code\" is equal to undefined, expected 22"
+                  },
+                  {
+                    "name": "Null arrays: Uint8Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Integer array: Uint8ClampedArray",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Large length: Uint8ClampedArray",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: crypto.getRandomValues length over 65536 function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException QuotaExceededError: property \"code\" is equal to undefined, expected 22"
+                  },
+                  {
+                    "name": "Null arrays: Uint8ClampedArray",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Integer array: Uint16Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Large length: Uint16Array",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: crypto.getRandomValues length over 65536 function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException QuotaExceededError: property \"code\" is equal to undefined, expected 22"
+                  },
+                  {
+                    "name": "Null arrays: Uint16Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Integer array: Uint32Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Large length: Uint32Array",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: crypto.getRandomValues length over 65536 function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException QuotaExceededError: property \"code\" is equal to undefined, expected 22"
+                  },
+                  {
+                    "name": "Null arrays: Uint32Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Integer array: BigUint64Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Large length: BigUint64Array",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: crypto.getRandomValues length over 65536 function \"function () { [native code] }\" threw object \"TypeError: cannot convert 'null' or 'undefined' to object\" that is not a DOMException QuotaExceededError: property \"code\" is equal to undefined, expected 22"
+                  },
+                  {
+                    "name": "Null arrays: BigUint64Array",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 29,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "historical.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Non-secure context window does not have access to crypto.subtle",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "Non-secure context window does not have access to SubtleCrypto",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Non-secure context window does not have access to CryptoKey",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 2,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "idlharness.https.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "idl_test setup",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "import_export": {
+          "Folder": {
+            "ec_importKey.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "okp_importKey.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "okp_importKey_failures_Ed25519.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "okp_importKey_failures_Ed448.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "okp_importKey_failures_X25519.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "okp_importKey_failures_X448.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "rsa_importKey.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "symmetric_importKey.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "randomUUID.https.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "namespace format",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "version set",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  },
+                  {
+                    "name": "variant set",
+                    "status": "Fail",
+                    "message": "cannot convert 'null' or 'undefined' to object"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 3,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "sign_verify": {
+          "Folder": {
+            "ecdsa.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "eddsa.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "hmac.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "rsa_pkcs.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "rsa_pss.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "wrapKey_unwrapKey": {
+          "Folder": {
+            "wrapKey_unwrapKey.https.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
     "compression": {
       "Folder": {
         "compression-bad-chunks.tentative.any.js": {
