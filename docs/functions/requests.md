@@ -29,6 +29,38 @@ const handler = async (request: Request): Promise<Response> => {
 };
 ```
 
+You can branch the code of the smart function based on any of this information.
+For example, you can parse the URL that the request went to and allow callers to call different URLs as though they were API endpoints.
+For example, this code parses the URL and does different things based on whether the request came to the URL `tezos://<ADDRESS>/ping` or `tezos://<ADDRESS>/marco`:
+
+```typescript
+const handler = async (request: Request): Promise<Response> => {
+  const url = new URL(request.url);
+  const path = url.pathname.toLowerCase();
+  console.log(path);
+
+  switch (path) {
+    case "/ping":
+      return new Response("Pong");
+      break;
+
+    case "/marco":
+      return new Response("Polo");
+      break;
+
+    default:
+      return new Response("Default", {
+        headers: {
+          "Content-Type": "text/utf-8",
+        },
+      });
+      break;
+  }
+};
+
+export default handler;
+```
+
 For more information, see the reference for the Jstz [`Request`](/api/request) object.
 
 ## Responses
