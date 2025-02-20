@@ -1,11 +1,12 @@
 # Smart functions
 
 Smart functions are the main processing unit of Jstz.
-They behave like server-side applications or APIs: clients call them, they run processing operations, and they return a value.
+They behave like [serverless applications](https://en.wikipedia.org/wiki/Serverless_computing), small applications that run only when called and do not have a long-term presence on any server.
+Clients call them, servers load them into memory to run them, they return a value, and they are removed from the server's memory until they are called again.
 
-Smart functions run when other smart functions or clients outside Jstz call them.
 As described in [Accepting requests](/functions/requests), each smart function must have a `handler` function that receives these requests from callers.
 This function receives a Jstz [Request](/api/request) object that includes the message sent from the client and metadata such as the address of the account that called the smart function.
+The function runs and returns a Jstz[Response](/api/response) object to the caller.
 
 Smart functions store persistent data within Jstz; see [Storing data](/functions/data_storage).
 
@@ -76,7 +77,7 @@ Smart functions can catch and handle errors with try/catch blocks just like in o
 
 ## Limitations of smart functions
 
-Smart functions behave much like other server-side JavaScript/TypeScript applications, but they have these limitations:
+Smart functions behave much like other serverless JavaScript/TypeScript applications, but they have these limitations:
 
 - Smart functions cannot call external APIs.
 - After being deployed, a smart function cannot be changed.
