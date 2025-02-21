@@ -43,9 +43,15 @@ impl NativeClass for ReadableStreamClass {
         args: &[JsValue],
         context: &mut Context,
     ) -> JsResult<Self::Instance> {
-        let underlying_source =
-            Option::<UnderlyingSource>::try_from_js(args.get_or_undefined(0), context)?
-                .unwrap_or_else(|| todo!());
+        let underlying_source = match Option::<UnderlyingSource>::try_from_js(
+            args.get_or_undefined(0),
+            context,
+        )? {
+            Some(v) => v,
+            None => {
+                crate::todo!("");
+            }
+        };
         let queuing_strategy =
             Option::<QueuingStrategy>::try_from_js(args.get_or_undefined(1), context)?
                 .unwrap_or_default();
@@ -57,7 +63,7 @@ impl NativeClass for ReadableStreamClass {
             let high_water_mark =
                 queuing_strategy.extract_high_water_mark(HighWaterMark::ZERO)?;
             let _ = high_water_mark;
-            todo!("SetUpReadableByteStreamControllerFromUnderlyingSource")
+            crate::todo!("SetUpReadableByteStreamControllerFromUnderlyingSource");
         } else {
             // TODO Assert: underlyingSourceDict["type"] does not exist.
             let size_algorithm = queuing_strategy.extract_size_algorithm();
