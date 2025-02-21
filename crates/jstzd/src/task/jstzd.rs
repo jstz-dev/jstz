@@ -19,6 +19,7 @@ use axum::{
     Router,
 };
 use indicatif::{ProgressBar, ProgressStyle};
+use jstz_crypto::public_key::PublicKey;
 use jstz_node::config::JstzNodeConfig;
 use octez::r#async::{
     baker::OctezBakerConfig,
@@ -137,8 +138,7 @@ impl Task for Jstzd {
                 // we need secret keys
                 BOOTSTRAP_ACCOUNTS
                     .into_iter()
-                    .enumerate()
-                    .map(|(i, (_, sk))| (format!("bootstrap{i}"), sk)),
+                    .map(|(alias, _, sk)| (alias, sk)),
             ),
         )
         .await?;
@@ -214,7 +214,7 @@ impl Jstzd {
 
     async fn import_accounts(
         octez_client: &OctezClient,
-        accounts: HashMap<String, &str>,
+        accounts: HashMap<&str, &str>,
     ) -> Result<()> {
         for (alias, sk) in accounts.iter() {
             octez_client
@@ -478,18 +478,34 @@ fn abandon_progress_bar(progress_bar: Option<&ProgressBar>) {
     }
 }
 
-fn print_bootstrap_accounts(writer: &mut impl Write, accounts: Vec<&BootstrapAccount>) {
+fn print_bootstrap_accounts<'a>(
+    writer: &mut impl Write,
+    accounts: impl IntoIterator<Item = &'a BootstrapAccount>,
+) {
+    let alias_address_mapping: HashMap<String, &str> = HashMap::from_iter(
+        BOOTSTRAP_ACCOUNTS
+            .map(|(alias, pk, _)| (PublicKey::from_base58(pk).unwrap().hash(), alias)),
+    );
+
     let mut table = Table::new();
     table.set_titles(Row::new(vec![
         Cell::new("Address"),
         Cell::new("XTZ Balance (mutez)"),
     ]));
 
-    for bootstrap_account in accounts {
-        table.add_row(Row::new(vec![
-            Cell::new(&bootstrap_account.address()),
-            Cell::new(&bootstrap_account.amount().to_string()),
-        ]));
+    let mut lines = accounts
+        .into_iter()
+        .map(|account| {
+            let address_string = match alias_address_mapping.get(&account.address()) {
+                Some(alias) => format!("({alias}) {}", account.address()),
+                None => account.address(),
+            };
+            (address_string, account.amount().to_string())
+        })
+        .collect::<Vec<_>>();
+    lines.sort();
+    for (address, amount) in lines {
+        table.add_row(Row::new(vec![Cell::new(&address), Cell::new(&amount)]));
     }
 
     table.set_format({
@@ -667,7 +683,7 @@ mod tests {
         let mut buf = vec![];
         super::print_bootstrap_accounts(
             &mut buf,
-            vec![
+            [
                 &BootstrapAccount::new(
                     "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv",
                     1,
@@ -683,13 +699,13 @@ mod tests {
         let s = String::from_utf8(buf).unwrap();
         assert_eq!(
             s,
-            r#"  +--------------------------------------+---------------------+
-  | Address                              | XTZ Balance (mutez) |
-  +======================================+=====================+
-  | tz1hGHtks3PnX4SnpqcDNMg5P3AQhTiH1WE4 | 1                   |
-  +--------------------------------------+---------------------+
-  | tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv | 2                   |
-  +--------------------------------------+---------------------+
+            r#"  +---------------------------------------------------+---------------------+
+  | Address                                           | XTZ Balance (mutez) |
+  +===================================================+=====================+
+  | (bootstrap4) tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv | 2                   |
+  +---------------------------------------------------+---------------------+
+  | tz1hGHtks3PnX4SnpqcDNMg5P3AQhTiH1WE4              | 1                   |
+  +---------------------------------------------------+---------------------+
 
 "#
         );
