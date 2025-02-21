@@ -369,6 +369,10 @@ async fn test_wpt() -> Result<()> {
             r"^\/compression\/[^\/]+\.any\.html$", // CompressionStream, DecompressionStream
             // module crypto; tests have "Err" status now because `crypto` does not exist in global yet
             r"^\/WebCryptoAPI\/.+\.any\.html$",
+            // ReadableByteStreamController
+            // construct-byob-request.any.js shows Err because `ReadableStream` and `ReadableByteStreamController`
+            // are not yet implemented
+            r"^\/streams\/readable\-byte\-streams\/.+\.any\.html$",
         ]
         .as_ref(),
     )?;
