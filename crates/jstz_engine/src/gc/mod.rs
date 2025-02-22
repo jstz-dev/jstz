@@ -85,6 +85,62 @@ macro_rules! gcptr_wrapper {
                     marker: std::marker::PhantomData,
                 }
             }
+
+            /// Retrieves a SpiderMonkey Rooted Handle to the underlying value.
+            ///
+            /// # Safety
+            ///
+            /// This function relies on Rust's borrow checker to ensure that only rooted values
+            /// are used, preventing unrooted accesses at the type level. However, **it is the
+            /// caller's responsibility** to guarantee that:
+            ///
+            /// - The lifetimes of both the context and the value are valid.
+            /// - The `Context` passed to this function is the **same** context in which the value
+            ///   was originally created and rooted.
+            ///
+            /// Failure to uphold these invariants—whether by bypassing the borrow checker
+            /// through `unsafe` code or by using multiple contexts incorrectly—constitutes a
+            /// **programming error** and results in **undefined behavior**.
+            #[allow(unused)]
+            pub(crate) fn handle<'cx, S>(
+                &self,
+                _cx: &'cx mut Context<S>,
+            ) -> $crate::gc::ptr::Handle<<Self as $crate::gc::ptr::AsRawPtr>::Ptr>
+            where
+                S: $crate::context::InCompartment<C> + $crate::context::CanAccess,
+                'cx: 'a,
+            {
+                // SAFETY: self is guaranteed to be rooted due to the lifetimes, therefore it safe to acquire a handle
+                unsafe { $crate::gc::ptr::AsRawHandle::as_raw_handle(self) }
+            }
+
+            /// Retrieves a SpiderMonkey Rooted HandleMut to the underlying value.
+            ///
+            /// # Safety
+            ///
+            /// This function relies on Rust's borrow checker to ensure that only rooted values
+            /// are used, preventing unrooted accesses at the type level. However, **it is the
+            /// caller's responsibility** to guarantee that:
+            ///
+            /// - The lifetimes of both the context and the value are valid.
+            /// - The `Context` passed to this function is the **same** context in which the value
+            ///   was originally created and rooted.
+            ///
+            /// Failure to uphold these invariants—whether by bypassing the borrow checker
+            /// through `unsafe` code or by using multiple contexts incorrectly—constitutes a
+            /// **programming error** and results in **undefined behavior**.
+            #[allow(unused)]
+            pub(crate) fn handle_mut<'cx, S>(
+                &self,
+                _cx: &'cx mut Context<S>,
+            ) -> $crate::gc::ptr::HandleMut<<Self as $crate::gc::ptr::AsRawPtr>::Ptr>
+            where
+                S: $crate::context::InCompartment<C> + $crate::context::CanAccess,
+                'cx: 'a,
+            {
+                // SAFETY: self is guaranteed to be rooted due to lifetimes, therefore it safe to acquire a handle
+                unsafe { $crate::gc::ptr::AsRawHandleMut::as_raw_handle_mut(self) }
+            }
         }
 
         unsafe impl<'a, 'b, C: $crate::gc::Compartment> $crate::gc::Prolong<'a>
