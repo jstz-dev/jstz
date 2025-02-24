@@ -90,16 +90,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1726495500,
-        "narHash": "sha256-LxIn3uvqOrNdlcUnbSvHGnVTn47rREvVqdvA4+AL8D0=",
+        "lastModified": 1740128419,
+        "narHash": "sha256-KV8tsrtArscwXRI9oRm9VHAIqALiTpKGhyaIBIBE/FU=",
         "owner": "tezos",
         "repo": "tezos",
-        "rev": "44643df827aa2d745c3d8a09a6649fe175ff77d7",
+        "rev": "cd672548c6214d1737ef89ec8c00bb99d940c97c",
         "type": "gitlab"
       },
       "original": {
         "owner": "tezos",
-        "ref": "octez-v21.0-rc2",
+        "ref": "v21-release",
         "repo": "tezos",
         "type": "gitlab"
       }
