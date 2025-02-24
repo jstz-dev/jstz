@@ -253,6 +253,7 @@ pub fn register_apis(context: &mut Context) {
     jstz_api::encoding::EncodingApi.init(context);
     jstz_api::file::FileApi.init(context);
     jstz_api::stream::StreamApi.init(context);
+    jstz_api::url::UrlApi.init(context);
 }
 
 fn insert_global_properties(rt: &mut Runtime) {
@@ -373,6 +374,7 @@ async fn test_wpt() -> Result<()> {
             // construct-byob-request.any.js shows Err because `ReadableStream` and `ReadableByteStreamController`
             // are not yet implemented
             r"^\/streams\/readable\-byte\-streams\/.+\.any\.html$",
+            r"^\/url\/[^\/]+\.any\.html$", // URL, URLSearchParams
         ]
         .as_ref(),
     )?;

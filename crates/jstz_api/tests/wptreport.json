@@ -9894,6 +9894,2831 @@
           }
         }
       }
+    },
+    "url": {
+      "Folder": {
+        "historical.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "searchParams on location object",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "<a> and <area>.searchParams should be undefined",
+                    "status": "Fail",
+                    "message": "document is not defined"
+                  },
+                  {
+                    "name": "Setting URL's href attribute and base URLs",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL.domainToASCII should be undefined",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL.domainToUnicode should be undefined",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL: no structured serialize/deserialize support",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
+                  },
+                  {
+                    "name": "URLSearchParams: no structured serialize/deserialize support",
+                    "status": "Fail",
+                    "message": "assert_throws_dom: function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
+                  },
+                  {
+                    "name": "Constructor only takes strings",
+                    "status": "Fail",
+                    "message": "assert_throws_exactly: url argument function \"function () { [native code] }\" threw object \"TypeError: cannot convert value to a String\" but we expected it to throw 1"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 4,
+                  "failed": 4,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "idlharness.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "idl_test setup",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "url-constructor.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Loading data…",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              },
+              {
+                "subtests": [
+                  {
+                    "name": "Loading data…",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              },
+              {
+                "subtests": [
+                  {
+                    "name": "Loading data…",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              },
+              {
+                "subtests": [
+                  {
+                    "name": "Loading data…",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "url-origin.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Loading data…",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "url-searchparams.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "URL.searchParams getter",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL.searchParams updating, clearing",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"?a=b\" but got \"a=b\""
+                  },
+                  {
+                    "name": "URL.searchParams setter, invalid values",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL.searchParams and URL.search setters, update propagation",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"?a=b&c=d\" but got \"a=b&c=d\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 2,
+                  "failed": 2,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "url-setters-stripping.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Setting protocol with leading U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid protocol"
+                  },
+                  {
+                    "name": "Setting protocol with U+0000 before inserted colon (https:)",
+                    "status": "Fail",
+                    "message": "Invalid protocol"
+                  },
+                  {
+                    "name": "Setting username with leading U+0000 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+0000 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+0000 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+0000 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+0000 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+0000 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with leading U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with middle U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with middle U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with trailing U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting port with leading U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+0000 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+0000 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+0000 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?%00test\" but got \"%00test\""
+                  },
+                  {
+                    "name": "Setting search with middle U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?te%00st\" but got \"te%00st\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test%00\" but got \"test%00\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#%00test\" but got \"%00test\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#te%00st\" but got \"te%00st\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+0000 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test%00\" but got \"test%00\""
+                  },
+                  {
+                    "name": "Setting protocol with leading U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"http:\" but got \"http\""
+                  },
+                  {
+                    "name": "Setting protocol with U+0009 before inserted colon (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"http:\" but got \"http\""
+                  },
+                  {
+                    "name": "Setting username with leading U+0009 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+0009 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+0009 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+0009 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+0009 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+0009 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with leading U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with middle U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with middle U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with trailing U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting port with leading U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+0009 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+0009 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+0009 (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with middle U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+0009 (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting protocol with leading U+000A (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"http:\" but got \"http\""
+                  },
+                  {
+                    "name": "Setting protocol with U+000A before inserted colon (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"http:\" but got \"http\""
+                  },
+                  {
+                    "name": "Setting username with leading U+000A (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+000A (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+000A (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+000A (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+000A (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+000A (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+000A (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with leading U+000A (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with middle U+000A (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with middle U+000A (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with trailing U+000A (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+000A (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting port with leading U+000A (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+000A (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+000A (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+000A (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+000A (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+000A (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+000A (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with middle U+000A (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+000A (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+000A (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+000A (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+000A (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting protocol with leading U+000D (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"http:\" but got \"http\""
+                  },
+                  {
+                    "name": "Setting protocol with U+000D before inserted colon (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"http:\" but got \"http\""
+                  },
+                  {
+                    "name": "Setting username with leading U+000D (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+000D (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+000D (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+000D (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+000D (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+000D (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+000D (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with leading U+000D (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with middle U+000D (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with middle U+000D (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with trailing U+000D (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+000D (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting port with leading U+000D (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+000D (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+000D (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+000D (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+000D (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+000D (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+000D (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with middle U+000D (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+000D (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+000D (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+000D (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+000D (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting protocol with leading U+001F (https:)",
+                    "status": "Fail",
+                    "message": "Invalid protocol"
+                  },
+                  {
+                    "name": "Setting protocol with U+001F before inserted colon (https:)",
+                    "status": "Fail",
+                    "message": "Invalid protocol"
+                  },
+                  {
+                    "name": "Setting username with leading U+001F (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+001F (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+001F (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+001F (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+001F (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+001F (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+001F (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with leading U+001F (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with middle U+001F (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with middle U+001F (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with trailing U+001F (https:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+001F (https:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting port with leading U+001F (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+001F (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+001F (https:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+001F (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+001F (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+001F (https:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+001F (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?%1Ftest\" but got \"%1Ftest\""
+                  },
+                  {
+                    "name": "Setting search with middle U+001F (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?te%1Fst\" but got \"te%1Fst\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+001F (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test%1F\" but got \"test%1F\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+001F (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#%1Ftest\" but got \"%1Ftest\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+001F (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#te%1Fst\" but got \"te%1Fst\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+001F (https:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test%1F\" but got \"test%1F\""
+                  },
+                  {
+                    "name": "Setting protocol with leading U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid protocol"
+                  },
+                  {
+                    "name": "Setting protocol with U+0000 before inserted colon (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid protocol"
+                  },
+                  {
+                    "name": "Setting username with leading U+0000 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+0000 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+0000 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+0000 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+0000 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+0000 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with leading U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with middle U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with middle U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with trailing U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting port with leading U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+0000 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+0000 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+0000 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?%00test\" but got \"%00test\""
+                  },
+                  {
+                    "name": "Setting search with middle U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?te%00st\" but got \"te%00st\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test%00\" but got \"test%00\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#%00test\" but got \"%00test\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#te%00st\" but got \"te%00st\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+0000 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test%00\" but got \"test%00\""
+                  },
+                  {
+                    "name": "Setting protocol with leading U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"wpt--:\" but got \"wpt--\""
+                  },
+                  {
+                    "name": "Setting protocol with U+0009 before inserted colon (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"wpt--:\" but got \"wpt--\""
+                  },
+                  {
+                    "name": "Setting username with leading U+0009 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+0009 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+0009 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+0009 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+0009 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+0009 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with leading U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with middle U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with middle U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with trailing U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting port with leading U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+0009 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+0009 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+0009 (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with middle U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+0009 (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting protocol with leading U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"wpt--:\" but got \"wpt--\""
+                  },
+                  {
+                    "name": "Setting protocol with U+000A before inserted colon (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"wpt--:\" but got \"wpt--\""
+                  },
+                  {
+                    "name": "Setting username with leading U+000A (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+000A (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+000A (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+000A (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+000A (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+000A (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with leading U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with middle U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with middle U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with trailing U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting port with leading U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+000A (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+000A (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+000A (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with middle U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+000A (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting protocol with leading U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"wpt--:\" but got \"wpt--\""
+                  },
+                  {
+                    "name": "Setting protocol with U+000D before inserted colon (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"wpt--:\" but got \"wpt--\""
+                  },
+                  {
+                    "name": "Setting username with leading U+000D (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+000D (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+000D (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+000D (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+000D (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+000D (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with leading U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with middle U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with middle U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting host with trailing U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid host"
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid hostname"
+                  },
+                  {
+                    "name": "Setting port with leading U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+000D (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+000D (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+000D (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with middle U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+000D (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test\" but got \"test\""
+                  },
+                  {
+                    "name": "Setting protocol with leading U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid protocol"
+                  },
+                  {
+                    "name": "Setting protocol with U+001F before inserted colon (wpt++:)",
+                    "status": "Fail",
+                    "message": "Invalid protocol"
+                  },
+                  {
+                    "name": "Setting username with leading U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with middle U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting username with trailing U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with leading U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with middle U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting password with trailing U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with leading U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"%1Ftest:8000\" but got \"%1Ftest\""
+                  },
+                  {
+                    "name": "Setting hostname with leading U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with middle U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"te%1Fst:8000\" but got \"te%1Fst\""
+                  },
+                  {
+                    "name": "Setting hostname with middle U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting host with trailing U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"test%1F:8000\" but got \"test%1F\""
+                  },
+                  {
+                    "name": "Setting hostname with trailing U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting port with leading U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with middle U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting port with trailing U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a u16"
+                  },
+                  {
+                    "name": "Setting pathname with leading U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with middle U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting pathname with trailing U+001F (wpt++:)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Setting search with leading U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?%1Ftest\" but got \"%1Ftest\""
+                  },
+                  {
+                    "name": "Setting search with middle U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?te%1Fst\" but got \"te%1Fst\""
+                  },
+                  {
+                    "name": "Setting search with trailing U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"?test%1F\" but got \"test%1F\""
+                  },
+                  {
+                    "name": "Setting hash with leading U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#%1Ftest\" but got \"%1Ftest\""
+                  },
+                  {
+                    "name": "Setting hash with middle U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#te%1Fst\" but got \"te%1Fst\""
+                  },
+                  {
+                    "name": "Setting hash with trailing U+001F (wpt++:)",
+                    "status": "Fail",
+                    "message": "assert_equals: property expected \"#test%1F\" but got \"test%1F\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 93,
+                  "failed": 167,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "url-setters.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Loading data…",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              },
+              {
+                "subtests": [
+                  {
+                    "name": "Loading data…",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              },
+              {
+                "subtests": [
+                  {
+                    "name": "Loading data…",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              },
+              {
+                "subtests": [
+                  {
+                    "name": "Loading data…",
+                    "status": "Fail",
+                    "message": "fetch is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "url-statics-canparse.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "URL.canParse(undefined, undefined)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "URL.canParse(aaa:b, undefined)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL.canParse(undefined, aaa:b)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "URL.canParse(aaa:/b, undefined)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL.canParse(undefined, aaa:/b)",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "URL.canParse(https://test:test, undefined)",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL.canParse(a, https://b/)",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 4,
+                  "failed": 3,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "url-tojson.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Untitled",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 1,
+                  "failed": 0,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlencoded-parser.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "URLSearchParams constructed with: test",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: ﻿test=﻿",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %EF%BB%BFtest=%EF%BB%BF",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %EF%BF%BF=%EF%BF%BF",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %FE%FF",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %FF%FE",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: †&†=x",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %C2",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %C2x",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: _charset_=windows-1252&test=%C2x",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: ",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a=b",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a=",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: =b",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: &",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: &a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a&",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a&a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a&b&c",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a=b&c=d",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a=b&c=d&",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: &&&a=b&&&&c=d&",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a=a&a=b&a=c",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a==a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: a=a+b+c+d",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %=a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %a=a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %a_=a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %61=a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: %61+%4d%4D=",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: id=0&value=%",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: b=%2sf%2a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: b=%2%2af%2a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructed with: b=%%2a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "request.formData() with input: test",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: test",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: ﻿test=﻿",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: ﻿test=﻿",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %EF%BB%BFtest=%EF%BB%BF",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %EF%BB%BFtest=%EF%BB%BF",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %EF%BF%BF=%EF%BF%BF",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %EF%BF%BF=%EF%BF%BF",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %FE%FF",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %FE%FF",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %FF%FE",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %FF%FE",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: †&†=x",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: †&†=x",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %C2",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %C2",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %C2x",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %C2x",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: _charset_=windows-1252&test=%C2x",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: _charset_=windows-1252&test=%C2x",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: ",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: ",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a=b",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a=b",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a=",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a=",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: =b",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: =b",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: &",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: &",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: &a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: &a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a&",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a&",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a&a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a&a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a&b&c",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a&b&c",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a=b&c=d",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a=b&c=d",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a=b&c=d&",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a=b&c=d&",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: &&&a=b&&&&c=d&",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: &&&a=b&&&&c=d&",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a=a&a=b&a=c",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a=a&a=b&a=c",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a==a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a==a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: a=a+b+c+d",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: a=a+b+c+d",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %=a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %=a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %a=a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %a=a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %a_=a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %a_=a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %61=a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %61=a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: %61+%4d%4D=",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: %61+%4d%4D=",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: id=0&value=%",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: id=0&value=%",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: b=%2sf%2a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: b=%2sf%2a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: b=%2%2af%2a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: b=%2%2af%2a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  },
+                  {
+                    "name": "request.formData() with input: b=%%2a",
+                    "status": "Fail",
+                    "message": "Request is not defined"
+                  },
+                  {
+                    "name": "response.formData() with input: b=%%2a",
+                    "status": "Fail",
+                    "message": "Response is not defined"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 35,
+                  "failed": 70,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-append.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Append same name",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Append empty strings",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Append null",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "Append multiple",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 2,
+                  "failed": 2,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-constructor.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Basic URLSearchParams construction",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a=b\" but got \"\""
+                  },
+                  {
+                    "name": "URLSearchParams constructor, no arguments",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructor, remove leading \"?\"",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a=b\" but got \"?a=b\""
+                  },
+                  {
+                    "name": "URLSearchParams constructor, DOMException as argument",
+                    "status": "Fail",
+                    "message": "DOMException is not defined"
+                  },
+                  {
+                    "name": "URLSearchParams constructor, empty string as argument",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructor, {} as argument",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructor, string.",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams constructor, object.",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (string) \"b\" but got (object) null"
+                  },
+                  {
+                    "name": "URLSearchParams constructor, FormData.",
+                    "status": "Fail",
+                    "message": "FormData is not defined"
+                  },
+                  {
+                    "name": "Parse +",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse encoded +",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"query=%2B15555555555\" but got \"query=+15555555555\""
+                  },
+                  {
+                    "name": "Parse space",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse %20",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse \\0",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse %00",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse ⎄",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse %e2%8e%84",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse 💩",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse %f0%9f%92%a9",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Constructor with sequence of sequences of strings",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Construct with object with +",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Construct with object with two keys",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Construct with array with two keys",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Construct with 2 unpaired surrogates (no trailing)",
+                    "status": "Fail",
+                    "message": "could not convert JsString to Rust string: invalid utf-16: lone surrogate found"
+                  },
+                  {
+                    "name": "Construct with 3 unpaired surrogates (no leading)",
+                    "status": "Fail",
+                    "message": "could not convert JsString to Rust string: invalid utf-16: lone surrogate found"
+                  },
+                  {
+                    "name": "Construct with object with NULL, non-ASCII, and surrogate keys",
+                    "status": "Fail",
+                    "message": "could not convert JsString to Rust string: invalid utf-16: lone surrogate found"
+                  },
+                  {
+                    "name": "Custom [Symbol.iterator]",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (string) \"b\" but got (object) null"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 17,
+                  "failed": 10,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-delete.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Delete basics",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "Deleting appended multiple",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "Deleting all params removes ? from URL",
+                    "status": "Fail",
+                    "message": "assert_equals: url.search does not have ? expected (string) \"\" but got (object) null"
+                  },
+                  {
+                    "name": "Removing non-existent param removes ? from URL",
+                    "status": "Fail",
+                    "message": "assert_equals: url.search does not have ? expected (string) \"\" but got (object) null"
+                  },
+                  {
+                    "name": "Changing the query of a URL with an opaque path can impact the path",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (string) \"\" but got (object) null"
+                  },
+                  {
+                    "name": "Changing the query of a URL with an opaque path can impact the path if the URL has no fragment",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (string) \"\" but got (object) null"
+                  },
+                  {
+                    "name": "Two-argument delete()",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a=b&a=d\" but got \"\""
+                  },
+                  {
+                    "name": "Two-argument delete() respects undefined as second arg",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"b=d\" but got \"\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 0,
+                  "failed": 8,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-foreach.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "ForEach Check",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "For-of Check",
+                    "status": "Fail",
+                    "message": "assert_array_equals: expected property 0 to be \"y\" but got \"b\" (expected array [\"y\", \"2\"] got [\"b\", \"2\"])"
+                  },
+                  {
+                    "name": "empty",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "delete next param during iteration",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "delete current param during iteration",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "delete every param seen during iteration",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 5,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-get.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Get basics",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "More get() basics",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 2,
+                  "failed": 0,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-getall.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "getAll() basics",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "getAll() multiples",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 2,
+                  "failed": 0,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-has.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Has basics",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "has() following delete()",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "Two-argument has()",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "Two-argument has() respects undefined as second arg",
+                    "status": "Pass",
+                    "message": null
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 1,
+                  "failed": 3,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-set.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Set basics",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams.set",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 1,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-size.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "URLSearchParams's size and deletion",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams's size and addition",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URLSearchParams's size when obtained from a URL",
+                    "status": "Fail",
+                    "message": "cannot convert value to a String"
+                  },
+                  {
+                    "name": "URLSearchParams's size when obtained from a URL and using .search",
+                    "status": "Fail",
+                    "message": "assert_equals: expected 0 but got 3"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 2,
+                  "failed": 2,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-sort.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Parse and sort: z=b&a=b&z=a&a=a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL parse and sort: z=b&a=b&z=a&a=a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse and sort: �=x&￼&�=a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL parse and sort: �=x&￼&�=a",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse and sort: ﬃ&🌈",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL parse and sort: ﬃ&🌈",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse and sort: é&e�&é",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL parse and sort: é&e�&é",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse and sort: z=z&a=a&z=y&a=b&z=x&a=c&z=w&a=d&z=v&a=e&z=u&a=f&z=t&a=g",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL parse and sort: z=z&a=a&z=y&a=b&z=x&a=c&z=w&a=d&z=v&a=e&z=u&a=f&z=t&a=g",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse and sort: bbb&bb&aaa&aa=x&aa=y",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL parse and sort: bbb&bb&aaa&aa=x&aa=y",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse and sort: z=z&=f&=t&=x",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL parse and sort: z=z&=f&=t&=x",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Parse and sort: a🌈&a💩",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "URL parse and sort: a🌈&a💩",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Sorting non-existent params removes ? from URL",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (string) \"\" but got (object) null"
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 16,
+                  "failed": 1,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        },
+        "urlsearchparams-stringifier.any.js": {
+          "Test": {
+            "variations": [
+              {
+                "subtests": [
+                  {
+                    "name": "Serialize space",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a=b+c\" but got \"a=b c\""
+                  },
+                  {
+                    "name": "Serialize empty value",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Serialize empty name",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Serialize empty name and value",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Serialize +",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a=b%2Bc\" but got \"a=b+c\""
+                  },
+                  {
+                    "name": "Serialize =",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"%3D=a\" but got \"==a\""
+                  },
+                  {
+                    "name": "Serialize &",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"%26=a\" but got \"&=a\""
+                  },
+                  {
+                    "name": "Serialize *-._",
+                    "status": "Pass",
+                    "message": null
+                  },
+                  {
+                    "name": "Serialize %",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a=b%25c\" but got \"a=b%c\""
+                  },
+                  {
+                    "name": "Serialize \\0",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a=b%00c\" but got \"a=b\\0c\""
+                  },
+                  {
+                    "name": "Serialize 💩",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a=b%F0%9F%92%A9c\" but got \"a=b💩c\""
+                  },
+                  {
+                    "name": "URLSearchParams.toString",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a+=+b+&a=b&c=d+\" but got \"a = b &a=b&c=d \""
+                  },
+                  {
+                    "name": "URLSearchParams connected to URL",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a=b%2Cc\" but got \"a=b,c\""
+                  },
+                  {
+                    "name": "URLSearchParams must not do newline normalization",
+                    "status": "Fail",
+                    "message": "assert_equals: expected \"a%0Ab=c%0Dd&e%0A%0Df=g%0D%0Ah\" but got \"a\\nb=c\\rd&e\\n\\rf=g\\r\\nh\""
+                  }
+                ],
+                "status": "Ok",
+                "metrics": {
+                  "passed": 4,
+                  "failed": 10,
+                  "timed_out": 0
+                }
+              }
+            ]
+          }
+        }
+      }
     }
   }
 }
