@@ -10879,6 +10879,1052 @@
                   }
                 }
               }
+            },
+            "response": {
+              "Folder": {
+                "response-cancel-stream.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Cancelling a starting blob Response stream",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Cancelling a loading blob Response stream",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Cancelling a closed blob Response stream",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Cancelling a starting Response stream",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "Cancelling a loading Response stream",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "Cancelling a closed Response stream",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          },
+                          {
+                            "name": "Accessing .body after canceling it",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 7,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-clone.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-consume-empty.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-consume-stream.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-error-from-stream.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-error.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Throws RangeError when responseInit's status is 0",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Throws RangeError when responseInit's status is 100",
+                            "status": "Fail",
+                            "message": "assert_throws_js: Expect RangeError exception when status is 100 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Throws RangeError when responseInit's status is 199",
+                            "status": "Fail",
+                            "message": "assert_throws_js: Expect RangeError exception when status is 199 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Throws RangeError when responseInit's status is 600",
+                            "status": "Fail",
+                            "message": "assert_throws_js: Expect RangeError exception when status is 600 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Throws RangeError when responseInit's status is 1000",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Throws TypeError when responseInit's statusText is \n",
+                            "status": "Fail",
+                            "message": "assert_throws_js: Expect TypeError exception \n function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Throws TypeError when responseInit's statusText is Ā",
+                            "status": "Fail",
+                            "message": "assert_throws_js: Expect TypeError exception Ā function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Throws TypeError when building a response with body and a body status of 204",
+                            "status": "Fail",
+                            "message": "assert_throws_js: Expect TypeError exception  function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Throws TypeError when building a response with body and a body status of 205",
+                            "status": "Fail",
+                            "message": "assert_throws_js: Expect TypeError exception  function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Throws TypeError when building a response with body and a body status of 304",
+                            "status": "Fail",
+                            "message": "assert_throws_js: Expect TypeError exception  function \"function () { [native code] }\" did not throw"
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 2,
+                          "failed": 8,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-from-stream.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Constructing a Response with a stream on which getReader() is called",
+                            "status": "Fail",
+                            "message": "todo: "
+                          },
+                          {
+                            "name": "Constructing a Response with a stream on which read() is called",
+                            "status": "Fail",
+                            "message": "todo: "
+                          },
+                          {
+                            "name": "Constructing a Response with a stream on which read() and releaseLock() are called",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 3,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-headers-guard.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Ensure response headers are immutable",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 1,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-init-001.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Check default value for type attribute",
+                            "status": "Fail",
+                            "message": "assert_equals: Expect default response.type is default expected (string) \"default\" but got (undefined) undefined"
+                          },
+                          {
+                            "name": "Check default value for url attribute",
+                            "status": "Fail",
+                            "message": "assert_equals: Expect default response.url is  expected (string) \"\" but got (object) null"
+                          },
+                          {
+                            "name": "Check default value for ok attribute",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check default value for status attribute",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check default value for statusText attribute",
+                            "status": "Fail",
+                            "message": "assert_equals: Expect default response.statusText is  expected \"\" but got \"OK\""
+                          },
+                          {
+                            "name": "Check default value for body attribute",
+                            "status": "Fail",
+                            "message": "assert_equals: Expect default response.body is null expected (object) null but got (undefined) undefined"
+                          },
+                          {
+                            "name": "Check status init values and associated getter",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check statusText init values and associated getter",
+                            "status": "Fail",
+                            "message": "assert_equals: Expect response.statusText is  when initialized with  expected \"\" but got \"OK\""
+                          },
+                          {
+                            "name": "Test that Response.headers has the [SameObject] extended attribute",
+                            "status": "Pass",
+                            "message": null
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 4,
+                          "failed": 5,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-init-002.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-init-contenttype.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Default Content-Type for Response with empty body",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Default Content-Type for Response with Blob body (no type set)",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Default Content-Type for Response with Blob body (empty type)",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Default Content-Type for Response with Blob body (set type)",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Default Content-Type for Response with buffer source body",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Default Content-Type for Response with URLSearchParams body",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Default Content-Type for Response with string body",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Default Content-Type for Response with ReadableStream body",
+                            "status": "Fail",
+                            "message": "todo: "
+                          },
+                          {
+                            "name": "Can override Content-Type for Response with empty body",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Can override Content-Type for Response with Blob body (no type set)",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Can override Content-Type for Response with Blob body (empty type)",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Can override Content-Type for Response with Blob body (set type)",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Can override Content-Type for Response with buffer source body",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Can override Content-Type for Response with FormData body",
+                            "status": "Fail",
+                            "message": "FormData is not defined"
+                          },
+                          {
+                            "name": "Can override Content-Type for Response with URLSearchParams body",
+                            "status": "Fail",
+                            "message": "object is not an ArrayBuffer"
+                          },
+                          {
+                            "name": "Can override Content-Type for Response with string body",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Can override Content-Type for Response with ReadableStream body",
+                            "status": "Fail",
+                            "message": "todo: "
+                          },
+                          {
+                            "name": "Default Content-Type for Response with FormData body",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: FormData is not defined\""
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 4,
+                          "failed": 14,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-static-error.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Check response returned by static method error()",
+                            "status": "Fail",
+                            "message": "assert_equals: Network error response's type is error expected (string) \"error\" but got (undefined) undefined"
+                          },
+                          {
+                            "name": "the 'guard' of the Headers instance should be immutable",
+                            "status": "Fail",
+                            "message": "assert_throws_js: function \"function () { [native code] }\" did not throw"
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 2,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-static-redirect.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Check default redirect response",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"default\" but got (undefined) undefined"
+                          },
+                          {
+                            "name": "Check response returned by static method redirect(), status = 301",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"default\" but got (undefined) undefined"
+                          },
+                          {
+                            "name": "Check response returned by static method redirect(), status = 302",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"default\" but got (undefined) undefined"
+                          },
+                          {
+                            "name": "Check response returned by static method redirect(), status = 303",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"default\" but got (undefined) undefined"
+                          },
+                          {
+                            "name": "Check response returned by static method redirect(), status = 307",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"default\" but got (undefined) undefined"
+                          },
+                          {
+                            "name": "Check response returned by static method redirect(), status = 308",
+                            "status": "Fail",
+                            "message": "assert_equals: expected (string) \"default\" but got (undefined) undefined"
+                          },
+                          {
+                            "name": "Check error returned when giving invalid url to redirect()",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check error returned when giving invalid status to redirect(), status = 200",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check error returned when giving invalid status to redirect(), status = 309",
+                            "status": "Fail",
+                            "message": "assert_throws_js: Expect RangeError exception function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "Check error returned when giving invalid status to redirect(), status = 400",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Check error returned when giving invalid status to redirect(), status = 500",
+                            "status": "Pass",
+                            "message": null
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 4,
+                          "failed": 7,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-stream-bad-chunk.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "ReadableStream with non-Uint8Array chunk passed to Response.arrayBuffer() causes TypeError",
+                            "status": "Fail",
+                            "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                          },
+                          {
+                            "name": "ReadableStream with non-Uint8Array chunk passed to Response.blob() causes TypeError",
+                            "status": "Fail",
+                            "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                          },
+                          {
+                            "name": "ReadableStream with non-Uint8Array chunk passed to Response.formData() causes TypeError",
+                            "status": "Fail",
+                            "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                          },
+                          {
+                            "name": "ReadableStream with non-Uint8Array chunk passed to Response.json() causes TypeError",
+                            "status": "Fail",
+                            "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                          },
+                          {
+                            "name": "ReadableStream with non-Uint8Array chunk passed to Response.text() causes TypeError",
+                            "status": "Fail",
+                            "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 5,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-stream-disturbed-1.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Getting blob after getting the Response body - not disturbed, not locked (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting text after getting the Response body - not disturbed, not locked (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting json after getting the Response body - not disturbed, not locked (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after getting the Response body - not disturbed, not locked (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting blob after getting the Response body - not disturbed, not locked (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting text after getting the Response body - not disturbed, not locked (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting json after getting the Response body - not disturbed, not locked (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after getting the Response body - not disturbed, not locked (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting blob after getting the Response body - not disturbed, not locked (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting text after getting the Response body - not disturbed, not locked (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting json after getting the Response body - not disturbed, not locked (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after getting the Response body - not disturbed, not locked (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 12,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-stream-disturbed-2.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Getting blob after getting a locked Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting text after getting a locked Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting json after getting a locked Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after getting a locked Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting blob after getting a locked Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting text after getting a locked Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting json after getting a locked Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after getting a locked Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting blob after getting a locked Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting text after getting a locked Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting json after getting a locked Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after getting a locked Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 12,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-stream-disturbed-3.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Getting blob after reading the Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting text after reading the Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting json after reading the Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after reading the Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting blob after reading the Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting text after reading the Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting json after reading the Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after reading the Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting blob after reading the Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting text after reading the Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting json after reading the Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after reading the Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 12,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-stream-disturbed-4.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Getting blob after cancelling the Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting text after cancelling the Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting json after cancelling the Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after cancelling the Response body (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting blob after cancelling the Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting text after cancelling the Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting json after cancelling the Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after cancelling the Response body (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting blob after cancelling the Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting text after cancelling the Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting json after cancelling the Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          },
+                          {
+                            "name": "Getting arrayBuffer after cancelling the Response body (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: cannot convert 'null' or 'undefined' to object\""
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 12,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-stream-disturbed-5.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Getting a body reader after consuming as blob (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as text (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as json (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as arrayBuffer (body source: fetch)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: fetch is not defined\""
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as blob (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as text (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as json (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as arrayBuffer (body source: stream)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as blob (body source: string)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as text (body source: string)",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as json (body source: string)",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "Getting a body reader after consuming as arrayBuffer (body source: string)",
+                            "status": "Pass",
+                            "message": null
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 3,
+                          "failed": 9,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-stream-disturbed-6.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "A non-closed stream on which read() has been called",
+                            "status": "Fail",
+                            "message": "todo: "
+                          },
+                          {
+                            "name": "A non-closed stream on which cancel() has been called",
+                            "status": "Fail",
+                            "message": "todo: "
+                          },
+                          {
+                            "name": "A closed stream on which read() has been called",
+                            "status": "Fail",
+                            "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                          },
+                          {
+                            "name": "An errored stream on which read() has been called",
+                            "status": "Fail",
+                            "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                          },
+                          {
+                            "name": "An errored stream on which cancel() has been called",
+                            "status": "Fail",
+                            "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 5,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-stream-disturbed-by-pipe.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "using pipeTo on Response body should disturb it synchronously",
+                            "status": "Fail",
+                            "message": "todo: "
+                          },
+                          {
+                            "name": "using pipeThrough on Response body should disturb it synchronously",
+                            "status": "Fail",
+                            "message": "todo: "
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 2,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "response-stream-with-broken-then.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Attempt to inject {done: false, value: bye} via Object.prototype.then.",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Attempt to inject value: undefined via Object.prototype.then.",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Attempt to inject undefined via Object.prototype.then.",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "Attempt to inject 8.2 via Object.prototype.then.",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                          },
+                          {
+                            "name": "intercepting arraybuffer to text conversion via Object.prototype.then should not be possible",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: object is not an ArrayBuffer\""
+                          },
+                          {
+                            "name": "intercepting arraybuffer to body readable stream conversion via Object.prototype.then should not be possible",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: object is not an ArrayBuffer\""
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 6,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           }
         }
