@@ -70,7 +70,7 @@ impl NativeClass for ReadableStreamClass {
             let high_water_mark =
                 queuing_strategy.extract_high_water_mark(HighWaterMark::ONE)?;
             let _ = (high_water_mark, size_algorithm);
-            todo!("SetUpReadableStreamDefaultControllerFromUnderlyingSource")
+            crate::todo!("SetUpReadableStreamDefaultControllerFromUnderlyingSource");
         }
     }
 
