@@ -115,7 +115,7 @@ impl SmartFunction {
                     })?;
 
                 let transfer_result = HostScript::handle_transfer(
-                    &request_deref,
+                    &request_deref.headers().deref(),
                     self_address,
                     &callee_address,
                 );
