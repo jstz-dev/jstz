@@ -34,6 +34,17 @@ export default defineConfig({
       },
 
       {
+        text: "Smart functions",
+        items: [
+          { text: "Overview", link: "/functions/overview" },
+          { text: "Handling requests", link: "/functions/requests" },
+          { text: "Storing data", link: "/functions/data_storage" },
+          { text: "Calling other smart functions", link: "/functions/calling" },
+          // TODO Managing tokens
+        ],
+      },
+
+      {
         text: "API Reference",
         items: [
           { text: "Overview", link: "/api/" },
