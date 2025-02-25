@@ -12,6 +12,7 @@ use http::Uri;
 use jstz_api::{
     http::{
         body::{Body, BodyWithType, HttpBody},
+        header::Headers,
         request::{Request, RequestClass},
         response::{Response, ResponseClass, ResponseOptions},
     },
@@ -61,12 +62,16 @@ pub mod headers {
 
 // Applies on_fullfilled or on_rejected based on either an error was raised or not.
 // If the value is a promise, then we apply the on_fulfilled and on_rejected to the promise.
-fn try_apply_to_value_or_promise(
+pub fn try_apply_to_value_or_promise<F1, F2>(
     value_or_promise: JsResult<JsValue>,
-    on_fulfilled: fn(&JsValue, &mut Context) -> JsResult<()>,
-    on_rejected: fn(&mut Context) -> JsResult<()>,
+    on_fulfilled: F1,
+    on_rejected: F2,
     context: &mut Context,
-) -> JsResult<JsValue> {
+) -> JsResult<JsValue>
+where
+    F1: Fn(&JsValue, &mut Context) -> JsResult<()> + 'static,
+    F2: Fn(&mut Context) -> JsResult<()> + 'static,
+{
     match value_or_promise {
         Ok(value) => match value.as_promise() {
             Some(promise) => {
@@ -441,10 +446,10 @@ impl HostScript {
 
     /// Extracts the XTZ transfer amount from the request headers.
     /// Returns None if the header is not present or Some(amount) if a valid amount is found.
-    fn extract_transfer_amount(
-        request: &impl Deref<Target = Request>,
+    pub fn extract_transfer_amount(
+        headers: &impl Deref<Target = Headers>,
     ) -> JsResult<Option<NonZeroU64>> {
-        let header = request.header(TRANSFER_HEADER_KEY)?;
+        let header = headers.get(TRANSFER_HEADER_KEY)?;
 
         if header.headers.is_empty() {
             return Ok(None);
@@ -472,11 +477,11 @@ impl HostScript {
     /// Transfer xtz from `src` to `dst` if the `TRANSFER_HEADER_KEY` header is present
     /// and the transfer amount > 0 in request
     pub fn handle_transfer(
-        request: &impl Deref<Target = Request>,
+        headers: &impl Deref<Target = Headers>,
         src: &impl Addressable,
         dst: &impl Addressable,
     ) -> JsResult<()> {
-        if let Some(amt) = Self::extract_transfer_amount(request)? {
+        if let Some(amt) = Self::extract_transfer_amount(headers)? {
             let transfer_result = runtime::with_js_hrt_and_tx(|hrt, tx| {
                 Account::transfer(hrt, tx, src, dst, amt.into()).map_err(|e| {
                     JsError::from_native(
@@ -520,9 +525,18 @@ pub mod run {
         builder.body(body).map_err(|_| Error::InvalidHttpRequest)
     }
 
-    fn response_to_receipt(response: JsValue) -> Result<RunFunctionReceipt> {
-        let response = Response::try_from_js(&response)?;
+    /// Handles the refund from the smart function if the response is successful.
+    /// Returns the receipt of the response.
+    fn handle_refund<'a>(
+        response: &'a JsValue,
+        from: &SmartFunctionHash,
+        to: &'a impl Addressable,
+    ) -> Result<RunFunctionReceipt> {
+        let response = Response::try_from_js(response)?;
         let (http_parts, body) = Response::to_http_response(&response).into_parts();
+        if http_parts.status.is_success() {
+            HostScript::handle_transfer(&response.headers().deref(), from, to)?;
+        }
         Ok(RunFunctionReceipt {
             body,
             status_code: http_parts.status,
@@ -552,7 +566,6 @@ pub mod run {
     ) -> Result<JsValue> {
         // Set referrer as the source address of the operation
         headers::test_and_set_referrer(&request.deref(), source)?;
-
         // Run :)
         {
             let rt = &mut *rt;
@@ -609,7 +622,11 @@ pub mod run {
         // 4. Handle transfer if the header is present (without committing)
         tx.begin();
         let transfer_result = runtime::enter_js_host_context(hrt, tx, || {
-            HostScript::handle_transfer(&request.deref(), source, &address)
+            HostScript::handle_transfer(
+                &request.deref().headers().deref(),
+                source,
+                &address,
+            )
         });
         if let Err(err) = transfer_result {
             tx.rollback()?;
@@ -625,13 +642,18 @@ pub mod run {
                     tx,
                     rt,
                     source,
-                    sf_address,
+                    // TODO: avoid cloning
+                    sf_address.clone(),
                     request,
                     operation_hash,
                 );
                 debug_msg!(hrt, "🚀 Smart function executed successfully with value: {:?} (in {:?} instructions)\n", result, gas_limit - rt.instructions_remaining());
                 // Commit or rollback based on the result
-                let result = result.and_then(response_to_receipt);
+                let result = result.and_then(|response| {
+                    runtime::enter_js_host_context(hrt, tx, || {
+                        handle_refund(&response, &sf_address, source)
+                    })
+                });
                 match &result {
                     Ok(receipt) if receipt.status_code.is_success() => tx.commit(hrt)?,
                     _ => tx.rollback()?,
@@ -659,27 +681,31 @@ pub mod run {
         };
 
         #[test]
-        fn transfer_xtz_to_smart_function_succeeds() {
+        fn transfer_xtz_to_and_from_smart_function_succeeds() {
             let source = Address::User(jstz_mock::account1());
             // 1. Deploy the smart function
             let mut jstz_mock_host = JstzMockHost::default();
             let host = jstz_mock_host.rt();
             let mut tx = Transaction::default();
-            let initial_balance = 1;
+            let transfer_amount = 3;
+            let refund_amount = 2;
             tx.begin();
-            Account::add_balance(host, &mut tx, &source, initial_balance)
+            Account::add_balance(host, &mut tx, &source, transfer_amount)
                 .expect("add balance");
             let source_balance = Account::balance(host, &mut tx, &source).unwrap();
-            assert_eq!(source_balance, initial_balance);
+            assert_eq!(source_balance, transfer_amount);
             tx.commit(host).unwrap();
 
             // 1. Deploy the smart function that transfers the balance to the source
-            let code = r#"
+            let code = format!(
+                r#"
             const handler = async () => {{
-                return new Response();
+                const headers = {{"X-JSTZ-TRANSFER": "{refund_amount}"}};
+                return new Response(null, {{headers}});
             }};
             export default handler;
-            "#;
+            "#
+            );
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
             tx.begin();
             let smart_function =
@@ -696,7 +722,7 @@ pub mod run {
             let mut headers = HeaderMap::new();
             headers.insert(
                 TRANSFER_HEADER_KEY,
-                initial_balance.to_string().try_into().unwrap(),
+                transfer_amount.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
                 uri: format!("tezos://{}/", &smart_function).try_into().unwrap(),
@@ -706,23 +732,69 @@ pub mod run {
                 gas_limit: 1000,
             };
             let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-            execute(host, &mut tx, &source, run_function.clone(), fake_op_hash)
-                .expect("run function expected");
+            execute(
+                host,
+                &mut tx,
+                &source,
+                run_function.clone(),
+                fake_op_hash.clone(),
+            )
+            .expect("run function expected");
             tx.commit(host).unwrap();
 
+            // 3. assert the transfer to the sf and refund to the source
             tx.begin();
             let balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
-            assert_eq!(balance_after - balance_before, initial_balance);
-            assert_eq!(Account::balance(host, &mut tx, &source).unwrap(), 0);
+            assert_eq!(
+                balance_after - balance_before,
+                transfer_amount - refund_amount
+            );
+            assert_eq!(
+                Account::balance(host, &mut tx, &source).unwrap(),
+                refund_amount
+            );
 
-            // // 4. transferring again should fail
-            let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
-            let error = execute(host, &mut tx, &source, run_function, fake_op_hash2)
-                .expect_err("Expected error");
+            // 4. transferring to the smart function should fail (source has insufficient funds)
+            let error = execute(
+                host,
+                &mut tx,
+                &source,
+                run_function.clone(),
+                fake_op_hash.clone(),
+            )
+            .expect_err("Expected error");
             assert_eq!(
                 error.to_string(),
                 "EvalError: Transfer failed: InsufficientFunds"
             );
+
+            // 5. transferring from the smart function should fail with insufficient funds and the balance is rolled back
+            let balance_before = Account::balance(host, &mut tx, &source).unwrap();
+            // drain the balance of the smart function
+            Account::set_balance(host, &mut tx, &smart_function, 0).unwrap();
+            let mut headers = HeaderMap::new();
+            headers.insert(
+                TRANSFER_HEADER_KEY,
+                transfer_amount.to_string().try_into().unwrap(),
+            );
+            let error = execute(
+                host,
+                &mut tx,
+                &source,
+                RunFunction {
+                    headers,
+                    ..run_function
+                },
+                fake_op_hash.clone(),
+            )
+            .expect_err("Expected error");
+            let balance_after = Account::balance(host, &mut tx, &source).unwrap();
+            assert_eq!(
+                error.to_string(),
+                "EvalError: Transfer failed: InsufficientFunds"
+            );
+            // tx rolled back as smart function has insufficient funds
+            assert_eq!(balance_after, balance_before);
         }
 
         #[test]
@@ -1436,7 +1508,7 @@ mod tests {
                 "1000".to_string(),
             )])?);
             assert_eq!(
-                HostScript::extract_transfer_amount(&request)?,
+                HostScript::extract_transfer_amount(&request.headers().deref())?,
                 Some(NonZeroU64::new(1000).unwrap())
             );
             Ok(())
@@ -1445,7 +1517,10 @@ mod tests {
         #[test]
         fn test_missing_header() -> JsResult<()> {
             let request = wrap_request(create_test_request(vec![])?);
-            assert_eq!(HostScript::extract_transfer_amount(&request)?, None);
+            assert_eq!(
+                HostScript::extract_transfer_amount(&request.headers().deref())?,
+                None
+            );
             Ok(())
         }
 
@@ -1455,7 +1530,9 @@ mod tests {
                 TRANSFER_HEADER_KEY.to_string(),
                 "invalid".to_string(),
             )])?);
-            assert!(HostScript::extract_transfer_amount(&request).is_err());
+            assert!(
+                HostScript::extract_transfer_amount(&request.headers().deref()).is_err()
+            );
             Ok(())
         }
     }
