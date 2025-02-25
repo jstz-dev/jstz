@@ -643,6 +643,7 @@ pub mod run {
                     rt,
                     source,
                     // TODO: avoid cloning
+                    // https://linear.app/tezos/issue/JSTZ-331/avoid-cloning-for-address-in-proto
                     sf_address.clone(),
                     request,
                     operation_hash,
