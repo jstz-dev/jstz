@@ -16,6 +16,20 @@ impl WptReport {
     pub fn insert(&mut self, path: &str, test: WptReportTest) -> Result<()> {
         insert_test_in_folder(&mut self.test_harness, path, test)
     }
+
+    pub fn stats(&self) -> BTreeMap<String, WptMetrics> {
+        let mut res = BTreeMap::new();
+        for (k, v) in self.test_harness() {
+            for (kk, vv) in v.stats() {
+                let key = match kk.len() {
+                    0 => k.to_owned(),
+                    _ => format!("{k}/{kk}"),
+                };
+                res.insert(key, vv);
+            }
+        }
+        res
+    }
 }
 
 #[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
@@ -88,6 +102,35 @@ impl WptReportFile {
                 variations.push(test);
                 Ok(())
             }
+        }
+    }
+
+    pub fn stats(&self) -> BTreeMap<String, WptMetrics> {
+        match self {
+            WptReportFile::Folder(folder) => {
+                let mut res = BTreeMap::new();
+                for (k, v) in folder {
+                    for (kk, vv) in v.stats() {
+                        let key = match kk.len() {
+                            0 => k.to_owned(),
+                            _ => format!("{k}/{kk}"),
+                        };
+                        res.insert(key, vv);
+                    }
+                }
+                res
+            }
+            WptReportFile::Test { variations } => BTreeMap::from_iter([(
+                String::new(),
+                variations.iter().fold(WptMetrics::default(), |acc, t| {
+                    let m = &t.metrics;
+                    return WptMetrics {
+                        passed: acc.passed + m.passed,
+                        failed: acc.failed + m.failed,
+                        timed_out: acc.timed_out + m.timed_out,
+                    };
+                }),
+            )]),
         }
     }
 }

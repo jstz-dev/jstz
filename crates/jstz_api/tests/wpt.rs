@@ -11,9 +11,10 @@ use derive_more::{From, Into};
 use expect_test::expect_file;
 use jstz_core::{host_defined, Api, Runtime};
 use jstz_wpt::{
-    Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptReportTest, WptServe, WptSubtest,
-    WptSubtestStatus, WptTestStatus,
+    Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReport, WptReportTest,
+    WptServe, WptSubtest, WptSubtestStatus, WptTestStatus,
 };
+use tokio::io::AsyncWriteExt;
 
 const TEST_SUBSET_SIZE: u8 = 5;
 
@@ -357,6 +358,27 @@ fn run_wpt_test(
     }
 }
 
+async fn dump_stats(report: &WptReport, output_path: &str) -> Result<()> {
+    let mut details = serde_json::json!({});
+    let mut full_metrics = WptMetrics::default();
+    let obj = details.as_object_mut().unwrap();
+    for (k, v) in report.stats() {
+        full_metrics.passed += v.passed;
+        full_metrics.failed += v.failed;
+        full_metrics.timed_out += v.timed_out;
+        obj.insert(k, serde_json::to_value(v).unwrap());
+    }
+    let mut stats = serde_json::to_value(full_metrics)?;
+    stats
+        .as_object_mut()
+        .unwrap()
+        .insert("details".to_owned(), details);
+    let mut f = tokio::fs::File::create(output_path).await?;
+    f.write_all(serde_json::to_string_pretty(&stats)?.as_bytes())
+        .await?;
+    Ok(())
+}
+
 #[cfg_attr(feature = "skip-wpt", ignore)]
 #[tokio::test]
 async fn test_wpt() -> Result<()> {
@@ -414,5 +436,8 @@ async fn test_wpt() -> Result<()> {
 
     expected.assert_eq(&serde_json::to_string_pretty(&report)?);
 
+    if let Ok(v) = std::env::var("STATS_PATH") {
+        dump_stats(&report, &v).await?;
+    }
     Ok(())
 }
