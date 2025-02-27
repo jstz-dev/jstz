@@ -75,12 +75,20 @@ Similarly, any calls to other smart contracts are reverted.
 
 Smart functions can catch and handle errors with try/catch blocks just like in ordinary JavaScript/TypeScript.
 
+## Differences from other JavaScript/TypeScript applications
+
+Smart functions look like ordinary JavaScript functions, but because they run on Jstz, they have some differences in their behavior.
+
+- Smart functions cannot be changed or stopped after they are deployed.
+- Smart functions are permissionless, so anyone can call them, but you can add your own logic to them to restrict who can call them.
+- Anyone can inspect the code and storage of deployed smart functions.
+- Because smart functions run in a decentralized manner on many Jstz Smart Rollup nodes, they are censorship-resistant.
+
 ## Limitations of smart functions
 
 Smart functions behave much like other serverless JavaScript/TypeScript applications, but they have these limitations:
 
 - Smart functions cannot call external APIs.
-- After being deployed, a smart function cannot be changed.
 - Smart functions are currently restricted to 3915 bytes.
 - Smart functions can import and use packages, but they can use only certain JavaScript APIs, which limits the packages that they can use.
 <!-- https://huancheng-trili.github.io/jstz-api-coverage/ -->
