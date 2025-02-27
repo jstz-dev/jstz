@@ -10,7 +10,7 @@ A smart function can write a new value for a certain key and the next time it re
 ## Errors
 
 Uncaught errors in smart functions reverse the entire transaction, as if the initial call to the smart function never happened.
-This reversal includes any changes to the data database.
+This reversal includes any changes to the database.
 
 For example, this code writes a value to storage in one line and throws an error on the next line.
 If the smart function does not catch this error, the change to the key-value database on the first line does not happen.
@@ -49,6 +49,10 @@ To delete a value, pass the key to the function `Kv.delete`.
 
 To check if a value exists, pass the key to the function `Kv.has`, which returns a Boolean value.
 
+The database stores keys separated with slashes as subkeys.
+For example, it splits the key `myKey/subKey` into the subkey `subKey` of the key `myKey`.
+This does not change how smart functions store and access data, but it allows API clients to browse subkeys when a smart function stores complex data.
+
 For more information about the smart function key-value API, see [KV](/api/kv).
 
 ## TypeScript applications
@@ -78,4 +82,24 @@ if (storedData) {
 }
 ```
 
-<!-- TODO link to info about the JS API for KV -->
+## Command line
+
+You can retrieve the value of a key with the `jstz kv get` command, where `<ADDRESS_OR_ALIAS>` is the address or alias of the smart function and `<KEY>` is the key:
+
+```bash
+jstz kv get -a <ADDRESS_OR_ALIAS> -n dev <KEY>
+```
+
+If the smart function stores data with subkey, delimited by slashes, you can get those subkey with the `jstz kv list` command.
+For example, if a smart function stores data in the keys `myKey/a`, `myKey/b`, and `myKey/c`, you can get a list of these three subkey with this command:
+
+```bash
+jstz kv list -a <ADDRESS_OR_ALIAS> -n dev myKey
+```
+
+This command helps you explore complex data stored by smart functions.
+To get the data for one of these subkey, use the `jstz kv get` command as usual, as in this example:
+
+```bash
+jstz kv get -a <ADDRESS_OR_ALIAS> -n dev `myKey/a
+```
