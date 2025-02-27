@@ -1,23 +1,25 @@
 # 🪣 KV
 
-A persistent key-value database that can be used to store and retrieve JSON blobs built directly into the `jstz` runtime,
-available using the global `Kv` object.
+As described in [Storing data](/functions/data_storage), Jstz smart functions store data in a persistent key-value database.
+This database is built directly into the Jstz runtime, available using the global `Kv` object.
+Smart functions can read only their own data, not the data of other smart functions.
+Therefore, it is not necessary to worry about name collisions for keys with other smart functions.
+Other clients can read the data, but only a smart function can write to the keys it puts in the database.
 
-Data in `Kv` is stored as a persistent collection of key-value pairs, much like to properties of a JavaScript object or a Map object.
-The keys are represented as strings, while the values are serializable JavaScript objects. Keys are unique within the database, and
-the last value to be set is the one that is returned when next reading the key.
+Data is stored as a persistent collection of key-value pairs, much like the properties of a JavaScript object or a Map object.
+The keys are strings and the values are serializable JavaScript objects.
+Keys are unique within the database, and the last value to be set is the one that is returned when next reading the key.
 
-All operations on `Kv` are synchronous and atomic, committed if the request to the smart function succeeds.
+As described in [Errors](/functions/data_storage#errors) operations on the database are synchronous and atomic, committed only if the request to the smart function succeeds.
+If a smart function writes to storage and throws an uncaught error later in the same transaction, the changes to the database are reversed and the storage is set to what it was before the request that failed.
 
-## Quick Start
-
-We create a key-value pair using the key `"foo"` and the value `{ bar: "baz" }`:
+To create a key-value pair and store data, pass the key and the value to the `Kv.set` function, as in this example:
 
 ```typescript
 Kv.set("foo", { bar: "baz" });
 ```
 
-Once a key-value pair is set, you can read it using `Kv.get()`:
+To read it, pass the key to the `Kv.get()` function:
 
 ```typescript
 const data = Kv.get("foo");
@@ -30,6 +32,8 @@ You can also delete a key-value pair using `Kv.delete()`.
 Kv.delete("foo");
 ```
 
+For more examples, see [Storing data](/functions/data_storage).
+
 ## Instance Methods
 
 ### `Kv.set(key: string, value: unknown): void`
@@ -38,11 +42,11 @@ Set the value for the given key in the database. If a value already exists for t
 
 ### `Kv.get<T = unknown>(key: string): T | null`
 
-Retrieve the value for the given key from the database. If no value exists for the key, this returns `null`.
+Retrieve the value for the given key from the database. If no value exists for the key, this function returns `null`.
 
 ### `Kv.delete(key: string): void`
 
-Deletes the value for the given key from the database. If no value exists for the key, this is an no-op.
+Deletes the value for the given key from the database. If no value exists for the key, this function is a no-op.
 
 ### `Kv.has(key: string): boolean`
 
