@@ -57,6 +57,9 @@ impl<'a> Hash<'a> for SmartFunctionHash {
     }
 
     fn from_base58(data: &str) -> Result<Self> {
+        if data.len() < 3 {
+            return Err(Error::InvalidSmartFunctionHash);
+        }
         match &data[..3] {
             "KT1" => Ok(SmartFunctionHash(ContractKt1Hash::from_base58_check(data)?)),
             _ => Err(Error::InvalidSmartFunctionHash),
@@ -113,6 +116,8 @@ mod test {
 
         // Test with completely invalid format
         assert!(SmartFunctionHash::from_str("invalid").is_err());
+
+        assert!(SmartFunctionHash::from_str("a").is_err());
     }
 
     #[test]
