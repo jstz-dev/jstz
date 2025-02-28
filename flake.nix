@@ -219,6 +219,14 @@
               )
               frameworks
             );
+
+          riscv64MuslPkgs = let
+            crossPkgs = import nixpkgs {
+              inherit system;
+              crossSystem.config = "riscv64-unknown-linux-musl";
+            };
+          in
+            crossPkgs.pkgsCross.riscv64;
         in {
           packages =
             crates.packages
@@ -299,6 +307,8 @@
                 sqlite # for jstz-node
                 octez # for jstzd
                 python39 # for running web-platform tests
+
+                riscv64MuslPkgs.pkgsStatic.stdenv.cc
               ]
               ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
           };
