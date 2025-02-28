@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
   "crates/jstz_api",
+  "crates/jstz_bench",
   "crates/jstz_cli",
   "crates/jstz_core",
   "crates/jstz_crypto",
