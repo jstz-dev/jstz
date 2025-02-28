@@ -378,6 +378,13 @@ async fn test_wpt() -> Result<()> {
             // Request
             // request-structure.any.js shows Err because jstz Request does not accept empty URLs
             r"^\/fetch\/api\/request\/[^\/]+\.any\.html$",
+            // Response
+            // FIXME: after JSTZ-328 is fixed, update the following lines so that all
+            // `/fetch/api/response` test suites are enabled. The test suite being filtered out is
+            // `fetch/api/response/response-static-json.any.js`
+            r"^\/fetch\/api\/response\/response-[^s].+\.any\.html$",
+            r"^\/fetch\/api\/response\/response-static-[^j].+\.any\.html$",
+            r"^\/fetch\/api\/response\/response-stream-.+\.any\.html$",
         ]
         .as_ref(),
     )?;
