@@ -3007,6 +3007,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "jstz_tps_bench"
+version = "0.1.0-alpha.0"
+dependencies = [
+ "base64 0.21.7",
+ "bincode 2.0.0-rc.3",
+ "boa_gc",
+ "clap 4.5.20",
+ "hex",
+ "http 1.1.0",
+ "jstz_crypto",
+ "jstz_kernel",
+ "jstz_proto",
+ "regex",
+ "serde",
+ "serde_json",
+ "tezos-smart-rollup",
+ "tezos-smart-rollup-core",
+ "tezos_crypto_rs 0.6.0",
+ "tezos_data_encoding 0.6.0",
+]
+
+[[package]]
 name = "jstz_wpt"
 version = "0.1.0-alpha.0"
 dependencies = [
@@ -5105,6 +5127,7 @@ source = "git+https://gitlab.com/tezos/tezos.git?rev=9642a3e9b8e8bc3c71cbcd6f513
 dependencies = [
  "hermit",
  "hex",
+ "serde_json",
  "tezos-smart-rollup-build-utils",
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
@@ -5114,6 +5137,7 @@ dependencies = [
  "tezos-smart-rollup-macros",
  "tezos-smart-rollup-mock",
  "tezos-smart-rollup-storage",
+ "tezos-smart-rollup-utils",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
 ]
