@@ -249,7 +249,7 @@ impl jstz_core::Api for TestHarnessReportApi {
 pub fn register_apis(context: &mut Context) {
     // Register all the APIs here
     // TODO this is not all the APIs
-    jstz_api::http::header::HeadersApi.init(context);
+    jstz_api::http::HttpApi.init(context);
     jstz_api::encoding::EncodingApi.init(context);
     jstz_api::file::FileApi.init(context);
     jstz_api::stream::StreamApi.init(context);
@@ -375,6 +375,9 @@ async fn test_wpt() -> Result<()> {
             // are not yet implemented
             r"^\/streams\/readable\-byte\-streams\/.+\.any\.html$",
             r"^\/url\/[^\/]+\.any\.html$", // URL, URLSearchParams
+            // Request
+            // request-structure.any.js shows Err because jstz Request does not accept empty URLs
+            r"^\/fetch\/api\/request\/[^\/]+\.any\.html$",
         ]
         .as_ref(),
     )?;
