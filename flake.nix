@@ -146,7 +146,7 @@
 
             # TODO(https://linear.app/tezos/issue/JSTZ-63)
             # Configure formatter for LIGO contracts
-            settings.global.excludes = ["target" "result" "node_modules/**" ".github" ".direnv" "contracts/**" "Dockerfile" "*.toml"];
+            settings.global.excludes = ["target" "result" "node_modules/**" ".github" ".direnv" "contracts/**" "Dockerfile" "*.toml" "crates/jstz_tps_bench/fa2.js"];
           };
         in {
           packages = crates.packages // js-packages.packages // {default = self.packages.${system}.jstz_kernel;};
