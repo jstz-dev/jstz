@@ -62,12 +62,16 @@ pub mod headers {
 
 // Applies on_fullfilled or on_rejected based on either an error was raised or not.
 // If the value is a promise, then we apply the on_fulfilled and on_rejected to the promise.
-fn try_apply_to_value_or_promise(
+pub fn try_apply_to_value_or_promise<F1, F2>(
     value_or_promise: JsResult<JsValue>,
-    on_fulfilled: fn(&JsValue, &mut Context) -> JsResult<()>,
-    on_rejected: fn(&mut Context) -> JsResult<()>,
+    on_fulfilled: F1,
+    on_rejected: F2,
     context: &mut Context,
-) -> JsResult<JsValue> {
+) -> JsResult<JsValue>
+where
+    F1: Fn(&JsValue, &mut Context) -> JsResult<()> + 'static,
+    F2: Fn(&mut Context) -> JsResult<()> + 'static,
+{
     match value_or_promise {
         Ok(value) => match value.as_promise() {
             Some(promise) => {
@@ -367,6 +371,7 @@ impl Script {
 }
 
 pub const TRANSFER_HEADER_KEY: &str = "X-JSTZ-TRANSFER";
+pub const TRANSFERRED_HEADER_KEY: &str = "X-JSTZ-TRANSFERRED";
 
 pub struct HostScript;
 
@@ -476,7 +481,7 @@ impl HostScript {
         headers: &impl Deref<Target = Headers>,
         src: &impl Addressable,
         dst: &impl Addressable,
-    ) -> JsResult<()> {
+    ) -> JsResult<Option<NonZeroU64>> {
         if let Some(amt) = Self::extract_transfer_amount(headers)? {
             let transfer_result = runtime::with_js_hrt_and_tx(|hrt, tx| {
                 Account::transfer(hrt, tx, src, dst, amt.into()).map_err(|e| {
@@ -487,10 +492,10 @@ impl HostScript {
                 })
             });
 
-            return transfer_result;
+            return transfer_result.map(|_| Some(amt));
         }
 
-        Ok(())
+        Ok(None)
     }
 }
 
@@ -529,9 +534,15 @@ pub mod run {
         to: &impl Addressable,
     ) -> Result<RunFunctionReceipt> {
         let response = Response::try_from_js(response)?;
-        let (http_parts, body) = Response::to_http_response(&response).into_parts();
+        let (mut http_parts, body) = Response::to_http_response(&response).into_parts();
         if http_parts.status.is_success() {
-            HostScript::handle_transfer(&response.headers().deref(), from, to)?;
+            let amt = HostScript::handle_transfer(&response.headers().deref(), from, to)?;
+            if let Some(amt) = amt {
+                http_parts.headers.remove(TRANSFER_HEADER_KEY);
+                http_parts
+                    .headers
+                    .insert(TRANSFERRED_HEADER_KEY, amt.to_string().try_into().unwrap());
+            }
         }
         Ok(RunFunctionReceipt {
             body,
@@ -639,6 +650,7 @@ pub mod run {
                     rt,
                     source,
                     // TODO: avoid cloning
+                    // https://linear.app/tezos/issue/JSTZ-331/avoid-cloning-for-address-in-proto
                     sf_address.clone(),
                     request,
                     operation_hash,
@@ -728,7 +740,7 @@ pub mod run {
                 gas_limit: 1000,
             };
             let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-            execute(
+            let response = execute(
                 host,
                 &mut tx,
                 &source,
@@ -736,6 +748,14 @@ pub mod run {
                 fake_op_hash.clone(),
             )
             .expect("run function expected");
+
+            assert!(response.headers.get(TRANSFER_HEADER_KEY).is_none());
+            assert!(response
+                .headers
+                .get(TRANSFERRED_HEADER_KEY)
+                .is_some_and(
+                    |amt| amt.to_str().unwrap().parse::<u64>().unwrap() == refund_amount
+                ));
             tx.commit(host).unwrap();
 
             // 3. assert the transfer to the sf and refund to the source
