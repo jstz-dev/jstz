@@ -64,8 +64,6 @@ pub enum Error {
     RevealDataSizeExceedsMaximumLimit,
 }
 
-// TODO: optimize the api and performance
-// https://linear.app/tezos/issue/JSTZ-359/optimize-reveal-data
 pub struct RevealData;
 
 impl RevealData {

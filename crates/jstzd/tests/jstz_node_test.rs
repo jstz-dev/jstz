@@ -8,8 +8,9 @@ async fn jstz_node_test() {
     let endpoint = Endpoint::localhost(unused_port());
     let mock_rollup_endpoint = Endpoint::localhost(unused_port());
     let tempfile = NamedTempFile::new().unwrap();
+    let path = tempfile.path().to_path_buf();
     let jstz_node_config =
-        JstzNodeConfig::new(&endpoint, &mock_rollup_endpoint, tempfile.path());
+        JstzNodeConfig::new(&endpoint, &mock_rollup_endpoint, &path, &path);
     let mut jstz_node = jstzd::task::jstz_node::JstzNode::spawn(jstz_node_config)
         .await
         .unwrap();

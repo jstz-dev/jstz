@@ -43,6 +43,10 @@ pub enum Error {
     ZeroAmountNotAllowed,
     AddressTypeMismatch,
     AccountExists,
+    // TOO: Reveal data error
+    RevealDataError {
+        message: String,
+    },
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -117,6 +121,9 @@ impl From<Error> for JsError {
             Error::AccountExists => {
                 JsNativeError::eval().with_message("AccountExists").into()
             }
+            Error::RevealDataError { message } => JsNativeError::eval()
+                .with_message(format!("RevealDataError: {}", message))
+                .into(),
         }
     }
 }

@@ -3046,6 +3046,7 @@ dependencies = [
  "erased-serde",
  "expect-test",
  "getrandom",
+ "hex",
  "jstz_crypto",
  "nom",
  "serde",

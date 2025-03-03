@@ -170,6 +170,7 @@ async fn create_jstzd_server(
         jstz_node_rpc_endpoint,
         &rollup_config.rpc_endpoint,
         &kernel_debug_file_path,
+        &kernel_debug_file_path,
     );
     let config = JstzdConfig::new(
         octez_node_config,
