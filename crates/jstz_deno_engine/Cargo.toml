@@ -1,0 +1,14 @@
+[package]
+name = "jstz_deno_engine"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description = "A memory-safe JavaScript engine API in Rust"
+
+[dependencies]
+deno_core.workspace = true

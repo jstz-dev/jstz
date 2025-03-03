@@ -64,6 +64,11 @@ build-sdk-wasm-pkg:
 build-native-kernel:
 	@cargo build -p jstz_engine --release --features "native-kernel"
 
+.PHONE: build-riscv-engine
+build-riscv-engine:
+	@sh ./scripts/download_v8.sh
+	@RUSTY_V8_ARCHIVE=$$PWD/librusty_v8.a RUSTY_V8_SRC_BINDING_PATH=$$PWD/librusty_v8_src_binding.rs cargo build -p jstz_deno_engine --release --target riscv64gc-unknown-linux-musl
+
 .PHONY: test
 test: test-unit test-int
 
