@@ -1,0 +1,15 @@
+[package]
+name = "jstz_runtime"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description = "Javascript runtime for Jstz"
+
+[dependencies]
+deno_core.workspace = true
+deno_fs.workspace = true
