@@ -39,9 +39,9 @@
       inputs.flake-utils.follows = "flake-utils";
     };
 
-    octez-v21 = {
-      url = "gitlab:tezos/tezos/octez-v21.0-rc2";
+    octezPackages = {
       inputs.nixpkgs.follows = "nixpkgs";
+      url = "gitlab:tezos/tezos/octez-v22.0-rc1";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.opam-nix-integration.follows = "opam-nix-integration";
@@ -65,7 +65,7 @@
           #
           # TODO(https://linear.app/tezos/issue/JSTZ-152):
           # This patch here should be upstreamed to tezos/tezos
-          octez = octez-v21.packages.${system}.default.overrideAttrs (old: let
+          octez = octezPackages.packages.${system}.default.overrideAttrs (old: let
             rustToolchain = pkgs.rust-bin.fromRustupToolchainFile "${old.src}/rust-toolchain";
             rustPlatform = pkgs.makeRustPlatform {
               rustc = rustToolchain;
@@ -91,10 +91,30 @@
             #
             # The latter is slower but doesn't require an explicit `hash` and is therefore
             # more maintainable (since this derivation isn't built in CI).
-            cargoDeps = rustPlatform.importCargoLock {
-              lockFile = "${old.src}/src/rust_deps/Cargo.lock";
-            };
-            cargoRoot = "src/rust_deps";
+            preBuild = let
+              # Vendor rust_deps
+              rust_deps = rustPlatform.importCargoLock {
+                lockFile = "${old.src}/src/rust_deps/Cargo.lock";
+              };
+              # Vendor rustzcash_deps
+              rustzcash_deps = rustPlatform.importCargoLock {
+                lockFile = "${old.src}/src/rustzcash_deps/Cargo.lock";
+              };
+              # Configure cargo to get dependencies from vendored dir
+              setup_vendored_dir = target_dir: vendored_dir: ''
+                mkdir -p ${target_dir}/.cargo
+                cat > ${target_dir}/.cargo/config.toml << EOF
+                [source.crates-io]
+                replace-with = "vendored-sources"
+
+                [source.vendored-sources]
+                directory = "${vendored_dir}"
+                EOF
+              '';
+            in ''
+              ${setup_vendored_dir "src/rust_deps" rust_deps}
+              ${setup_vendored_dir "src/rustzcash_deps" rustzcash_deps}
+            '';
 
             nativeBuildInputs =
               (old.nativeBuildInputs or [])
@@ -102,9 +122,7 @@
                 # See https://nixos.org/manual/nixpkgs/stable/#compiling-non-rust-packages-that-include-rust-code
                 # for more information.
                 #
-                # `cargoSetupHook` configures cargo to vendor dependencies using `cargoDeps`.
                 rustToolchain
-                rustPlatform.cargoSetupHook
               ];
           });
 
@@ -148,6 +166,18 @@
             # Configure formatter for LIGO contracts
             settings.global.excludes = ["target" "result" "node_modules/**" ".github" ".direnv" "contracts/**" "Dockerfile" "*.toml"];
           };
+
+          mkFrameworkFlags = frameworks:
+            pkgs.lib.concatStringsSep " " (
+              pkgs.lib.concatMap
+              (
+                framework: [
+                  "-F${pkgs.darwin.apple_sdk.frameworks.${framework}}/Library/Frameworks"
+                  "-framework ${framework}"
+                ]
+              )
+              frameworks
+            );
         in {
           packages = crates.packages // js-packages.packages // {default = self.packages.${system}.jstz_kernel;};
           checks = crates.checks // {formatting = fmt.config.build.check self;};
@@ -162,6 +192,14 @@
             # targeting other architectures.
             CC_wasm32_unknown_unknown = "${clangNoArch}/bin/clang";
             CC_riscv64gc_unknown_hermit = "${clangNoArch}/bin/clang";
+
+            NIX_LDFLAGS = pkgs.lib.optionals pkgs.stdenv.isDarwin (
+              mkFrameworkFlags [
+                "SystemConfiguration"
+                "Security"
+                "Foundation"
+              ]
+            );
 
             hardeningDisable =
               pkgs.lib.optionals
@@ -215,8 +253,7 @@
                 octez # for jstzd
                 python39 # for running web-platform tests
               ]
-              ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev]
-              ++ lib.optionals stdenv.isDarwin (with darwin.apple_sdk.frameworks; [Security SystemConfiguration Foundation]);
+              ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
           };
         }
       );
