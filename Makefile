@@ -2,7 +2,7 @@
 PROFILE ?= release
 PROFILE_OPT := --profile $(PROFILE)
 
-# Frustratingly, for the dev profile, /target/debug is used. For all other profiles, 
+# Frustratingly, for the dev profile, /target/debug is used. For all other profiles,
 # /target/$(PROFILE) is used. This is a workaround to ensure that the correct target
 # directory is used for the dev profile.
 ifeq ($(PROFILE), dev)
@@ -63,6 +63,10 @@ build-sdk-wasm-pkg:
 .PHONY: build-native-kernel
 build-native-kernel:
 	@cargo build -p jstz_engine --release --features "native-kernel"
+
+.PHONE: riscv-runtime
+riscv-runtime:
+	@RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs cargo build -p jstz_runtime --release --target riscv64gc-unknown-linux-musl
 
 .PHONY: test
 test: test-unit test-int
