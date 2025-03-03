@@ -4577,6 +4577,66 @@
                     "message": "not a constructor"
                   },
                   {
+                    "name": "encodeInto() into ArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 0, filler 0",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (number) 5 but got (bigint) bigint \"5\""
+                  },
+                  {
+                    "name": "encodeInto() into SharedArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 0, filler 0",
+                    "status": "Fail",
+                    "message": "not a constructor"
+                  },
+                  {
+                    "name": "encodeInto() into ArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 4, filler 0",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (number) 5 but got (bigint) bigint \"7\""
+                  },
+                  {
+                    "name": "encodeInto() into SharedArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 4, filler 0",
+                    "status": "Fail",
+                    "message": "not a constructor"
+                  },
+                  {
+                    "name": "encodeInto() into ArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 0, filler 128",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (number) 5 but got (bigint) bigint \"5\""
+                  },
+                  {
+                    "name": "encodeInto() into SharedArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 0, filler 128",
+                    "status": "Fail",
+                    "message": "not a constructor"
+                  },
+                  {
+                    "name": "encodeInto() into ArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 4, filler 128",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (number) 5 but got (bigint) bigint \"7\""
+                  },
+                  {
+                    "name": "encodeInto() into SharedArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 4, filler 128",
+                    "status": "Fail",
+                    "message": "not a constructor"
+                  },
+                  {
+                    "name": "encodeInto() into ArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 0, filler random",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (number) 5 but got (bigint) bigint \"5\""
+                  },
+                  {
+                    "name": "encodeInto() into SharedArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 0, filler random",
+                    "status": "Fail",
+                    "message": "not a constructor"
+                  },
+                  {
+                    "name": "encodeInto() into ArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 4, filler random",
+                    "status": "Fail",
+                    "message": "assert_equals: expected (number) 5 but got (bigint) bigint \"7\""
+                  },
+                  {
+                    "name": "encodeInto() into SharedArrayBuffer with \\uD834A\\uDF06A¥Hi and destination length 10, offset 4, filler random",
+                    "status": "Fail",
+                    "message": "not a constructor"
+                  },
+                  {
                     "name": "encodeInto() into ArrayBuffer with A\\uDF06 and destination length 4, offset 0, filler 0",
                     "status": "Fail",
                     "message": "assert_equals: expected (number) 2 but got (bigint) bigint \"2\""
@@ -4825,7 +4885,7 @@
                 "status": "Ok",
                 "metrics": {
                   "passed": 13,
-                  "failed": 84,
+                  "failed": 96,
                   "timed_out": 0
                 }
               }

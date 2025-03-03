@@ -167,5 +167,16 @@ in {
       // {
         cargoClippyExtraArgs = "--all-targets -- --deny warnings";
       });
+
+    wpt = craneLib.cargoNextest (commonWorkspace
+      // {
+        buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert pkgs.python39 pkgs.git];
+        buildPhase = ''
+          mkdir -p $out
+          git submodule update && cd crates/jstz_wpt/wpt && python3 wpt make-hosts-file >> /etc/hosts && python3 wpt serve &
+        '';
+        doCheck = true;
+        cargoNextestExtraArgs = "--workspace --test \"wpt\"";
+      });
   };
 }
