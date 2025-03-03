@@ -172,7 +172,7 @@ in {
       // {
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert pkgs.python39 pkgs.git];
         doCheck = true;
-        checkPhaseCargoCommand = "git submodule update && cd crates/jstz_wpt/wpt && python3 wpt make-hosts-file >> /etc/hosts && python3 wpt serve & && cd - && cargo test --test wpt"
+        checkPhaseCargoCommand = "git submodule update && cd crates/jstz_wpt/wpt && python3 wpt make-hosts-file >> /etc/hosts && python3 wpt serve & && cd - && cargo test --test wpt";
       });
   };
 }
