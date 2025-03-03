@@ -171,7 +171,10 @@ in {
     wpt = craneLib.cargoNextest (commonWorkspace
       // {
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert pkgs.python39 pkgs.git];
-        buildPhaseCargoCommand = "git submodule update && cd crates/jstz_wpt/wpt && python3 wpt make-hosts-file >> /etc/hosts && python3 wpt serve &";
+        buildPhase = ''
+          mkdir -p $out
+          git submodule update && cd crates/jstz_wpt/wpt && python3 wpt make-hosts-file >> /etc/hosts && python3 wpt serve &
+        '';
         doCheck = true;
         cargoNextestExtraArgs = "--workspace --test \"wpt\"";
       });
