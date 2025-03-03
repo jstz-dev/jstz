@@ -44,3 +44,6 @@ crates/jstz_cli/jstz_kernel.wasm
 crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 
 **/*/.DS_Store
+
+librusty_v8.a
+librusty_v8_src_binding.rs
