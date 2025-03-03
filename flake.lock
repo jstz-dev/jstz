@@ -1,17 +1,12 @@
 {
   "nodes": {
     "crane": {
-      "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
-      },
       "locked": {
-        "lastModified": 1722960479,
-        "narHash": "sha256-NhCkJJQhD5GUib8zN9JrmYGMwt4lCRp6ZVNzIiYCl0Y=",
+        "lastModified": 1739936662,
+        "narHash": "sha256-x4syUjNUuRblR07nDPeLDP7DpphaBVbUaSoeZkFbGSk=",
         "owner": "ipetkov",
         "repo": "crane",
-        "rev": "4c6c77920b8d44cd6660c1621dea6b3fc4b4c4f4",
+        "rev": "19de14aaeb869287647d9461cbd389187d8ecdb7",
         "type": "github"
       },
       "original": {
@@ -20,16 +15,30 @@
         "type": "github"
       }
     },
+    "flake-compat": {
+      "locked": {
+        "lastModified": 1696426674,
+        "narHash": "sha256-kvjfFW7WAETZlt09AgDn1MrtKzP7t90Vf7vypd3OL1U=",
+        "rev": "0f9255e01c2351cc7d116c072cb317785dd33b33",
+        "revCount": 57,
+        "type": "tarball",
+        "url": "https://api.flakehub.com/f/pinned/edolstra/flake-compat/1.0.1/018afb31-abd1-7bff-a5e4-cff7e18efb7a/source.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://flakehub.com/f/edolstra/flake-compat/1.tar.gz"
+      }
+    },
     "flake-utils": {
       "inputs": {
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1689068808,
-        "narHash": "sha256-6ixXo3wt24N/melDWjq70UuHQLxGV8jZvooRanIHXw0=",
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "919d646de7be200f3bf08cb76ae1f09402b6f9b4",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
         "type": "github"
       },
       "original": {
@@ -40,11 +49,11 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1721059602,
-        "narHash": "sha256-LCTss2iem0kTTSihKamsYTc1ZUL85S8TXqwhelOevqI=",
+        "lastModified": 1741010256,
+        "narHash": "sha256-WZNlK/KX7Sni0RyqLSqLPbK8k08Kq7H7RijPJbq9KHM=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "ccb1f96597312925b921f21461f713691c6050f0",
+        "rev": "ba487dbc9d04e0634c64e3b1f0d25839a0a68246",
         "type": "github"
       },
       "original": {
@@ -73,8 +82,9 @@
         "type": "github"
       }
     },
-    "octez-v21": {
+    "octezPackages": {
       "inputs": {
+        "flake-compat": "flake-compat",
         "flake-utils": [
           "flake-utils"
         ],
@@ -90,16 +100,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1726495500,
-        "narHash": "sha256-LxIn3uvqOrNdlcUnbSvHGnVTn47rREvVqdvA4+AL8D0=",
+        "lastModified": 1740505579,
+        "narHash": "sha256-Gf83zujQlUWJVu8UFweDB+NBefCQ6dlOKX5FAs68eQk=",
         "owner": "tezos",
         "repo": "tezos",
-        "rev": "44643df827aa2d745c3d8a09a6649fe175ff77d7",
+        "rev": "f1704a0580f70c48451cf0beef0a93bf10f536a9",
         "type": "gitlab"
       },
       "original": {
         "owner": "tezos",
-        "ref": "octez-v21.0-rc2",
+        "ref": "octez-v22.0-rc1",
         "repo": "tezos",
         "type": "gitlab"
       }
@@ -115,11 +125,11 @@
         "opam-repository": "opam-repository_2"
       },
       "locked": {
-        "lastModified": 1716561961,
-        "narHash": "sha256-SgeZItYuUZV7WSaoX4G7J1ZpmwgeI3ocQCLP95E+O1U=",
+        "lastModified": 1733485420,
+        "narHash": "sha256-8tdWH9ojaXR95yvskNO62ugSMpZdsOX/ipU0rPPWsok=",
         "owner": "vapourismo",
         "repo": "opam-nix-integration",
-        "rev": "0f98236c75cdb436be7669ccaa249264456baa37",
+        "rev": "698b636dc194511a818bdf9ba2f9d5639e268bea",
         "type": "github"
       },
       "original": {
@@ -131,11 +141,11 @@
     "opam-repository": {
       "flake": false,
       "locked": {
-        "lastModified": 1723381368,
-        "narHash": "sha256-fN8jaeSfK8lbIQcvPXk96FeH8i7sjGjkwqnf0C9ZCog=",
+        "lastModified": 1738066957,
+        "narHash": "sha256-zUOPhbEsAJprwvanDVDT3DSV1ioUjuGxMVYCYlzfd2E=",
         "owner": "ocaml",
         "repo": "opam-repository",
-        "rev": "0f4d0ee5b69b496a4e26f305891c31400f0b4b5f",
+        "rev": "aa131f3eda80ed7121debe7582faaf50448bc105",
         "type": "github"
       },
       "original": {
@@ -147,11 +157,11 @@
     "opam-repository_2": {
       "flake": false,
       "locked": {
-        "lastModified": 1688548241,
-        "narHash": "sha256-cmk1kCLtcL9GJplfl4J7t0r8g0N25O4G0ctycV4eyPo=",
+        "lastModified": 1733410362,
+        "narHash": "sha256-1FF9b/mKh69J4z832m7qLbZ5XY4zq7KJ8FpLNPxdHjc=",
         "owner": "ocaml",
         "repo": "opam-repository",
-        "rev": "860072345fa2f234ff10ffeee88db6906e138e92",
+        "rev": "f51a0cfb02636dd317844a2246d8d08b3581867e",
         "type": "github"
       },
       "original": {
@@ -166,7 +176,7 @@
         "flake-utils": "flake-utils",
         "nixpkgs": "nixpkgs",
         "npm-buildpackage": "npm-buildpackage",
-        "octez-v21": "octez-v21",
+        "octezPackages": "octezPackages",
         "opam-nix-integration": "opam-nix-integration",
         "rust-overlay": "rust-overlay",
         "treefmt": "treefmt"
@@ -179,11 +189,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1739500069,
-        "narHash": "sha256-eCxWMqMsP2KQkleWWhs9KzFvxgd9v0F0iq7Piw6XDAs=",
+        "lastModified": 1740969088,
+        "narHash": "sha256-BajboqzFnDhxVT0SXTDKVJCKtFP96lZXccBlT/43mao=",
         "owner": "oxalica",
         "repo": "rust-overlay",
-        "rev": "cd3e0a87bf9edadb0f311ba1eb677bbae7a08b81",
+        "rev": "20fdb02098fdda9a25a2939b975abdd7bc03f62d",
         "type": "github"
       },
       "original": {
@@ -214,11 +224,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1723656612,
-        "narHash": "sha256-6Sx+/VhRPLR+kRf6rnNUFMQ66DUz1DMYajixYUe+CUU=",
+        "lastModified": 1739829690,
+        "narHash": "sha256-mL1szCeIsjh6Khn3nH2cYtwO5YXG6gBiTw1A30iGeDU=",
         "owner": "numtide",
         "repo": "treefmt-nix",
-        "rev": "4a6d7dccf80a1aa2d04cfaa88d9e5511542a2486",
+        "rev": "3d0579f5cc93436052d94b73925b48973a104204",
         "type": "github"
       },
       "original": {
