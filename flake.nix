@@ -178,6 +178,10 @@
           mozjs = pkgs.callPackage ./nix/mozjs.nix {};
           crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez mozjs;};
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
+          riscvV8 = fetchTarball {
+            url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/130.0.7/librusty_v8.tar.gz";
+            sha256 = "0q7b4f70sczlvx6qsrx11p3gyq6651jj9xjrzrv8j4gn1iqhwpaa";
+          };
 
           fmt = treefmt.lib.evalModule pkgs {
             projectRootFile = "flake.nix";
@@ -247,6 +251,8 @@
             # targeting other architectures.
             CC_wasm32_unknown_unknown = "${clangNoArch}/bin/clang";
             CC_riscv64gc_unknown_hermit = "${clangNoArch}/bin/clang";
+
+            RISCV_V8_ARCHIVE_DIR = "${riscvV8}";
 
             NIX_LDFLAGS = pkgs.lib.optionals pkgs.stdenv.isDarwin (
               mkFrameworkFlags [
