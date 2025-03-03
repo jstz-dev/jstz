@@ -93,6 +93,21 @@ in {
     # When adding a new crate, add it to this list
     # in alphabetical order.
     jstz_api = crate "jstz_api";
+    jstz_bench = craneLib.buildPackage (commonWorkspace
+      // rec {
+        # build the crate first to get the bench binary to generate an inbox file
+        benchmark_cli = crate "jstz_bench";
+
+        # then build the crate again with the feature flag to run benchmarking with the inbox file
+        cargoExtraArgs = "-p jstz_bench --features static-inbox";
+
+        preBuildPhases = ["makeInbox"];
+        transfer_count = 10;
+        makeInbox = ''
+          ${benchmark_cli}/bin/bench generate --transfers $transfer_count --inbox-file ./crates/jstz_bench/src/kernel/inbox.json
+          mkdir $out && cp ./crates/jstz_bench/src/kernel/inbox.json $out/inbox.json && echo "$out/bin/kernel --timings > $out/benchmark-log 2>/dev/null && $out/bin/bench results --inbox-file $out/inbox.json --log-file $out/benchmark-log --expected-transfers $transfer_count" >> $out/run.sh
+        '';
+      });
     jstz_cli = craneLib.buildPackage (commonWorkspace
       // rec {
         pname = "jstz_cli";
