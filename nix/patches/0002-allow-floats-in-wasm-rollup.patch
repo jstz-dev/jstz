@@ -12,10 +12,10 @@ index 92ab9996c8..42960b9bd9 100644
                  ~bytes:kernel
              in
 diff --git a/src/lib_scoru_wasm/wasm_vm.ml b/src/lib_scoru_wasm/wasm_vm.ml
-index 62b8ef3104..3cc1efb96f 100644
+index bbe72fc1de..6b4ce57486 100644
 --- a/src/lib_scoru_wasm/wasm_vm.ml
 +++ b/src/lib_scoru_wasm/wasm_vm.ml
-@@ -220,7 +220,7 @@ let unsafe_next_tick_state ~wasm_entrypoint ~version ~stack_size_limit
+@@ -221,7 +221,7 @@ let unsafe_next_tick_state ~wasm_entrypoint ~version ~stack_size_limit
        let* kernel = Durable.find_value_exn durable Constants.kernel_key in
        let* m =
          Tezos_webassembly_interpreter.Decode.module_step
@@ -25,23 +25,23 @@ index 62b8ef3104..3cc1efb96f 100644
            m
        in
 diff --git a/src/lib_wasm_debugger/wasm_debugger.ml b/src/lib_wasm_debugger/wasm_debugger.ml
-index 4a0748f917..612bd3e500 100644
+index 4afeb210e9..9671007923 100644
 --- a/src/lib_wasm_debugger/wasm_debugger.ml
 +++ b/src/lib_wasm_debugger/wasm_debugger.ml
-@@ -28,7 +28,7 @@ module Make (Wasm : Wasm_utils_intf.S) = struct
+@@ -47,7 +47,7 @@ let read_kernel_from_file kernel_path =
  
-   let parse_binary_module name module_ =
-     let bytes = Tezos_lazy_containers.Chunked_byte_vector.of_string module_ in
--    Tezos_webassembly_interpreter.Decode.decode ~allow_floats:false ~name ~bytes
-+    Tezos_webassembly_interpreter.Decode.decode ~allow_floats:true ~name ~bytes
+ let parse_binary_module name module_ =
+   let bytes = Tezos_lazy_containers.Chunked_byte_vector.of_string module_ in
+-  Tezos_webassembly_interpreter.Decode.decode ~allow_floats:false ~name ~bytes
++  Tezos_webassembly_interpreter.Decode.decode ~allow_floats:true ~name ~bytes
  
-   (* [typecheck_module module_ast] runs the typechecker on the module, which is
-      not done by the PVM. *)
+ (* [typecheck_module module_ast] runs the typechecker on the module, which is
+    not done by the PVM. *)
 diff --git a/src/lib_wasmer/api_funcs_desc.ml b/src/lib_wasmer/api_funcs_desc.ml
-index 40e1a1612c..8b3f776f2e 100644
+index 40e1a1612c..680a1a6260 100644
 --- a/src/lib_wasmer/api_funcs_desc.ml
 +++ b/src/lib_wasmer/api_funcs_desc.ml
-@@ -160,6 +160,12 @@ module Functions (S : FOREIGN) = struct
+@@ -160,6 +160,11 @@ module Functions (S : FOREIGN) = struct
          "wasm_config_set_features"
          (ptr Types.Config.t @-> ptr Types.Wasmer.Features.t @-> returning void)
  
@@ -49,7 +49,6 @@ index 40e1a1612c..8b3f776f2e 100644
 +      foreign
 +        "wasm_config_canonicalize_nans"
 +        (ptr Types.Config.t @-> bool @-> returning void)
-+    
 +
      let delete =
        foreign "wasm_config_delete" (ptr Types.Config.t @-> returning void)
