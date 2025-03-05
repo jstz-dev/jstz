@@ -11990,6 +11990,1464 @@
         }
       }
     },
+    "html": {
+      "Folder": {
+        "webappapis": {
+          "Folder": {
+            "atob": {
+              "Folder": {
+                "base64.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "btoa(\"עברית\") must raise INVALID_CHARACTER_ERR",
+                            "status": "Fail",
+                            "message": "assert_throws_dom: Code unit 0 has value 1506, which is greater than 255 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "btoa(\"\") == \"\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"ab\") == \"YWI=\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"abc\") == \"YWJj\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"abcd\") == \"YWJjZA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"abcde\") == \"YWJjZGU=\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"ÿÿÀ\") == \"///A\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"///A\" but got \"w7_Dv8OA\""
+                          },
+                          {
+                            "name": "btoa(\"\\0a\") == \"AGE=\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"a\\0b\") == \"YQBi\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(undefined) == \"dW5kZWZpbmVk\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(null) == \"bnVsbA==\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(7) == \"Nw==\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(12) == \"MTI=\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(1.5) == \"MS41\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(true) == \"dHJ1ZQ==\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(false) == \"ZmFsc2U=\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(NaN) == \"TmFO\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(Infinity) == \"SW5maW5pdHk=\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(-Infinity) == \"LUluZmluaXR5\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(0) == \"MA==\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(-0) == \"MA==\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(object \"foo\") == \"Zm9v\"",
+                            "status": "Fail",
+                            "message": "expected string"
+                          },
+                          {
+                            "name": "btoa(\"\\0\") == \"AA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x01\") == \"AQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x02\") == \"Ag==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x03\") == \"Aw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x04\") == \"BA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x05\") == \"BQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x06\") == \"Bg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x07\") == \"Bw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\b\") == \"CA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\t\") == \"CQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\n\") == \"Cg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\v\") == \"Cw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\f\") == \"DA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\r\") == \"DQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x0e\") == \"Dg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x0f\") == \"Dw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x10\") == \"EA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x11\") == \"EQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x12\") == \"Eg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x13\") == \"Ew==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x14\") == \"FA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x15\") == \"FQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x16\") == \"Fg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x17\") == \"Fw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x18\") == \"GA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x19\") == \"GQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x1a\") == \"Gg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x1b\") == \"Gw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x1c\") == \"HA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x1d\") == \"HQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x1e\") == \"Hg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\x1f\") == \"Hw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\" \") == \"IA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"!\") == \"IQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\\"\") == \"Ig==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"#\") == \"Iw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"$\") == \"JA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"%\") == \"JQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"&\") == \"Jg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"'\") == \"Jw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"(\") == \"KA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\")\") == \"KQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"*\") == \"Kg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"+\") == \"Kw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\",\") == \"LA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"-\") == \"LQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\".\") == \"Lg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"/\") == \"Lw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"0\") == \"MA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"1\") == \"MQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"2\") == \"Mg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"3\") == \"Mw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"4\") == \"NA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"5\") == \"NQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"6\") == \"Ng==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"7\") == \"Nw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"8\") == \"OA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"9\") == \"OQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\":\") == \"Og==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\";\") == \"Ow==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"<\") == \"PA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"=\") == \"PQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\">\") == \"Pg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"?\") == \"Pw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"@\") == \"QA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"A\") == \"QQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"B\") == \"Qg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"C\") == \"Qw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"D\") == \"RA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"E\") == \"RQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"F\") == \"Rg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"G\") == \"Rw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"H\") == \"SA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"I\") == \"SQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"J\") == \"Sg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"K\") == \"Sw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"L\") == \"TA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"M\") == \"TQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"N\") == \"Tg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"O\") == \"Tw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"P\") == \"UA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"Q\") == \"UQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"R\") == \"Ug==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"S\") == \"Uw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"T\") == \"VA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"U\") == \"VQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"V\") == \"Vg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"W\") == \"Vw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"X\") == \"WA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"Y\") == \"WQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"Z\") == \"Wg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"[\") == \"Ww==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\\\\\") == \"XA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"]\") == \"XQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"^\") == \"Xg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"_\") == \"Xw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"`\") == \"YA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"a\") == \"YQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"b\") == \"Yg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"c\") == \"Yw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"d\") == \"ZA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"e\") == \"ZQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"f\") == \"Zg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"g\") == \"Zw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"h\") == \"aA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"i\") == \"aQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"j\") == \"ag==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"k\") == \"aw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"l\") == \"bA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"m\") == \"bQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"n\") == \"bg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"o\") == \"bw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"p\") == \"cA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"q\") == \"cQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"r\") == \"cg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"s\") == \"cw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"t\") == \"dA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"u\") == \"dQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"v\") == \"dg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"w\") == \"dw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"x\") == \"eA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"y\") == \"eQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"z\") == \"eg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"{\") == \"ew==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"|\") == \"fA==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"}\") == \"fQ==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"~\") == \"fg==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\") == \"fw==\"",
+                            "status": "Pass",
+                            "message": null
+                          },
+                          {
+                            "name": "btoa(\"\") == \"gA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"gA==\" but got \"woA=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"gQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"gQ==\" but got \"woE=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"gg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"gg==\" but got \"woI=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"gw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"gw==\" but got \"woM=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"hA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"hA==\" but got \"woQ=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"hQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"hQ==\" but got \"woU=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"hg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"hg==\" but got \"woY=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"hw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"hw==\" but got \"woc=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"iA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"iA==\" but got \"wog=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"iQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"iQ==\" but got \"wok=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"ig==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"ig==\" but got \"woo=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"iw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"iw==\" but got \"wos=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"jA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"jA==\" but got \"wow=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"jQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"jQ==\" but got \"wo0=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"jg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"jg==\" but got \"wo4=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"jw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"jw==\" but got \"wo8=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"kA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"kA==\" but got \"wpA=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"kQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"kQ==\" but got \"wpE=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"kg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"kg==\" but got \"wpI=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"kw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"kw==\" but got \"wpM=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"lA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"lA==\" but got \"wpQ=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"lQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"lQ==\" but got \"wpU=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"lg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"lg==\" but got \"wpY=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"lw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"lw==\" but got \"wpc=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"mA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"mA==\" but got \"wpg=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"mQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"mQ==\" but got \"wpk=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"mg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"mg==\" but got \"wpo=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"mw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"mw==\" but got \"wps=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"nA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"nA==\" but got \"wpw=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"nQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"nQ==\" but got \"wp0=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"ng==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"ng==\" but got \"wp4=\""
+                          },
+                          {
+                            "name": "btoa(\"\") == \"nw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"nw==\" but got \"wp8=\""
+                          },
+                          {
+                            "name": "btoa(\" \") == \"oA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"oA==\" but got \"wqA=\""
+                          },
+                          {
+                            "name": "btoa(\"¡\") == \"oQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"oQ==\" but got \"wqE=\""
+                          },
+                          {
+                            "name": "btoa(\"¢\") == \"og==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"og==\" but got \"wqI=\""
+                          },
+                          {
+                            "name": "btoa(\"£\") == \"ow==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"ow==\" but got \"wqM=\""
+                          },
+                          {
+                            "name": "btoa(\"¤\") == \"pA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"pA==\" but got \"wqQ=\""
+                          },
+                          {
+                            "name": "btoa(\"¥\") == \"pQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"pQ==\" but got \"wqU=\""
+                          },
+                          {
+                            "name": "btoa(\"¦\") == \"pg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"pg==\" but got \"wqY=\""
+                          },
+                          {
+                            "name": "btoa(\"§\") == \"pw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"pw==\" but got \"wqc=\""
+                          },
+                          {
+                            "name": "btoa(\"¨\") == \"qA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"qA==\" but got \"wqg=\""
+                          },
+                          {
+                            "name": "btoa(\"©\") == \"qQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"qQ==\" but got \"wqk=\""
+                          },
+                          {
+                            "name": "btoa(\"ª\") == \"qg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"qg==\" but got \"wqo=\""
+                          },
+                          {
+                            "name": "btoa(\"«\") == \"qw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"qw==\" but got \"wqs=\""
+                          },
+                          {
+                            "name": "btoa(\"¬\") == \"rA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"rA==\" but got \"wqw=\""
+                          },
+                          {
+                            "name": "btoa(\"­\") == \"rQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"rQ==\" but got \"wq0=\""
+                          },
+                          {
+                            "name": "btoa(\"®\") == \"rg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"rg==\" but got \"wq4=\""
+                          },
+                          {
+                            "name": "btoa(\"¯\") == \"rw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"rw==\" but got \"wq8=\""
+                          },
+                          {
+                            "name": "btoa(\"°\") == \"sA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"sA==\" but got \"wrA=\""
+                          },
+                          {
+                            "name": "btoa(\"±\") == \"sQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"sQ==\" but got \"wrE=\""
+                          },
+                          {
+                            "name": "btoa(\"²\") == \"sg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"sg==\" but got \"wrI=\""
+                          },
+                          {
+                            "name": "btoa(\"³\") == \"sw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"sw==\" but got \"wrM=\""
+                          },
+                          {
+                            "name": "btoa(\"´\") == \"tA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"tA==\" but got \"wrQ=\""
+                          },
+                          {
+                            "name": "btoa(\"µ\") == \"tQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"tQ==\" but got \"wrU=\""
+                          },
+                          {
+                            "name": "btoa(\"¶\") == \"tg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"tg==\" but got \"wrY=\""
+                          },
+                          {
+                            "name": "btoa(\"·\") == \"tw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"tw==\" but got \"wrc=\""
+                          },
+                          {
+                            "name": "btoa(\"¸\") == \"uA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"uA==\" but got \"wrg=\""
+                          },
+                          {
+                            "name": "btoa(\"¹\") == \"uQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"uQ==\" but got \"wrk=\""
+                          },
+                          {
+                            "name": "btoa(\"º\") == \"ug==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"ug==\" but got \"wro=\""
+                          },
+                          {
+                            "name": "btoa(\"»\") == \"uw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"uw==\" but got \"wrs=\""
+                          },
+                          {
+                            "name": "btoa(\"¼\") == \"vA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"vA==\" but got \"wrw=\""
+                          },
+                          {
+                            "name": "btoa(\"½\") == \"vQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"vQ==\" but got \"wr0=\""
+                          },
+                          {
+                            "name": "btoa(\"¾\") == \"vg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"vg==\" but got \"wr4=\""
+                          },
+                          {
+                            "name": "btoa(\"¿\") == \"vw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"vw==\" but got \"wr8=\""
+                          },
+                          {
+                            "name": "btoa(\"À\") == \"wA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"wA==\" but got \"w4A=\""
+                          },
+                          {
+                            "name": "btoa(\"Á\") == \"wQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"wQ==\" but got \"w4E=\""
+                          },
+                          {
+                            "name": "btoa(\"Â\") == \"wg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"wg==\" but got \"w4I=\""
+                          },
+                          {
+                            "name": "btoa(\"Ã\") == \"ww==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"ww==\" but got \"w4M=\""
+                          },
+                          {
+                            "name": "btoa(\"Ä\") == \"xA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"xA==\" but got \"w4Q=\""
+                          },
+                          {
+                            "name": "btoa(\"Å\") == \"xQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"xQ==\" but got \"w4U=\""
+                          },
+                          {
+                            "name": "btoa(\"Æ\") == \"xg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"xg==\" but got \"w4Y=\""
+                          },
+                          {
+                            "name": "btoa(\"Ç\") == \"xw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"xw==\" but got \"w4c=\""
+                          },
+                          {
+                            "name": "btoa(\"È\") == \"yA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"yA==\" but got \"w4g=\""
+                          },
+                          {
+                            "name": "btoa(\"É\") == \"yQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"yQ==\" but got \"w4k=\""
+                          },
+                          {
+                            "name": "btoa(\"Ê\") == \"yg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"yg==\" but got \"w4o=\""
+                          },
+                          {
+                            "name": "btoa(\"Ë\") == \"yw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"yw==\" but got \"w4s=\""
+                          },
+                          {
+                            "name": "btoa(\"Ì\") == \"zA==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"zA==\" but got \"w4w=\""
+                          },
+                          {
+                            "name": "btoa(\"Í\") == \"zQ==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"zQ==\" but got \"w40=\""
+                          },
+                          {
+                            "name": "btoa(\"Î\") == \"zg==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"zg==\" but got \"w44=\""
+                          },
+                          {
+                            "name": "btoa(\"Ï\") == \"zw==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"zw==\" but got \"w48=\""
+                          },
+                          {
+                            "name": "btoa(\"Ð\") == \"0A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"0A==\" but got \"w5A=\""
+                          },
+                          {
+                            "name": "btoa(\"Ñ\") == \"0Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"0Q==\" but got \"w5E=\""
+                          },
+                          {
+                            "name": "btoa(\"Ò\") == \"0g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"0g==\" but got \"w5I=\""
+                          },
+                          {
+                            "name": "btoa(\"Ó\") == \"0w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"0w==\" but got \"w5M=\""
+                          },
+                          {
+                            "name": "btoa(\"Ô\") == \"1A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"1A==\" but got \"w5Q=\""
+                          },
+                          {
+                            "name": "btoa(\"Õ\") == \"1Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"1Q==\" but got \"w5U=\""
+                          },
+                          {
+                            "name": "btoa(\"Ö\") == \"1g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"1g==\" but got \"w5Y=\""
+                          },
+                          {
+                            "name": "btoa(\"×\") == \"1w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"1w==\" but got \"w5c=\""
+                          },
+                          {
+                            "name": "btoa(\"Ø\") == \"2A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"2A==\" but got \"w5g=\""
+                          },
+                          {
+                            "name": "btoa(\"Ù\") == \"2Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"2Q==\" but got \"w5k=\""
+                          },
+                          {
+                            "name": "btoa(\"Ú\") == \"2g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"2g==\" but got \"w5o=\""
+                          },
+                          {
+                            "name": "btoa(\"Û\") == \"2w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"2w==\" but got \"w5s=\""
+                          },
+                          {
+                            "name": "btoa(\"Ü\") == \"3A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"3A==\" but got \"w5w=\""
+                          },
+                          {
+                            "name": "btoa(\"Ý\") == \"3Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"3Q==\" but got \"w50=\""
+                          },
+                          {
+                            "name": "btoa(\"Þ\") == \"3g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"3g==\" but got \"w54=\""
+                          },
+                          {
+                            "name": "btoa(\"ß\") == \"3w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"3w==\" but got \"w58=\""
+                          },
+                          {
+                            "name": "btoa(\"à\") == \"4A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"4A==\" but got \"w6A=\""
+                          },
+                          {
+                            "name": "btoa(\"á\") == \"4Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"4Q==\" but got \"w6E=\""
+                          },
+                          {
+                            "name": "btoa(\"â\") == \"4g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"4g==\" but got \"w6I=\""
+                          },
+                          {
+                            "name": "btoa(\"ã\") == \"4w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"4w==\" but got \"w6M=\""
+                          },
+                          {
+                            "name": "btoa(\"ä\") == \"5A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"5A==\" but got \"w6Q=\""
+                          },
+                          {
+                            "name": "btoa(\"å\") == \"5Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"5Q==\" but got \"w6U=\""
+                          },
+                          {
+                            "name": "btoa(\"æ\") == \"5g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"5g==\" but got \"w6Y=\""
+                          },
+                          {
+                            "name": "btoa(\"ç\") == \"5w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"5w==\" but got \"w6c=\""
+                          },
+                          {
+                            "name": "btoa(\"è\") == \"6A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"6A==\" but got \"w6g=\""
+                          },
+                          {
+                            "name": "btoa(\"é\") == \"6Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"6Q==\" but got \"w6k=\""
+                          },
+                          {
+                            "name": "btoa(\"ê\") == \"6g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"6g==\" but got \"w6o=\""
+                          },
+                          {
+                            "name": "btoa(\"ë\") == \"6w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"6w==\" but got \"w6s=\""
+                          },
+                          {
+                            "name": "btoa(\"ì\") == \"7A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"7A==\" but got \"w6w=\""
+                          },
+                          {
+                            "name": "btoa(\"í\") == \"7Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"7Q==\" but got \"w60=\""
+                          },
+                          {
+                            "name": "btoa(\"î\") == \"7g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"7g==\" but got \"w64=\""
+                          },
+                          {
+                            "name": "btoa(\"ï\") == \"7w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"7w==\" but got \"w68=\""
+                          },
+                          {
+                            "name": "btoa(\"ð\") == \"8A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"8A==\" but got \"w7A=\""
+                          },
+                          {
+                            "name": "btoa(\"ñ\") == \"8Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"8Q==\" but got \"w7E=\""
+                          },
+                          {
+                            "name": "btoa(\"ò\") == \"8g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"8g==\" but got \"w7I=\""
+                          },
+                          {
+                            "name": "btoa(\"ó\") == \"8w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"8w==\" but got \"w7M=\""
+                          },
+                          {
+                            "name": "btoa(\"ô\") == \"9A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"9A==\" but got \"w7Q=\""
+                          },
+                          {
+                            "name": "btoa(\"õ\") == \"9Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"9Q==\" but got \"w7U=\""
+                          },
+                          {
+                            "name": "btoa(\"ö\") == \"9g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"9g==\" but got \"w7Y=\""
+                          },
+                          {
+                            "name": "btoa(\"÷\") == \"9w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"9w==\" but got \"w7c=\""
+                          },
+                          {
+                            "name": "btoa(\"ø\") == \"+A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"+A==\" but got \"w7g=\""
+                          },
+                          {
+                            "name": "btoa(\"ù\") == \"+Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"+Q==\" but got \"w7k=\""
+                          },
+                          {
+                            "name": "btoa(\"ú\") == \"+g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"+g==\" but got \"w7o=\""
+                          },
+                          {
+                            "name": "btoa(\"û\") == \"+w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"+w==\" but got \"w7s=\""
+                          },
+                          {
+                            "name": "btoa(\"ü\") == \"/A==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"/A==\" but got \"w7w=\""
+                          },
+                          {
+                            "name": "btoa(\"ý\") == \"/Q==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"/Q==\" but got \"w70=\""
+                          },
+                          {
+                            "name": "btoa(\"þ\") == \"/g==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"/g==\" but got \"w74=\""
+                          },
+                          {
+                            "name": "btoa(\"ÿ\") == \"/w==\"",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"/w==\" but got \"w78=\""
+                          },
+                          {
+                            "name": "btoa(\"Ā\") must raise INVALID_CHARACTER_ERR",
+                            "status": "Fail",
+                            "message": "assert_throws_dom: Code unit 0 has value 256, which is greater than 255 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "btoa(\"ā\") must raise INVALID_CHARACTER_ERR",
+                            "status": "Fail",
+                            "message": "assert_throws_dom: Code unit 0 has value 257, which is greater than 255 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "btoa(\"✐\") must raise INVALID_CHARACTER_ERR",
+                            "status": "Fail",
+                            "message": "assert_throws_dom: Code unit 0 has value 10000, which is greater than 255 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "btoa(\"\\ufffe\") must raise INVALID_CHARACTER_ERR",
+                            "status": "Fail",
+                            "message": "assert_throws_dom: Code unit 0 has value 65534, which is greater than 255 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "btoa(\"\\uffff\") must raise INVALID_CHARACTER_ERR",
+                            "status": "Fail",
+                            "message": "assert_throws_dom: Code unit 0 has value 65535, which is greater than 255 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "btoa(\"𐀀\") must raise INVALID_CHARACTER_ERR",
+                            "status": "Fail",
+                            "message": "assert_throws_dom: Code unit 0 has value 55296, which is greater than 255 function \"function () { [native code] }\" did not throw"
+                          },
+                          {
+                            "name": "btoa(first 256 code points concatenated)",
+                            "status": "Fail",
+                            "message": "assert_equals: expected \"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6PkJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==\" but got \"AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmJygpKissLS4vMDEyMzQ1Njc4OTo7PD0-P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5fYGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn_CgMKBwoLCg8KEwoXChsKHwojCicKKwovCjMKNwo7Cj8KQwpHCksKTwpTClcKWwpfCmMKZwprCm8Kcwp3CnsKfwqDCocKiwqPCpMKlwqbCp8KowqnCqsKrwqzCrcKuwq_CsMKxwrLCs8K0wrXCtsK3wrjCucK6wrvCvMK9wr7Cv8OAw4HDgsODw4TDhcOGw4fDiMOJw4rDi8OMw43DjsOPw5DDkcOSw5PDlMOVw5bDl8OYw5nDmsObw5zDncOew5_DoMOhw6LDo8Okw6XDpsOnw6jDqcOqw6vDrMOtw67Dr8Oww7HDssOzw7TDtcO2w7fDuMO5w7rDu8O8w73DvsO_\""
+                          },
+                          {
+                            "name": "atob() setup.",
+                            "status": "Fail",
+                            "message": "fetch is not defined"
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 135,
+                          "failed": 151,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "streams": {
       "Folder": {
         "queuing-strategies.any.js": {
