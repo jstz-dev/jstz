@@ -112,6 +112,7 @@ in {
     jstz_node = crate "jstz_node";
     jstz_proto = crate "jstz_proto";
     jstz_rollup = crate "jstz_rollup";
+    jstz_runtime = crate "jstz_runtime";
     jstz_wpt = crate "jstz_wpt";
     jstzd = craneLib.buildPackage (commonWorkspace
       // rec {

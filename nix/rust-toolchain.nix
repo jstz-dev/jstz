@@ -7,5 +7,5 @@ in
       # FIXME(https://linear.app/tezos/issue/JSTZ-69):
       # rust-overlay doesn't support riscv64gc-unknown-hermit, so
       # we override the targets to avoid a build failure.
-      targets = ["wasm32-unknown-unknown"];
+      targets = ["wasm32-unknown-unknown" "riscv64gc-unknown-linux-musl"];
     })
