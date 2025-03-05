@@ -93,35 +93,13 @@ clean:
 	@rm -f result
 	@rm -rf logs
 
-.PHONY: fmt-nix-check
-fmt-nix-check:
-	@alejandra check ./
-
-.PHONY: fmt-nix
-fmt-nix:
-	@alejandra ./
-
-.PHONY: fmt-rust-check
-fmt-rust-check:
-	@cargo fmt --check
-
-.PHONY: fmt-rust
-fmt-rust:
-	@cargo fmt
-
-.PHONY: fmt-js-check
-fmt-js-check:
-	npm run check:format
-
-.PHONY: fmt-js
-fmt-js:
-	npm run format
-
 .PHONY: fmt
-fmt: fmt-nix fmt-rust fmt-js
+fmt:
+	nix fmt
 
 .PHONY: fmt-check
-fmt-check: fmt-nix-check fmt-rust-check fmt-js-check
+fmt-check:
+	nix fmt -- --fail-on-change
 
 .PHONY: lint
 lint:
