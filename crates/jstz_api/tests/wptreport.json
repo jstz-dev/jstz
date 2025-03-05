@@ -13443,6 +13443,701 @@
                   }
                 }
               }
+            },
+            "structured-clone": {
+              "Folder": {
+                "structured-clone.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "primitive undefined",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive null",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive true",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive false",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive string, empty string",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive string, lone high surrogate",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive string, lone low surrogate",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive string, NUL",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive string, astral character",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, 0.2",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, 0",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, -0",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, NaN",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, Infinity",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, -Infinity",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, 9007199254740992",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, -9007199254740992",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, 9007199254740994",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive number, -9007199254740994",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive BigInt, 0n",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive BigInt, -0n",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive BigInt, -9007199254740994000n",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "primitive BigInt, -9007199254740994000900719925474099400090071992547409940009007199254740994000n",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array primitives",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object primitives",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Boolean true",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Boolean false",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Boolean objects",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object Boolean objects",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "String empty string",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "String lone high surrogate",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "String lone low surrogate",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "String NUL",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "String astral character",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array String objects",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object String objects",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number 0.2",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number 0",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number -0",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number NaN",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number Infinity",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number -Infinity",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number 9007199254740992",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number -9007199254740992",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number 9007199254740994",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Number -9007199254740994",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "BigInt -9007199254740994n",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Number objects",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object Number objects",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Date 0",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Date -0",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Date -8.64e15",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Date 8.64e15",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Date objects",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object Date objects",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "RegExp flags and lastIndex",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "RegExp sticky flag",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "RegExp unicode flag",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "RegExp empty",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "RegExp slash",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "RegExp new line",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array RegExp object, RegExp flags and lastIndex",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array RegExp object, RegExp sticky flag",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array RegExp object, RegExp unicode flag",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array RegExp object, RegExp empty",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array RegExp object, RegExp slash",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array RegExp object, RegExp new line",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object RegExp object, RegExp flags and lastIndex",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object RegExp object, RegExp sticky flag",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object RegExp object, RegExp unicode flag",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object RegExp object, RegExp empty",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object RegExp object, RegExp slash",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object RegExp object, RegExp new line",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Empty Error object",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Error object",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "EvalError object",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "RangeError object",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "ReferenceError object",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "SyntaxError object",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "TypeError object",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "URIError object",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Blob basic",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Blob unpaired high surrogate (invalid utf-8)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Blob unpaired low surrogate (invalid utf-8)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Blob paired surrogates (invalid utf-8)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Blob empty",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Blob NUL",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Blob object, Blob basic",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Blob object, Blob unpaired high surrogate (invalid utf-8)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Blob object, Blob unpaired low surrogate (invalid utf-8)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Blob object, Blob paired surrogates (invalid utf-8)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Blob object, Blob empty",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Blob object, Blob NUL",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array Blob object, two Blobs",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object Blob object, Blob basic",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object Blob object, Blob unpaired high surrogate (invalid utf-8)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object Blob object, Blob unpaired low surrogate (invalid utf-8)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object Blob object, Blob paired surrogates (invalid utf-8)",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object Blob object, Blob empty",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object Blob object, Blob NUL",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "File basic",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array sparse",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array with non-index property",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object with index property and length",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array with circular reference",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object with circular reference",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Array with identical property values",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object with identical property values",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object with property on prototype",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object with non-enumerable property",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object with non-writable property",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object with non-configurable property",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Object with a getter that throws",
+                            "status": "Fail",
+                            "message": "promise_rejects_exactly: function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" but we expected it to throw object \"Error\""
+                          },
+                          {
+                            "name": "ObjectPrototype must lose its exotic-ness when cloned",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Serializing a non-serializable platform object fails",
+                            "status": "Fail",
+                            "message": "promise_rejects_dom: function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
+                          },
+                          {
+                            "name": "An object whose interface is deleted from the global must still deserialize",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "A subclass instance will deserialize as its closest serializable superclass",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Resizable ArrayBuffer",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Growable SharedArrayBuffer",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a constructor\""
+                          },
+                          {
+                            "name": "Length-tracking TypedArray",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Length-tracking DataView",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Serializing OOB TypedArray throws",
+                            "status": "Fail",
+                            "message": "promise_rejects_dom: function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
+                          },
+                          {
+                            "name": "Serializing OOB DataView throws",
+                            "status": "Fail",
+                            "message": "promise_rejects_dom: function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
+                          },
+                          {
+                            "name": "ArrayBuffer",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "MessagePort",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: MessageChannel is not defined\""
+                          },
+                          {
+                            "name": "A detached ArrayBuffer cannot be transferred",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "A detached platform object cannot be transferred",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: MessageChannel is not defined\""
+                          },
+                          {
+                            "name": "Transferring a non-transferable platform object fails",
+                            "status": "Fail",
+                            "message": "promise_rejects_dom: function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
+                          },
+                          {
+                            "name": "An object whose interface is deleted from the global object must still be received",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: MessageChannel is not defined\""
+                          },
+                          {
+                            "name": "A subclass instance will be received as its closest transferable superclass",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: DOMException is not defined\""
+                          },
+                          {
+                            "name": "Resizable ArrayBuffer is transferable",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Length-tracking TypedArray is transferable",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Length-tracking DataView is transferable",
+                            "status": "Fail",
+                            "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                          },
+                          {
+                            "name": "Transferring OOB TypedArray throws",
+                            "status": "Fail",
+                            "message": "promise_rejects_dom: function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
+                          },
+                          {
+                            "name": "Transferring OOB DataView throws",
+                            "status": "Fail",
+                            "message": "promise_rejects_dom: function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 135,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           }
         }
