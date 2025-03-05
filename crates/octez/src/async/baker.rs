@@ -135,6 +135,7 @@ impl OctezBaker {
                 "remotely",
                 "--liquidity-baking-toggle-vote",
                 "pass",
+                "--without-dal",
             ])
             .stdout(Stdio::from(config.log_file.as_file().try_clone()?))
             .stderr(Stdio::from(config.log_file.as_file().try_clone()?));
