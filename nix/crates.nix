@@ -124,7 +124,7 @@ in {
         transfer_count = 10;
         makeInbox = ''
           ${benchmark_cli}/bin/bench generate --transfers $transfer_count --inbox-file ./crates/jstz_tps_bench/src/kernel/inbox.json
-          mkdir $out && cp ./crates/jstz_tps_bench/src/kernel/inbox.json $out/inbox.json && echo "$out/bin/kernel --timings > $out/benchmark-log 2>/dev/null && $out/bin/bench results --inbox-file $out/inbox.json --log-file $out/benchmark-log --expected-transfers $transfer_count" >> $out/run.sh
+          mkdir $out && cp ./crates/jstz_tps_bench/src/kernel/inbox.json $out/inbox.json && echo "!/bin/sh" >> $out/run.sh && echo "$out/bin/kernel --timings > $out/benchmark-log 2>/dev/null && $out/bin/bench results --inbox-file $out/inbox.json --log-file $out/benchmark-log --expected-transfers $transfer_count" >> $out/run.sh && chmod +x $out/run.sh
         '';
       });
     jstz_wpt = crate "jstz_wpt";
@@ -142,6 +142,13 @@ in {
     # Special target to build all crates in the workspace
     all = workspace;
   };
+
+  apps = {
+    tps_bench = {
+      type = "app";
+      program = "${self.packages.jstz_tps_bench}/bin/run.sh";
+    }
+  }
 
   checks = {
     # Build the workspace as part of `nix flake check`

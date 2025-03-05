@@ -65,7 +65,8 @@ jobs:
         id: bench_base
         if: github.event_name == 'pull_request'
         run: |
-          nix --accept-flake-config --log-format raw -L build -j auto .#jstz_tps_bench && echo "result=$(sh result/run.sh)" >> $GITHUB_OUTPUT || true
+          result=$(nix --accept-flake-config --log-format raw -L run tps_bench)
+          echo "result=$result" >> $GITHUB_OUTPUT || true
       - name: Display result
         run: |
           echo "Current branch: ${{ steps.bench_head.outputs.result }}"
