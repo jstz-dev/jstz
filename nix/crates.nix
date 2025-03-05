@@ -146,7 +146,7 @@ in {
   apps = {
     tps_bench = {
       type = "app";
-      program = "${self.packages.jstz_tps_bench}/bin/run.sh";
+      program = "${packages.jstz_tps_bench}/bin/run.sh";
     };
   };
 
