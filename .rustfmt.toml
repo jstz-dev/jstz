@@ -1,2 +1,4 @@
 max_width = 90
 newline_style = "Unix"
+
+ignore = []
