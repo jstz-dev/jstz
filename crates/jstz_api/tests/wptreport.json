@@ -14138,6 +14138,158 @@
                   }
                 }
               }
+            },
+            "timers": {
+              "Folder": {
+                "clearinterval-from-callback.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Clearing an interval from the callback should still clear it.",
+                            "status": "Fail",
+                            "message": "setInterval is not defined"
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 1,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "cleartimeout-clearinterval.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Clear timeout with clearInterval",
+                            "status": "Fail",
+                            "message": "setTimeout is not defined"
+                          },
+                          {
+                            "name": "Clear interval with clearTimeout",
+                            "status": "Fail",
+                            "message": "setInterval is not defined"
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 2,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "evil-spec-example.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "missing-timeout-setinterval.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [
+                          {
+                            "name": "Calling setInterval with no interval should be the same as if called with 0 interval",
+                            "status": "Fail",
+                            "message": "setInterval is not defined"
+                          },
+                          {
+                            "name": "Calling setInterval with undefined interval should be the same as if called with 0 interval",
+                            "status": "Fail",
+                            "message": "setInterval is not defined"
+                          }
+                        ],
+                        "status": "Ok",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 2,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "negative-setinterval.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "negative-settimeout.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "type-long-setinterval.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                },
+                "type-long-settimeout.any.js": {
+                  "Test": {
+                    "variations": [
+                      {
+                        "subtests": [],
+                        "status": "Err",
+                        "metrics": {
+                          "passed": 0,
+                          "failed": 0,
+                          "timed_out": 0
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
             }
           }
         }
