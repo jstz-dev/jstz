@@ -31,7 +31,7 @@ jobs:
       - name: Prevent blst
         run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
       - name: Build
-        run: nix --accept-flake-config --log-format raw -L build -j auto .#{all,js_jstz}
+        run: nix --accept-flake-config --log-format raw -L build -j auto .#all
       - name: Flake check
         run: nix --accept-flake-config --log-format raw --log-lines 70 -L flake check -j auto
       # Coverage is part of nix flake check, but we want to upload it to Codecov
