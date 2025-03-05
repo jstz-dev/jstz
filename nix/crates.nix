@@ -147,8 +147,8 @@ in {
     tps_bench = {
       type = "app";
       program = "${self.packages.jstz_tps_bench}/bin/run.sh";
-    }
-  }
+    };
+  };
 
   checks = {
     # Build the workspace as part of `nix flake check`
