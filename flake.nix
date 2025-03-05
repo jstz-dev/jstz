@@ -193,7 +193,19 @@
 
             # TODO(https://linear.app/tezos/issue/JSTZ-63)
             # Configure formatter for LIGO contracts
-            settings.global.excludes = ["target" "result" "node_modules/**" ".github" ".direnv" "contracts/**" "Dockerfile" "*.toml" "crates/jstz_tps_bench/fa2.js"];
+
+            # NOTE: For language specific ignores, use the specific ignore files:
+            #   rustfmt: use .rustfmt.toml
+            #   prettier: use .prettierignore
+            settings.global.excludes =
+              # Build/install directories (ignored by all formatters)
+              ["target" "result" "node_modules/**" "**/dist"]
+              ++
+              # Dot files
+              [".direnv"]
+              ++
+              # Unsupported languages (LIGO, Docker)
+              ["contracts/**" "Dockerfile"];
           };
 
           mkFrameworkFlags = frameworks:
