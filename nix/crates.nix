@@ -112,6 +112,21 @@ in {
     jstz_node = crate "jstz_node";
     jstz_proto = crate "jstz_proto";
     jstz_rollup = crate "jstz_rollup";
+    jstz_tps_bench = craneLib.buildPackage (commonWorkspace
+      // rec {
+        # build the crate first to get the bench binary to generate an inbox file
+        benchmark_cli = crate "jstz_tps_bench";
+
+        # then build the crate again with the feature flag to run benchmarking with the inbox file
+        cargoExtraArgs = "-p jstz_tps_bench --features static-inbox";
+
+        preBuildPhases = ["makeInbox"];
+        transfer_count = 10;
+        makeInbox = ''
+          ${benchmark_cli}/bin/bench generate --transfers $transfer_count --inbox-file ./crates/jstz_tps_bench/src/kernel/inbox.json
+          mkdir $out && cp ./crates/jstz_tps_bench/src/kernel/inbox.json $out/inbox.json && echo "$out/bin/kernel --timings > $out/benchmark-log 2>/dev/null && $out/bin/bench results --inbox-file $out/inbox.json --log-file $out/benchmark-log --expected-transfers $transfer_count" >> $out/run.sh
+        '';
+      });
     jstz_wpt = crate "jstz_wpt";
     jstzd = craneLib.buildPackage (commonWorkspace
       // rec {
