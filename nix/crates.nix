@@ -37,6 +37,8 @@
       (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
 
     MOZJS_ARCHIVE = mozjs;
+
+    RUSTY_V8_ARCHIVE = pkgs.callPackage ./v8.nix {};
   };
 
   # Build *just* the workspace dependencies.
