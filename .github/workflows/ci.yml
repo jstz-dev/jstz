@@ -46,6 +46,33 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  benchmark:
+    name: Benchmark
+    runs-on: [x86_64, linux, nix]
+    needs: [build]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run benchmark
+        id: bench_head
+        run: |
+          result=$(nix --accept-flake-config --log-format raw -L run .#tps_bench)
+          echo "result=$result" >> $GITHUB_OUTPUT || true
+      - uses: actions/checkout@v4
+        if: github.event_name == 'pull_request'
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+      - name: Run benchmark with base
+        id: bench_base
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "result=$(nix --accept-flake-config --log-format raw -L run .#tps_bench)" >> $GITHUB_OUTPUT || true
+      - name: Display result
+        run: |
+          echo "Current branch: ${{ steps.bench_head.outputs.result }}"
+          if [ -n "${{ steps.bench_base.outputs.result }}" ]; then
+            echo "Base branch (${{ github.event.pull_request.base.ref }}): ${{ steps.bench_base.outputs.result }}"
+          fi
+
   build-docs:
     name: Build Documentation
     runs-on: ubuntu-latest

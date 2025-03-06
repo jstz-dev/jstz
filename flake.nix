@@ -249,6 +249,7 @@
               default = self.packages.${system}.jstz_kernel;
             };
           checks = crates.checks // {formatting = fmt.config.build.check self;};
+          apps = crates.apps;
 
           formatter = fmt.config.build.wrapper;
 
