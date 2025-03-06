@@ -17,13 +17,30 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
   linux-amd64:
     name: Build CLI for Linux AMD64
-    runs-on: [x86_64, linux, nix]
+    runs-on: ubuntu-24.04
+    # need to build in an alpine container so that cargo can build with musl
+    # target: x86_64-unknown-linux-musl
+    container:
+      image: alpine:3.21
     steps:
-      - uses: jstz-dev/jstz/.github/actions/build-cli@main
+      - name: Install dependencies
+        shell: sh
+        run: apk add make musl-dev libcrypto3 openssl-dev clang gcc musl-dev libstdc++ libffi-dev g++ openssl-libs-static bash curl
+        # curl and bash are required by dtolnay/rust-toolchain
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.82.0
         with:
-          platform: linux
-          arch: x64 # To match the arch name in Node.js. This will be referenced by the npm package
+          targets: wasm32-unknown-unknown
+      - name: Build
+        shell: sh
+        run: make build-cli
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/release/jstz
+          asset_name: jstz_linux_x64
+          tag: ${{ github.ref_name }}
   linux-arm64:
     # cannot easily build with nix on arm64 because mozjs does not have prebuilds for linux arm64
     # so we need to use make build-cli here
@@ -31,7 +48,7 @@ jobs:
     runs-on: ubuntu-24.04-arm
     # need to build in an alpine container so that cargo can build with musl
     container:
-      image: alpine
+      image: alpine:3.21
       volumes:
         - /:/host
     steps:
