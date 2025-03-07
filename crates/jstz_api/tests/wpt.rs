@@ -365,8 +365,8 @@ async fn test_wpt() -> Result<()> {
             r"^\/fetch\/api\/headers\/[^\/]+\.any\.html$",
             r"^\/FileAPI\/blob\/[^\/]+\.any\.html$", // Blob
             r"^\/streams\/queuing\-strategies\.any\.html$", // CountQueuingStrategy, ByteLengthQueuingStrategy
-            r"^\/streams\/writable\-streams\/byte\-length\-queuing\-strategy\.any\.html$", // ByteLengthQueuingStrategy
-            r"^\/streams\/writable\-streams\/count\-queuing\-strategy\.any\.html$", // CountQueuingStrategy
+            // WritableStream, WritableStreamDefaultController, ByteLengthQueuingStrategy, CountQueuingStrategy
+            r"^\/streams\/writable\-streams\/.+\.any\.html$",
             r"^\/compression\/[^\/]+\.any\.html$", // CompressionStream, DecompressionStream
             // module crypto; tests have "Err" status now because `crypto` does not exist in global yet
             r"^\/WebCryptoAPI\/.+\.any\.html$",
