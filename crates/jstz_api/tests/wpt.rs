@@ -392,6 +392,7 @@ async fn test_wpt() -> Result<()> {
             // set/clearTimeout, set/clearInterval
             // Some tests show Err because the targeted set/clear functions are not yet defined
             r"^\/html\/webappapis\/timers\/[^\/]+\.any\.html$",
+            r"^\/xhr\/formdata\/[^\/]+\.any\.html$", // FormData
         ]
         .as_ref(),
     )?;
