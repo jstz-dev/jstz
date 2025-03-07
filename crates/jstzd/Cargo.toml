@@ -50,7 +50,6 @@ rand.workspace = true
 tezos_crypto_rs.workspace = true
 
 [features]
-skip-rollup-tests = []
 build-image = ["octez/disable-alpha"]
 
 [[bin]]

@@ -16,7 +16,6 @@ fn unknown_command() {
         .stderr(predicate::str::contains("unrecognized subcommand \'test\'"));
 }
 
-#[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[test]
 fn default_config() {
     // Since the server's port number is unknown when jstzd runs on default config,
@@ -36,7 +35,6 @@ fn default_config() {
     assert!(child.wait().is_ok());
 }
 
-#[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[test]
 fn valid_config_file() {
     let port = unused_port();
