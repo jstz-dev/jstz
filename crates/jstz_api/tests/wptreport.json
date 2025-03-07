@@ -15368,6 +15368,1952 @@
             }
           }
         },
+        "readable-streams": {
+          "Folder": {
+            "async-iterator.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Async iterator instances should have the correct list of properties",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "values() throws if there's already a lock",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "return() should unlock the stream synchronously when preventCancel = false",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "return() should unlock the stream synchronously when preventCancel = true",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Async-iterating a push source",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Async-iterating a pull source",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Async-iterating a push source with undefined values",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Async-iterating a pull source with undefined values",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Async-iterating a pull source manually",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Async-iterating an errored stream throws",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Async-iterating a closed stream never executes the loop body, but works fine",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Async-iterating an empty but not closed/errored stream never executes the loop body and stalls the async function",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: \""
+                      },
+                      {
+                        "name": "Async-iterating a partially consumed stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Cancellation behavior when throwing inside loop body; preventCancel = false",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Cancellation behavior when throwing inside loop body; preventCancel = true",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Cancellation behavior when breaking inside loop body; preventCancel = false",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Cancellation behavior when breaking inside loop body; preventCancel = true",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Cancellation behavior when returning inside loop body; preventCancel = false",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Cancellation behavior when returning inside loop body; preventCancel = true",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Cancellation behavior when manually calling return(); preventCancel = false",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Cancellation behavior when manually calling return(); preventCancel = true",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "next() rejects if the stream errors",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "return() does not rejects if the stream has not errored yet",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "return() rejects if the stream has errored",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "next() that succeeds; next() that reports an error; next()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "next() that succeeds; next() that reports an error(); next() [no awaiting]",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "next() that succeeds; next() that reports an error(); return()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "next() that succeeds; next() that reports an error(); return() [no awaiting]",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "next() that succeeds; return()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "next() that succeeds; return() [no awaiting]",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "return(); next()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: \""
+                      },
+                      {
+                        "name": "return(); next() [no awaiting]",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: \""
+                      },
+                      {
+                        "name": "return(); return()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: \""
+                      },
+                      {
+                        "name": "return(); return() [no awaiting]",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: \""
+                      },
+                      {
+                        "name": "Acquiring a reader after exhaustively async-iterating a stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Acquiring a reader after return()ing from a stream that errors",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Acquiring a reader after partially async-iterating a stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Acquiring a reader and reading the remaining chunks after partially async-iterating a stream with preventCancel = true",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "close() while next() is pending",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 39,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "bad-strategies.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Readable stream: throwing strategy.size getter",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: construction should re-throw the error function \"function () { [native code] }\" threw object \"Error: todo: try_from_js(custom_queuing_strategy)\" but we expected it to throw object \"Error: a unique string\""
+                      },
+                      {
+                        "name": "Readable stream: throwing strategy.highWaterMark getter",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: construction should re-throw the error function \"function () { [native code] }\" threw object \"Error: todo: try_from_js(custom_queuing_strategy)\" but we expected it to throw object \"Error: a unique string\""
+                      },
+                      {
+                        "name": "Readable stream: invalid strategy.highWaterMark",
+                        "status": "Fail",
+                        "message": "assert_throws_js: construction should throw a RangeError for -1 function \"function () { [native code] }\" threw object \"Error: todo: try_from_js(custom_queuing_strategy)\" (\"Error\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                      },
+                      {
+                        "name": "Readable stream: strategy.size errors the stream and then throws",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "Readable stream: strategy.size errors the stream and then returns Infinity",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "Readable stream: throwing strategy.size method",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "Readable stream: invalid strategy.size return value",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "Readable stream: invalid strategy.size return value when pulling",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 8,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "bad-underlying-sources.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Underlying source start: throwing getter",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Underlying source start: throwing method",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: constructing the stream should re-throw the error function \"function () { [native code] }\" threw object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\" but we expected it to throw object \"Error: a unique string\""
+                      },
+                      {
+                        "name": "Underlying source: throwing pull getter (initial pull)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Underlying source cancel: throwing getter",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Underlying source: throwing pull method (initial pull)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source pull: throwing getter (second pull does not result in a second get)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source pull: throwing method (second pull)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source cancel: throwing method",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling enqueue on an empty canceled stream should throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling enqueue on a non-empty canceled stream should throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling enqueue on a closed stream should throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling enqueue on an errored stream should throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling close twice on an empty stream should throw the second time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling close twice on a non-empty stream should throw the second time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling close on an empty canceled stream should throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling close on a non-empty canceled stream should throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling close after error should throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling error twice should not throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling error after close should not throw",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling error and returning a rejected promise from start should cause the stream to error with the first error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Underlying source: calling error and returning a rejected promise from pull should cause the stream to error with the first error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "read should not error if it dequeues and pull() throws",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 3,
+                      "failed": 19,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "cancel.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStream cancellation: cancel(reason) should pass through the given reason to the underlying source",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream cancellation: integration test on an infinite stream derived from a random push source",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream cancellation: cancel() on a locked stream should fail and not call the underlying source cancel",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream cancellation: should fulfill promise when cancel callback went fine",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream cancellation: returning a value from the underlying source's cancel should not affect the fulfillment value of the promise returned by the stream's cancel",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream cancellation: should reject promise when cancel callback raises an exception",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream cancellation: if the underlying source's cancel method returns a promise, the promise returned by the stream's cancel should fulfill when that one does (1)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream cancellation: if the underlying source's cancel method returns a promise, the promise returned by the stream's cancel should fulfill when that one does (2)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream cancellation: if the underlying source's cancel method returns a promise, the promise returned by the stream's cancel should reject when that one does",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream cancellation: cancelling before start finishes should prevent pull() from being called",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 10,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "constructor.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "underlyingSource argument should be converted after queuingStrategy argument",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: function \"function () { [native code] }\" threw object \"error1: error1\" but we expected it to throw object \"error2: error2\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "count-queuing-strategy-integration.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Can construct a readable stream with a valid CountQueuingStrategy",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Correctly governs a ReadableStreamController's desiredSize property (HWM = 0)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Correctly governs a ReadableStreamController's desiredSize property (HWM = 1)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Correctly governs a ReadableStreamController's desiredSize property (HWM = 4)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 4,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "default-reader.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStreamDefaultReader constructor should get a ReadableStream object as argument",
+                        "status": "Fail",
+                        "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: ReadableStreamDefaultReader is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "ReadableStreamDefaultReader closed should always return the same promise object",
+                        "status": "Fail",
+                        "message": "ReadableStreamDefaultReader is not defined"
+                      },
+                      {
+                        "name": "Constructing a ReadableStreamDefaultReader directly should fail if the stream is already locked (via direct construction)",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Getting a ReadableStreamDefaultReader via getReader should fail if the stream is already locked (via direct construction)",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Constructing a ReadableStreamDefaultReader directly should fail if the stream is already locked (via getReader)",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Getting a ReadableStreamDefaultReader via getReader should fail if the stream is already locked (via getReader)",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Constructing a ReadableStreamDefaultReader directly should be OK if the stream is closed",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Constructing a ReadableStreamDefaultReader directly should be OK if the stream is errored",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "getReader() should call ToString() on mode",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Reading from a reader for an empty stream will wait until a chunk is available",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "cancel() on a reader does not release the reader",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "closed should be fulfilled after stream is closed (.closed access before acquiring)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "closed should be rejected after reader releases its lock (multiple stream locks)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "closed is replaced when stream closes and reader releases its lock",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "closed is replaced when stream errors and reader releases its lock",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Multiple readers can access the stream in sequence",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Cannot use an already-released reader to unlock a stream again",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "cancel() on a released reader is a no-op and does not pass through",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Getting a second reader after erroring the stream and releasing the reader should succeed",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStreamDefaultReader closed promise should be rejected with undefined if that is the error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStreamDefaultReader: if start rejects with no parameter, it should error the stream with an undefined error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Erroring a ReadableStream after checking closed should reject ReadableStreamDefaultReader closed promise",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Erroring a ReadableStream before checking closed should reject ReadableStreamDefaultReader closed promise",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Reading twice on a stream that gets closed",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Reading twice on a closed stream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Reading twice on an errored stream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Reading twice on a stream that gets errored",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "controller.close() should clear the list of pending read requests",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Second reader can read chunks after first reader was released with pending read requests",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 29,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "floating-point-total-queue-size.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Floating point arithmetic must manifest near NUMBER.MAX_SAFE_INTEGER (total ends up positive)",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "Floating point arithmetic must manifest near 0 (total ends up positive, but clamped)",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "Floating point arithmetic must manifest near 0 (total ends up positive, and not clamped)",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "Floating point arithmetic must manifest near 0 (total ends up zero)",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 4,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "from.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically null",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically undefined",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically 0",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically NaN",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically true",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically {}",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically Object.create(null)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically a function",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically a symbol",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically an object with a non-callable @@iterator method",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from throws on invalid iterables; specifically an object with a non-callable @@asyncIterator method",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream.from re-throws errors from calling the @@iterator method",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: from() should re-throw the error function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" but we expected it to throw object \"Error: a unique string\""
+                      },
+                      {
+                        "name": "ReadableStream.from re-throws errors from calling the @@asyncIterator method",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: from() should re-throw the error function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" but we expected it to throw object \"Error: a unique string\""
+                      },
+                      {
+                        "name": "ReadableStream.from ignores @@iterator if @@asyncIterator exists",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: from() should re-throw the error function \"function () { [native code] }\" threw object \"TypeError: not a callable function\" but we expected it to throw object \"Error: a unique string\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts an array of values",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts an array of promises",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts an array iterator",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts a string",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts a Set",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts a Set iterator",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts a sync generator",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts an async generator",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts a sync iterable of values",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts a sync iterable of promises",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts an async iterable",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts a ReadableStream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts a ReadableStream async iterator",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream.from accepts an empty iterable",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from: stream errors when next() rejects",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from: stream stalls when next() never settles",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from: calls next() after first read()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from: cancelling the returned stream calls and awaits return()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from: return() is not called when iterator completes normally",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from: cancel() rejects when return() fulfills with a non-object",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from: reader.read() inside next()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from: reader.cancel() inside next()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from: reader.cancel() inside return()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      },
+                      {
+                        "name": "ReadableStream.from(array), push() to array while reading",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a callable function\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 11,
+                      "failed": 27,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "garbage-collection.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStreamController methods should continue working properly when scripts lose their reference to the readable stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream closed promise should fulfill even if the stream and reader JS references are lost",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream closed promise should reject even if stream and reader JS references are lost",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "Garbage-collecting a ReadableStreamDefaultReader should not unlock its stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 4,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "general.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStream can be constructed with no errors",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream can't be constructed with garbage",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw when the source is null function \"function () { [native code] }\" threw object \"Error: todo: \" (\"Error\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "ReadableStream can't be constructed with an invalid type",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw when the type is null function \"function () { [native code] }\" threw object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\" (\"Error\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "ReadableStream constructor should throw for non-function start arguments",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream constructor will not tolerate initial garbage as cancel argument",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream constructor will not tolerate initial garbage as pull argument",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream start should be called with the proper thisArg",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream start controller parameter should be extensible",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "default ReadableStream getReader() should only accept mode:undefined",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream: enqueue should throw when the stream is readable but draining",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: enqueue should throw when the stream is closed",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: desiredSize when closed",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream: desiredSize when errored",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "Subclassing ReadableStream should work",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream strategies: the default strategy should give desiredSize of 1 to start, decreasing by 1 per enqueue",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream should be able to call start method within prototype chain of its source",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream start should be able to return a promise",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream start should be able to return a promise and reject it",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream should be able to enqueue different objects.",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: if pull rejects, it should error the stream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should only call pull once upon starting the stream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should call pull when trying to read from a started, empty stream",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should only call pull once on a non-empty stream read from before start fulfills",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should only call pull once on a non-empty stream read from after start fulfills",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should call pull in reaction to read()ing the last chunk, if not draining",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should not call pull() in reaction to read()ing the last chunk, if draining",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should not call pull until the previous pull call's promise fulfills",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should pull after start, and after every read",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream: should not call pull after start if the stream is now closed",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should call pull after enqueueing from inside pull (with no read requests), if strategy allows",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream pull should be able to close a stream.",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream pull should be able to error a stream.",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream pull should be able to error a stream and throw.",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream: should call underlying source methods as methods",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream strategies: the default strategy should continue giving desiredSize of 1 if the chunks are read immediately",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream integration test: adapting a random push source",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream integration test: adapting a sync pull source",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream integration test: adapting an async pull source",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 3,
+                      "failed": 35,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "owning-type-message-port.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Transferred MessageChannel works as expected",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: MessageChannel is not defined\""
+                      },
+                      {
+                        "name": "Second branch of owning ReadableStream tee should end up into errors with transfer only values",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: MessageChannel is not defined\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 2,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "owning-type-video-frame.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStream of type owning should close serialized chunks",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: VideoFrame is not defined\""
+                      },
+                      {
+                        "name": "ReadableStream of type owning should transfer JS chunks with transferred values",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: VideoFrame is not defined\""
+                      },
+                      {
+                        "name": "ReadableStream of type owning should error when trying to enqueue not serializable values",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: VideoFrame is not defined\""
+                      },
+                      {
+                        "name": "ReadableStream of type owning should clone serializable objects when teeing",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: VideoFrame is not defined\""
+                      },
+                      {
+                        "name": "ReadableStream of type owning should clone JS Objects with serializables when teeing",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: VideoFrame is not defined\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 5,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "owning-type.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStream can be constructed with owning type",
+                        "status": "Fail",
+                        "message": "owning is not a valid value for enumeration ReadableStreamType."
+                      },
+                      {
+                        "name": "ReadableStream of type owning should call start with a ReadableStreamDefaultController",
+                        "status": "Fail",
+                        "message": "owning is not a valid value for enumeration ReadableStreamType."
+                      },
+                      {
+                        "name": "ReadableStream should be able to call enqueue with an empty transfer list",
+                        "status": "Fail",
+                        "message": "owning is not a valid value for enumeration ReadableStreamType."
+                      },
+                      {
+                        "name": "ReadableStream should check transfer parameter",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream of type owning should transfer enqueued chunks",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: owning is not a valid value for enumeration ReadableStreamType.\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 5,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "patched-global.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "reentrant-strategies.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "enqueue() inside size() should work",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "close() inside size() should not crash",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "close request inside size() should work",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "error() inside size() should work",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "desiredSize inside size() should work",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "cancel() inside size() should work",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "pipeTo() inside size() should behave as expected",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "read() inside of size() should behave as expected",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "getReader() inside size() should work",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "tee() inside size() should work",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 10,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "tee.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ReadableStream teeing: rs.tee() returns an array of two ReadableStreams",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Running templatedRSTeeCancel with ReadableStream teeing",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStreamTee should not use a modified ReadableStream constructor from the global object",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream teeing: should be able to read one branch to the end without affecting the other",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream teeing: values should be equal across each branch",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream teeing: errors in the source should propagate to both branches",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream teeing: canceling branch1 should not impact branch2",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream teeing: canceling branch2 should not impact branch1",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream teeing: canceling both branches should aggregate the cancel reasons into an array",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing: canceling both branches in reverse order should aggregate the cancel reasons into an array",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing: failing to cancel the original stream should cause cancel() to reject on branches",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing: erroring a teed stream should properly handle canceled branches",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing: erroring a teed stream should error both branches",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream teeing: closing the original should immediately close the branches",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream teeing: erroring the original should immediately error the branches",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream teeing: canceling branch1 should finish when branch2 reads until end of stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing: canceling branch1 should finish when original stream errors",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing: canceling both branches in sequence with delay",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStream teeing: failing to cancel when canceling both branches in sequence with delay",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ReadableStreamTee should not pull more chunks than can fit in the branch queue",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStreamTee should only pull enough to fill the emptiest queue",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStreamTee should not pull when original is already errored",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStreamTee stops pulling when original stream errors while branch 1 is reading",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStreamTee stops pulling when original stream errors while branch 2 is reading",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStreamTee stops pulling when original stream errors while both branches are reading",
+                        "status": "Fail",
+                        "message": "todo: try_from_js(custom_queuing_strategy)"
+                      },
+                      {
+                        "name": "ReadableStream teeing: enqueue() and close() while both branches are pulling",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 1,
+                      "failed": 25,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "templated.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Running templatedRSEmpty with ReadableStream (empty)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream (empty): instances have the correct methods and properties",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty): calling getReader with invalid arguments should throw appropriate errors",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Running templatedRSEmptyReader with ReadableStream (empty) reader",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: instances have the correct methods and properties",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: locked should be true",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: read() should return distinct promises each time",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: getReader() again on the stream should fail",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: releasing the lock should cause locked to become false",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Running templatedRSClosed with ReadableStream (closed via call in start)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream (closed via call in start): locked should be false",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (closed via call in start): getReader() should be OK",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (closed via call in start): should be able to acquire multiple readers if they are released in succession",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (closed via call in start): should not be able to acquire a second reader if we don't release the first one",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Running templatedRSClosedReader with ReadableStream reader (closed before getting reader)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Running templatedRSClosedReader with ReadableStream reader (closed after getting reader)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Running templatedRSClosed with ReadableStream (closed via cancel)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream (closed via cancel): locked should be false",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (closed via cancel): getReader() should be OK",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (closed via cancel): should be able to acquire multiple readers if they are released in succession",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (closed via cancel): should not be able to acquire a second reader if we don't release the first one",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "Running templatedRSClosedReader with ReadableStream reader (closed via cancel after getting reader)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Running templatedRSErrored with ReadableStream (errored via call in start)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream (errored via call in start): locked should be false",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Running templatedRSErroredSyncOnly with ReadableStream (errored via call in start)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream (errored via call in start): should not be able to obtain additional readers if we don't release the first lock",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Running templatedRSErrored with ReadableStream (errored via returning a rejected promise in start)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream (errored via returning a rejected promise in start): locked should be false",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Running templatedRSErroredReader with ReadableStream (errored via returning a rejected promise in start) reader",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Running templatedRSErroredReader with ReadableStream reader (errored before getting reader)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Running templatedRSErroredReader with ReadableStream reader (errored after getting reader)",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "Running templatedRSTwoChunksOpenReader with ReadableStream (two chunks enqueued, still open) reader",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, still open) reader: read() should return distinct promises each time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "Running templatedRSTwoChunksClosedReader with ReadableStream (two chunks enqueued, then closed) reader",
+                        "status": "Pass",
+                        "message": null
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: read() should never settle",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: two read()s should both never settle",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: releasing the lock should reject all pending read requests",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: \""
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: releasing the lock should cause further read() calls to reject with a TypeError",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: releasing the lock should cause closed calls to reject with a TypeError",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: canceling via the reader should cause the reader to act closed",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (empty) reader: canceling via the stream should fail",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (closed via call in start): cancel() should return a distinct fulfilled promise each time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed before getting reader): read() should fulfill with { value: undefined, done: true }",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed before getting reader): read() multiple times should fulfill with { value: undefined, done: true }",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed before getting reader): read() should work when used within another read() fulfill callback",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed before getting reader): closed should fulfill with undefined",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed before getting reader): releasing the lock should cause closed to reject and change identity",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed before getting reader): cancel() should return a distinct fulfilled promise each time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed after getting reader): read() should fulfill with { value: undefined, done: true }",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed after getting reader): read() multiple times should fulfill with { value: undefined, done: true }",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed after getting reader): read() should work when used within another read() fulfill callback",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed after getting reader): closed should fulfill with undefined",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed after getting reader): releasing the lock should cause closed to reject and change identity",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (closed after getting reader): cancel() should return a distinct fulfilled promise each time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (closed via cancel): cancel() should return a distinct fulfilled promise each time",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream reader (closed via cancel after getting reader): read() should fulfill with { value: undefined, done: true }",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream reader (closed via cancel after getting reader): read() multiple times should fulfill with { value: undefined, done: true }",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream reader (closed via cancel after getting reader): read() should work when used within another read() fulfill callback",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream reader (closed via cancel after getting reader): closed should fulfill with undefined",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream reader (closed via cancel after getting reader): releasing the lock should cause closed to reject and change identity",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream reader (closed via cancel after getting reader): cancel() should return a distinct fulfilled promise each time",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "ReadableStream (errored via call in start): getReader() should return a reader that acts errored",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (errored via call in start): read() twice should give the error each time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (errored via call in start): should be able to obtain a second reader, with the correct closed promise",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (errored via call in start): cancel() should return a distinct rejected promise each time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (errored via call in start): reader cancel() should return a distinct rejected promise each time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (errored via returning a rejected promise in start): getReader() should return a reader that acts errored",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (errored via returning a rejected promise in start): read() twice should give the error each time",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (errored via returning a rejected promise in start) reader: closed should reject with the error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (errored via returning a rejected promise in start) reader: releasing the lock should cause closed to reject and change identity",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (errored via returning a rejected promise in start) reader: read() should reject with the error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (errored before getting reader): closed should reject with the error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (errored before getting reader): releasing the lock should cause closed to reject and change identity",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (errored before getting reader): read() should reject with the error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (errored after getting reader): closed should reject with the error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (errored after getting reader): releasing the lock should cause closed to reject and change identity",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream reader (errored after getting reader): read() should reject with the error",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, still open) reader: calling read() twice without waiting will eventually give both chunks (sequential)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, still open) reader: calling read() twice without waiting will eventually give both chunks (nested)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, still open) reader: cancel() after a read() should still give that single read result",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, then closed) reader: third read(), without waiting, should give { value: undefined, done: true } (sequential)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, then closed) reader: third read(), without waiting, should give { value: undefined, done: true } (nested)",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, then closed) reader: draining the stream via read() should cause the reader closed promise to fulfill, but locked stays true",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, then closed) reader: releasing the lock after the stream is closed should cause locked to become false",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, then closed) reader: releasing the lock should cause further read() calls to reject with a TypeError",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      },
+                      {
+                        "name": "ReadableStream (two chunks enqueued, then closed) reader: reader's closed property always returns the same promise",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 15,
+                      "failed": 71,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
         "writable-streams": {
           "Folder": {
             "byte-length-queuing-strategy.any.js": {
