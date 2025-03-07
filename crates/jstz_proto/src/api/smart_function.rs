@@ -24,7 +24,6 @@ use crate::{
     executor::{
         smart_function::{
             headers, run::NOOP_PATH, try_apply_to_value_or_promise, HostScript, Script,
-            TRANSFERRED_HEADER_KEY, TRANSFER_HEADER_KEY,
         },
         JSTZ_HOST,
     },
@@ -122,7 +121,7 @@ impl SmartFunction {
                     })?;
 
                 let transfer_result = HostScript::handle_transfer(
-                    &request_deref.headers().deref(),
+                    &mut request_deref.headers().deref_mut(),
                     self_address,
                     &callee_address,
                 );
@@ -158,19 +157,11 @@ impl SmartFunction {
                             response,
                             move |value, _context| {
                                 let response = Response::try_from_js(value)?;
-                                let transferred = HostScript::handle_transfer(
-                                    &response.headers().deref(),
+                                HostScript::handle_transfer(
+                                    &mut response.headers().deref_mut(),
                                     &callee_address,
                                     &self_address,
                                 )?;
-                                if let Some(amt) = transferred {
-                                    let mut headers = response.headers().deref_mut();
-                                    headers.remove(TRANSFER_HEADER_KEY)?;
-                                    headers.append(
-                                        TRANSFERRED_HEADER_KEY,
-                                        &amt.to_string(),
-                                    )?;
-                                }
                                 Ok(())
                             },
                             |_context| Ok(()),
@@ -750,7 +741,7 @@ mod test {
             r#"
             const handler = async() => {{
                 const response = await fetch(new Request("tezos://{refund_sf}"));
-                const refunded = response.headers.get("X-JSTZ-TRANSFERRED");
+                const refunded = response.headers.get("X-JSTZ-AMOUNT");
                 // propagate the refunded amount to the caller
                 return new Response(null, {{
                     headers: {{ "X-JSTZ-TRANSFER": refunded }},

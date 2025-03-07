@@ -371,7 +371,7 @@ impl Script {
 }
 
 pub const TRANSFER_HEADER_KEY: &str = "X-JSTZ-TRANSFER";
-pub const TRANSFERRED_HEADER_KEY: &str = "X-JSTZ-TRANSFERRED";
+pub const TRANSFERRED_HEADER_KEY: &str = "X-JSTZ-AMOUNT";
 
 pub struct HostScript;
 
@@ -476,22 +476,27 @@ impl HostScript {
     }
 
     /// Transfer xtz from `src` to `dst` if the `TRANSFER_HEADER_KEY` header is present
-    /// and the transfer amount > 0 in request
+    /// and the transfer amount > 0 in request. On success, `TRANSFER_HEADER_KEY` is set to `TRANSFERRED_HEADER_KEY`
     pub fn handle_transfer(
-        headers: &impl Deref<Target = Headers>,
+        headers: &mut impl std::ops::DerefMut<Target = Headers>,
         src: &impl Addressable,
         dst: &impl Addressable,
     ) -> JsResult<Option<NonZeroU64>> {
         if let Some(amt) = Self::extract_transfer_amount(headers)? {
             let transfer_result = runtime::with_js_hrt_and_tx(|hrt, tx| {
-                Account::transfer(hrt, tx, src, dst, amt.into()).map_err(|e| {
-                    JsError::from_native(
-                        JsNativeError::eval()
-                            .with_message(format!("Transfer failed: {}", e)),
-                    )
-                })
+                Account::transfer(hrt, tx, src, dst, amt.into())
+                    .and_then(|_| {
+                        headers.remove(TRANSFER_HEADER_KEY)?;
+                        headers.append(TRANSFERRED_HEADER_KEY, &amt.to_string())?;
+                        Ok(())
+                    })
+                    .map_err(|e| {
+                        JsError::from_native(
+                            JsNativeError::eval()
+                                .with_message(format!("Transfer failed: {}", e)),
+                        )
+                    })
             });
-
             return transfer_result.map(|_| Some(amt));
         }
 
@@ -534,16 +539,10 @@ pub mod run {
         to: &impl Addressable,
     ) -> Result<RunFunctionReceipt> {
         let response = Response::try_from_js(response)?;
-        let (mut http_parts, body) = Response::to_http_response(&response).into_parts();
-        if http_parts.status.is_success() {
-            let amt = HostScript::handle_transfer(&response.headers().deref(), from, to)?;
-            if let Some(amt) = amt {
-                http_parts.headers.remove(TRANSFER_HEADER_KEY);
-                http_parts
-                    .headers
-                    .insert(TRANSFERRED_HEADER_KEY, amt.to_string().try_into().unwrap());
-            }
+        if response.ok() {
+            HostScript::handle_transfer(&mut response.headers().deref_mut(), from, to)?;
         }
+        let (http_parts, body) = Response::to_http_response(&response).into_parts();
         Ok(RunFunctionReceipt {
             body,
             status_code: http_parts.status,
@@ -630,7 +629,7 @@ pub mod run {
         tx.begin();
         let transfer_result = runtime::enter_js_host_context(hrt, tx, || {
             HostScript::handle_transfer(
-                &request.deref().headers().deref(),
+                &mut request.deref().headers().deref_mut(),
                 source,
                 &address,
             )
