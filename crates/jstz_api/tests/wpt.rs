@@ -387,6 +387,9 @@ async fn test_wpt() -> Result<()> {
             r"^\/fetch\/api\/response\/response-stream-.+\.any\.html$",
             r"^\/html\/webappapis\/atob\/base64\.any\.html$", // atob, btoa
             r"^\/html\/webappapis\/structured-clone\/structured\-clone\.any\.html$", // structuredClone
+            // set/clearTimeout, set/clearInterval
+            // Some tests show Err because the targeted set/clear functions are not yet defined
+            r"^\/html\/webappapis\/timers\/[^\/]+\.any\.html$",
         ]
         .as_ref(),
     )?;
