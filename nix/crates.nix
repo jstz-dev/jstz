@@ -89,7 +89,7 @@
   #     });
 
   workspace = craneLib.cargoBuild commonWorkspace;
-in {
+in let
   packages = {
     # A list of all the crates in the workspace
     # When adding a new crate, add it to this list
@@ -115,6 +115,24 @@ in {
     jstz_proto = crate "jstz_proto";
     jstz_rollup = crate "jstz_rollup";
     jstz_runtime = crate "jstz_runtime";
+    jstz_tps_bench = craneLib.buildPackage (commonWorkspace
+      // rec {
+        pname = "jstz_tps_bench";
+
+        # build the crate first to get the bench binary to generate an inbox file
+        benchmark_cli = crate "${pname}";
+
+        # then build the crate again with the feature flag to run benchmarking with the inbox file
+        cargoExtraArgs = "-p ${pname} --features static-inbox";
+
+        doCheck = false;
+        preBuildPhases = ["makeInbox"];
+        transfer_count = 10;
+        makeInbox = ''
+          ${benchmark_cli}/bin/bench generate --transfers $transfer_count --inbox-file ./crates/jstz_tps_bench/src/kernel/inbox.json
+          mkdir $out && cp ./crates/jstz_tps_bench/src/kernel/inbox.json $out/inbox.json && echo "#!${pkgs.bash}/bin/bash" >> $out/run.sh && echo "log_file=\$(mktemp); $out/bin/kernel --timings > \$log_file 2>/dev/null && $out/bin/bench results --inbox-file $out/inbox.json --log-file \$log_file --expected-transfers $transfer_count" >> $out/run.sh && chmod +x $out/run.sh
+        '';
+      });
     jstz_wpt = crate "jstz_wpt";
     jstzd = craneLib.buildPackage (commonWorkspace
       // rec {
@@ -170,5 +188,15 @@ in {
       // {
         cargoClippyExtraArgs = "--all-targets -- --deny warnings";
       });
+  };
+in {
+  inherit packages;
+  inherit checks;
+
+  apps = {
+    tps_bench = {
+      type = "app";
+      program = "${packages.jstz_tps_bench}/run.sh";
+    };
   };
 }
