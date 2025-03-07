@@ -17316,6 +17316,469 @@
         },
         "writable-streams": {
           "Folder": {
+            "aborting.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "WritableStreamDefaultController.signal",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Aborting a WritableStream before it starts should cause the writer's unsettled ready promise to reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Aborting a WritableStream should cause the writer's fulfilled ready promise to reset to a rejected one",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "abort() on a released writer rejects",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Aborting a WritableStream immediately prevents future writes",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Aborting a WritableStream prevents further writes after any that are in progress",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Fulfillment value of writer.abort() call must be undefined even if the underlying sink returns a non-undefined value",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream if sink's abort throws, the promise returned by writer.abort() rejects",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream if sink's abort throws, the promise returned by multiple writer.abort()s is the same and rejects",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream if sink's abort throws, the promise returned by ws.abort() rejects",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream if sink's abort throws, for an abort performed during a write, the promise returned by ws.abort() rejects",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Aborting a WritableStream passes through the given reason",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Aborting a WritableStream puts it in an errored state with the error passed to abort()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Aborting a WritableStream causes any outstanding write() promises to be rejected with the reason supplied",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Closing but then immediately aborting a WritableStream causes the stream to error",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Closing a WritableStream and aborting it while it closes causes the stream to ignore the abort attempt",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Aborting a WritableStream after it is closed is a no-op",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream should NOT call underlying sink's close if no abort is supplied (historical)",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "returning a thenable from abort() should work",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": ".closed should not resolve before fulfilled write()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": ".closed should not resolve before rejected write(); write() error should not overwrite abort() error",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writes should be satisfied in order when aborting",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writes should be satisfied in order after rejected write when aborting",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() should reject with abort reason why abort() is first error",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "underlying abort() should not be called until underlying write() completes",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "underlying abort() should not be called if underlying close() has started",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "if underlying close() has started and then rejects, the abort() and close() promises should reject with the underlying close rejection reason",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "an abort() that happens during a write() should trigger the underlying abort() even with a close() queued",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "if a writer is created for a stream with a pending abort, its ready should be rejected with the abort error",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writer close() promise should resolve before abort() promise",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writer.ready should reject on controller error without waiting for underlying write",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writer.abort() while there is an in-flight write, and then finish the write with rejection",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writer.abort(), controller.error() while there is an in-flight write, and then finish the write",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writer.abort(), controller.error() while there is an in-flight close, and then finish the close",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller.error(), writer.abort() while there is an in-flight write, and then finish the write",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller.error(), writer.abort() while there is an in-flight close, and then finish the close",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "releaseLock() while aborting should reject the original closed promise",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "releaseLock() during delayed async abort() should reject the writer.closed promise",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink abort() should not be called until sink start() is done",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "if start attempts to error the controller after abort() has been called, then it should lose",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "stream abort() promise should still resolve if sink start() rejects",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writer abort() during sink start() should replace the writer.ready promise synchronously",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "promises returned from other writer methods should be rejected when writer abort() happens during sink start()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "abort() should succeed despite rejection from write",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "abort() should be rejected with the rejection returned from close()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "a rejecting sink.write() should not prevent sink.abort() from being called",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when start errors after stream abort(), underlying sink abort() should be called anyway",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when calling abort() twice on the same stream, both should give the same promise that fulfills with undefined",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when calling abort() twice on the same stream, but sequentially so so there's no pending abort the second time, both should fulfill with undefined",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "calling abort() on an errored stream should fulfill with undefined",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink abort() should not be called if stream was erroring due to controller.error() before abort() was called",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink abort() should not be called if stream was erroring due to bad strategy before abort() was called",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "abort with no arguments should set the stored error to undefined",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "abort with an undefined argument should set the stored error to undefined",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "abort with a string argument should set the stored error to that argument",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "abort on a locked stream should reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "the abort signal is signalled synchronously - write",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: WritableStream is not defined\""
+                      },
+                      {
+                        "name": "the abort signal is signalled synchronously - close",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: WritableStream is not defined\""
+                      },
+                      {
+                        "name": "the abort signal is not signalled on error",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: WritableStream is not defined\""
+                      },
+                      {
+                        "name": "the abort signal is not signalled on write failure",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: WritableStream is not defined\""
+                      },
+                      {
+                        "name": "the abort signal is not signalled on close failure",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: WritableStream is not defined\""
+                      },
+                      {
+                        "name": "recursive abort() call",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: WritableStream is not defined\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 62,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "bad-strategies.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Writable stream: throwing strategy.size getter",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: construction should re-throw the error function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" but we expected it to throw object \"error1: a unique string\""
+                      },
+                      {
+                        "name": "reject any non-function value for strategy.size",
+                        "status": "Fail",
+                        "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "Writable stream: throwing strategy.highWaterMark getter",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: construction should re-throw the error function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" but we expected it to throw object \"error1: a unique string\""
+                      },
+                      {
+                        "name": "Writable stream: invalid strategy.highWaterMark",
+                        "status": "Fail",
+                        "message": "assert_throws_js: construction should throw a RangeError for -1 function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                      },
+                      {
+                        "name": "Writable stream: invalid size beats invalid highWaterMark",
+                        "status": "Fail",
+                        "message": "assert_throws_js: WritableStream constructor should throw a TypeError function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "Writable stream: throwing strategy.size method",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Writable stream: invalid strategy.size return value",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 7,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "bad-underlying-sinks.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "start: errors in start cause WritableStream constructor to throw",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: constructor should throw same error as throwing start getter function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" but we expected it to throw object \"error1: error1\""
+                      },
+                      {
+                        "name": "close: throwing getter should cause constructor to throw",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" but we expected it to throw object \"error1: error1\""
+                      },
+                      {
+                        "name": "write: throwing getter should cause write() and closed to reject",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" but we expected it to throw object \"error1: error1\""
+                      },
+                      {
+                        "name": "start: non-function start method",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "write: non-function write method",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "close: non-function close method",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "abort: non-function abort method with .apply",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "abort: throwing getter should cause abort() and closed to reject",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" but we expected it to throw object \"error1: error1\""
+                      },
+                      {
+                        "name": "close: throwing method should cause writer close() and ready to reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close: returning a rejected promise should cause writer close() and ready to reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "write: throwing method should cause write() and closed to reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "write: returning a promise that becomes rejected after the writer write() should cause writer write() and ready to reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "write: returning a rejected promise (second write) should cause writer write() and ready to reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "abort: throwing method should cause abort() and closed to reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 14,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
             "byte-length-queuing-strategy.any.js": {
               "Test": {
                 "variations": [
@@ -17331,6 +17794,223 @@
                     "metrics": {
                       "passed": 0,
                       "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "close.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "fulfillment value of writer.close() call must be undefined even if the underlying sink returns a non-undefined value",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when sink calls error asynchronously while sink close is in-flight, the stream should not become errored",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when sink calls error synchronously while closing, the stream should not become errored",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when the sink throws during close, and the close is requested while a write is still in-flight, the stream should become errored during the close",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "releaseLock on a stream with a pending write in which the stream has been errored",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "releaseLock on a stream with a pending close in which controller.error() was called",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when close is called on a WritableStream in writable state, ready should return a fulfilled promise",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when close is called on a WritableStream in waiting state, ready promise should be fulfilled",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when close is called on a WritableStream in waiting state, ready should be fulfilled immediately even if close takes a long time",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "returning a thenable from close() should work",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "releaseLock() should not change the result of sync close()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "releaseLock() should not change the result of async close()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() should set state to CLOSED even if writer has detached",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "the promise returned by async abort during close should resolve",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "promises must fulfill/reject in the expected order on closure",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "promises must fulfill/reject in the expected order on aborted closure",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "promises must fulfill/reject in the expected order on aborted and errored closure",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() should not reject until no sink methods are in flight",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "ready promise should be initialised as fulfilled for a writer on a closed stream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() on a writable stream should work",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() on a locked stream should reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() on an erroring stream should reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() on an errored stream should reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() on an closed stream should reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() on a stream with a pending close should reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 25,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "constructor.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "WritableStream should be constructible with no arguments",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "underlyingSink argument should be converted after queuingStrategy argument",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" but we expected it to throw object \"error2: error2\""
+                      },
+                      {
+                        "name": "WritableStream instances should have standard methods and properties",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStreamDefaultController constructor should throw",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStreamDefaultController constructor should throw when passed an initialised WritableStream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStreamDefaultWriter should throw unless passed a WritableStream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStreamDefaultWriter constructor should throw when stream argument is locked",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller argument should be passed to start method",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller argument should be passed to write method",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller argument should not be passed to close method",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "highWaterMark should be reflected to desiredSize",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream should be writable and ready should fulfill immediately if the strategy does not apply backpressure",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 12,
                       "timed_out": 0
                     }
                   }
@@ -17362,6 +18042,423 @@
                     "metrics": {
                       "passed": 0,
                       "failed": 3,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "error.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "controller.error() on erroring stream should not throw",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() should error the stream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "surplus calls to controller.error() should be a no-op",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() on errored stream should not throw",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() on closed stream should not throw",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 5,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "floating-point-total-queue-size.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Floating point arithmetic must manifest near NUMBER.MAX_SAFE_INTEGER (total ends up positive)",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Floating point arithmetic must manifest near 0 (total ends up positive, but clamped)",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Floating point arithmetic must manifest near 0 (total ends up positive, and not clamped)",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Floating point arithmetic must manifest near 0 (total ends up zero)",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 4,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "general.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "desiredSize on a released writer",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "desiredSize initial value",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "desiredSize on a writer for an errored stream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "ws.getWriter() on a closing WritableStream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "ws.getWriter() on an aborted WritableStream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "Subclassing WritableStream should work",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "the locked getter should return true if the stream has a writer",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "desiredSize on a writer for a closed stream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "ws.getWriter() on a closed WritableStream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "ws.getWriter() on an errored WritableStream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "closed and ready on a released writer",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream should call underlying sink methods as methods",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "methods should not not have .apply() or .call() called",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream's strategy.size should not be called as a method",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "redundant releaseLock() is no-op",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "ready promise should fire before closed on releaseLock",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 16,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "properties.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "sink method start should be called with the right number of arguments",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink method start should be called even when it's located on the prototype chain",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink method write should be called with the right number of arguments",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink method write should be called even when it's located on the prototype chain",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink method close should be called with the right number of arguments",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink method close should be called even when it's located on the prototype chain",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink method abort should be called with the right number of arguments",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "sink method abort should be called even when it's located on the prototype chain",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 8,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "reentrant-strategy.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "writes should be written in the standard order",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writer.write() promises should resolve in the standard order",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() should work when called from within strategy.size()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "close() should work when called from within strategy.size()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "abort() should work when called from within strategy.size()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "releaseLock() should abort the write() when called within strategy.size()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "original reader should error when new reader is created within strategy.size()",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 7,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "start.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "underlying sink's write or close should not be called if start throws",
+                        "status": "Fail",
+                        "message": "assert_throws_exactly: constructor should throw passedError function \"function () { [native code] }\" threw object \"ReferenceError: WritableStream is not defined\" but we expected it to throw object \"Error: horrible things\""
+                      },
+                      {
+                        "name": "underlying sink's write should not be called until start finishes",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "underlying sink's close should not be called until start finishes",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "underlying sink's write or close should not be invoked if the promise returned by start is rejected",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "returning a thenable from start() should work",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() during start should cause writes to fail",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() during async start should cause existing writes to fail",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when start() rejects, writer promises should reject in standard order",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 8,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "write.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "WritableStream should complete asynchronous writes before close resolves",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream should complete synchronous writes before close resolves",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "fulfillment value of ws.write() call should be undefined even if the underlying sink returns a non-undefined value",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStream should transition to waiting until write is acknowledged",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when write returns a rejected promise, queued writes and close should be cleared",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "when sink's write throws an error, the stream should become errored and the promise should reject",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writer.write(), ready and closed reject with the error passed to controller.error() made before sink.write rejection",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "a large queue of writes should be processed completely",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "WritableStreamDefaultWriter should work when manually constructed",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "returning a thenable from write() should work",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "failing DefaultWriter constructor should not release an existing writer",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "write() on a stream with HWM 0 should not cause the ready Promise to resolve",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "writing to a released writer should reject the returned promise",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 13,
                       "timed_out": 0
                     }
                   }
