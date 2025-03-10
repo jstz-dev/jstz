@@ -64,11 +64,12 @@ pub struct RunArgs {
     url: String,
     http_method: String,
     gas_limit: u32,
+    /// The amount in XTZ to transfer.
+    amount: u64,
     json_data: Option<String>,
     network: Option<NetworkName>,
     trace: bool,
     include_response_headers: bool,
-    headers: Option<HeaderMap>,
 }
 
 impl RunArgs {
@@ -77,11 +78,11 @@ impl RunArgs {
             url,
             http_method,
             gas_limit,
+            amount: 0,
             json_data: None,
             network: None,
             trace: false,
             include_response_headers: false,
-            headers: None,
         }
     }
 
@@ -108,8 +109,8 @@ impl RunArgs {
         self
     }
 
-    pub fn set_headers(mut self, headers: Option<HeaderMap>) -> Self {
-        self.headers = headers;
+    pub fn set_amount(mut self, amount: u64) -> Self {
+        self.amount = amount;
         self
     }
 }
@@ -125,24 +126,17 @@ pub async fn exec_transfer(
     network: Option<NetworkName>,
 ) -> Result<()> {
     let cfg = Config::load().await?;
-    let mutez_amount = amount * MUTEZ_PER_TEZ;
     let to = AddressOrAlias::resolve_or_use_current_user(Some(to), &cfg)?;
     let url = match &to {
         Address::User(_) => format!("tezos://{}", to),
         // for sf address, ignore the function execution and just transfer the amount
         Address::SmartFunction(_) => format!("tezos://{}{}", to, NOOP_PATH),
     };
-    let mut headers = HeaderMap::new();
-    headers.insert(
-        TRANSFER_HEADER_KEY,
-        HeaderValue::from_str(&format!("{}", mutez_amount)).unwrap(),
-    );
-
     let args = RunArgs::new(url, "POST".to_string(), gas_limit);
     exec(
         args.set_network(network)
             .set_include_response_headers(include_response_headers)
-            .set_headers(Some(headers)),
+            .set_amount(amount),
     )
     .await
     .map_err(|err| anyhow!("Failed to transfer {} XTZ to {}: {}", amount, to, err))?;
@@ -207,13 +201,22 @@ pub async fn exec(args: RunArgs) -> Result<()> {
 
     debug!("Body: {:?}", body);
 
+    let mut headers = HeaderMap::new();
+    if args.amount > 0 {
+        let mutez_amount = args.amount * MUTEZ_PER_TEZ;
+        headers.insert(
+            TRANSFER_HEADER_KEY,
+            HeaderValue::from_str(&format!("{}", mutez_amount)).unwrap(),
+        );
+    }
+
     let op = Operation {
         source: user.address.clone(),
         nonce,
         content: OperationContent::RunFunction(RunFunction {
             uri: url,
             method,
-            headers: args.headers.unwrap_or_default(),
+            headers,
             body,
             gas_limit: args
                 .gas_limit
