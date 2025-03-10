@@ -3364,6 +3364,9 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "deno_core",
  "deno_fs",
+ "jstz_core",
+ "tezos-smart-rollup-core",
+ "tezos-smart-rollup-mock",
 ]
 
 [[package]]
