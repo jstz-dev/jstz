@@ -1,5 +1,6 @@
 #![allow(unused)]
-pub(crate) mod runtime;
+mod console;
+mod runtime;
 
 pub(crate) use runtime::JstzHostRuntime;
 pub use runtime::JstzRuntime;
@@ -11,7 +12,8 @@ mod test {
 
     pub struct MockHostRuntime {
         inner: RollupMockHost,
-        sink: Vec<u8>,
+        #[allow(clippy::box_collection)]
+        sink: Box<Vec<u8>>,
     }
 
     impl MockHostRuntime {
@@ -20,7 +22,7 @@ mod test {
         }
 
         pub fn init() -> Self {
-            let sink: Vec<u8> = vec![];
+            let sink: Box<Vec<u8>> = Box::default();
             let rollup_host = RollupMockHost::default();
             let mut host = Self {
                 inner: rollup_host,

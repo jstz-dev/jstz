@@ -11,9 +11,11 @@ license-file.workspace = true
 description = "Javascript runtime for Jstz"
 
 [dependencies]
+deno_console.workspace = true
 deno_core.workspace = true
 deno_fs.workspace = true
 jstz_core = { path = "../jstz_core" }
+tezos-smart-rollup.workspace = true
 tezos-smart-rollup-core.workspace = true
 
 [dev-dependencies]
