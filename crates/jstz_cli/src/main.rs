@@ -78,6 +78,9 @@ enum Command {
         /// The JSON data in the request body.
         #[arg(name = "data", short, long, default_value = None, value_hint = clap::ValueHint::FilePath)]
         json_data: Option<String>,
+        /// The amount in XTZ to transfer.
+        #[arg(short, long, default_value_t = 0)]
+        amount: u64,
         /// Specifies the network from the config file, defaulting to the configured default network.
         ///  Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
@@ -170,6 +173,7 @@ async fn exec(command: Command) -> Result<()> {
             http_method,
             gas_limit,
             json_data,
+            amount,
             network,
             trace,
             include_response_headers,
@@ -179,6 +183,7 @@ async fn exec(command: Command) -> Result<()> {
                 args.set_json_data(json_data)
                     .set_network(network)
                     .set_trace(trace)
+                    .set_amount(amount)
                     .set_include_response_headers(include_response_headers),
             )
             .await
