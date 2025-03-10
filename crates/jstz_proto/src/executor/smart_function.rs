@@ -62,12 +62,16 @@ pub mod headers {
 
 // Applies on_fullfilled or on_rejected based on either an error was raised or not.
 // If the value is a promise, then we apply the on_fulfilled and on_rejected to the promise.
-fn try_apply_to_value_or_promise(
+pub fn try_apply_to_value_or_promise<F1, F2>(
     value_or_promise: JsResult<JsValue>,
-    on_fulfilled: fn(&JsValue, &mut Context) -> JsResult<()>,
-    on_rejected: fn(&mut Context) -> JsResult<()>,
+    on_fulfilled: F1,
+    on_rejected: F2,
     context: &mut Context,
-) -> JsResult<JsValue> {
+) -> JsResult<JsValue>
+where
+    F1: Fn(&JsValue, &mut Context) -> JsResult<()> + 'static,
+    F2: Fn(&mut Context) -> JsResult<()> + 'static,
+{
     match value_or_promise {
         Ok(value) => match value.as_promise() {
             Some(promise) => {
@@ -367,6 +371,7 @@ impl Script {
 }
 
 pub const TRANSFER_HEADER_KEY: &str = "X-JSTZ-TRANSFER";
+pub const TRANSFERRED_HEADER_KEY: &str = "X-JSTZ-AMOUNT";
 
 pub struct HostScript;
 
@@ -470,27 +475,33 @@ impl HostScript {
         Ok(amount)
     }
 
-    /// Transfer xtz from `src` to `dst` if the `TRANSFER_HEADER_KEY` header is present
-    /// and the transfer amount > 0 in request
+    /// Transfer xtz from `src` to `dst` if the `TRANSFER_HEADER_KEY` header is present & amount > 0
+    /// On success, `TRANSFER_HEADER_KEY` is set to `TRANSFERRED_HEADER_KEY`
     pub fn handle_transfer(
-        headers: &impl Deref<Target = Headers>,
+        headers: &mut impl std::ops::DerefMut<Target = Headers>,
         src: &impl Addressable,
         dst: &impl Addressable,
-    ) -> JsResult<()> {
-        if let Some(amt) = Self::extract_transfer_amount(headers)? {
-            let transfer_result = runtime::with_js_hrt_and_tx(|hrt, tx| {
-                Account::transfer(hrt, tx, src, dst, amt.into()).map_err(|e| {
+    ) -> JsResult<Option<NonZeroU64>> {
+        let amt = match Self::extract_transfer_amount(headers)? {
+            Some(a) => a,
+            None => return Ok(None),
+        };
+        runtime::with_js_hrt_and_tx(|hrt, tx| {
+            // 1) Attempt to transfer.
+            Account::transfer(hrt, tx, src, dst, amt.into())
+                .and_then(|_| {
+                    headers.remove(TRANSFER_HEADER_KEY)?;
+                    headers.append(TRANSFERRED_HEADER_KEY, &amt.to_string())?;
+                    Ok(())
+                })
+                .map_err(|e| {
                     JsError::from_native(
                         JsNativeError::eval()
                             .with_message(format!("Transfer failed: {}", e)),
                     )
                 })
-            });
-
-            return transfer_result;
-        }
-
-        Ok(())
+        })?;
+        Ok(Some(amt))
     }
 }
 
@@ -529,10 +540,10 @@ pub mod run {
         to: &impl Addressable,
     ) -> Result<RunFunctionReceipt> {
         let response = Response::try_from_js(response)?;
-        let (http_parts, body) = Response::to_http_response(&response).into_parts();
-        if http_parts.status.is_success() {
-            HostScript::handle_transfer(&response.headers().deref(), from, to)?;
+        if response.ok() {
+            HostScript::handle_transfer(&mut response.headers().deref_mut(), from, to)?;
         }
+        let (http_parts, body) = Response::to_http_response(&response).into_parts();
         Ok(RunFunctionReceipt {
             body,
             status_code: http_parts.status,
@@ -619,7 +630,7 @@ pub mod run {
         tx.begin();
         let transfer_result = runtime::enter_js_host_context(hrt, tx, || {
             HostScript::handle_transfer(
-                &request.deref().headers().deref(),
+                &mut request.deref().headers().deref_mut(),
                 source,
                 &address,
             )
@@ -639,6 +650,7 @@ pub mod run {
                     rt,
                     source,
                     // TODO: avoid cloning
+                    // https://linear.app/tezos/issue/JSTZ-331/avoid-cloning-for-address-in-proto
                     sf_address.clone(),
                     request,
                     operation_hash,
@@ -695,7 +707,11 @@ pub mod run {
             // 1. Deploy the smart function that transfers the balance to the source
             let code = format!(
                 r#"
-            const handler = async () => {{
+            const handler = async (request) => {{
+                const transferred_amount = request.headers.get("X-JSTZ-AMOUNT");
+                if (transferred_amount !== "{transfer_amount}") {{
+                    return Response.error("Invalid transferred amount");
+                }}
                 const headers = {{"X-JSTZ-TRANSFER": "{refund_amount}"}};
                 return new Response(null, {{headers}});
             }};
@@ -728,7 +744,7 @@ pub mod run {
                 gas_limit: 1000,
             };
             let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-            execute(
+            let response = execute(
                 host,
                 &mut tx,
                 &source,
@@ -736,6 +752,14 @@ pub mod run {
                 fake_op_hash.clone(),
             )
             .expect("run function expected");
+
+            assert!(response.headers.get(TRANSFER_HEADER_KEY).is_none());
+            assert!(response
+                .headers
+                .get(TRANSFERRED_HEADER_KEY)
+                .is_some_and(
+                    |amt| amt.to_str().unwrap().parse::<u64>().unwrap() == refund_amount
+                ));
             tx.commit(host).unwrap();
 
             // 3. assert the transfer to the sf and refund to the source
