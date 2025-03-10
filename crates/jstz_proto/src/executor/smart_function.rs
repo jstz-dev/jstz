@@ -487,7 +487,6 @@ impl HostScript {
             None => return Ok(None),
         };
         runtime::with_js_hrt_and_tx(|hrt, tx| {
-            // 1) Attempt to transfer.
             Account::transfer(hrt, tx, src, dst, amt.into())
                 .and_then(|_| {
                     headers.remove(TRANSFER_HEADER_KEY)?;
