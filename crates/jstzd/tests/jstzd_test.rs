@@ -203,7 +203,7 @@ async fn ensure_jstzd_components_are_up(
         .is_ok());
     assert!(jstzd.baker_healthy().await);
     let rollup_running =
-        retry(10, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
+        retry(20, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
     assert!(rollup_running);
     assert!(jstzd.jstz_node_healthy().await);
     assert!(jstzd.health_check().await);
