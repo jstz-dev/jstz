@@ -12,9 +12,9 @@ fn create_config_file(port: u16) -> NamedTempFile {
     tmp_file
         .write_all(
             format!(
-                r#"{{"server_port":{}, "octez_rollup":{{"endpoint":{}}}}}"#,
+                r#"{{"server_port":{}, "octez_rollup":{{"endpoint":"{}"}}}}"#,
                 port,
-                Endpoint::localhost(unused_port())
+                Endpoint::localhost(unused_port()).to_string()
             )
             .as_bytes(),
         )
