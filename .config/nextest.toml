@@ -7,4 +7,4 @@ slow-timeout = { period = "3m", terminate-after = 1 }
 
 [[profile.default.overrides]]
 filter = 'test(/^jstzd::/)'
-threads-required = 2
+threads-required = 4
