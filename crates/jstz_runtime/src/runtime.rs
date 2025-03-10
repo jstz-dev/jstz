@@ -1,14 +1,14 @@
 use std::ops::Deref;
 use std::ops::DerefMut;
 
+use crate::console::jstz_console;
 use crate::init_ops_and_esm_extensions;
-use deno_core::Extension;
-use deno_core::JsRuntime;
-use deno_core::RuntimeOptions;
+use deno_console::deno_console;
+use deno_core::{Extension, JsRuntime, RuntimeOptions};
 use jstz_core::host::{HostRuntime, JsHostRuntime};
 
 fn init_extenions() -> Vec<Extension> {
-    init_ops_and_esm_extensions!()
+    init_ops_and_esm_extensions!(deno_console, jstz_console)
 }
 
 pub type JstzHostRuntime = JsHostRuntime<'static>;
