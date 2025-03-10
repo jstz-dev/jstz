@@ -14,7 +14,7 @@ fn create_config_file(port: u16) -> NamedTempFile {
             format!(
                 r#"{{"server_port":{}, "octez_rollup":{{"endpoint":"{}"}}}}"#,
                 port,
-                Endpoint::localhost(unused_port()).to_string()
+                Endpoint::localhost(unused_port())
             )
             .as_bytes(),
         )
