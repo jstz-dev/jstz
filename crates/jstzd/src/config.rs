@@ -74,6 +74,11 @@ pub struct BootstrapContractFile;
 #[include = "*.json"]
 struct BootstrapRollupFile;
 
+#[derive(Deserialize)]
+struct RollupConfig {
+    endpoint: Endpoint,
+}
+
 #[derive(Deserialize, Default)]
 struct Config {
     server_port: Option<u16>,
@@ -82,6 +87,7 @@ struct Config {
     #[serde(default)]
     octez_baker: OctezBakerConfigBuilder,
     octez_client: Option<OctezClientConfigBuilder>,
+    octez_rollup: Option<RollupConfig>,
     #[serde(default)]
     protocol: ProtocolParameterBuilder,
 }
@@ -136,8 +142,13 @@ pub(crate) async fn build_config(
     .build()
     .unwrap();
 
-    let jstz_node_rpc_endpoint =
-        Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
+    let jstz_node_rpc_endpoint = config
+        .octez_rollup
+        .unwrap_or(RollupConfig {
+            endpoint: Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT))
+                .unwrap(),
+        })
+        .endpoint;
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,

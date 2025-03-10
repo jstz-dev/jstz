@@ -154,7 +154,7 @@ in {
         # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
         # FIXME(https://linear.app/tezos/issue/JSTZ-237):
         # Fix tests that only fail in CI/Nix
-        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --features \"skip-rollup-tests\" --config-file ${src}/.config/nextest.toml";
+        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
@@ -163,7 +163,7 @@ in {
         # Use nextest for test harness (instead of `cargo test`)
         cargoLlvmCovCommand = "nextest";
         # Generate coverage reports for codecov
-        cargoLlvmCovExtraArgs = "--codecov --output-path $out --features \"skip-rollup-tests\" --features \"skip-wpt\" --config-file ${src}/.config/nextest.toml";
+        cargoLlvmCovExtraArgs = "--codecov --output-path $out --features \"skip-wpt\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-clippy = craneLib.cargoClippy (commonWorkspace
