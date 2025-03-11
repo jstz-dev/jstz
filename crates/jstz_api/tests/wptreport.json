@@ -5175,6 +5175,695 @@
             ]
           }
         },
+        "streams": {
+          "Folder": {
+            "backpressure.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "write() should not complete until read relieves backpressure for TextDecoderStream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a constructor\""
+                      },
+                      {
+                        "name": "additional writes should wait for backpressure to be relieved for class TextDecoderStream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a constructor\""
+                      },
+                      {
+                        "name": "write() should not complete until read relieves backpressure for TextEncoderStream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a constructor\""
+                      },
+                      {
+                        "name": "additional writes should wait for backpressure to be relieved for class TextEncoderStream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"TypeError: not a constructor\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 4,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "decode-attributes.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "encoding attribute should have correct value for 'unicode-1-1-utf-8'",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "encoding attribute should have correct value for 'iso-8859-2'",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "encoding attribute should have correct value for 'ascii'",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "encoding attribute should have correct value for 'utf-16'",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to 'false' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to 'false' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to '0' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to '0' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to '' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to '' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to 'undefined' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to 'undefined' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to 'null' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to 'null' should set the attribute to false",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to 'true' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to 'true' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to '1' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to '1' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to '[object Object]' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to '[object Object]' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to '' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to '' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting fatal to 'yes' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "setting ignoreBOM to 'yes' should set the attribute to true",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      },
+                      {
+                        "name": "constructing with an invalid encoding should throw",
+                        "status": "Fail",
+                        "message": "assert_throws_js: the constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoderStream is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                      },
+                      {
+                        "name": "constructing with a non-stringifiable encoding should throw",
+                        "status": "Fail",
+                        "message": "assert_throws_js: the constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoderStream is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      },
+                      {
+                        "name": "a throwing fatal member should cause the constructor to throw",
+                        "status": "Fail",
+                        "message": "assert_throws_js: the constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoderStream is not defined\" (\"ReferenceError\") expected instance of function \"function Error() { [native code] }\" (\"Error\")"
+                      },
+                      {
+                        "name": "a throwing ignoreBOM member should cause the constructor to throw",
+                        "status": "Fail",
+                        "message": "assert_throws_js: the constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: TextDecoderStream is not defined\" (\"ReferenceError\") expected instance of function \"function Error() { [native code] }\" (\"Error\")"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 28,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "decode-bad-chunks.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "chunk of type undefined should error the stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "chunk of type null should error the stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "chunk of type numeric should error the stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "chunk of type object, not BufferSource should error the stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "chunk of type array should error the stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 5,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "decode-ignore-bom.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "ignoreBOM should work for encoding utf-8, split at character 0",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-8, split at character 1",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-8, split at character 2",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-8, split at character 3",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-16le, split at character 0",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-16le, split at character 1",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-16le, split at character 2",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-16le, split at character 3",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-16be, split at character 0",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-16be, split at character 1",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-16be, split at character 2",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "ignoreBOM should work for encoding utf-16be, split at character 3",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 12,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "decode-incomplete-input.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "incomplete input with error mode \"replacement\" should end with a replacement character",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "incomplete input with error mode \"fatal\" should error the stream",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 2,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "decode-non-utf8.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "TextDecoderStream should be able to decode UTF-16BE",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to decode invalid sequences in UTF-16BE",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to reject invalid sequences in UTF-16BE",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to decode UTF-16LE",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to decode invalid sequences in UTF-16LE",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to reject invalid sequences in UTF-16LE",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to decode Shift_JIS",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to decode invalid sequences in Shift_JIS",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to reject invalid sequences in Shift_JIS",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to decode ISO-2022-JP",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to decode invalid sequences in ISO-2022-JP",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to reject invalid sequences in ISO-2022-JP",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      },
+                      {
+                        "name": "TextDecoderStream should be able to decode ISO-8859-14",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TextDecoderStream is not defined\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 13,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "decode-split-character.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "a code point split between chunks should not be emitted until all bytes are available; split point = 2",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a code point split between chunks should not be emitted until all bytes are available; split point = 3",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a code point split between chunks should not be emitted until all bytes are available; split point = 4",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a code point split between chunks should not be emitted until all bytes are available; split point = 5",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a code point should be emitted as soon as all bytes are available",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an empty chunk inside a code point split between chunks should not change the output; split point = 1",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an empty chunk inside a code point split between chunks should not change the output; split point = 2",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an empty chunk inside a code point split between chunks should not change the output; split point = 3",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an empty chunk inside a code point split between chunks should not change the output; split point = 4",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an empty chunk inside a code point split between chunks should not change the output; split point = 5",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an empty chunk inside a code point split between chunks should not change the output; split point = 6",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 11,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "decode-utf8.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "encode-bad-chunks.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "a chunk that cannot be converted to a string should error the streams",
+                        "status": "Fail",
+                        "message": "TextEncoderStream is not defined"
+                      },
+                      {
+                        "name": "input of type undefined should be converted correctly to string",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "input of type null should be converted correctly to string",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "input of type numeric should be converted correctly to string",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "input of type object should be converted correctly to string",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "input of type array should be converted correctly to string",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 6,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "encode-utf8.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "encoding one string of UTF-8 should give one complete chunk",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a character split between chunks should be correctly encoded",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a character following one split between chunks should be correctly encoded",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "two consecutive astral characters each split down the middle should be correctly reassembled",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "two consecutive astral characters each split down the middle with an invalid surrogate in the middle should be correctly encoded",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a stream ending in a leading surrogate should emit a replacement character as a final chunk",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an unmatched surrogate at the end of a chunk followed by an astral character in the next chunk should be replaced with the replacement character at the start of the next output chunk",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an unmatched surrogate at the end of a chunk followed by an ascii character in the next chunk should be replaced with the replacement character at the start of the next output chunk",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an unmatched surrogate at the end of a chunk followed by a plane 1 character split into two chunks should result in the encoded plane 1 character appearing in the last output chunk",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "two leading chunks should result in two replacement characters",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a non-terminal unpaired leading surrogate should immediately be replaced",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a terminal unpaired trailing surrogate should immediately be replaced",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a leading surrogate chunk should be carried past empty chunks",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a leading surrogate chunk should error when it is clear it didn't form a pair",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "an empty string should result in no output chunk",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a leading empty chunk should be ignored",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a trailing empty chunk should be ignored",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "a plain ASCII chunk should be converted",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      },
+                      {
+                        "name": "characters in the ISO-8859-1 range should be encoded correctly",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"Error: todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 19,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "readable-writable-properties.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "TextEncoderStream readable and writable properties must pass brand checks",
+                        "status": "Fail",
+                        "message": "TextEncoderStream is not defined"
+                      },
+                      {
+                        "name": "TextDecoderStream readable and writable properties must pass brand checks",
+                        "status": "Fail",
+                        "message": "TextDecoderStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 2,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
         "textdecoder-arguments.any.js": {
           "Test": {
             "variations": [
