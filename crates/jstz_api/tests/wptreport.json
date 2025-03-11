@@ -21982,6 +21982,306 @@
           }
         }
       }
+    },
+    "xhr": {
+      "Folder": {
+        "formdata": {
+          "Folder": {
+            "append.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "testFormDataAppend1",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataAppend2",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataAppendUndefined1",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataAppendUndefined2",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataAppendNull1",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataAppendNull2",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataAppendEmptyBlob",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 7,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "constructor.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Constructors should throw a type error",
+                        "status": "Fail",
+                        "message": "assert_throws_js: function \"function () { [native code] }\" threw object \"ReferenceError: FormData is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 1,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "delete.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "testFormDataDelete",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataDeleteNonExistentKey",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataDeleteOtherKey",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 3,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "foreach.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "get.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "testFormDataGet",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataGetNull1",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataGetNull2",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataGetAll",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataGetAllEmpty1",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataGetAllEmpty2",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 6,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "has.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "testFormDataHas",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataHasEmpty1",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataHasEmpty2",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 3,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "iteration.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "Iteration skips elements removed while iterating",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "Removing elements already iterated over causes an element to be skipped during iteration",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "Appending a value pair during iteration causes it to be reached during iteration",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 3,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "set-blob.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [],
+                    "status": "Err",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 0,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "set.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "testFormDataSet1",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataSet2",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataSetUndefined1",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataSetUndefined2",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataSetNull1",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataSetNull2",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      },
+                      {
+                        "name": "testFormDataSetEmptyBlob",
+                        "status": "Fail",
+                        "message": "FormData is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 7,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
