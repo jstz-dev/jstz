@@ -361,7 +361,8 @@ fn run_wpt_test(
 async fn test_wpt() -> Result<()> {
     let filter = TestFilter::try_from(
         [
-            r"^\/encoding\/[^\/]+\.any\.html$",
+            r"^\/encoding\/[^\/]+\.any\.html$", // TextEncode, TextDecoder
+            r"^\/encoding\/streams\/[^\/]+\.any\.html$", // TextEncoderStream, TextDecoderStream
             r"^\/fetch\/api\/headers\/[^\/]+\.any\.html$",
             r"^\/FileAPI\/blob\/[^\/]+\.any\.html$", // Blob
             r"^\/streams\/queuing\-strategies\.any\.html$", // CountQueuingStrategy, ByteLengthQueuingStrategy
