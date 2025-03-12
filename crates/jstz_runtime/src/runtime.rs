@@ -3,12 +3,15 @@ use deno_core::*;
 use jstz_core::host::HostRuntime;
 use jstz_core::host::JsHostRuntime;
 use jstz_core::kv::Transaction;
+use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::Deserialize;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::jstz_console::jstz_console;
+use crate::jstz_kv::jstz_kv;
+use crate::jstz_kv::kv::Kv;
 use deno_console::deno_console;
 
 /// [`JstzRuntime`] manages the [`JsRuntime`] state. It is also
@@ -87,7 +90,7 @@ impl DerefMut for JstzRuntime {
 pub struct Protocol {
     pub host: JsHostRuntime<'static>,
     pub tx: &'static mut Transaction,
-    pub address: SmartFunctionHash,
+    pub kv: Kv,
 }
 
 impl Protocol {
@@ -105,7 +108,11 @@ impl Protocol {
         let tx = unsafe {
             std::mem::transmute::<&mut Transaction, &'static mut Transaction>(tx)
         };
-        Protocol { host, tx, address }
+        Protocol {
+            host,
+            tx,
+            kv: Kv::new(address.to_base58()),
+        }
     }
 }
 
@@ -119,35 +126,33 @@ macro_rules! init_ops_and_esm_extensions  {
 }
 
 fn init_extenions() -> Vec<Extension> {
-    init_ops_and_esm_extensions!(deno_console, jstz_console)
+    init_ops_and_esm_extensions!(deno_console, jstz_console, jstz_kv)
 }
 
 #[cfg(test)]
 mod test {
-    use jstz_core::kv::Transaction;
-    use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 
-    use crate::{test_utils::init_mock_host, JstzRuntime};
+    use crate::init_test_setup;
 
     #[test]
     fn test_init_jstz_runtime() {
-        let address =
-            SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton")
-                .unwrap();
-        let (sink, mut host) = init_mock_host();
-        let tx = &mut Transaction::default();
-        tx.begin();
-        let jstz_runtime = JstzRuntime::new(&mut host, tx, address, None);
+        init_test_setup!(runtime, host, tx, sink, address);
 
         let code = r#"
-            console.log("hello");
+            Kv.set("hello", "world");
+            Kv.set("abc", 42);
+            let hello = Kv.get("hello");
+            console.log(hello);
+            let abc = Kv.get("abc");
             console.log(42);
+            42 + 8
         "#;
 
-        jstz_runtime.execute(code).unwrap();
+        let result = runtime.execute_with_result::<u32>(code).unwrap();
+        assert_eq!(result, 50);
         assert_eq!(
-            String::from_utf8_lossy(&sink),
-            "[INFO] hello\n[INFO] \u{1b}[33m42\u{1b}[39m\n".to_string()
+            sink.to_string(),
+            "[INFO] world\n[INFO] \u{1b}[33m42\u{1b}[39m\n".to_string()
         )
     }
 }
