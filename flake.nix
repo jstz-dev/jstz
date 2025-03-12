@@ -180,7 +180,7 @@
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
           riscvV8 = fetchTarball {
             url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/130.0.7/librusty_v8.tar.gz";
-            sha256 = "0q7b4f70sczlvx6qsrx11p3gyq6651jj9xjrzrv8j4gn1iqhwpaa";
+            sha256 = "04y81fjwdrblhlqsyij2bc37x47x7j5k8qacfi2wby6gz5nwmxrj";
           };
 
           fmt = treefmt.lib.evalModule pkgs {

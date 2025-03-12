@@ -3,14 +3,16 @@ use jstz_core::{
     kv::Transaction,
 };
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use jstz_runtime::JstzRuntime;
+use jstz_runtime::{runtime::JstzRuntimeOptions, JstzRuntime};
 
 use crate::api::Kv;
 
 /// Initializes a new [`JstzRuntime`] with the given protocol
 pub fn init_jstz_runtime(protocol: Protocol) -> JstzRuntime {
-    let extensions = vec![];
-    JstzRuntime::init(extensions, Some(protocol))
+    JstzRuntime::init(JstzRuntimeOptions {
+        protocol: Some(protocol),
+        ..Default::default()
+    })
 }
 
 /// [`Protocol`] exposes proto-specific state to [`JstzRuntime`]

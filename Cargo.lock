@@ -3211,6 +3211,8 @@ name = "jstz_runtime"
 version = "0.1.0-alpha.0"
 dependencies = [
  "deno_core",
+ "thiserror 1.0.67",
+ "tokio",
 ]
 
 [[package]]
