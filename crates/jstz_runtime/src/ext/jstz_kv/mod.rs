@@ -45,7 +45,7 @@ extension!(
     jstz_kv,
     objects = [Kv],
     esm_entry_point = "ext:jstz_kv/kv.js",
-    esm = [dir "src/jstz_kv", "kv.js"]
+    esm = [dir "src/ext/jstz_kv", "kv.js"]
 );
 
 #[cfg(test)]
