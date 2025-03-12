@@ -3217,13 +3217,17 @@ dependencies = [
 name = "jstz_runtime"
 version = "0.1.0-alpha.0"
 dependencies = [
+ "bincode 2.0.0-rc.3",
  "deno_console",
  "deno_core",
  "jstz_core",
  "jstz_crypto",
+ "serde",
+ "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-mock",
+ "utoipa",
 ]
 
 [[package]]
