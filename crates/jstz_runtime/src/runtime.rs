@@ -9,7 +9,10 @@ use serde::Deserialize;
 use crate::error::Result;
 
 fn init_extenions() -> Vec<Extension> {
-    vec![]
+    vec![
+        deno_webidl::deno_webidl::init_ops_and_esm(),
+        deno_url::deno_url::init_ops_and_esm(),
+    ]
 }
 
 /// Returns the default object of the specified JavaScript namespace (Object).
