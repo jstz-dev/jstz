@@ -1171,6 +1171,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_console"
+version = "0.190.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94352b8d75c288a26ef748ad0ddae07e181109374a02c547850f96eef76b5389"
+dependencies = [
+ "deno_core",
+]
+
+[[package]]
 name = "deno_core"
 version = "0.336.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3165,6 +3174,7 @@ dependencies = [
  "bincode 2.0.0-rc.3",
  "boa_engine",
  "boa_gc",
+ "deno_console",
  "deno_core",
  "derive_more",
  "either",

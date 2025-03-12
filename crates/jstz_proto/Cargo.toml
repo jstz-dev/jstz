@@ -30,6 +30,7 @@ tezos-smart-rollup.workspace = true
 utoipa.workspace = true
 
 jstz_runtime = { path = "../jstz_runtime", optional = true }
+deno_console = { workspace = true, optional = true }
 deno_core = { workspace = true, optional = true }
 
 [dev-dependencies]
@@ -38,4 +39,4 @@ tezos-smart-rollup-mock.workspace = true
 bincode.workspace = true
 
 [features]
-jstz-runtime = ["dep:jstz_runtime", "dep:deno_core"]
+jstz-runtime = ["dep:jstz_runtime", "dep:deno_console", "dep:deno_core"]
