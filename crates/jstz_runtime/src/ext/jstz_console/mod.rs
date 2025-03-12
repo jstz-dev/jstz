@@ -27,7 +27,7 @@ extension!(
     deps = [deno_console],
     ops = [op_debug_msg],
     esm_entry_point = "ext:jstz_console/console.js",
-    esm = [dir "src/jstz_console", "console.js"],
+    esm = [dir "src/ext/jstz_console", "console.js"],
 );
 
 #[cfg(test)]

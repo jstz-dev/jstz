@@ -8,8 +8,11 @@ use serde::Deserialize;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-use crate::jstz_console::jstz_console;
+use crate::ext::{jstz_console::jstz_console, jstz_main::jstz_main};
+
 use deno_console::deno_console;
+use deno_url::deno_url;
+use deno_webidl::deno_webidl;
 
 /// [`JstzRuntime`] manages the [`JsRuntime`] state. It is also
 /// provides [`JsRuntime`] with the instiatiated [`HostRuntime`]
@@ -121,7 +124,13 @@ macro_rules! init_ops_and_esm_extensions  {
 }
 
 fn init_extenions() -> Vec<Extension> {
-    init_ops_and_esm_extensions!(deno_console, jstz_console)
+    init_ops_and_esm_extensions!(
+        deno_webidl,
+        deno_console,
+        jstz_console,
+        deno_url,
+        jstz_main
+    )
 }
 
 #[cfg(test)]

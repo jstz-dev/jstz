@@ -17,6 +17,8 @@ jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 tezos-smart-rollup.workspace = true
 tezos-smart-rollup-host.workspace = true
+deno_webidl.workspace = true
+deno_url.workspace = true
 
 [dev-dependencies]
 tezos-smart-rollup-mock.workspace = true
