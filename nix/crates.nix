@@ -5,7 +5,6 @@
   crane,
   rust-toolchain,
   octez,
-  mozjs,
 }: let
   craneLib = (crane.mkLib pkgs).overrideToolchain (_: rust-toolchain);
 
@@ -35,8 +34,6 @@
       ++ lib.optionals
       stdenv.isDarwin
       (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
-
-    MOZJS_ARCHIVE = mozjs;
 
     RUSTY_V8_ARCHIVE = pkgs.callPackage ./v8.nix {};
   };
@@ -108,7 +105,6 @@ in let
       });
     jstz_core = crate "jstz_core";
     jstz_crypto = crate "jstz_crypto";
-    jstz_engine = crate "jstz_engine";
     inherit jstz_kernel;
     jstz_mock = crate "jstz_mock";
     jstz_node = crate "jstz_node";
