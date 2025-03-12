@@ -245,7 +245,7 @@ fn init_runtime() -> (JstzRuntime, Transaction, MockHost) {
     options
         .extensions
         .push(test_harness_api::init_ops_and_esm());
-    let mut runtime = JstzRuntime::init(&mut host, &mut tx, address, Some(options));
+    let mut runtime = JstzRuntime::new(&mut host, &mut tx, address, Some(options));
 
     let op_state = runtime.op_state();
     // Insert a blank report to be filled in by test cases

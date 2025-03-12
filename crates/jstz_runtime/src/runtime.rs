@@ -1,3 +1,4 @@
+use deno_core::error::CoreError;
 use deno_core::*;
 use jstz_core::host::HostRuntime;
 use jstz_core::host::JsHostRuntime;
@@ -7,9 +8,8 @@ use serde::Deserialize;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-fn init_extenions() -> Vec<Extension> {
-    vec![]
-}
+use crate::jstz_console::jstz_console;
+use deno_console::deno_console;
 
 /// [`JstzRuntime`] manages the [`JsRuntime`] state. It is also
 /// provides [`JsRuntime`] with the instiatiated [`HostRuntime`]
@@ -31,7 +31,7 @@ impl JstzRuntime {
 
     /// Creates a new [`JstzRuntime`] with protocol extensions registered
     /// and an instance of Protocol exposed in the [`OpState`]
-    pub fn init(
+    pub fn new(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         address: SmartFunctionHash,
@@ -49,9 +49,9 @@ impl JstzRuntime {
 
     /// Executes traditional, non-ECMAScript-module JavaScript code, ignoring
     /// its result
-    pub fn execute(mut self, code: &str) -> Option<()> {
-        self.execute_script("jstz://run", code.to_string()).ok()?;
-        Some(())
+    pub fn execute(mut self, code: &str) -> Result<()> {
+        self.execute_script("jstz://run", code.to_string())?;
+        Ok(())
     }
 
     /// Executes traditional, non-ECMAScript-module JavaScript code, parsing
@@ -60,12 +60,15 @@ impl JstzRuntime {
         &mut self,
         code: &str,
     ) -> Option<T> {
-        let value = self.execute_script("jstz://run", code.to_string()).unwrap();
+        let value = self.execute_script("jstz://run", code.to_string()).ok()?;
         let scope = &mut self.handle_scope();
         let local = v8::Local::new(scope, value);
-        serde_v8::from_v8::<T>(scope, local).ok()
+        let t = serde_v8::from_v8::<T>(scope, local).ok()?;
+        Some(t)
     }
 }
+
+type Result<T> = std::result::Result<T, CoreError>;
 
 impl Deref for JstzRuntime {
     type Target = JsRuntime;
@@ -113,4 +116,38 @@ macro_rules! init_ops_and_esm_extensions  {
             $($ext::init_ops_and_esm()),*
         ]
     };
+}
+
+fn init_extenions() -> Vec<Extension> {
+    init_ops_and_esm_extensions!(deno_console, jstz_console)
+}
+
+#[cfg(test)]
+mod test {
+    use jstz_core::kv::Transaction;
+    use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+
+    use crate::{test_utils::init_mock_host, JstzRuntime};
+
+    #[test]
+    fn test_init_jstz_runtime() {
+        let address =
+            SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton")
+                .unwrap();
+        let (sink, mut host) = init_mock_host();
+        let tx = &mut Transaction::default();
+        tx.begin();
+        let jstz_runtime = JstzRuntime::new(&mut host, tx, address, None);
+
+        let code = r#"
+            console.log("hello");
+            console.log(42);
+        "#;
+
+        jstz_runtime.execute(code).unwrap();
+        assert_eq!(
+            String::from_utf8_lossy(&sink),
+            "[INFO] hello\n[INFO] \u{1b}[33m42\u{1b}[39m\n".to_string()
+        )
+    }
 }
