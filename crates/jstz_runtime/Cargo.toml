@@ -12,5 +12,7 @@ description = "Javascript runtime for Jstz"
 
 [dependencies]
 deno_core.workspace = true
+deno_webidl.workspace = true
+deno_url.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
