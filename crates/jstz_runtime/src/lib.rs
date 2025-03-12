@@ -1,9 +1,5 @@
-<<<<<<< HEAD
 pub mod error;
 mod ext;
-=======
-mod jstz_console;
->>>>>>> 776a974a (feat(runtime): add console to the runtime)
 pub mod runtime;
 
 pub use runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};

@@ -21,3 +21,4 @@ const workerGlobalScope = {
 };
 
 export { workerGlobalScope };
+

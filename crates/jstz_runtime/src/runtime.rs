@@ -205,8 +205,6 @@ impl JstzRuntime {
     }
 }
 
-type Result<T> = std::result::Result<T, CoreError>;
-
 impl Deref for JstzRuntime {
     type Target = JsRuntime;
 
