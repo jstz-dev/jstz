@@ -1,7 +1,5 @@
 pub mod error;
-mod jstz_console;
-mod jstz_kv;
-
+mod ext;
 pub mod runtime;
 
 pub use runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};
