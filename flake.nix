@@ -178,10 +178,19 @@
           mozjs = pkgs.callPackage ./nix/mozjs.nix {};
           crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez mozjs;};
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
-          riscvV8 = fetchTarball {
-            url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/130.0.7/librusty_v8.tar.gz";
-            sha256 = "0q7b4f70sczlvx6qsrx11p3gyq6651jj9xjrzrv8j4gn1iqhwpaa";
-          };
+
+          # It is necessary to use fetchurl instead of fetchTarball to
+          # preserve the hash compatability among case (in/)sensitive file systems
+          riscvV8 = with pkgs; let
+            tarball = fetchurl {
+              url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/130.0.7/librusty_v8.tar.gz";
+              sha256 = "sha256-8cywAe9kofNPxCwdzdkegtlRPwlqqR986m25wvDWbyo=";
+            };
+          in
+            runCommand "fetch-riscv-v8" {} ''
+              mkdir -p $out
+              tar -xzf ${tarball} -C $out --strip-components=1
+            '';
 
           fmt = treefmt.lib.evalModule pkgs {
             projectRootFile = "flake.nix";
