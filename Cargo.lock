@@ -304,12 +304,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "base32"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "022dfe9eb35f19ebbcb51e0b40a5ab759f46ad60cadf7297e0bd085afb50e076"
-
-[[package]]
 name = "base58"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -646,16 +640,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "boxed_error"
-version = "0.2.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17d4f95e880cfd28c4ca5a006cf7f6af52b4bcb7b5866f573b2faa126fb7affb"
-dependencies = [
- "quote",
- "syn 2.0.87",
-]
-
-[[package]]
 name = "bs58"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -736,26 +720,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "58ec49028cb308564429cd8fac4ef21290067a0afe8f5955330a8d487d0d790c"
 dependencies = [
  "itoa",
-]
-
-[[package]]
-name = "capacity_builder"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8f2d24a6dcf0cd402a21b65d35340f3a49ff3475dc5fdac91d22d2733e6641c6"
-dependencies = [
- "capacity_builder_macros",
- "itoa",
-]
-
-[[package]]
-name = "capacity_builder_macros"
-version = "0.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3b4a6cae9efc04cc6cbb8faf338d2c497c165c83e74509cf4dbedea948bbf6e5"
-dependencies = [
- "quote",
- "syn 2.0.87",
 ]
 
 [[package]]
@@ -1002,25 +966,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "crossbeam-deque"
-version = "0.8.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dd111b7b7f7d55b72c0a6ae361660ee5853c9af73f70c3c2ef6858b950e2e51"
-dependencies = [
- "crossbeam-epoch",
- "crossbeam-utils",
-]
-
-[[package]]
-name = "crossbeam-epoch"
-version = "0.9.18"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5b82ac4a3c2ca9c3460964f020e1402edd5753411d7737aa39c3714ad1b5420e"
-dependencies = [
- "crossbeam-utils",
-]
-
-[[package]]
 name = "crossbeam-utils"
 version = "0.8.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1237,7 +1182,7 @@ dependencies = [
  "bit-set",
  "bit-vec",
  "bytes",
- "capacity_builder 0.1.3",
+ "capacity_builder",
  "cooked-waker",
  "deno_core_icudata",
  "deno_error",
@@ -1296,56 +1241,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "deno_fs"
-version = "0.100.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c82f79b71403b93b248727a89746026104b3a5ac1d82e79a02af6fa8e8487666"
-dependencies = [
- "async-trait",
- "base32",
- "boxed_error",
- "deno_core",
- "deno_error",
- "deno_io",
- "deno_path_util",
- "deno_permissions",
- "filetime",
- "junction",
- "libc",
- "nix 0.27.1",
- "rand 0.8.5",
- "rayon",
- "serde",
- "thiserror 2.0.12",
- "winapi",
- "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "deno_io"
-version = "0.100.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e72489fe0dcada08047611d1ab92db1baebf7b606ab7c78790f622ecb30e22b"
-dependencies = [
- "async-trait",
- "deno_core",
- "deno_error",
- "filetime",
- "fs3",
- "libc",
- "log",
- "once_cell",
- "os_pipe",
- "parking_lot",
- "pin-project",
- "rand 0.8.5",
- "tokio",
- "uuid",
- "winapi",
- "windows-sys 0.59.0",
-]
-
-[[package]]
 name = "deno_ops"
 version = "0.212.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1373,38 +1268,6 @@ dependencies = [
  "sys_traits",
  "thiserror 2.0.12",
  "url",
-]
-
-[[package]]
-name = "deno_permissions"
-version = "0.49.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "abf879dff0b3de4dbcb78d6dda3a55e711369d5b9f479270a82853ef106c4176"
-dependencies = [
- "capacity_builder 0.5.0",
- "deno_core",
- "deno_error",
- "deno_path_util",
- "deno_terminal",
- "fqdn",
- "libc",
- "log",
- "once_cell",
- "percent-encoding",
- "serde",
- "thiserror 2.0.12",
- "which 6.0.3",
- "winapi",
-]
-
-[[package]]
-name = "deno_terminal"
-version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "daef12499e89ee99e51ad6000a91f600d3937fb028ad4918af76810c5bc9e0d5"
-dependencies = [
- "once_cell",
- "termcolor",
 ]
 
 [[package]]
@@ -1960,23 +1823,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e13624c2627564efccf4934284bdd98cbaa14e79b0b5a141218e507b3a823456"
 dependencies = [
  "percent-encoding",
-]
-
-[[package]]
-name = "fqdn"
-version = "0.3.12"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb540cf7bc4fe6df9d8f7f0c974cfd0dce8ed4e9e8884e73433b503ee78b4e7d"
-
-[[package]]
-name = "fs3"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb17cf6ed704f72485332f6ab65257460c4f9f3083934cf402bf9f5b3b600a90"
-dependencies = [
- "libc",
- "rustc_version 0.2.3",
- "winapi",
 ]
 
 [[package]]
@@ -3363,7 +3209,11 @@ name = "jstz_runtime"
 version = "0.1.0-alpha.0"
 dependencies = [
  "deno_core",
- "deno_fs",
+ "jstz_core",
+ "jstz_crypto",
+ "tezos-smart-rollup",
+ "tezos-smart-rollup-host",
+ "tezos-smart-rollup-mock",
 ]
 
 [[package]]
@@ -3451,16 +3301,6 @@ dependencies = [
  "tezos-smart-rollup-installer-config",
  "tezos_crypto_rs 0.6.0",
  "tokio",
-]
-
-[[package]]
-name = "junction"
-version = "1.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "72bbdfd737a243da3dfc1f99ee8d6e166480f17ab4ac84d7c34aacd73fc7bd16"
-dependencies = [
- "scopeguard",
- "windows-sys 0.52.0",
 ]
 
 [[package]]
@@ -4013,16 +3853,6 @@ name = "option-ext"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "04744f49eae99ab78e0d5c0b603ab218f515ea8cfe5a456d7629ad883a3b6e7d"
-
-[[package]]
-name = "os_pipe"
-version = "1.1.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57119c3b893986491ec9aa85056780d3a0f3cf4da7cc09dd3650dbd6c6738fb9"
-dependencies = [
- "libc",
- "windows-sys 0.52.0",
-]
 
 [[package]]
 name = "os_str_bytes"
@@ -4602,26 +4432,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c6928fa44c097620b706542d428957635951bade7143269085389d42c8a4927e"
 dependencies = [
  "bitflags 2.6.0",
-]
-
-[[package]]
-name = "rayon"
-version = "1.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b418a60154510ca1a002a752ca9714984e21e4241e804d32555251faf8b78ffa"
-dependencies = [
- "either",
- "rayon-core",
-]
-
-[[package]]
-name = "rayon-core"
-version = "1.12.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1465873a3dfdaa8ae7cb14b4383657caab0b3e8a0aa9ae8e04b044854c8dfce2"
-dependencies = [
- "crossbeam-deque",
- "crossbeam-utils",
 ]
 
 [[package]]

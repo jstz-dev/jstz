@@ -12,4 +12,12 @@ description = "Javascript runtime for Jstz"
 
 [dependencies]
 deno_core.workspace = true
-deno_fs.workspace = true
+
+jstz_core = { path = "../jstz_core" }
+jstz_crypto = { path = "../jstz_crypto" }
+
+tezos-smart-rollup.workspace = true
+tezos-smart-rollup-host.workspace = true
+
+[dev-dependencies]
+tezos-smart-rollup-mock.workspace = true

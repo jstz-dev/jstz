@@ -1,14 +1,13 @@
 use derive_more::Display;
+pub use tezos_smart_rollup_host::runtime::{
+    Runtime as HostRuntime, RuntimeError as HostError,
+};
 use tezos_smart_rollup_host::{
     dal_parameters::RollupDalParameters,
     input,
     metadata::RollupMetadata,
     path::{self, Path},
-    runtime::{Runtime, ValueType},
-};
-
-pub use tezos_smart_rollup_host::runtime::{
-    Runtime as HostRuntime, RuntimeError as HostError,
+    runtime::ValueType,
 };
 
 mod erased_runtime {
@@ -435,7 +434,7 @@ pub struct JsHostRuntime<'a> {
 }
 
 impl<'a> JsHostRuntime<'a> {
-    pub fn new<R: Runtime>(rt: &'a mut R) -> JsHostRuntime<'static> {
+    pub fn new<R: HostRuntime>(rt: &'a mut R) -> JsHostRuntime<'static> {
         let rt_ptr: *mut dyn erased_runtime::Runtime = rt;
 
         // SAFETY
