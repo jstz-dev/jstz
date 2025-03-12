@@ -1,4 +1,6 @@
 mod jstz_console;
+mod jstz_kv;
+
 pub mod runtime;
 
 pub use runtime::JstzRuntime;
@@ -62,7 +64,9 @@ mod test_utils {
                     .unwrap();
             let mut $tx = jstz_core::kv::Transaction::default();
             $tx.begin();
-            let $runtime = $crate::JstzRuntime::new(&mut $host, &mut $tx, $address.clone(), None);
+            #[allow(unused)]
+            let mut $runtime = $crate::JstzRuntime::new(&mut $host, &mut $tx, $address.clone(), None);
+            #[allow(unused)]
             let $sink = $crate::test_utils::Sink($sink);
         };
     }
