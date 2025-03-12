@@ -12,4 +12,3 @@ description = "Javascript runtime for Jstz"
 
 [dependencies]
 deno_core.workspace = true
-deno_fs.workspace = true
