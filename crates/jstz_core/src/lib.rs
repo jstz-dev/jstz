@@ -7,6 +7,7 @@ pub mod js_fn;
 pub mod kv;
 pub mod native;
 pub mod realm;
+pub mod reveal_data;
 pub mod runtime;
 pub mod value;
 
