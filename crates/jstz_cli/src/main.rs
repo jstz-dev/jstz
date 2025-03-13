@@ -1,3 +1,5 @@
+use std::num::NonZeroU64;
+
 use clap::Parser;
 use clap_complete::Shell;
 
@@ -46,7 +48,7 @@ enum Command {
     Transfer {
         /// The amount in XTZ to transfer.
         #[arg(value_name = "AMOUNT")]
-        amount: u64,
+        amount: NonZeroU64,
 
         #[arg(value_name = "ADDRESS|ALIAS")]
         to: AddressOrAlias,
@@ -79,8 +81,8 @@ enum Command {
         #[arg(name = "data", short, long, default_value = None, value_hint = clap::ValueHint::FilePath)]
         json_data: Option<String>,
         /// The amount in XTZ to transfer.
-        #[arg(short, long, default_value_t = 0)]
-        amount: u64,
+        #[arg(short, long, default_value = None)]
+        amount: Option<NonZeroU64>,
         /// Specifies the network from the config file, defaulting to the configured default network.
         ///  Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]

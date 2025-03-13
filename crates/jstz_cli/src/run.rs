@@ -1,10 +1,11 @@
+use std::num::NonZeroU64;
 use std::str::FromStr;
 
 use anyhow::bail;
 use http::{HeaderMap, HeaderValue, Method, Uri};
 use jstz_proto::context::account::{Address, Addressable};
 use jstz_proto::executor::smart_function::run::NOOP_PATH;
-use jstz_proto::executor::smart_function::TRANSFER_HEADER_KEY;
+use jstz_proto::executor::smart_function::X_JSTZ_TRANSFER;
 use jstz_proto::executor::JSTZ_HOST;
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
@@ -65,7 +66,7 @@ pub struct RunArgs {
     http_method: String,
     gas_limit: u32,
     /// The amount in XTZ to transfer.
-    amount: u64,
+    amount: Option<NonZeroU64>,
     json_data: Option<String>,
     network: Option<NetworkName>,
     trace: bool,
@@ -78,7 +79,7 @@ impl RunArgs {
             url,
             http_method,
             gas_limit,
-            amount: 0,
+            amount: None,
             json_data: None,
             network: None,
             trace: false,
@@ -109,7 +110,7 @@ impl RunArgs {
         self
     }
 
-    pub fn set_amount(mut self, amount: u64) -> Self {
+    pub fn set_amount(mut self, amount: Option<NonZeroU64>) -> Self {
         self.amount = amount;
         self
     }
@@ -119,7 +120,7 @@ impl RunArgs {
 /// to indicate that the request can be executed as a transfer.
 /// For smart function address, the execution of the function will be skipped with the `/-/noop endpoint.
 pub async fn exec_transfer(
-    amount: u64,
+    amount: NonZeroU64,
     to: AddressOrAlias,
     gas_limit: u32,
     include_response_headers: bool,
@@ -136,7 +137,7 @@ pub async fn exec_transfer(
     exec(
         args.set_network(network)
             .set_include_response_headers(include_response_headers)
-            .set_amount(amount),
+            .set_amount(Some(amount)),
     )
     .await
     .map_err(|err| anyhow!("Failed to transfer {} XTZ to {}: {}", amount, to, err))?;
@@ -202,10 +203,10 @@ pub async fn exec(args: RunArgs) -> Result<()> {
     debug!("Body: {:?}", body);
 
     let mut headers = HeaderMap::new();
-    if args.amount > 0 {
-        let mutez_amount = args.amount * MUTEZ_PER_TEZ;
+    if let Some(amount) = args.amount {
+        let mutez_amount = amount.get() * MUTEZ_PER_TEZ;
         headers.insert(
-            TRANSFER_HEADER_KEY,
+            X_JSTZ_TRANSFER,
             HeaderValue::from_str(&format!("{}", mutez_amount)).unwrap(),
         );
     }

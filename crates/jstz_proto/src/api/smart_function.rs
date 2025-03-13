@@ -333,9 +333,7 @@ mod test {
             account::{Account, Address, ParsedCode},
             ticket_table::TicketTable,
         },
-        executor::smart_function::{
-            self, register_web_apis, Script, TRANSFER_HEADER_KEY,
-        },
+        executor::smart_function::{self, register_web_apis, Script, X_JSTZ_TRANSFER},
         operation::RunFunction,
     };
 
@@ -703,7 +701,7 @@ mod test {
     }
 
     #[test]
-    fn smart_function_refund_propagates() {
+    fn smart_function_refund_can_propagate() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
@@ -791,7 +789,7 @@ mod test {
     }
 
     #[test]
-    fn smart_function_refund_should_not_propagate_by_default() {
+    fn propagating_smart_function_refund_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
@@ -864,13 +862,195 @@ mod test {
             run_function.clone(),
             fake_op_hash.clone(),
         )
-        .expect("run function expected");
-        let balance_after_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
-        let balance_after_source = Account::balance(host, &mut tx, &source).unwrap();
+        .expect_err("Invalid header X-JSTZ-AMOUNT");
         tx.commit(host).unwrap();
 
+        tx.begin();
+        let balance_after_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
+        let balance_after_source = Account::balance(host, &mut tx, &source).unwrap();
+
         // 4. Assert the refund is not propagated to the source
-        assert_eq!(balance_before_caller + refund_amount, balance_after_caller);
+        assert_eq!(balance_before_caller, balance_after_caller);
+        assert_eq!(balance_before_source, balance_after_source);
+    }
+
+    #[test]
+    fn returning_invalid_refund_amount_in_response_fails() {
+        let source = Address::User(jstz_mock::account2());
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+        let initial_caller_sf_balance: u64 = 0;
+        let initial_refund_sf_balance: u64 = 1;
+        tx.begin();
+
+        Account::add_balance(host, &mut tx, &source, initial_refund_sf_balance).unwrap();
+
+        // 1. Deploy the smart function that refunds to the caller
+        let refund_amount = 1;
+        let invalid_refund_code = format!(
+            r#"
+            const handler = () => {{
+                return new Response(null, {{
+                    headers: {{ "X-JSTZ-AMOUNT": "{refund_amount}" }},
+                }});
+            }};
+            export default handler;
+            "#
+        );
+        let parsed_code = ParsedCode::try_from(invalid_refund_code.to_string()).unwrap();
+        let fake_refund_sf = Script::deploy(
+            host,
+            &mut tx,
+            &source,
+            parsed_code.clone(),
+            initial_refund_sf_balance,
+        )
+        .unwrap();
+
+        // 2. deploy a smart function that calls the refund smart function
+        //    and returns the response
+        let code = format!(
+            r#"
+            const handler = async () => {{
+                await fetch(new Request("tezos://{fake_refund_sf}"));
+                return new Response();
+            }};
+            export default handler;
+            "#
+        );
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let caller_sf = Script::deploy(
+            host,
+            &mut tx,
+            &source,
+            parsed_code.clone(),
+            initial_caller_sf_balance,
+        )
+        .unwrap();
+        tx.commit(host).unwrap();
+
+        // 3. Call the caller smart function
+        tx.begin();
+        let balance_before_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
+        let balance_before_source = Account::balance(host, &mut tx, &source).unwrap();
+        let run_function = RunFunction {
+            uri: format!("tezos://{}/", &caller_sf).try_into().unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        smart_function::run::execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            fake_op_hash.clone(),
+        )
+        .expect_err("Invalid header X-JSTZ-AMOUNT");
+        tx.commit(host).unwrap();
+
+        tx.begin();
+        let balance_after_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
+        let balance_after_source = Account::balance(host, &mut tx, &source).unwrap();
+
+        // 4. Assert the refund is not propagated to the source
+        assert_eq!(balance_before_caller, balance_after_caller);
+        assert_eq!(balance_before_source, balance_after_source);
+    }
+
+    #[test]
+    fn returning_invalid_request_amount_fails() {
+        let source = Address::User(jstz_mock::account2());
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+        let initial_caller_sf_balance: u64 = 1;
+        let initial_refund_sf_balance: u64 = 1;
+        tx.begin();
+
+        Account::add_balance(
+            host,
+            &mut tx,
+            &source,
+            initial_refund_sf_balance + initial_caller_sf_balance,
+        )
+        .unwrap();
+
+        // 1. Deploy the smart function that refunds to the caller
+        let refund_code = r#"
+            const handler = () => {
+                return new Response(null, {
+                    headers: { "X-JSTZ-TRANSFER": "1" },
+                });
+            };
+            export default handler;
+            "#;
+        let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
+        let fake_refund_sf = Script::deploy(
+            host,
+            &mut tx,
+            &source,
+            parsed_code.clone(),
+            initial_refund_sf_balance,
+        )
+        .unwrap();
+
+        // 2. deploy a smart function that calls the refund smart function
+        //    and returns the response
+        let invalid_request_amount_code = format!(
+            r#"
+            const handler = async () => {{
+                const myHeaders = new Headers();
+                myHeaders.append("X-JSTZ-AMOUNT", "{initial_caller_sf_balance}");
+                return fetch(new Request("tezos://{fake_refund_sf}/", {{
+                    headers: myHeaders
+                }}));
+            }};
+            export default handler;
+            "#
+        );
+        let caller_sf = Script::deploy(
+            host,
+            &mut tx,
+            &source,
+            ParsedCode::try_from(invalid_request_amount_code.to_string()).unwrap(),
+            initial_caller_sf_balance,
+        )
+        .unwrap();
+        tx.commit(host).unwrap();
+
+        // 3. Call the caller smart function
+        tx.begin();
+        let balance_before_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
+        let balance_before_source = Account::balance(host, &mut tx, &source).unwrap();
+        let run_function = RunFunction {
+            uri: format!("tezos://{}/", &caller_sf).try_into().unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        let result = smart_function::run::execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            fake_op_hash.clone(),
+        )
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+        tx.commit(host).unwrap();
+
+        tx.begin();
+        let balance_after_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
+        let balance_after_source = Account::balance(host, &mut tx, &source).unwrap();
+
+        // // 4. Assert the refund is not propagated to the source
+        assert_eq!(balance_before_caller, balance_after_caller);
         assert_eq!(balance_before_source, balance_after_source);
     }
 
@@ -981,7 +1161,7 @@ mod test {
         let balance_before = Account::balance(host, &mut tx, &source).unwrap();
         let mut headers = HeaderMap::new();
         headers.insert(
-            TRANSFER_HEADER_KEY,
+            X_JSTZ_TRANSFER,
             transfer_amount.to_string().try_into().unwrap(),
         );
         let error = smart_function::run::execute(

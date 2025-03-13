@@ -23,7 +23,6 @@ use jstz_core::{
     Module, Realm,
 };
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use std::ops::Deref;
 use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
@@ -370,8 +369,8 @@ impl Script {
     }
 }
 
-pub const TRANSFER_HEADER_KEY: &str = "X-JSTZ-TRANSFER";
-pub const TRANSFERRED_HEADER_KEY: &str = "X-JSTZ-AMOUNT";
+pub const X_JSTZ_TRANSFER: &str = "X-JSTZ-TRANSFER";
+pub const X_JSTZ_AMOUNT: &str = "X-JSTZ-AMOUNT";
 
 pub struct HostScript;
 
@@ -447,10 +446,8 @@ impl HostScript {
 
     /// Extracts the XTZ transfer amount from the request headers.
     /// Returns None if the header is not present or Some(amount) if a valid amount is found.
-    pub fn extract_transfer_amount(
-        headers: &impl Deref<Target = Headers>,
-    ) -> JsResult<Option<NonZeroU64>> {
-        let header = headers.get(TRANSFER_HEADER_KEY)?;
+    pub fn extract_transfer_amount(headers: &Headers) -> JsResult<Option<NonZeroU64>> {
+        let header = headers.get(X_JSTZ_TRANSFER)?;
 
         if header.headers.is_empty() {
             return Ok(None);
@@ -475,13 +472,25 @@ impl HostScript {
         Ok(amount)
     }
 
-    /// Transfer xtz from `src` to `dst` if the `TRANSFER_HEADER_KEY` header is present & amount > 0
-    /// On success, `TRANSFER_HEADER_KEY` is set to `TRANSFERRED_HEADER_KEY`
+    fn verify_headers(headers: &Headers) -> JsResult<()> {
+        if headers.contains_key(X_JSTZ_AMOUNT) {
+            return Err(JsError::from_native(
+                JsNativeError::error()
+                    .with_message("X-JSTZ-AMOUNT header should not be present"),
+            ));
+        }
+        Ok(())
+    }
+
+    /// Transfer xtz from `src` to `dst` if the `X_JSTZ_TRANSFER` header is present & amount > 0
+    /// On success, `X_JSTZ_TRANSFER` is set to `X_JSTZ_AMOUNT`
+    /// Rejects if `X_JSTZ_AMOUNT` is already present in the headers or transfer failed
     pub fn handle_transfer(
-        headers: &mut impl std::ops::DerefMut<Target = Headers>,
+        headers: &mut Headers,
         src: &impl Addressable,
         dst: &impl Addressable,
     ) -> JsResult<Option<NonZeroU64>> {
+        Self::verify_headers(headers)?;
         let amt = match Self::extract_transfer_amount(headers)? {
             Some(a) => a,
             None => return Ok(None),
@@ -489,8 +498,8 @@ impl HostScript {
         runtime::with_js_hrt_and_tx(|hrt, tx| {
             Account::transfer(hrt, tx, src, dst, amt.into())
                 .and_then(|_| {
-                    headers.remove(TRANSFER_HEADER_KEY)?;
-                    headers.append(TRANSFERRED_HEADER_KEY, &amt.to_string())?;
+                    headers.remove(X_JSTZ_TRANSFER)?;
+                    headers.append(X_JSTZ_AMOUNT, &amt.to_string())?;
                     Ok(())
                 })
                 .map_err(|e| {
@@ -732,7 +741,7 @@ pub mod run {
             tx.begin();
             let mut headers = HeaderMap::new();
             headers.insert(
-                TRANSFER_HEADER_KEY,
+                X_JSTZ_TRANSFER,
                 transfer_amount.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
@@ -752,13 +761,13 @@ pub mod run {
             )
             .expect("run function expected");
 
-            assert!(response.headers.get(TRANSFER_HEADER_KEY).is_none());
-            assert!(response
-                .headers
-                .get(TRANSFERRED_HEADER_KEY)
-                .is_some_and(
-                    |amt| amt.to_str().unwrap().parse::<u64>().unwrap() == refund_amount
-                ));
+            assert!(response.headers.get(X_JSTZ_TRANSFER).is_none());
+            assert!(response.headers.get(X_JSTZ_AMOUNT).is_some_and(|amt| amt
+                .to_str()
+                .unwrap()
+                .parse::<u64>()
+                .unwrap()
+                == refund_amount));
             tx.commit(host).unwrap();
 
             // 3. assert the transfer to the sf and refund to the source
@@ -793,7 +802,7 @@ pub mod run {
             Account::set_balance(host, &mut tx, &smart_function, 0).unwrap();
             let mut headers = HeaderMap::new();
             headers.insert(
-                TRANSFER_HEADER_KEY,
+                X_JSTZ_TRANSFER,
                 transfer_amount.to_string().try_into().unwrap(),
             );
             let error = execute(
@@ -858,7 +867,7 @@ pub mod run {
             tx.begin();
             let mut headers = HeaderMap::new();
             headers.insert(
-                TRANSFER_HEADER_KEY,
+                X_JSTZ_TRANSFER,
                 initial_balance.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
@@ -901,7 +910,7 @@ pub mod run {
             tx.begin();
             let mut headers = HeaderMap::new();
             headers.insert(
-                TRANSFER_HEADER_KEY,
+                X_JSTZ_TRANSFER,
                 initial_balance.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
@@ -934,6 +943,139 @@ pub mod run {
                 error.to_string(),
                 "EvalError: Transfer failed: InsufficientFunds"
             );
+        }
+
+        #[test]
+        fn invalid_request_should_fails() {
+            let source = Address::User(jstz_mock::account1());
+            // 1. Deploy the smart function
+            let mut jstz_mock_host = JstzMockHost::default();
+            let host = jstz_mock_host.rt();
+            let mut tx = Transaction::default();
+            let initial_balance = 1;
+            tx.begin();
+            Account::add_balance(host, &mut tx, &source, initial_balance)
+                .expect("add balance");
+            tx.commit(host).unwrap();
+
+            let code = r#"
+                const handler = () => {{
+                    return new Response();
+                }};
+                export default handler;
+                "#;
+
+            // 1. Deploy smart function
+            let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+            tx.begin();
+            let smart_function =
+                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+            tx.commit(host).unwrap();
+
+            // Calling the smart function should error or return an error response
+            tx.begin();
+
+            let sf_balance_before =
+                Account::balance(host, &mut tx, &smart_function).unwrap();
+            let source_balance_before = Account::balance(host, &mut tx, &source).unwrap();
+            let mut invalid_headers = HeaderMap::new();
+            invalid_headers.insert(
+                X_JSTZ_AMOUNT,
+                initial_balance.to_string().try_into().unwrap(),
+            );
+            let run_function = RunFunction {
+                uri: format!("tezos://{}/", &smart_function).try_into().unwrap(),
+                method: Method::GET,
+                headers: invalid_headers,
+                body: None,
+                gas_limit: 1000,
+            };
+            let result = execute(
+                host,
+                &mut tx,
+                &source,
+                run_function.clone(),
+                Blake2b::from(b"fake_op_hash".as_ref()),
+            );
+            let sf_balance_after =
+                Account::balance(host, &mut tx, &smart_function).unwrap();
+            let source_balance_after = Account::balance(host, &mut tx, &source).unwrap();
+
+            assert_eq!(sf_balance_before, sf_balance_after);
+            assert_eq!(source_balance_before, source_balance_after);
+            let call_failed = match result {
+                Ok(receipt) => receipt.status_code.is_server_error(),
+                _ => true,
+            };
+            assert!(call_failed);
+        }
+
+        #[test]
+        fn invalid_response_should_fails() {
+            let source = Address::User(jstz_mock::account1());
+            // 1. Deploy the smart function
+            let mut jstz_mock_host = JstzMockHost::default();
+            let host = jstz_mock_host.rt();
+            let mut tx = Transaction::default();
+            let initial_balance = 1;
+            tx.begin();
+            Account::add_balance(host, &mut tx, &source, initial_balance)
+                .expect("add balance");
+            tx.commit(host).unwrap();
+
+            let code = format!(
+                r#"
+                const handler = () => {{
+                    const headers = new Headers();
+                    return new Response(null, {{
+                        headers: {{ "X-JSTZ-AMOUNT": "{initial_balance}" }},
+                    }});
+                }};
+                export default handler;
+                "#
+            );
+
+            // 1. Deploy smart function
+            let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+            tx.begin();
+            let smart_function =
+                Script::deploy(host, &mut tx, &source, parsed_code, initial_balance)
+                    .unwrap();
+
+            let sf_balance_before =
+                Account::balance(host, &mut tx, &smart_function).unwrap();
+            let source_balance_before = Account::balance(host, &mut tx, &source).unwrap();
+
+            tx.commit(host).unwrap();
+
+            // Calling the smart function should error or return an error response
+            tx.begin();
+            let run_function = RunFunction {
+                uri: format!("tezos://{}/", &smart_function).try_into().unwrap(),
+                method: Method::GET,
+                headers: Default::default(),
+                body: None,
+                gas_limit: 1000,
+            };
+            let result = execute(
+                host,
+                &mut tx,
+                &source,
+                run_function.clone(),
+                Blake2b::from(b"fake_op_hash".as_ref()),
+            );
+            let sf_balance_after =
+                Account::balance(host, &mut tx, &smart_function).unwrap();
+            let source_balance_after = Account::balance(host, &mut tx, &source).unwrap();
+
+            assert_eq!(sf_balance_before, sf_balance_after);
+            assert_eq!(source_balance_before, source_balance_after);
+            let call_failed = match result {
+                Ok(receipt) => receipt.status_code.is_server_error(),
+                _ => true,
+            };
+            assert!(call_failed);
         }
 
         #[test]
@@ -993,7 +1135,7 @@ pub mod run {
             tx.begin();
             let mut headers = HeaderMap::new();
             headers.insert(
-                TRANSFER_HEADER_KEY,
+                X_JSTZ_TRANSFER,
                 initial_balance.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
@@ -1505,6 +1647,7 @@ mod tests {
 
     mod transfer_amount {
         use super::*;
+        use std::ops::Deref;
 
         struct TestRequest(Request);
 
@@ -1523,7 +1666,7 @@ mod tests {
         #[test]
         fn test_valid_amount() -> JsResult<()> {
             let request = wrap_request(create_test_request(vec![(
-                TRANSFER_HEADER_KEY.to_string(),
+                X_JSTZ_TRANSFER.to_string(),
                 "1000".to_string(),
             )])?);
             assert_eq!(
@@ -1546,7 +1689,7 @@ mod tests {
         #[test]
         fn test_invalid_amount() -> JsResult<()> {
             let request = wrap_request(create_test_request(vec![(
-                TRANSFER_HEADER_KEY.to_string(),
+                X_JSTZ_TRANSFER.to_string(),
                 "invalid".to_string(),
             )])?);
             assert!(
