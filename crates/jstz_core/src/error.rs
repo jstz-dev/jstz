@@ -1,6 +1,10 @@
 use boa_engine::{JsError, JsNativeError};
 use derive_more::{Display, Error, From};
 
+use crate::host;
+use crate::kv;
+use crate::reveal_data;
+
 #[derive(Display, Debug, Error, From)]
 pub enum KvError {
     DowncastFailed,
@@ -14,7 +18,7 @@ pub enum Error {
         source: KvError,
     },
     HostError {
-        source: crate::host::HostError,
+        source: host::HostError,
     },
     PathError {
         source: tezos_smart_rollup_host::path::PathError,
@@ -26,7 +30,10 @@ pub enum Error {
         description: String,
     },
     OutboxError {
-        source: crate::kv::outbox::OutboxError,
+        source: kv::outbox::OutboxError,
+    },
+    RevealDataError {
+        source: reveal_data::Error,
     },
 }
 
@@ -51,6 +58,9 @@ impl From<Error> for JsError {
                 .into(),
             Error::OutboxError { source } => JsNativeError::eval()
                 .with_message(format!("OutboxError: {}", source))
+                .into(),
+            Error::RevealDataError { source } => JsNativeError::eval()
+                .with_message(format!("RevealDataError: {}", source))
                 .into(),
         }
     }
