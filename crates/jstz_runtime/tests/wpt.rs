@@ -9,7 +9,7 @@ use derive_more::{From, Into};
 use expect_test::expect_file;
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use jstz_runtime::JstzRuntime;
+use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};
 use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptReportTest, WptServe, WptSubtest,
     WptSubtestStatus, WptTestStatus,
@@ -242,7 +242,11 @@ fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntim
     options
         .extensions
         .push(test_harness_api::init_ops_and_esm());
-    let mut runtime = JstzRuntime::new(host, tx, address, Some(options));
+    let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
+        protocol: Some(Protocol::new(host, tx, address)),
+        extensions: vec![test_harness_api::init_ops_and_esm()],
+        ..Default::default()
+    });
 
     let op_state = runtime.op_state();
     // Insert a blank report to be filled in by test cases
