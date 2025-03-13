@@ -1,9 +1,10 @@
+pub mod error;
 mod jstz_console;
 mod jstz_kv;
 
 pub mod runtime;
 
-pub use runtime::JstzRuntime;
+pub use runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};
 
 #[cfg(test)]
 mod test_utils {
@@ -65,7 +66,9 @@ mod test_utils {
             let mut $tx = jstz_core::kv::Transaction::default();
             $tx.begin();
             #[allow(unused)]
-            let mut $runtime = $crate::JstzRuntime::new(&mut $host, &mut $tx, $address.clone(), None);
+            let protocol  = Some($crate::Protocol::new(&mut $host, &mut $tx, $address.clone()));
+            #[allow(unused)]
+            let mut $runtime = $crate::JstzRuntime::new($crate::JstzRuntimeOptions { protocol, ..Default::default() } );
             #[allow(unused)]
             let $sink = $crate::test_utils::Sink($sink);
         };
