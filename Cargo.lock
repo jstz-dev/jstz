@@ -3046,14 +3046,17 @@ dependencies = [
  "erased-serde",
  "expect-test",
  "getrandom",
+ "hex",
  "jstz_crypto",
  "nom",
  "serde",
+ "serde-big-array",
  "tezos-smart-rollup",
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-mock",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
+ "thiserror 1.0.67",
  "tokio",
 ]
 
@@ -4857,6 +4860,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f55c3193aca71c12ad7890f1785d2b73e1b9f63a0bbc353c08ef26fe03fc56b5"
 dependencies = [
  "serde_derive",
+]
+
+[[package]]
+name = "serde-big-array"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "11fc7cc2c76d73e0f27ee52abbd64eec84d46f370c88371120433196934e4b7f"
+dependencies = [
+ "serde",
 ]
 
 [[package]]
