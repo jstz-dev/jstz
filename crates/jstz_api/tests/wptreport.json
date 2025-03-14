@@ -18197,6 +18197,831 @@
             }
           }
         },
+        "transform-streams": {
+          "Folder": {
+            "backpressure.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "backpressure allows no transforms with a default identity transform and no reader",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "backpressure only allows one transform() with a identity transform with a readable HWM of 1 and no reader",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "transform() should keep being called as long as there is no backpressure",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "writes should resolve as soon as transform completes",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "calling pull() before the first write() with backpressure should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "transform() should be able to read the chunk it just enqueued",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "blocking transform() should cause backpressure",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "writer.closed should resolve after readable is canceled during start",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "writer.closed should resolve after readable is canceled with backpressure",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "writer.closed should resolve after readable is canceled with no backpressure",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "cancelling the readable should cause a pending write to resolve",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "cancelling the readable side of a TransformStream should abort an empty pipe",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "cancelling the readable side of a TransformStream should abort an empty pipe after startup",
+                        "status": "Fail",
+                        "message": "todo: "
+                      },
+                      {
+                        "name": "cancelling the readable side of a TransformStream should abort a full pipe",
+                        "status": "Fail",
+                        "message": "todo: SetUpReadableStreamDefaultControllerFromUnderlyingSource"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 14,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "cancel.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "cancelling the readable side should call transformer.cancel()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TransformStream is not defined\""
+                      },
+                      {
+                        "name": "cancelling the readable side should reject if transformer.cancel() throws",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TransformStream is not defined\""
+                      },
+                      {
+                        "name": "aborting the writable side should call transformer.abort()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TransformStream is not defined\""
+                      },
+                      {
+                        "name": "aborting the writable side should reject if transformer.cancel() throws",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TransformStream is not defined\""
+                      },
+                      {
+                        "name": "closing the writable side should reject if a parallel transformer.cancel() throws",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TransformStream is not defined\""
+                      },
+                      {
+                        "name": "readable.cancel() and a parallel writable.close() should reject if a transformer.cancel() calls controller.error()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TransformStream is not defined\""
+                      },
+                      {
+                        "name": "writable.abort() and readable.cancel() should reject if a transformer.cancel() calls controller.error()",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TransformStream is not defined\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 7,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "errors.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "errored TransformStream should not enqueue new chunks",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream constructor should throw when start does",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: TransformStream is not defined\" (\"ReferenceError\") expected instance of function \"function URIError() { [native code] }\" (\"URIError\")"
+                      },
+                      {
+                        "name": "when strategy.size throws inside start(), the constructor should throw the same error",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw the same error strategy.size throws function \"function () { [native code] }\" threw object \"ReferenceError: TransformStream is not defined\" (\"ReferenceError\") expected instance of function \"function URIError() { [native code] }\" (\"URIError\")"
+                      },
+                      {
+                        "name": "when strategy.size calls controller.error() then throws, the constructor should throw the first error",
+                        "status": "Fail",
+                        "message": "assert_throws_js: the first error should be thrown function \"function () { [native code] }\" threw object \"ReferenceError: TransformStream is not defined\" (\"ReferenceError\") expected instance of function \"function URIError() { [native code] }\" (\"URIError\")"
+                      },
+                      {
+                        "name": "TransformStream errors thrown in transform put the writable and readable in an errored state",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream errors thrown in flush put the writable and readable in an errored state",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream transformer.start() rejected promise should error the stream",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "when controller.error is followed by a rejection, the error reason should come from controller.error",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "cancelling the readable side should error the writable",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "it should be possible to error the readable between close requested and complete",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "an exception from transform() should error the stream if terminate has been requested but not completed",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "abort should set the close reason for the writable when it happens before cancel during start, and cancel should reject",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "abort should set the close reason for the writable when it happens before cancel during underlying sink write, but cancel should still succeed",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() should do nothing the second time it is called",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() should close writable immediately after readable.cancel()",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() should do nothing after readable.cancel() resolves",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() should do nothing after writable.abort() has completed",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() should do nothing after a transformer method has thrown an exception",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "erroring during write with backpressure should result in the write failing",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "a write() that was waiting for backpressure should reject if the writable is aborted",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "the readable should be errored with the reason passed to the writable abort() method",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 21,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "flush.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "TransformStream flush is called immediately when the writable is closed, if no writes are queued",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream flush is called after all queued writes finish, once the writable is closed",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream flush gets a chance to enqueue more into the readable",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream flush gets a chance to enqueue more into the readable, and can then async close",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "error() during flush should cause writer.close() to reject",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "closing the writable side should call transformer.flush() and a parallel readable.cancel() should not reject",
+                        "status": "Fail",
+                        "message": "promise_test: Unhandled rejection with value: object \"ReferenceError: TransformStream is not defined\""
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 6,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "general.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "TransformStream can be constructed with a transform function",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream can be constructed with no transform function",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream writable starts in the writable state",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "enqueue() should throw after controller.terminate()",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.terminate() should do nothing the second time it is called",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "specifying a defined readableType should throw",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: TransformStream is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                      },
+                      {
+                        "name": "specifying a defined writableType should throw",
+                        "status": "Fail",
+                        "message": "assert_throws_js: constructor should throw function \"function () { [native code] }\" threw object \"ReferenceError: TransformStream is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                      },
+                      {
+                        "name": "Subclassing TransformStream should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "Identity TransformStream: can read from readable what is put into writable",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "Uppercaser sync TransformStream: can read from readable transformed version of what is put into writable",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "Uppercaser-doubler sync TransformStream: can read both chunks put into the readable",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "Uppercaser async TransformStream: can read from readable transformed version of what is put into writable",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "Uppercaser-doubler async TransformStream: can read both chunks put into the readable",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream: by default, closing the writable closes the readable (when there are no queued writes)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream: by default, closing the writable waits for transforms to finish before closing both",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream: by default, closing the writable closes the readable after sync enqueues and async done",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream: by default, closing the writable closes the readable after async enqueues and async done",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "Transform stream should call transformer methods as methods",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "methods should not not have .apply() or .call() called",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream start, transform, and flush should be strictly ordered",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "it should be possible to call transform() synchronously",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "closing the writable should close the readable when there are no queued chunks, even with backpressure",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "enqueue() should throw after readable.cancel()",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "terminate() should abort writable immediately after readable.cancel()",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "terminate() should do nothing after readable.cancel() resolves",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "start() should not be called twice",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 26,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "lipfuzz.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "testing \"\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"\" (length 0)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{in1}}\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"z{{in1}}\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{in1}}q\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{in1}}{{in1}\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{in1}}{{in1},}\" (length 2)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{in1,}}\" (length 2)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{,in1}}\" (length 2)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{,{in1}}\" (length 2)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{,in1}\" (length 2)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{,\" (length 2)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{,{,i,n,1,},}\" (length 7)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{in1}}{{in2}}{{in1}}\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{wrong}}\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{wron,g}}\" (length 2)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{quine}}\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{bogusPartial}}\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "testing \"{{bogusPartial}}}\" (length 1)",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 20,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "patched-global.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "TransformStream constructor should not call setters for highWaterMark or size",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "TransformStream should use the original value of ReadableStream and WritableStream",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 2,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "properties.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "transformer method start should be called with the right number of arguments",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "transformer method start should be called even when it's located on the prototype chain",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "transformer method transform should be called with the right number of arguments",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "transformer method transform should be called even when it's located on the prototype chain",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "transformer method flush should be called with the right number of arguments",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "transformer method flush should be called even when it's located on the prototype chain",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 6,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "reentrant-strategies.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "enqueue() inside size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "terminate() inside size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "error() inside size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "desiredSize inside size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "readable cancel() inside size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "pipeTo() inside size() should work",
+                        "status": "Fail",
+                        "message": "WritableStream is not defined"
+                      },
+                      {
+                        "name": "read() inside of size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "writer.write() inside size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "synchronous writer.write() inside size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "writer.close() inside size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "writer.abort() inside size() should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 11,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "strategies.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "writableStrategy highWaterMark should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "default writable strategy should be equivalent to { highWaterMark: 1 }",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "a RangeError should be thrown for an invalid highWaterMark",
+                        "status": "Fail",
+                        "message": "assert_throws_js: should throw RangeError for negative writableHighWaterMark function \"function () { [native code] }\" threw object \"ReferenceError: TransformStream is not defined\" (\"ReferenceError\") expected instance of function \"function RangeError() { [native code] }\" (\"RangeError\")"
+                      },
+                      {
+                        "name": "writableStrategy highWaterMark should be converted to a number",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "readableStrategy highWaterMark should be converted to a number",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "readableStrategy highWaterMark should work",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "writable should have the correct size() function",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "default readable strategy should be equivalent to { highWaterMark: 0 }",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "a bad readableStrategy size function should cause writer.write() to reject on an identity transform",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "a bad readableStrategy size function should error the stream on enqueue even when transformer.transform() catches the exception",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 10,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            },
+            "terminate.any.js": {
+              "Test": {
+                "variations": [
+                  {
+                    "subtests": [
+                      {
+                        "name": "controller.enqueue() should throw after controller.terminate()",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.terminate() should error pipeTo()",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.terminate() should prevent remaining chunks from being processed",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() after controller.terminate() with queued chunk should error the readable",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.error() after controller.terminate() without queued chunk should do nothing",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      },
+                      {
+                        "name": "controller.terminate() inside flush() should not prevent writer.close() from succeeding",
+                        "status": "Fail",
+                        "message": "TransformStream is not defined"
+                      }
+                    ],
+                    "status": "Ok",
+                    "metrics": {
+                      "passed": 0,
+                      "failed": 6,
+                      "timed_out": 0
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
         "writable-streams": {
           "Folder": {
             "aborting.any.js": {

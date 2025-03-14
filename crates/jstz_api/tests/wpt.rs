@@ -377,7 +377,8 @@ async fn test_wpt() -> Result<()> {
             // construct-byob-request.any.js shows Err because `ReadableStream` and `ReadableByteStreamController`
             // are not yet implemented
             r"^\/streams\/readable\-byte\-streams\/.+\.any\.html$",
-            r"^\/url\/[^\/]+\.any\.html$", // URL, URLSearchParams
+            r"^\/streams\/transform\-streams\/.+\.any\.html$", // TransformStream
+            r"^\/url\/[^\/]+\.any\.html$",                     // URL, URLSearchParams
             // Request
             // request-structure.any.js shows Err because jstz Request does not accept empty URLs
             r"^\/fetch\/api\/request\/[^\/]+\.any\.html$",
