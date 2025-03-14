@@ -2,7 +2,6 @@ use crate::error::{Error, Result};
 use anyhow::anyhow;
 use jstz_proto::context::account::Address;
 use std::{
-    env,
     fmt::{self, Display},
     fs,
     io::{self, IsTerminal},
@@ -82,13 +81,6 @@ pub fn read_file_or_input_or_piped(
             read_piped_input()
         }
     }
-}
-
-pub fn using_jstzd() -> bool {
-    matches!(
-        env::var("USE_JSTZD").as_ref().map(String::as_str),
-        Ok("true") | Ok("1")
-    )
 }
 
 #[cfg(test)]

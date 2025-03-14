@@ -6,7 +6,7 @@ use crate::{
     error::{bail_user_error, Result},
     sandbox::{JSTZD_SERVER_BASE_URL, SANDBOX_BOOTSTRAP_ACCOUNTS},
     term::styles,
-    utils::{using_jstzd, AddressOrAlias},
+    utils::AddressOrAlias,
 };
 
 // hardcoding it here instead of importing from jstzd simply to avoid adding jstzd
@@ -33,12 +33,12 @@ pub async fn exec(
 
     // Check if trying to deposit to a bootsrap account.
     if let Some(bootstrap_account) = SANDBOX_BOOTSTRAP_ACCOUNTS
-        .iter()
-        .find(|account| account.address == to_pkh.to_string())
+        .into_iter()
+        .find(|address| *address == to_pkh.to_string())
     {
         bail_user_error!(
             "Cannot deposit to the bootstrap account '{}'.",
-            bootstrap_account.address
+            bootstrap_account
         );
     }
     let pkh = to_pkh.to_base58();
@@ -61,17 +61,16 @@ pub async fn exec(
             bail_user_error!("Failed to deposit XTZ. Please check whether the addresses and network are correct.");
         }
     } else {
-        let contract = match using_jstzd() {
-            // Since jstz contracts are loaded as bootstrap contracts in jstzd,
-            // octez-client does not recognise them by alias, but addresses
-            // remain constant for bootstrap contracts, so we can use the KT1 address here
-            true => NATIVE_BRIDGE_ADDRESS,
-            _ => "jstz_native_bridge",
-        };
         // Execute the octez-client command
         if cfg
             .octez_client(&network)?
-            .call_contract(&from, contract, "deposit", &format!("\"{}\"", &pkh), amount)
+            .call_contract(
+                &from,
+                NATIVE_BRIDGE_ADDRESS,
+                "deposit",
+                &format!("\"{}\"", &pkh),
+                amount,
+            )
             .is_err()
         {
             bail_user_error!("Failed to deposit XTZ. Please check whether the addresses and network are correct.");
