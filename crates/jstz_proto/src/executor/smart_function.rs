@@ -1549,6 +1549,17 @@ pub mod jstz_run {
 }
 
 pub mod deploy {
+
+    pub fn compute_hash() -> ([u8; 33], String) {
+        let code = "const handler = async () => { console.log('Hello, World!'); return new Response(); }; export default handler";
+        let digest = tezos_crypto_rs::blake2b::digest_256(code.as_bytes()); // 32 bytes
+        let mut descriptor = [0u8; 33];
+        descriptor[0] = 0x00; // Tag byte for “raw data”
+        descriptor[1..].copy_from_slice(&digest);
+
+        (descriptor, code.to_string())
+    }
+
     use super::*;
     use crate::{operation, receipt};
 
@@ -1562,6 +1573,36 @@ pub mod deploy {
             function_code,
             account_credit,
         } = deployment;
+
+        let address = Script::deploy(hrt, tx, source, function_code, account_credit)?;
+
+        Ok(receipt::DeployFunctionReceipt { address })
+    }
+
+    pub fn execute2(
+        hrt: &mut impl HostRuntime,
+        tx: &mut Transaction,
+        source: &impl Addressable,
+        deployment: operation::DeployFunction,
+    ) -> Result<receipt::DeployFunctionReceipt> {
+        let operation::DeployFunction {
+            function_code,
+            account_credit,
+        } = deployment;
+
+        // let code = "test";
+        let mut buffer = [0; 5000];
+
+        let (hash, _) = compute_hash();
+        let hex_string: String =
+            hash.clone().iter().map(|b| format!("{:02x}", b)).collect();
+        debug_msg!(hrt, "\n\n\n HASH HEX: {:?}", hex_string);
+        let size = hrt.reveal_preimage(&hash, &mut buffer).unwrap();
+        let mut v = vec![0; size];
+        v.copy_from_slice(buffer[..size].as_ref());
+        // decode buffer into string utf8
+        let parsed_string = String::from_utf8(v).expect("Invalid UTF-8 data");
+        debug_msg!(hrt, "\nPARSED BUFFER {} \n", parsed_string);
 
         let address = Script::deploy(hrt, tx, source, function_code, account_credit)?;
 

@@ -9,6 +9,8 @@ pub struct JstzNodeConfig {
     pub endpoint: Endpoint,
     /// Rollup endpoint.
     pub rollup_endpoint: Endpoint,
+    /// The path to the rollup preimages directory.
+    pub rollup_preimages_dir: PathBuf,
     /// The path to the rollup kernel log file.
     pub kernel_log_file: PathBuf,
 }
@@ -17,11 +19,13 @@ impl JstzNodeConfig {
     pub fn new(
         endpoint: &Endpoint,
         rollup_endpoint: &Endpoint,
+        rollup_preimages_dir: &PathBuf,
         kernel_log_file: &Path,
     ) -> Self {
         Self {
             endpoint: endpoint.clone(),
             rollup_endpoint: rollup_endpoint.clone(),
+            rollup_preimages_dir: rollup_preimages_dir.to_path_buf(),
             kernel_log_file: kernel_log_file.to_path_buf(),
         }
     }
@@ -36,6 +40,7 @@ mod tests {
         let config = JstzNodeConfig::new(
             &Endpoint::localhost(8932),
             &Endpoint::localhost(8933),
+            &Path::new("/tmp/preimages").to_path_buf(),
             Path::new("/tmp/kernel.log"),
         );
 
@@ -43,6 +48,7 @@ mod tests {
 
         assert_eq!(json["endpoint"], "http://localhost:8932");
         assert_eq!(json["rollup_endpoint"], "http://localhost:8933");
+        assert_eq!(json["rollup_preimages_dir"], "/tmp/preimages");
         assert_eq!(json["kernel_log_file"], "/tmp/kernel.log");
     }
 }

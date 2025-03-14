@@ -5,7 +5,7 @@ use crate::{
 use bincode::{Decode, Encode};
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
-use jstz_core::{host::HostRuntime, kv::Transaction};
+use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
     signature::Signature,
@@ -13,7 +13,9 @@ use jstz_crypto::{
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode)]
+#[derive(
+    Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
+)]
 pub struct Operation {
     pub source: PublicKeyHash,
     #[bincode(with_serde)]
@@ -80,6 +82,12 @@ impl Operation {
                 )
                 .as_bytes(),
             ),
+            Content::RevealLargePayloadOperation(RevealLargePayloadOperation {
+                root_hash,
+                reveal_type,
+            }) => Blake2b::from(
+                format!("{}{}{:?}{:?}", source, nonce, root_hash, reveal_type).as_bytes(),
+            ),
         }
     }
 }
@@ -122,6 +130,20 @@ pub struct RunFunction {
     pub gas_limit: usize,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
+pub enum RevealType {
+    DeployFunction,
+    RunFunction,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
+#[schema(description = "The root hash of the payload to reveal, prefixed with 0x0")]
+pub struct RevealLargePayloadOperation {
+    #[schema(value_type = String)]
+    pub root_hash: PreimageHash,
+    pub reveal_type: RevealType,
+}
+
 #[derive(
     Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
 )]
@@ -131,9 +153,13 @@ pub enum Content {
     DeployFunction(#[bincode(with_serde)] DeployFunction),
     #[schema(title = "RunFunction")]
     RunFunction(#[bincode(with_serde)] RunFunction),
+    #[schema(title = "RevealLargePayloadOperation")]
+    RevealLargePayloadOperation(#[bincode(with_serde)] RevealLargePayloadOperation),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode)]
+#[derive(
+    Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
+)]
 pub struct SignedOperation {
     pub public_key: PublicKey,
     signature: Signature,

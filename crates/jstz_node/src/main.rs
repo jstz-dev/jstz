@@ -51,9 +51,16 @@ async fn main() -> anyhow::Result<()> {
                 "http://{}:{}",
                 args.rollup_node_rpc_addr, args.rollup_node_rpc_port
             ));
-
-            jstz_node::run(&args.addr, args.port, rollup_endpoint, args.kernel_log_path)
-                .await
+            //TODO: fix this
+            let temp_dir = PathBuf::from("/tmp/preimages");
+            jstz_node::run(
+                &args.addr,
+                args.port,
+                rollup_endpoint,
+                temp_dir,
+                args.kernel_log_path,
+            )
+            .await
         }
         Command::Spec { out } => {
             let spec = jstz_node::openapi_json_raw()?;
