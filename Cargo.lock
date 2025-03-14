@@ -3214,6 +3214,8 @@ dependencies = [
  "tezos-smart-rollup",
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-mock",
+ "thiserror 1.0.67",
+ "tokio",
 ]
 
 [[package]]
