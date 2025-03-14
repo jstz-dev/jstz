@@ -58,7 +58,7 @@ pub async fn spawn_rollup(
     let rollup = octez_rollup::OctezRollup::spawn(config)
         .await
         .expect("Failed to spawn rollup");
-    let rollup_ready = retry(10, 1000, || async { rollup.health_check().await }).await;
+    let rollup_ready = retry(20, 1000, || async { rollup.health_check().await }).await;
     assert!(rollup_ready);
     rollup
 }

@@ -50,8 +50,7 @@ rand.workspace = true
 tezos_crypto_rs.workspace = true
 
 [features]
-skip-rollup-tests = []
-build-image = ["octez/disable-alpha", "octez/disable-slow-pvm"]
+build-image = ["octez/disable-alpha"]
 
 [[bin]]
 name = "jstzd"

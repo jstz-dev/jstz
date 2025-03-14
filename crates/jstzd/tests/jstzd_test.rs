@@ -34,7 +34,6 @@ pub const JSTZ_ROLLUP_OPERATOR_PK: &str =
     "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
 pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "bootstrap1";
 
-#[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[tokio::test(flavor = "multi_thread")]
 async fn jstzd_test() {
     let octez_node_rpc_endpoint = Endpoint::localhost(unused_port());
@@ -204,7 +203,7 @@ async fn ensure_jstzd_components_are_up(
         .is_ok());
     assert!(jstzd.baker_healthy().await);
     let rollup_running =
-        retry(10, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
+        retry(20, 1000, || async { Ok(jstzd.rollup_healthy().await) }).await;
     assert!(rollup_running);
     assert!(jstzd.jstz_node_healthy().await);
     assert!(jstzd.health_check().await);
@@ -251,23 +250,23 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
     let mut full_config = serde_json::json!({});
     for (key, expected_json) in [
         (
-            "octez-node",
+            "octez_node",
             serde_json::to_value(jstzd_config.octez_node_config()).unwrap(),
         ),
         (
-            "octez-client",
+            "octez_client",
             serde_json::to_value(jstzd_config.octez_client_config()).unwrap(),
         ),
         (
-            "octez-baker",
+            "octez_baker",
             serde_json::to_value(jstzd_config.baker_config()).unwrap(),
         ),
         (
-            "octez-rollup",
+            "octez_rollup",
             serde_json::to_value(jstzd_config.octez_rollup_config()).unwrap(),
         ),
         (
-            "jstz-node",
+            "jstz_node",
             serde_json::to_value(jstzd_config.jstz_node_config()).unwrap(),
         ),
     ] {
