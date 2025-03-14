@@ -254,6 +254,7 @@ pub fn register_apis(context: &mut Context) {
     jstz_api::file::FileApi.init(context);
     jstz_api::stream::StreamApi.init(context);
     jstz_api::url::UrlApi.init(context);
+    jstz_api::ConsoleApi.init(context);
 }
 
 fn insert_global_properties(rt: &mut Runtime) {
@@ -393,6 +394,7 @@ async fn test_wpt() -> Result<()> {
             // Some tests show Err because the targeted set/clear functions are not yet defined
             r"^\/html\/webappapis\/timers\/[^\/]+\.any\.html$",
             r"^\/xhr\/formdata\/[^\/]+\.any\.html$", // FormData
+            r"^\/console\/[^\/]+\.any\.html$",       // console
         ]
         .as_ref(),
     )?;
