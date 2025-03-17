@@ -2,7 +2,6 @@ use std::{
     cell::RefCell,
     collections::VecDeque,
     future::poll_fn,
-    io::Read,
     num::NonZeroU32,
     ops::{Deref, DerefMut},
     rc::Rc,
@@ -11,10 +10,9 @@ use std::{
 
 use boa_engine::{
     builtins::promise::PromiseState, context::HostHooks, job::NativeJob,
-    object::builtins::JsPromise, Context, JsError, JsNativeError, JsResult, JsValue,
-    Source,
+    object::builtins::JsPromise, parser::source::ReadChar, Context, JsError,
+    JsNativeError, JsResult, JsValue, Source,
 };
-use chrono::{DateTime, FixedOffset, LocalResult, NaiveDateTime};
 use getrandom::{register_custom_getrandom, Error as RandomError};
 
 use crate::{
@@ -48,24 +46,16 @@ impl HostHooks for Hooks {
     //     false
     // }
 
-    fn utc_now(&self) -> NaiveDateTime {
-        NaiveDateTime::from_timestamp_opt(UTC_NOW, 0)
-            .expect("Failed to create `NaiveDateTime` from `UTC_NOW`")
+    fn utc_now(&self) -> i64 {
+        UTC_NOW
     }
 
-    fn local_from_utc(&self, utc: NaiveDateTime) -> DateTime<FixedOffset> {
-        DateTime::from_naive_utc_and_offset(utc, FixedOffset::east_opt(0).unwrap())
-    }
-
-    fn local_from_naive_local(
-        &self,
-        _local: NaiveDateTime,
-    ) -> LocalResult<DateTime<FixedOffset>> {
-        LocalResult::None
+    fn local_timezone_offset_seconds(&self, _unix_time_seconds: i64) -> i32 {
+        0
     }
 }
 
-pub const HOOKS: &'static dyn HostHooks = &Hooks;
+const HOOKS: &Hooks = &Hooks;
 
 // custom getrandom
 const GETRANDOM_ERROR_CODE: u32 = RandomError::CUSTOM_START + 42;
@@ -89,31 +79,27 @@ impl JobQueue {
         self.0.borrow_mut().pop_front()
     }
 
-    pub fn call_next(&self, context: &mut Context<'_>) -> Option<JsResult<JsValue>> {
+    pub fn call_next(&self, context: &mut Context) -> Option<JsResult<JsValue>> {
         let job = self.next()?;
         Some(job.call(context))
     }
 }
 
 impl boa_engine::job::JobQueue for JobQueue {
-    fn enqueue_promise_job(
-        &self,
-        job: NativeJob,
-        _context: &mut boa_engine::Context<'_>,
-    ) {
+    fn enqueue_promise_job(&self, job: NativeJob, _context: &mut boa_engine::Context) {
         self.0.borrow_mut().push_back(job);
     }
 
     fn enqueue_future_job(
         &self,
         future: boa_engine::job::FutureJob,
-        context: &mut boa_engine::Context<'_>,
+        context: &mut boa_engine::Context,
     ) {
         let job = future::block_on(future);
         self.enqueue_promise_job(job, context);
     }
 
-    fn run_jobs(&self, context: &mut boa_engine::Context<'_>) {
+    fn run_jobs(&self, context: &mut boa_engine::Context) {
         while let Some(job) = self.next() {
             // Jobs can fail, it is the final result that determines the value
             let _ = job.call(context);
@@ -123,10 +109,10 @@ impl boa_engine::job::JobQueue for JobQueue {
 
 thread_local! {
     /// Thread-local host context
-    static JS_HOST_RUNTIME: RefCell<Option<JsHostRuntime<'static>>> = RefCell::new(None);
+    static JS_HOST_RUNTIME: RefCell<Option<JsHostRuntime<'static>>> = const { RefCell::new(None) };
 
     /// Thread-local transaction
-    static JS_TRANSACTION: RefCell<Option<JsTransaction>> = RefCell::new(None);
+    static JS_TRANSACTION: RefCell<Option<JsTransaction>> = const { RefCell::new(None) };
 }
 
 /// Enters a new host context, running the closure `f` with the new context
@@ -138,11 +124,9 @@ pub fn enter_js_host_context<F, R>(
 where
     F: FnOnce() -> R,
 {
-    JS_HOST_RUNTIME
-        .with(|js_hrt| *js_hrt.borrow_mut() = Some(unsafe { JsHostRuntime::new(hrt) }));
+    JS_HOST_RUNTIME.with(|js_hrt| *js_hrt.borrow_mut() = Some(JsHostRuntime::new(hrt)));
 
-    JS_TRANSACTION
-        .with(|js_tx| *js_tx.borrow_mut() = Some(unsafe { JsTransaction::new(tx) }));
+    JS_TRANSACTION.with(|js_tx| *js_tx.borrow_mut() = Some(JsTransaction::new(tx)));
 
     let result = f();
 
@@ -190,29 +174,29 @@ where
 }
 
 #[derive(Debug)]
-pub struct Runtime<'host> {
-    context: Context<'host>,
+pub struct Runtime {
+    context: Context,
     realm: Realm,
     // There will only ever be 2 references to the `job_queue`.
     // The context's internal reference and the runtime's reference.
     job_queue: Rc<JobQueue>,
 }
 
-impl<'host> Deref for Runtime<'host> {
-    type Target = Context<'host>;
+impl Deref for Runtime {
+    type Target = Context;
 
     fn deref(&self) -> &Self::Target {
         &self.context
     }
 }
 
-impl<'host> DerefMut for Runtime<'host> {
+impl DerefMut for Runtime {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.context
     }
 }
 
-impl<'host> Runtime<'host> {
+impl Runtime {
     pub fn new(gas_limit: usize) -> JsResult<Self> {
         // 1. Initialize job queue
         let job_queue = Rc::new(JobQueue::new());
@@ -221,7 +205,7 @@ impl<'host> Runtime<'host> {
         // NB: At this point, the context contains a 'default' realm
         let mut context = Context::builder()
             .host_hooks(HOOKS)
-            .job_queue(job_queue.clone() as Rc<dyn boa_engine::job::JobQueue>)
+            .job_queue(job_queue.clone())
             .instructions_remaining(gas_limit)
             .build()?;
 
@@ -242,16 +226,16 @@ impl<'host> Runtime<'host> {
     /// Returns the module instance and the module promise. Implementors must manually
     /// call `Runtime::run_event_loop` or poll/resolve the promise to drive the
     /// module's evaluation.
-    pub fn eval_module(&mut self, module: &Module) -> JsResult<JsPromise> {
+    pub fn eval_module(&mut self, module: &Module) -> JsPromise {
         self.realm.eval_module(module, &mut self.context)
     }
 
     /// Parses, compiles and evaluates the script `src`.
-    pub fn eval<R: Read>(&mut self, src: Source<'_, R>) -> JsResult<JsValue> {
+    pub fn eval<R: ReadChar>(&mut self, src: Source<'_, R>) -> JsResult<JsValue> {
         self.realm.eval(src, &mut self.context)
     }
 
-    pub fn context(&mut self) -> &mut Context<'host> {
+    pub fn context(&mut self) -> &mut Context {
         self.deref_mut()
     }
 
@@ -276,7 +260,7 @@ impl<'host> Runtime<'host> {
     }
 
     fn poll_promise(promise: JsPromise) -> Poll<JsResult<JsValue>> {
-        match promise.state()? {
+        match promise.state() {
             PromiseState::Pending => Poll::Pending,
             PromiseState::Fulfilled(result) => Poll::Ready(Ok(result)),
             PromiseState::Rejected(err) => Poll::Ready(Err(JsError::from_opaque(err))),
@@ -286,18 +270,15 @@ impl<'host> Runtime<'host> {
     /// Polls a given value to resolve by stepping the event loop
     pub fn poll_value(&mut self, value: &JsValue) -> Poll<JsResult<JsValue>> {
         match value.as_promise() {
-            Some(promise) => {
-                let promise = JsPromise::from_object(promise.clone())?;
-                match Self::poll_promise(promise) {
-                    Poll::Ready(val) => Poll::Ready(val),
-                    Poll::Pending => match self.poll_event_loop() {
-                        Poll::Ready(()) => Poll::Ready(Err(JsNativeError::error()
-                            .with_message("Event loop did not resolve the promise")
-                            .into())),
-                        Poll::Pending => Poll::Pending,
-                    },
-                }
-            }
+            Some(promise) => match Self::poll_promise(promise) {
+                Poll::Ready(val) => Poll::Ready(val),
+                Poll::Pending => match self.poll_event_loop() {
+                    Poll::Ready(()) => Poll::Ready(Err(JsNativeError::error()
+                        .with_message("Event loop did not resolve the promise")
+                        .into())),
+                    Poll::Pending => Poll::Pending,
+                },
+            },
             None => Poll::Ready(Ok(value.clone())),
         }
     }

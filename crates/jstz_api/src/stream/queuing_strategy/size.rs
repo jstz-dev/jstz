@@ -1,7 +1,8 @@
-use crate::{idl, stream::queuing_strategy::*, stream::Chunk};
 use boa_engine::{object::NativeObject, Context, JsResult};
 use boa_gc::{Finalize, Trace};
 use jstz_core::{js_fn::JsCallableWithoutThis, native::JsNativeObject};
+
+use crate::{idl, stream::queuing_strategy::*, stream::Chunk};
 
 pub trait ExtractSizeAlgorithm {
     // The type of the extracted size algorithm. It could just be `QueuingStrategySizeAlgorithm`.
@@ -35,7 +36,7 @@ impl JsCallableWithoutThis<(Chunk,), idl::UnrestrictedDouble>
     fn call_without_this(
         &self,
         _inputs: (Chunk,),
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<idl::UnrestrictedDouble> {
         match self {
             CountQueuingStrategySizeAlgorithm::ReturnOne => {
@@ -65,11 +66,11 @@ impl JsCallableWithoutThis<(Chunk,), idl::UnrestrictedDouble>
     fn call_without_this(
         &self,
         _inputs: (Chunk,),
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<idl::UnrestrictedDouble> {
         match self {
             ByteLengthQueuingStrategySizeAlgorithm::ReturnByteLengthOfChunk => {
-                todo!("ReturnByteLengthOfChunk.call_without_this()")
+                crate::todo!("ReturnByteLengthOfChunk.call_without_this()");
             }
         }
     }
@@ -104,7 +105,7 @@ impl JsCallableWithoutThis<(Chunk,), idl::UnrestrictedDouble>
     fn call_without_this(
         &self,
         inputs: (Chunk,),
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<idl::UnrestrictedDouble> {
         match self {
             QueuingStrategySizeAlgorithm::Count(size_algorithm) => {
@@ -152,5 +153,25 @@ impl ExtractSizeAlgorithm for Option<QueuingStrategy> {
         self.as_ref()
             .map(|v| v.extract_size_algorithm())
             .unwrap_or_default()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ByteLengthQueuingStrategySizeAlgorithm;
+    use crate::stream::Chunk;
+    use boa_engine::{Context, JsNativeError};
+    use jstz_core::js_fn::JsCallableWithoutThis;
+
+    #[test]
+    fn byte_length_queuing_call_without_this() {
+        assert_eq!(
+            ByteLengthQueuingStrategySizeAlgorithm::ReturnByteLengthOfChunk
+                .call_without_this((Chunk::null(),), &mut Context::default())
+                .unwrap_err(),
+            JsNativeError::error()
+                .with_message("todo: ReturnByteLengthOfChunk.call_without_this()")
+                .into()
+        );
     }
 }

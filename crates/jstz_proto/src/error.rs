@@ -1,16 +1,48 @@
 use boa_engine::{JsError, JsNativeError};
 use derive_more::{Display, Error, From};
+use tezos_smart_rollup::michelson::ticket::TicketHashError;
+
+use crate::{
+    context::ticket_table,
+    executor::{fa_deposit, fa_withdraw},
+};
 
 #[derive(Display, Debug, Error, From)]
 pub enum Error {
-    CoreError { source: jstz_core::Error },
-    CryptoError { source: jstz_crypto::Error },
+    CoreError {
+        source: jstz_core::Error,
+    },
+    CryptoError {
+        source: jstz_crypto::Error,
+    },
     BalanceOverflow,
+    InsufficientFunds,
     InvalidNonce,
     InvalidAddress,
     RefererShouldNotBeSet,
     GasLimitExceeded,
+    UnsupportedPath,
+    InvalidHost,
     InvalidHttpRequest,
+    InvalidHttpRequestBody,
+    InvalidHttpRequestMethod,
+    InvalidHeaderValue,
+    InvalidUri,
+    InvalidTicketType,
+    TicketTableError {
+        source: ticket_table::TicketTableError,
+    },
+    FaDepositError {
+        source: fa_deposit::FaDepositError,
+    },
+    FaWithdrawError {
+        source: fa_withdraw::FaWithdrawError,
+    },
+    TicketHashError(TicketHashError),
+    TicketAmountTooLarge,
+    ZeroAmountNotAllowed,
+    AddressTypeMismatch,
+    AccountExists,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -24,6 +56,9 @@ impl From<Error> for JsError {
             Error::BalanceOverflow => {
                 JsNativeError::eval().with_message("BalanceOverflow").into()
             }
+            Error::InsufficientFunds => JsNativeError::eval()
+                .with_message("InsufficientFunds")
+                .into(),
             Error::InvalidNonce => {
                 JsNativeError::eval().with_message("InvalidNonce").into()
             }
@@ -39,6 +74,49 @@ impl From<Error> for JsError {
             Error::InvalidHttpRequest => JsNativeError::eval()
                 .with_message("InvalidHttpRequest")
                 .into(),
+            Error::InvalidHttpRequestBody => JsNativeError::eval()
+                .with_message("InvalidHttpRequestBody")
+                .into(),
+            Error::InvalidHttpRequestMethod => JsNativeError::eval()
+                .with_message("InvalidHttpRequestMethod")
+                .into(),
+            Error::InvalidHost => {
+                JsNativeError::eval().with_message("InvalidHost").into()
+            }
+            Error::UnsupportedPath => {
+                JsNativeError::eval().with_message("UnsupportedPath").into()
+            }
+            Error::TicketTableError { source } => JsNativeError::eval()
+                .with_message(format!("TicketTableError: {}", source))
+                .into(),
+            Error::FaDepositError { source } => JsNativeError::eval()
+                .with_message(format!("FaDepositError: {}", source))
+                .into(),
+            Error::FaWithdrawError { source } => JsNativeError::eval()
+                .with_message(format!("FaWithdrawError: {}", source))
+                .into(),
+            Error::TicketHashError(inner) => JsNativeError::eval()
+                .with_message(format!("{}", inner))
+                .into(),
+            Error::TicketAmountTooLarge => JsNativeError::eval()
+                .with_message("TicketAmountTooLarge")
+                .into(),
+            Error::InvalidTicketType => JsNativeError::eval()
+                .with_message("InvalidTicketType")
+                .into(),
+            Error::InvalidUri => JsNativeError::eval().with_message("InvalidUri").into(),
+            Error::InvalidHeaderValue => JsNativeError::eval()
+                .with_message("InvalidHeaderValue")
+                .into(),
+            Error::ZeroAmountNotAllowed => JsNativeError::eval()
+                .with_message("ZeroAmountNotAllowed")
+                .into(),
+            Error::AddressTypeMismatch => JsNativeError::eval()
+                .with_message("AddressTypeMismatch")
+                .into(),
+            Error::AccountExists => {
+                JsNativeError::eval().with_message("AccountExists").into()
+            }
         }
     }
 }

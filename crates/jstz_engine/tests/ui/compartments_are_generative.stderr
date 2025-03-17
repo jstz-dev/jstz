@@ -1,0 +1,17 @@
+error[E0597]: `compartment_id` does not live long enough
+ --> tests/ui/compartments_are_generative.rs:5:5
+  |
+5 |     alloc_compartment!(b);
+  |     ^^^^^^^^^^^^^^^^^^^^^
+  |     |
+  |     borrowed value does not live long enough
+  |     binding `compartment_id` declared here
+6 |     assert_eq!(a, b);
+7 | }
+  | -
+  | |
+  | `compartment_id` dropped here while still borrowed
+  | borrow might be used here, when `compartment_region` is dropped and runs the `Drop` code for type `Region`
+  |
+  = note: values in a scope are dropped in the opposite order they are defined
+  = note: this error originates in the macro `alloc_compartment` (in Nightly builds, run with -Z macro-backtrace for more info)

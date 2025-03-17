@@ -2,7 +2,7 @@ use log::warn;
 
 use crate::{error::Result, term::open_browser};
 
-const DOCS_URL: &str = "https://trilitech.github.io/jstz/";
+const DOCS_URL: &str = "https://jstz-dev.github.io/jstz/";
 
 pub fn exec() -> Result<()> {
     if open_browser(DOCS_URL).is_err() {

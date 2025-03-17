@@ -12,13 +12,14 @@
 //! - The default queuing strategy is supposed to behave as if it were `new CountQueuingStrategy({highWaterMark: 1.0})`.
 //!
 
+use boa_engine::{value::TryFromJs, Context, JsResult, JsValue};
+use derive_more::*;
+use jstz_core::native::{register_global_class, JsNativeObject};
+
 use crate::stream::queuing_strategy::builtin::{
     ByteLengthQueuingStrategy, ByteLengthQueuingStrategyClass, CountQueuingStrategy,
     CountQueuingStrategyClass,
 };
-use boa_engine::{value::TryFromJs, Context, JsResult, JsValue};
-use derive_more::*;
-use jstz_core::native::{register_global_class, JsNativeObject};
 
 pub mod builtin;
 pub mod high_water_mark;
@@ -42,7 +43,7 @@ impl Default for QueuingStrategy {
 }
 
 impl TryFromJs for QueuingStrategy {
-    fn try_from_js(value: &JsValue, _context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, _context: &mut Context) -> JsResult<Self> {
         if JsNativeObject::<CountQueuingStrategy>::is(value) {
             JsNativeObject::<CountQueuingStrategy>::try_from(value.clone())
                 .map(Into::into)
@@ -50,7 +51,7 @@ impl TryFromJs for QueuingStrategy {
             JsNativeObject::<ByteLengthQueuingStrategy>::try_from(value.clone())
                 .map(Into::into)
         } else {
-            todo!("try_from_js(custom_queuing_strategy)")
+            crate::todo!("try_from_js(custom_queuing_strategy)");
         }
     }
 }
@@ -58,7 +59,7 @@ impl TryFromJs for QueuingStrategy {
 pub struct QueuingStrategyApi;
 
 impl jstz_core::Api for QueuingStrategyApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<CountQueuingStrategyClass>(context)
             .expect("The `CountQueuingStrategy` class shouldn't exist yet");
         register_global_class::<ByteLengthQueuingStrategyClass>(context)

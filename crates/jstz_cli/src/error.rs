@@ -8,7 +8,7 @@ pub struct UserError {
 }
 
 impl fmt::Display for UserError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.message)
     }
 }

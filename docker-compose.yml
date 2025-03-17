@@ -21,7 +21,7 @@ services:
     command: >
       -c "mkdir -p /roots/logs &&
           touch /roots/logs/kernel.log &&
-          usr/bin/jstz-node --rollup-endpoint http://rollup:8932 --kernel-log-path /root/logs/kernel.log --addr 0.0.0.0"
+          usr/bin/jstz-node run --rollup-endpoint http://rollup:8932 --kernel-log-path /root/logs/kernel.log --addr 0.0.0.0"
     restart: always
     ports:
       - 8933:8933

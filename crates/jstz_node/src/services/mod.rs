@@ -1,12 +1,12 @@
-mod accounts;
-pub mod logs;
-mod operations;
+use crate::AppState;
 
-pub use accounts::AccountsService;
-use actix_web::web::ServiceConfig;
-pub use logs::LogsService;
-pub use operations::OperationsService;
+use utoipa_axum::router::OpenApiRouter;
+
+pub mod accounts;
+pub mod error;
+pub mod logs;
+pub mod operations;
 
 pub trait Service {
-    fn configure(cfg: &mut ServiceConfig);
+    fn router_with_openapi() -> OpenApiRouter<AppState>;
 }

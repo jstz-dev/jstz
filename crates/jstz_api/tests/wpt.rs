@@ -3,8 +3,8 @@ use std::future::IntoFuture;
 use anyhow::Result;
 use boa_engine::{
     js_string, object::FunctionObjectBuilder, property::PropertyDescriptor,
-    value::TryFromJs, Context, JsArgs, JsNativeError, JsResult, JsValue, NativeFunction,
-    Source,
+    value::TryFromJs, Context, JsArgs, JsData, JsNativeError, JsObject, JsResult,
+    JsString, JsValue, NativeFunction, Source,
 };
 use boa_gc::{Finalize, Trace};
 use derive_more::{From, Into};
@@ -15,10 +15,12 @@ use jstz_wpt::{
     WptSubtestStatus, WptTestStatus,
 };
 
+const TEST_SUBSET_SIZE: u8 = 5;
+
 macro_rules! impl_try_from_js_for_enum {
     ($ty:ty) => {
         impl TryFromJs for $ty {
-            fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+            fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
                 let value: u8 = value.try_js_into(context)?;
 
                 value.try_into().map_err(|_| {
@@ -58,9 +60,12 @@ impl_try_from_js_for_enum!(TestStatus);
 /// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html#Test
 #[derive(Debug, TryFromJs)]
 pub struct TestResult {
-    pub name: String,
+    // Cannot rely on TryFromJs to convert JsString to String because TryFromJs<String> does not
+    // handle utf-16 characters nicely and there are some utf-16 characters in some tests.
+    // We therefore need to get JsString first and do the proper conversion.
+    pub name: JsString,
     pub status: TestStatus,
-    pub message: Option<String>,
+    pub message: Option<JsString>,
 }
 
 /// Enum of possible harness statuses
@@ -91,7 +96,7 @@ impl TryFrom<u8> for TestsStatus {
 #[derive(TryFromJs)]
 pub struct TestsResult {
     pub status: TestsStatus,
-    pub message: Option<String>,
+    pub message: Option<JsString>,
 }
 
 /// A report of a test harness run, containing the harness result and all test results
@@ -99,9 +104,11 @@ pub struct TestsResult {
 /// This struct implements the TestHarness API expected by [wpt]
 ///
 /// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html
-#[derive(Default, Debug, Trace, Finalize)]
+#[derive(Default, Debug, Trace, Finalize, JsData)]
 pub struct TestHarnessReport {
     #[unsafe_ignore_trace]
+    // `status` is an Option because it is set at the end of a test suite
+    // and we need a placeholder for it before that.
     status: Option<WptTestStatus>,
     #[unsafe_ignore_trace]
     subtests: Vec<WptSubtest>,
@@ -133,9 +140,10 @@ impl TestHarnessReport {
         } = result;
 
         self.subtests.push(WptSubtest {
-            name,
+            // `to_std_string_escaped` handles utf-16 characters better than `to_std_string`
+            name: name.to_std_string_escaped(),
             status: status.into(),
-            message,
+            message: message.map(|v| v.to_std_string_escaped()),
         });
     }
 }
@@ -162,7 +170,7 @@ impl TestHarnessReportApi {
     pub fn test_result_callback(
         _this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         preamble!(context, report);
 
@@ -176,7 +184,7 @@ impl TestHarnessReportApi {
     pub fn test_completion_callback(
         _this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         preamble!(context, report);
 
@@ -192,7 +200,7 @@ impl TestHarnessReportApi {
 }
 
 impl jstz_core::Api for TestHarnessReportApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         let test_result_callback = FunctionObjectBuilder::new(
             context.realm(),
             NativeFunction::from_fn_ptr(Self::test_result_callback),
@@ -210,7 +218,7 @@ impl jstz_core::Api for TestHarnessReportApi {
         .build();
 
         #[inline]
-        fn call_global_function(name: &str, args: &[JsValue], context: &mut Context<'_>) {
+        fn call_global_function(name: &str, args: &[JsValue], context: &mut Context) {
             let value = context
                 .global_object()
                 .get(js_string!(name), context)
@@ -238,26 +246,18 @@ impl jstz_core::Api for TestHarnessReportApi {
     }
 }
 
-pub fn register_apis(context: &mut Context<'_>) {
+pub fn register_apis(context: &mut Context) {
     // Register all the APIs here
     // TODO this is not all the APIs
-    jstz_api::http::header::HeadersApi.init(context);
+    jstz_api::http::HttpApi.init(context);
     jstz_api::encoding::EncodingApi.init(context);
     jstz_api::file::FileApi.init(context);
+    jstz_api::stream::StreamApi.init(context);
+    jstz_api::url::UrlApi.init(context);
+    jstz_api::ConsoleApi.init(context);
 }
 
-pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
-    let mut rt: Runtime<'_> = Runtime::new(usize::MAX)?;
-
-    // Initialize the host-defined object with the test harness report
-    {
-        host_defined!(&mut rt, mut host_defined);
-        host_defined.insert(TestHarnessReport::default());
-    }
-
-    // Register APIs
-    register_apis(&mut rt);
-
+fn insert_global_properties(rt: &mut Runtime) {
     // Define self
     rt.global_object().insert_property(
         js_string!("self"),
@@ -268,6 +268,44 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
             .enumerable(true)
             .build(),
     );
+
+    // Define a dummy `location` object so that subsetTest can run
+    let location = JsObject::with_null_proto();
+
+    // `location.search` is used by wpt to determine how many tests in a subset test can run.
+    // Limiting this with a small enough `TEST_SUBSET_SIZE` here because those subsets
+    // can contain thousands of tests.
+    location
+        .create_data_property(
+            js_string!("search"),
+            js_string!(format!("?0-{TEST_SUBSET_SIZE}")),
+            rt.context(),
+        )
+        .unwrap();
+    rt.global_object().insert_property(
+        js_string!("location"),
+        PropertyDescriptor::builder()
+            .value(location)
+            .configurable(true)
+            .writable(true)
+            .enumerable(true)
+            .build(),
+    );
+}
+
+pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>> {
+    let mut rt: Runtime = Runtime::new(usize::MAX)?;
+
+    // Initialize the host-defined object with the test harness report
+    {
+        host_defined!(&mut rt, mut host_defined);
+        host_defined.insert(TestHarnessReport::default());
+    }
+
+    // Register APIs
+    register_apis(&mut rt);
+
+    insert_global_properties(&mut rt);
 
     // Run the bundle, evaluating each script in order
     // Instead of loading the TestHarnessReport script, we initialize it manually
@@ -281,6 +319,9 @@ pub fn run_wpt_test_harness(bundle: &Bundle) -> JsResult<Box<TestHarnessReport>>
             }
         }
     }
+
+    // Execute promises after all sync tests have completed after `eval` returns
+    rt.run_jobs();
 
     // Return the test harness report
 
@@ -305,7 +346,10 @@ fn run_wpt_test(
             return Ok(WptReportTest::new(WptTestStatus::Err, vec![]));
         };
 
-        let status = report.status.clone().unwrap_or(WptTestStatus::Null);
+        // It should be safe to unwrap here because each test suite should have a
+        // status code attached after it completes. If unwrap fails, it means something
+        // is wrong and we should fix that
+        let status = report.status.clone().unwrap();
 
         let subtests = report.subtests.clone();
 
@@ -313,19 +357,50 @@ fn run_wpt_test(
     }
 }
 
+#[cfg_attr(feature = "skip-wpt", ignore)]
 #[tokio::test]
 async fn test_wpt() -> Result<()> {
     let filter = TestFilter::try_from(
         [
-            r"^\/encoding\/[^\/]+\.any\.html$",
+            r"^\/encoding\/[^\/]+\.any\.html$", // TextEncode, TextDecoder
+            r"^\/encoding\/streams\/[^\/]+\.any\.html$", // TextEncoderStream, TextDecoderStream
             r"^\/fetch\/api\/headers\/[^\/]+\.any\.html$",
-            r"^\/FileAPI\/blob\/Blob-slice-overflow.any.html$",
+            r"^\/FileAPI\/blob\/[^\/]+\.any\.html$", // Blob
+            r"^\/streams\/queuing\-strategies\.any\.html$", // CountQueuingStrategy, ByteLengthQueuingStrategy
+            // WritableStream, WritableStreamDefaultController, ByteLengthQueuingStrategy, CountQueuingStrategy
+            r"^\/streams\/writable\-streams\/.+\.any\.html$",
+            r"^\/compression\/[^\/]+\.any\.html$", // CompressionStream, DecompressionStream
+            // module crypto; tests have "Err" status now because `crypto` does not exist in global yet
+            r"^\/WebCryptoAPI\/.+\.any\.html$",
+            r"^\/streams\/readable\-streams\/.+\.any\.html$", // ReadableStream
+            // ReadableByteStreamController
+            // construct-byob-request.any.js shows Err because `ReadableStream` and `ReadableByteStreamController`
+            // are not yet implemented
+            r"^\/streams\/readable\-byte\-streams\/.+\.any\.html$",
+            r"^\/url\/[^\/]+\.any\.html$", // URL, URLSearchParams
+            // Request
+            // request-structure.any.js shows Err because jstz Request does not accept empty URLs
+            r"^\/fetch\/api\/request\/[^\/]+\.any\.html$",
+            // Response
+            // FIXME: after JSTZ-328 is fixed, update the following lines so that all
+            // `/fetch/api/response` test suites are enabled. The test suite being filtered out is
+            // `fetch/api/response/response-static-json.any.js`
+            r"^\/fetch\/api\/response\/response-[^s].+\.any\.html$",
+            r"^\/fetch\/api\/response\/response-static-[^j].+\.any\.html$",
+            r"^\/fetch\/api\/response\/response-stream-.+\.any\.html$",
+            r"^\/html\/webappapis\/atob\/base64\.any\.html$", // atob, btoa
+            r"^\/html\/webappapis\/structured-clone\/structured\-clone\.any\.html$", // structuredClone
+            // set/clearTimeout, set/clearInterval
+            // Some tests show Err because the targeted set/clear functions are not yet defined
+            r"^\/html\/webappapis\/timers\/[^\/]+\.any\.html$",
+            r"^\/xhr\/formdata\/[^\/]+\.any\.html$", // FormData
+            r"^\/console\/[^\/]+\.any\.html$",       // console
         ]
         .as_ref(),
     )?;
 
     let report = {
-        let wpt = Wpt::new()?;
+        let wpt = Wpt::new().await?;
 
         let manifest = Wpt::read_manifest()?;
 

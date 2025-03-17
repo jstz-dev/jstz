@@ -1,19 +1,23 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/jstz_core",
-    "crates/jstz_api",
-    "crates/jstz_proto",
-    "crates/jstz_crypto",
-    "crates/jstz_kernel",
-    "crates/jstz_cli",
-    "crates/jstz_node",
-    "crates/jstz_wpt",
-    "crates/octez",
-    "crates/jstz_rollup",
-    "crates/jstz_sdk",
+  "crates/jstz_api",
+  "crates/jstz_cli",
+  "crates/jstz_core",
+  "crates/jstz_crypto",
+  "crates/jstz_engine",
+  "crates/jstz_runtime",
+  "crates/jstz_kernel",
+  "crates/jstz_mock",
+  "crates/jstz_node",
+  "crates/jstz_proto",
+  "crates/jstz_rollup",
+  "crates/jstz_sdk",
+  "crates/jstz_tps_bench",
+  "crates/jstz_wpt",
+  "crates/jstzd",
+  "crates/octez",
 ]
-
 
 [workspace.package]
 edition = "2021"
@@ -27,22 +31,103 @@ license-file = "LICENSE"
 description = "JavaScript server runtime for Tezos Smart Rollups"
 
 [workspace.dependencies]
-jstz_core = { version = "0.1.0-alpha.0", path = "crates/jstz_core" }
-jstz_api = { version = "0.1.0-alpha.0", path = "crates/jstz_api" }
-jstz_kernel = { version = "0.1.0-alpha.0", path = "crates/jstz_kernel" }
-jstz_proto = { version = "0.1.0-alpha.0", path = "crates/jstz_proto" }
-jstz_crypto = { version = "0.1.0-alpha.0", path = "crates/jstz_crypto" }
-jstz_node = { version = "0.1.0-alpha.0", path = "crates/jstz_node" }
-jstz_cli = { version = "0.1.0-alpha.0", path = "crates/jstz_cli" }
-jstz_wpt = { version = "0.1.0-alpha.0", path = "crates/jstz_wpt" }
-octez = { version = "0.1.0-alpha.0", path = "crates/octez" }
-jstz_rollup = { version = "0.1.0-alpha.0", path = "crates/jstz_rollup" }
-jstz_sdk = { version = "0.1.0-alpha.0", path = "crates/jstz_sdk" }
+ansi_term = "0.12.1"
+anyhow = "1.0.82"
+assert_cmd = "2.0.14"
+async-dropper-simple = { version = "0.2.6", features = ["tokio"] }
+async-trait = "0.1.82"
+axum = "0.7.7"
+base64 = "0.21.7"
+bincode = { version = "2.0.0-rc.3", features = ["derive", "serde"] }
+boa_engine = { version = "0.19.0", features = ["fuzz"] }
+boa_gc = "0.19.0"
+bollard = "0.16.1"
+bs58 = "0.5"
+bytes = "1.4.0"
+chrono = { version = "0.4.34", default-features = false, features = ["std"] }
+clap = { version = "^4.4", features = ["derive"] }
+clap_complete = "4.4.10"
+console = "0.15.8"
+crossterm = "0.27"
+ctrlc = "3.4.2"
+daemonize = "0.5.0"
+deno_core = "0.336.0"
+deno_fs = "0.100.0"
+derive_more = "0.99.17"
+dialoguer = "0.11.0"
+dirs = "3.0"
+either = "1.9.0"
+encoding_rs = "0.8.33"
+env_logger = "0.11.1"
+erased-serde = "0.4.2"
+expect-test = "1.4.1"
+fastrand = "2.0.1"
+figment = { version = "0.10.12", features = ["json", "env"] }
+form_urlencoded = "1.2.0"
+fs_extra = "1.2"
+futures = "0.3"
+futures-util = "0.3.30"
+getrandom = { version = "0.2.12", features = ["custom"] }
+hex = "0.4.3"
+http = "1.0.0"
+http-serde = "2.0.0"
+in-container = "^1"
+indicatif = "0.17.0"
+indoc = "2"
+log = "0.4.20"
+mozjs = "0.14.1"
+nix = { version = "^0.27.1", features = ["process", "signal"] }
+nom = "7.1.3"
+num-traits = "0.2.16"
+parking_lot = "0.12.1"
+predicates = "3.1.0"
+prettytable = "0.10.0"
+pretty_assertions = "1.4.1"
+proptest = "1.1"
+rand = "0.8"
+regex = "1"
+reqwest = { version = "0.11.24", features = ["json", "blocking"] }
+reqwest-eventsource = "0.5.0"
+rust-embed = { version = "8.5.0", features = ["interpolate-folder-path", "include-exclude"] }
+rustyline = "14.0.0"
+serde = { version = "1.0.196", features = ["derive", "rc"] }
+serde-wasm-bindgen = "0.6.5"
+serde_json = "1.0.107"
+serde_with = { version = "3.6.1", features = ["macros"] }
+serde_yaml = "0.9"
+sha2 = "0.10"
+signal-hook = "0.3.17"
+simplelog = "0.11"
+spinners = "4.1.1"
+syntect = "5.2.0"
+tempfile = "3.10.0"
+tezos_data_encoding = "0.6.0"
+thiserror = "1.0.56"
+tiny-bip39 = "1.0.0"
+tl = "0.7.7"
+tokio = { version = "1.36.0", features = ["full"] }
+tokio-stream = "0.1.14"
+tokio-util = "0.7.10"
+tower-http = { version = "0.6.1", features = ["cors"] }
+trybuild = "1.0.103"
+url = "2.4.1"
+urlpattern = "0.2.0"
+utoipa = { version = "5.1.3", features = ["axum_extras", "url"] }
+utoipa-axum = "0.1.1"
+utoipa-scalar = { version = "0.2.0", features = ["axum"] }
+wasm-bindgen = "0.2.92"
 
 [workspace.dependencies.tezos-smart-rollup]
 version = "0.2.2"
 default-features = false
-features = ["std", "crypto", "panic-hook", "data-encoding", "storage", "proto-alpha"]
+features = [
+  "std",
+  "crypto",
+  "panic-hook",
+  "data-encoding",
+  "storage",
+  "proto-alpha",
+]
 
 [workspace.dependencies.tezos-smart-rollup-host]
 version = "0.2.2"
@@ -78,23 +163,25 @@ version = "0.2.2"
 version = "0.2.2"
 
 [workspace.dependencies.tezos_crypto_rs]
-version = "0.5.2"
+version = "0.6.0"
 default-features = false
 
 [patch.crates-io]
-tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git" }
-tezos-smart-rollup-host = { git = "https://gitlab.com/tezos/tezos.git" }
-tezos-smart-rollup-core = { git = "https://gitlab.com/tezos/tezos.git" }
-tezos-smart-rollup-mock = { git = "https://gitlab.com/tezos/tezos.git" }
-tezos-smart-rollup-encoding = { git = "https://gitlab.com/tezos/tezos.git" }
-tezos-smart-rollup-entrypoint = { git = "https://gitlab.com/tezos/tezos.git" }
-tezos-smart-rollup-debug = { git = "https://gitlab.com/tezos/tezos.git" }
-tezos-smart-rollup-panic-hook = { git = "https://gitlab.com/tezos/tezos.git" }
-tezos-smart-rollup-storage = { git = "https://gitlab.com/tezos/tezos.git" }
-boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_engine = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_interner = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_macros = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_parser = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
-boa_profiler = { git = "https://github.com/trilitech/boa.git", branch = "ryutamago/fix-undefined-to-json" }
+# NOTE: When updating `tag`, also update the `tag` in the `mozjs_archive` derivation in `nix/crates.nix`
+mozjs = { git = "https://github.com/servo/mozjs.git", tag = "mozjs-sys-v0.128.3-0" }
+tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
+tezos-smart-rollup-host = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
+tezos-smart-rollup-core = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
+tezos-smart-rollup-mock = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
+tezos-smart-rollup-encoding = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
+tezos-smart-rollup-entrypoint = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
+tezos-smart-rollup-debug = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
+tezos-smart-rollup-panic-hook = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
+tezos-smart-rollup-storage = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
+boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_engine = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_interner = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_macros = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_parser = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+boa_profiler = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }

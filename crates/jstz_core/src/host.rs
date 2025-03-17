@@ -1,14 +1,13 @@
 use derive_more::Display;
+pub use tezos_smart_rollup_host::runtime::{
+    Runtime as HostRuntime, RuntimeError as HostError,
+};
 use tezos_smart_rollup_host::{
     dal_parameters::RollupDalParameters,
     input,
     metadata::RollupMetadata,
     path::{self, Path},
-    runtime::{Runtime, ValueType},
-};
-
-pub use tezos_smart_rollup_host::runtime::{
-    Runtime as HostRuntime, RuntimeError as HostError,
+    runtime::ValueType,
 };
 
 mod erased_runtime {
@@ -346,7 +345,7 @@ mod erased_runtime {
         }
 
         fn store_delete_value<T: Path>(&mut self, path: &T) -> Result<(), HostError> {
-            self.erased_store_delete(erase::Path(path))
+            self.erased_store_delete_value(erase::Path(path))
         }
 
         fn store_count_subkeys<T: Path>(&self, prefix: &T) -> Result<u64, HostError> {
@@ -435,14 +434,14 @@ pub struct JsHostRuntime<'a> {
 }
 
 impl<'a> JsHostRuntime<'a> {
-    pub unsafe fn new<R: Runtime>(rt: &'a mut R) -> JsHostRuntime<'static> {
+    pub fn new<R: HostRuntime>(rt: &'a mut R) -> JsHostRuntime<'static> {
         let rt_ptr: *mut dyn erased_runtime::Runtime = rt;
 
         // SAFETY
         // From the pov of the `Host` struct, it is permitted to cast
         // the `rt` reference to `'static` since the lifetime of `Host`
         // is always shorter than the lifetime of `rt`
-        let rt: &'a mut dyn erased_runtime::Runtime = &mut *rt_ptr;
+        let rt: &'a mut dyn erased_runtime::Runtime = unsafe { &mut *rt_ptr };
 
         let jhr: Self = Self { inner: rt };
 

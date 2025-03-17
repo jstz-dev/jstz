@@ -1,0 +1,15 @@
+{
+  "name": "@jstz-dev/sdk",
+  "description": "TypeScript dApp SDK for jstz 👨‍⚖️",
+  "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
+  "version": "0.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "format": "prettier . --write",
+    "build": "tsc --outDir dist"
+  },
+  "dependencies": {
+    "@zcabter/jstz-client": "0.1.0-alpha",
+    "jstz_sdk": "file:../../crates/jstz_sdk/pkg"
+  }
+}

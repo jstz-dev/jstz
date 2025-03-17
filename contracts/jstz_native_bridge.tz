@@ -1,0 +1,63 @@
+{ parameter (or (ticket %callback (pair nat (option bytes))) (address %deposit)) ;
+  storage
+    (pair (address %exchanger)
+          (address %jstz_address)
+          (option %deposit_request address)) ;
+  code { UNPAIR ;
+         IF_LEFT
+           { DUP 2 ;
+             UNPAIR 3 ;
+             DROP ;
+             SWAP ;
+             IF_NONE { PUSH string "Callback on non-locked deposit" ; FAILWITH } {} ;
+             SWAP ;
+             CONTRACT
+               (or (pair %deposit_ticket address (ticket (pair nat (option bytes))))
+                   (pair %deposit_fa_ticket
+                      (address %receiver)
+                      (option %proxy address)
+                      (ticket %ticket (pair nat (option bytes))))) ;
+             IF_NONE { PUSH string "Invalid rollup address" ; FAILWITH } {} ;
+             PUSH mutez 0 ;
+             DIG 3 ;
+             DIG 3 ;
+             PAIR ;
+             LEFT (pair address (option address) (ticket (pair nat (option bytes)))) ;
+             TRANSFER_TOKENS ;
+             SWAP ;
+             NONE address ;
+             UPDATE 4 ;
+             NIL operation ;
+             DIG 2 ;
+             CONS ;
+             PAIR }
+           { DUP 2 ;
+             UNPAIR 3 ;
+             SWAP ;
+             DROP ;
+             SWAP ;
+             IF_NONE {} { DROP ; PUSH string "Deposit locked" ; FAILWITH } ;
+             AMOUNT ;
+             PUSH mutez 0 ;
+             DUP 2 ;
+             COMPARE ;
+             LE ;
+             IF { DROP 4 ;
+                  PUSH string "Invalid deposit amount: Deposit amount must be greater than 0." ;
+                  FAILWITH }
+                { SELF %callback ;
+                  ADDRESS ;
+                  DIG 2 ;
+                  CONTRACT %mint address ;
+                  IF_NONE
+                    { DROP 4 ; PUSH string "Invalid tez ticket contract" ; FAILWITH }
+                    { DUG 2 ;
+                      TRANSFER_TOKENS ;
+                      DUG 2 ;
+                      SOME ;
+                      UPDATE 4 ;
+                      NIL operation ;
+                      DIG 2 ;
+                      CONS ;
+                      PAIR } } } } }
+

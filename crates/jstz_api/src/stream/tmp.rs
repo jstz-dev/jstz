@@ -14,7 +14,7 @@ pub type ReadableByteStreamController = Todo;
 pub fn get_jsobject_property(
     obj: &JsObject,
     name: &str,
-    context: &mut Context<'_>,
+    context: &mut Context,
 ) -> JsResult<JsValue> {
     let key = PropertyKey::from(js_string!(name));
     let has_prop = obj.has_property(key.clone(), context)?;

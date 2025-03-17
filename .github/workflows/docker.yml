@@ -1,6 +1,10 @@
 name: Build docker image for subsequent jobs
 
 on:
+  push:
+    tags:
+      - "*"
+
   # For manually rebuilding the images
   workflow_dispatch:
     inputs:
@@ -18,110 +22,67 @@ on:
     outputs:
       jstz-cli:
         description: "jstz docker image tag"
-        value: ${{ jobs.build-docker.outputs.jstz-cli }}
+        value: ${{ jobs.build-image.outputs.tag }}
       jstz-rollup:
         description: "jstz-rollup docker image tag"
-        value: ${{ jobs.build-docker.outputs.jstz-rollup }}
+        value: ${{ jobs.build-image.outputs.tag }}
       jstz-node:
         description: "jstz-node docker image tag"
-        value: ${{ jobs.build-docker.outputs.jstz-node }}
-
-env:
-  DOCKER_REGISTRY: ghcr.io
-  DOCKER_IMAGE_BASE: trilitech
+        value: ${{ jobs.build-image.outputs.tag }}
+      jstzd:
+        description: "jstzd docker image tag"
+        value: ${{ jobs.build-image.outputs.tag }}
 
 jobs:
+  set-octez-tag:
+    name: Set octez tag for workflows triggered by tags
+    runs-on: ubuntu-latest
+    outputs:
+      octez-tag: ${{ steps.run.outputs.OCTEZ_TAG }}
+    steps:
+      - id: run
+        run: |
+          input_tag=${{ inputs.octez-tag }}
+          octez_tag=${input_tag:-"master_d21359af_20241220171048"}
+          echo "OCTEZ_TAG=${octez_tag}" >> ${GITHUB_OUTPUT}
   build-kernel:
     name: Build (Kernel)
-    runs-on: ubuntu-latest
+    runs-on: [x86_64, linux, nix]
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2.7.1
-      - name: Rust setup
-        # FIXME: Once rustup adds a command to install a toolchain from rust-toolchain.toml, we can remove this.
-        run: rustup toolchain add 1.73.0 --profile minimal
-
-      - name: Build kernel
-        run: make build-kernel
+      - run: nix --version
+      - name: Format
+        run: nix --accept-flake-config fmt -- --fail-on-change
+      - name: Prevent blst
+        run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
+      - name: Build
+        run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_kernel
       - name: Upload kernel
         id: upload-kernel
         uses: actions/upload-artifact@v4
         with:
           name: jstz-kernel
-          path: target/wasm32-unknown-unknown/release/jstz_kernel.wasm
-
-  build-docker:
-    name: Build (Docker)
-    needs: [build-kernel]
-    runs-on:
-      group: jstz
-    permissions:
-      contents: read
-      packages: write
-    outputs:
-      jstz-cli: ${{ steps.jstz-cli-tag.outputs.tag || '' }}
-      jstz-rollup: ${{ steps.jstz-rollup-tag.outputs.tag || '' }}
-      jstz-node: ${{ steps.jstz-node-tag.outputs.tag || '' }}
+          path: result/lib/jstz_kernel.wasm
+  build-image:
+    name: Build image
+    needs: [build-kernel, set-octez-tag]
     strategy:
       matrix:
         include:
-          - image: jstz-cli
-            dockerfile: ./crates/jstz_cli/Dockerfile
-            platforms: linux/amd64, linux/arm64
-          - image: jstz-node
-            dockerfile: ./crates/jstz_node/Dockerfile
-            platforms: linux/amd64
           - image: jstz-rollup
             dockerfile: ./crates/jstz_rollup/Dockerfile
-            platforms: linux/amd64
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.DOCKER_REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Download jstz-kernel artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: jstz-kernel
-          path: jstz_kernel
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: ${{ env.DOCKER_REGISTRY }}/${{ env.DOCKER_IMAGE_BASE }}/${{ matrix.image }}
-          tags: |
-            type=ref,event=tag
-            {{date 'YYYYMMDD'}}
-      - # Extract tags for jstz
-        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
-        id: jstz-cli-tag
-        if: matrix.image == 'jstz-cli'
-      - # Extract tags for jstz-node
-        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
-        id: jstz-node-tag
-        if: matrix.image == 'jstz-node'
-      - # Extract tags for jstz-rollup
-        run: echo "tag=${{ fromJson(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
-        id: jstz-rollup-tag
-        if: matrix.image == 'jstz-rollup'
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6.3.0
-        with:
-          context: .
-          file: ${{ matrix.dockerfile }}
-          push: true
-          build-args: |
-            OCTEZ_TAG=${{ inputs.octez-tag }}
-            KERNEL_PATH=./jstz_kernel/jstz_kernel.wasm
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          platforms: ${{ matrix.platforms }}
+          - image: jstzd
+            dockerfile: ./crates/jstzd/Dockerfile
+          - image: jstz-cli
+            dockerfile: ./crates/jstz_cli/Dockerfile
+          - image: jstz-node
+            dockerfile: ./crates/jstz_node/Dockerfile
+    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
+    with:
+      octez-tag: ${{ needs.set-octez-tag.outputs.octez-tag }}
+      docker_registry: ghcr.io
+      docker_image_base: jstz-dev/jstz
+      image: ${{ matrix.image }}
+      dockerfile: ${{ matrix.dockerfile }}
+      kernel_artifact_name: jstz-kernel
+    secrets: inherit

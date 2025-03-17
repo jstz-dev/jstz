@@ -1,9 +1,10 @@
 use std::time::Duration;
 
 use anyhow::{bail, Result};
-use jstz_api::KvValue;
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_proto::{
-    context::account::{Address, Nonce},
+    api::KvValue,
+    context::account::{Address, Addressable, Nonce},
     operation::{OperationHash, SignedOperation},
     receipt::Receipt,
 };
@@ -37,11 +38,7 @@ impl JstzClient {
         hash: &OperationHash,
     ) -> Result<Option<Receipt>> {
         let response = self
-            .get(&format!(
-                "{}/operations/{}/receipt",
-                self.endpoint,
-                hash.to_string()
-            ))
+            .get(&format!("{}/operations/{}/receipt", self.endpoint, hash))
             .await?;
 
         if response.status().is_success() {
@@ -71,7 +68,7 @@ impl JstzClient {
         }
     }
 
-    pub async fn get_code(&self, address: &Address) -> Result<Option<String>> {
+    pub async fn get_code(&self, address: &SmartFunctionHash) -> Result<Option<String>> {
         let response = self
             .get(&format!("{}/accounts/{}/code", self.endpoint, address))
             .await?;
@@ -80,6 +77,9 @@ impl JstzClient {
             StatusCode::OK => {
                 let code = response.json::<Option<String>>().await?;
                 Ok(code)
+            }
+            StatusCode::NOT_FOUND => {
+                bail!("Account '{}' not found", address)
             }
             // For any other status, return a generic error
             _ => bail!("Failed to get the code"),
@@ -95,6 +95,9 @@ impl JstzClient {
             StatusCode::OK => {
                 let balance = response.json::<u64>().await?;
                 Ok(balance)
+            }
+            StatusCode::NOT_FOUND => {
+                bail!("Account '{}' not found", address.to_base58())
             }
             _ => bail!("Failed to get the balance"),
         }
@@ -174,7 +177,7 @@ impl JstzClient {
     pub async fn post_operation(&self, operation: &SignedOperation) -> Result<()> {
         let response = self
             .client
-            .post(&format!("{}/operations", self.endpoint))
+            .post(format!("{}/operations", self.endpoint))
             .json(operation)
             .send()
             .await?;

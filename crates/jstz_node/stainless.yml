@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=https://app.stainlessapi.com/config.schema.json
+
+organization:
+  # Name of your organization or company, used to determine the name of the client
+  # and headings.
+  name: jstz # Strangely, the organisation name is used as the name of the root class
+  docs: https://jstz-dev.github.io/jstz/
+  contact: contact@trili.tech
+
+# `targets` define the output targets and their customization options, such as
+# whether to emit the Node SDK and what it's package name should be.
+targets:
+  node:
+    readme_title: Jstz Client
+    package_name: "@jstz-dev/jstz-client"
+    production_repo: "jstz-dev/jstz-client"
+    publish:
+      npm: false
+    browser:
+      state: "allow"
+
+# `client_settings` define settings for the API client, such as extra constructor
+# arguments (used for authentication), retry behavior, idempotency, etc.
+client_settings:
+  opts: {}
+
+# `environments` are a map of the name of the environment (e.g. "sandbox",
+# "production") to the corresponding url to use.
+environments:
+  production: http://localhost:8933
+
+# `pagination` defines [pagination schemes] which provides a template to match
+# endpoints and generate next-page and auto-pagination helpers in the SDKs.
+pagination: []
+
+# `resources` define the structure and organziation for your API, such as how
+# methods and models are grouped together and accessed. See the [configuration
+# guide] for more information.
+#
+# [configuration guide]:
+#   https://app.stainlessapi.com/docs/guides/configure#resources
+resources:
+  accounts:
+    models:
+      account: Account
+      code: ParsedCode
+      kvValue: KvValue
+      nonce: Nonce
+    methods:
+      get: get /accounts/{address}
+      get_balance: get /accounts/{address}/balance
+      get_code: get /accounts/{address}/code
+      get_nonce: get /accounts/{address}/nonce
+      get_kv: get /accounts/{address}/kv
+      get_subkeys:
+        type: http
+        endpoint: get /accounts/{address}/kv/subkeys
+        paginated: false
+    subresources:
+      logs:
+        models:
+          log: LogRecord
+        methods:
+          stream: get /logs/{address}/stream
+        subresources:
+          persistent:
+            methods:
+              get: get /logs/{address}/persistent/requests/{request_id}
+              list:
+                type: http
+                endpoint: get /logs/{address}/persistent/requests
+                paginated: false
+  operations:
+    models:
+      operation: Operation
+      signed_operation: SignedOperation
+      receipt: Receipt
+    methods:
+      inject: post /operations
+      hash: post /operations/hash
+      get_receipt: get /operations/{operation_hash}/receipt
+  $shared:
+    models:
+      publicKey: PublicKey
+      publicKeyHash: PublicKeyHash
+      signature: Signature
+
+settings:
+  license: Apache-2.0
+
+# `readme` is used to configure the code snippets that will be rendered in the
+# README.md of various SDKs. In particular, you can change the `headline`
+# snippet's endpoint and the arguments to call it with.
+readme:
+  example_requests:
+    default:
+      type: request
+      endpoint: get /accounts/{address}/code
+      params: &ref_0
+        address: REPLACE_ME
+    headline:
+      type: request
+      endpoint: get /accounts/{address}/code
+      params: *ref_0
+    pagination:
+      type: request
+      endpoint: get /accounts/{address}/kv/subkeys
+      params:
+        address: REPLACE_ME
+  include_stainless_attribution: false

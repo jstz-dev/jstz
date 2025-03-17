@@ -31,7 +31,7 @@ The possible settings are:
 
 - `headers` (`HeadersInit`, optional)
 
-  Any headers that should be attatched to the request. Either a [`Headers`](./headers.md) object, an `Array` of key-value pairs, or a `Record<string, string>`.
+  Any headers that should be attached to the request. Either a [`Headers`](./headers.md) object, an `Array` of key-value pairs, or a `Record<string, string>`.
 
 - `body` (`BodyInit | null`, optional)
 
@@ -71,14 +71,14 @@ A string property for the URL of the request.
 
 ## Instance Methods
 
-### `Response.arrayBuffer(): Promise<ArrayBuffer>`
+### `Request.arrayBuffer(): Promise<ArrayBuffer>`
 
 Returns a promise that resolves with an `ArrayBuffer`.
 
-### `Response.json(): Promise<any>`
+### `Request.json(): Promise<any>`
 
 Returns a promise that resolves with the result of parsing the body text as JSON.
 
-### `Response.text(): Promise<string>`
+### `Request.text(): Promise<string>`
 
 Returns a promise that resolves with a UTF-16 `string`.

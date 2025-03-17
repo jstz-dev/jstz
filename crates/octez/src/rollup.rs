@@ -74,7 +74,7 @@ impl OctezRollupNode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OctezRollupClient {
     endpoint: String,
     client: reqwest::Client,

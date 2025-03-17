@@ -12,3 +12,7 @@
 
 # Lock files
 **/*.lock
+
+# Ignore generated files:
+crates/jstz_node/openapi.json
+crates/jstz_tps_bench/fa2.js

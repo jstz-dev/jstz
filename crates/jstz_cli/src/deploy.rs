@@ -2,7 +2,7 @@ use boa_engine::JsError;
 use jstz_proto::{
     context::account::ParsedCode,
     operation::{Content, DeployFunction, Operation, SignedOperation},
-    receipt::Content as ReceiptContent,
+    receipt::{ReceiptContent, ReceiptResult},
 };
 use log::{debug, info};
 
@@ -11,7 +11,7 @@ use crate::{
     config::{Config, NetworkName, SmartFunction},
     error::{anyhow, bail, bail_user_error, user_error, Result},
     term::styles,
-    utils::read_file_or_input_or_piped,
+    utils::{read_file_or_input_or_piped, MUTEZ_PER_TEZ},
 };
 
 pub async fn exec(
@@ -23,7 +23,7 @@ pub async fn exec(
     // maximum size of code until the DAL is implemented
     const MAX_CODE_LENGTH: usize = 3915;
 
-    let mut cfg = Config::load()?;
+    let mut cfg = Config::load().await?;
     // Load sandbox if the selected network is Dev and sandbox is not already loaded
     if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {
         bail_user_error!(
@@ -33,8 +33,8 @@ pub async fn exec(
     }
 
     // Get the current user and check if we are logged in
-    account::login_quick(&mut cfg)?;
-    cfg.reload()?;
+    account::login_quick(&mut cfg).await?;
+    cfg.reload().await?;
     let (user_name, user) = cfg.accounts.current_user().ok_or(anyhow!(
         "Failed to setup the account. Please run `{}`.",
         styles::command("jstz login")
@@ -53,7 +53,7 @@ pub async fn exec(
     // 2. Construct operation
     let jstz_client = cfg.jstz_client(&network)?;
 
-    let nonce = jstz_client.get_nonce(&user.address).await?;
+    let nonce = jstz_client.get_nonce(&user.address.clone().into()).await?;
 
     debug!("Nonce: {:?}", nonce);
 
@@ -69,12 +69,13 @@ pub async fn exec(
     let code: ParsedCode = code
         .try_into()
         .map_err(|err: JsError| user_error!("{err}"))?;
+
     let op = Operation {
         source: user.address.clone(),
         nonce,
         content: Content::DeployFunction(DeployFunction {
             function_code: code,
-            account_credit: balance,
+            account_credit: balance * MUTEZ_PER_TEZ,
         }),
     };
 
@@ -95,12 +96,12 @@ pub async fn exec(
 
     debug!("Receipt: {:?}", receipt);
 
-    let address = match receipt.inner {
-        Ok(ReceiptContent::DeployFunction(deploy)) => deploy.address,
-        Ok(_) => {
+    let address = match receipt.result {
+        ReceiptResult::Success(ReceiptContent::DeployFunction(deploy)) => deploy.address,
+        ReceiptResult::Success(_) => {
             bail!("Expected a `DeployFunction` receipt, but got something else.")
         }
-        Err(err) => {
+        ReceiptResult::Failed(err) => {
             bail_user_error!("Failed to deploy smart function with error {err:?}.")
         }
     };

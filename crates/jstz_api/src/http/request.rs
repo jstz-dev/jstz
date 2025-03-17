@@ -10,10 +10,10 @@ use std::str::FromStr;
 
 use boa_engine::{
     js_string,
-    object::{builtins::JsPromise, Object},
+    object::{builtins::JsPromise, ErasedObject},
     property::Attribute,
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{custom_trace, Finalize, GcRefMut, Trace};
 use http::{Method, Request as InnerRequest, Uri};
@@ -29,7 +29,7 @@ use url::Url;
 
 use super::{
     body::{Body, BodyWithType, HttpBody},
-    header::{Headers, HeadersClass},
+    header::{Header, Headers, HeadersClass},
 };
 
 pub enum RequestInfo {
@@ -44,6 +44,7 @@ pub struct RequestOptions {
     body: BodyWithType,
 }
 
+#[derive(JsData)]
 pub struct Request {
     request: InnerRequest<Body>,
     headers: JsNativeObject<Headers>,
@@ -53,7 +54,7 @@ pub struct Request {
 impl Request {
     pub fn from_http_request(
         request: http::Request<HttpBody>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self> {
         let url = Url::from_str(&request.uri().to_string()).map_err(|_| {
             JsError::from_native(JsNativeError::typ().with_message("Expected valid URL"))
@@ -77,6 +78,10 @@ impl Request {
             headers,
             url,
         })
+    }
+
+    pub fn header(&self, key: &str) -> JsResult<Header> {
+        self.headers().deref().get(key)
     }
 }
 
@@ -114,7 +119,7 @@ impl Finalize for Request {
 }
 
 unsafe impl Trace for Request {
-    custom_trace!(this, {
+    custom_trace!(this, mark, {
         mark(&this.headers);
         mark(this.request.body());
     });
@@ -156,7 +161,7 @@ impl Request {
     pub fn new(
         info: RequestInfo,
         options: RequestOptions,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self> {
         // 1. Let `request` be null
         // 3. Let `base_url` be `this's` relevant settings object's API base URL
@@ -289,27 +294,31 @@ impl Request {
         &self.headers
     }
 
-    pub fn array_buffer(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn array_buffer(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         self.request.body_mut().array_buffer(context)
     }
 
-    pub fn json(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn json(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         self.request.body_mut().json(context)
     }
 
-    pub fn text(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn text(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         self.request.body_mut().text(context)
     }
 
     pub fn body_used(&self) -> bool {
         self.request.body().is_used()
     }
+
+    pub fn body(&mut self) -> &mut Body {
+        self.request.body_mut()
+    }
 }
 
 pub struct RequestClass;
 
 impl Request {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -322,7 +331,7 @@ impl Request {
 }
 
 impl RequestClass {
-    fn method(context: &mut Context<'_>) -> Accessor {
+    fn method(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Request,
@@ -331,7 +340,7 @@ impl RequestClass {
         )
     }
 
-    fn url(context: &mut Context<'_>) -> Accessor {
+    fn url(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Request,
@@ -340,7 +349,7 @@ impl RequestClass {
         )
     }
 
-    fn headers(context: &mut Context<'_>) -> Accessor {
+    fn headers(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Request,
@@ -349,7 +358,7 @@ impl RequestClass {
         )
     }
 
-    fn body_used(context: &mut Context<'_>) -> Accessor {
+    fn body_used(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Request,
@@ -361,7 +370,7 @@ impl RequestClass {
     fn array_buffer(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut request = Request::try_from_js(this)?;
 
@@ -371,7 +380,7 @@ impl RequestClass {
     fn text(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut request = Request::try_from_js(this)?;
 
@@ -381,7 +390,7 @@ impl RequestClass {
     fn json(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut request = Request::try_from_js(this)?;
 
@@ -390,7 +399,7 @@ impl RequestClass {
 }
 
 impl TryFromJs for RequestInfo {
-    fn try_from_js(value: &JsValue, _context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, _context: &mut Context) -> JsResult<Self> {
         if let Some(string) = value.as_string() {
             Ok(Self::String(string.to_std_string_escaped()))
         } else {
@@ -400,7 +409,7 @@ impl TryFromJs for RequestInfo {
     }
 }
 
-fn method_try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Method> {
+fn method_try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Method> {
     let string: String = value.try_js_into(context)?;
 
     Method::from_str(&string).map_err(|_| {
@@ -409,7 +418,7 @@ fn method_try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Me
 }
 
 impl TryFromJs for RequestOptions {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let obj = value.as_object().ok_or_else(|| {
             JsError::from_native(JsNativeError::typ().with_message("Expected object"))
         })?;
@@ -452,7 +461,7 @@ impl NativeClass for RequestClass {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self::Instance> {
         let info: RequestInfo = args.get_or_undefined(0).try_js_into(context)?;
 
@@ -464,7 +473,7 @@ impl NativeClass for RequestClass {
         Request::new(info, options, context)
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let body_used = Self::body_used(class.context());
         let headers = Self::headers(class.context());
         let method = Self::method(class.context());
@@ -498,7 +507,7 @@ impl NativeClass for RequestClass {
 pub struct RequestApi;
 
 impl jstz_core::Api for RequestApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<RequestClass>(context)
             .expect("The `Request` class shouldn't exist yet")
     }

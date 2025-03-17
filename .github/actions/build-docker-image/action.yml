@@ -1,0 +1,89 @@
+name: Build docker image for jstz binaries
+inputs:
+  platform:
+    description: Platform that the binary can run on, e.g. linux, macos
+    required: true
+  arch:
+    description: Architecture of CPU that the binary can run on, e.g. arm64, amd64
+    required: true
+  repo_token:
+    description: API token that gives access to manage the target repo
+    required: true
+  octez-tag:
+    description: "tezos/tezos docker tag to be used"
+    required: true
+  docker_registry:
+    description: Docker registry
+    required: true
+  docker_registry_username:
+    description: Docker registry username
+    required: true
+  docker_registry_password:
+    description: Docker registry password
+    required: true
+  docker_image_base:
+    description: Docker image base
+    required: true
+  image:
+    description: Image
+    required: true
+  dockerfile:
+    description: Dockerfile
+    required: true
+  kernel_artefact_name:
+    description: Kernel artefact name
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/checkout@v4
+    - run: echo "${{ runner.temp }}"
+      shell: bash
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+    - name: Login to Docker registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ inputs.docker_registry }}
+        username: ${{ inputs.docker_registry_username }}
+        password: ${{ inputs.docker_registry_password }}
+    - name: Download jstz-kernel artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.kernel_artefact_name }}
+        path: jstz_kernel
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v3
+      with:
+        images: ${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}
+        tags: |
+          type=ref,event=tag
+          {{sha}}
+    - name: Build and push Docker image
+      id: build-image
+      uses: docker/build-push-action@v6.3.0
+      with:
+        context: .
+        file: ${{ inputs.dockerfile }}
+        build-args: |
+          OCTEZ_TAG=${{ inputs.octez-tag }}
+          KERNEL_PATH=./jstz_kernel/jstz_kernel.wasm
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        labels: ${{ steps.meta.outputs.labels }}
+        platforms: ${{ inputs.platform }}
+        outputs: type=image,"name=${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}",push-by-digest=true,name-canonical=true,push=true
+    - name: Export digest
+      shell: bash
+      run: |
+        mkdir -p ${{ runner.temp }}/digests/${{ inputs.image }}
+        digest="${{ steps.build-image.outputs.digest }}"
+        touch "${{ runner.temp }}/digests/${{ inputs.image }}/${digest#sha256:}"
+    - name: Upload digest
+      uses: actions/upload-artifact@v4
+      with:
+        name: digests-${{ inputs.image }}-${{ inputs.platform }}-${{ inputs.arch }}
+        path: ${{ runner.temp }}/digests/${{ inputs.image }}/*
+        if-no-files-found: error
+        retention-days: 1

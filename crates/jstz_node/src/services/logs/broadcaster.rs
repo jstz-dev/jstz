@@ -1,18 +1,20 @@
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, convert::Infallible, sync::Arc, time::Duration};
 
-use actix_web::rt::time::interval;
-use actix_web_lab::{
-    sse::{self, Data, Event, Sse},
-    util::InfallibleStream,
-};
+use axum::response::{sse, Sse};
 use futures_util::future;
-use jstz_proto::context::account::Address;
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use parking_lot::Mutex;
 use tokio::sync::mpsc::{self, Sender};
+use tokio::time::interval;
 use tokio_stream::wrappers::ReceiverStream;
 
+type InfallibleSseEvent = Result<sse::Event, Infallible>;
+pub type InfallibleSSeStream = ReceiverStream<Result<sse::Event, Infallible>>;
+
+/// Broadcasts messages to all connected clients through Server-sent Events
+/// <https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events>.
 pub struct Broadcaster {
-    clients: Mutex<HashMap<Address, Vec<Sender<Event>>>>, // TODO: Use a read-write lock instead?
+    clients: Mutex<HashMap<SmartFunctionHash, Vec<Sender<InfallibleSseEvent>>>>, // TODO: Use a read-write lock instead?
 }
 
 // Pings clients every 10 seconds
@@ -20,24 +22,18 @@ const PING_INTERVAL: u64 = 10;
 
 impl Broadcaster {
     /// Constructs new broadcaster and spawns ping loop responsible for removing stale clients.
-    pub fn create() -> Arc<Self> {
-        let this = Arc::new(Broadcaster::new());
+    pub(crate) fn new() -> Arc<Self> {
+        let this = Arc::new(Broadcaster::default());
 
         Broadcaster::spawn_ping(Arc::clone(&this));
 
         this
     }
 
-    fn new() -> Self {
-        Broadcaster {
-            clients: Mutex::new(Default::default()),
-        }
-    }
-
     /// Pings clients every `PING_INTERVAL` seconds to see if they are alive and remove them from the broadcast
     /// list if not.
     fn spawn_ping(this: Arc<Self>) {
-        actix_web::rt::spawn(async move {
+        tokio::task::spawn(async move {
             let mut interval = interval(Duration::from_secs(PING_INTERVAL));
 
             loop {
@@ -51,13 +47,16 @@ impl Broadcaster {
     async fn remove_stale_clients(&self) {
         let clients = self.clients.lock().clone();
 
-        let mut responsive_clients: HashMap<Address, Vec<Sender<Event>>> = HashMap::new();
+        let mut responsive_clients: HashMap<
+            SmartFunctionHash,
+            Vec<Sender<InfallibleSseEvent>>,
+        > = HashMap::new();
 
-        for (contract_address, senders) in clients {
+        for (function_address, senders) in clients {
             let mut responsive_senders = Vec::new();
             for sender in senders {
                 if sender
-                    .send(sse::Event::Comment("ping".into()))
+                    .send(Ok(sse::Event::default().data("ping")))
                     .await
                     .is_ok()
                 {
@@ -65,7 +64,7 @@ impl Broadcaster {
                 }
             }
             if !responsive_senders.is_empty() {
-                responsive_clients.insert(contract_address, responsive_senders);
+                responsive_clients.insert(function_address, responsive_senders);
             }
         }
 
@@ -75,33 +74,48 @@ impl Broadcaster {
     /// Registers client with broadcaster, returning an SSE response body.
     pub async fn new_client(
         &self,
-        contract_address: Address,
-    ) -> Sse<InfallibleStream<ReceiverStream<sse::Event>>> {
+        function_address: SmartFunctionHash,
+    ) -> Sse<InfallibleSSeStream> {
         let (tx, rx) = mpsc::channel(10);
 
-        tx.send(sse::Data::new("connected").into()).await.unwrap();
+        tx.send(Ok(sse::Event::default().data("connected")))
+            .await
+            .unwrap();
 
         self.clients
             .lock()
-            .entry(contract_address)
+            .entry(function_address)
             .or_default()
             .push(tx);
 
-        Sse::from_infallible_receiver(rx)
+        let stream = ReceiverStream::new(rx);
+        let sse_response = Sse::new(stream);
+        sse_response.keep_alive(
+            sse::KeepAlive::new()
+                .interval(Duration::from_secs(3))
+                .text("keep-alive-ping"),
+        )
     }
 
     /// Broadcasts `msg` to all clients.
-    pub async fn broadcast(&self, contract_address: &Address, msg: &str) {
+    pub async fn broadcast(&self, function_address: &SmartFunctionHash, msg: &str) {
         let clients = self.clients.lock().clone();
 
-        if let Some(clients) = clients.get(contract_address) {
+        if let Some(clients) = clients.get(function_address) {
             let send_futures = clients
                 .iter()
-                .map(|client| client.send(Data::new(msg).into()));
-
+                .map(|client| client.send(Ok(sse::Event::default().data(msg))));
             // try to send to all clients, ignoring failures
             // disconnected clients will get swept up by `remove_stale_clients`
             let _ = future::join_all(send_futures).await;
+        }
+    }
+}
+
+impl Default for Broadcaster {
+    fn default() -> Self {
+        Broadcaster {
+            clients: Mutex::new(Default::default()),
         }
     }
 }

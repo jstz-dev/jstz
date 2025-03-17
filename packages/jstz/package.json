@@ -1,14 +1,19 @@
 {
-  "name": "@tezos/jstz",
+  "name": "@jstz-dev/jstz",
   "description": "TypeScript SDK for jstz 👨‍⚖️",
   "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
   "version": "0.0.0",
-  "main": "index.ts",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "check:types": "tsc --noEmit",
     "build": "tsc --outDir dist"
   },
+  "files": [
+    "dist"
+  ],
   "dependencies": {
-    "@tezos/jstz-types": "^0.0.0"
+    "@jstz-dev/types": "^0.0.0"
   }
 }

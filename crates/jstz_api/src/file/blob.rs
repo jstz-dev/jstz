@@ -9,16 +9,19 @@
 //! [spec]: https://w3c.github.io/FileAPI/
 //! [infra-spec]: https://infra.spec.whatwg.org/
 
-use crate::idl::{ArrayBufferLike, JsBufferSource};
+use std::cmp::{max, min};
+
 use boa_engine::{
+    builtins::{array_buffer::ArrayBuffer, dataview::DataView, typed_array::TypedArray},
     js_string,
     object::{
         builtins::{JsArray, JsArrayBuffer, JsPromise},
-        Object,
+        ErasedObject,
     },
     property::Attribute,
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsError, JsNativeError, JsResult, JsString, JsValue,
+    NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
 use jstz_core::{
@@ -28,9 +31,10 @@ use jstz_core::{
     },
     value::IntoJs,
 };
-use std::cmp::{max, min};
 
-#[derive(Trace, Finalize, Clone)]
+use crate::idl::{BufferSource, JsBufferSource};
+
+#[derive(Trace, Finalize, JsData, Clone)]
 pub struct Blob {
     // TODO: Use https://docs.rs/bytes/1.5.0/bytes/
     bytes: Vec<u8>,
@@ -55,7 +59,7 @@ fn collect_code_points(mut position: &[u16]) -> (Vec<u16>, &[u16]) {
 }
 
 // https://w3c.github.io/FileAPI/#convert-line-endings-to-native
-fn convert_line_endings_to_native(s: &[u16]) -> Vec<u16> {
+fn convert_line_endings_to_native(s: Vec<u16>) -> Vec<u16> {
     // 1. Let native line ending be be the code point U+000A LF.
     let native_line_ending: u16 = 0x000A;
     // 3. Set result to the empty string.
@@ -64,7 +68,7 @@ fn convert_line_endings_to_native(s: &[u16]) -> Vec<u16> {
     let position = s;
     // 5. Let token be the result of collecting a sequence of code points that are not equal
     //    to U+000A LF or U+000D CR from s given position.
-    let (mut token, mut position) = collect_code_points(position);
+    let (mut token, mut position) = collect_code_points(&position);
     // 6. Append token to result.
     result.append(&mut token);
     // 7. While position is not past the end of s:
@@ -131,8 +135,8 @@ fn utf8_encoding(s: &[u16]) -> String {
 fn process_blob_parts(
     blob_parts: BlobParts,
     options: &BlobPropertyBag,
-    context: &mut Context<'_>,
-) -> Vec<u8> {
+    context: &mut Context,
+) -> JsResult<Vec<u8>> {
     let BlobParts(blob_parts) = blob_parts;
     // 1. Let bytes be an empty sequence of bytes.
     let mut bytes: Vec<u8> = vec![];
@@ -142,7 +146,7 @@ fn process_blob_parts(
             // 1. If element is a USVString, run the following substeps:
             BlobPart::String(string) => {
                 // 1. Let s be element.
-                let s = string.as_slice();
+                let s = string.to_vec();
                 // 2. If the endings member of options is "native", set s to the result
                 //    of converting line endings to native of element.
                 let s = match options {
@@ -158,9 +162,7 @@ fn process_blob_parts(
             // 2. If element is a BufferSource, get a copy of the bytes held by the
             //    buffer source, and append those bytes to bytes.
             BlobPart::BufferSource(buffer_source) => {
-                let buffer_data = buffer_source.to_array_buffer_data(context).unwrap();
-                let mut b: Vec<u8> =
-                    buffer_data.as_slice().unwrap().iter().copied().collect();
+                let mut b = buffer_source.clone_data(context)?;
                 bytes.append(&mut b)
             }
             // 3. If element is a Blob, append the bytes it represents to bytes.
@@ -168,7 +170,7 @@ fn process_blob_parts(
         }
     }
     // 3. Return bytes.
-    bytes
+    Ok(bytes)
 }
 
 impl Blob {
@@ -176,7 +178,7 @@ impl Blob {
     pub fn new(
         blob_parts: Option<BlobParts>,
         options: Option<BlobPropertyBag>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self> {
         // 1. If invoked with zero parameters, return a new Blob object consisting of
         //    0 bytes, with size set to 0, and with type set to the empty string.
@@ -198,7 +200,7 @@ impl Blob {
             (Some(blob_parts), Some(options)) => (blob_parts, options),
         };
         // 2. Let bytes be the result of processing blob parts given blobParts and options.
-        let bytes = process_blob_parts(blob_parts, &options, context);
+        let bytes = process_blob_parts(blob_parts, &options, context)?;
         let mut t = String::new();
         // 3. If the type member of the options argument is not the empty string, run the
         //    following sub-steps (see normalize_type)
@@ -223,17 +225,17 @@ impl Blob {
         self.type_.clone()
     }
 
-    pub fn text(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn text(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         let s = js_string!(bytes_to_string(&self.bytes)?);
-        JsPromise::resolve(s, context)
+        Ok(JsPromise::resolve(s, context))
     }
 
-    pub fn array_buffer(&mut self, context: &mut Context<'_>) -> JsResult<JsPromise> {
+    pub fn array_buffer(&mut self, context: &mut Context) -> JsResult<JsPromise> {
         let b = &self.bytes;
-        JsPromise::resolve(
+        Ok(JsPromise::resolve(
             JsArrayBuffer::from_byte_block(b.to_vec(), context)?,
             context,
-        )
+        ))
     }
 
     // https://w3c.github.io/FileAPI/#slice-blob
@@ -298,7 +300,7 @@ impl Blob {
 }
 
 impl Blob {
-    pub fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    pub fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -317,7 +319,7 @@ pub enum BlobPart {
 }
 
 impl TryFromJs for BlobPart {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         if value.is_string() {
             let string: String = value.try_js_into(context)?;
             return Ok(Self::String(js_string!(string)));
@@ -325,7 +327,7 @@ impl TryFromJs for BlobPart {
         let obj = value.as_object().ok_or_else(|| {
             JsError::from_native(JsNativeError::typ().with_message("Expected object"))
         })?;
-        if obj.is_array_buffer() || obj.is_typed_array() || obj.is_data_view() {
+        if obj.is::<ArrayBuffer>() || obj.is::<TypedArray>() || obj.is::<DataView>() {
             return Ok(Self::BufferSource(JsBufferSource::try_from_js(
                 value, context,
             )?));
@@ -339,7 +341,7 @@ impl TryFromJs for BlobPart {
 pub struct BlobParts(Vec<BlobPart>);
 
 impl TryFromJs for BlobParts {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let mut vec: Vec<BlobPart> = vec![];
 
         if value.is_object() {
@@ -363,7 +365,7 @@ pub enum Endings {
 }
 
 impl TryFromJs for Endings {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let endings = String::try_from_js(value, context)?;
         match endings.as_str() {
             "transparent" => Ok(Endings::Transparent),
@@ -383,7 +385,7 @@ pub struct BlobPropertyBag {
 }
 
 impl TryFromJs for BlobPropertyBag {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let obj = value.as_object().ok_or_else(|| {
             JsError::from_native(JsNativeError::typ().with_message("Expected object"))
         })?;
@@ -414,7 +416,7 @@ impl TryFromJs for BlobPropertyBag {
 pub struct BlobClass;
 
 impl BlobClass {
-    fn size(context: &mut Context<'_>) -> Accessor {
+    fn size(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Blob,
@@ -423,7 +425,7 @@ impl BlobClass {
         )
     }
 
-    fn type_(context: &mut Context<'_>) -> Accessor {
+    fn type_(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Blob,
@@ -435,7 +437,7 @@ impl BlobClass {
     fn text(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut blob = Blob::try_from_js(this)?;
 
@@ -445,7 +447,7 @@ impl BlobClass {
     fn array_buffer(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut blob = Blob::try_from_js(this)?;
 
@@ -455,7 +457,7 @@ impl BlobClass {
     fn slice(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let blob = Blob::try_from_js(this)?;
         let start: Option<i64> = args.get_or_undefined(0).try_js_into(context)?;
@@ -477,7 +479,7 @@ impl NativeClass for BlobClass {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self::Instance> {
         let blob_parts: Option<BlobParts> =
             args.get_or_undefined(0).try_js_into(context)?;
@@ -487,7 +489,7 @@ impl NativeClass for BlobClass {
         Blob::new(blob_parts, options, context)
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let size = Self::size(class.context());
         let type_ = Self::type_(class.context());
 
@@ -517,7 +519,7 @@ impl NativeClass for BlobClass {
 pub struct BlobApi;
 
 impl jstz_core::Api for BlobApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<BlobClass>(context)
             .expect("The `Blob` class shouldn't exist yet")
     }

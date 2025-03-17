@@ -1,8 +1,8 @@
 use std::io::Write;
 
 use boa_engine::{
-    js_string, object::Object, property::Attribute, Context, JsArgs, JsError,
-    JsNativeError, JsResult, JsValue, NativeFunction,
+    js_string, object::ErasedObject, property::Attribute, Context, JsArgs, JsData,
+    JsError, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
 use encoding_rs::{Decoder, DecoderResult, Encoding};
@@ -12,7 +12,7 @@ use jstz_core::{
     value::{IntoJs, TryFromJs},
 };
 
-use crate::idl::{ArrayBufferLike, JsBufferSource};
+use crate::idl::{BufferSource, JsBufferSource};
 // https://encoding.spec.whatwg.org/#interface-textdecoder
 //
 // dictionary TextDecoderOptions {
@@ -39,7 +39,7 @@ use crate::idl::{ArrayBufferLike, JsBufferSource};
 //   readonly attribute boolean ignoreBOM;
 // };
 
-#[derive(Trace, Finalize)]
+#[derive(Trace, Finalize, JsData)]
 pub struct TextDecoder {
     encoding: &'static Encoding,
     #[unsafe_ignore_trace]
@@ -57,7 +57,7 @@ pub struct TextDecoderOptions {
 }
 
 impl TryFromJs for TextDecoderOptions {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let obj = value.as_object().ok_or_else(|| {
             JsError::from_native(JsNativeError::typ().with_message("Expected `JsObject`"))
         })?;
@@ -78,13 +78,13 @@ impl TryFromJs for TextDecoderOptions {
     }
 }
 
-#[derive(Trace, Finalize, Default)]
+#[derive(Trace, Finalize, JsData, Default)]
 pub struct TextDecodeOptions {
     stream: bool,
 }
 
 impl TryFromJs for TextDecodeOptions {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let obj = value.as_object().ok_or_else(|| {
             JsError::from_native(JsNativeError::typ().with_message("Expected `JsObject`"))
         })?;
@@ -100,7 +100,7 @@ impl TryFromJs for TextDecodeOptions {
 }
 
 impl TextDecoder {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -213,14 +213,14 @@ impl TextDecoder {
         })?;
 
         //  4. Let output be the I/O queue of scalar values <<end-of-queue>>.
-        let mut output: Vec<u16> = Vec::with_capacity(
+        let mut output: Vec<u16> = vec![
+            0;
             self.decoder
                 .max_utf16_buffer_length(input.len())
                 .ok_or_else(|| {
                     JsNativeError::eval().with_message("Input too large for buffer")
-                })?,
-        );
-        output.resize(output.capacity(), 0);
+                })?
+        ];
 
         //  5. While true:
         //    1. Let item be the result of reading from this's I/O queue.
@@ -271,7 +271,7 @@ impl TextDecoder {
 #[derive(Default, Clone, Trace, Finalize)]
 pub struct TextDecoderClass;
 impl TextDecoderClass {
-    fn encoding(context: &mut Context<'_>) -> Accessor {
+    fn encoding(context: &mut Context) -> Accessor {
         accessor!(
             context,
             TextDecoder,
@@ -279,7 +279,7 @@ impl TextDecoderClass {
             get:((this, context) => Ok(this.encoding().into_js(context)))
         )
     }
-    fn fatal(context: &mut Context<'_>) -> Accessor {
+    fn fatal(context: &mut Context) -> Accessor {
         accessor!(
             context,
             TextDecoder,
@@ -287,7 +287,7 @@ impl TextDecoderClass {
             get:((this, _context) => Ok(this.fatal().into()))
         )
     }
-    fn ignore_bom(context: &mut Context<'_>) -> Accessor {
+    fn ignore_bom(context: &mut Context) -> Accessor {
         accessor!(
             context,
             TextDecoder,
@@ -306,19 +306,15 @@ impl TextDecoderClass {
             args.get_or_undefined(0).try_js_into(context)?;
         let options = args.get_or_undefined(1).try_js_into(context)?;
 
-        // TODO: BORROW CHECKER ISSUE
-        // We cannot borrow the slice directly from `input` because we need to create
-        // 2 temporaries: a `JsArrayBufferData` and a `GcRefMut`.
         let result = match input {
             Some(input) => {
-                let array_buffer_data = input.to_array_buffer_data(context)?;
-                let array_buffer_slice = array_buffer_data.as_slice_mut();
-                text_decoder.decode(array_buffer_slice.as_deref(), options)
+                let bytes = input.clone_data(context)?;
+                text_decoder.decode(Some(&bytes), options)
             }
             None => text_decoder.decode(None, options),
         }?;
 
-        Ok(js_string!(result).into())
+        Ok(js_string!(result.as_slice()).into())
     }
 }
 
@@ -330,7 +326,7 @@ impl NativeClass for TextDecoderClass {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<TextDecoder> {
         let label: Option<String> = args.get_or_undefined(0).try_js_into(context)?;
         let options: Option<TextDecoderOptions> =
@@ -342,7 +338,7 @@ impl NativeClass for TextDecoderClass {
         })
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let encoding = Self::encoding(class.context());
         let fatal = Self::fatal(class.context());
         let ignore_bom = Self::ignore_bom(class.context());
@@ -362,7 +358,7 @@ impl NativeClass for TextDecoderClass {
 
 pub struct TextDecoderApi;
 impl jstz_core::Api for TextDecoderApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<TextDecoderClass>(context)
             .expect("The `TextDecoder` class shouldn't exist yet");
     }

@@ -8,7 +8,7 @@ All operations on `SmartFunction` are asynchronous.
 
 ## Quick Start
 
-We may deploy a new smart function programatically by calling `SmartFunction.create()` with a single `string` argument.
+We may deploy a new smart function programmatically by calling `SmartFunction.create()` with a single `string` argument.
 The smart function code must be valid ECMAScript. TypeScript is not supported when deploying functions using
 `SmartFunction.create`.
 

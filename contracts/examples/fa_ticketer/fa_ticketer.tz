@@ -1,0 +1,140 @@
+{ parameter
+    (or (pair %withdraw (address %receiver) (ticket %ticket (pair nat (option bytes))))
+        (nat %deposit)) ;
+  storage
+    (pair (big_map %metadata string bytes)
+          (or %token (address %fa12) (pair %fa2 address nat))
+          (pair %content nat (option bytes))
+          (nat %total_supply)) ;
+  code { LAMBDA
+           (pair (or address (pair address nat)) nat address address)
+           operation
+           { UNPAIR 4 ;
+             IF_LEFT
+               { CONTRACT %transfer (pair (address %from) (address %to) (nat %value)) ;
+                 IF_NONE { PUSH string "INVALID_FA12" ; FAILWITH } {} ;
+                 PUSH mutez 0 ;
+                 DIG 2 ;
+                 DIG 4 ;
+                 DIG 4 ;
+                 PAIR 3 ;
+                 TRANSFER_TOKENS }
+               { UNPAIR ;
+                 CONTRACT %transfer
+                   (list (pair (address %from_) (list %txs (pair (address %to_) (nat %token_id) (nat %amount))))) ;
+                 IF_NONE { PUSH string "INVALID_FA2" ; FAILWITH } {} ;
+                 PUSH mutez 0 ;
+                 NIL (pair address (list (pair address nat nat))) ;
+                 NIL (pair address nat nat) ;
+                 DIG 5 ;
+                 DIG 5 ;
+                 DIG 7 ;
+                 PAIR 3 ;
+                 CONS ;
+                 DIG 4 ;
+                 PAIR ;
+                 CONS ;
+                 TRANSFER_TOKENS } } ;
+         LAMBDA
+           unit
+           unit
+           { PUSH mutez 0 ;
+             AMOUNT ;
+             COMPARE ;
+             GT ;
+             IF { DROP ; PUSH string "XTZ_DEPOSIT_DISALLOWED" ; FAILWITH } {} } ;
+         DIG 2 ;
+         UNPAIR ;
+         IF_LEFT
+           { UNPAIR ;
+             SWAP ;
+             READ_TICKET ;
+             SWAP ;
+             DROP ;
+             UNPAIR ;
+             SWAP ;
+             UNPAIR ;
+             DUP 5 ;
+             GET 5 ;
+             SWAP ;
+             COMPARE ;
+             EQ ;
+             IF {} { PUSH string "UNEXPECTED_TKT_CONTENT" ; FAILWITH } ;
+             SELF_ADDRESS ;
+             DUP 3 ;
+             COMPARE ;
+             NEQ ;
+             IF { PUSH string "UNAUTHORIZED_TKTR" ; FAILWITH } {} ;
+             UNIT ;
+             DIG 5 ;
+             SWAP ;
+             EXEC ;
+             DROP ;
+             DUP 4 ;
+             GET 6 ;
+             DUP 2 ;
+             COMPARE ;
+             GT ;
+             IF { PUSH string "TOTAL_SUPPLY_EXCEEDED" ; FAILWITH }
+                { DUP ; DUP 5 ; GET 6 ; SUB ; ABS } ;
+             DIG 4 ;
+             SWAP ;
+             UPDATE 6 ;
+             DUG 3 ;
+             DUP 4 ;
+             GET 3 ;
+             PAIR 4 ;
+             DIG 2 ;
+             SWAP ;
+             EXEC ;
+             SWAP ;
+             NIL operation }
+           { UNIT ;
+             DIG 3 ;
+             SWAP ;
+             EXEC ;
+             DROP ;
+             DUP ;
+             DUP 3 ;
+             GET 6 ;
+             ADD ;
+             PUSH nat
+                  115792089237316195423570985008687907853269984665640564039457584007913129639936 ;
+             DUP 2 ;
+             COMPARE ;
+             GE ;
+             IF { DIG 2 ; DROP 2 ; PUSH string "TOTAL_SUPPLY_EXCEED_MAX" ; FAILWITH }
+                { DIG 2 ; SWAP ; UPDATE 6 } ;
+             SELF_ADDRESS ;
+             SENDER ;
+             DUP 4 ;
+             DUP 4 ;
+             GET 5 ;
+             TICKET ;
+             IF_NONE { PUSH string "TKT_CREATION_FAILED" ; FAILWITH } {} ;
+             DIG 2 ;
+             DUP 3 ;
+             DIG 5 ;
+             DUP 6 ;
+             GET 3 ;
+             PAIR 4 ;
+             DIG 4 ;
+             SWAP ;
+             EXEC ;
+             DIG 2 ;
+             CONTRACT (ticket (pair nat (option bytes))) ;
+             IF_NONE { PUSH string "FAILED_TO_GET_TKT_ENTRYPOINT" ; FAILWITH } {} ;
+             PUSH mutez 0 ;
+             DIG 3 ;
+             TRANSFER_TOKENS ;
+             DIG 2 ;
+             NIL operation ;
+             DIG 2 ;
+             CONS } ;
+         DIG 2 ;
+         CONS ;
+         PAIR } ;
+  view "get_total_supply" unit nat { CDR ; GET 6 } ;
+  view "get_content" unit (pair nat (option bytes)) { CDR ; GET 5 } ;
+  view "get_token" unit (or (address %fa12) (pair %fa2 address nat)) { CDR ; GET 3 } }
+

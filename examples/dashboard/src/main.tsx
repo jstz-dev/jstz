@@ -1,8 +1,8 @@
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
-import { Jstz, User } from "@tezos/jstz-sdk";
+import { Jstz, User } from "@jstz-dev/sdk";
 
-const DEFAULT_ENDPOINT = "localhost:8933";
+const DEFAULT_ENDPOINT = "http://localhost:8933";
 
 const SignUp: React.FC<{ addUser: (name: string, user: User) => void }> = ({
   addUser,
@@ -150,7 +150,7 @@ const RunSmartFunction: React.FC<{ endpoint: string; user: User }> = ({
 
   const runFunction = async () => {
     const result = await new Jstz(endpoint).run(user, { uri });
-    setFunctionResult(result.statusCode);
+    setFunctionResult(result.status_code);
   };
 
   return (

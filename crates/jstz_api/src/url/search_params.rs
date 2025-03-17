@@ -1,10 +1,12 @@
+use std::fmt::{self, Display};
+
 use boa_engine::{
     builtins, js_string,
-    object::{builtins::JsArray, Object},
+    object::{builtins::JsArray, ErasedObject},
     property::Attribute,
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsString, JsValue,
-    NativeFunction,
+    Context, JsArgs, JsData, JsError, JsNativeError, JsObject, JsResult, JsString,
+    JsValue, NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{
@@ -26,7 +28,7 @@ pub type Value = String;
 /// the query string of a `Url`.
 ///
 /// [spec] https://url.spec.whatwg.org/#urlsearchparams
-#[derive(Default)]
+#[derive(JsData, Default)]
 pub struct UrlSearchParams {
     values: Vec<(Name, Value)>,
     pub(crate) url: Option<JsNativeObject<Url>>,
@@ -44,7 +46,7 @@ unsafe impl Trace for UrlSearchParams {
 impl JsNativeObjectToString for UrlSearchParams {
     fn to_string(
         this: &JsNativeObject<Self>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         Ok(this.deref().to_string().into_js(context))
     }
@@ -227,13 +229,17 @@ impl UrlSearchParams {
     }
 }
 
-impl ToString for UrlSearchParams {
-    fn to_string(&self) -> String {
-        self.values
-            .iter()
-            .map(|(k, v)| format!("{k}={v}"))
-            .collect::<Vec<String>>()
-            .join("&")
+impl Display for UrlSearchParams {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            self.values
+                .iter()
+                .map(|(k, v)| format!("{k}={v}"))
+                .collect::<Vec<String>>()
+                .join("&")
+        )
     }
 }
 
@@ -245,7 +251,7 @@ pub enum UrlSearchParamsInit {
 
 fn js_array_into_url_search_params_values(
     obj: JsObject,
-    context: &mut Context<'_>,
+    context: &mut Context,
 ) -> JsResult<Vec<(Name, Value)>> {
     let arr = JsArray::from_object(obj)?;
 
@@ -272,10 +278,10 @@ impl UrlSearchParams {
             .collect()
     }
 
-    fn from_init(init: UrlSearchParamsInit, context: &mut Context<'_>) -> JsResult<Self> {
+    fn from_init(init: UrlSearchParamsInit, context: &mut Context) -> JsResult<Self> {
         match init {
             UrlSearchParamsInit::Object(obj) => {
-                let arr = builtins::object::Object::entries(
+                let arr = builtins::object::OrdinaryObject::entries(
                     &JsValue::undefined(),
                     &[obj.into()],
                     context,
@@ -302,7 +308,7 @@ impl UrlSearchParams {
 }
 
 impl TryFromJs for UrlSearchParamsInit {
-    fn try_from_js(value: &JsValue, _context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, _context: &mut Context) -> JsResult<Self> {
         if let Some(string) = value.as_string() {
             Ok(Self::String(string.clone()))
         } else {
@@ -323,7 +329,7 @@ impl TryFromJs for UrlSearchParamsInit {
 }
 
 impl TryFromJs for UrlSearchParams {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let init: UrlSearchParamsInit = value.try_js_into(context)?;
 
         Self::from_init(init, context)
@@ -333,7 +339,7 @@ impl TryFromJs for UrlSearchParams {
 pub struct UrlSearchParamsClass;
 
 impl UrlSearchParams {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -348,7 +354,7 @@ impl UrlSearchParams {
 }
 
 impl UrlSearchParamsClass {
-    fn size(context: &mut Context<'_>) -> Accessor {
+    fn size(context: &mut Context) -> Accessor {
         accessor!(
             context,
             UrlSearchParams,
@@ -360,7 +366,7 @@ impl UrlSearchParamsClass {
     fn append(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut search_params = UrlSearchParams::try_from_js(this)?;
         let name: String = args.get_or_undefined(0).try_js_into(context)?;
@@ -374,7 +380,7 @@ impl UrlSearchParamsClass {
     fn delete(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut search_params = UrlSearchParams::try_from_js(this)?;
         let name: String = args.get_or_undefined(0).try_js_into(context)?;
@@ -385,11 +391,7 @@ impl UrlSearchParamsClass {
         Ok(JsValue::undefined())
     }
 
-    fn get(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
+    fn get(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         let search_params = UrlSearchParams::try_from_js(this)?;
         let name: String = args.get_or_undefined(0).try_js_into(context)?;
 
@@ -402,7 +404,7 @@ impl UrlSearchParamsClass {
     fn get_all(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let search_params = UrlSearchParams::try_from_js(this)?;
         let name: String = args.get_or_undefined(0).try_js_into(context)?;
@@ -416,11 +418,7 @@ impl UrlSearchParamsClass {
         Ok(JsArray::from_iter(values, context).into())
     }
 
-    fn has(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
+    fn has(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         let search_params = UrlSearchParams::try_from_js(this)?;
         let name: String = args.get_or_undefined(0).try_js_into(context)?;
         let value: Option<String> = args.get_or_undefined(1).try_js_into(context)?;
@@ -428,11 +426,7 @@ impl UrlSearchParamsClass {
         Ok(search_params.contains(name, value).into())
     }
 
-    fn set(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
+    fn set(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         let mut search_params = UrlSearchParams::try_from_js(this)?;
         let name: String = args.get_or_undefined(0).try_js_into(context)?;
         let value: String = args.get_or_undefined(1).try_js_into(context)?;
@@ -445,7 +439,7 @@ impl UrlSearchParamsClass {
     fn sort(
         this: &JsValue,
         _args: &[JsValue],
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut search_params = UrlSearchParams::try_from_js(this)?;
 
@@ -463,15 +457,15 @@ impl NativeClass for UrlSearchParamsClass {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<UrlSearchParams> {
-        match args.get(0) {
+        match args.first() {
             None => Ok(UrlSearchParams::default()),
             Some(init) => init.try_js_into(context),
         }
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let size = UrlSearchParamsClass::size(class.context());
 
         class
@@ -531,7 +525,7 @@ impl PairIterable for UrlSearchParams {
     fn pair_iterable_get(
         &self,
         index: usize,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<PairValue> {
         let pair = self.values.get(index).ok_or::<JsError>(
             JsNativeError::typ()
@@ -554,7 +548,7 @@ impl PairIteratorClass for UrlSearchParamsIteratorClass {
 pub struct UrlSearchParamsApi;
 
 impl jstz_core::Api for UrlSearchParamsApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<UrlSearchParamsClass>(context)
             .expect("The `URLSearchParams` class shouldn't exist yet");
         // TODO should not really be a global class, remove from

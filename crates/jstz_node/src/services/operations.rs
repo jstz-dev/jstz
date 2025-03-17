@@ -1,67 +1,112 @@
-use actix_web::{
-    get, post,
-    web::{self, Data, Path, ServiceConfig},
-    HttpResponse, Responder, Scope,
-};
+use super::error::{ServiceError, ServiceResult};
+use super::{AppState, Service};
 use anyhow::anyhow;
-use jstz_proto::{operation::SignedOperation, receipt::Receipt};
-use octez::OctezRollupClient;
+use axum::{
+    extract::{Path, State},
+    Json,
+};
+
+use jstz_core::BinEncodable;
+use jstz_proto::operation::{Operation, SignedOperation};
+use jstz_proto::receipt::Receipt;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
 
-use crate::Result;
+use utoipa_axum::router::OpenApiRouter;
+use utoipa_axum::routes;
 
-use super::Service;
+pub struct OperationsService;
 
-#[post("")]
+const OPERATIONS_TAG: &str = "Operations";
+
+type HexEncodedOperationHash = String;
+
+/// Inject an operation into Jstz
+#[utoipa::path(
+        post,
+        path = "",
+        tag = OPERATIONS_TAG,
+        responses(
+            (status = 200, description = "Operation successfully injectedd"),
+            (status = 400),
+            (status = 500)
+        )
+    )]
 async fn inject(
-    rollup_client: Data<OctezRollupClient>,
-    operation: web::Json<SignedOperation>,
-) -> Result<impl Responder> {
-    let encoded_operation = bincode::serialize(&operation)
+    State(AppState { rollup_client, .. }): State<AppState>,
+    Json(operation): Json<SignedOperation>,
+) -> ServiceResult<()> {
+    let encoded_operation = operation
+        .encode()
         .map_err(|_| anyhow!("Failed to serialize operation"))?;
-
     let address = rollup_client.get_rollup_address().await?;
-
     let message_frame = ExternalMessageFrame::Targetted {
         address,
         contents: encoded_operation,
     };
-
     let mut binary_contents = Vec::new();
     message_frame
         .bin_write(&mut binary_contents)
         .map_err(|_| anyhow!("Failed to write binary frame"))?;
-
     rollup_client.batcher_injection([binary_contents]).await?;
-
-    Ok(HttpResponse::Ok())
+    Ok(())
 }
 
-#[get("/{hash}/receipt")]
+/// Get the receipt of an operation
+#[utoipa::path(
+        get,
+        path = "/{operation_hash}/receipt",
+        tag = OPERATIONS_TAG,
+        params(
+            ("operation_hash" = String, description = "Operation hash")
+        ),
+        responses(
+            (status = 200, body = Receipt),
+            (status = 400),
+            (status = 500)
+        )
+    )]
 async fn receipt(
-    rollup_client: Data<OctezRollupClient>,
-    path: Path<String>,
-) -> Result<impl Responder> {
-    let key = format!("/jstz_receipt/{}", path.into_inner());
+    State(AppState { rollup_client, .. }): State<AppState>,
+    Path(hash): Path<String>,
+) -> ServiceResult<Json<Receipt>> {
+    let key = format!("/jstz_receipt/{}", hash);
 
     let value = rollup_client.get_value(&key).await?;
 
     let receipt = match value {
-        Some(value) => bincode::deserialize::<Receipt>(&value)
+        Some(value) => Receipt::decode(value.as_slice())
             .map_err(|_| anyhow!("Failed to deserialize receipt"))?,
-        None => return Ok(HttpResponse::NotFound().finish()),
+        None => Err(ServiceError::NotFound)?,
     };
 
-    Ok(HttpResponse::Ok().json(receipt))
+    Ok(Json(receipt))
 }
 
-pub struct OperationsService;
+/// Returns the hex encoded hash of an Operation
+#[utoipa::path(
+        post,
+        path = "/hash",
+        tag = OPERATIONS_TAG,
+        responses(
+            (status = 200, body = HexEncodedOperationHash),
+            (status = 400),
+            (status = 500)
+        )
+    )]
+async fn hash_operation(
+    Json(operation): Json<Operation>,
+) -> ServiceResult<Json<HexEncodedOperationHash>> {
+    Ok(Json(format!("{}", operation.hash())))
+}
 
 impl Service for OperationsService {
-    fn configure(cfg: &mut ServiceConfig) {
-        let scope = Scope::new("/operations").service(inject).service(receipt);
+    fn router_with_openapi() -> OpenApiRouter<AppState> {
+        let routes = OpenApiRouter::new()
+            .routes(routes!(inject))
+            .routes(routes!(receipt))
+            .routes(routes!(hash_operation));
 
-        cfg.service(scope);
+        OpenApiRouter::new().nest("/operations", routes)
     }
 }

@@ -13,7 +13,7 @@ pub async fn exec(
     log_level: LogLevel,
     network: &Option<NetworkName>,
 ) -> Result<()> {
-    let cfg = Config::load()?;
+    let cfg = Config::load().await?;
 
     let address = address_or_alias.resolve(&cfg)?;
     debug!("resolved `address_or_alias` -> {:?}", address);

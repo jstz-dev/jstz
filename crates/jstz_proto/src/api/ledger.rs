@@ -2,9 +2,9 @@ use std::ops::Deref;
 
 use boa_engine::{
     js_string,
-    object::{Object, ObjectInitializer},
+    object::{ErasedObject, ObjectInitializer},
     property::Attribute,
-    Context, JsArgs, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 
@@ -12,6 +12,7 @@ use jstz_core::{
     accessor, host::HostRuntime, kv::Transaction, native::Accessor, runtime,
     value::IntoJs,
 };
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 
 use crate::{
     context::account::{Account, Address, Amount},
@@ -22,8 +23,9 @@ use crate::{
 // Ledger.balance(pkh)
 // Ledger.transfer(dst, amount)
 
+#[derive(JsData)]
 struct Ledger {
-    address: Address,
+    address: SmartFunctionHash,
 }
 
 impl Finalize for Ledger {}
@@ -61,7 +63,7 @@ impl Ledger {
 }
 
 pub struct LedgerApi {
-    pub address: Address,
+    pub address: SmartFunctionHash,
 }
 
 pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<Address> {
@@ -73,11 +75,11 @@ pub(crate) fn js_value_to_pkh(value: &JsValue) -> Result<Address> {
         })
         .map(JsString::to_std_string_escaped)?;
 
-    Ok(Address::from_base58(&pkh_string)?)
+    Address::from_base58(&pkh_string)
 }
 
 impl Ledger {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -92,7 +94,7 @@ impl Ledger {
 impl LedgerApi {
     const NAME: &'static str = "Ledger";
 
-    fn self_address(context: &mut Context<'_>) -> Accessor {
+    fn self_address(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Ledger,
@@ -104,7 +106,7 @@ impl LedgerApi {
     fn balance(
         _this: &JsValue,
         args: &[JsValue],
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<JsValue> {
         let pkh = js_value_to_pkh(args.get_or_undefined(0))?;
 
@@ -118,7 +120,7 @@ impl LedgerApi {
     fn transfer(
         this: &JsValue,
         args: &[JsValue],
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<JsValue> {
         let ledger = Ledger::try_from_js(this)?;
         let dst = js_value_to_pkh(args.get_or_undefined(0))?;
@@ -136,10 +138,10 @@ impl LedgerApi {
 }
 
 impl jstz_core::Api for LedgerApi {
-    fn init(self, context: &mut boa_engine::Context<'_>) {
+    fn init(self, context: &mut boa_engine::Context) {
         let self_address = LedgerApi::self_address(context);
 
-        let ledger = ObjectInitializer::with_native(
+        let ledger = ObjectInitializer::with_native_data(
             Ledger {
                 address: self.address,
             },

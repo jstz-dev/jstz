@@ -9,6 +9,9 @@ use crate::BootstrapAccount;
 
 const CTEZ_CONTRACT: &str = include_str!("../../../contracts/jstz_ctez.tz");
 const BRIDGE_CONTRACT: &str = include_str!("../../../contracts/jstz_bridge.tz");
+const EXCHANGER_CONTRACT: &str = include_str!("../../../contracts/exchanger.tz");
+const NATIVE_BRDIGE_CONTRACT: &str =
+    include_str!("../../../contracts/jstz_native_bridge.tz");
 
 impl BootstrapAccount {
     fn as_michelson_elt(&self) -> String {
@@ -34,6 +37,58 @@ pub fn deploy_ctez_contract(
     );
 
     client.originate_contract("jstz_ctez", operator_address, CTEZ_CONTRACT, &init_storage)
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Deref, DerefMut)]
+pub struct Exchanger(String);
+
+impl Exchanger {
+    pub fn deploy(client: &OctezClient, operator: &str) -> Result<Self> {
+        let storage_init = "Unit";
+        client
+            .originate_contract("exchanger", operator, EXCHANGER_CONTRACT, storage_init)
+            .map(Exchanger)
+    }
+}
+
+impl Display for Exchanger {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<ContractKt1Hash> for Exchanger {
+    fn from(hash: ContractKt1Hash) -> Self {
+        Self(hash.to_base58_check())
+    }
+}
+
+pub struct NativeBridge(String);
+
+impl NativeBridge {
+    pub fn deploy(
+        client: &OctezClient,
+        operator: &str,
+        exchanger: &Exchanger,
+        rollup_address: &str,
+    ) -> Result<NativeBridge> {
+        let storage_init =
+            format!("(Pair \"{}\" \"{}\" None)", exchanger.0, rollup_address);
+        client
+            .originate_contract(
+                "jstz_native_bridge",
+                operator,
+                NATIVE_BRDIGE_CONTRACT,
+                &storage_init,
+            )
+            .map(NativeBridge)
+    }
+}
+
+impl Display for NativeBridge {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deref, DerefMut)]
@@ -80,6 +135,7 @@ impl BridgeContract {
             &self.0,
             "set_rollup",
             &format!("\"{}\"", rollup_address),
+            0,
         )
     }
 }

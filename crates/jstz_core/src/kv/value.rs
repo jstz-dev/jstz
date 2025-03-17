@@ -1,42 +1,22 @@
+use crate::BinEncodable;
+use derive_more::{Deref, DerefMut};
 use std::any::Any;
 use std::fmt::Debug;
 
-use bincode::Options;
-use derive_more::{Deref, DerefMut};
-use serde::de::DeserializeOwned;
-
-use crate::{Error, Result};
-
-fn bincode_options() -> impl bincode::Options {
-    bincode::DefaultOptions::new()
-        .with_fixint_encoding()
-        .allow_trailing_bytes()
-}
-
-pub fn serialize<T: erased_serde::Serialize + ?Sized>(value: &T) -> Result<Vec<u8>> {
-    let mut writer = Vec::new();
-    let mut bincode_serializer = bincode::Serializer::new(&mut writer, bincode_options());
-
-    value
-        .erased_serialize(&mut <dyn erased_serde::Serializer>::erase(
-            &mut bincode_serializer,
-        ))
-        .map_err(|err| Error::SerializationError {
-            description: format!("{err}"),
-        })?;
-
-    Ok(writer)
-}
-
-pub(crate) fn deserialize<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
-    bincode::deserialize(bytes).map_err(|err| Error::SerializationError {
-        description: format!("{err}"),
-    })
-}
-
-/// A key-value 'value' is a value that is can be dynamically
+/// A key-value 'value' is a value that can be dynamically
 /// coerced (using `Any`) and serialized.
-pub trait Value: Any + Debug + erased_serde::Serialize {
+/// It must satisfy three requirements:
+/// 1. Dynamic type coercion through `Any` trait
+/// 2. Debug formatting for development and error messages
+/// 3. Binary encoding/decoding through `BinEncodable` trait
+///
+/// Types implementing this trait can be:
+/// - Stored and retrieved from the key-value store
+/// - Dynamically downcasted to concrete types
+/// - Cloned into new boxed values
+///
+/// The trait is object-safe and can be used with trait objects.
+pub trait Value: Any + Debug + BinEncodable {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
     fn clone_box(&self) -> Box<dyn Value>;
@@ -44,7 +24,7 @@ pub trait Value: Any + Debug + erased_serde::Serialize {
 
 impl<T> Value for T
 where
-    T: Any + Debug + Clone + erased_serde::Serialize,
+    T: Any + Debug + Clone + BinEncodable,
 {
     fn as_any(&self) -> &dyn Any {
         self

@@ -1,19 +1,21 @@
 #![cfg(feature = "persistent-logging")]
 use std::fs;
 
-use super::{Line, QueryResponse};
-use actix_web::web::block;
+use super::Line;
 use anyhow::{anyhow, Result};
+use jstz_api::js_log::LogLevel;
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::{
     context::account::Address, js_logger::LogRecord, request_logger::RequestEvent,
 };
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{params, Params, Statement};
+use tokio::task::spawn_blocking;
 
 pub type SqliteConnectionPool = Pool<SqliteConnectionManager>;
 pub type SqliteConnection = PooledConnection<r2d2_sqlite::SqliteConnectionManager>;
-type QueryResponseResult = Result<Vec<QueryResponse>>;
+type QueryResponseResult = Result<Vec<LogRecord>>;
 
 const DB_PATH: &str = ".jstz/log.db";
 
@@ -59,7 +61,7 @@ impl Db {
     async fn get_connection_from_pool(
         pool: SqliteConnectionPool,
     ) -> Result<SqliteConnection> {
-        block(move || pool.get())
+        spawn_blocking(move || pool.get())
             .await
             .map_err(|e| {
                 anyhow!("Failed to get connection from pool: {}", e.to_string())
@@ -130,17 +132,30 @@ impl Db {
         mut stmt: Statement<'_>,
         params: P,
     ) -> QueryResponseResult {
-        let logs = stmt
+        let query_result = stmt
             .query_map(params, |row| {
-                Ok(QueryResponse::Log {
-                    level: row.get(1)?,
-                    content: row.get(2)?,
-                    function_address: row.get(3)?,
-                    request_id: row.get(4)?,
-                })
+                Ok((
+                    row.get::<usize, String>(1)?,
+                    row.get(2)?,
+                    row.get::<usize, String>(3)?,
+                    row.get(4)?,
+                ))
             })?
-            .filter_map(Result::ok)
-            .collect();
+            .filter_map(Result::ok);
+
+        // Process logs outside of `query_map` so that anyhow error
+        // can be returned on failure.
+        let mut logs: Vec<LogRecord> = Vec::new();
+        for (level, text, address, request_id) in query_result {
+            let log_record = LogRecord {
+                level: LogLevel::try_from(level.as_str())
+                    .map_err(|e| anyhow!(e.to_string()))?,
+                text,
+                address: PublicKeyHash::from_base58(address.as_str())?,
+                request_id,
+            };
+            logs.push(log_record)
+        }
 
         Ok(logs)
     }

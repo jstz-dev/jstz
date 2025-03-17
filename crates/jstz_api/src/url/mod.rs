@@ -12,8 +12,8 @@ mod search_params;
 use std::{cmp::Ordering, ops::Deref};
 
 use boa_engine::{
-    js_string, object::Object, property::Attribute, Context, JsArgs, JsError,
-    JsNativeError, JsObject, JsResult, JsValue, NativeFunction,
+    js_string, object::ErasedObject, property::Attribute, Context, JsArgs, JsData,
+    JsError, JsNativeError, JsObject, JsResult, JsValue, NativeFunction,
 };
 use boa_gc::{custom_trace, Finalize, GcRefMut, Trace};
 use jstz_core::{
@@ -30,6 +30,7 @@ pub use search_params::UrlSearchParams;
 
 use self::search_params::{UrlSearchParamsApi, UrlSearchParamsClass};
 
+#[derive(JsData)]
 pub struct Url {
     pub(crate) url: InnerUrl,
     search_params: JsNativeObject<UrlSearchParams>,
@@ -42,7 +43,7 @@ impl Finalize for Url {
 }
 
 unsafe impl Trace for Url {
-    custom_trace!(this, {
+    custom_trace!(this, mark, {
         mark(this.search_params.deref().deref());
     });
 }
@@ -50,7 +51,7 @@ unsafe impl Trace for Url {
 impl JsNativeObjectToString for Url {
     fn to_string(
         this: &JsNativeObject<Self>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         Ok(this.deref().href().into_js(context))
     }
@@ -73,7 +74,7 @@ impl Url {
     pub fn new(
         url: String,
         base: Option<String>,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Self> {
         // 1. Let `parsed_url` be the result of running the API URL parser on url with base, if given
         // 2. If `parsed_url` is failure, then throw a `TypeError`
@@ -296,7 +297,7 @@ impl Url {
 pub struct UrlClass;
 
 impl Url {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -309,7 +310,7 @@ impl Url {
 }
 
 impl UrlClass {
-    fn hash(context: &mut Context<'_>) -> Accessor {
+    fn hash(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -319,7 +320,7 @@ impl UrlClass {
         )
     }
 
-    fn host(context: &mut Context<'_>) -> Accessor {
+    fn host(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -329,7 +330,7 @@ impl UrlClass {
         )
     }
 
-    fn hostname(context: &mut Context<'_>) -> Accessor {
+    fn hostname(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -339,7 +340,7 @@ impl UrlClass {
         )
     }
 
-    fn href(context: &mut Context<'_>) -> Accessor {
+    fn href(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -349,7 +350,7 @@ impl UrlClass {
         )
     }
 
-    fn origin(context: &mut Context<'_>) -> Accessor {
+    fn origin(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -358,7 +359,7 @@ impl UrlClass {
         )
     }
 
-    fn password(context: &mut Context<'_>) -> Accessor {
+    fn password(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -368,7 +369,7 @@ impl UrlClass {
         )
     }
 
-    fn pathname(context: &mut Context<'_>) -> Accessor {
+    fn pathname(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -378,7 +379,7 @@ impl UrlClass {
         )
     }
 
-    fn port(context: &mut Context<'_>) -> Accessor {
+    fn port(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -388,7 +389,7 @@ impl UrlClass {
         )
     }
 
-    fn protocol(context: &mut Context<'_>) -> Accessor {
+    fn protocol(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -398,7 +399,7 @@ impl UrlClass {
         )
     }
 
-    fn search(context: &mut Context<'_>) -> Accessor {
+    fn search(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -408,7 +409,7 @@ impl UrlClass {
         )
     }
 
-    fn search_params(context: &mut Context<'_>) -> Accessor {
+    fn search_params(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -417,7 +418,7 @@ impl UrlClass {
         )
     }
 
-    fn username(context: &mut Context<'_>) -> Accessor {
+    fn username(context: &mut Context) -> Accessor {
         accessor!(
             context,
             Url,
@@ -430,7 +431,7 @@ impl UrlClass {
     fn can_parse(
         _this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let url: String = args.get_or_undefined(0).try_js_into(context)?;
         let base: Option<String> = args.get_or_undefined(1).try_js_into(context)?;
@@ -447,7 +448,7 @@ impl NativeClass for UrlClass {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Url> {
         let url: String = args.get_or_undefined(0).try_js_into(context)?;
         let base: Option<String> = args.get_or_undefined(1).try_js_into(context)?;
@@ -458,7 +459,7 @@ impl NativeClass for UrlClass {
     fn object_constructor(
         this: &JsNativeObject<Self::Instance>,
         _args: &[JsValue],
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<()> {
         // 7. Set `this`’s query object’s URL object to `this`.
         this.deref_mut().search_params.deref_mut().set_url(this);
@@ -466,7 +467,7 @@ impl NativeClass for UrlClass {
         Ok(())
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let hash = UrlClass::hash(class.context());
         let host = UrlClass::host(class.context());
         let hostname = UrlClass::hostname(class.context());
@@ -516,7 +517,7 @@ impl NativeClass for UrlClass {
 pub struct UrlApi;
 
 impl jstz_core::Api for UrlApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         UrlSearchParamsApi.init(context);
         register_global_class::<UrlClass>(context)
             .expect("The `URL` class shouldn't exist yet")

@@ -2,6 +2,7 @@ use std::{path::PathBuf, process::Command};
 
 use anyhow::{anyhow, Result};
 
+pub mod r#async;
 mod client;
 mod node;
 mod rollup;
@@ -45,4 +46,12 @@ pub(crate) fn run_command(command: &mut Command) -> Result<()> {
     }
 
     Ok(())
+}
+
+pub fn unused_port() -> u16 {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .unwrap()
+        .local_addr()
+        .unwrap()
+        .port()
 }

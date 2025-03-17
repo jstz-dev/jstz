@@ -16,10 +16,10 @@ use std::{cell::RefCell, collections::BTreeMap, ops::DerefMut};
 
 use boa_engine::{
     builtins, js_string,
-    object::{builtins::JsArray, Object},
+    object::{builtins::JsArray, ErasedObject},
     value::TryFromJs,
-    Context, JsArgs, JsError, JsNativeError, JsObject, JsResult, JsString, JsSymbol,
-    JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsError, JsNativeError, JsObject, JsResult, JsString,
+    JsSymbol, JsValue, NativeFunction,
 };
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
 use derive_more::Deref;
@@ -29,7 +29,7 @@ use jstz_core::{
     native::{register_global_class, ClassBuilder, NativeClass},
     value::IntoJs,
 };
-#[derive(Default, Clone, Deref)]
+#[derive(Default, Clone, Deref, JsData)]
 pub struct Headers {
     // TODO probably don't need Deref? It exposes HeaderMap impl and
     // probably shouldn't
@@ -70,7 +70,7 @@ fn sort_and_combine_headers(headers: &HeaderMap) -> JsResult<Vec<(String, String
 impl Headers {
     pub fn from_http_headers(
         headers: http::HeaderMap,
-        _context: &mut Context<'_>,
+        _context: &mut Context,
     ) -> JsResult<Self> {
         Ok(Self {
             headers,
@@ -142,7 +142,7 @@ impl Header {
 }
 
 impl IntoJs for Header {
-    fn into_js(self, context: &mut Context<'_>) -> JsValue {
+    fn into_js(self, context: &mut Context) -> JsValue {
         if self.headers.is_empty() {
             return JsValue::null();
         }
@@ -234,7 +234,7 @@ impl Headers {
 pub struct HeadersClass;
 
 impl Headers {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -271,10 +271,10 @@ fn require_args(
 struct ByteString(String);
 
 impl TryFromJs for ByteString {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let s: JsString = value.to_string(context)?;
         for c in s.iter() {
-            if c >= &256 {
+            if c >= 256 {
                 return Err(JsNativeError::typ().with_message("invalid ByteString"))?;
             }
         }
@@ -304,7 +304,7 @@ fn normalize_header_value(string: &str) -> &str {
 }
 
 impl TryFromJs for HeaderVal {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let ByteString(string) = value.try_js_into(context)?;
         let string = normalize_header_value(string.as_str()).to_string();
         Ok(HeaderVal(string))
@@ -315,7 +315,7 @@ impl HeadersClass {
     fn append(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         require_args(args, 2, "append", "Headers")?;
         let mut headers = Headers::try_from_js(this)?;
@@ -330,7 +330,7 @@ impl HeadersClass {
     fn delete(
         this: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         require_args(args, 1, "delete", "Headers")?;
         let mut headers = Headers::try_from_js(this)?;
@@ -341,11 +341,7 @@ impl HeadersClass {
         Ok(JsValue::undefined())
     }
 
-    fn get(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
+    fn get(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         require_args(args, 1, "get", "Headers")?;
         let headers = Headers::try_from_js(this)?;
         let name: ByteString = args.get_or_undefined(0).try_js_into(context)?;
@@ -356,17 +352,13 @@ impl HeadersClass {
     fn get_set_cookie(
         this: &JsValue,
         _args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<JsValue> {
         let headers = Headers::try_from_js(this)?;
         Ok(headers.get_set_cookie()?.into_js(context))
     }
 
-    fn has(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
+    fn has(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         require_args(args, 1, "has", "Headers")?;
         let headers = Headers::try_from_js(this)?;
         let name: ByteString = args.get_or_undefined(0).try_js_into(context)?;
@@ -374,11 +366,7 @@ impl HeadersClass {
         Ok(headers.contains(&name)?.into())
     }
 
-    fn set(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context<'_>,
-    ) -> JsResult<JsValue> {
+    fn set(this: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
         require_args(args, 2, "set", "Headers")?;
         let mut headers = Headers::try_from_js(this)?;
         let name: ByteString = args.get_or_undefined(0).try_js_into(context)?;
@@ -397,7 +385,7 @@ pub struct HeaderEntry {
 }
 
 impl TryFromJs for HeaderEntry {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         let obj = value.as_object()
 	    .ok_or(JsNativeError::typ()
 		   .with_message("Failed to construct 'Headers': The provided value cannot be converted to a sequence."))?;
@@ -418,7 +406,7 @@ impl TryFromJs for HeaderEntry {
     }
 }
 
-fn get_iterator(obj: &JsObject, context: &mut Context<'_>) -> JsResult<JsValue> {
+fn get_iterator(obj: &JsObject, context: &mut Context) -> JsResult<JsValue> {
     // TODO workaround until JsSymbol::iterator() is pub
     let symbol_iterator: JsSymbol = context
         .intrinsics()
@@ -438,7 +426,7 @@ fn get_iterator(obj: &JsObject, context: &mut Context<'_>) -> JsResult<JsValue> 
 // for HeadersInit in particular we have sequence<sequence<ByteString>>
 //
 // TODO: using Array.from as a hack, expose something in boa
-fn iterable_to_sequence(obj: &JsObject, context: &mut Context<'_>) -> JsResult<JsValue> {
+fn iterable_to_sequence(obj: &JsObject, context: &mut Context) -> JsResult<JsValue> {
     let array_from_obj = context
         .intrinsics()
         .constructors()
@@ -462,7 +450,7 @@ fn iterable_to_sequence(obj: &JsObject, context: &mut Context<'_>) -> JsResult<J
 
 fn js_array_to_header_entries(
     obj: &JsObject,
-    context: &mut Context<'_>,
+    context: &mut Context,
 ) -> JsResult<Vec<HeaderEntry>> {
     let arr = JsArray::from_object(obj.clone())?;
 
@@ -510,7 +498,7 @@ impl Headers {
 }
 
 impl TryFromJs for HeadersInit {
-    fn try_from_js(value: &JsValue, context: &mut Context<'_>) -> JsResult<Self> {
+    fn try_from_js(value: &JsValue, context: &mut Context) -> JsResult<Self> {
         if value.is_undefined() {
             return Ok(HeadersInit::default());
         }
@@ -535,7 +523,7 @@ impl TryFromJs for HeadersInit {
             // TODO: Expose `enumerable_own_property_names` in Boa
             // TODO: also should throw if there are any own property
             // symbols, because we should try to ToString them
-            let arr = builtins::object::Object::entries(
+            let arr = builtins::object::OrdinaryObject::entries(
                 &JsValue::undefined(),
                 &[value.clone()],
                 context,
@@ -561,9 +549,9 @@ impl NativeClass for HeadersClass {
     fn data_constructor(
         _target: &JsValue,
         args: &[JsValue],
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<Headers> {
-        match args.get(0) {
+        match args.first() {
             None => Ok(Headers::default()),
             Some(value) => {
                 let init: HeadersInit = value.try_js_into(context)?;
@@ -572,7 +560,7 @@ impl NativeClass for HeadersClass {
         }
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         class
             .method(
                 js_string!("append"),
@@ -617,7 +605,7 @@ impl PairIterable for Headers {
     fn pair_iterable_get(
         &self,
         index: usize,
-        context: &mut Context<'_>,
+        context: &mut Context,
     ) -> JsResult<jstz_core::iterators::PairValue> {
         let cached_iteration = self.get_cached_iteration()?;
         match cached_iteration.get(index) {
@@ -643,7 +631,7 @@ impl PairIteratorClass for HeadersIteratorClass {
 pub struct HeadersApi;
 
 impl jstz_core::Api for HeadersApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<HeadersClass>(context)
             .expect("The `Headers` class shouldn't exist yet");
         register_global_class::<HeadersIteratorClass>(context)

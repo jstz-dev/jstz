@@ -29,6 +29,20 @@ export default defineConfig({
           { text: "Quick Start", link: "/quick_start" },
           { text: "CLI", link: "/cli" },
           { text: "Asset Bridge", link: "/bridge" },
+          { text: "Accounts", link: "/accounts" },
+          { text: "Architecture", link: "/architecture" },
+          { text: "jstzd", link: "/jstzd" },
+        ],
+      },
+
+      {
+        text: "Smart functions",
+        items: [
+          { text: "Overview", link: "/functions/overview" },
+          { text: "Handling requests", link: "/functions/requests" },
+          { text: "Storing data", link: "/functions/data_storage" },
+          { text: "Calling other smart functions", link: "/functions/calling" },
+          // TODO Managing tokens
         ],
       },
 

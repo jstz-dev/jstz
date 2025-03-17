@@ -52,7 +52,7 @@ async fn main() -> Result<()> {
 
     match command {
         Command::Doctor => {
-            let diagnosis = Wpt::doctor()?;
+            let diagnosis = Wpt::doctor().await?;
 
             if !diagnosis.python_installed {
                 println!("Python3 is not installed. Please install it and try again.");
@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
             }
         }
         Command::Init { auto_config_hosts } => {
-            let diagnosis = Wpt::doctor()?;
+            let diagnosis = Wpt::doctor().await?;
             if !diagnosis.python_installed {
                 println!("Python3 is not installed. Please install it and try again.");
                 return Ok(());
@@ -125,19 +125,24 @@ async fn main() -> Result<()> {
             }
         }
         Command::Serve { debug } => {
-            let mut wpt = Wpt::new()?.serve(debug).await?;
+            let mut wpt = Wpt::new().await?.serve(debug).await?;
 
-            ctrlc::set_handler(move || {
-                println!("Stopping WPT server...");
-                wpt.kill().expect("Failed to kill wpt server");
-                process::exit(0);
+            ctrlc::set_handler({
+                let wpt = wpt.clone();
+                move || {
+                    println!("Stopping WPT server...");
+                    wpt.clone().kill().expect("Failed to kill wpt server");
+                    process::exit(0);
+                }
             })?;
 
             println!("WPT server started at http://localhost:8000");
-            loop {}
+            wpt.wait().await?;
         }
-        Command::UpdateManifest { rebuild } => Wpt::new()?.update_manifest(rebuild)?,
-        Command::UpdateHosts => Wpt::new()?.update_hosts()?,
+        Command::UpdateManifest { rebuild } => {
+            Wpt::new().await?.update_manifest(rebuild).await?
+        }
+        Command::UpdateHosts => Wpt::new().await?.update_hosts().await?,
     }
 
     Ok(())

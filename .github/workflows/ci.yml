@@ -5,6 +5,10 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref_name != 'main' }}
+
 jobs:
   commitlint:
     runs-on: ubuntu-latest
@@ -12,54 +16,40 @@ jobs:
       - uses: actions/checkout@v4
       - uses: wagoid/commitlint-github-action@v6
 
-  fmt:
-    name: Format
-    runs-on: ubuntu-latest
+  # FIXME(https://linear.app/tezos/issue/JSTZ-49):
+  # Add build and tests for LIGO contracts
+
+  build:
+    name: Build
+    runs-on: [x86_64, linux, nix]
+    needs: [commitlint]
     steps:
       - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2.7.1
-      - name: Rust setup
-        # FIXME: Once rustup adds a command to install a toolchain from rust-toolchain.toml, we can remove this.
-        run: rustup toolchain add 1.73.0 --profile minimal
-
-      - uses: luisnquin/setup-alejandra@v1.0.0
-
-      - name: Format (rustfmt)
-        run: make fmt-rust-check
-
-      - name: Format (prettier)
-        run: npx prettier --check .
-
-      - name: Format (Nix)
-        run: make fmt-nix-check
-
-  build-rust:
-    name: Build (Cargo)
-    runs-on: ubuntu-latest
-    needs: [commitlint, fmt]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: Swatinem/rust-cache@v2.7.1
-      - name: Rust setup
-        # FIXME: Once rustup adds a command to install a toolchain from rust-toolchain.toml, we can remove this.
-        run: rustup toolchain add 1.73.0 --profile minimal
-
-      - name: Build kernel
-        run: make build-kernel
-
-      - name: Lint
-        run: make lint
-
+      - run: nix --version
+      - name: Format
+        run: nix --accept-flake-config fmt -- --fail-on-change
       - name: Prevent blst
-        run: sh -c '[ -z "$(cargo tree | grep blst)" ]'
-
-      - name: Build all packages
-        run: cargo build
+        run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
+      - name: Build
+        run: nix --accept-flake-config --log-format raw -L build -j auto .#all
+      - name: Flake check
+        run: nix --accept-flake-config --log-format raw --log-lines 70 -L flake check -j auto
+      # Coverage is part of nix flake check, but we want to upload it to Codecov
+      # So we run it again (it's cached) and upload the result
+      - name: Coverage
+        run: nix --accept-flake-config --log-format raw -L build .#checks.x86_64-linux.cargo-llvm-cov
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: result
+          fail_ci_if_error: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   build-docs:
     name: Build Documentation
     runs-on: ubuntu-latest
-    needs: [commitlint, fmt]
+    needs: [commitlint]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -83,51 +73,3 @@ jobs:
 
       - name: Build with VitePress
         run: npm run docs:build
-
-  build-sdk:
-    name: Build TypeScript SDK
-    runs-on: ubuntu-latest
-    needs: [commitlint, fmt]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: npm
-      - name: Get npm cache directory
-        id: npm-cache-dir
-        shell: bash
-        run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
-      - name: Configure npm cache
-        uses: actions/cache@v4
-        id: npm-cache
-        with:
-          path: ${{ steps.npm-cache-dir.outputs.dir }}
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - run: npm ci
-
-      - name: Build
-        run: cd packages/jstz && npm run build
-
-  build-nix:
-    name: Build (Nix)
-    runs-on: ubuntu-latest
-    needs: [build-rust, build-sdk, build-docs]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: cachix/install-nix-action@V27
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-      - uses: cachix/cachix-action@v15
-        with:
-          name: trilitech-jstz
-          authToken: "${{ secrets.CACHIX_AUTH_TOKEN }}"
-
-      - name: Build Shell
-        run: nix develop --command bash -c "echo 'Hello World'"
-
-      - name: Build
-        run: nix build -j auto

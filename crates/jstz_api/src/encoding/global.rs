@@ -52,7 +52,7 @@ impl GlobalApi {
 }
 
 impl jstz_core::Api for GlobalApi {
-    fn init(self, context: &mut boa_engine::Context<'_>) {
+    fn init(self, context: &mut Context) {
         context
             .register_global_builtin_callable(
                 js_string!("atob"),

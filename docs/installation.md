@@ -10,7 +10,13 @@ Ensure `docker` is installed on your system. If not, please follow [this guide](
 To download and install `jstz`, run the following command in your terminal:
 
 ```sh
-source <(curl --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/jstz-dev/jstz/main/scripts/install-jstz-cli.sh)
+npm install -g 'https://gitpkg.vercel.app/jstz-dev/jstz/packages/cli/main?0.1.1-alpha.0'
+```
+
+or
+
+```sh
+yarn global add 'https://gitpkg.vercel.app/jstz-dev/jstz/packages/cli/main?0.1.1-alpha.0'
 ```
 
 Congratulations! 🎉 `jstz` is now installed and configured on your system.
@@ -74,6 +80,12 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 #### Octez 🐙
 
+::: tip
+
+The Nix shell ships with Octez binaries for convenience but it does take a little while to build for the very first time.
+Skip ahead to [Building](#building-👷‍♂️)
+
+:::
 The jstz sandbox uses a custom distribution of Octez found [here](https://gitlab.com/tezos/tezos/-/tree/jstz@octez-dev). See the [Octez docs](https://tezos.gitlab.io/introduction/howtoget.html?highlight=building#compiling-with-make) for instructions on building Octez from source.
 
 Once Octez has been built, copy the following binaries to `jstz`:
@@ -82,38 +94,16 @@ Once Octez has been built, copy the following binaries to `jstz`:
 - `octez-node`
 - `octez-smart-rollup-node`
 
-::: tip
-
-Using Nix, simply execute the following:
-
-```sh
-# Clone Octez
-git clone git@gitlab.com:tezos/tezos.git && cd tezos
-# Checkout custom distribution for jstz
-git checkout jstz@octez-dev
-# Build using Nix
-nix-build -j auto
-```
-
-After Nix successfully builds Octez (it takes a long time 🕣), the Octez binaries will be accessable from `result`.
-:::
-
 ### Building 👷‍♂️
 
 ::: tip
 Using Nix, simply run `nix develop` to enter a shell with all build dependencies or use `direnv` to automatically enter the shell when you `cd` into the `jstz` directory.
 :::
 
-Additional build dependencies can be installed with:
+The kernel can be built with:
 
 ```sh
-make build-deps
-```
-
-The `.wasm` file for `jstz`'s kernel is built with:
-
-```sh
-make build-kernel
+make build
 ```
 
 You can locate the resulting build artifact at `/target/wasm32-unknown-unknown/release/jstz_kernel.wasm`.
@@ -123,8 +113,9 @@ You can locate the resulting build artifact at `/target/wasm32-unknown-unknown/r
 You can start the sandbox with:
 
 ```sh
-make build-cli-kernel
+make build-cli
 PATH=.:$PATH cargo run --bin jstz -- sandbox start
 ```
 
-This will initially run `octez-node` and initialize `octez-client`. Once the client is initialized, the `jstz_kernel` and `jstz_bridge` is originated, a `octez-smart-rollup-node` and `jstz-node` is spun up.
+This will initially run `octez-node` and initialize `octez-client`. Once the client is initialized, the `jstz_kernel` and `jstz_bridge`
+is originated, a `octez-smart-rollup-node` and `jstz-node` is spun up.

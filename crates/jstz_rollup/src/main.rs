@@ -1,4 +1,10 @@
-use std::{env, fs, path::PathBuf, str::FromStr};
+use std::{
+    env,
+    fmt::{self, Display},
+    fs,
+    path::PathBuf,
+    str::FromStr,
+};
 
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
@@ -8,7 +14,7 @@ use figment::{
     Figment,
 };
 use jstz_rollup::{
-    deploy_ctez_contract, rollup, BootstrapAccount, BridgeContract, JstzRollup,
+    deploy_ctez_contract, rollup, BootstrapAccount, BridgeContract, Exchanger, JstzRollup,
 };
 use octez::{OctezClient, OctezRollupNode, OctezThread};
 use serde::{Deserialize, Serialize};
@@ -54,9 +60,9 @@ impl From<Option<String>> for Alias {
     }
 }
 
-impl ToString for Alias {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for Alias {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -88,11 +94,11 @@ impl FromStr for Tz1AddressOrAlias {
     }
 }
 
-impl ToString for Tz1AddressOrAlias {
-    fn to_string(&self) -> String {
+impl Display for Tz1AddressOrAlias {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Address(address) => address.to_base58_check(),
-            Self::Alias(alias) => alias.clone(),
+            Self::Address(address) => write!(f, "{}", address),
+            Self::Alias(alias) => write!(f, "{}", alias),
         }
     }
 }
@@ -248,7 +254,7 @@ fn gen_keys(cfg: &Config, alias: Option<String>) -> Result<()> {
     let alias = Alias::from(alias);
 
     client.gen_keys(&alias)?;
-    println!("Generated keys for {}", alias.to_string());
+    println!("Generated keys for {}", alias);
 
     Ok(())
 }
@@ -276,7 +282,7 @@ fn import_keys(cfg: &Config, alias: Option<String>, secret_key: &str) -> Result<
     let client = cfg.octez_client();
     let alias = Alias::from(alias);
 
-    print!("Importing key for {}...", alias.to_string());
+    print!("Importing key for {}...", alias);
     client.import_secret_key(&alias, secret_key)?;
     println!(" done");
 
@@ -285,14 +291,15 @@ fn import_keys(cfg: &Config, alias: Option<String>, secret_key: &str) -> Result<
 
 fn make_installer(
     kernel: PathBuf,
-    bridge: ContractKt1Hash,
+    exchanger: ContractKt1Hash,
     output: PathBuf,
 ) -> Result<()> {
-    let bridge = BridgeContract::from(bridge);
+    let exchanger = Exchanger::from(exchanger);
 
     print!("Building installer...");
 
-    let installer = rollup::make_installer(&kernel, &output.join("preimages"), &bridge)?;
+    let installer =
+        rollup::make_installer(&kernel, &output.join("preimages"), &exchanger)?;
     fs::write(output.join("installer.wasm"), installer)?;
 
     println!(" done");
@@ -353,16 +360,17 @@ fn deploy(
     cfg: &Config,
     operator: Option<Tz1AddressOrAlias>,
     kernel: PathBuf,
-    bridge: ContractKt1Hash,
+    exchanger: ContractKt1Hash,
     output: PathBuf,
 ) -> Result<()> {
     let client = cfg.octez_client();
     let operator = Operator::try_from(operator)?;
-    let bridge = BridgeContract::from(bridge);
+    let exchanger = Exchanger::from(exchanger);
 
     print!("Building installer...");
 
-    let installer = rollup::make_installer(&kernel, &output.join("preimages"), &bridge)?;
+    let installer =
+        rollup::make_installer(&kernel, &output.join("preimages"), &exchanger)?;
     fs::write(output.join("installer.wasm"), &installer)?;
 
     println!(" done");
@@ -370,7 +378,6 @@ fn deploy(
     println!("Deploying rollup...");
 
     let rollup_address = JstzRollup::deploy(&client, &operator.to_string(), &installer)?;
-    bridge.set_rollup(&client, &operator.to_string(), &rollup_address)?;
 
     println!("\tAddress: {}", rollup_address);
 
@@ -398,9 +405,9 @@ fn run(
         &addr,
         port,
     )?;
-    let thread = OctezThread::from_child(child);
+    let mut thread = OctezThread::from_child(child);
 
-    OctezThread::join(vec![thread])?;
+    OctezThread::join(&mut vec![&mut thread])?;
 
     Ok(())
 }

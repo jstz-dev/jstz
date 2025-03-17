@@ -2,11 +2,11 @@ use boa_engine::{
     js_string,
     object::{
         builtins::{JsArrayBuffer, JsUint8Array},
-        Object,
+        ErasedObject,
     },
     property::Attribute,
-    Context, JsArgs, JsBigInt, JsNativeError, JsResult, JsString, JsValue,
-    NativeFunction,
+    Context, JsArgs, JsBigInt, JsData, JsError, JsNativeError, JsResult, JsString,
+    JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
 use encoding_rs::UTF_8;
@@ -17,8 +17,6 @@ use jstz_core::{
     },
     value::TryFromJs,
 };
-
-use crate::idl::ArrayBufferLike;
 
 // https://encoding.spec.whatwg.org/#textencodercommon
 //
@@ -39,17 +37,17 @@ use crate::idl::ArrayBufferLike;
 // };
 // TextEncoder includes TextEncoderCommon;
 
-#[derive(Trace, Finalize)]
+#[derive(Trace, Finalize, JsData)]
 pub struct TextEncoder;
 
-#[derive(Trace, Finalize, Default, TryFromJs)]
+#[derive(Trace, Finalize, JsData, Default, TryFromJs)]
 pub struct TextEncoderEncodeIntoResult {
     read: u128,
     written: u128,
 }
 
 impl TextEncoderEncodeIntoResult {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
           .as_object()
           .and_then(|obj| obj.downcast_mut::<Self>())
@@ -59,7 +57,7 @@ impl TextEncoderEncodeIntoResult {
                   .into()
           })
     }
-    fn read(context: &mut Context<'_>) -> Accessor {
+    fn read(context: &mut Context) -> Accessor {
         accessor!(
             context,
             TextEncoderEncodeIntoResult,
@@ -67,7 +65,7 @@ impl TextEncoderEncodeIntoResult {
             get:((x, _context) => Ok(JsBigInt::new(x.read).into()))
         )
     }
-    fn written(context: &mut Context<'_>) -> Accessor {
+    fn written(context: &mut Context) -> Accessor {
         accessor!(
             context,
             TextEncoderEncodeIntoResult,
@@ -88,12 +86,12 @@ impl NativeClass for TextEncoderEncodeIntoResult {
     fn data_constructor(
         _target: &JsValue,
         _args: &[JsValue],
-        _: &mut Context<'_>,
+        _: &mut Context,
     ) -> JsResult<TextEncoderEncodeIntoResult> {
         Ok(TextEncoderEncodeIntoResult::default())
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let read = Self::read(class.context());
         let written = Self::written(class.context());
         class
@@ -105,7 +103,7 @@ impl NativeClass for TextEncoderEncodeIntoResult {
 }
 
 impl TextEncoder {
-    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, Object, Self>> {
+    fn try_from_js(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
         value
             .as_object()
             .and_then(|obj| obj.downcast_mut::<Self>())
@@ -135,14 +133,14 @@ impl TextEncoder {
         let mut encoder = UTF_8.new_encoder();
 
         // 3.1. Allocate a buffer with suffient space for the result
-        let mut buffer: Vec<u8> = Vec::with_capacity(
+        let mut buffer: Vec<u8> = vec![
+            0;
             encoder
                 .max_buffer_length_from_utf16_if_no_unmappables(input.len())
                 .ok_or_else(|| {
                     JsNativeError::eval().with_message("Input too large for buffer")
-                })?,
-        );
-        buffer.resize(buffer.capacity(), 0);
+                })?
+        ];
 
         // 3.2. Encode the input into the buffer using `encoding_rs`
         let (_result, _read, written, has_error) =
@@ -193,10 +191,10 @@ impl TextEncoder {
     }
 }
 
-#[derive(Default, Clone, Trace, Finalize)]
+#[derive(Default, Clone, Trace, Finalize, JsData)]
 pub struct TextEncoderClass;
 impl TextEncoderClass {
-    fn encoding(context: &mut Context<'_>) -> Accessor {
+    fn encoding(context: &mut Context) -> Accessor {
         accessor!(
             context,
             TextEncoder,
@@ -206,9 +204,9 @@ impl TextEncoderClass {
     }
 
     fn encode(_: &JsValue, args: &[JsValue], context: &mut Context) -> JsResult<JsValue> {
-        let input = args.get_or_undefined(0).as_string().map(|x| x.as_slice());
+        let input = args.get_or_undefined(0).as_string().map(JsString::to_vec);
 
-        let result = TextEncoder::encode(input)?;
+        let result = TextEncoder::encode(input.as_deref())?;
 
         let uint8_array = JsUint8Array::from_array_buffer(
             JsArrayBuffer::from_byte_block(result, context)?,
@@ -226,20 +224,19 @@ impl TextEncoderClass {
         let src = args
             .get_or_undefined(0)
             .as_string()
-            .map(|x| x.as_slice())
-            .ok_or::<boa_engine::JsError>(
-            JsNativeError::typ()
-                .with_message("Failed to interpret argument as a string")
-                .into(),
-        )?;
+            .map(JsString::to_vec)
+            .ok_or::<JsError>(
+                JsNativeError::typ()
+                    .with_message("Failed to interpret argument as a string")
+                    .into(),
+            )?;
 
         let dst: JsUint8Array = args.get_or_undefined(1).try_js_into(context)?;
-
-        let array_buffer_data = dst.to_array_buffer_data(context)?;
-        let mut dst_slice = array_buffer_data.as_slice_mut();
+        let dst_buffer: JsArrayBuffer = dst.buffer(context)?.try_js_into(context)?;
+        let mut dst_slice = dst_buffer.data_mut();
 
         let result: TextEncoderEncodeIntoResult =
-            TextEncoder::encode_into(src, dst_slice.as_deref_mut().unwrap_or_default())?;
+            TextEncoder::encode_into(&src, dst_slice.as_deref_mut().unwrap_or_default())?;
 
         // create and return a TextEncoderEncodeIntoResult object
         let js_return: JsValue =
@@ -258,12 +255,12 @@ impl NativeClass for TextEncoderClass {
     fn data_constructor(
         _target: &JsValue,
         _args: &[JsValue],
-        _: &mut Context<'_>,
+        _: &mut Context,
     ) -> JsResult<TextEncoder> {
         Ok(TextEncoder)
     }
 
-    fn init(class: &mut ClassBuilder<'_, '_>) -> JsResult<()> {
+    fn init(class: &mut ClassBuilder<'_>) -> JsResult<()> {
         let encoding = Self::encoding(class.context());
         class
             .accessor(js_string!("encoding"), encoding, Attribute::all())
@@ -284,7 +281,7 @@ impl NativeClass for TextEncoderClass {
 
 pub struct TextEncoderApi;
 impl jstz_core::Api for TextEncoderApi {
-    fn init(self, context: &mut Context<'_>) {
+    fn init(self, context: &mut Context) {
         register_global_class::<TextEncoderClass>(context)
             .expect("The `TextEncoder` class shouldn't exist yet");
         register_global_class::<TextEncoderEncodeIntoResult>(context)

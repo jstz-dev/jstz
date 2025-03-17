@@ -5,11 +5,16 @@ use std::{
 };
 
 use derive_more::{Deref, DerefMut};
-use serde::de::DeserializeOwned;
+
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
-use super::value::{BoxedValue, Value};
-use super::Storage;
+use super::{
+    outbox::{
+        flush, OutboxError, OutboxMessage, PersistentOutboxQueue, SnapshotOutboxQueue,
+    },
+    value::{BoxedValue, Value},
+    Storage,
+};
 use crate::error::{KvError, Result};
 
 /// A transaction is a 'lazy' snapshot of the persistent key-value store from
@@ -55,6 +60,8 @@ pub struct Transaction {
     // A stack of transactional snapshots
     stack: Vec<Snapshot>,
     lookup_map: LookupMap,
+    persistent_outbox: PersistentOutboxQueue,
+    snapshot_outbox_len: u32,
 }
 
 #[derive(Debug, Clone, Deref, DerefMut)]
@@ -65,30 +72,21 @@ impl SnapshotValue {
         Self(BoxedValue::new(value))
     }
 
-    pub fn as_ref<V>(&self) -> Result<&V>
-    where
-        V: Value,
-    {
+    pub fn as_ref<V: Value>(&self) -> Result<&V> {
         Ok(self
             .as_any()
             .downcast_ref()
             .ok_or(KvError::DowncastFailed)?)
     }
 
-    pub fn as_mut<V>(&mut self) -> Result<&mut V>
-    where
-        V: Value,
-    {
+    pub fn as_mut<V: Value>(&mut self) -> Result<&mut V> {
         Ok(self
             .as_any_mut()
             .downcast_mut()
             .ok_or(KvError::DowncastFailed)?)
     }
 
-    pub fn into_value<V>(self) -> Result<V>
-    where
-        V: Value,
-    {
+    pub fn into_value<V: Value>(self) -> Result<V> {
         let value = self.0.downcast().map_err(|_| KvError::DowncastFailed)?;
         *value
     }
@@ -101,6 +99,7 @@ struct Snapshot {
     insert_edits: BTreeMap<Key, SnapshotValue>,
     // A set of 'remove' edits to be applied
     remove_edits: BTreeSet<Key>,
+    outbox_queue: SnapshotOutboxQueue,
 }
 
 impl Snapshot {
@@ -132,6 +131,10 @@ impl Snapshot {
 
     pub fn contains_key(&self, key: &Key) -> bool {
         self.insert_edits.contains_key(key) && !self.remove_edits.contains(key)
+    }
+
+    pub fn outbox_queue_mut(&mut self) -> &mut SnapshotOutboxQueue {
+        &mut self.outbox_queue
     }
 }
 
@@ -209,10 +212,11 @@ impl Transaction {
         Ok(())
     }
 
-    fn lookup<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&SnapshotValue>>
-    where
-        V: Value + DeserializeOwned,
-    {
+    fn lookup<V: Value>(
+        &mut self,
+        rt: &impl Runtime,
+        key: Key,
+    ) -> Result<Option<&SnapshotValue>> {
         if let Some(&snapshot_idx) =
             self.lookup_map.get(&key).and_then(|history| history.last())
         {
@@ -231,14 +235,11 @@ impl Transaction {
         }
     }
 
-    fn lookup_mut<V>(
+    fn lookup_mut<V: Value>(
         &mut self,
         rt: &impl Runtime,
         key: Key,
-    ) -> Result<Option<&mut SnapshotValue>>
-    where
-        V: Value + DeserializeOwned,
-    {
+    ) -> Result<Option<&mut SnapshotValue>> {
         if let Some(&snapshot_idx) =
             self.lookup_map.get(&key).and_then(|history| history.last())
         {
@@ -260,20 +261,19 @@ impl Transaction {
 
     /// Returns a reference to the value corresponding to the key in the
     /// key-value store if it exists.
-    pub fn get<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&V>>
-    where
-        V: Value + DeserializeOwned,
-    {
+    pub fn get<V: Value>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&V>>
+where {
         self.lookup::<V>(rt, key)
             .map(|entry_opt| entry_opt.map(|entry| entry.as_ref()).transpose())?
     }
 
     /// Returns a mutable reference to the value corresponding to the key in the
     /// key-value store if it exists.
-    pub fn get_mut<V>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&mut V>>
-    where
-        V: Value + DeserializeOwned,
-    {
+    pub fn get_mut<V: Value>(
+        &mut self,
+        rt: &impl Runtime,
+        key: Key,
+    ) -> Result<Option<&mut V>> {
         self.lookup_mut::<V>(rt, key)
             .map(|entry_opt| entry_opt.map(|entry| entry.as_mut()).transpose())?
     }
@@ -293,10 +293,7 @@ impl Transaction {
     }
 
     /// Insert a key-value pair into the key-value store.
-    pub fn insert<V>(&mut self, key: Key, value: V) -> Result<()>
-    where
-        V: Value,
-    {
+    pub fn insert<V: Value>(&mut self, key: Key, value: V) -> Result<()> {
         self.current_snapshot_insert(key, SnapshotValue::new(value))
     }
 
@@ -313,7 +310,7 @@ impl Transaction {
         key: Key,
     ) -> Result<Entry<'b, V>>
     where
-        V: Value + DeserializeOwned,
+        V: Value,
         'a: 'b,
     {
         // A mutable lookup ensures the key is in the current snapshot
@@ -336,6 +333,22 @@ impl Transaction {
                 Ok(Entry::occupied(inner, &mut current_snapshot.remove_edits))
             }
         }
+    }
+
+    pub fn queue_outbox_message(
+        &mut self,
+        rt: &mut impl Runtime,
+        message: OutboxMessage,
+    ) -> Result<()> {
+        if self.persistent_outbox.len(rt)? + self.snapshot_outbox_len + 1
+            > self.persistent_outbox.max(rt)?
+        {
+            Err(OutboxError::OutboxQueueFull)?;
+        }
+        let current_outbox_queue = self.current_snapshot()?.outbox_queue_mut();
+        current_outbox_queue.queue_message(message);
+        self.snapshot_outbox_len += 1;
+        Ok(())
     }
 
     /// Begin a transaction.
@@ -361,6 +374,8 @@ impl Transaction {
                 self.lookup_map.update(key.clone(), prev_idx);
                 prev_ctxt.insert(key, value);
             }
+
+            prev_ctxt.outbox_queue.extend(curr_ctxt.outbox_queue);
         } else {
             for key in &curr_ctxt.remove_edits {
                 Storage::remove(rt, key)?
@@ -369,6 +384,9 @@ impl Transaction {
             for (key, value) in curr_ctxt.insert_edits {
                 Storage::insert(rt, &key, value.0.as_ref())?
             }
+
+            flush(rt, &mut self.persistent_outbox, curr_ctxt.outbox_queue)?;
+            self.snapshot_outbox_len = 0;
 
             // Update lookup map
             self.lookup_map.clear()
@@ -434,8 +452,16 @@ impl<'a, V> Entry<'a, V> {
     where
         V: Value + Default,
     {
+        self.or_insert_with(|| V::default())
+    }
+
+    pub fn or_insert_with<F>(self, default: F) -> &'a mut V
+    where
+        V: Value,
+        F: FnOnce() -> V,
+    {
         match self {
-            Entry::Vacant(vacant_entry) => vacant_entry.insert(Default::default()),
+            Entry::Vacant(vacant_entry) => vacant_entry.insert(default()),
             Entry::Occupied(occupied_entry) => occupied_entry.into_mut(),
         }
     }
@@ -562,14 +588,370 @@ pub struct JsTransaction {
 }
 
 impl JsTransaction {
-    pub unsafe fn new(tx: &mut Transaction) -> Self {
+    pub fn new(tx: &mut Transaction) -> Self {
         // SAFETY
         // From the pov of the `JsTransaction` struct, it is permitted to cast
         // the `tx` reference to `'static` since the lifetime of `JsTransaction`
         // is always shorter than the lifetime of `tx`
-
-        let rt: &'static mut Transaction = mem::transmute(tx);
+        let rt: &'static mut Transaction = unsafe { mem::transmute(tx) };
 
         Self { inner: rt }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use bincode::{Decode, Encode};
+    use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
+    use serde::{Deserialize, Serialize};
+    use tezos_data_encoding::nom::NomReader;
+    use tezos_smart_rollup::{
+        host::Runtime,
+        michelson::{
+            ticket::FA2_1Ticket, MichelsonContract, MichelsonNat, MichelsonOption,
+            MichelsonPair,
+        },
+        outbox::{OutboxMessageFull, OutboxMessageTransaction},
+        storage::path::OwnedPath,
+        types::{Contract, Entrypoint},
+    };
+    use tezos_smart_rollup_mock::MockHost;
+
+    use crate::kv::{
+        outbox::{OutboxMessage, PersistentOutboxQueue},
+        Storage,
+    };
+
+    use super::Transaction;
+
+    fn make_withdrawal(account: &PublicKeyHash) -> OutboxMessage {
+        let creator =
+            Contract::from_b58check("KT1NgXQ6Mwu3XKFDcKdYFS6dkkY3iNKdBKEc").unwrap();
+        let parameters = MichelsonPair(
+            MichelsonContract(Contract::try_from(account.to_base58()).unwrap()),
+            FA2_1Ticket::new(
+                creator.clone(),
+                MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                10,
+            )
+            .unwrap(),
+        );
+        let outbox_tx = OutboxMessageTransaction {
+            parameters,
+            destination: creator,
+            entrypoint: Entrypoint::try_from("burn".to_string()).unwrap(),
+        };
+        OutboxMessage::Withdrawal(vec![outbox_tx].into())
+    }
+
+    #[test]
+    fn test_nested_transactions() {
+        let hrt = &mut MockHost::default();
+        let tx = &mut Transaction::default();
+
+        #[derive(Clone, Serialize, Deserialize, Debug, Default, Encode, Decode)]
+        struct Account {
+            amount: u64,
+        }
+
+        impl Account {
+            fn path(name: &str) -> OwnedPath {
+                OwnedPath::try_from(format!("/jstz_account/{}", name)).unwrap()
+            }
+
+            fn get<'a>(
+                hrt: &impl Runtime,
+                tx: &'a mut Transaction,
+                path: &OwnedPath,
+            ) -> &'a mut Self {
+                tx.entry(hrt, path.clone()).unwrap().or_insert_default()
+            }
+
+            fn get_from_storage(hrt: &impl Runtime, path: &OwnedPath) -> Self {
+                Storage::get::<Account>(hrt, path)
+                    .unwrap()
+                    .unwrap_or_default()
+            }
+        }
+
+        // Start transaction (tx0)
+        tx.begin();
+
+        let account1 = &Account::path("tz1notanaddress1");
+        let account2 = &Account::path("tz1notanaddress2");
+
+        assert_eq!(0, Account::get(hrt, tx, account1).amount);
+        assert_eq!(0, Account::get(hrt, tx, account2).amount);
+
+        // Start transaction (tx1)
+        tx.begin();
+
+        Account::get(hrt, tx, account2).amount += 25;
+
+        assert_eq!(0, Account::get(hrt, tx, account1).amount);
+        assert_eq!(25, Account::get(hrt, tx, account2).amount);
+
+        // Start transaction (tx2)
+        tx.begin();
+
+        Account::get(hrt, tx, account1).amount += 57;
+
+        assert_eq!(57, Account::get(hrt, tx, account1).amount);
+        assert_eq!(25, Account::get(hrt, tx, account2).amount);
+
+        // Commit transaction (tx2)
+        tx.commit(hrt).unwrap();
+
+        // In transaction (tx1)
+
+        Account::get(hrt, tx, account1).amount += 57;
+
+        assert_eq!(2 * 57, Account::get(hrt, tx, account1).amount);
+        assert_eq!(25, Account::get(hrt, tx, account2).amount);
+
+        // Commit transaction (tx1)
+        tx.commit(hrt).unwrap();
+
+        // In transaction (tx0)
+
+        assert_eq!(2 * 57, Account::get(hrt, tx, account1).amount);
+
+        Account::get(hrt, tx, account1).amount += 57;
+
+        assert_eq!(3 * 57, Account::get(hrt, tx, account1).amount);
+
+        tx.commit(hrt).unwrap();
+
+        // Check storage
+
+        assert_eq!(3 * 57, Account::get_from_storage(hrt, account1).amount);
+        assert_eq!(25, Account::get_from_storage(hrt, account2).amount);
+    }
+
+    #[test]
+    fn push_outbox_message_succeeds_until_outbox_queue_is_full() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction {
+            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
+            ..Transaction::default()
+        };
+
+        for i in 0..120 {
+            if i % 10 == 0 {
+                tx.begin();
+            }
+            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let message = make_withdrawal(&acc);
+            tx.queue_outbox_message(&mut host, message).unwrap();
+        }
+
+        assert_eq!(120, tx.snapshot_outbox_len);
+
+        // Adding an additional message to a full outbox queue without
+        // flushing should fail
+        let error = tx
+            .queue_outbox_message(
+                &mut host,
+                make_withdrawal(
+                    &PublicKeyHash::digest("failure account".to_string().as_bytes())
+                        .unwrap(),
+                ),
+            )
+            .expect_err("Outbox should be full");
+
+        assert!(matches!(
+            error,
+            crate::error::Error::OutboxError {
+                source: crate::kv::outbox::OutboxError::OutboxQueueFull
+            }
+        ));
+    }
+
+    #[test]
+    fn non_final_commit_appends_outbox_messages_to_previous_snapshot() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction {
+            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
+            ..Transaction::default()
+        };
+
+        for i in 0..120 {
+            if i % 60 == 0 {
+                tx.begin();
+            }
+            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let message = make_withdrawal(&acc);
+            tx.queue_outbox_message(&mut host, message).unwrap();
+        }
+
+        tx.commit(&mut host).unwrap();
+
+        assert_eq!(120, tx.snapshot_outbox_len);
+
+        let level = host.run_level(|_| {});
+        let outbox = host.outbox_at(level);
+
+        assert_eq!(0, outbox.len());
+    }
+
+    #[test]
+    #[ignore]
+    fn final_commit_resets_snapshot_queue_len() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction {
+            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
+            ..Transaction::default()
+        };
+
+        for i in 0..120 {
+            if i % 60 == 0 {
+                tx.begin();
+            }
+            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let message = make_withdrawal(&acc);
+            tx.queue_outbox_message(&mut host, message).unwrap();
+        }
+
+        tx.commit(&mut host).unwrap();
+        tx.commit(&mut host).unwrap();
+        assert_eq!(0, tx.snapshot_outbox_len);
+
+        let level = host.run_level(|_| {});
+        let outbox = host.outbox_at(level);
+
+        assert_eq!(100, outbox.len());
+    }
+
+    #[test]
+    fn final_commit_flush_outbox_messages_in_enqueue_order() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction {
+            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
+            ..Transaction::default()
+        };
+
+        // Enqueue 120 messages, 60 per snapshot
+        for i in 0..120 {
+            if i % 60 == 0 {
+                tx.begin();
+            }
+
+            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let message = make_withdrawal(&acc);
+            tx.queue_outbox_message(&mut host, message).unwrap();
+        }
+
+        // Commit both snapshots
+        tx.commit(&mut host).unwrap();
+        tx.commit(&mut host).unwrap();
+
+        let level = host.run_level(|_| {});
+        let outbox = host.outbox_at(level);
+
+        // Maximum number of outbox messages per level is 100.
+        // The remaining 20 messages are left in the persistent queue.
+        assert_eq!(100, outbox.len());
+        assert_eq!(20, tx.persistent_outbox.len(&mut host).unwrap());
+
+        for (i, outbox_message) in outbox.iter().enumerate() {
+            let (_, message) =
+                OutboxMessageFull::<OutboxMessage>::nom_read(outbox_message.as_slice())
+                    .unwrap();
+
+            assert_eq!(
+                message,
+                make_withdrawal(
+                    &PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap()
+                )
+                .into()
+            );
+        }
+
+        tx.begin();
+        tx.commit(&mut host).unwrap();
+
+        let level = host.run_level(|_| {});
+        let outbox = host.outbox_at(level);
+
+        assert_eq!(20, outbox.len());
+        assert_eq!(0, tx.persistent_outbox.len(&mut host).unwrap());
+
+        for (i, outbox_message) in outbox.iter().enumerate().take(20) {
+            let (_, message) =
+                OutboxMessageFull::<OutboxMessage>::nom_read(outbox_message.as_slice())
+                    .unwrap();
+
+            assert_eq!(
+                message,
+                make_withdrawal(
+                    &PublicKeyHash::digest(format!("account{}", 100 + i).as_bytes())
+                        .unwrap()
+                )
+                .into()
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use bincode::{Decode, Encode};
+    use serde::{Deserialize, Serialize};
+    use tezos_smart_rollup_mock::MockHost;
+
+    use super::*;
+    #[derive(Debug, Default, Clone, Serialize, Deserialize, Encode, Decode)]
+    struct TestValue(i32);
+
+    #[test]
+    fn test_entry_or_insert_default() {
+        let hrt = &MockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+
+        // Create a test path
+        let try_from = OwnedPath::try_from("/test".to_string());
+        let path = try_from.unwrap();
+
+        // Test or_insert_default on vacant entry
+        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let value = entry.or_insert_default();
+        assert_eq!(value.0, 0);
+
+        // Test or_insert_default on occupied entry
+        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        entry.or_insert_default().0 = 42;
+        // Get entry again, should return existing value
+        let entry = tx.entry::<TestValue>(hrt, path).unwrap();
+        let value = entry.or_insert_default();
+        assert_eq!(value.0, 42);
+    }
+
+    #[test]
+    fn test_entry_or_insert_with() {
+        let hrt = &MockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+
+        let path = OwnedPath::try_from("/test".to_string()).unwrap();
+
+        // Test or_insert_with on vacant entry
+        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let value = entry.or_insert_with(|| TestValue(100));
+        assert_eq!(value.0, 100); // Custom value should be used
+
+        // Test or_insert_with on occupied entry
+        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let value = entry.or_insert_with(|| TestValue(200));
+        assert_eq!(value.0, 100); // Should keep existing value, not call closure
+
+        // Test closure is not called for occupied entry
+        let mut called = false;
+        let entry = tx.entry::<TestValue>(hrt, path).unwrap();
+        let _value = entry.or_insert_with(|| {
+            called = true;
+            TestValue(300)
+        });
+        assert!(!called, "Closure should not be called for occupied entry");
     }
 }

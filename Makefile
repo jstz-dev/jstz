@@ -1,26 +1,52 @@
+# In some situations we might want to override the default profile (release) (e.g. in CI)
+PROFILE ?= release
+PROFILE_OPT := --profile $(PROFILE)
+
+# Frustratingly, for the dev profile, /target/debug is used. For all other profiles,
+# /target/$(PROFILE) is used. This is a workaround to ensure that the correct target
+# directory is used for the dev profile.
+ifeq ($(PROFILE), dev)
+	PROFILE_TARGET_DIR := debug
+else
+	PROFILE_TARGET_DIR := $(PROFILE)
+endif
+
+JSTZD_KERNEL_PATH := crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
+CLI_KERNEL_PATH := crates/jstz_cli/jstz_kernel.wasm
+
 .PHONY: all
-all: test build check
+all: build test check
 
 .PHONY: build
-build: build-cli-kernel
-	@cargo build --release
+build: build-cli-kernel build-jstzd-kernel
+	@cargo build $(PROFILE_OPT)
 
 .PHONY: build-bridge
 build-bridge:
-	@ligo compile contract contracts/jstz_bridge.mligo \
+	@ligo compile contract --no-warn contracts/jstz_bridge.mligo \
 		--module "Jstz_bridge" > contracts/jstz_bridge.tz
+	@ligo compile contract contracts/jstz_native_bridge.mligo > contracts/jstz_native_bridge.tz
+	@ligo compile contract --no-warn contracts/exchanger.mligo > contracts/exchanger.tz
+	@ligo compile contract --no-warn contracts/jstz_fa_bridge.mligo > contracts/jstz_fa_bridge.tz
+	@ligo compile contract --no-warn contracts/examples/fa_ticketer/fa_ticketer.mligo > contracts/examples/fa_ticketer/fa_ticketer.tz
 
 .PHONY: build-kernel
 build-kernel:
-	@cargo build --package jstz_kernel --target wasm32-unknown-unknown --release
+	@cargo build --package jstz_kernel --target wasm32-unknown-unknown $(PROFILE_OPT)
 
+.PHONY: build-jstzd-kernel
+build-jstzd-kernel: build-kernel
+	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(JSTZD_KERNEL_PATH)
+
+# TODO: Remove once jstzd replaces the sandbox 
+# https://linear.app/tezos/issue/JSTZ-205/remove-build-for-jstz-cli
 .PHONY: build-cli-kernel
 build-cli-kernel: build-kernel
-	@cp target/wasm32-unknown-unknown/release/jstz_kernel.wasm crates/jstz_cli/jstz_kernel.wasm
+	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(CLI_KERNEL_PATH)
 
 .PHONY: build-cli
 build-cli: build-cli-kernel
-	@cargo build --package jstz_cli --release
+	@cargo build --package jstz_cli $(PROFILE_OPT)
 
 .PHONY: build-deps
 build-deps:
@@ -34,9 +60,33 @@ build-dev-deps: build-deps
 build-sdk-wasm-pkg:
 	@cd crates/jstz_sdk && wasm-pack build --target bundler --release
 
+.PHONY: build-native-kernel
+build-native-kernel:
+	@cargo build -p jstz_engine --release --features "native-kernel"
+
+.PHONE: riscv-runtime
+riscv-runtime:
+	@RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs cargo build -p jstz_runtime --release --target riscv64gc-unknown-linux-musl
+
 .PHONY: test
-test:
-	@cargo test
+test: test-unit test-int
+
+.PHONY: test-unit
+test-unit:
+# --lib only runs unit tests in library crates
+# --bins only runs unit tests in binary crates
+	@cargo nextest run --lib --bins
+
+.PHONY: test-int
+test-int:
+# --test only runs a specified integration test (a test in /tests).
+#        the glob pattern is used to match all integration tests
+# --exclude excludes the jstz_api wpt test
+	@cargo nextest run --test "*" --workspace --exclude "jstz_api"
+
+.PHONY: cov 
+cov:
+	@cargo llvm-cov --workspace --exclude-from-test "jstz_api" --html --open 
 
 .PHONY: check
 check: lint fmt
@@ -47,39 +97,18 @@ clean:
 	@rm -f result
 	@rm -rf logs
 
-.PHONY: fmt-nix-check
-fmt-nix-check:
-	@alejandra check ./
-
-.PHONY: fmt-nix
-fmt-nix:
-	@alejandra ./
-
-.PHONY: fmt-rust-check
-fmt-rust-check:
-	@cargo fmt --check
-
-.PHONY: fmt-rust
-fmt-rust:
-	@cargo fmt
-
-.PHONY: fmt-js-check
-fmt-js-check:
-	npm run check:format
-
-.PHONY: fmt-js
-fmt-js:
-	npm run format
-
 .PHONY: fmt
-fmt: fmt-nix fmt-rust fmt-js
+fmt:
+	nix fmt
 
 .PHONY: fmt-check
-fmt-check: fmt-nix-check fmt-rust-check fmt-js-check
+fmt-check:
+	nix fmt -- --fail-on-change
 
-# FIXME: 
-# Clippy builds the CLI since the CLI must expand the macro containing the bytes of the `jstz_kernel.wasm` file. 
-# So in order to lint the CLI we need to build the kernel
 .PHONY: lint
-lint: build-cli-kernel
-	@cargo clippy -- --no-deps -D warnings -A clippy::let_underscore_future -A clippy::module_inception -A clippy::op_ref -A clippy::manual_strip -A clippy::missing_safety_doc -A clippy::slow_vector_initialization -A clippy::empty_loop -A clippy::collapsible-match
+lint:
+	@touch $(CLI_KERNEL_PATH) 
+#  Jstzd has to processes a non-empty kernel in its build script
+	@echo "ignore" > $(JSTZD_KERNEL_PATH) 
+	@cargo clippy --all-targets -- --deny warnings
+	@rm -f $(CLI_KERNEL_PATH) $(JSTZD_KERNEL_PATH)
