@@ -162,13 +162,9 @@ in let
         doCheck = true;
         # Run the integration tests
         #
-        # FIXME(https://linear.app/tezos/issue/JSTZ-186):
-        # Don't run the `jstz_api` integration tests until they've been paralellized
-        #
-        # Note: --workspace is required for --exclude. Once --exclude is removed, remove --workspace
         # FIXME(https://linear.app/tezos/issue/JSTZ-237):
         # Fix tests that only fail in CI/Nix
-        cargoNextestExtraArgs = "--workspace --test \"*\" --exclude \"jstz_api\" --features \"skip-rollup-tests\" --config-file ${src}/.config/nextest.toml";
+        cargoNextestExtraArgs = "--test \"*\" --features \"skip-wpt\" --features \"skip-rollup-tests\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace

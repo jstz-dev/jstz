@@ -1167,9 +1167,9 @@ checksum = "fe4dccb6147bb3f3ba0c7a48e993bfeb999d2c2e47a81badee80e2b370c8d695"
 
 [[package]]
 name = "deno_error"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9c23dbc46d5804814b08b4675838f9884e3a52916987ec5105af36d42f9911b5"
+checksum = "19fae9fe305307b5ef3ee4e8244c79cffcca421ab0ce8634dea0c6b1342f220f"
 dependencies = [
  "deno_error_macro",
  "libc",
@@ -1181,9 +1181,9 @@ dependencies = [
 
 [[package]]
 name = "deno_error_macro"
-version = "0.5.5"
+version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "babccedee31ce7e57c3e6dff2cb3ab8d68c49d0df8222fe0d11d628e65192790"
+checksum = "5abb2556e91848b66f562451fcbcdee2a3b7c88281828908dcf7cca355f5d997"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2770,12 +2770,19 @@ dependencies = [
 name = "jstz_runtime"
 version = "0.1.0-alpha.0"
 dependencies = [
+ "anyhow",
  "deno_core",
+ "deno_error",
+ "derive_more",
+ "expect-test",
  "jstz_core",
  "jstz_crypto",
+ "jstz_wpt",
+ "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-mock",
+ "tokio",
 ]
 
 [[package]]
