@@ -182,6 +182,8 @@ impl JstzClient {
             .send()
             .await?;
 
+        println!("Response: {:?}", response);
+
         match response.status() {
             StatusCode::OK => Ok(()),
             // For any other status, return a generic error

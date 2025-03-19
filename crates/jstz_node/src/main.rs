@@ -40,6 +40,9 @@ struct Args {
 
     #[arg(long, default_value = DEFAULT_KERNEL_LOG_PATH)]
     kernel_log_path: PathBuf,
+
+    #[arg(long)]
+    preimages_dir: PathBuf,
 }
 
 #[tokio::main]
@@ -52,8 +55,14 @@ async fn main() -> anyhow::Result<()> {
                 args.rollup_node_rpc_addr, args.rollup_node_rpc_port
             ));
 
-            jstz_node::run(&args.addr, args.port, rollup_endpoint, args.kernel_log_path)
-                .await
+            jstz_node::run(
+                &args.addr,
+                args.port,
+                rollup_endpoint,
+                args.preimages_dir,
+                args.kernel_log_path,
+            )
+            .await
         }
         Command::Spec { out } => {
             let spec = jstz_node::openapi_json_raw()?;
