@@ -741,19 +741,22 @@
       "Operation": {
         "type": "object",
         "required": [
-          "source",
+          "public_key",
           "nonce",
           "content"
         ],
         "properties": {
           "content": {
-            "$ref": "#/components/schemas/Content"
+            "$ref": "#/components/schemas/Content",
+            "description": "The content of the operation"
           },
           "nonce": {
-            "$ref": "#/components/schemas/Nonce"
+            "$ref": "#/components/schemas/Nonce",
+            "description": "Nonce is used to avoid replay attacks."
           },
-          "source": {
-            "$ref": "#/components/schemas/PublicKeyHash"
+          "public_key": {
+            "$ref": "#/components/schemas/PublicKey",
+            "description": "The public key of the account which was used to sign the operation"
           }
         }
       },
@@ -1082,16 +1085,12 @@
       "SignedOperation": {
         "type": "object",
         "required": [
-          "public_key",
           "signature",
           "inner"
         ],
         "properties": {
           "inner": {
             "$ref": "#/components/schemas/Operation"
-          },
-          "public_key": {
-            "$ref": "#/components/schemas/PublicKey"
           },
           "signature": {
             "$ref": "#/components/schemas/Signature"
