@@ -5,7 +5,7 @@ use crate::{
 use bincode::{Decode, Encode};
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
-use jstz_core::{host::HostRuntime, kv::Transaction};
+use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
     signature::Signature,
@@ -13,7 +13,9 @@ use jstz_crypto::{
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode)]
+#[derive(
+    Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
+)]
 pub struct Operation {
     /// The public key of the account which was used to sign the operation
     pub public_key: PublicKey,
@@ -83,6 +85,13 @@ impl Operation {
                 )
                 .as_bytes(),
             ),
+            Content::RevealLargePayloadOperation(RevealLargePayloadOperation {
+                root_hash,
+                reveal_type,
+            }) => Blake2b::from(
+                format!("{}{}{:?}{:?}", public_key, nonce, root_hash, reveal_type)
+                    .as_bytes(),
+            ),
         }
     }
 }
@@ -125,6 +134,22 @@ pub struct RunFunction {
     pub gas_limit: usize,
 }
 
+#[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
+pub enum RevealType {
+    DeployFunction,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
+#[schema(
+    description = "An operation to reveal an operation with a large payload of type `RevealType`. 
+            The root hash is the hash of the SignedOperation and the data is assumed to be available."
+)]
+pub struct RevealLargePayloadOperation {
+    #[schema(value_type = String)]
+    pub root_hash: PreimageHash,
+    pub reveal_type: RevealType,
+}
+
 #[derive(
     Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
 )]
@@ -134,9 +159,13 @@ pub enum Content {
     DeployFunction(#[bincode(with_serde)] DeployFunction),
     #[schema(title = "RunFunction")]
     RunFunction(#[bincode(with_serde)] RunFunction),
+    #[schema(title = "RevealLargePayloadOperation")]
+    RevealLargePayloadOperation(#[bincode(with_serde)] RevealLargePayloadOperation),
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode)]
+#[derive(
+    Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
+)]
 pub struct SignedOperation {
     signature: Signature,
     inner: Operation,
@@ -238,12 +267,13 @@ pub mod openapi {
 
 #[cfg(test)]
 mod test {
-    use super::{DeployFunction, Operation, RunFunction, SignedOperation};
-    use crate::{
-        context::account::{Account, Nonce, ParsedCode},
-        operation::Content,
+    use super::{
+        Content, DeployFunction, RevealLargePayloadOperation, RevealType, RunFunction,
     };
+    use super::{Operation, SignedOperation};
+    use crate::context::account::{Account, Nonce, ParsedCode};
     use http::{HeaderMap, Method, Uri};
+    use jstz_core::reveal_data::PreimageHash;
     use jstz_core::{kv::Transaction, BinEncodable};
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
     use jstz_mock::host::JstzMockHost;
@@ -430,5 +460,41 @@ mod test {
 
         let signed_operation = SignedOperation::new(signature, operation);
         assert!(signed_operation.verify().is_err())
+    }
+
+    #[test]
+    fn test_reveal_large_payload_operation_json_round_trip() {
+        let reveal_large_payload_operation =
+            Content::RevealLargePayloadOperation(RevealLargePayloadOperation {
+                root_hash: PreimageHash::default(),
+                reveal_type: RevealType::DeployFunction,
+            });
+
+        let json = serde_json::to_value(&reveal_large_payload_operation).unwrap();
+
+        // Check the structure without hardcoding the exact serialization of root_hash
+        let json_obj = json.as_object().unwrap();
+        assert_eq!(
+            json_obj.get("_type").unwrap(),
+            "RevealLargePayloadOperation"
+        );
+        assert_eq!(json_obj.get("reveal_type").unwrap(), "DeployFunction");
+        assert!(json_obj.contains_key("root_hash"));
+
+        let decoded = serde_json::from_value::<Content>(json).unwrap();
+        assert_eq!(reveal_large_payload_operation, decoded);
+    }
+
+    #[test]
+    fn test_reveal_large_payload_operation_bin_round_trip() {
+        let reveal_large_payload_operation =
+            Content::RevealLargePayloadOperation(RevealLargePayloadOperation {
+                root_hash: PreimageHash::default(),
+                reveal_type: RevealType::DeployFunction,
+            });
+
+        let binary = reveal_large_payload_operation.encode().unwrap();
+        let bin_decoded = Content::decode(binary.as_slice()).unwrap();
+        assert_eq!(reveal_large_payload_operation, bin_decoded);
     }
 }
