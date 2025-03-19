@@ -2,7 +2,7 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::{
-    operation::{self, ExternalOperation, Operation, SignedOperation},
+    operation::{self, ExternalOperation, SignedOperation},
     receipt::{self, Receipt},
     Result,
 };
@@ -25,22 +25,16 @@ fn execute_operation_inner(
 
     operation.verify_nonce(hrt, tx)?;
 
-    match operation {
-        Operation {
-            source,
-            content: operation::Content::DeployFunction(deployment),
-            ..
-        } => {
+    let source = operation.source();
+
+    match operation.content {
+        operation::Content::DeployFunction(deployment) => {
             let result = smart_function::deploy::execute(hrt, tx, &source, deployment)?;
 
             Ok(receipt::ReceiptContent::DeployFunction(result))
         }
 
-        Operation {
-            content: operation::Content::RunFunction(run),
-            source,
-            ..
-        } => {
+        operation::Content::RunFunction(run) => {
             let result = match run.uri.host() {
                 Some(JSTZ_HOST) => {
                     smart_function::jstz_run::execute(hrt, tx, ticketer, &source, run)?
