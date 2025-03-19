@@ -8,11 +8,12 @@ use serde::Deserialize;
 use std::ops::Deref;
 use std::ops::DerefMut;
 
-use crate::ext::{jstz_console::jstz_console, jstz_main::jstz_main};
+use crate::ext::{jstz_console, jstz_main};
 
-use deno_console::deno_console;
-use deno_url::deno_url;
-use deno_webidl::deno_webidl;
+use deno_console;
+use deno_url;
+use deno_web::TimersPermission;
+use deno_webidl;
 
 /// [`JstzRuntime`] manages the [`JsRuntime`] state. It is also
 /// provides [`JsRuntime`] with the instiatiated [`HostRuntime`]
@@ -116,11 +117,20 @@ impl Protocol {
 
 #[macro_export]
 macro_rules! init_ops_and_esm_extensions  {
-    ($($ext:ident),*) => {
+    ($($ext:ident $(::<$($generics:ty),*> )? $(($($args:expr),*))?),*) => {
         vec![
-            $($ext::init_ops_and_esm()),*
+            $($ext::$ext::init_ops_and_esm$(::<$($generics),*> )?($($($args),*)?)),*
         ]
     };
+}
+
+struct JstzPermissions;
+
+impl TimersPermission for JstzPermissions {
+    fn allow_hrtime(&mut self) -> bool {
+        // Disables high resolution time
+        false
+    }
 }
 
 fn init_extenions() -> Vec<Extension> {
@@ -129,6 +139,7 @@ fn init_extenions() -> Vec<Extension> {
         deno_console,
         jstz_console,
         deno_url,
+        deno_web::<JstzPermissions>(Default::default(), None),
         jstz_main
     )
 }
