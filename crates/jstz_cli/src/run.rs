@@ -212,7 +212,7 @@ pub async fn exec(args: RunArgs) -> Result<()> {
     }
 
     let op = Operation {
-        source: user.address.clone(),
+        public_key: user.public_key.clone(),
         nonce,
         content: OperationContent::RunFunction(RunFunction {
             uri: url,
@@ -232,8 +232,7 @@ pub async fn exec(args: RunArgs) -> Result<()> {
 
     debug!("Operation hash: {}", hash.to_string());
 
-    let signed_op =
-        SignedOperation::new(user.public_key.clone(), user.secret_key.sign(&hash)?, op);
+    let signed_op = SignedOperation::new(user.secret_key.sign(&hash)?, op);
 
     debug!("Signed operation: {:?}", signed_op);
 

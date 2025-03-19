@@ -71,7 +71,7 @@ pub async fn exec(
         .map_err(|err: JsError| user_error!("{err}"))?;
 
     let op = Operation {
-        source: user.address.clone(),
+        public_key: user.public_key.clone(),
         nonce,
         content: Content::DeployFunction(DeployFunction {
             function_code: code,
@@ -85,8 +85,7 @@ pub async fn exec(
 
     debug!("Operation hash: {}", hash.to_string());
 
-    let signed_op =
-        SignedOperation::new(user.public_key.clone(), user.secret_key.sign(&hash)?, op);
+    let signed_op = SignedOperation::new(user.secret_key.sign(&hash)?, op);
 
     debug!("Signed operation: {:?}", signed_op);
 
