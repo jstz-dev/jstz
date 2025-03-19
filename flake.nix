@@ -177,7 +177,6 @@
 
           crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
-
           # It is necessary to use fetchurl instead of fetchTarball to
           # preserve the hash compatability among case (in/)sensitive file systems
           riscvV8 = with pkgs; let
