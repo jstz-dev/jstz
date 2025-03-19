@@ -43,6 +43,7 @@ pub enum Error {
     ZeroAmountNotAllowed,
     AddressTypeMismatch,
     AccountExists,
+    RevealTypeMismatch,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -117,6 +118,9 @@ impl From<Error> for JsError {
             Error::AccountExists => {
                 JsNativeError::eval().with_message("AccountExists").into()
             }
+            Error::RevealTypeMismatch => JsNativeError::eval()
+                .with_message("RevealTypeMismatch")
+                .into(),
         }
     }
 }
