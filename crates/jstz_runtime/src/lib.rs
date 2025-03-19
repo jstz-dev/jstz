@@ -1,4 +1,4 @@
-mod jstz_console;
+mod ext;
 pub mod runtime;
 
 pub use runtime::JstzRuntime;
