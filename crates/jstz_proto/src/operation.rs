@@ -15,9 +15,12 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode)]
 pub struct Operation {
-    pub source: PublicKeyHash,
+    /// The public key of the account which was used to sign the operation
+    pub public_key: PublicKey,
     #[bincode(with_serde)]
+    /// Nonce is used to avoid replay attacks.
     pub nonce: Nonce,
+    /// The content of the operation
     pub content: Content,
 }
 
@@ -25,8 +28,8 @@ pub type OperationHash = Blake2b;
 
 impl Operation {
     /// Returns the source of the operation
-    pub fn source(&self) -> &PublicKeyHash {
-        &self.source
+    pub fn source(&self) -> PublicKeyHash {
+        (&self.public_key).into()
     }
 
     /// Returns the nonce of the operation
@@ -41,7 +44,7 @@ impl Operation {
         rt: &impl HostRuntime,
         tx: &mut Transaction,
     ) -> Result<()> {
-        let next_nonce = Account::nonce(rt, tx, &self.source)?;
+        let next_nonce = Account::nonce(rt, tx, &self.source())?;
 
         if self.nonce == *next_nonce {
             next_nonce.increment();
@@ -55,7 +58,7 @@ impl Operation {
     /// This is the hash which the client should sign
     pub fn hash(&self) -> OperationHash {
         let Operation {
-            source,
+            public_key,
             nonce,
             content,
         } = self;
@@ -64,7 +67,7 @@ impl Operation {
                 function_code,
                 account_credit,
             }) => Blake2b::from(
-                format!("{}{}{}{}", source, nonce, function_code, account_credit)
+                format!("{}{}{}{}", public_key, nonce, function_code, account_credit)
                     .as_bytes(),
             ),
             Content::RunFunction(RunFunction {
@@ -76,7 +79,7 @@ impl Operation {
             }) => Blake2b::from(
                 format!(
                     "{}{}{}{}{:?}{:?}",
-                    source, nonce, uri, method, headers, body
+                    public_key, nonce, uri, method, headers, body
                 )
                 .as_bytes(),
             ),
@@ -135,18 +138,13 @@ pub enum Content {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode)]
 pub struct SignedOperation {
-    pub public_key: PublicKey,
     signature: Signature,
     inner: Operation,
 }
 
 impl SignedOperation {
-    pub fn new(public_key: PublicKey, signature: Signature, inner: Operation) -> Self {
-        Self {
-            public_key,
-            signature,
-            inner,
-        }
+    pub fn new(signature: Signature, inner: Operation) -> Self {
+        Self { signature, inner }
     }
 
     pub fn hash(&self) -> Blake2b {
@@ -154,9 +152,9 @@ impl SignedOperation {
     }
 
     pub fn verify(self) -> Result<Operation> {
-        // FIXME: Adding signature verification kills to the rollup???!??!?!?!
         let hash = self.inner.hash();
-        self.signature.verify(&self.public_key, hash.as_ref())?;
+        self.signature
+            .verify(&self.inner.public_key, hash.as_ref())?;
 
         Ok(self.inner)
     }
@@ -240,10 +238,15 @@ pub mod openapi {
 
 #[cfg(test)]
 mod test {
-    use super::{DeployFunction, RunFunction};
-    use crate::{context::account::ParsedCode, operation::Content};
+    use super::{DeployFunction, Operation, RunFunction, SignedOperation};
+    use crate::{
+        context::account::{Account, Nonce, ParsedCode},
+        operation::Content,
+    };
     use http::{HeaderMap, Method, Uri};
-    use jstz_core::BinEncodable;
+    use jstz_core::{kv::Transaction, BinEncodable};
+    use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
+    use jstz_mock::host::JstzMockHost;
     use serde_json::json;
 
     fn run_function_content() -> Content {
@@ -269,6 +272,11 @@ mod test {
             function_code,
             account_credit,
         })
+    }
+
+    fn dummy_content() -> Content {
+        // Simply picks one the existing test content we have
+        run_function_content()
     }
 
     #[test]
@@ -320,5 +328,107 @@ mod test {
         let binary = deploy_function.encode().unwrap();
         let bin_decoded = Content::decode(binary.as_slice()).unwrap();
         assert_eq!(deploy_function, bin_decoded);
+    }
+
+    fn mock_hrt_tx_with_nonces<'a>(
+        nonces: impl IntoIterator<Item = &'a (PublicKeyHash, Nonce)>,
+    ) -> (JstzMockHost, Transaction) {
+        let mut hrt = JstzMockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+
+        for (address, nonce) in nonces {
+            let stored_nonce = Account::nonce(hrt.rt(), &mut tx, address).unwrap();
+            *stored_nonce = *nonce;
+        }
+
+        (hrt, tx)
+    }
+
+    fn dummy_operation(public_key: PublicKey, nonce: Nonce) -> Operation {
+        Operation {
+            public_key,
+            nonce,
+            content: dummy_content(),
+        }
+    }
+
+    #[test]
+    fn test_verify_nonce_checks_and_increments_nonce() {
+        let nonce = Nonce(42);
+        let (mut hrt, mut tx) = mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), nonce)]);
+
+        let operation = dummy_operation(jstz_mock::pk1(), nonce);
+        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_ok());
+
+        let updated_nonce =
+            Account::nonce(hrt.rt(), &mut tx, &jstz_mock::pkh1()).unwrap();
+        assert_eq!(*updated_nonce, nonce.next());
+    }
+
+    #[test]
+    fn test_verify_nonce_incorrect() {
+        let (mut hrt, mut tx) =
+            mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), Nonce(1337))]);
+
+        let operation = dummy_operation(jstz_mock::pk1(), Nonce(42));
+        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_err());
+    }
+
+    #[test]
+    fn test_verify_nonce_prevents_replay() {
+        let (mut hrt, mut tx) = mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), Nonce(7))]);
+
+        let operation = dummy_operation(jstz_mock::pk1(), Nonce(7));
+
+        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_ok());
+
+        // Replaying the operation fails
+        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_err());
+    }
+
+    #[test]
+    fn test_verify_signed_op_is_ok_for_valid_signature() {
+        let operation = dummy_operation(jstz_mock::pk1(), Nonce::default());
+
+        let hash = operation.hash();
+        let signature = jstz_mock::sk1().sign(hash).unwrap();
+        let signed_operation = SignedOperation::new(signature, operation);
+
+        assert!(signed_operation.verify().is_ok())
+    }
+
+    #[test]
+    fn test_verify_signed_op_is_err_with_bad_sig() {
+        let operation = dummy_operation(jstz_mock::pk1(), Nonce::default());
+
+        let signature = jstz_mock::sk1().sign(b"badsig").unwrap();
+        let signed_operation = SignedOperation::new(signature, operation);
+
+        assert!(signed_operation.verify().is_err())
+    }
+
+    #[test]
+    fn test_verify_signed_op_is_err_when_signed_by_other() {
+        let operation = dummy_operation(jstz_mock::pk1(), Nonce::default());
+
+        let signature = jstz_mock::sk2().sign(operation.hash()).unwrap();
+        let signed_operation = SignedOperation::new(signature, operation);
+
+        assert!(signed_operation.verify().is_err())
+    }
+
+    #[test]
+    fn test_verify_signed_op_is_err_with_tampered_op() {
+        let mut operation = dummy_operation(jstz_mock::pk1(), Nonce::default());
+
+        let hash = operation.hash();
+        let signature = jstz_mock::sk1().sign(hash).unwrap();
+
+        // Be evil, say the operation is from someone else
+        operation.public_key = jstz_mock::pk2();
+
+        let signed_operation = SignedOperation::new(signature, operation);
+        assert!(signed_operation.verify().is_err())
     }
 }

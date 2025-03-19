@@ -10,8 +10,7 @@ use http::{HeaderMap, Method, Uri};
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_crypto::{
-    keypair_from_passphrase, public_key::PublicKey, public_key_hash::PublicKeyHash,
-    secret_key::SecretKey,
+    keypair_from_passphrase, public_key::PublicKey, secret_key::SecretKey,
 };
 use jstz_proto::context::account::{Address, Addressable, Nonce, ParsedCode};
 use jstz_proto::operation::{
@@ -285,13 +284,13 @@ impl Account {
         content: Content,
     ) -> Result<Message> {
         let op = Operation {
-            source: PublicKeyHash::from_base58(&self.address.to_base58())?,
+            public_key: self.pk.clone(),
             nonce: self.nonce,
             content,
         };
 
         let hash = op.hash();
-        let signed_op = SignedOperation::new(self.pk.clone(), self.sk.sign(hash)?, op);
+        let signed_op = SignedOperation::new(self.sk.sign(hash)?, op);
 
         let bytes = bincode::encode_to_vec(&signed_op, bincode::config::legacy())?;
         let mut external = Vec::with_capacity(bytes.len() + EXTERNAL_FRAME_SIZE);
