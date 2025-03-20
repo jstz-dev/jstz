@@ -71,6 +71,9 @@ tokio-util.workspace = true
 tokio.workspace = true
 url.workspace = true
 
+[dev-dependencies]
+mockito.workspace = true
+
 [[bin]]
 name = "jstz"
 path = "src/main.rs"
