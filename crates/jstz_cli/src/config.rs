@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::{
     collections::{hash_map, HashMap},
-    env, fmt, fs,
+    fmt, fs,
     path::PathBuf,
     str::FromStr,
 };
@@ -27,15 +27,22 @@ use crate::{
 
 // hardcoding it here instead of importing from jstzd simply to avoid adding jstzd
 // as a new depedency of jstz_cli just for this so that build time remains the same
-
+#[cfg(not(test))]
 pub fn jstz_home_dir() -> PathBuf {
-    if let Ok(value) = env::var("JSTZ_HOME") {
+    if let Ok(value) = std::env::var("JSTZ_HOME") {
         PathBuf::from(value)
     } else {
         dirs::home_dir()
             .expect("Could not find home directory")
             .join(".jstz")
     }
+}
+
+#[cfg(test)]
+pub fn jstz_home_dir() -> PathBuf {
+    use tempfile::env::temp_dir;
+
+    temp_dir()
 }
 
 // Represents a collection of accounts: users or smart functions
@@ -216,24 +223,24 @@ impl<'a> Iterator for AccountsIter<'a> {
 // A subset of jstzd::task::jstzd::JstzdConfig
 #[derive(Deserialize, Debug, Clone)]
 pub struct JstzdConfig {
-    octez_node: OctezNodeConfig,
-    octez_client: OctezClientConfig,
-    jstz_node: JstzNodeConfig,
+    pub octez_node: OctezNodeConfig,
+    pub octez_client: OctezClientConfig,
+    pub jstz_node: JstzNodeConfig,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct OctezClientConfig {
-    base_dir: String,
+pub struct OctezClientConfig {
+    pub base_dir: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct OctezNodeConfig {
-    rpc_endpoint: String,
+pub struct OctezNodeConfig {
+    pub rpc_endpoint: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-struct JstzNodeConfig {
-    endpoint: String,
+pub struct JstzNodeConfig {
+    pub endpoint: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
@@ -347,7 +354,7 @@ impl Config {
     }
 
     async fn load_jstzd_config(&mut self) -> Result<()> {
-        self.fill_in_jstzd_config(Self::fetch_jstzd_config().await?)
+        self.fill_in_jstzd_config(Self::fetch_jstzd_config(JSTZD_SERVER_BASE_URL).await?)
     }
 
     // for running jstzd in the host environment only
@@ -363,10 +370,10 @@ impl Config {
         Ok(())
     }
 
-    async fn fetch_jstzd_config() -> Result<JstzdConfig> {
+    async fn fetch_jstzd_config(jstzd_server_base_url: &str) -> Result<JstzdConfig> {
         let r = reqwest::Client::new();
         let c = r
-            .get(format!("{JSTZD_SERVER_BASE_URL}/config/"))
+            .get(format!("{jstzd_server_base_url}/config/"))
             .send()
             .await?
             .json::<JstzdConfig>()
@@ -590,5 +597,40 @@ mod tests {
                 .to_string(),
             "Network 'bar' not found in the config file."
         );
+    }
+
+    #[tokio::test]
+    async fn fetch_jstzd_config_invalid_config() {
+        let mut server = mockito::Server::new_async().await;
+        server.mock("GET", "/config/").with_body("{}").create();
+
+        assert_eq!(
+            Config::fetch_jstzd_config(&server.url())
+                .await
+                .unwrap_err()
+                .to_string(),
+            "error decoding response body: missing field `octez_node` at line 1 column 2"
+        );
+    }
+
+    #[tokio::test]
+    async fn fetch_jstzd_config_failed_to_send_request() {
+        assert_eq!(
+            Config::fetch_jstzd_config("")
+                .await
+                .unwrap_err()
+                .to_string(),
+            "builder error: relative URL without a base"
+        );
+    }
+
+    #[tokio::test]
+    async fn fetch_jstzd_config_ok() {
+        let mut server = mockito::Server::new_async().await;
+        server.mock("GET", "/config/").with_body(r#"{"octez_node":{"rpc_endpoint":"foo"},"octez_client":{"base_dir":"bar"},"jstz_node":{"endpoint":"baz"}}"#).create();
+        let cfg = Config::fetch_jstzd_config(&server.url()).await.unwrap();
+        assert_eq!(cfg.octez_node.rpc_endpoint, "foo");
+        assert_eq!(cfg.octez_client.base_dir, "bar");
+        assert_eq!(cfg.jstz_node.endpoint, "baz");
     }
 }
