@@ -33,7 +33,7 @@ fn handle_message(
         Message::External(signed_operation) => {
             debug_msg!(hrt, "External operation: {signed_operation:?}\n");
             let receipt =
-                executor::execute_signed_operation(hrt, tx, signed_operation, ticketer);
+                executor::execute_operation(hrt, tx, signed_operation, ticketer);
             debug_msg!(hrt, "Receipt: {receipt:?}\n");
             receipt.write(hrt, tx)?
         }

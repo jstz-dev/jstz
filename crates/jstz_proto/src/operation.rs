@@ -3,6 +3,7 @@ use crate::{
     Error, Result,
 };
 use bincode::{Decode, Encode};
+use derive_more::Display;
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
@@ -89,8 +90,7 @@ impl Operation {
                 root_hash,
                 reveal_type,
             }) => Blake2b::from(
-                format!("{}{}{:?}{:?}", public_key, nonce, root_hash, reveal_type)
-                    .as_bytes(),
+                format!("{}{}{}{}", public_key, nonce, root_hash, reveal_type).as_bytes(),
             ),
         }
     }
@@ -134,19 +134,20 @@ pub struct RunFunction {
     pub gas_limit: usize,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize, Display)]
 pub enum RevealType {
     DeployFunction,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
 #[schema(
-    description = "An operation to reveal an operation with a large payload of type `RevealType`. 
+    description = "An operation to reveal an operation with a large payload of type `RevealType`. \
             The root hash is the hash of the SignedOperation and the data is assumed to be available."
 )]
 pub struct RevealLargePayloadOperation {
     #[schema(value_type = String)]
     pub root_hash: PreimageHash,
+    #[schema(value_type = String, example = "DeployFunction")]
     pub reveal_type: RevealType,
 }
 
