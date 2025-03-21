@@ -9,6 +9,7 @@ use std::ops::Deref;
 use std::ops::DerefMut;
 
 use crate::jstz_console::jstz_console;
+use crate::jstz_fetch::jstz_fetch;
 use deno_console::deno_console;
 
 /// [`JstzRuntime`] manages the [`JsRuntime`] state. It is also
@@ -119,7 +120,7 @@ macro_rules! init_ops_and_esm_extensions  {
 }
 
 fn init_extenions() -> Vec<Extension> {
-    init_ops_and_esm_extensions!(deno_console, jstz_console)
+    init_ops_and_esm_extensions!(deno_console, jstz_console, jstz_fetch)
 }
 
 #[cfg(test)]
