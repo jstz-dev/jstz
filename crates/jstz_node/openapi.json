@@ -605,6 +605,28 @@
               }
             ],
             "title": "RunFunction"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RevealLargePayloadOperation"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "RevealLargePayloadOperation"
+                    ]
+                  }
+                }
+              }
+            ],
+            "title": "RevealLargePayloadOperation"
           }
         ],
         "discriminator": {
@@ -974,6 +996,28 @@
               }
             }
           }
+        ]
+      },
+      "RevealLargePayloadOperation": {
+        "type": "object",
+        "description": "An operation to reveal an operation with a large payload of type `RevealType`. \n            The root hash is the hash of the SignedOperation and the data is assumed to be available.",
+        "required": [
+          "root_hash",
+          "reveal_type"
+        ],
+        "properties": {
+          "reveal_type": {
+            "$ref": "#/components/schemas/RevealType"
+          },
+          "root_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "RevealType": {
+        "type": "string",
+        "enum": [
+          "DeployFunction"
         ]
       },
       "RunFunction": {
