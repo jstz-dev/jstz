@@ -1,4 +1,5 @@
 mod jstz_console;
+mod jstz_fetch;
 pub mod runtime;
 
 pub use runtime::JstzRuntime;
