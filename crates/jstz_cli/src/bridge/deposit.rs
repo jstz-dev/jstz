@@ -44,22 +44,9 @@ pub async fn exec(
     let pkh = to_pkh.to_base58();
     debug!("resolved `to` -> {}", &pkh);
 
+    // TODO: this is a bug. Fix the container flag or simply check if network_name == NetworkName::Dev
     if cfg.sandbox().is_ok_and(|c| c.container) {
-        let client = reqwest::Client::new();
-        let res = client
-            .post(format!("{JSTZD_SERVER_BASE_URL}/contract_call"))
-            .json(&serde_json::json!({
-                "from": from,
-                "contract": NATIVE_BRIDGE_ADDRESS,
-                "amount": amount,
-                "entrypoint": "deposit",
-                "arg": format!("\"{pkh}\"")
-            }))
-            .send()
-            .await?;
-        if !res.status().is_success() {
-            bail_user_error!("Failed to deposit XTZ. Please check whether the addresses and network are correct.");
-        }
+        exec_sandbox(JSTZD_SERVER_BASE_URL, &from, &pkh, amount).await?;
     } else {
         // Execute the octez-client command
         if cfg
@@ -85,4 +72,64 @@ pub async fn exec(
     );
 
     Ok(())
+}
+
+async fn exec_sandbox(
+    jstzd_server_base_url: &str,
+    from: &str,
+    to_pkh: &str,
+    amount: u64,
+) -> Result<()> {
+    // go through jstzd server even when the sandbox is not in a container for simplicity
+    let client = reqwest::Client::new();
+    let res = client
+        .post(format!("{jstzd_server_base_url}/contract_call"))
+        .json(&serde_json::json!({
+            "from": from,
+            "contract": NATIVE_BRIDGE_ADDRESS,
+            "amount": amount,
+            "entrypoint": "deposit",
+            "arg": format!("\"{to_pkh}\"")
+        }))
+        .send()
+        .await?;
+    if !res.status().is_success() {
+        bail_user_error!("Failed to deposit XTZ. Please check whether the addresses and network are correct.");
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::exec_sandbox;
+
+    #[tokio::test]
+    async fn exec_sandbox_ok() {
+        let mut server = mockito::Server::new_async().await;
+        server.mock("POST", "/contract_call").create();
+
+        assert!(exec_sandbox(&server.url(), "", "", 1).await.is_ok());
+    }
+
+    #[tokio::test]
+    async fn exec_sandbox_failed_to_send_request() {
+        assert_eq!(
+            exec_sandbox("bad url", "", "", 1)
+                .await
+                .unwrap_err()
+                .to_string(),
+            "builder error: relative URL without a base"
+        );
+    }
+
+    #[tokio::test]
+    async fn exec_sandbox_bad_request() {
+        let mut server = mockito::Server::new_async().await;
+        server
+            .mock("POST", "/contract_call")
+            .with_status(422)
+            .create();
+
+        assert_eq!(exec_sandbox(&server.url(), "", "", 1).await.unwrap_err().to_string(), "Failed to deposit XTZ. Please check whether the addresses and network are correct.");
+    }
 }
