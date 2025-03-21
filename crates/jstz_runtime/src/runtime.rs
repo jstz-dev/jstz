@@ -35,13 +35,11 @@ impl JstzRuntime {
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         address: SmartFunctionHash,
+        options: Option<RuntimeOptions>,
     ) -> Self {
         let protocol = Protocol::new(hrt, tx, address);
 
-        let mut runtime = JsRuntime::new(RuntimeOptions {
-            extensions: init_extenions(),
-            ..Default::default()
-        });
+        let mut runtime = JsRuntime::new(options.unwrap_or(Self::options()));
 
         let op_state = runtime.op_state();
         op_state.borrow_mut().put(protocol);

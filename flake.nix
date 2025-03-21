@@ -175,8 +175,7 @@
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
           llvmPackages = pkgs.llvmPackages_16;
 
-          mozjs = pkgs.callPackage ./nix/mozjs.nix {};
-          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez mozjs;};
+          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
 
           # It is necessary to use fetchurl instead of fetchTarball to
@@ -249,6 +248,7 @@
               default = self.packages.${system}.jstz_kernel;
             };
           checks = crates.checks // {formatting = fmt.config.build.check self;};
+          apps = crates.apps;
 
           formatter = fmt.config.build.wrapper;
 
@@ -286,7 +286,6 @@
                   ''
                     npm install --lockfile-version 2
                     export PATH="$PWD/node_modules/.bin/:$PATH"
-                    export MOZJS_ARCHIVE=${mozjs}
                   ''
                 ]
                 ++ lib.optionals stdenv.isLinux [
@@ -299,7 +298,7 @@
               [
                 # C toolchain
                 llvmPackages.clangNoLibc
-                llvmPackages.llvm # for llvm-objdump (building mozjs from source)
+                llvmPackages.llvm # for llvm-objdump
 
                 # Rust toolchain
                 rust-toolchain
