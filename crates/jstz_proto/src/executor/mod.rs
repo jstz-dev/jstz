@@ -1,6 +1,3 @@
-use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::RevealData};
-use tezos_crypto_rs::hash::ContractKt1Hash;
-
 use crate::{
     operation::{
         self, ExternalOperation, Operation, OperationHash, RevealType, SignedOperation,
@@ -8,7 +5,8 @@ use crate::{
     receipt::{self, Receipt},
     Error, Result,
 };
-
+use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::RevealData};
+use tezos_crypto_rs::hash::ContractKt1Hash;
 pub mod deposit;
 pub mod fa_deposit;
 pub mod fa_withdraw;
@@ -16,35 +14,18 @@ pub mod smart_function;
 pub mod withdraw;
 pub const JSTZ_HOST: &str = "jstz";
 
-pub fn execute_external_operation(
+fn verify_signed_op(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    external_operation: ExternalOperation,
-) -> Receipt {
-    match external_operation {
-        ExternalOperation::Deposit(deposit) => deposit::execute(hrt, tx, deposit),
-        ExternalOperation::FaDeposit(fa_deposit) => {
-            fa_deposit::execute(hrt, tx, fa_deposit)
-        }
-    }
+    signed_op: SignedOperation,
+) -> Result<Operation> {
+    signed_op.verify().and_then(|op| {
+        op.verify_nonce(hrt, tx)?;
+        Ok(op)
+    })
 }
 
-pub fn execute_signed_operation(
-    hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
-    signed_operation: SignedOperation,
-    ticketer: &ContractKt1Hash,
-) -> Receipt {
-    let operation_hash = signed_operation.hash();
-    let result = verify_signed_op(hrt, tx, signed_operation)
-        .and_then(|op| execute_op(hrt, tx, op, ticketer));
-    match result {
-        Ok((hash, content)) => Receipt::new(hash, Ok(content)),
-        Err(e) => Receipt::new(operation_hash, Err(e)),
-    }
-}
-
-fn execute_op(
+fn execute_operation_inner(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     op: Operation,
@@ -77,7 +58,7 @@ fn execute_op(
             let revealed_op = verify_signed_op(hrt, tx, revealed_op)?;
             match (reveal.reveal_type, &revealed_op.content) {
                 (RevealType::DeployFunction, &operation::Content::DeployFunction(_)) => {
-                    execute_op(hrt, tx, revealed_op, ticketer)
+                    execute_operation_inner(hrt, tx, revealed_op, ticketer)
                 }
                 _ => Err(Error::RevealTypeMismatch),
             }
@@ -85,15 +66,32 @@ fn execute_op(
     }
 }
 
-fn verify_signed_op(
+pub fn execute_external_operation(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    signed_op: SignedOperation,
-) -> Result<Operation> {
-    signed_op.verify().and_then(|op| {
-        op.verify_nonce(hrt, tx)?;
-        Ok(op)
-    })
+    external_operation: ExternalOperation,
+) -> Receipt {
+    match external_operation {
+        ExternalOperation::Deposit(deposit) => deposit::execute(hrt, tx, deposit),
+        ExternalOperation::FaDeposit(fa_deposit) => {
+            fa_deposit::execute(hrt, tx, fa_deposit)
+        }
+    }
+}
+
+pub fn execute_operation(
+    hrt: &mut impl HostRuntime,
+    tx: &mut Transaction,
+    signed_operation: SignedOperation,
+    ticketer: &ContractKt1Hash,
+) -> Receipt {
+    let operation_hash = signed_operation.hash();
+    let result = verify_signed_op(hrt, tx, signed_operation)
+        .and_then(|op| execute_operation_inner(hrt, tx, op, ticketer));
+    match result {
+        Ok((hash, content)) => Receipt::new(hash, Ok(content)),
+        Err(e) => Receipt::new(operation_hash, Err(e)),
+    }
 }
 
 #[cfg(test)]
@@ -143,7 +141,7 @@ mod tests {
     }
 
     fn run_function_content() -> Content {
-        let body = r#""value":1""#.to_string().into_bytes();
+        let body = vec![0];
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
                 "tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
@@ -212,7 +210,7 @@ mod tests {
         let root_hash = make_data_available(&mut host, deploy_op);
         let rdc_op = signed_rdc_op(root_hash);
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_signed_operation(&mut host, &mut tx, rdc_op, &ticketer);
+        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer);
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
     }
     #[test]
@@ -224,7 +222,7 @@ mod tests {
         let root_hash = make_data_available(&mut host, run_op);
         let rdc_op = signed_rdc_op(root_hash);
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_signed_operation(&mut host, &mut tx, rdc_op, &ticketer);
+        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer);
         assert!(matches!(
             receipt.result,
             ReceiptResult::Failed(e) if e.contains("RevealTypeMismatch")
@@ -238,10 +236,9 @@ mod tests {
         tx.begin();
         let deploy_op = make_signed_op(deploy_function_content());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt =
-            execute_signed_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer);
+        let receipt = execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer);
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
-        let receipt = execute_signed_operation(&mut host, &mut tx, deploy_op, &ticketer);
+        let receipt = execute_operation(&mut host, &mut tx, deploy_op, &ticketer);
         assert!(
             matches!(receipt.result, ReceiptResult::Failed(e) if e.contains("InvalidNonce"))
         );
