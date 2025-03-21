@@ -740,6 +740,7 @@ mod tests {
                 &Endpoint::default(),
                 &Endpoint::default(),
                 &PathBuf::from("/foo"),
+                &PathBuf::from("/foo"),
             ),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(
