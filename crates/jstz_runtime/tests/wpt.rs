@@ -7,7 +7,7 @@ use deno_core::{
 use deno_error::JsErrorBox;
 use derive_more::{From, Into};
 use expect_test::expect_file;
-use jstz_core::kv::Transaction;
+use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use jstz_runtime::JstzRuntime;
 use jstz_wpt::{
@@ -234,28 +234,28 @@ deno_core::extension!(
     esm = [dir "tests", "test_harness_api.js"],
 );
 
-fn init_runtime() -> (JstzRuntime, Transaction, MockHost) {
+fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntime {
     let address =
         SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton").unwrap();
-    let mut tx = Transaction::default();
-    tx.begin();
-    let mut host = MockHost::default();
 
     let mut options = JstzRuntime::options();
     options
         .extensions
         .push(test_harness_api::init_ops_and_esm());
-    let mut runtime = JstzRuntime::new(&mut host, &mut tx, address, Some(options));
+    let mut runtime = JstzRuntime::new(host, tx, address, Some(options));
 
     let op_state = runtime.op_state();
     // Insert a blank report to be filled in by test cases
     op_state.borrow_mut().put(TestHarnessReport::default());
 
-    (runtime, tx, host)
+    runtime
 }
 
 pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
-    let (mut rt, _, _) = init_runtime();
+    let mut tx = Transaction::default();
+    tx.begin();
+    let mut host = MockHost::default();
+    let mut rt = init_runtime(&mut host, &mut tx);
 
     // Somehow each `execute_script` call has some strange side effect such that the global
     // test suite object is completed prematurely before all test cases are registered.
