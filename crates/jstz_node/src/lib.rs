@@ -1,7 +1,11 @@
 use anyhow::Result;
 use api_doc::{modify, ApiDoc};
-use axum::{http, routing::get};
-use config::JstzNodeConfig;
+use axum::{
+    http::{self},
+    routing::get,
+};
+use config::{JstzNodeConfig, KeyPair};
+use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use octez::OctezRollupClient;
 use services::{
     accounts::AccountsService,
@@ -25,8 +29,10 @@ pub mod config;
 #[derive(Clone)]
 pub struct AppState {
     pub rollup_client: OctezRollupClient,
+    pub rollup_preimages_dir: PathBuf,
     pub broadcaster: Arc<Broadcaster>,
     pub db: Db,
+    pub injector: KeyPair,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -37,7 +43,9 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         endpoint_addr,
         endpoint_port,
         rollup_endpoint,
+        config.rollup_preimages_dir.to_path_buf(),
         config.kernel_log_file.to_path_buf(),
+        config.injector,
     )
     .await
 }
@@ -46,7 +54,9 @@ pub async fn run(
     addr: &str,
     port: u16,
     rollup_endpoint: String,
+    rollup_preimages_dir: PathBuf,
     kernel_log_path: PathBuf,
+    injector: KeyPair,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
 
@@ -56,8 +66,10 @@ pub async fn run(
 
     let state = AppState {
         rollup_client,
+        rollup_preimages_dir,
         broadcaster,
         db,
+        injector,
     };
 
     let cors = CorsLayer::new()
@@ -78,11 +90,14 @@ pub async fn run(
 }
 
 fn router() -> OpenApiRouter<AppState> {
+    let body_limit = axum::extract::DefaultBodyLimit::max(MAX_REVEAL_SIZE);
+
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .merge(OperationsService::router_with_openapi())
         .merge(AccountsService::router_with_openapi())
         .merge(LogsService::router_with_openapi())
         .route("/health", get(http::StatusCode::OK))
+        .layer(body_limit)
 }
 
 pub fn openapi_json_raw() -> anyhow::Result<String> {
