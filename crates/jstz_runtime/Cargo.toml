@@ -12,7 +12,8 @@ description = "Javascript runtime for Jstz"
 
 [dependencies]
 deno_console.workspace = true
-deno_core.workspace = true
+deno_core = "=0.341.0"
+deno_fetch = "0.220.0"
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 tezos-smart-rollup.workspace = true
@@ -27,6 +28,7 @@ jstz_wpt = { path = "../jstz_wpt" }
 serde_json.workspace = true
 tezos-smart-rollup-mock.workspace = true
 tokio.workspace = true
+deno_fetch.workspace = true
 
 [features]
 skip-wpt = []

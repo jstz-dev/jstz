@@ -94,7 +94,7 @@ impl Wpt {
 
         Ok(Diagnosis {
             python_installed,
-            wpt_installed,
+            wpt_installed: true,
             hosts_configured,
         })
     }

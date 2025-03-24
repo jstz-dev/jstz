@@ -11,6 +11,11 @@ use std::ops::DerefMut;
 use crate::jstz_console::jstz_console;
 use crate::jstz_fetch::jstz_fetch;
 use deno_console::deno_console;
+use deno_core::anyhow::Result as AnyhowResult;
+use deno_core::error::JsError;
+use deno_core::url::Url;
+use deno_fetch::FetchPermissions;
+use std::path::Path;
 
 /// [`JstzRuntime`] manages the [`JsRuntime`] state. It is also
 /// provides [`JsRuntime`] with the instiatiated [`HostRuntime`]
@@ -119,8 +124,31 @@ macro_rules! init_ops_and_esm_extensions  {
     };
 }
 
+pub struct JstzDenoFetchPermissions;
+
+impl FetchPermissions for JstzDenoFetchPermissions {
+    fn check_net_url(&mut self, _url: &Url, _api_name: &str) -> AnyhowResult<()> {
+        Ok(())
+    }
+    fn check_read(&mut self, _p: &Path, _api_name: &str) -> AnyhowResult<()> {
+        Ok(())
+    }
+}
+
 fn init_extenions() -> Vec<Extension> {
-    init_ops_and_esm_extensions!(deno_console, jstz_console, jstz_fetch)
+    /*deno_fetch::deno_fetch::init_ops_and_esm::<JstzDenoFetchPermissions>(
+        Default::default(),
+    );
+    init_ops_and_esm_extensions!(deno_console, jstz_console, jstz_fetch)*/
+
+    vec![
+        deno_fetch::deno_fetch::init_ops_and_esm::<JstzDenoFetchPermissions>(
+            Default::default(),
+        ),
+        deno_console::init_ops_and_esm(),
+        jstz_console::init_ops_and_esm(),
+        jstz_fetch::init_ops_and_esm(),
+    ]
 }
 
 #[cfg(test)]
