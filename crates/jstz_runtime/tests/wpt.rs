@@ -255,6 +255,7 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
     let mut tx = Transaction::default();
     tx.begin();
     let mut host = MockHost::default();
+    host.set_debug_handler(std::io::empty());
     let mut rt = init_runtime(&mut host, &mut tx);
 
     // Somehow each `execute_script` call has some strange side effect such that the global
