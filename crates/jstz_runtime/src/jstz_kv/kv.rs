@@ -16,7 +16,7 @@ use utoipa::ToSchema;
 
 #[derive(Debug)]
 pub struct Kv {
-    prefix: String,
+    pub prefix: String,
 }
 
 const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
