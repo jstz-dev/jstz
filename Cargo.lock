@@ -2739,6 +2739,7 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
+ "bip39",
  "boa_gc",
  "derive_more",
  "hex",

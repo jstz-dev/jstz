@@ -8,13 +8,16 @@ pub mod secret_key;
 pub mod signature;
 pub mod smart_function_hash;
 
+use bip39::{Language, Mnemonic};
 use tezos_crypto_rs::hash::SeedEd25519;
 
-use crate::{hash::Blake2b, public_key::PublicKey, secret_key::SecretKey};
+use crate::{public_key::PublicKey, secret_key::SecretKey};
 
 pub fn keypair_from_passphrase(passphrase: &str) -> Result<(SecretKey, PublicKey)> {
-    let ikm = Blake2b::from(passphrase.as_bytes()).as_array().to_vec();
-    let seed = SeedEd25519::try_from(ikm)?;
+    // FIXME: clarify terminology. The function input `passphrase` is actually equivalent to a
+    // mnemonic in octez client.
+    let m = Mnemonic::parse_in(Language::English, passphrase).unwrap();
+    let seed = SeedEd25519::try_from(m.to_seed("")[0..32].to_vec()).unwrap();
     let (pk, sk) = seed.keypair()?;
     Ok((SecretKey::Ed25519(sk), PublicKey::Ed25519(pk.into())))
 }
@@ -50,6 +53,13 @@ macro_rules! impl_bincode_for_hash {
 mod tests {
     use super::keypair_from_passphrase;
     use proptest::prelude::*;
+
+    #[test]
+    fn test_keypair_from_passphrase() {
+        let s = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
+        let (_, pk) = keypair_from_passphrase(s).unwrap();
+        assert_eq!(pk.hash(), "tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h");
+    }
 
     proptest! {
         #[test]
