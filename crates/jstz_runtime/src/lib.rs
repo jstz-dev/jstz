@@ -1,6 +1,7 @@
 pub mod error;
 mod jstz_console;
 mod jstz_kv;
+mod jstz_meta;
 
 pub mod runtime;
 

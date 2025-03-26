@@ -16,6 +16,7 @@ use tokio;
 use crate::jstz_console::jstz_console;
 use crate::jstz_kv::jstz_kv;
 use crate::jstz_kv::kv::Kv;
+use crate::jstz_meta::jstz_meta;
 use deno_console::deno_console;
 
 /// Returns the default object of the specified JavaScript namespace (Object).
@@ -253,7 +254,7 @@ macro_rules! init_ops_and_esm_extensions  {
 }
 
 fn init_extenions() -> Vec<Extension> {
-    init_ops_and_esm_extensions!(deno_console, jstz_console, jstz_kv)
+    init_ops_and_esm_extensions!(deno_console, jstz_console, jstz_kv, jstz_meta)
 }
 
 #[cfg(test)]
