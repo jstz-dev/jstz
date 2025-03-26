@@ -18388,23 +18388,23 @@
                   },
                   {
                     "name": "Setting URL's href attribute and base URLs",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.domainToASCII should be undefined",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.domainToUnicode should be undefined",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL: no structured serialize/deserialize support",
                     "status": "Fail",
-                    "message": "assert_throws_dom: function \"() => self.structuredClone(new URL(\"about:blank\"))\" threw object \"ReferenceError: URL is not defined\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
+                    "message": "assert_throws_dom: function \"() => self.structuredClone(new URL(\"about:blank\"))\" threw object \"TypeError: self.structuredClone is not a function\" that is not a DOMException DataCloneError: property \"code\" is equal to undefined, expected 25"
                   },
                   {
                     "name": "URLSearchParams: no structured serialize/deserialize support",
@@ -18413,14 +18413,14 @@
                   },
                   {
                     "name": "Constructor only takes strings",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   }
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 1,
-                  "failed": 7,
+                  "passed": 5,
+                  "failed": 3,
                   "timed_out": 0
                 }
               }
@@ -18542,29 +18542,29 @@
                 "subtests": [
                   {
                     "name": "URL.searchParams getter",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.searchParams updating, clearing",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.searchParams setter, invalid values",
                     "status": "Fail",
-                    "message": "URL is not defined"
+                    "message": "assert_throws_js: function \"function() { url.searchParams = new URLSearchParams(urlString) }\" threw object \"ReferenceError: URLSearchParams is not defined\" (\"ReferenceError\") expected instance of function \"function TypeError() { [native code] }\" (\"TypeError\")"
                   },
                   {
                     "name": "URL.searchParams and URL.search setters, update propagation",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   }
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 4,
+                  "passed": 3,
+                  "failed": 1,
                   "timed_out": 0
                 }
               }
@@ -18578,1309 +18578,1309 @@
                 "subtests": [
                   {
                     "name": "Setting protocol with leading U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+0000 before inserted colon (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+0000 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with leading U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+0009 before inserted colon (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+0009 (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with leading U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+000A before inserted colon (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+000A (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with leading U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+000D before inserted colon (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+000D (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with leading U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+001F before inserted colon (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+001F (https:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with leading U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+0000 before inserted colon (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+0000 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with leading U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+0009 before inserted colon (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+0009 (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with leading U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+000A before inserted colon (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+000A (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with leading U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+000D before inserted colon (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+000D (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with leading U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting protocol with U+001F before inserted colon (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with leading U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with middle U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting username with trailing U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with leading U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with middle U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting password with trailing U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with leading U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with leading U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with middle U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with middle U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting host with trailing U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hostname with trailing U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with leading U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with middle U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting port with trailing U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with leading U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with middle U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting pathname with trailing U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with leading U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with middle U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting search with trailing U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with leading U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with middle U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Setting hash with trailing U+001F (wpt++:)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   }
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 260,
+                  "passed": 260,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -19960,44 +19960,44 @@
                 "subtests": [
                   {
                     "name": "URL.canParse(undefined, undefined)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.canParse(aaa:b, undefined)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.canParse(undefined, aaa:b)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.canParse(aaa:/b, undefined)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.canParse(undefined, aaa:/b)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.canParse(https://test:test, undefined)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URL.canParse(a, https://b/)",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   }
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 7,
+                  "passed": 7,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -20011,14 +20011,14 @@
                 "subtests": [
                   {
                     "name": "Untitled",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   }
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 1,
+                  "passed": 1,
+                  "failed": 0,
                   "timed_out": 0
                 }
               }
@@ -20770,23 +20770,23 @@
                   },
                   {
                     "name": "Deleting all params removes ? from URL",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Removing non-existent param removes ? from URL",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Changing the query of a URL with an opaque path can impact the path",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Changing the query of a URL with an opaque path can impact the path if the URL has no fragment",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "Two-argument delete()",
@@ -20801,8 +20801,8 @@
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 8,
+                  "passed": 4,
+                  "failed": 4,
                   "timed_out": 0
                 }
               }
@@ -20821,34 +20821,34 @@
                   },
                   {
                     "name": "For-of Check",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "empty",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "delete next param during iteration",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "delete current param during iteration",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "delete every param seen during iteration",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   }
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 6,
+                  "passed": 5,
+                  "failed": 1,
                   "timed_out": 0
                 }
               }
@@ -20986,19 +20986,19 @@
                   },
                   {
                     "name": "URLSearchParams's size when obtained from a URL",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URLSearchParams's size when obtained from a URL and using .search",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   }
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 4,
+                  "passed": 2,
+                  "failed": 2,
                   "timed_out": 0
                 }
               }
@@ -21018,7 +21018,7 @@
                   {
                     "name": "URL parse and sort: z=b&a=b&z=a&a=a",
                     "status": "Fail",
-                    "message": "URL is not defined"
+                    "message": "URLSearchParams is not defined"
                   },
                   {
                     "name": "Parse and sort: �=x&￼&�=a",
@@ -21028,7 +21028,7 @@
                   {
                     "name": "URL parse and sort: �=x&￼&�=a",
                     "status": "Fail",
-                    "message": "URL is not defined"
+                    "message": "URLSearchParams is not defined"
                   },
                   {
                     "name": "Parse and sort: ﬃ&🌈",
@@ -21038,7 +21038,7 @@
                   {
                     "name": "URL parse and sort: ﬃ&🌈",
                     "status": "Fail",
-                    "message": "URL is not defined"
+                    "message": "URLSearchParams is not defined"
                   },
                   {
                     "name": "Parse and sort: é&e�&é",
@@ -21048,7 +21048,7 @@
                   {
                     "name": "URL parse and sort: é&e�&é",
                     "status": "Fail",
-                    "message": "URL is not defined"
+                    "message": "URLSearchParams is not defined"
                   },
                   {
                     "name": "Parse and sort: z=z&a=a&z=y&a=b&z=x&a=c&z=w&a=d&z=v&a=e&z=u&a=f&z=t&a=g",
@@ -21058,7 +21058,7 @@
                   {
                     "name": "URL parse and sort: z=z&a=a&z=y&a=b&z=x&a=c&z=w&a=d&z=v&a=e&z=u&a=f&z=t&a=g",
                     "status": "Fail",
-                    "message": "URL is not defined"
+                    "message": "URLSearchParams is not defined"
                   },
                   {
                     "name": "Parse and sort: bbb&bb&aaa&aa=x&aa=y",
@@ -21068,7 +21068,7 @@
                   {
                     "name": "URL parse and sort: bbb&bb&aaa&aa=x&aa=y",
                     "status": "Fail",
-                    "message": "URL is not defined"
+                    "message": "URLSearchParams is not defined"
                   },
                   {
                     "name": "Parse and sort: z=z&=f&=t&=x",
@@ -21078,7 +21078,7 @@
                   {
                     "name": "URL parse and sort: z=z&=f&=t&=x",
                     "status": "Fail",
-                    "message": "URL is not defined"
+                    "message": "URLSearchParams is not defined"
                   },
                   {
                     "name": "Parse and sort: a🌈&a💩",
@@ -21088,18 +21088,18 @@
                   {
                     "name": "URL parse and sort: a🌈&a💩",
                     "status": "Fail",
-                    "message": "URL is not defined"
+                    "message": "URLSearchParams is not defined"
                   },
                   {
                     "name": "Sorting non-existent params removes ? from URL",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   }
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 17,
+                  "passed": 1,
+                  "failed": 16,
                   "timed_out": 0
                 }
               }
@@ -21173,19 +21173,19 @@
                   },
                   {
                     "name": "URLSearchParams connected to URL",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   },
                   {
                     "name": "URLSearchParams must not do newline normalization",
-                    "status": "Fail",
-                    "message": "URL is not defined"
+                    "status": "Pass",
+                    "message": "null"
                   }
                 ],
                 "status": "Ok",
                 "metrics": {
-                  "passed": 0,
-                  "failed": 14,
+                  "passed": 2,
+                  "failed": 12,
                   "timed_out": 0
                 }
               }
