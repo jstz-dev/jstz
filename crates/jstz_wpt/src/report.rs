@@ -16,6 +16,20 @@ impl WptReport {
     pub fn insert(&mut self, path: &str, test: WptReportTest) -> Result<()> {
         insert_test_in_folder(&mut self.test_harness, path, test)
     }
+
+    pub fn stats(&self) -> BTreeMap<String, WptMetrics> {
+        let mut stats = BTreeMap::new();
+        for (folder, report) in self.test_harness() {
+            for (suite_name, metrics) in report.stats() {
+                let key = match suite_name.len() {
+                    0 => folder.to_owned(),
+                    _ => format!("{folder}/{suite_name}"),
+                };
+                stats.insert(key, metrics);
+            }
+        }
+        stats
+    }
 }
 
 #[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
@@ -88,6 +102,37 @@ impl WptReportFile {
                 variations.push(test);
                 Ok(())
             }
+        }
+    }
+
+    pub fn stats(&self) -> BTreeMap<String, WptMetrics> {
+        match self {
+            WptReportFile::Folder(folder_map) => {
+                let mut stats = BTreeMap::new();
+                for (folder, report) in folder_map {
+                    for (suite_name, metrics) in report.stats() {
+                        let key = match suite_name.len() {
+                            0 => folder.to_owned(),
+                            _ => format!("{folder}/{suite_name}"),
+                        };
+                        stats.insert(key, metrics);
+                    }
+                }
+                stats
+            }
+            WptReportFile::Test { variations } => BTreeMap::from_iter([(
+                String::new(),
+                variations
+                    .iter()
+                    .fold(WptMetrics::default(), |acc, report| {
+                        let metrics = &report.metrics;
+                        WptMetrics {
+                            passed: acc.passed + metrics.passed,
+                            failed: acc.failed + metrics.failed,
+                            timed_out: acc.timed_out + metrics.timed_out,
+                        }
+                    }),
+            )]),
         }
     }
 }
@@ -169,5 +214,189 @@ impl TryFrom<u8> for WptTestStatus {
             3 => Ok(Self::PreconditionFailed),
             _ => Err(()),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::BTreeMap;
+
+    use super::{
+        WptMetrics, WptReport, WptReportFile, WptReportTest, WptSubtest,
+        WptSubtestStatus, WptTestStatus,
+    };
+
+    fn report_file(passed: u64) -> WptReportFile {
+        WptReportFile::Test {
+            variations: vec![
+                WptReportTest {
+                    status: WptTestStatus::Ok,
+                    subtests: vec![WptSubtest {
+                        name: "foo".to_string(),
+                        status: WptSubtestStatus::Pass,
+                        message: None,
+                    }],
+                    metrics: WptMetrics {
+                        passed,
+                        failed: 0,
+                        timed_out: 0,
+                    },
+                },
+                WptReportTest {
+                    status: WptTestStatus::Ok,
+                    subtests: vec![WptSubtest {
+                        name: "bar".to_string(),
+                        status: WptSubtestStatus::Pass,
+                        message: None,
+                    }],
+                    metrics: WptMetrics {
+                        passed: 0,
+                        failed: 2,
+                        timed_out: 0,
+                    },
+                },
+                WptReportTest {
+                    status: WptTestStatus::Ok,
+                    subtests: vec![WptSubtest {
+                        name: "baz".to_string(),
+                        status: WptSubtestStatus::Pass,
+                        message: None,
+                    }],
+                    metrics: WptMetrics {
+                        passed: 0,
+                        failed: 0,
+                        timed_out: 3,
+                    },
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn wpt_report_file_stats_single_test_suite() {
+        let report = report_file(1);
+        let stats = report.stats();
+        assert_eq!(
+            stats,
+            BTreeMap::from_iter([(
+                "".to_string(),
+                WptMetrics {
+                    passed: 1,
+                    failed: 2,
+                    timed_out: 3,
+                }
+            )])
+        );
+    }
+
+    #[test]
+    fn wpt_report_file_stats_report_folder() {
+        let report = WptReportFile::Folder(BTreeMap::from_iter([
+            ("foo".to_string(), report_file(1)),
+            ("bar".to_string(), report_file(100)),
+            (
+                "baz".to_string(),
+                WptReportFile::Folder(BTreeMap::from_iter([
+                    ("aaa".to_string(), report_file(5)),
+                    ("bbb".to_string(), report_file(7)),
+                ])),
+            ),
+        ]));
+        assert_eq!(
+            report.stats(),
+            BTreeMap::from_iter([
+                (
+                    "foo".to_string(),
+                    WptMetrics {
+                        passed: 1,
+                        failed: 2,
+                        timed_out: 3,
+                    }
+                ),
+                (
+                    "bar".to_string(),
+                    WptMetrics {
+                        passed: 100,
+                        failed: 2,
+                        timed_out: 3,
+                    }
+                ),
+                (
+                    "baz/aaa".to_string(),
+                    WptMetrics {
+                        passed: 5,
+                        failed: 2,
+                        timed_out: 3,
+                    }
+                ),
+                (
+                    "baz/bbb".to_string(),
+                    WptMetrics {
+                        passed: 7,
+                        failed: 2,
+                        timed_out: 3,
+                    }
+                )
+            ])
+        );
+    }
+
+    #[test]
+    fn wpt_report_stats() {
+        let report = WptReport {
+            test_harness: BTreeMap::from_iter([
+                (
+                    "test1".to_string(),
+                    WptReportFile::Folder(BTreeMap::from_iter([
+                        ("foo".to_string(), report_file(1)),
+                        (
+                            "bar".to_string(),
+                            WptReportFile::Folder(BTreeMap::from_iter([
+                                ("aaa".to_string(), report_file(5)),
+                                ("bbb".to_string(), report_file(7)),
+                            ])),
+                        ),
+                    ])),
+                ),
+                ("test2".to_string(), report_file(11)),
+            ]),
+        };
+        assert_eq!(
+            report.stats(),
+            BTreeMap::from_iter([
+                (
+                    "test1/foo".to_string(),
+                    WptMetrics {
+                        passed: 1,
+                        failed: 2,
+                        timed_out: 3,
+                    }
+                ),
+                (
+                    "test1/bar/aaa".to_string(),
+                    WptMetrics {
+                        passed: 5,
+                        failed: 2,
+                        timed_out: 3,
+                    }
+                ),
+                (
+                    "test1/bar/bbb".to_string(),
+                    WptMetrics {
+                        passed: 7,
+                        failed: 2,
+                        timed_out: 3,
+                    }
+                ),
+                (
+                    "test2".to_string(),
+                    WptMetrics {
+                        passed: 11,
+                        failed: 2,
+                        timed_out: 3,
+                    }
+                ),
+            ])
+        );
     }
 }
