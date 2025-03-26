@@ -17,6 +17,7 @@ default-run = "jstz"
 [dependencies]
 ansi_term.workspace = true
 anyhow.workspace = true
+bip39.workspace = true
 boa_engine.workspace = true
 boa_gc.workspace = true
 bollard.workspace = true
@@ -66,7 +67,6 @@ tempfile.workspace = true
 tezos-smart-rollup-mock.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
-tiny-bip39.workspace = true
 tokio-util.workspace = true
 tokio.workspace = true
 url.workspace = true
