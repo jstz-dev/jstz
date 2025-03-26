@@ -1,6 +1,6 @@
 use std::collections::hash_map::Entry;
 
-use bip39::{Language, Mnemonic, MnemonicType};
+use bip39::{Language, Mnemonic};
 use clap::Subcommand;
 use dialoguer::{Confirm, Input};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
@@ -15,7 +15,10 @@ use crate::{
 };
 
 fn generate_passphrase() -> String {
-    let mnemonic = Mnemonic::new(MnemonicType::Words12, Language::English);
+    // unwrap is okay here because we are using a fixed value for word count and it's always
+    // valid unless the library stops supporting word count 12
+    let mnemonic = Mnemonic::generate_in(Language::English, 12)
+        .expect("generate_in should generate mnemonics");
     mnemonic.to_string()
 }
 
@@ -349,5 +352,16 @@ pub async fn exec(command: Command) -> Result<()> {
         Command::List { long } => list_accounts(long).await,
         Command::Code { account, network } => get_code(account, network).await,
         Command::Balance { account, network } => get_balance(account, network).await,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn generate_passphrase() {
+        // Just to make sure that generate_passphrase works with the current version of Mnemonic.
+        // If anything changes in the library and fails our logic, the unwrap call will lead to
+        // a panic and we can capture that issue here.
+        assert_ne!(super::generate_passphrase(), super::generate_passphrase());
     }
 }

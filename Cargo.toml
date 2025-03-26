@@ -38,6 +38,7 @@ async-trait = "0.1.82"
 axum = "0.7.7"
 base64 = "0.21.7"
 bincode = { version = "2.0.0-rc.3", features = ["derive", "serde"] }
+bip39 = { version = "2.1.0", features = ["rand"] }
 boa_engine = { version = "0.19.0", features = ["fuzz"] }
 boa_gc = "0.19.0"
 bollard = "0.16.1"
@@ -106,7 +107,6 @@ syntect = "5.2.0"
 tempfile = "3.10.0"
 tezos_data_encoding = "0.6.0"
 thiserror = "1.0.56"
-tiny-bip39 = "1.0.0"
 tl = "0.7.7"
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-stream = "0.1.14"
