@@ -26,10 +26,10 @@ tokio.workspace = true
 deno_webidl.workspace = true
 deno_web.workspace = true
 deno_url.workspace = true
+deno_error.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true
-deno_error.workspace = true
 derive_more.workspace = true
 jstz_wpt = { path = "../jstz_wpt" }
 serde_json.workspace = true
