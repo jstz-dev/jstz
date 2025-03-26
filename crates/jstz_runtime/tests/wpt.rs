@@ -365,5 +365,7 @@ async fn test_wpt() -> anyhow::Result<()> {
     let expected = expect_file!["./wptreport.json"];
     expected.assert_eq(&serde_json::to_string_pretty(&report)?);
 
+    println!("{:?}", report.stats());
+
     Ok(())
 }
