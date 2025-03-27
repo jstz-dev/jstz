@@ -53,6 +53,7 @@ daemonize = "0.5.0"
 deno_console = "0.190.0"
 deno_core = "0.336.0"
 deno_error = "0.5.5"
+deno_fetch = "0.202.0"
 deno_fs = "0.100.0"
 deno_url = "0.190.0"
 deno_webidl = "0.190.0"
@@ -185,3 +186,4 @@ boa_interner = { git = "https://github.com/trilitech/boa.git", branch = "ajob410
 boa_macros = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
 boa_parser = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
 boa_profiler = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
+deno_fetch = { git = "https://github.com/jstz-dev/deno", package = "deno_fetch", tag = "v2.1.0-jstz"}
