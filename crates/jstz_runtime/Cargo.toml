@@ -27,6 +27,12 @@ deno_webidl.workspace = true
 deno_web.workspace = true
 deno_url.workspace = true
 
+[dependencies.deno_fetch_base]
+git = "https://github.com/jstz-dev/deno"
+branch = "ryan/patch-deno-fetch"
+features = ["sandbox"]
+default-features = false
+
 [dev-dependencies]
 anyhow.workspace = true
 deno_error.workspace = true
