@@ -44,6 +44,7 @@ pub enum Error {
     AddressTypeMismatch,
     AccountExists,
     RevealTypeMismatch,
+    InvalidInjector,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -121,6 +122,9 @@ impl From<Error> for JsError {
             Error::RevealTypeMismatch => JsNativeError::eval()
                 .with_message("RevealTypeMismatch")
                 .into(),
+            Error::InvalidInjector => {
+                JsNativeError::eval().with_message("InvalidInjector").into()
+            }
         }
     }
 }

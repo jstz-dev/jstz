@@ -3,7 +3,8 @@ use rust_embed::Embed;
 
 use crate::task::jstzd::JstzdConfig;
 use crate::{
-    jstz_rollup_path, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS,
+    jstz_rollup_path, EXCHANGER_ADDRESS, INJECTOR_ALIAS, JSTZ_NATIVE_BRIDGE_ADDRESS,
+    JSTZ_ROLLUP_ADDRESS,
 };
 use anyhow::{Context, Result};
 use http::Uri;
@@ -62,7 +63,7 @@ pub(crate) const BOOTSTRAP_ACCOUNTS: [(&str, &str, &str); 6] = [
         "unencrypted:edsk4QLrcijEffxV31gGdN2HU7UpyJjA8drFoNcmnB28n89YjPNRFm",
     ),
 ];
-pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
+pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = INJECTOR_ALIAS;
 const BOOTSTRAP_ACCOUNT_BALANCE: u64 = 100_000_000_000;
 
 #[derive(Embed)]
@@ -141,7 +142,9 @@ pub(crate) async fn build_config(
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
+        &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
+        None,
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
