@@ -11,11 +11,12 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};
 use jstz_wpt::{
-    Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptReportTest, WptServe, WptSubtest,
-    WptSubtestStatus, WptTestStatus,
+    Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReport, WptReportTest,
+    WptServe, WptSubtest, WptSubtestStatus, WptTestStatus,
 };
 use std::future::IntoFuture;
 use tezos_smart_rollup_mock::MockHost;
+use tokio::io::AsyncWriteExt;
 
 /// Enum of possible test statuses
 ///
@@ -312,6 +313,49 @@ fn run_wpt_test(
     }
 }
 
+async fn dump_stats(report: &WptReport, output_path: &str) -> anyhow::Result<()> {
+    let mut file = tokio::fs::File::create(output_path).await?;
+    let mut full_metrics = WptMetrics::default();
+    let mut lines =
+        "|Test suite|Passed|Failed|Timed out|\n|---|---|---|---|\n".to_string();
+
+    let max_width = 45; // line width is around 80
+    for (suite_name, metrics) in report.stats() {
+        full_metrics.passed += metrics.passed;
+        full_metrics.failed += metrics.failed;
+        full_metrics.timed_out += metrics.timed_out;
+        let name = if suite_name.len() > max_width {
+            format!(
+                "...{}",
+                &suite_name[(suite_name.len() - max_width + 3)..suite_name.len()]
+            )
+        } else {
+            suite_name
+        };
+        lines += &format!(
+            "|{}|{}|{}|{}|\n",
+            name, metrics.passed, metrics.failed, metrics.timed_out
+        );
+    }
+
+    lines += &format!(
+        "|Total|{}|{}|{}|\n",
+        full_metrics.passed, full_metrics.failed, full_metrics.timed_out
+    );
+    file.write_all(
+        format!(
+            "### WPT summary\nTotal pass rate: {:.2}%\n{}",
+            100f64 * full_metrics.passed as f64
+                / (full_metrics.passed + full_metrics.failed + full_metrics.timed_out)
+                    as f64,
+            lines
+        )
+        .as_bytes(),
+    )
+    .await?;
+    Ok(())
+}
+
 #[cfg_attr(feature = "skip-wpt", ignore)]
 #[tokio::test]
 async fn test_wpt() -> anyhow::Result<()> {
@@ -365,7 +409,9 @@ async fn test_wpt() -> anyhow::Result<()> {
     let expected = expect_file!["./wptreport.json"];
     expected.assert_eq(&serde_json::to_string_pretty(&report)?);
 
-    println!("{:?}", report.stats());
+    if let Ok(v) = std::env::var("STATS_PATH") {
+        dump_stats(&report, &v).await?;
+    }
 
     Ok(())
 }
