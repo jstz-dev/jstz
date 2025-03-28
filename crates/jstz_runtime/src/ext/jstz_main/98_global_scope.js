@@ -110,4 +110,3 @@ const workerGlobalScope = {
 };
 
 export { workerGlobalScope };
-
