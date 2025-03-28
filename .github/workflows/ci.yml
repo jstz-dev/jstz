@@ -89,7 +89,10 @@ jobs:
           ln -s /usr/bin/python3.11 /usr/bin/python3
           cd crates/jstz_wpt/wpt && python3 wpt make-hosts-file >> /etc/hosts
           python3 wpt serve &
-          cd ../../jstz_runtime && cargo test --test wpt
+          cd ../../jstz_runtime && STATS_PATH=$(pwd)/out.txt cargo test --test wpt
+          while read line; do
+            echo "$line" >> $GITHUB_STEP_SUMMARY
+          done < $(pwd)/out.txt
 
   build-docs:
     name: Build Documentation
