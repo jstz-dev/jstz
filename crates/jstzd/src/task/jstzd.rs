@@ -23,7 +23,7 @@ use jstz_crypto::public_key::PublicKey;
 use jstz_node::config::JstzNodeConfig;
 use octez::r#async::{
     baker::OctezBakerConfig,
-    client::{OctezClient, OctezClientConfig},
+    client::{Address, OctezClient, OctezClientConfig},
     endpoint::Endpoint,
     node_config::OctezNodeConfig,
     protocol::{BootstrapAccount, ProtocolParameter},
@@ -357,6 +357,7 @@ impl JstzdServer {
             .route("/config/:config_type", get(config_handler))
             .route("/config/", get(all_config_handler))
             .route("/contract_call", post(call_contract_handler))
+            .route("/l1_alias/:alias", get(l1_alias_handler))
             .with_state(self.inner.state.clone());
         let listener = TcpListener::bind(("0.0.0.0", self.port)).await?;
 
@@ -585,6 +586,35 @@ async fn config_handler(
     }
 }
 
+async fn l1_alias_handler(
+    state: State<Shared<ServerState>>,
+    Path(alias): Path<String>,
+) -> impl IntoResponse {
+    let lock = state.read().await;
+    let c = lock.jstzd_config.as_ref().unwrap().octez_client_config();
+    handle_show_address_response(
+        OctezClient::new(c.clone())
+            .show_address(&alias, false)
+            .await,
+    )
+}
+
+// split from l1_alias_handler so that this part can be easily tested
+fn handle_show_address_response(res: Result<Address>) -> impl IntoResponse {
+    match res {
+        Ok(v) => v.hash.to_string().into_response(),
+        Err(e) => {
+            let s = e.to_string();
+            if s.contains("no public key hash alias") {
+                http::StatusCode::NOT_FOUND.into_response()
+            } else {
+                // TODO: log the error
+                http::StatusCode::INTERNAL_SERVER_ERROR.into_response()
+            }
+        }
+    }
+}
+
 #[derive(Deserialize)]
 struct TransferRequest {
     from: String,
@@ -618,14 +648,16 @@ async fn call_contract_handler(
 
 #[cfg(test)]
 mod tests {
+    use axum::{body::to_bytes, response::IntoResponse};
     use indicatif::ProgressBar;
+    use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
     use std::path::PathBuf;
     use std::str::FromStr;
 
     use jstz_node::config::JstzNodeConfig;
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
-        client::OctezClientConfigBuilder,
+        client::{Address, OctezClientConfigBuilder},
         endpoint::Endpoint,
         node_config::OctezNodeConfigBuilder,
         protocol::{BootstrapAccount, ProtocolParameterBuilder},
@@ -763,5 +795,58 @@ mod tests {
                 "octez_rollup",
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn handle_show_address_response_ok() {
+        let res = super::handle_show_address_response(Ok(Address {
+            hash: PublicKeyHash::from_str("tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv")
+                .unwrap(),
+            public_key: PublicKey::from_base58(
+                "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv",
+            )
+            .unwrap(),
+            secret_key: None,
+        }))
+        .into_response();
+        assert_eq!(res.status(), 200);
+        let address =
+            String::from_utf8(to_bytes(res.into_body(), 100).await.unwrap().to_vec())
+                .unwrap();
+        assert_eq!(address, "tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv");
+    }
+
+    #[tokio::test]
+    async fn handle_show_address_response_unknown_alias() {
+        let res = super::handle_show_address_response(Err(anyhow::anyhow!(
+            r#"Warning:
+
+                 This is NOT the Tezos Mainnet.
+
+           Do NOT use your fundraiser keys on this network.
+
+Error:
+  Erroneous command line argument 3 (test).
+  no public key hash alias named test"#
+        )))
+        .into_response();
+        assert_eq!(res.status(), 404);
+    }
+
+    #[tokio::test]
+    async fn handle_show_address_response_other_errors() {
+        let res = super::handle_show_address_response(Err(anyhow::anyhow!(
+            r#"Warning:
+
+                 This is NOT the Tezos Mainnet.
+
+           Do NOT use your fundraiser keys on this network.
+
+Error:
+  Erroneous command line argument 3 (test).
+  Unknown command 'foo'"#
+        )))
+        .into_response();
+        assert_eq!(res.status(), 500);
     }
 }
