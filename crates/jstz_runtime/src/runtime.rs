@@ -13,11 +13,7 @@ use deno_core::{error::JsError, *};
 use serde::Deserialize;
 use tokio;
 
-use crate::ext::{
-    jstz_console::jstz_console,
-    jstz_kv::{jstz_kv, kv::Kv},
-    jstz_main::jstz_main,
-};
+use crate::ext::{jstz_console, jstz_kv, jstz_kv::kv::Kv, jstz_main};
 use deno_console;
 use deno_url;
 use deno_web::TimersPermission;
