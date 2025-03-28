@@ -20,9 +20,9 @@ pub async fn exec(
     network: Option<NetworkName>,
 ) -> Result<()> {
     let cfg = Config::load().await?;
-
+    let use_sandbox = cfg.network_name(&network)? == NetworkName::Dev;
     // Check network
-    if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {
+    if use_sandbox && cfg.sandbox.is_none() {
         bail_user_error!(
             "No sandbox is currently running. Please run {}.",
             styles::command("jstz sandbox start")
@@ -44,8 +44,7 @@ pub async fn exec(
     let pkh = to_pkh.to_base58();
     debug!("resolved `to` -> {}", &pkh);
 
-    // TODO: this is a bug. Fix the container flag or simply check if network_name == NetworkName::Dev
-    if cfg.sandbox().is_ok_and(|c| c.container) {
+    if use_sandbox {
         exec_sandbox(JSTZD_SERVER_BASE_URL, &from, &pkh, amount).await?;
     } else {
         // Execute the octez-client command
@@ -102,6 +101,8 @@ async fn exec_sandbox(
 #[cfg(test)]
 mod tests {
     use super::exec_sandbox;
+    use crate::config::NetworkName;
+    use crate::utils::AddressOrAlias;
 
     #[tokio::test]
     async fn exec_sandbox_ok() {
@@ -131,5 +132,17 @@ mod tests {
             .create();
 
         assert_eq!(exec_sandbox(&server.url(), "", "", 1).await.unwrap_err().to_string(), "Failed to deposit XTZ. Please check whether the addresses and network are correct.");
+    }
+
+    #[tokio::test]
+    async fn exec_no_sandbox() {
+        assert!(super::exec(
+            "foo".to_string(),
+            AddressOrAlias::Alias("bar".to_string()),
+            1,
+            Some(NetworkName::Dev),
+        )
+        .await
+        .is_err_and(|e| e.to_string().contains("No sandbox is currently running.")),);
     }
 }
