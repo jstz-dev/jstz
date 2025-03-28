@@ -63,7 +63,6 @@ mod test_utils {
                     .unwrap();
             let mut $tx = jstz_core::kv::Transaction::default();
             $tx.begin();
-            #[allow(unused)]
             let protocol  = Some($crate::Protocol::new(&mut $host, &mut $tx, $address.clone()));
             #[allow(unused)]
             let mut $runtime = $crate::JstzRuntime::new($crate::JstzRuntimeOptions { protocol, ..Default::default() } );
