@@ -1,3 +1,4 @@
+use deno_core::v8::Local;
 use jstz_core::host::HostRuntime;
 use jstz_core::host::JsHostRuntime;
 use jstz_core::kv::Transaction;
@@ -177,6 +178,7 @@ impl JstzRuntime {
     pub async fn call_default_handler(
         &mut self,
         id: ModuleId,
+        args: &[v8::Global<v8::Value>],
     ) -> Result<v8::Global<v8::Value>> {
         let ns = self.runtime.get_module_namespace(id)?;
         let scope = &mut self.handle_scope();
@@ -190,7 +192,10 @@ impl JstzRuntime {
 
             // TODO():
             // Support passing values to the handler
-            let result = default_fn.call(tc_scope, undefined.into(), &[]);
+            let local_args: Vec<Local<v8::Value>> =
+                args.iter().map(|arg| Local::new(tc_scope, arg)).collect();
+            let result =
+                default_fn.call(tc_scope, undefined.into(), local_args.as_slice());
 
             if let Some(exn) = tc_scope.exception() {
                 let error = JsError::from_v8_exception(tc_scope, exn);
@@ -318,7 +323,7 @@ mod test {
         });
 
         let id = rt.execute_main_module(&specifier).await.unwrap();
-        let result = rt.call_default_handler(id).await;
+        let result = rt.call_default_handler(id, &[]).await;
         (rt, result)
     }
 

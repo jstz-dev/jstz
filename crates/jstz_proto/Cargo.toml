@@ -15,6 +15,9 @@ bincode.workspace = true
 boa_engine.workspace = true
 boa_gc.workspace = true
 derive_more.workspace = true
+deno_core = { workspace = true, optional = true }
+deno_error = { workspace = true, optional = true }
+deno_fetch_ext = { workspace = true, optional = true }
 either.workspace = true
 erased-serde.workspace = true
 http-serde.workspace = true
@@ -22,15 +25,21 @@ http.workspace = true
 jstz_api = { path = "../jstz_api" }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
+jstz_runtime = { path = "../jstz_runtime", optional = true }
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
 utoipa.workspace = true
+url.workspace = true
 
 [dev-dependencies]
 jstz_mock = { path = "../jstz_mock" }
 tezos-smart-rollup-mock.workspace = true
 bincode.workspace = true
+tokio.workspace = true
 
+[features]
+riscv = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_ext", "dep:deno_error"]
