@@ -2992,7 +2992,6 @@ dependencies = [
  "deno_web",
  "deno_webidl",
  "derive_more",
- "expect-test",
  "jstz_core",
  "jstz_crypto",
  "jstz_wpt",

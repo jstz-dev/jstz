@@ -31,7 +31,6 @@ deno_url.workspace = true
 anyhow.workspace = true
 deno_error.workspace = true
 derive_more.workspace = true
-expect-test.workspace = true
 jstz_wpt = { path = "../jstz_wpt" }
 serde_json.workspace = true
 tezos-smart-rollup-mock.workspace = true
