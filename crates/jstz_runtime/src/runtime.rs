@@ -97,10 +97,13 @@ impl JstzRuntime {
             ..Default::default()
         });
 
+        let op_state = runtime.op_state();
+
         if let Some(protocol) = options.protocol {
-            let op_state = runtime.op_state();
             op_state.borrow_mut().put(protocol);
         };
+
+        op_state.borrow_mut().put(JstzPermissions);
 
         Self { runtime }
     }
