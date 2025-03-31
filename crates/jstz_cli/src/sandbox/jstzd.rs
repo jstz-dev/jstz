@@ -25,7 +25,7 @@ where
     false
 }
 
-async fn is_jstzd_running(jstzd_server_base_url: &str) -> Result<bool> {
+pub(crate) async fn is_jstzd_running(jstzd_server_base_url: &str) -> Result<bool> {
     match reqwest::get(format!("{jstzd_server_base_url}/health")).await {
         Err(e) => {
             // ignore connection error because this is what is returned when the server
