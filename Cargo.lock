@@ -3034,6 +3034,7 @@ dependencies = [
  "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-core",
+ "tezos-smart-rollup-host",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
 ]
