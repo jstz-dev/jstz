@@ -1284,6 +1284,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "deno_fetch_ext"
+version = "0.202.0"
+source = "git+https://github.com/jstz-dev/deno?rev=bfb8c4588aa39da694cafc15274789ab217b82c6#bfb8c4588aa39da694cafc15274789ab217b82c6"
+dependencies = [
+ "bytes",
+ "deno_core",
+ "deno_error",
+ "http 1.1.0",
+ "http-body-util",
+ "serde",
+]
+
+[[package]]
 name = "deno_ops"
 version = "0.212.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2875,6 +2888,7 @@ dependencies = [
  "num-traits",
  "serde",
  "tezos-smart-rollup",
+ "tezos-smart-rollup-host",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
 ]
@@ -2988,6 +3002,7 @@ dependencies = [
  "deno_console",
  "deno_core",
  "deno_error",
+ "deno_fetch_ext",
  "deno_url",
  "deno_web",
  "deno_webidl",

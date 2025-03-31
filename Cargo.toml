@@ -120,6 +120,12 @@ utoipa-axum = "0.1.1"
 utoipa-scalar = { version = "0.2.0", features = ["axum"] }
 wasm-bindgen = "0.2.92"
 
+[workspace.dependencies.deno_fetch_ext]
+git = "https://github.com/jstz-dev/deno"
+rev = "bfb8c4588aa39da694cafc15274789ab217b82c6"
+features = ["sandbox"]
+ default-features = false
+
 [workspace.dependencies.tezos-smart-rollup]
 version = "0.2.2"
 default-features = false

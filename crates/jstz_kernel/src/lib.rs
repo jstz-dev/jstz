@@ -2,11 +2,8 @@ use jstz_core::kv::{Storage, Transaction};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_proto::{executor, Result};
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup::{
-    entrypoint,
-    prelude::{debug_msg, Runtime},
-    storage::path::RefPath,
-};
+use tezos_smart_rollup::{entrypoint, prelude::debug_msg, storage::path::RefPath};
+use tezos_smart_rollup_host::runtime::Runtime;
 
 use crate::inbox::{read_message, Message};
 pub mod inbox;
