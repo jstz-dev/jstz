@@ -426,7 +426,7 @@
         },
         "responses": {
           "200": {
-            "description": "Operation successfully injectedd"
+            "description": "Operation successfully injected"
           },
           "400": {
             "description": ""

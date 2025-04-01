@@ -29,6 +29,7 @@ jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
 log.workspace = true
+mockito.workspace = true
 octez = { path = "../octez" }
 parking_lot.workspace = true
 r2d2 = { version = "0.8", optional = true }
@@ -37,6 +38,7 @@ reqwest.workspace = true
 rusqlite = { version = "0.29", optional = true }
 serde.workspace = true
 serde_json.workspace = true
+tempfile.workspace = true
 tezos-smart-rollup-encoding.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
