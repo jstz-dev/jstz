@@ -17,8 +17,13 @@ pub struct KeyPair(pub PublicKey, pub SecretKey);
 impl Default for KeyPair {
     fn default() -> Self {
         Self(
+<<<<<<< HEAD
             PublicKey::from_base58(JSTZ_NODE_DEFAULT_PK).unwrap(),
             SecretKey::from_base58(JSTZ_NODE_DEFAULT_SK).unwrap(),
+=======
+            PublicKey::from_base58(BOOTSTRAP_PK).unwrap(),
+            SecretKey::from_base58(BOOTSTRAP_SK).unwrap(),
+>>>>>>> f39fa18d (feat(jstz_node): prepare rlp operation)
         )
     }
 }
