@@ -3,7 +3,7 @@
 // TODO: We could probably automatically generate these from WebIDL specs
 
 mod interfaces;
-pub(crate) mod js;
+pub mod js;
 
 use deno_core::v8;
 pub use interfaces::*;

@@ -1,4 +1,5 @@
-use deno_core::v8::Local;
+use deno_error::JsErrorBox;
+use deno_fetch_ext::FetchHandler;
 use jstz_core::host::HostRuntime;
 use jstz_core::host::JsHostRuntime;
 use jstz_core::kv::Transaction;
@@ -10,7 +11,7 @@ use std::{
 };
 
 use crate::error::Result;
-use deno_core::{error::JsError, *};
+use deno_core::*;
 use serde::Deserialize;
 use tokio;
 
@@ -33,13 +34,6 @@ fn get_default_export<'s>(
     ns_object.get(scope, default_str.into()).unwrap()
 }
 
-/// [`JstzRuntime`] manages the [`JsRuntime`] state. It is also
-/// provides [`JsRuntime`] with the instiatiated [`HostRuntime`]
-/// and protocol capabilities
-pub struct JstzRuntime {
-    runtime: JsRuntime,
-}
-
 pub struct JstzRuntimeOptions {
     pub protocol: Option<Protocol>,
     /// Additional extensions to be registered on initialization.
@@ -50,6 +44,45 @@ pub struct JstzRuntimeOptions {
     /// Not to be confused with ES modules registered by extensions
     /// (these are static, and treated differently)
     pub module_loader: Rc<dyn ModuleLoader>,
+    pub fetch_extension: Extension,
+}
+
+struct NotImplementedFetch;
+
+#[allow(unused)]
+impl FetchHandler for NotImplementedFetch {
+    type CreateHttpClientArgs = ();
+
+    type FetchError = JsErrorBox;
+
+    type Options = ();
+
+    fn fetch(
+        state: &mut deno_core::OpState,
+        method: ByteString,
+        url: String,
+        headers: Vec<(ByteString, ByteString)>,
+        client_rid: Option<u32>,
+        has_body: bool,
+        data: Option<JsBuffer>,
+        resource: Option<ResourceId>,
+    ) -> std::result::Result<deno_fetch_ext::FetchReturn, Self::FetchError> {
+        unimplemented!()
+    }
+
+    async fn fetch_send(
+        state: Rc<std::cell::RefCell<deno_core::OpState>>,
+        rid: ResourceId,
+    ) -> std::result::Result<deno_fetch_ext::FetchResponse, Self::FetchError> {
+        unimplemented!()
+    }
+
+    fn custom_client(
+        state: &mut deno_core::OpState,
+        args: Self::CreateHttpClientArgs,
+    ) -> std::result::Result<ResourceId, Self::FetchError> {
+        unimplemented!()
+    }
 }
 
 impl Default for JstzRuntimeOptions {
@@ -58,6 +91,9 @@ impl Default for JstzRuntimeOptions {
             protocol: Default::default(),
             extensions: Default::default(),
             module_loader: Rc::new(NoopModuleLoader),
+            fetch_extension: deno_fetch_ext::deno_fetch::init_ops_and_esm::<
+                NotImplementedFetch,
+            >(()),
         }
     }
 }
@@ -76,6 +112,13 @@ impl JstzRuntimeSnapshot {
     }
 }
 
+/// [`JstzRuntime`] manages the [`JsRuntime`] state. It is also
+/// provides [`JsRuntime`] with the instiatiated [`HostRuntime`]
+/// and protocol capabilities
+pub struct JstzRuntime {
+    runtime: JsRuntime,
+}
+
 impl JstzRuntime {
     /// Returns the default [`RuntimeOptions`] configured
     /// with custom extensions
@@ -86,10 +129,10 @@ impl JstzRuntime {
             ..Default::default()
         }
     }
-
     /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`]
     pub fn new(options: JstzRuntimeOptions) -> Self {
         let mut extensions = init_extenions();
+        extensions.push(options.fetch_extension);
         extensions.extend(options.extensions);
 
         let mut runtime = JsRuntime::new(RuntimeOptions {
@@ -181,31 +224,15 @@ impl JstzRuntime {
         args: &[v8::Global<v8::Value>],
     ) -> Result<v8::Global<v8::Value>> {
         let ns = self.runtime.get_module_namespace(id)?;
-        let scope = &mut self.handle_scope();
-
-        let default_value = get_default_export(ns, scope);
-        let default_fn = v8::Local::<v8::Function>::try_from(default_value)?;
-
-        let result = {
-            let tc_scope = &mut v8::TryCatch::new(scope);
-            let undefined = v8::undefined(tc_scope);
-
-            // TODO():
-            // Support passing values to the handler
-            let local_args: Vec<Local<v8::Value>> =
-                args.iter().map(|arg| Local::new(tc_scope, arg)).collect();
-            let result =
-                default_fn.call(tc_scope, undefined.into(), local_args.as_slice());
-
-            if let Some(exn) = tc_scope.exception() {
-                let error = JsError::from_v8_exception(tc_scope, exn);
-                return Err(error.into());
-            }
-
-            result
+        let default_fn = {
+            let scope = &mut self.handle_scope();
+            let default_value = get_default_export(ns, scope);
+            let default_fn = v8::Local::<v8::Function>::try_from(default_value)?;
+            v8::Global::new(scope, default_fn)
         };
-
-        Ok(v8::Global::new(scope, result.unwrap()))
+        let fut = self.call_with_args(&default_fn, args);
+        let result = self.with_event_loop_promise(fut, Default::default()).await;
+        Ok(result?)
     }
 }
 
@@ -227,6 +254,7 @@ pub struct Protocol {
     pub host: JsHostRuntime<'static>,
     pub tx: &'static mut Transaction,
     pub kv: Kv,
+    pub address: SmartFunctionHash,
 }
 
 impl Protocol {
@@ -248,6 +276,7 @@ impl Protocol {
             host,
             tx,
             kv: Kv::new(address.to_base58()),
+            address,
         }
     }
 }
@@ -361,7 +390,7 @@ export function handler() {
     async fn test_call_default_handler() {
         let (mut rt, result) = init_and_call_default_handler(
             r#"
-function handler() {
+async function handler() {
     return 42;
 }
 

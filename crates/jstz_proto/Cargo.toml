@@ -14,6 +14,7 @@ description.workspace = true
 bincode.workspace = true
 boa_engine.workspace = true
 boa_gc.workspace = true
+bytemuck.workspace = true
 derive_more.workspace = true
 deno_core = { workspace = true, optional = true }
 deno_error = { workspace = true, optional = true }
@@ -32,6 +33,7 @@ thiserror.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
+tokio = { workspace = true, optional = true }
 utoipa.workspace = true
 url.workspace = true
 
@@ -42,4 +44,4 @@ bincode.workspace = true
 tokio.workspace = true
 
 [features]
-riscv = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_ext", "dep:deno_error"]
+riscv = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_ext", "dep:deno_error", "dep:tokio"]

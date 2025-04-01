@@ -1,6 +1,6 @@
 use deno_core::v8;
 
-use crate::{js_class, js_constructor, js_getter, js_static_method};
+use crate::{js_class, js_constructor, js_getter, js_method, js_static_method};
 
 use super::Headers;
 
@@ -22,7 +22,10 @@ impl<'s> Response<'s> {
 
     js_getter! { fn body_used() -> bool }
 
-    js_getter! { fn body() -> Option<v8::Local<'s, v8::Value>> }
+    js_method! {
+      #[js_name(arrayBuffer)]
+      async fn array_buffer() -> Option<deno_core::JsBuffer>
+    }
 
     js_static_method! {
       #[js_name(ok)]

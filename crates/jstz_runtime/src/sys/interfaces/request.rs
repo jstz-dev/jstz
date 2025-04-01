@@ -33,9 +33,19 @@ impl<'s> RequestInit<'s> {
         Self(v8::Object::new(scope))
     }
 
-    js_setter! { fn set_body(value: v8::Local<'s, v8::Value>) }
+    js_setter! {
+        #[js_name(body)]
+        fn set_body(value: v8::Local<'s, v8::Value>)
+    }
 
-    js_setter! { fn set_headers(headers: Headers<'s>) }
+    js_setter! {
+        #[js_name(headers)]
+        fn set_headers(headers: Headers<'s>)
+    }
 
-    js_setter! { fn set_method(value: String) }
+    js_setter! {
+        #[js_name(method)]
+        fn set_method(value: deno_core::ByteString)
+    }
+
 }

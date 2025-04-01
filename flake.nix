@@ -180,13 +180,14 @@
               src = builtins.fetchGit {
                 url = "https://gitlab.com/tezos/tezos.git";
                 ref = "master";
-                rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3";
+                rev = "0a983034296e708a92a8e314bc7d8fa82a7241da";
               };
               cargoRoot = "src/riscv";
               buildAndTestSubdir = "src/riscv/sandbox";
               useFetchCargoVendor = true;
               cargoHash = "sha256-ZhvEguaALAbxo/Icf3SIA6ROc5eq7GhNA/ZIfWoT5oc=";
-              cargoBuildFeatures = ["supervisor"];
+              cargoBuildType = "release";
+              buildFeatures = ["supervisor"];
             };
 
           llvmPackages = pkgs.llvmPackages_16;

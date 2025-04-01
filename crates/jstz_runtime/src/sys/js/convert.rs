@@ -37,7 +37,7 @@ where
     T: FromV8<'a>,
 {
     fn from_v8(scope: &mut v8::HandleScope<'a>, value: v8::Local<'a, v8::Value>) -> Self {
-        if value.is_null() {
+        if value.is_null_or_undefined() {
             None
         } else {
             Some(T::from_v8(scope, value))
@@ -108,6 +108,8 @@ impl_from_v8!(for f32, f64 where |value, _scope| deno_core::_ops::to_f64_option(
 // Strings
 impl_to_v8!(for String, Cow<'a, str>, &'a str where |value, scope| v8::String::new(scope, &value).unwrap());
 impl_from_v8!(for String where |value, scope| value.to_rust_string_lossy(scope));
+impl_to_v8!(for deno_core::ByteString where |value, scope| serde_v8::to_v8(scope, value).unwrap());
+impl_from_v8!(for deno_core::ByteString where |value, scope| serde_v8::from_v8(scope, value).unwrap());
 
 // Buffers
 
@@ -141,6 +143,11 @@ impl<'a> ToV8<'a> for serde_v8::JsBuffer {
     }
 }
 
+impl<'a> FromV8<'a> for serde_v8::JsBuffer {
+    fn from_v8(scope: &mut v8::HandleScope<'a>, value: v8::Local<'a, v8::Value>) -> Self {
+        serde_v8::from_v8(scope, value).unwrap()
+    }
+}
 // v8::Local types
 
 impl<'a, T> FromV8<'a> for v8::Local<'a, T>
@@ -181,5 +188,30 @@ where
 {
     fn to_v8(self, scope: &mut v8::HandleScope<'a>) -> v8::Local<'a, v8::Value> {
         serde_v8::to_v8(scope, self.0).unwrap()
+    }
+}
+
+impl<'a, T> FromV8<'a> for Serde<T>
+where
+    T: serde::Deserialize<'a>,
+{
+    fn from_v8(scope: &mut v8::HandleScope<'a>, value: v8::Local<'a, v8::Value>) -> Self {
+        // TODO: Handle errors
+        Serde(serde_v8::from_v8(scope, value).unwrap())
+    }
+}
+
+impl<'s, T, U> FromV8<'s> for (T, U)
+where
+    T: FromV8<'s>,
+    U: FromV8<'s>,
+{
+    fn from_v8(scope: &mut v8::HandleScope<'s>, value: v8::Local<'s, v8::Value>) -> Self {
+        let object = value.try_cast::<v8::Object>().unwrap();
+        let fs_key = v8::Integer::new(scope, 0);
+        let fs = object.get(scope, fs_key.into()).unwrap();
+        let snd_key = v8::Integer::new(scope, 1);
+        let snd = object.get(scope, snd_key.into()).unwrap();
+        (T::from_v8(scope, fs), U::from_v8(scope, snd))
     }
 }

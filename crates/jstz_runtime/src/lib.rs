@@ -1,6 +1,7 @@
 pub mod error;
 mod ext;
 pub mod runtime;
+#[macro_use]
 pub mod sys;
 
 pub use runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};

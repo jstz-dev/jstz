@@ -1,6 +1,10 @@
-use deno_core::v8;
+use std::marker::PhantomData;
 
-use crate::sys::worker_global_scope;
+use deno_core::v8::{self};
+
+use crate::{sys::worker_global_scope, JstzRuntime};
+
+use super::convert::FromV8;
 
 pub(crate) fn class_object<'s>(
     scope: &mut v8::HandleScope<'s>,
@@ -97,11 +101,40 @@ macro_rules! js_method {
         }
     };
     (
+        #[js_name($js_name:ident)]
+        async fn $method_name:ident($($method_arg_name:ident: $method_arg_type:ty),*) -> $method_return:ty
+    ) => {
+        pub fn $method_name(
+            &self,
+            scope: &mut v8::HandleScope<'s>,
+            $($method_arg_name: $method_arg_type),*
+        ) -> $crate::sys::js::class::Promise<$method_return> {
+            let method_name = v8::String::new(scope, stringify!($js_name)).unwrap();
+            let args =
+                [
+                $(<$method_arg_type as $crate::sys::js::convert::ToV8>::to_v8($method_arg_name, scope)),*
+                ];
+
+            #[allow(unused)]
+            let result = $crate::sys::js::class::instance_call_method(scope, &self.0, method_name, &args);
+            let value = v8::Global::new(scope, result);
+            $crate::sys::js::class::Promise::new(value)
+        }
+    };
+    (
         fn $method_name:ident($($method_arg_name:ident: $method_arg_type:ty),*) $(-> $method_return:ty)?
     ) => {
         $crate::js_method! {
             #[js_name($method_name)]
             fn $method_name($($method_arg_name: $method_arg_type),*) $(-> $method_return)?
+        }
+    };
+    (
+        async fn $method_name:ident($($method_arg_name:ident: $method_arg_type:ty),*) -> $method_return:ty
+    ) => {
+        $crate::js_method! {
+            #[js_name($method_name)]
+            async fn $method_name($($method_arg_name: $method_arg_type),*) $(-> $method_return)?
         }
     };
 }
@@ -192,7 +225,7 @@ macro_rules! js_setter {
             scope: &mut v8::HandleScope<'s>,
             $arg_name: $arg_type,
         ) {
-            let setter_name = v8::String::new(scope, stringify!(js_name)).unwrap();
+            let setter_name = v8::String::new(scope, stringify!($js_name)).unwrap();
             let value =
                 <$arg_type as $crate::sys::js::convert::ToV8>::to_v8($arg_name, scope);
             self.0.set(scope, setter_name.into(), value).unwrap();
@@ -211,7 +244,7 @@ macro_rules! js_setter {
 #[macro_export]
 macro_rules! js_class {
     (
-        $name:ident
+        $name:ident $(with $($mixin:ident),+)?
     ) => {
         // Define the struct for instances
         #[derive(Debug, Clone, PartialEq, Eq)]
@@ -234,7 +267,27 @@ macro_rules! js_class {
 
         impl<'s> $crate::sys::js::class::JsClass for $name<'s> {
             const JS_CLASS_NAME: deno_core::FastStaticString =
-                deno_core::ascii_str!(stringify!(name));
+                deno_core::ascii_str!(stringify!($name));
         }
     };
+}
+
+/// A Js
+pub struct Promise<T>(v8::Global<v8::Value>, PhantomData<T>);
+
+impl<'s, T: FromV8<'s>> Promise<T> {
+    pub fn new(value: v8::Global<v8::Value>) -> Self {
+        Self(value, PhantomData)
+    }
+
+    pub async fn with_runtime(self, runtime: &'s mut JstzRuntime) -> T {
+        let promise = runtime.resolve(self.0);
+        let result = runtime
+            .with_event_loop_future(promise, Default::default())
+            .await
+            .unwrap();
+        let scope = &mut runtime.handle_scope();
+        let result = v8::Local::new(scope, result);
+        T::from_v8(scope, result)
+    }
 }

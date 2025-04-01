@@ -12,7 +12,7 @@ impl Kv {
     #[static_method]
     #[serde]
     fn get(op_state: &mut OpState, #[string] key: &str) -> Option<serde_json::Value> {
-        let Protocol { host, tx, kv } = op_state.borrow_mut::<Protocol>();
+        let Protocol { host, tx, kv, .. } = op_state.borrow_mut::<Protocol>();
         kv.get(host, tx, key).map(|v| v.0.clone())
     }
 
@@ -36,7 +36,7 @@ impl Kv {
     #[fast]
     #[static_method]
     fn contains(op_state: &mut OpState, #[string] key: &str) -> bool {
-        let Protocol { tx, kv, host } = &mut op_state.borrow_mut::<Protocol>();
+        let Protocol { tx, kv, host, .. } = &mut op_state.borrow_mut::<Protocol>();
         kv.has(host, tx, key).is_some_and(|t| t)
     }
 }

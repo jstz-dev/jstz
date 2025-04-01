@@ -1286,7 +1286,7 @@ dependencies = [
 [[package]]
 name = "deno_fetch_ext"
 version = "0.202.0"
-source = "git+https://github.com/jstz-dev/deno?rev=bfb8c4588aa39da694cafc15274789ab217b82c6#bfb8c4588aa39da694cafc15274789ab217b82c6"
+source = "git+https://github.com/jstz-dev/deno?rev=9f6cd3e100943dd33806452fb90fc0b8aa74106a#9f6cd3e100943dd33806452fb90fc0b8aa74106a"
 dependencies = [
  "bytes",
  "deno_core",
@@ -2954,6 +2954,7 @@ dependencies = [
  "bincode 2.0.0-rc.3",
  "boa_engine",
  "boa_gc",
+ "bytemuck",
  "deno_core",
  "deno_error",
  "deno_fetch_ext",
