@@ -11,6 +11,7 @@ use jstz_proto::{
         ACCOUNTS_PATH_PREFIX,
     },
 };
+use octez::OctezRollupClient;
 use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -69,6 +70,21 @@ async fn get_account(
     Ok(Json(account))
 }
 
+pub async fn get_account_nonce(
+    rollup_client: &OctezRollupClient,
+    address: &str,
+) -> ServiceResult<Nonce> {
+    let key = construct_accounts_key(address);
+    let value = rollup_client.get_value(&key).await?;
+    match value {
+        Some(value) => match deserialize_account(value.as_slice())? {
+            Account::User(UserAccount { nonce, .. }) => Ok(nonce),
+            Account::SmartFunction(SmartFunctionAccount { nonce, .. }) => Ok(nonce),
+        },
+        None => Ok(Nonce(0)),
+    }
+}
+
 /// Get nonce of an account
 #[utoipa::path(
     get,
@@ -84,15 +100,10 @@ async fn get_nonce(
     State(AppState { rollup_client, .. }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
-    let key = construct_accounts_key(&address);
-    let value = rollup_client.get_value(&key).await?;
-    let account_nonce = match value {
-        Some(value) => match deserialize_account(value.as_slice())? {
-            Account::User(UserAccount { nonce, .. }) => nonce,
-            Account::SmartFunction(SmartFunctionAccount { nonce, .. }) => nonce,
-        },
-        None => Err(ServiceError::NotFound)?,
-    };
+    let account_nonce = get_account_nonce(&rollup_client, &address).await?;
+    if account_nonce.0 == 0 {
+        return Err(ServiceError::NotFound)?;
+    }
     Ok(Json(account_nonce))
 }
 
