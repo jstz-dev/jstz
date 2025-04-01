@@ -173,6 +173,21 @@
             else pkgs.clang;
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
+
+          riscvSandbox = with pkgs;
+            rustPlatform.buildRustPackage {
+              name = "riscv-sandbox";
+              src = builtins.fetchGit {
+                url = "https://gitlab.com/tezos/tezos.git";
+                ref = "master";
+                rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3";
+              };
+              cargoRoot = "src/riscv";
+              buildAndTestSubdir = "src/riscv/sandbox";
+              useFetchCargoVendor = true;
+              cargoHash = "sha256-ZhvEguaALAbxo/Icf3SIA6ROc5eq7GhNA/ZIfWoT5oc=";
+            };
+
           llvmPackages = pkgs.llvmPackages_16;
 
           crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
@@ -323,6 +338,7 @@
                 python39 # for running web-platform tests
 
                 riscv64MuslPkgs.pkgsStatic.stdenv.cc
+                riscvSandbox
               ]
               ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
           };
