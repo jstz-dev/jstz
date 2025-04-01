@@ -7,7 +7,7 @@ For this reason, smart functions themselves have no persistent state or memory; 
 
 As described in [Accepting requests](/functions/requests), each smart function must have a `handler` function that receives these requests from callers.
 This function receives a Jstz [Request](/api/request) object that includes the message sent from the client and metadata such as the address of the account that called the smart function.
-The function runs and returns a Jstz[Response](/api/response) object to the caller.
+The function runs and returns a Jstz [Response](/api/response) object to the caller.
 
 ## Example smart function
 
