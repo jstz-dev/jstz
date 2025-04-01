@@ -40,6 +40,10 @@ impl Operation {
         &self.nonce
     }
 
+    pub fn content(&self) -> &Content {
+        &self.content
+    }
+
     /// Verify the nonce of the operation
     /// Returns the operation's
     pub fn verify_nonce(
@@ -139,6 +143,16 @@ pub enum RevealType {
     DeployFunction,
 }
 
+impl TryFrom<&Content> for RevealType {
+    type Error = Error;
+    fn try_from(value: &Content) -> Result<Self> {
+        match *value {
+            Content::DeployFunction(_) => Ok(RevealType::DeployFunction),
+            _ => Err(Error::RevealNotSupported),
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
 #[schema(
     description = "An operation to reveal an operation with a large payload of type `RevealType`. \
@@ -164,6 +178,18 @@ pub enum Content {
     RevealLargePayloadOperation(#[bincode(with_serde)] RevealLargePayloadOperation),
 }
 
+impl Content {
+    pub fn new_reveal_large_payload(
+        root_hash: PreimageHash,
+        reveal_type: RevealType,
+    ) -> Self {
+        Content::RevealLargePayloadOperation(RevealLargePayloadOperation {
+            root_hash,
+            reveal_type,
+        })
+    }
+}
+
 #[derive(
     Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
 )]
@@ -187,6 +213,14 @@ impl SignedOperation {
             .verify(&self.inner.public_key, hash.as_ref())?;
 
         Ok(self.inner)
+    }
+
+    pub fn verify_ref(&self) -> Result<&Operation> {
+        let hash = self.inner.hash();
+        self.signature
+            .verify(&self.inner.public_key, hash.as_ref())?;
+
+        Ok(&self.inner)
     }
 }
 

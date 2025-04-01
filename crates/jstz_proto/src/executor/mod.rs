@@ -1,7 +1,5 @@
 use crate::{
-    operation::{
-        self, ExternalOperation, Operation, OperationHash, RevealType, SignedOperation,
-    },
+    operation::{self, ExternalOperation, Operation, OperationHash, SignedOperation},
     receipt::{self, Receipt},
     Error, Result,
 };
@@ -56,12 +54,10 @@ fn execute_operation_inner(
                 &reveal.root_hash,
             )?;
             let revealed_op = verify_signed_op(hrt, tx, revealed_op)?;
-            match (reveal.reveal_type, &revealed_op.content) {
-                (RevealType::DeployFunction, &operation::Content::DeployFunction(_)) => {
-                    execute_operation_inner(hrt, tx, revealed_op, ticketer)
-                }
-                _ => Err(Error::RevealTypeMismatch),
+            if reveal.reveal_type == revealed_op.content().try_into()? {
+                return execute_operation_inner(hrt, tx, revealed_op, ticketer);
             }
+            Err(Error::RevealTypeMismatch)
         }
     }
 }
@@ -102,6 +98,7 @@ mod tests {
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
     };
+    use operation::RevealType;
     use tezos_crypto_rs::hash::HashTrait;
     use tezos_smart_rollup_mock::MockHost;
 
@@ -214,7 +211,7 @@ mod tests {
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
     }
     #[test]
-    fn throws_error_if_reveal_type_mismatch() {
+    fn throws_error_if_reveal_type_not_supported() {
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
         tx.begin();
@@ -225,7 +222,7 @@ mod tests {
         let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer);
         assert!(matches!(
             receipt.result,
-            ReceiptResult::Failed(e) if e.contains("RevealTypeMismatch")
+            ReceiptResult::Failed(e) if e.contains("RevealNotSupported")
         ));
     }
 

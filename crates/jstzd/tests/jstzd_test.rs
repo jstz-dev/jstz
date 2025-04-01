@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-use jstz_node::config::JstzNodeConfig;
+use jstz_node::config::{JstzNodeConfig, KeyPair};
 use jstzd::jstz_rollup_path::*;
 
 use http::Uri;
@@ -24,7 +24,7 @@ use octez::r#async::rollup::{OctezRollupConfigBuilder, RollupDataDir};
 use octez::unused_port;
 use serde_json::Value;
 use std::fs;
-use tempfile::NamedTempFile;
+use tempfile::{NamedTempFile, TempDir};
 use tezos_crypto_rs::hash::SmartRollupHash;
 use tokio::time::{sleep, timeout};
 
@@ -152,6 +152,8 @@ async fn create_jstzd_server(
         .expect("Failed to build baker config");
     let kernel_debug_file = FileWrapper::default();
     let kernel_debug_file_path = kernel_debug_file.path();
+    let preimages_dir = TempDir::new().unwrap();
+    let preimages_dir_path = preimages_dir.path().to_path_buf();
     let rollup_config = OctezRollupConfigBuilder::new(
         octez_node_rpc_endpoint.clone(),
         octez_client_config.base_dir().into(),
@@ -169,7 +171,9 @@ async fn create_jstzd_server(
     let jstz_node_config = JstzNodeConfig::new(
         jstz_node_rpc_endpoint,
         &rollup_config.rpc_endpoint,
+        &preimages_dir_path,
         &kernel_debug_file_path,
+        KeyPair::default(),
     );
     let config = JstzdConfig::new(
         octez_node_config,

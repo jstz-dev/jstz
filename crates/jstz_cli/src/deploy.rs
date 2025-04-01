@@ -1,4 +1,5 @@
 use boa_engine::JsError;
+use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use jstz_proto::{
     context::account::ParsedCode,
     operation::{Content, DeployFunction, Operation, SignedOperation},
@@ -21,9 +22,6 @@ pub async fn exec(
     name: Option<String>,
     network: Option<NetworkName>,
 ) -> Result<()> {
-    // maximum size of code until the DAL is implemented
-    const MAX_CODE_LENGTH: usize = 3915;
-
     let mut cfg = Config::load().await?;
     // Load sandbox if the selected network is Dev and sandbox is not already loaded
     if cfg.network_name(&network)? == NetworkName::Dev {
@@ -58,8 +56,10 @@ pub async fn exec(
     let code = read_file_or_input_or_piped(code_op)?
         .ok_or(user_error!("No function code supplied. Please provide a filename or pipe the file contents into stdin."))?;
 
-    if code.bytes().len() > MAX_CODE_LENGTH {
-        bail_user_error!("The data availability layer is not yet available. Smart functions are currently restricted to {MAX_CODE_LENGTH} bytes");
+    if code.bytes().len() > MAX_REVEAL_SIZE {
+        bail_user_error!(
+            "Smart functions are currently restricted to {MAX_REVEAL_SIZE} bytes"
+        );
     }
 
     debug!("Code: {}", code);

@@ -44,6 +44,7 @@ pub enum Error {
     AddressTypeMismatch,
     AccountExists,
     RevealTypeMismatch,
+    RevealNotSupported,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -120,6 +121,9 @@ impl From<Error> for JsError {
             }
             Error::RevealTypeMismatch => JsNativeError::eval()
                 .with_message("RevealTypeMismatch")
+                .into(),
+            Error::RevealNotSupported => JsNativeError::eval()
+                .with_message("RevealNotSupported")
                 .into(),
         }
     }
