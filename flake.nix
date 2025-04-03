@@ -186,7 +186,7 @@
               buildAndTestSubdir = "src/riscv/sandbox";
               useFetchCargoVendor = true;
               cargoHash = "sha256-ZhvEguaALAbxo/Icf3SIA6ROc5eq7GhNA/ZIfWoT5oc=";
-              cargoBuildFeatures = ["supervisor"];
+              buildFeatures = ["supervisor"];
             };
 
           llvmPackages = pkgs.llvmPackages_16;
