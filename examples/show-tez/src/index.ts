@@ -10,6 +10,7 @@ import * as signer from "jstz_sdk";
 const encoder = new TextEncoder();
 const decoder = new TextDecoder("utf-8");
 
+// Accept a smart function address and message and put together a request
 function buildRequest(
   contractAddress: string,
   message: string,
@@ -30,6 +31,7 @@ function buildRequest(
   };
 }
 
+// Main function to manage CLI application
 async function main() {
   const args = process.argv.slice(2);
   const contractAddress = args[0];
@@ -37,6 +39,7 @@ async function main() {
     fail("Please provide a smart function address to target");
   }
 
+  // Initialize the Jstz client
   const jstzClient = new Jstz({
     timeout: 6000,
   });
@@ -59,15 +62,21 @@ async function main() {
     public_key: publicKey,
     address,
   } = config.accounts[alias].User;
+
+  // Set up the CLI terminal
   const terminal = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
   });
   let waitingForReceipt = false;
+
+  // Handle CLI input
   terminal.on("line", async (input: string) => {
     try {
       if (input.toLocaleLowerCase() === "show") {
+        // If the user sends "show," print their messages from the contract's key-value store
         const length: number = Number.parseInt(
+          // Get the total number of messages sent by the user account
           await jstzClient.accounts
             .getKv(contractAddress, {
               key: `messages/${address}/length`,
@@ -77,6 +86,7 @@ async function main() {
               return "0";
             }),
         );
+        // Print each message
         for (let index = 0; index < length; index++) {
           const message = await jstzClient.accounts.getKv(contractAddress, {
             key: `messages/${address}/${index}`,
@@ -87,6 +97,8 @@ async function main() {
         if (waitingForReceipt) {
           return;
         }
+        // If the user sends any message other than "show,"
+        // send that message as a request to the smart function
         const runFunction = buildRequest(contractAddress, input);
         const nonce = await jstzClient.accounts.getNonce(address);
         const operation = {
@@ -94,7 +106,9 @@ async function main() {
           nonce,
           source: address,
         };
+        // Sign the operation
         const signature = signer.sign_operation(operation, secretKey);
+        // Send the operation
         const response = jstzClient.operations.injectAndPoll({
           inner: operation,
           public_key: publicKey,

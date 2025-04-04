@@ -4,6 +4,7 @@ const ONE_TEZ = 1000000;
 // Maximum amount of tez a requester can receive
 const MAX_TEZ = 10000;
 
+// Get the amount of tez that the smart function has sent to an address
 const getReceivedTez = (requester: Address): number => {
   let receivedTez: number | null = Kv.get(`received/${requester}`);
   receivedTez = receivedTez === null ? 0 : receivedTez;
@@ -11,10 +12,12 @@ const getReceivedTez = (requester: Address): number => {
   return receivedTez;
 };
 
+// Update the record of the amount of tez that an address has received
 const setReceivedTez = (requester: Address, received: number): void => {
   Kv.set(`received/${requester}`, received);
 };
 
+// Log the message that the user sent
 const addPoliteMessage = (requester: Address, message: string): void => {
   let length: number | null = Kv.get(`messages/${requester}/length`);
   if (length === null) {
@@ -24,6 +27,7 @@ const addPoliteMessage = (requester: Address, message: string): void => {
   Kv.set(`messages/${requester}/length`, length + 1);
 };
 
+// Main function: handle calls to the smart function
 const handler = async (request: Request): Promise<Response> => {
   // Extract the requester's address and message from the request
   const requester = request.headers.get("Referer") as Address;
@@ -39,8 +43,8 @@ const handler = async (request: Request): Promise<Response> => {
   }
 
   // If the requester already received too much tez, decline the request
-  const recievedTez = getReceivedTez(requester);
-  if (recievedTez >= MAX_TEZ) {
+  const receivedTez = getReceivedTez(requester);
+  if (receivedTez >= MAX_TEZ) {
     return new Response(
       JSON.stringify("Sorry, you already received too much tez"),
     );
@@ -58,7 +62,8 @@ const handler = async (request: Request): Promise<Response> => {
     );
   }
 
-  setReceivedTez(requester, recievedTez + 1);
+  // Log the updates
+  setReceivedTez(requester, receivedTez + 1);
   addPoliteMessage(requester, message);
 
   return new Response(
