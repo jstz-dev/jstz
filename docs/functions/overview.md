@@ -6,7 +6,7 @@ Clients call them, servers load them into memory to run them, they return a valu
 
 As described in [Accepting requests](/functions/requests), each smart function must have a `handler` function that receives these requests from callers.
 This function receives a Jstz [Request](/api/request) object that includes the message sent from the client and metadata such as the address of the account that called the smart function.
-The function runs and returns a Jstz[Response](/api/response) object to the caller.
+The function runs and returns a Jstz [Response](/api/response) object to the caller.
 
 Smart functions store persistent data within Jstz; see [Storing data](/functions/data_storage).
 
