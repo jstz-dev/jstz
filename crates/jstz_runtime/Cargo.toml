@@ -24,13 +24,13 @@ utoipa.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 deno_webidl.workspace = true
+deno_web.workspace = true
 deno_url.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true
 deno_error.workspace = true
 derive_more.workspace = true
-expect-test.workspace = true
 jstz_wpt = { path = "../jstz_wpt" }
 serde_json.workspace = true
 tezos-smart-rollup-mock.workspace = true

@@ -2,11 +2,10 @@ use deno_core::{
     convert::Smi,
     op2,
     v8::{self},
-    FromV8, OpState, PollEventLoopOptions,
+    FromV8, OpState,
 };
 use deno_error::JsErrorBox;
 use derive_more::{From, Into};
-use expect_test::expect_file;
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};
@@ -14,7 +13,7 @@ use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReport, WptReportTest,
     WptServe, WptSubtest, WptSubtestStatus, WptTestStatus,
 };
-use std::future::IntoFuture;
+use std::{fs::OpenOptions, future::IntoFuture, path::Path};
 use tezos_smart_rollup_mock::MockHost;
 use tokio::io::AsyncWriteExt;
 
@@ -243,6 +242,7 @@ fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntim
     options
         .extensions
         .push(test_harness_api::init_ops_and_esm());
+
     let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
         protocol: Some(Protocol::new(host, tx, address)),
         extensions: vec![test_harness_api::init_ops_and_esm()],
@@ -261,12 +261,7 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
     tx.begin();
     let mut host = MockHost::default();
     host.set_debug_handler(std::io::empty());
-    let mut rt = init_runtime(&mut host, &mut tx);
 
-    // Somehow each `execute_script` call has some strange side effect such that the global
-    // test suite object is completed prematurely before all test cases are registered.
-    // Therefore, instead of executing each piece of test scripts separately, we need to
-    // collect them and run them all in one `execute_script` call.
     let mut source = String::new();
     for item in &bundle.items {
         match item {
@@ -279,15 +274,14 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
             }
         }
     }
-    let _ = rt.execute_script("native code", source);
 
-    // Execute promises to run async/promise tests
-    let _ = rt
-        .run_event_loop(PollEventLoopOptions {
-            wait_for_inspector: true,
-            pump_v8_message_loop: true,
-        })
-        .await;
+    let mut rt = init_runtime(&mut host, &mut tx);
+
+    // Somehow each `execute_script` call has some strange side effect such that the global
+    // test suite object is completed prematurely before all test cases are registered.
+    // Therefore, instead of executing each piece of test scripts separately, we need to
+    // collect them and run them all in one `execute_script` call.
+    let _ = rt.execute_script("native code", source);
 
     // Take the test harness report out of the runtime and return it
     // Need to store data temporarily so that the borrow can be dropped
@@ -302,7 +296,7 @@ fn run_wpt_test(
     async move {
         let bundle = wpt_serve.bundle(&test.url_path).await?;
         let report = run_wpt_test_harness(&bundle).await;
-
+        println!("Running test {} => {:?}", &test.url_path, &report.status);
         // Each test suite should have a status code attached after it completes.
         // When unwrap fails, it means something is wrong, e.g. some tests failed because
         // of something not yet supported by the runtime, such that the test completion callback
@@ -405,13 +399,23 @@ async fn test_wpt() -> anyhow::Result<()> {
         let wpt_serve = wpt.serve(false).await?;
         WptServe::run_test_harness(&wpt_serve, &manifest, &filter, run_wpt_test).await?
     };
-
-    let expected = expect_file!["./wptreport.json"];
-    expected.assert_eq(&serde_json::to_string_pretty(&report)?);
-
+    let path = Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/wptreport.json");
+    if std::env::var("REGEN").is_ok() {
+        let report_file = OpenOptions::new()
+            .write(true)
+            .truncate(true)
+            .create(true)
+            .open(path)
+            .unwrap();
+        serde_json::to_writer_pretty(report_file, &report).unwrap();
+    } else {
+        let expected_file = std::fs::File::open(path).unwrap();
+        let reader = std::io::BufReader::new(expected_file);
+        let expected: WptReport = serde_json::from_reader(reader).unwrap();
+        assert_eq!(expected, report);
+    }
     if let Ok(v) = std::env::var("STATS_PATH") {
         dump_stats(&report, &v).await?;
     }
-
     Ok(())
 }

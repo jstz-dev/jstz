@@ -13,15 +13,11 @@ use deno_core::{error::JsError, *};
 use serde::Deserialize;
 use tokio;
 
-use crate::ext::{
-    jstz_console::jstz_console,
-    jstz_kv::{jstz_kv, kv::Kv},
-    jstz_main::jstz_main,
-};
-
-use deno_console::deno_console;
-use deno_url::deno_url;
-use deno_webidl::deno_webidl;
+use crate::ext::{jstz_console, jstz_kv, jstz_kv::kv::Kv, jstz_main};
+use deno_console;
+use deno_url;
+use deno_web::TimersPermission;
+use deno_webidl;
 
 /// Returns the default object of the specified JavaScript namespace (Object).
 ///
@@ -101,10 +97,13 @@ impl JstzRuntime {
             ..Default::default()
         });
 
+        let op_state = runtime.op_state();
+
         if let Some(protocol) = options.protocol {
-            let op_state = runtime.op_state();
             op_state.borrow_mut().put(protocol);
         };
+
+        op_state.borrow_mut().put(JstzPermissions);
 
         Self { runtime }
     }
@@ -250,11 +249,20 @@ impl Protocol {
 
 #[macro_export]
 macro_rules! init_ops_and_esm_extensions  {
-    ($($ext:ident),*) => {
+    ($($ext:ident $(::<$($generics:ty),*> )? $(($($args:expr),*))?),*) => {
         vec![
-            $($ext::init_ops_and_esm()),*
+            $($ext::$ext::init_ops_and_esm$(::<$($generics),*> )?($($($args),*)?)),*
         ]
     };
+}
+
+struct JstzPermissions;
+
+impl TimersPermission for JstzPermissions {
+    fn allow_hrtime(&mut self) -> bool {
+        // Disables high resolution time
+        false
+    }
 }
 
 fn init_extenions() -> Vec<Extension> {
@@ -264,6 +272,7 @@ fn init_extenions() -> Vec<Extension> {
         jstz_console,
         deno_url,
         jstz_kv,
+        deno_web::<JstzPermissions>(Default::default(), None),
         jstz_main
     )
 }
