@@ -14,18 +14,19 @@ description = "Javascript runtime for Jstz"
 bincode.workspace = true
 deno_core.workspace = true
 deno_console.workspace = true
-jstz_core = { path = "../jstz_core" }
-jstz_crypto = { path = "../jstz_crypto" }
+# jstz_core = { path = "../jstz_core" }
+# jstz_crypto = { path = "../jstz_crypto" }
 serde.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup.workspace = true
-tezos-smart-rollup-host.workspace = true
+# tezos-smart-rollup-host.workspace = true
 utoipa.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
 deno_webidl.workspace = true
 deno_web.workspace = true
 deno_url.workspace = true
+log.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true
@@ -38,3 +39,7 @@ tokio.workspace = true
 
 [features]
 skip-wpt = []
+
+[[bin]]
+name = "jstz_test_kernel2"
+path = "test_kernel/src/main.rs"
