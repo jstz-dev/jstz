@@ -1,7 +1,5 @@
 use crate::{
-    operation::{
-        self, ExternalOperation, Operation, OperationHash, RevealType, SignedOperation,
-    },
+    operation::{self, ExternalOperation, Operation, OperationHash, SignedOperation},
     receipt::{self, Receipt},
     Error, Result,
 };
@@ -56,12 +54,10 @@ fn execute_operation_inner(
                 &reveal.root_hash,
             )?;
             let revealed_op = verify_signed_op(hrt, tx, revealed_op)?;
-            match (reveal.reveal_type, &revealed_op.content) {
-                (RevealType::DeployFunction, &operation::Content::DeployFunction(_)) => {
-                    execute_operation_inner(hrt, tx, revealed_op, ticketer)
-                }
-                _ => Err(Error::RevealTypeMismatch),
+            if reveal.reveal_type == revealed_op.content().into() {
+                return execute_operation_inner(hrt, tx, revealed_op, ticketer);
             }
+            Err(Error::RevealTypeMismatch)
         }
     }
 }
@@ -102,6 +98,7 @@ mod tests {
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
     };
+    use operation::RevealType;
     use tezos_crypto_rs::hash::HashTrait;
     use tezos_smart_rollup_mock::MockHost;
 
