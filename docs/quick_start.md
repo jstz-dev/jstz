@@ -1,6 +1,6 @@
 # 🚀 Quick Start
 
-This guide will instruct you in writing, deploying, and using your first _smart function_ in under 10 minutes.
+This guide will instruct you in writing, deploying, and using your first Jstz _smart function_ in under 10 minutes.
 
 ## Prerequisites
 
@@ -16,18 +16,23 @@ It will also help to have a basic familiarity with [Typescript](https://www.yout
 
 ## What is Jstz?
 
-Jstz is a specialized JavaScript runtime for [Tezos Smart Rollups](https://docs.tezos.com/architecture/smart-rollups) that aims to be compatible with web conventions.
-It bridges the gap between JavaScript/TypeScript applications and the Tezos blockchain by allowing you to deploy _smart functions_.
+Jstz allows you to deploy _smart functions_, which are JavaScript applications that behave like [serverless applications](https://en.wikipedia.org/wiki/Serverless_computing), small applications that run only when called and do not have a persistent presence in memory on any specific server.
+Jstz smart functions run on the Tezos blockchain via [Smart Rollup](https://docs.tezos.com/architecture/smart-rollups) technology.
+Running on Tezos provides smart functions with many of the same advantages as [smart contracts on Tezos](https://docs.tezos.com/smart-contracts):
 
-Smart functions have the same security advantages as Tezos [smart contracts](https://docs.tezos.com/smart-contracts) with the additional benefits of low gas cost and reduced latency of running on Tezos layer 2, and integration with the JavaScript ecosystem.
+- Smart functions are persistent, transparent, and immutable, which allows users to trust that they will stay available and will not change how they behave or be shut down
+- Smart functions are censorship-resistant, because they are deployed on distributed Jstz Smart Rollup nodes and therefore no one can block calls to them
+- Smart functions have no long-term hosting cost; they incur a cost only when called
+
+Also, because smart functions run on a Tezos Smart Rollup instead of directly on Tezos, they have the additional benefits of low gas cost and reduced latency that Tezos layer 2 provides.
 
 ## 1. A sample smart function
 
 Like smart contracts, you compile and deploy smart functions and then they cannot be changed.
-However, smart functions behave more like web applications because they accept requests and return responses through HTTP.
+However, smart functions behave more like web applications because they accept requests and return responses in a way similar to ordinary web-based HTTP requests.
 
-The sample smart function in the `get-tez` folder of the Jstz repository stores tez and sends 1 tez to requesters who ask politely.
-Its code is written in TypeScript:
+The sample smart function in the `get-tez` folder of the Jstz repository stores tez and sends 1 tez (the primary cryptocurrency token of the Tezos chain and therefore the primary token of Jstz) to requesters who ask politely.
+Its code is written in ordinary TypeScript:
 
 ```typescript
 // <src="examples/get-tez/index.ts">
@@ -38,6 +43,7 @@ const ONE_TEZ = 1000000;
 // Maximum amount of tez a requester can receive
 const MAX_TEZ = 10000;
 
+// Get the amount of tez that the smart function has sent to an address
 const getReceivedTez = (requester: Address): number => {
   let receivedTez: number | null = Kv.get(`received/${requester}`);
   receivedTez = receivedTez === null ? 0 : receivedTez;
@@ -45,10 +51,12 @@ const getReceivedTez = (requester: Address): number => {
   return receivedTez;
 };
 
+// Update the record of the amount of tez that an address has received
 const setReceivedTez = (requester: Address, received: number): void => {
-  Kv.set(`received/${requester}`, received + 1);
+  Kv.set(`received/${requester}`, received);
 };
 
+// Log the message that the user sent
 const addPoliteMessage = (requester: Address, message: string): void => {
   let length: number | null = Kv.get(`messages/${requester}/length`);
   if (length === null) {
@@ -58,6 +66,7 @@ const addPoliteMessage = (requester: Address, message: string): void => {
   Kv.set(`messages/${requester}/length`, length + 1);
 };
 
+// Main function: handle calls to the smart function
 const handler = async (request: Request): Promise<Response> => {
   // Extract the requester's address and message from the request
   const requester = request.headers.get("Referer") as Address;
@@ -73,8 +82,8 @@ const handler = async (request: Request): Promise<Response> => {
   }
 
   // If the requester already received too much tez, decline the request
-  const recievedTez = getReceivedTez(requester);
-  if (recievedTez >= MAX_TEZ) {
+  const receivedTez = getReceivedTez(requester);
+  if (receivedTez >= MAX_TEZ) {
     return new Response(
       JSON.stringify("Sorry, you already received too much tez"),
     );
@@ -92,7 +101,8 @@ const handler = async (request: Request): Promise<Response> => {
     );
   }
 
-  setReceivedTez(requester, recievedTez + 1);
+  // Log the updates
+  setReceivedTez(requester, receivedTez + 1);
   addPoliteMessage(requester, message);
 
   return new Response(
@@ -103,11 +113,29 @@ const handler = async (request: Request): Promise<Response> => {
 export default handler;
 ```
 
-The smart function consists of:
+This smart function consists of:
+
+- A few utility functions that read and write data with the Jstz key-value store.
+  Each time a smart function is called, it runs in a new environment and therefore must store any persistent data in the key-value store.
+  In this case, the smart function records how much tez it has sent to each address and also logs the messages that users send to it.
 
 - A `handler` function.
 
-  A smart function processes an HTTP `Request` object and returns a `Response` object, mirroring the functionality of conventional web server handlers or cloud functions.
+  The handler function is the sole entrypoint of a Jstz smart function; it is what runs when a client calls the smart function.
+  The handler function receives a Jstz [request](/api/request) object that includes the address of the account that called it in its `Referer` header and an optional request body.
+  It must return a Jstz [response](/api/response) object.
+  In this way, smart functions behave much like conventional web server handlers or cloud functions.
+
+  In this case, the handler runs this logic:
+
+  1. It gets the address that sent the request and the message from the request body.
+  1. It verifies that the message was polite, in this case that it included the word "please."
+  1. It checks to see if the account has already received the maximum amount of tez from it.
+  1. It verifies that it has at least one tez in its account.
+     The smart function's tez balance is in the Jstz persistent ledger of tez balances of all accounts, which the smart function can access with the [`Ledger`](./api/ledger.md) API.
+  1. It sends one tez to the requester with the Ledger API.
+  1. It updates its information in the key-value store, including the message that the requester sent and the new total amount of tez that the requester has received.
+  1. It returns a text message to the requester.
 
 - An `export default` statement.
 
@@ -117,33 +145,6 @@ The smart function consists of:
   ```typescript
   type Handler = (req: Request) => Response | Promise<Response>;
   ```
-
-In addition to several [standard Web APIs](./api/index.md#web-platform-apis), Jstz introduces several concepts and APIs specific to smart functions:
-
-- **Self address**.
-
-  On deployment, each smart function is allocated a unique `KT1` address, akin to an IP address for the function.
-  `Ledger.selfAddress` contains the (self) address of the smart function.
-
-- **Referer header**.
-
-  The `"Referer"` header contains the `tz1` address of the account that sent the request to the smart function.
-  This address can be retrieved using `request.headers.get("Referer")`.
-
-- **Ledger**
-
-  Jstz maintains a persistent ledger of all accounts and their balances (in mutez, or one-millionth of a tez).
-  The [`Ledger`](./api/ledger.md) API provides methods for transferring tez between accounts and querying account balances.
-
-- **Key-Value store**
-
-  Jstz maintains a persistent key-value store for each smart function, accessible through the [`Kv`](./api/kv.md) API.
-  This smart function logs the requests it gets in that key-value store.
-
-- **`SmartFunction` API**
-
-  Smart functions can invoke other smart functions using `fetch`, similar to network requests in JavaScript.
-  Additionally, smart functions can deploy other smart functions with the [`SmartFunction`](./api/smart_function.md) API.
 
 ## 2. Deploying the smart function {#deploying-the-smart-function}
 
@@ -176,7 +177,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
 
     :::
 
-    When the sandbox starts, it shows the bootstrap accounts and their balances on Tezos layer 1, which you can use to fund smart functions and user accounts on layer 2:
+    When the sandbox starts, it shows the bootstrap accounts and their balances on Tezos layer 1, which you can use to fund smart functions and user accounts in Jstz:
 
     <details>
     <summary>Output</summary>
@@ -243,10 +244,13 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     </pre>
     </details>
 
-    Upon successful deployment, Jstz assigns the smart function a unique `KT1` address, serving as its identifier, similar to an IP address or a smart contract address.
+    Upon successful deployment, Jstz assigns the smart function a unique `KT1` address.
+    This address is its identifier, similar to an IP address or a smart contract address.
 
     In the example above, the smart function was deployed to the address `KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw`.
     Now the smart function is accessible through a URL of the format `tezos://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/`.
+
+    After you deploy the smart function, you cannot delete it or change it.
 
 1.  Fund the smart function by running this command, using your smart function address for the `<ADDRESS>` variable:
 
@@ -254,7 +258,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     jstz bridge deposit --from bootstrap1 --to <ADDRESS> --amount 1000 -n dev
     ```
 
-    This command bridges tez from layer 1 bootstrap to a Jstz account.
+    This command bridges tez from a layer 1 bootstrap account to a Jstz account.
     Like Tezos smart contracts, Jstz smart functions are a type of account and can store and transfer tez.
     For more information about bridging to Jstz, see [Asset Bridge](bridge.md).
 
@@ -286,19 +290,35 @@ After a successful deployment, you can call the smart function in a way similar 
 
    The response is the current balance of the currently logged in account, including the 1 tez that the smart function sent.
 
-Congratulations! 🎉 You have now successfully deployed and crafted an HTTP request to run your first smart function.
+1. Get your user account address by running this command:
+
+   ```sh
+   jstz whoami
+   ```
+
+   Like Tezos accounts, Jstz user account start with `tz1`.
+
+1. Check the key-value store for the smart function to see that it recorded your tez and messages by running this command, with your user account address in place of the variable `<USER_ADDRESS>`:
+
+   ```sh
+   jstz kv get -a <ADDRESS> -n dev "received/<USER_ADDRESS>"
+   ```
+
+   The response is the amount of tez that the smart function has sent to your user account.
+   Note that the key-value storage for a smart function is visible to all accounts, but only the smart function itself can write to its key-value store.
+
+   You can also see the messages that you have sent to the smart function in the key-value store by looking them up by index, as in this example:
+
+   ```sh
+   jstz kv get -a <ADDRESS> -n dev "messages/<USER_ADDRESS>/0"
+   ```
+
+Congratulations! 🎉 You have now successfully deployed and crafted a Jstz request to run your first smart function.
 
 ::: tip
-To deploy and interact with your function on networks beyond the local sandbox, like weeklynet, use the `--network` (`-n`) flag.
-:::
+For debugging, you can listen to the log of a smart function with the command `jstz logs trace` which behaves like the Linux command `tail -f`.
 
-For debugging, Jstz provides the following tools:
-
-- `jstz logs trace` enables tailing the logs of a given smart function.
-- `jstz kv` allows exploring the current state of the KV store, listing subkeys or retrieving values for a particular account.
-
-::: tip
-The `--trace` flag for `jstz run` prints the logs of smart functions, akin to the `jstz logs trace` command.
+You can also send a request and view the log messages generated from that request by adding the `--trace` flag to the `jstz run` command.
 :::
 
 ## 4. Interacting with the smart function in Node.JS
@@ -355,17 +375,16 @@ Follow these steps to build and run this application:
 
 1. Check your balance with the `jstz account balance -n dev` command.
 
-The complete code of the function is in the file `examples/show-tez/src/intex.ts`.
+The complete code of the CLI application is in the file `examples/show-tez/src/index.ts`.
 Here are some details about how the CLI application works with the smart function:
 
 It imports the Jstz client library, client library types, and the signing library, which signs Jstz transactions:
 
 ```javascript
-// line 1
 import { Jstz } from "@jstz-dev/jstz-client";
 import JstzType from "@jstz-dev/jstz-client";
 ...
-import * as jstz_sdk from "jstz_sdk"; // <- signing library
+import * as signer from "jstz_sdk"; // <- signing library
 ```
 
 ::: warning
@@ -374,7 +393,7 @@ Essentially, it is a WASM program directly compiled from the core Jstz Rust code
 Although it is semantically correct, do not use this library in production because it involves copying users' secret keys, which is not secure.
 :::
 
-The `buildRequest` function constructs a `RunFunction` operation that targets the smart function by its `tezos://<ADDRESS>` URL.
+The `buildRequest` function constructs a `RunFunction` operation that calls the smart function by its `tezos://<ADDRESS>` URL.
 
 ```typescript
 function buildRequest(
@@ -398,15 +417,43 @@ function buildRequest(
 }
 ```
 
-Then the application injects this operation to Jstz by following these steps:
+The `main` function controls the behavior of the CLI application.
+It starts the command-line terminal with the `readline.createInterface` function and processes each message from the user.
 
-1. Build the operation content (`RunFunction` in this case)
-2. Fetch the account nonce, which is a unique value that prevents a transaction from being duplicated
-3. Construct the `Operation` object
-4. Sign the `Operation` object with the user's secret key
-5. Inject and (optionally) poll for the receipt, which you can think of as a response
+When it receives the message `show`, it uses the Jstz client API to get the messages from the smart function's key-value store:
 
 ```typescript
+if (input.toLocaleLowerCase() === "show") {
+  // If the user sends "show," print their messages from the contract's key-value store
+  const length: number = Number.parseInt(
+    // Get the total number of messages sent by the user account
+    await jstzClient.accounts.getKv(contractAddress, {
+      key: `messages/${address}/length`,
+    }),
+  );
+  // Print each message
+  for (let index = 0; index < length; index++) {
+    const message = await jstzClient.accounts.getKv(contractAddress, {
+      key: `messages/${address}/${index}`,
+    });
+    console.log(`[${index}]`, message);
+  }
+}
+```
+
+When it receives any other message, it follows these steps:
+
+1. It uses the `buildRequest` function to create a Jstz.
+1. It gets the account nonce, which is a unique value that prevents a transaction from being duplicated.
+1. It signs the operation with the user's secret key and nonce.
+1. It sends the transaction to Jstz and waits for the response.
+1. It prints the response to the console.
+
+This is the code that assembles, signs, and sends the request:
+
+```typescript
+// If the user sends any message other than "show,"
+// send that message as a request to the smart function
 const runFunction = buildRequest(contractAddress, input);
 const nonce = await jstzClient.accounts.getNonce(address);
 const operation = {
@@ -414,7 +461,9 @@ const operation = {
   nonce,
   source: address,
 };
+// Sign the operation
 const signature = jstz_sdk.sign_operation(operation, secretKey);
+// Send the operation
 const response = jstzClient.operations.injectAndPoll({
   inner: operation,
   public_key: publicKey,
@@ -428,23 +477,7 @@ const {
 } = await response; // Async so we need to await
 ```
 
-The smart function stores data about the accounts it has sent tez to in the Jstz key-value store.
-The CLI application inspects this store when the user sends the "show" command and prints messages that are related to the logged-in user:
-
-```typescript
-if (input.toLocaleLowerCase() === "show") {
-  const length: number = Number.parseInt(
-    await jstzClient.accounts.getKv(contractAddress, {
-      key: `messages/${address}/length`,
-    }),
-  );
-  for (let index = 0; index < length; index++) {
-    const message = await jstzClient.accounts.getKv(contractAddress, {
-      key: `messages/${address}/${index}`,
-    });
-    console.log(`[${index}]`, message);
-  }
-}
-```
-
 And that's it! You are now equipped to battle the evil forces of centralization. Go forth and do Jstz 👊!
+
+If you want to take these applications further, you can change how the smart function distributes tez or stores data.
+You can also try running the example web application at `examples/call-from-web` to see how Jstz works with a web application.
