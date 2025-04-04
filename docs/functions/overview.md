@@ -3,12 +3,11 @@
 Smart functions are the main processing unit of Jstz.
 They behave like [serverless applications](https://en.wikipedia.org/wiki/Serverless_computing), small applications that run only when called and do not have a long-term presence on any server.
 Clients call them, servers load them into memory to run them, they return a value, and they are removed from the server's memory until they are called again.
+For this reason, smart functions themselves have no persistent state or memory; they must store all persistent data in the key-value store, as described in [Storing data](/functions/data_storage).
 
 As described in [Accepting requests](/functions/requests), each smart function must have a `handler` function that receives these requests from callers.
 This function receives a Jstz [Request](/api/request) object that includes the message sent from the client and metadata such as the address of the account that called the smart function.
 The function runs and returns a Jstz[Response](/api/response) object to the caller.
-
-Smart functions store persistent data within Jstz; see [Storing data](/functions/data_storage).
 
 ## Example smart function
 
@@ -91,4 +90,8 @@ Smart functions behave much like other serverless JavaScript/TypeScript applicat
 - Smart functions cannot call external APIs.
 - Smart functions are currently restricted to 3915 bytes.
 - Smart functions can import and use packages, but they can use only certain JavaScript APIs, which limits the packages that they can use.
+- Smart functions run in an isolated context; each time a smart function runs, it is as if it is running for the first time.
+  Therefore, smart functions cannot store persistent data such as persistent global variables.
+  They must use the key-value store as described in [Storing data](/functions/data_storage).
+- Unlike smart contracts, smart functions have only a single entrypoint.
 <!-- https://huancheng-trili.github.io/jstz-api-coverage/ -->

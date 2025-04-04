@@ -1,6 +1,7 @@
 # Handling requests
 
 Jstz smart functions accept requests from smart functions and clients via their `handler` function, which they must export as their default function.
+Smart functions can have only this single entrypoint.
 This function receives a Jstz [`Request`](/api/request) object and must return a promise that resolves to a Jstz [`Response`](/api/response) object.
 
 For an example of a `handler` function, see [Smart functions](/functions/overview).
