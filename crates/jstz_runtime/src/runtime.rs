@@ -1,8 +1,8 @@
-use jstz_core::host::HostRuntime;
-use jstz_core::host::JsHostRuntime;
-use jstz_core::kv::Transaction;
-use jstz_crypto::hash::Hash;
-use jstz_crypto::smart_function_hash::SmartFunctionHash;
+//use jstz_core::host::HostRuntime;
+//use jstz_core::host::JsHostRuntime;
+//use jstz_core::kv::Transaction;
+//use jstz_crypto::hash::Hash;
+//use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use std::{
     ops::{Deref, DerefMut},
     rc::Rc,
@@ -13,11 +13,12 @@ use deno_core::{error::JsError, *};
 use serde::Deserialize;
 use tokio;
 
-use crate::ext::{jstz_console, jstz_kv, jstz_kv::kv::Kv, jstz_main};
+use crate::ext::{/*jstz_console, jstz_kv, jstz_kv::kv::Kv,*/ jstz_main};
 use deno_console;
 use deno_url;
 use deno_web::TimersPermission;
 use deno_webidl;
+use tezos_smart_rollup::prelude::Runtime;
 
 /// Returns the default object of the specified JavaScript namespace (Object).
 ///
@@ -219,30 +220,29 @@ impl DerefMut for JstzRuntime {
 }
 
 pub struct Protocol {
-    pub host: JsHostRuntime<'static>,
-    pub tx: &'static mut Transaction,
-    pub kv: Kv,
+    //pub host: Box<dyn Runtime>, // Ref&JsHostRuntime<'static>,
+    //pub tx: &'static mut Transaction,
+    //pub kv: Kv,
 }
 
 impl Protocol {
-    pub fn new(
-        hrt: &mut impl HostRuntime,
-        tx: &mut Transaction,
-        address: SmartFunctionHash,
+    pub fn new(//hrt: &mut impl Runtime,
+        //tx: &mut Transaction,
+        //address: SmartFunctionHash,
     ) -> Self {
-        let host = JsHostRuntime::new(hrt);
+        //let host = JsHostRuntime::new(hrt);
 
         // Safety: Since we synchronisely execute Operations, the tx will not be dropped before
         // the runtime, so this is safe
         // TODO: Replace with Arc<Mutex<Transaction>>
         // https://linear.app/tezos/issue/JSTZ-375/replace-andmut-transaction-with-arcmutextransaction
-        let tx = unsafe {
-            std::mem::transmute::<&mut Transaction, &'static mut Transaction>(tx)
-        };
+        //let tx = unsafe {
+        //    std::mem::transmute::<&mut Transaction, &'static mut Transaction>(tx)
+        //};
         Protocol {
-            host,
-            tx,
-            kv: Kv::new(address.to_base58()),
+            //host,
+            //tx,
+            //kv: Kv::new(address.to_base58()),
         }
     }
 }
@@ -269,14 +269,14 @@ fn init_extenions() -> Vec<Extension> {
     init_ops_and_esm_extensions!(
         deno_webidl,
         deno_console,
-        jstz_console,
+        //jstz_console,
         deno_url,
-        jstz_kv,
+        //jstz_kv,
         deno_web::<JstzPermissions>(Default::default(), None),
         jstz_main
     )
 }
-
+/*
 #[cfg(test)]
 mod test {
     use super::*;
@@ -369,4 +369,4 @@ export default handler;
         let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
         assert_eq!(result_i64, 42);
     }
-}
+}*/
