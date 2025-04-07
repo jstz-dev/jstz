@@ -26,5 +26,7 @@ jobs:
         run: |
           git clone https://github.com/denoland/deno.git --branch v2.1.7 --depth 1
           cd deno && git submodule init && git submodule update
+          deno run -A --lock=tools/deno.lock.json --config tests/config/deno.json\
+            ./tests/wpt/wpt.ts setup
           deno run -A --lock=tools/deno.lock.json --config tests/config/deno.json \
             ./tests/wpt/wpt.ts run --binary=$(which deno) --json bbb.json -- /WebCryptoAPI/wrapKey_unwrapKey/wrapKey_unwrapKey.https.any
