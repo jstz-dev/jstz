@@ -17,14 +17,15 @@ jobs:
       - name: Install Deno
         uses: denoland/setup-deno@v2
         with:
-          deno-version: v2.1.7
+          deno-version: v2.1.10
       - name: Install Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11
+      - uses: actions/checkout@v4
       - name: Run
         run: |
-          git clone https://github.com/denoland/deno.git --branch v2.1.7 --depth 1
+          git clone https://github.com/denoland/deno.git --branch v2.1.10 --depth 1
           cd deno && git submodule init && git submodule update
           deno run -A --lock=tools/deno.lock.json --config tests/config/deno.json\
             ./tests/wpt/wpt.ts setup
@@ -32,4 +33,11 @@ jobs:
           python3 ./wpt make-hosts-file | sudo tee -a /etc/hosts
           cd ../../../
           deno run -A --lock=tools/deno.lock.json --config tests/config/deno.json \
-            ./tests/wpt/wpt.ts run --binary=$(which deno) --json bbb.json -- /WebCryptoAPI/wrapKey_unwrapKey/wrapKey_unwrapKey.https.any
+            ./tests/wpt/wpt.ts run --binary=$(which deno) --json ../bbb.json
+          cd ../ && python3 run.py
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: out
+          path: out.json
+          retention-days: 5
