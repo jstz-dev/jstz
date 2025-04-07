@@ -14,16 +14,17 @@ jobs:
     name: Web Platform Test
     runs-on: ubuntu-latest
     steps:
+      - name: Install Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.7
       - name: Install Python
         uses: actions/setup-python@v5
         with:
           python-version: 3.11
       - name: Run
         run: |
-          wget https://github.com/denoland/deno/releases/download/v2.1.7/deno-x86_64-unknown-linux-gnu.zip && unzip deno-x86_64-unknown-linux-gnu.zip && mv deno deno2
-          DENO_PATH=$(pwd)/deno2
-          export PATH=$PATH:$DENO_PATH
           git clone https://github.com/denoland/deno.git --branch v2.1.7 --depth 1
           cd deno && git submodule init && git submodule update
           deno run -A --lock=tools/deno.lock.json --config tests/config/deno.json \
-            ./tests/wpt/wpt.ts run --quiet --binary=$DENO_PATH --json bbb.json -- /WebCryptoAPI/wrapKey_unwrapKey/wrapKey_unwrapKey.https.any
+            ./tests/wpt/wpt.ts run --binary=$(which deno) --json bbb.json -- /WebCryptoAPI/wrapKey_unwrapKey/wrapKey_unwrapKey.https.any
