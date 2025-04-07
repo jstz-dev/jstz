@@ -33,7 +33,7 @@ jobs:
           python3 ./wpt make-hosts-file | sudo tee -a /etc/hosts
           cd ../../../
           deno run -A --lock=tools/deno.lock.json --config tests/config/deno.json \
-            ./tests/wpt/wpt.ts run --binary=$(which deno) --json ../bbb.json
+            ./tests/wpt/wpt.ts run --quiet --release --binary=$(which deno) --json ../bbb.json
           cd ../ && python3 run.py
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
