@@ -69,10 +69,8 @@ Like user accounts, they can receive, store, and send tez (XTZ).
 
 Calls to smart functions are atomic, which means that all of the request completes or none of it does.
 If a smart function throws an exception and does not catch it, all effects of the request are reverted, so it is as if the call to the smart function never happened.
-For example, if a smart function writes values to storage early in processing a request and generates an uncaught exception later while processing the same request, the changes to storage are reverted.
-Similarly, any calls to other smart contracts are reverted.
 
-Smart functions can catch and handle errors with try/catch blocks just like in ordinary JavaScript/TypeScript.
+For more information, see [Handling errors](/functions/errors).
 
 ## Differences from other JavaScript/TypeScript applications
 
