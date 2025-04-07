@@ -2,11 +2,21 @@
 
 [![codecov](https://codecov.io/gh/jstz-dev/jstz/graph/badge.svg?token=FA7IPI5Q9J)](https://codecov.io/gh/jstz-dev/jstz)
 
-`jstz` (pronounced: "justice") is a JavaScript runtime powered by Tezos Smart Optimistic Rollups that uses [Boa](https://boajs.dev/) and is built in [Rust](https://www.rust-lang.org/).
+`Jstz` (pronounced: "justice") is a JavaScript runtime powered by Tezos Smart Optimistic Rollups that uses [Boa](https://boajs.dev/) and is built in [Rust](https://www.rust-lang.org/).
 
-## Install
+## Installation
 
-Build from source using Rust:
+Install the Jstz command-line tool via NPM with this command:
+
+```sh
+npm i -g @jstz-dev/cli
+```
+
+To verify that Jstz installed correctly, run `jstz --version`.
+
+## Building from source
+
+You can build Jstz from source with Rust:
 
 ```sh
 make build-deps
@@ -27,6 +37,8 @@ jstz deploy index.js --name example
 # Send request to smart function
 jstz run tezos://example/
 ```
+
+For a more detailed quick start, see [Quick start](https://jstz-dev.github.io/jstz/quick_start.html).
 
 ## Documentation
 
