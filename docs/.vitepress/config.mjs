@@ -43,7 +43,7 @@ export default defineConfig({
           { text: "Handling requests", link: "/functions/requests" },
           { text: "Storing data", link: "/functions/data_storage" },
           { text: "Calling other smart functions", link: "/functions/calling" },
-          // TODO Managing tokens
+          { text: "Handling errors", link: "/functions/errors" },
         ],
       },
 
