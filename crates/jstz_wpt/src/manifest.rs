@@ -1,4 +1,7 @@
-use std::{collections::BTreeMap, result};
+use std::{
+    collections::{BTreeMap, HashSet},
+    result,
+};
 
 use regex::RegexSet;
 use serde::{Deserialize, Serialize};
@@ -127,6 +130,7 @@ pub struct WptTestOptions {
 #[derive(Default, Debug, Clone)]
 pub struct TestFilter {
     pub folders: RegexSet,
+    expected_tests: Option<HashSet<String>>,
 }
 
 impl TestFilter {
@@ -139,6 +143,25 @@ impl TestFilter {
 
         self.folders.is_match(path)
     }
+
+    pub fn is_expected(&self, path: &str) -> bool {
+        self.expected_tests
+            .as_ref()
+            .is_none_or(|s| s.contains(path))
+    }
+
+    pub fn set_expected_tests(&mut self, test_names: &[String]) -> anyhow::Result<()> {
+        let mut s = HashSet::new();
+        let base_url = Url::parse("http://host").expect("should parse base URL");
+        for v in test_names {
+            // need this URL::parse because in WptManifestTest::test the target value
+            // is transformed into a URL and the set here will be used to check against
+            // that target value there
+            s.insert(base_url.join(v)?.to_string());
+        }
+        self.expected_tests.replace(s);
+        Ok(())
+    }
 }
 
 impl TryFrom<&[&str]> for TestFilter {
@@ -146,7 +169,10 @@ impl TryFrom<&[&str]> for TestFilter {
 
     fn try_from(value: &[&str]) -> anyhow::Result<Self> {
         let folders = RegexSet::new(value)?;
-        Ok(Self { folders })
+        Ok(Self {
+            folders,
+            expected_tests: None,
+        })
     }
 }
 
@@ -163,6 +189,7 @@ pub trait WptTests {
 
 impl WptTests for WptManifestTest {
     fn tests(&self, path: String, filter: &TestFilter) -> Vec<TestToRun> {
+        let base_url = Url::parse("http://host").expect("should parse base URL");
         self.variations
             .iter()
             .filter_map(
@@ -176,10 +203,9 @@ impl WptTests for WptManifestTest {
                     };
 
                     // We need to parse the path as a URL to get the path and query string (separately)
-                    let url = Url::parse(&format!("http://localhost:8000/{}", url_path))
-                        .ok()?;
+                    let url = base_url.join(url_path).ok()?;
 
-                    if !filter.is_match(url.path()) {
+                    if !filter.is_match(url.path()) || !filter.is_expected(url.as_ref()) {
                         return None;
                     }
 
@@ -233,5 +259,96 @@ impl WptManifest {
             .iter()
             .flat_map(|(name, file)| file.tests(name.to_string(), filter))
             .collect()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashSet;
+
+    use super::{
+        TestFilter, WptManifestTest, WptTestOptions, WptTestVariation, WptTests,
+    };
+
+    #[test]
+    fn test_filter_try_from() {
+        let filter = TestFilter::try_from(["/foo", "/bar"].as_slice()).unwrap();
+        assert!(filter.expected_tests.is_none());
+        assert_eq!(filter.folders.len(), 2);
+    }
+
+    #[test]
+    fn test_filter_set_expected_tests() {
+        let mut filter = TestFilter::default();
+        assert!(filter.expected_tests.is_none());
+
+        filter
+            .set_expected_tests(&["/foo".to_string(), "/bar".to_string()])
+            .unwrap();
+        assert_eq!(
+            filter.expected_tests,
+            Some(HashSet::from_iter([
+                "http://host/foo".to_string(),
+                "http://host/bar".to_string()
+            ]))
+        );
+    }
+
+    #[test]
+    fn test_filter_is_expected() {
+        let mut filter = TestFilter::default();
+        assert!(filter.expected_tests.is_none());
+        assert!(filter.is_expected("http://host/foo"));
+        assert!(filter.is_expected("http://host/bar"));
+
+        filter.set_expected_tests(&["/foo".to_string()]).unwrap();
+        assert!(filter.is_expected("http://host/foo"));
+        assert!(!filter.is_expected("http://host/bar"));
+    }
+
+    #[test]
+    fn manifest_test_tests() {
+        // efgh should be filtered out because they don't meet the requirements for paths
+        let test = WptManifestTest {
+            hash: "a".to_string(),
+            variations: [
+                "a.any.html",
+                "b.worker.html",
+                "c.window.html",
+                "d.worker-module.html",
+                "e-request-upload.html",
+                "f.h2.html",
+                "g-any.html",
+                "h.js",
+            ]
+            .iter()
+            .map(|v| WptTestVariation {
+                path: Some(v.to_string()),
+                options: WptTestOptions {
+                    script_metadata: vec![],
+                },
+            })
+            .collect::<Vec<_>>(),
+        };
+        // d should be filtered out because it's not in expected tests
+        // b should then be filtered out because it's not in the filter
+        let mut filter =
+            TestFilter::try_from(["a.any.html", "c.window.html"].as_slice()).unwrap();
+        filter
+            .set_expected_tests(&[
+                "a.any.html".to_string(),
+                "b.worker.html".to_string(),
+                "c.window.html".to_string(),
+            ])
+            .unwrap();
+
+        let mut res = test.tests("manifest_path".to_string(), &filter);
+        assert_eq!(res.len(), 2);
+        res.sort_by_key(|v| v.url_path.clone());
+        let item = res.first().unwrap();
+        assert_eq!(item.url_path, "a.any.html");
+        assert_eq!(item.manifest_path, "manifest_path");
+        let item = res.last().unwrap();
+        assert_eq!(item.url_path, "c.window.html");
     }
 }
