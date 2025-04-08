@@ -115,7 +115,7 @@ mod test {
 
     #[test]
     fn test_new() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let response = Response::new(scope).unwrap();
@@ -124,7 +124,7 @@ mod test {
 
     #[test]
     fn test_new_with_body() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let body = v8::String::new(scope, "Hello World").unwrap();
@@ -134,7 +134,7 @@ mod test {
 
     #[test]
     fn test_new_with_body_and_init() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let body = v8::String::new(scope, "Hello World").unwrap();
@@ -151,7 +151,7 @@ mod test {
 
     #[tokio::test]
     async fn test_new_json() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
 
         let array_buffer = {
             let scope = &mut runtime.handle_scope();
@@ -176,7 +176,7 @@ mod test {
 
     #[test]
     fn test_new_error() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let response = Response::new_error(scope).unwrap();
@@ -185,7 +185,7 @@ mod test {
 
     #[test]
     fn test_new_redirect() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let response =
@@ -201,7 +201,7 @@ mod test {
 
     #[test]
     fn test_body() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let body = v8::String::new(scope, "Hello World").unwrap();
@@ -214,7 +214,7 @@ mod test {
 
     #[test]
     fn test_headers() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new(scope).unwrap();
@@ -239,7 +239,7 @@ mod test {
 
     #[tokio::test]
     async fn test_array_buffer() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime ;};
 
         let (global_response, array_buffer) = {
             let scope = &mut runtime.handle_scope();
