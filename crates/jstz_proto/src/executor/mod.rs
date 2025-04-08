@@ -50,7 +50,11 @@ fn execute_operation_inner(
             };
             Ok((op_hash, receipt::ReceiptContent::RunFunction(result)))
         }
+<<<<<<< HEAD
         operation::Content::RevealLargePayload(reveal) => {
+=======
+        operation::Content::RevealLargePayloadOperation(reveal) => {
+>>>>>>> e8ce0914 (feat: tmp)
             if op.public_key != *injector {
                 return Err(Error::InvalidInjector);
             }
