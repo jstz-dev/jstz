@@ -1,5 +1,9 @@
 # 💰 Ledger
 
+::: warning
+The Ledger API is deprecated and will be removed in future versions of Jstz
+:::
+
 The `Ledger` object maintains a persistent ledger of all accounts and their
 balances of L2 tez (stored as mutez). Additionally, the `Ledger` object stores the 'self address' of
 the smart function, which is the address of the smart function itself.
