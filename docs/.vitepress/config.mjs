@@ -32,6 +32,7 @@ export default defineConfig({
           { text: "Accounts", link: "/accounts" },
           { text: "Architecture", link: "/architecture" },
           { text: "jstzd", link: "/jstzd" },
+          { text: "Transfer", link: "/transfer" },
         ],
       },
 

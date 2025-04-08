@@ -8,6 +8,7 @@ This guide will instruct through how to use the command line interface for `jstz
 - [bridge](#bridge) - Interact with the XTZ asset bridge between Tezos and `jstz`.
 - [deploy](#deploy) - Deploy your smart function.
 - [run](#run) - Run your smart function.
+- [transfer](#transfer) - Transfer XTZ across `jstz` accounts.
 - [repl](#repl) - Enter an interactive REPL for the `jstz` runtime.
 
 ::: tip
@@ -161,7 +162,11 @@ jstz run [OPTIONS] <URL>
 
 - `--data (-d) <data>`: Defines the JSON data to be included in the request body.
 
+- `--amount (-a) <data>`: The amount in XTZ to transfer.
+
 - `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
+
+- `--include (-i)`: Include response headers in the output.
 
 - `--trace (-t)`: Flag to show the logs of the function.
 
@@ -182,6 +187,36 @@ You should be able to see an output of the counter smart function looking like t
 [🪵] Counter: 0
 [🪵] Counter: 1
 [🪵] Counter: 2
+```
+
+## Transfer
+
+Transfer XTZ.
+
+### Usage:
+
+```bash
+jstz jstz transfer [OPTIONS] <AMOUNT> <ADDRESS|ALIAS>
+```
+
+### Arguments:
+
+- `<AMOUNT>`: The amount in XTZ to transfer.
+
+- `<ADDRESS|ALIAS>`: Destination address or alias of the account (user or smart function).
+
+### Options:
+
+- `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
+
+- `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
+
+- `--include (-i)`: Include response headers in the output.
+
+### Example
+
+```bash
+$ jstz transfer 2 KT1CexuXoXuShARedvKSmxwDTLxRHNcvxqKR
 ```
 
 ## REPL

@@ -44,12 +44,13 @@ enum Command {
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
-    /// 🏃 Send a request to a transfer XTZ to a deployed smart function
+    /// 🏃 Send a request to a transfer XTZ
     Transfer {
         /// The amount in XTZ to transfer.
         #[arg(value_name = "AMOUNT")]
         amount: NonZeroU64,
 
+        /// Destination address or alias of the account (user or smart function).
         #[arg(value_name = "ADDRESS|ALIAS")]
         to: AddressOrAlias,
 
