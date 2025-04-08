@@ -1,10 +1,7 @@
 use anyhow::Result;
 use api_doc::{modify, ApiDoc};
 use axum::{
-<<<<<<< HEAD
     extract::DefaultBodyLimit,
-=======
->>>>>>> ac93d01e (feat(jstz_node): prepare rlp operation)
     http::{self},
     routing::get,
 };
