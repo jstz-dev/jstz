@@ -68,7 +68,7 @@ mod test {
 
     #[test]
     fn test_new() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let request =
@@ -80,7 +80,7 @@ mod test {
 
     #[test]
     fn test_new_with_request() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let request =
@@ -95,7 +95,7 @@ mod test {
 
     #[test]
     fn test_new_with_request_and_init() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let request =
@@ -133,7 +133,7 @@ mod test {
 
     #[test]
     fn test_new_with_string_and_init() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let init = RequestInit::new(scope);
@@ -168,7 +168,7 @@ mod test {
 
     #[test]
     fn test_method() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let request =
@@ -179,7 +179,7 @@ mod test {
 
     #[test]
     fn test_url() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let request =
@@ -190,7 +190,7 @@ mod test {
 
     #[test]
     fn test_headers() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new(scope).unwrap();
@@ -239,7 +239,7 @@ mod test {
 
     #[test]
     fn test_body() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let init = RequestInit::new(scope);
@@ -266,7 +266,7 @@ mod test {
 
     #[tokio::test]
     async fn test_array_buffer() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
 
         let (global_request, array_buffer) = {
             let scope = &mut runtime.handle_scope();

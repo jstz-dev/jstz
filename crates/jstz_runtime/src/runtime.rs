@@ -274,8 +274,10 @@ mod test {
 
     #[test]
     fn test_init_jstz_runtime() {
-        init_test_setup!(runtime, host, tx, sink, address);
-
+        init_test_setup! {
+            runtime = runtime;
+            sink = sink;
+        };
         let code = r#"
             Kv.set("hello", "world");
             Kv.set("abc", 42);
@@ -297,15 +299,10 @@ mod test {
     async fn init_and_call_default_handler(
         code: &'static str,
     ) -> (JstzRuntime, Result<v8::Global<v8::Value>>) {
-        let specifier =
-            resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
-        let module_loader = StaticModuleLoader::with(specifier.clone(), code);
-
-        let mut rt = JstzRuntime::new(JstzRuntimeOptions {
-            module_loader: Rc::new(module_loader),
-            ..Default::default()
-        });
-
+        init_test_setup! {
+            runtime = rt;
+            specifier = (specifier, code);
+        };
         let id = rt.execute_main_module(&specifier).await.unwrap();
         let result = rt.call_default_handler(id, &[]).await;
         (rt, result)
@@ -373,5 +370,30 @@ export default handler;
 
         let result = result.unwrap_err();
         assert!(matches!(result, RuntimeError::DenoCore(_)));
+    }
+
+    #[tokio::test]
+    async fn test_call_default_handler_with_arguments() {
+        let code = r#"
+    function handler(value) {
+        return 42 + value;
+    }
+
+    export default handler;
+            "#;
+        init_test_setup! {
+            runtime = rt;
+            specifier = (specifier, code);
+        };
+        let id = rt.execute_main_module(&specifier).await.unwrap();
+        let value = {
+            let scope = &mut rt.handle_scope();
+            let value = v8::Integer::new(scope, 20_i32).cast::<v8::Value>();
+            v8::Global::new(scope, value)
+        };
+        let result = rt.call_default_handler(id, &[value]).await;
+        let scope = &mut rt.handle_scope();
+        let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
+        assert_eq!(result_i64, 62);
     }
 }

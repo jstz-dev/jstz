@@ -40,7 +40,7 @@ mod test {
 
     #[test]
     fn test_new_and_append() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new(scope).unwrap();
@@ -57,7 +57,7 @@ mod test {
 
     #[test]
     fn test_new_with_sequence() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new_with_sequence(
@@ -74,7 +74,7 @@ mod test {
 
     #[test]
     fn test_new_with_headers() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers1 = Headers::new(scope).unwrap();
@@ -98,7 +98,7 @@ mod test {
 
     #[test]
     fn test_append() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new(scope).unwrap();
@@ -122,7 +122,7 @@ mod test {
 
     #[test]
     fn test_delete() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new(scope).unwrap();
@@ -143,7 +143,7 @@ mod test {
 
     #[test]
     fn test_for_each() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new(scope).unwrap();
@@ -201,7 +201,7 @@ mod test {
 
     #[test]
     fn test_get_set_cookie() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new(scope).unwrap();
@@ -223,7 +223,7 @@ mod test {
 
     #[test]
     fn test_has() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new(scope).unwrap();
@@ -238,7 +238,7 @@ mod test {
 
     #[test]
     fn test_set() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let headers = Headers::new(scope).unwrap();
