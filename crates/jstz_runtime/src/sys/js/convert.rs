@@ -5,12 +5,12 @@
 //! functions. We have to use our own traits due to Rust's orphan rule. Additional `deno_core::ops`'s conversions
 //! are generated using a procedural macro (not exposed by the crate).
 
-use std::borrow::Cow;
-
 use deno_core::{
     serde_v8::{self, V8Sliceable},
     v8,
 };
+use derive_more::{Deref, DerefMut, From};
+use std::borrow::Cow;
 
 pub trait FromV8<'a> {
     fn from_v8(scope: &mut v8::HandleScope<'a>, value: v8::Local<'a, v8::Value>) -> Self;
@@ -173,14 +173,8 @@ where
 
 // Serde
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Deref, DerefMut, From, Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Serde<T>(pub T);
-
-impl<T> From<T> for Serde<T> {
-    fn from(value: T) -> Self {
-        Self(value)
-    }
-}
 
 impl<'a, T> ToV8<'a> for Serde<T>
 where

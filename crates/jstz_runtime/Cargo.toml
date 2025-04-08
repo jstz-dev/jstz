@@ -14,6 +14,7 @@ description = "Javascript runtime for Jstz"
 bincode.workspace = true
 deno_core.workspace = true
 deno_console.workspace = true
+derive_more = { workspace = true, features = ["deref", "deref_mut", "from"] }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 serde.workspace = true

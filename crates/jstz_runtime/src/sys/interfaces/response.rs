@@ -1,6 +1,6 @@
 use deno_core::v8;
 
-use crate::{js_class, js_constructor, js_getter, js_static_method};
+use crate::{js_class, js_constructor, js_getter, js_method, js_static_method};
 
 use super::Headers;
 
@@ -32,5 +32,10 @@ impl<'s> Response<'s> {
     js_static_method! {
       #[js_name(error)]
       fn new_error() -> Self
+    }
+
+    js_method! {
+      #[js_name(arrayBuffer)]
+      async fn array_buffer() -> deno_core::JsBuffer
     }
 }

@@ -130,6 +130,23 @@ macro_rules! js_method {
             fn $method_name($($method_arg_name: $method_arg_type),*) $(-> $method_return)?
         }
     };
+    (
+        #[js_name($js_name:ident)]
+        async fn $method_name:ident($($method_arg_name:ident: $method_arg_type:ty),*) -> $method_return:ty
+    ) => {
+        $crate::js_method! {
+            #[js_name($method_name)]
+            fn $method_name($($method_arg_name: $method_arg_type),*) -> $crate::sys::js::promise::Promise<$method_return>
+        }
+    };
+    (
+        async fn $method_name:ident($($method_arg_name:ident: $method_arg_type:ty),*) -> $method_return:ty
+    ) => {
+        $crate::js_method! {
+            #[js_name($method_name)]
+            fn $method_name($($method_arg_name: $method_arg_type),*) -> $crate::sys::js::promise::Promise<$method_return>
+        }
+    };
 }
 
 #[macro_export]
@@ -203,6 +220,14 @@ macro_rules! js_getter {
         $crate::js_getter! {
             #[js_name($getter_name)]
             fn $getter_name() -> $getter_return
+        }
+    };
+    (
+        async fn $getter_name:ident() -> $getter_return:ty
+    ) => {
+        $crate::js_getter! {
+            #[js_name($getter_name)]
+            fn $getter_name() -> $crate::sys::js::promise::Promise<$getter_return>
         }
     };
 }

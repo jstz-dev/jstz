@@ -23,7 +23,7 @@ impl<'s> Request<'s> {
 
     js_getter! { fn body_used() -> bool }
 
-    js_getter! { fn body() -> Option<v8::Local<'s, v8::Value>> }
+    js_getter! { async fn body() -> Option<v8::Local<'s, v8::Value>> }
 }
 
 js_class!(RequestInit);
