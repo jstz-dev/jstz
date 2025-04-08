@@ -10,6 +10,7 @@ use crate::{
     account,
     config::{Config, NetworkName, SmartFunction},
     error::{anyhow, bail, bail_user_error, user_error, Result},
+    sandbox::{assert_sandbox_running, JSTZD_SERVER_BASE_URL},
     term::styles,
     utils::{read_file_or_input_or_piped, MUTEZ_PER_TEZ},
 };
@@ -25,11 +26,8 @@ pub async fn exec(
 
     let mut cfg = Config::load().await?;
     // Load sandbox if the selected network is Dev and sandbox is not already loaded
-    if cfg.network_name(&network)? == NetworkName::Dev && cfg.sandbox.is_none() {
-        bail_user_error!(
-            "No sandbox is currently running. Please run {}.",
-            styles::command("jstz sandbox start")
-        );
+    if cfg.network_name(&network)? == NetworkName::Dev {
+        assert_sandbox_running(JSTZD_SERVER_BASE_URL).await?;
     }
 
     // Get the current user and check if we are logged in
