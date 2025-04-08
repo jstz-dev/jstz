@@ -4,8 +4,9 @@ use log::{debug, info};
 use crate::{
     config::{Config, NetworkName},
     error::{bail_user_error, Result},
-    sandbox::{JSTZD_SERVER_BASE_URL, SANDBOX_BOOTSTRAP_ACCOUNTS},
-    term::styles,
+    sandbox::{
+        assert_sandbox_running, JSTZD_SERVER_BASE_URL, SANDBOX_BOOTSTRAP_ACCOUNTS,
+    },
     utils::AddressOrAlias,
 };
 
@@ -22,11 +23,8 @@ pub async fn exec(
     let cfg = Config::load().await?;
     let use_sandbox = cfg.network_name(&network)? == NetworkName::Dev;
     // Check network
-    if use_sandbox && cfg.sandbox.is_none() {
-        bail_user_error!(
-            "No sandbox is currently running. Please run {}.",
-            styles::command("jstz sandbox start")
-        );
+    if use_sandbox {
+        assert_sandbox_running(JSTZD_SERVER_BASE_URL).await?;
     }
 
     let to_pkh = to.resolve(&cfg)?;
@@ -101,8 +99,6 @@ async fn exec_sandbox(
 #[cfg(test)]
 mod tests {
     use super::exec_sandbox;
-    use crate::config::NetworkName;
-    use crate::utils::AddressOrAlias;
 
     #[tokio::test]
     async fn exec_sandbox_ok() {
@@ -132,17 +128,5 @@ mod tests {
             .create();
 
         assert_eq!(exec_sandbox(&server.url(), "", "", 1).await.unwrap_err().to_string(), "Failed to deposit XTZ. Please check whether the addresses and network are correct.");
-    }
-
-    #[tokio::test]
-    async fn exec_no_sandbox() {
-        assert!(super::exec(
-            "foo".to_string(),
-            AddressOrAlias::Alias("bar".to_string()),
-            1,
-            Some(NetworkName::Dev),
-        )
-        .await
-        .is_err_and(|e| e.to_string().contains("No sandbox is currently running.")),);
     }
 }

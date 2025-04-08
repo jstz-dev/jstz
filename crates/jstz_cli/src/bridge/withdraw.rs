@@ -3,8 +3,7 @@ use crate::{
     config::{Config, NetworkName},
     error::{bail_user_error, Result},
     run::{self, RunArgs},
-    sandbox::JSTZD_SERVER_BASE_URL,
-    term::styles,
+    sandbox::{assert_sandbox_running, JSTZD_SERVER_BASE_URL},
     utils::AddressOrAlias,
 };
 use anyhow::Context;
@@ -22,12 +21,7 @@ pub async fn exec(
 
     // Check network
     let receiver = if cfg.network_name(&network)? == NetworkName::Dev {
-        if cfg.sandbox.is_none() {
-            bail_user_error!(
-                "No sandbox is currently running. Please run {}.",
-                styles::command("jstz sandbox start")
-            );
-        }
+        assert_sandbox_running(JSTZD_SERVER_BASE_URL).await?;
         sandbox_resolve_l1(to, JSTZD_SERVER_BASE_URL).await?
     } else {
         to.resolve_l1(&cfg, &network)?
@@ -79,19 +73,8 @@ async fn sandbox_resolve_l1(
 #[cfg(test)]
 mod tests {
     use super::sandbox_resolve_l1;
-    use crate::{config::NetworkName, utils::AddressOrAlias};
+    use crate::utils::AddressOrAlias;
     use std::str::FromStr;
-
-    #[tokio::test]
-    async fn exec_no_sandbox() {
-        assert!(super::exec(
-            AddressOrAlias::Alias("bar".to_string()),
-            1.0,
-            Some(NetworkName::Dev),
-        )
-        .await
-        .is_err_and(|e| e.to_string().contains("No sandbox is currently running.")),);
-    }
 
     #[tokio::test]
     async fn sandbox_resolve_l1_address() {
