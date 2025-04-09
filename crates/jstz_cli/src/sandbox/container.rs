@@ -19,7 +19,7 @@ use log::info;
 use tempfile::{NamedTempFile, TempDir};
 use tokio::{fs, io::AsyncWriteExt};
 
-use crate::config::{Config, SandboxConfig};
+use crate::config::Config;
 
 const JSTZD_OCTEZ_CLIENT_DIR_PATH: &str = "/jstzd/octez-client-dir";
 const JSTZD_CONFIG_PATH: &str = "/jstzd/config.json";
@@ -69,16 +69,6 @@ pub(crate) async fn start_container(
         .await
         .context("Failed to start the sandbox container")?;
 
-    // update config so that the following CLI commands can call the sandbox
-    cfg.sandbox = Some(SandboxConfig {
-        octez_client_dir: tmp_dir_path,
-        octez_node_dir: PathBuf::new(),
-        octez_rollup_node_dir: PathBuf::new(),
-        pid: 0,
-        container: true,
-    });
-    cfg.save()?;
-
     if !detach {
         // Docker::start_container returns immediately after the container is up and there is
         // no way to make it behave like `docker run -it`. Therefore, if users wish to attach
@@ -93,7 +83,7 @@ pub(crate) async fn start_container(
 
 pub(crate) async fn stop_container(
     container_name: &str,
-    cfg: &mut Config,
+    _cfg: &mut Config,
 ) -> Result<bool> {
     let client =
         Docker::connect_with_defaults().context("Failed to connect to docker")?;
@@ -108,8 +98,6 @@ pub(crate) async fn stop_container(
                 }),
             )
             .await?;
-        cfg.sandbox.take();
-        cfg.save()?;
         info!("Sandbox stopped");
         Ok(true)
     } else {
