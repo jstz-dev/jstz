@@ -33,7 +33,7 @@ pub struct JstzNodeConfig {
     pub rollup_preimages_dir: PathBuf,
     /// The path to the rollup kernel log file.
     pub kernel_log_file: PathBuf,
-    /// The injector of the operation. Currently, it's used for signing `RevealLargePayloadOperation`.
+    /// The injector of the operation. Currently, it's used for signing `RevealLargePayload` operation.
     pub injector: KeyPair,
 }
 
