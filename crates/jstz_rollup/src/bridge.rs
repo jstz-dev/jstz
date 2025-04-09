@@ -135,7 +135,7 @@ impl BridgeContract {
             &self.0,
             "set_rollup",
             &format!("\"{}\"", rollup_address),
-            0,
+            0.0,
         )
     }
 }

@@ -1,4 +1,3 @@
-use std::num::NonZeroU64;
 use std::str::FromStr;
 
 use anyhow::bail;
@@ -16,7 +15,7 @@ use serde_json::Value;
 use tokio::sync::mpsc;
 use url::Url;
 
-use crate::utils::MUTEZ_PER_TEZ;
+use crate::utils::Tez;
 use crate::{
     account,
     config::{Config, NetworkName},
@@ -65,8 +64,8 @@ pub struct RunArgs {
     url: String,
     http_method: String,
     gas_limit: u32,
-    /// The amount in XTZ to transfer.
-    amount: Option<NonZeroU64>,
+    /// The amount in tez to transfer.
+    amount: Option<Tez>,
     json_data: Option<String>,
     network: Option<NetworkName>,
     trace: bool,
@@ -110,7 +109,7 @@ impl RunArgs {
         self
     }
 
-    pub fn set_amount(mut self, amount: Option<NonZeroU64>) -> Self {
+    pub fn set_amount(mut self, amount: Option<Tez>) -> Self {
         self.amount = amount;
         self
     }
@@ -120,7 +119,7 @@ impl RunArgs {
 /// to indicate that the request can be executed as a transfer.
 /// For smart function address, the execution of the function will be skipped with the `/-/noop endpoint.
 pub async fn exec_transfer(
-    amount: NonZeroU64,
+    amount: Tez,
     to: AddressOrAlias,
     gas_limit: u32,
     include_response_headers: bool,
@@ -140,9 +139,16 @@ pub async fn exec_transfer(
             .set_amount(Some(amount)),
     )
     .await
-    .map_err(|err| anyhow!("Failed to transfer {} XTZ to {}: {}", amount, to, err))?;
+    .map_err(|err| {
+        anyhow!(
+            "Failed to transfer {} XTZ to {}: {}",
+            amount.to_f64(),
+            to,
+            err
+        )
+    })?;
 
-    log::info!("Transferred {} XTZ to {}", amount, to);
+    log::info!("Transferred {} XTZ to {}", amount.to_f64(), to);
 
     Ok(())
 }
@@ -204,10 +210,9 @@ pub async fn exec(args: RunArgs) -> Result<()> {
 
     let mut headers = HeaderMap::new();
     if let Some(amount) = args.amount {
-        let mutez_amount = amount.get() * MUTEZ_PER_TEZ;
         headers.insert(
             X_JSTZ_TRANSFER,
-            HeaderValue::from_str(&format!("{}", mutez_amount)).unwrap(),
+            HeaderValue::from_str(&format!("{}", amount.to_mutez())).unwrap(),
         );
     }
 

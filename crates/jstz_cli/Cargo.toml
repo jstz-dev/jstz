@@ -54,6 +54,7 @@ regex.workspace = true
 reqwest-eventsource.workspace = true
 reqwest.workspace = true
 rustyline.workspace = true
+rust_decimal.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
