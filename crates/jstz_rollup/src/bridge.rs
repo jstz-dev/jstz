@@ -3,6 +3,7 @@ use std::fmt::{self, Display};
 use anyhow::Result;
 use derive_more::{Deref, DerefMut};
 use octez::OctezClient;
+use rust_decimal::Decimal;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use crate::BootstrapAccount;
@@ -135,7 +136,7 @@ impl BridgeContract {
             &self.0,
             "set_rollup",
             &format!("\"{}\"", rollup_address),
-            0,
+            &Decimal::from(0),
         )
     }
 }

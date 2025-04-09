@@ -22,6 +22,7 @@ figment.workspace = true
 fs_extra.workspace = true
 hex.workspace = true
 octez = { path = "../octez" }
+rust_decimal.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup-host.workspace = true
