@@ -93,8 +93,13 @@ impl Operation {
             Content::RevealLargePayload(RevealLargePayload {
                 root_hash,
                 reveal_type,
+                op_hash_to_reveal,
             }) => Blake2b::from(
-                format!("{}{}{}{}", public_key, nonce, root_hash, reveal_type).as_bytes(),
+                format!(
+                    "{}{}{}{}{}",
+                    public_key, nonce, root_hash, reveal_type, op_hash_to_reveal,
+                )
+                .as_bytes(),
             ),
         }
     }
@@ -163,6 +168,7 @@ pub struct RevealLargePayload {
     pub root_hash: PreimageHash,
     #[schema(value_type = String, example = "DeployFunction")]
     pub reveal_type: RevealType,
+    pub op_hash_to_reveal: OperationHash,
 }
 
 #[derive(
@@ -182,10 +188,12 @@ impl Content {
     pub fn new_reveal_large_payload(
         root_hash: PreimageHash,
         reveal_type: RevealType,
+        op_hash_to_reveal: OperationHash,
     ) -> Self {
         Content::RevealLargePayload(RevealLargePayload {
             root_hash,
             reveal_type,
+            op_hash_to_reveal,
         })
     }
 }
@@ -305,6 +313,7 @@ mod test {
     use super::{Content, DeployFunction, RevealLargePayload, RevealType, RunFunction};
     use super::{Operation, SignedOperation};
     use crate::context::account::{Account, Nonce, ParsedCode};
+    use crate::operation::OperationHash;
     use http::{HeaderMap, Method, Uri};
     use jstz_core::reveal_data::PreimageHash;
     use jstz_core::{kv::Transaction, BinEncodable};
@@ -501,6 +510,7 @@ mod test {
             Content::RevealLargePayload(RevealLargePayload {
                 root_hash: PreimageHash::default(),
                 reveal_type: RevealType::DeployFunction,
+                op_hash_to_reveal: OperationHash::default(),
             });
 
         let json = serde_json::to_value(&reveal_large_payload_operation).unwrap();
@@ -521,6 +531,7 @@ mod test {
             Content::RevealLargePayload(RevealLargePayload {
                 root_hash: PreimageHash::default(),
                 reveal_type: RevealType::DeployFunction,
+                op_hash_to_reveal: OperationHash::default(),
             });
 
         let binary = reveal_large_payload_operation.encode().unwrap();
