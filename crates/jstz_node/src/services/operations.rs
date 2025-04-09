@@ -60,7 +60,11 @@ async fn prepare_rlp_operation(
     let rlp_operation = Operation {
         public_key,
         nonce,
-        content: Content::new_reval_large_payload(root_hash, reveal_type),
+        content: Content::new_reval_large_payload(
+            root_hash,
+            reveal_type,
+            operation.hash(),
+        ),
     };
     let signature = secret_key
         .sign(rlp_operation.hash())

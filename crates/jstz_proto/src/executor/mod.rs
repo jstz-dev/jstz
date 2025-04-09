@@ -1,5 +1,7 @@
 use crate::{
-    operation::{self, ExternalOperation, Operation, OperationHash, SignedOperation},
+    operation::{
+        self, Content, ExternalOperation, Operation, OperationHash, SignedOperation,
+    },
     receipt::{self, Receipt},
     Error, Result,
 };
@@ -12,17 +14,6 @@ pub mod fa_withdraw;
 pub mod smart_function;
 pub mod withdraw;
 pub const JSTZ_HOST: &str = "jstz";
-
-fn verify_signed_op(
-    hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
-    signed_op: SignedOperation,
-) -> Result<Operation> {
-    signed_op.verify().and_then(|op| {
-        op.verify_nonce(hrt, tx)?;
-        Ok(op)
-    })
-}
 
 fn execute_operation_inner(
     hrt: &mut impl HostRuntime,
@@ -50,19 +41,16 @@ fn execute_operation_inner(
             };
             Ok((op_hash, receipt::ReceiptContent::RunFunction(result)))
         }
-<<<<<<< HEAD
         operation::Content::RevealLargePayload(reveal) => {
-=======
-        operation::Content::RevealLargePayloadOperation(reveal) => {
->>>>>>> e8ce0914 (feat: tmp)
             if op.public_key != *injector {
                 return Err(Error::InvalidInjector);
             }
             let revealed_op = RevealData::reveal_and_decode::<_, SignedOperation>(
                 hrt,
                 &reveal.root_hash,
-            )?;
-            let revealed_op = verify_signed_op(hrt, tx, revealed_op)?;
+            )?
+            .verify()?;
+            revealed_op.verify_nonce(hrt, tx)?;
             if reveal.reveal_type == revealed_op.content().try_into()? {
                 return execute_operation_inner(hrt, tx, revealed_op, ticketer, injector);
             }
@@ -91,13 +79,25 @@ pub fn execute_operation(
     ticketer: &ContractKt1Hash,
     injector: &PublicKey,
 ) -> Receipt {
-    let operation_hash = signed_operation.hash();
-    let result = verify_signed_op(hrt, tx, signed_operation)
-        .and_then(|op| execute_operation_inner(hrt, tx, op, ticketer, injector));
-    match result {
-        Ok((hash, content)) => Receipt::new(hash, Ok(content)),
-        Err(e) => Receipt::new(operation_hash, Err(e)),
-    }
+    let op_hash = signed_operation.hash();
+    let op = signed_operation.verify();
+    let op_hash = match &op {
+        // If the operation is a reveal large payload operation, use the original operation hash
+        Ok(Operation {
+            content: Content::RevealLargePayload(reveal),
+            ..
+        }) => reveal.op_hash_to_reveal.clone(),
+        _ => op_hash,
+    };
+
+    op.and_then(|op| {
+        op.verify_nonce(hrt, tx)?;
+        execute_operation_inner(hrt, tx, op, ticketer, injector)
+    })
+    .map_or_else(
+        |e| Receipt::new(op_hash, Err(e)),
+        |(hash, content)| Receipt::new(hash, Ok(content)),
+    )
 }
 
 #[cfg(test)]
@@ -190,6 +190,7 @@ mod tests {
         let rdc_op = RevealLargePayload {
             root_hash,
             reveal_type: RevealType::DeployFunction,
+            op_hash_to_reveal: OperationHash::default(),
         };
         let rdc_op_content = rdc_op;
         let rdc_op: Operation = Operation {
@@ -268,12 +269,13 @@ mod tests {
         let (_, pk1, sk1) = bootstrap1();
         let (_, pk2, sk2) = bootstrap2();
         let deploy_op = make_signed_op(deploy_function_content(), pk1.clone(), sk1);
-        let root_hash = make_data_available(&mut host, deploy_op);
+        let root_hash = make_data_available(&mut host, deploy_op.clone());
         let rdc_op = signed_rdc_op(root_hash, pk2.clone(), sk2);
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
         assert!(
-            matches!(receipt.result, ReceiptResult::Failed(e) if e.contains("InvalidInjector"))
+            matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidInjector"))
         );
+        assert_eq!(receipt.hash().to_string(), deploy_op.hash().to_string());
     }
 }
