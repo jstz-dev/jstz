@@ -48,7 +48,7 @@ fn execute_operation_inner(
             };
             Ok((op_hash, receipt::ReceiptContent::RunFunction(result)))
         }
-        operation::Content::RevealLargePayloadOperation(reveal) => {
+        operation::Content::RevealLargePayload(reveal) => {
             let revealed_op = RevealData::reveal_and_decode::<_, SignedOperation>(
                 hrt,
                 &reveal.root_hash,
@@ -105,7 +105,7 @@ mod tests {
     use super::*;
     use crate::{
         context::account::{Nonce, ParsedCode},
-        operation::{Content, DeployFunction, RevealLargePayloadOperation, RunFunction},
+        operation::{Content, DeployFunction, RevealLargePayload, RunFunction},
         receipt::ReceiptResult,
     };
 
@@ -174,7 +174,7 @@ mod tests {
     }
 
     fn signed_rdc_op(root_hash: PreimageHash) -> SignedOperation {
-        let rdc_op = RevealLargePayloadOperation {
+        let rdc_op = RevealLargePayload {
             root_hash,
             reveal_type: RevealType::DeployFunction,
         };
@@ -183,7 +183,7 @@ mod tests {
         let rdc_op: Operation = Operation {
             public_key: pk,
             nonce: Nonce(0),
-            content: Content::RevealLargePayloadOperation(rdc_op_content),
+            content: Content::RevealLargePayload(rdc_op_content),
         };
         let sig = sk.sign(rdc_op.hash()).unwrap();
         SignedOperation::new(sig, rdc_op)
