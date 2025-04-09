@@ -222,12 +222,14 @@ impl<'a> Iterator for AccountsIter<'a> {
 #[derive(Deserialize, Debug, Clone)]
 pub struct JstzdConfig {
     pub octez_node: OctezNodeConfig,
+    #[allow(unused)]
     pub octez_client: OctezClientConfig,
     pub jstz_node: JstzNodeConfig,
 }
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct OctezClientConfig {
+    #[allow(unused)]
     pub base_dir: String,
 }
 
@@ -246,9 +248,6 @@ pub struct Config {
     /// Path to octez installation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub octez_path: Option<PathBuf>,
-    /// Sandbox config (None if sandbox is not running)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sandbox: Option<SandboxConfig>,
     /// List of accounts
     #[serde(flatten)]
     pub accounts: AccountConfig,
@@ -260,21 +259,6 @@ pub struct Config {
     pub sandbox_logs_dir: Option<PathBuf>,
     #[serde(skip)]
     pub jstzd_config: Option<JstzdConfig>,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct SandboxConfig {
-    /// Directory of the octez client (initialized when sandbox is running)
-    pub octez_client_dir: PathBuf,
-    /// Directory of the octez node
-    pub octez_node_dir: PathBuf,
-    /// Directory of the octez rollup node
-    pub octez_rollup_node_dir: PathBuf,
-    /// Pid of the pid
-    pub pid: u32,
-    /// Flag indicating if the sandbox is using jstzd in a container
-    #[serde(default)]
-    pub container: bool,
 }
 
 #[derive(SerializeDisplay, DeserializeFromStr, Debug, Clone, PartialEq, Eq, Hash)]
@@ -352,19 +336,8 @@ impl Config {
     }
 
     async fn load_jstzd_config(&mut self) -> Result<()> {
-        self.fill_in_jstzd_config(Self::fetch_jstzd_config(JSTZD_SERVER_BASE_URL).await?)
-    }
-
-    // for running jstzd in the host environment only
-    fn fill_in_jstzd_config(&mut self, jstzd_config: JstzdConfig) -> Result<()> {
-        self.sandbox = Some(SandboxConfig {
-            octez_client_dir: PathBuf::from_str(&jstzd_config.octez_client.base_dir)?,
-            octez_node_dir: PathBuf::new(),
-            octez_rollup_node_dir: PathBuf::new(),
-            pid: 0,
-            container: false,
-        });
-        self.jstzd_config = Some(jstzd_config);
+        self.jstzd_config
+            .replace(Self::fetch_jstzd_config(JSTZD_SERVER_BASE_URL).await?);
         Ok(())
     }
 
@@ -397,12 +370,6 @@ impl Config {
         Ok(())
     }
 
-    pub fn sandbox(&self) -> Result<&SandboxConfig> {
-        self.sandbox.as_ref().ok_or(user_error!(
-            "The sandbox is not running. Please run `jstz sandbox start`."
-        ))
-    }
-
     pub fn octez_client(
         &self,
         network_name: &Option<NetworkName>,
@@ -414,31 +381,16 @@ impl Config {
                 .octez_path
                 .as_ref()
                 .map(|path| path.join("octez-client")),
-            octez_client_dir: self.octez_client_dir(network_name)?,
+            octez_client_dir: None,
             endpoint: network.octez_node_rpc_endpoint,
             disable_disclaimer: true,
         })
     }
 
     pub fn jstz_client(&self, network_name: &Option<NetworkName>) -> Result<JstzClient> {
-        if let Some(NetworkName::Dev) = network_name {
-            self.sandbox()?;
-        };
-
         let network = self.network(network_name)?;
 
         Ok(JstzClient::new(network.jstz_node_endpoint.clone()))
-    }
-
-    fn octez_client_dir(
-        &self,
-        network_name: &Option<NetworkName>,
-    ) -> Result<Option<PathBuf>> {
-        let sandbox = self.sandbox()?;
-        Ok(match self.network_name(network_name)? {
-            NetworkName::Dev => Some(sandbox.octez_client_dir.clone()),
-            _ => None,
-        })
     }
 
     fn network(&self, name: &Option<NetworkName>) -> Result<Network> {
@@ -503,11 +455,11 @@ impl Config {
 
 #[cfg(test)]
 mod tests {
-    use std::{collections::HashMap, path::PathBuf, str::FromStr};
+    use std::collections::HashMap;
 
     use super::{
         Config, JstzNodeConfig, JstzdConfig, Network, NetworkConfig, NetworkName,
-        OctezClientConfig, OctezNodeConfig, SandboxConfig,
+        OctezClientConfig, OctezNodeConfig,
     };
 
     fn dummy_jstzd_config() -> JstzdConfig {
@@ -525,27 +477,9 @@ mod tests {
     }
 
     #[test]
-    fn fill_in_jstzd_config() {
-        let mut config = Config::default();
-        assert!(config.sandbox().is_err());
-
-        config.fill_in_jstzd_config(dummy_jstzd_config()).unwrap();
-        assert_eq!(
-            config.sandbox().unwrap(),
-            &SandboxConfig {
-                octez_client_dir: PathBuf::from_str("/base").unwrap(),
-                octez_node_dir: PathBuf::new(),
-                octez_rollup_node_dir: PathBuf::new(),
-                pid: 0,
-                container: false
-            }
-        );
-    }
-
-    #[test]
     fn lookup_network_with_jstzd() {
         let mut config = Config::default();
-        config.fill_in_jstzd_config(dummy_jstzd_config()).unwrap();
+        config.jstzd_config.replace(dummy_jstzd_config());
         let jstzd_config = config.jstzd_config.as_ref().unwrap();
         assert_eq!(
             config.lookup_network(&NetworkName::Dev).unwrap(),
