@@ -1064,9 +1064,9 @@
           "uri": {
             "type": "string",
             "format": "uri",
-            "description": "Smart function URI in the form tezos://{smart_function_address}/rest/of/path",
+            "description": "Smart function URI in the form jstz://{smart_function_address}/rest/of/path",
             "examples": [
-              "tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"
+              "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"
             ]
           }
         }

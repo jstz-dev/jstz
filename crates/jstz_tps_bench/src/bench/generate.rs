@@ -167,7 +167,7 @@ fn transfer_op(
     let body = serde_json::ser::to_vec(&transfer)?;
 
     let content = Content::RunFunction(RunFunction {
-        uri: Uri::try_from(format!("tezos://{fa2}/transfer"))?,
+        uri: Uri::try_from(format!("jstz://{fa2}/transfer"))?,
         method: Method::POST,
         headers: HeaderMap::default(),
         body: Some(body),
@@ -193,7 +193,7 @@ fn balance(
     let query = URL_SAFE.encode(query);
 
     let content = Content::RunFunction(RunFunction {
-        uri: Uri::try_from(format!("tezos://{fa2}/balance_of?requests={query}"))?,
+        uri: Uri::try_from(format!("jstz://{fa2}/balance_of?requests={query}"))?,
         method: Method::GET,
         headers: HeaderMap::default(),
         body: None,
@@ -223,7 +223,7 @@ fn batch_mint(
     let account = &mut accounts[0];
 
     let content = Content::RunFunction(RunFunction {
-        uri: Uri::try_from(format!("tezos://{fa2}/mint_new"))?,
+        uri: Uri::try_from(format!("jstz://{fa2}/mint_new"))?,
         method: Method::POST,
         headers: HeaderMap::default(),
         body: Some(body),

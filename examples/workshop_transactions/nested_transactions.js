@@ -28,7 +28,7 @@ async function handler() {
       let smartFunctionAddress = await SmartFunction.create(nested_code2);
 
       await fetch(
-        new Request(\`tezos://\${smartFunctionAddress}/\`, {
+        new Request(\`jstz://\${smartFunctionAddress}/\`, {
           method: \`POST\`,
           body: \`Hello World\`,
         }),
@@ -51,7 +51,7 @@ async function handler() {
   const smartFunctionAddress = await SmartFunction.create(nested_code1);
 
   await fetch(
-    new Request(`tezos://${smartFunctionAddress}/`, {
+    new Request(`jstz://${smartFunctionAddress}/`, {
       method: `POST`,
       body: `Hello World`,
     }),

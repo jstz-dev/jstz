@@ -27,7 +27,7 @@ function buildRequest(
     gas_limit: 55000,
     headers: {},
     method: "GET",
-    uri: `tezos://${contractAddress}`,
+    uri: `jstz://${contractAddress}`,
   };
 }
 

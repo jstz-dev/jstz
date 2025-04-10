@@ -19,7 +19,7 @@ const handler = async () => {
   try {
     const newSmartFunction = await SmartFunction.create(smartFunctionCode);
     console.log("created new smart function with address", newSmartFunction);
-    const url = `tezos://${newSmartFunction}/myEndPoint`;
+    const url = `jstz://${newSmartFunction}/myEndPoint`;
     const request = new Request(url, {
       method: "POST",
       body: "Hello from child smart function 👋",

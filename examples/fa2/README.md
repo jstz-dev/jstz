@@ -51,5 +51,5 @@ npm run build:test
 fa2=tz1...
 jstz deploy dist/test/index.js
 scenario=tz1...
-jstz run "tezos://$scenario/?fa2=$fa2"
+jstz run "jstz://$scenario/?fa2=$fa2"
 ```

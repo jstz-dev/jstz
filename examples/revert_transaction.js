@@ -24,14 +24,14 @@ const handler = async () => {
 
   const addr = await SmartFunction.create(code);
 
-  await fetch(new Request(`tezos://${addr}/`));
+  await fetch(new Request(`jstz://${addr}/`));
   try {
-    await fetch(new Request(`tezos://${addr}/delete`));
+    await fetch(new Request(`jstz://${addr}/delete`));
   } catch (error) {
     console.error("Caught: ", error);
   }
 
-  await fetch(new Request(`tezos://${addr}/log`));
+  await fetch(new Request(`jstz://${addr}/log`));
 
   return new Response();
 };

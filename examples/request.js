@@ -2,7 +2,7 @@ const handler = async () => {
   try {
     // Constructor 1
     {
-      const oldRequest = new Request("tezos://github.tez/tezos/issues/12959", {
+      const oldRequest = new Request("jstz://github.tez/tezos/issues/12959", {
         headers: { From: "webmaster@example.org" },
       });
       console.log(
@@ -23,7 +23,7 @@ const handler = async () => {
       };
 
       const myRequest = new Request(
-        "tezos://flowers.tez/flowers.jpg",
+        "jstz://flowers.tez/flowers.jpg",
         myOptions,
       );
       console.log(
@@ -36,7 +36,7 @@ const handler = async () => {
 
     // bodyUsed
     {
-      const request = new Request("tezos://sam.tez/myEndpoint", {
+      const request = new Request("jstz://sam.tez/myEndpoint", {
         method: "POST",
         body: "Hello world",
       });
@@ -58,7 +58,7 @@ const handler = async () => {
         headers: myHeaders,
       };
 
-      const myRequest = new Request("tezos://flowers.tez/flowers.jpg", myInit);
+      const myRequest = new Request("jstz://flowers.tez/flowers.jpg", myInit);
 
       const myContentType = myRequest.headers.get("Content-Type");
       console.log(`Actual: ${myContentType}, Expected: image/jpeg`);
@@ -66,25 +66,23 @@ const handler = async () => {
 
     // Method
     {
-      const myRequest = new Request("tezos://flowers.tez/flowers.jpg");
+      const myRequest = new Request("jstz://flowers.tez/flowers.jpg");
       const myMethod = myRequest.method; // GET
       console.log(`Actual: ${myMethod}, Expected: GET`);
     }
 
     // Url
     {
-      const myRequest = new Request("tezos://flowers.tez/flowers.jpg");
+      const myRequest = new Request("jstz://flowers.tez/flowers.jpg");
       const myURL = myRequest.url;
-      console.log(
-        `Actual: ${myURL}, Expected: tezos://flowers.tez/flowers.jpg`,
-      );
+      console.log(`Actual: ${myURL}, Expected: jstz://flowers.tez/flowers.jpg`);
     }
 
     // Text
     {
       const text = "Hello world";
 
-      const request = new Request("tezos://alistair.tez/myEndpoint", {
+      const request = new Request("jstz://alistair.tez/myEndpoint", {
         method: "POST",
         body: text,
       });

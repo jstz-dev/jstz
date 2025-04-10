@@ -144,7 +144,7 @@ mod tests {
         let body = vec![0];
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
-                "tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
+                "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
             )
             .unwrap(),
             method: Method::POST,

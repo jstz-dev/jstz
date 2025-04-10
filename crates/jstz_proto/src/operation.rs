@@ -109,12 +109,12 @@ pub struct DeployFunction {
     The target smart function is given by the host part of the uri. \
     The rest of the attributes will be handled by the smart function itself.")]
 pub struct RunFunction {
-    /// Smart function URI in the form tezos://{smart_function_address}/rest/of/path
+    /// Smart function URI in the form jstz://{smart_function_address}/rest/of/path
     #[serde(with = "http_serde::uri")]
     #[schema(
             value_type = String,
             format = Uri,
-            examples("tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"),
+            examples("jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"),
         )]
     pub uri: Uri,
     /// Any valid HTTP method
@@ -284,7 +284,7 @@ mod test {
         let body = r#""value":1""#.to_string().into_bytes();
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
-                "tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
+                "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
             )
             .unwrap(),
             method: Method::POST,
@@ -322,7 +322,7 @@ mod test {
                 "gas_limit":10000,
                 "headers":{},
                 "method":"POST",
-                "uri":"tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"
+                "uri":"jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"
             })
         );
         let decoded = serde_json::from_value::<Content>(json).unwrap();

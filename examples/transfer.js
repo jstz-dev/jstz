@@ -26,7 +26,7 @@ const handler = async (request) => {
   // 1. deploy the smart function that refunds 1 tez
   const refund_sf = await deployRefundSmartFunction();
   // 2. call the refund smart function with 2 tez.
-  const call_request = new Request(`tezos://${refund_sf}`, {
+  const call_request = new Request(`jstz://${refund_sf}`, {
     headers: {
       "X-JSTZ-TRANSFER": "2000000",
     },

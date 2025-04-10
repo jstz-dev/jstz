@@ -745,7 +745,7 @@ pub mod run {
                 transfer_amount.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
-                uri: format!("tezos://{}/", &smart_function).try_into().unwrap(),
+                uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
                 method: Method::GET,
                 headers,
                 body: None,
@@ -844,7 +844,7 @@ pub mod run {
             let code = format!(
                 r#"
                 const handler = async () => {{
-                    await fetch(new Request("tezos://{source}", {{
+                    await fetch(new Request("jstz://{source}", {{
                         headers: {{"X-JSTZ-TRANSFER": "{initial_balance}"}}
                     }}));
                     return new Response();
@@ -871,7 +871,7 @@ pub mod run {
                 initial_balance.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
-                uri: format!("tezos://{}/-/noop", &smart_function)
+                uri: format!("jstz://{}/-/noop", &smart_function)
                     .try_into()
                     .unwrap(),
                 method: Method::GET,
@@ -914,7 +914,7 @@ pub mod run {
                 initial_balance.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
-                uri: format!("tezos://{}/", &destination).try_into().unwrap(),
+                uri: format!("jstz://{}/", &destination).try_into().unwrap(),
                 method: Method::GET,
                 headers,
                 body: None,
@@ -985,7 +985,7 @@ pub mod run {
                 initial_balance.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
-                uri: format!("tezos://{}/", &smart_function).try_into().unwrap(),
+                uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
                 method: Method::GET,
                 headers: invalid_headers,
                 body: None,
@@ -1052,7 +1052,7 @@ pub mod run {
             // Calling the smart function should error or return an error response
             tx.begin();
             let run_function = RunFunction {
-                uri: format!("tezos://{}/", &smart_function).try_into().unwrap(),
+                uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
                 method: Method::GET,
                 headers: Default::default(),
                 body: None,
@@ -1139,7 +1139,7 @@ pub mod run {
                 initial_balance.to_string().try_into().unwrap(),
             );
             let run_function = RunFunction {
-                uri: format!("tezos://{}/", &smart_function).try_into().unwrap(),
+                uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
                 method: Method::GET,
                 headers,
                 body: None,
@@ -1286,7 +1286,7 @@ pub mod jstz_run {
 
         fn withdraw_request() -> RunFunction {
             RunFunction {
-                uri: Uri::try_from("tezos://jstz/withdraw").unwrap(),
+                uri: Uri::try_from("jstz://jstz/withdraw").unwrap(),
                 method: Method::POST,
                 headers: HeaderMap::from_iter([(
                     header::CONTENT_TYPE,
@@ -1322,7 +1322,7 @@ pub mod jstz_run {
             };
 
             RunFunction {
-                uri: Uri::try_from("tezos://jstz/fa-withdraw").unwrap(),
+                uri: Uri::try_from("jstz://jstz/fa-withdraw").unwrap(),
                 method: Method::POST,
                 headers: HeaderMap::from_iter([(
                     header::CONTENT_TYPE,
@@ -1339,7 +1339,7 @@ pub mod jstz_run {
             let mut tx = Transaction::default();
             let source = Address::User(jstz_mock::account1());
             let req = RunFunction {
-                uri: Uri::try_from("tezos://example.com/withdraw").unwrap(),
+                uri: Uri::try_from("jstz://example.com/withdraw").unwrap(),
                 ..withdraw_request()
             };
             let ticketer =
@@ -1355,7 +1355,7 @@ pub mod jstz_run {
             let mut tx = Transaction::default();
             let source = Address::User(jstz_mock::account1());
             let req = RunFunction {
-                uri: Uri::try_from("tezos://jstz/blahblah").unwrap(),
+                uri: Uri::try_from("jstz://jstz/blahblah").unwrap(),
                 ..withdraw_request()
             };
             let ticketer =
@@ -1614,7 +1614,7 @@ mod tests {
 
         let mut builder = http::Request::builder()
             .method("POST")
-            .uri("tezos://test")
+            .uri("jstz://test")
             .body(Some(Vec::new()))
             .map_err(|e| {
                 JsError::from_native(

@@ -174,10 +174,10 @@ jstz run [OPTIONS] <URL>
 
 ```bash
 $ export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
-$ jstz run --trace "tezos://${counter}/"
-$ jstz run --trace "tezos://${counter}/"
-$ jstz run --trace "tezos://${counter}/"
-$ jstz run --trace "tezos://${counter}/"
+$ jstz run --trace "jstz://${counter}/"
+$ jstz run --trace "jstz://${counter}/"
+$ jstz run --trace "jstz://${counter}/"
+$ jstz run --trace "jstz://${counter}/"
 ```
 
 You should be able to see an output of the counter smart function looking like this:

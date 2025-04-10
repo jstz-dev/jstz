@@ -65,7 +65,7 @@ fn new_run_function(
     );
     Ok(RunFunction {
         uri: Uri::builder()
-            .scheme("tezos")
+            .scheme("jstz")
             .authority(proxy_contract.to_string())
             .path_and_query(DEPOSIT_URI)
             .build()

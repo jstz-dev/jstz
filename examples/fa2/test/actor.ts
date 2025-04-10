@@ -21,7 +21,7 @@ async function handler(request: Request): Promise<Response> {
         ];
 
         return await SmartFunction.call(
-          new Request(`tezos://${target}/transfer`, {
+          new Request(`jstz://${target}/transfer`, {
             method: "POST",
             body: JSON.stringify(transfers),
           }),
@@ -42,7 +42,7 @@ async function handler(request: Request): Promise<Response> {
         }));
 
         return await fetch(
-          new Request(`tezos://${target}/update_operators`, {
+          new Request(`jstz://${target}/update_operators`, {
             method: "PUT",
             body: JSON.stringify(body),
           }),
