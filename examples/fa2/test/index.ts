@@ -2,7 +2,7 @@ import type { BalanceRequest, BalanceResponse, MintNew } from "../src/index";
 
 // NOTE: When updating actor smart function, make sure to update the `ACTOR_FUNCTION_CODE` below
 const ACTOR_FUNCTION_CODE =
-  'async function u(c){let e=new URL(c.url),l=e.pathname;try{switch(l){case"/ping":return console.log("Hello from child smart function \u{1F44B}"),new Response("Pong!");case"/transfer":{let t=e.searchParams.get("to"),a=+e.searchParams.get("token_id"),s=+e.searchParams.get("amount"),o=e.searchParams.get("fa2"),n=[{from:Ledger.selfAddress,transfers:[{to:t,token_id:a,amount:s}]}];return await SmartFunction.call(new Request(`tezos://${o}/transfer`,{method:"POST",body:JSON.stringify(n)}))}case"/add_operator":{let t=e.searchParams.get("fa2"),a=JSON.parse(e.searchParams.get("tokens")),s=c.headers.get("Referer"),o=Ledger.selfAddress,n=a.map(d=>({operation:"add_operator",owner:o,operator:s,token_id:d}));return await SmartFunction.call(new Request(`tezos://${t}/update_operators`,{method:"PUT",body:JSON.stringify(n)}))}default:let r=`Unrecognised entrypoint ${l}`;return console.error(r),new Response(r,{status:404})}}catch(r){return console.error(r),Response.error()}}var g=u;export{g as default};';
+  'async function u(c){let e=new URL(c.url),l=e.pathname;try{switch(l){case"/ping":return console.log("Hello from child smart function \u{1F44B}"),new Response("Pong!");case"/transfer":{let t=e.searchParams.get("to"),a=+e.searchParams.get("token_id"),s=+e.searchParams.get("amount"),o=e.searchParams.get("fa2"),n=[{from:Ledger.selfAddress,transfers:[{to:t,token_id:a,amount:s}]}];return await SmartFunction.call(new Request(`jstz://${o}/transfer`,{method:"POST",body:JSON.stringify(n)}))}case"/add_operator":{let t=e.searchParams.get("fa2"),a=JSON.parse(e.searchParams.get("tokens")),s=c.headers.get("Referer"),o=Ledger.selfAddress,n=a.map(d=>({operation:"add_operator",owner:o,operator:s,token_id:d}));return await SmartFunction.call(new Request(`jstz://${t}/update_operators`,{method:"PUT",body:JSON.stringify(n)}))}default:let r=`Unrecognised entrypoint ${l}`;return console.error(r),new Response(r,{status:404})}}catch(r){return console.error(r),Response.error()}}var g=u;export{g as default};';
 
 async function createActors(n: number): Promise<Address[]> {
   let promises = new Array(n)
@@ -21,7 +21,7 @@ async function logBalances(fa2: Address, actor: Address[], tokens: number[]) {
   let encodedRequests = btoa(JSON.stringify(requests));
 
   let response = await fetch(
-    new Request(`tezos://${fa2}/balance_of?requests=${encodedRequests}`),
+    new Request(`jstz://${fa2}/balance_of?requests=${encodedRequests}`),
   );
 
   let balances = await response.json();
@@ -43,7 +43,7 @@ async function addSelfAsOperator(
   let promises = actors.map((actor) =>
     fetch(
       new Request(
-        `tezos://${actor}/add_operator?fa2=${fa2}&tokens=${JSON.stringify(
+        `jstz://${actor}/add_operator?fa2=${fa2}&tokens=${JSON.stringify(
           tokens,
         )}`,
       ),
@@ -57,7 +57,7 @@ async function mintTokens(
   ...tokens: MintNew[]
 ): Promise<Response> {
   return await fetch(
-    new Request(`tezos://${fa2}/mint_new`, {
+    new Request(`jstz://${fa2}/mint_new`, {
       method: "POST",
       body: JSON.stringify(tokens),
     }),
@@ -73,7 +73,7 @@ async function transfer(
 ): Promise<Response> {
   return await fetch(
     new Request(
-      `tezos://${from}/transfer?fa2=${fa2}&to=${to}&token_id=${token_id}&amount=${amount}`,
+      `jstz://${from}/transfer?fa2=${fa2}&to=${to}&token_id=${token_id}&amount=${amount}`,
     ),
   );
 }
@@ -95,7 +95,7 @@ async function steal(
 
   // 2. Attempt to transfer the tokens
   return await fetch(
-    new Request(`tezos://${fa2}/transfer`, {
+    new Request(`jstz://${fa2}/transfer`, {
       method: "POST",
       body: JSON.stringify(transfers),
     }),

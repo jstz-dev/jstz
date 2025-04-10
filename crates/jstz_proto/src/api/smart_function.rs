@@ -358,7 +358,7 @@ mod test {
         let receiver = Address::User(PublicKeyHash::digest(b"receiver address").unwrap());
         let http_request = http::Request::builder()
             .method(Method::POST)
-            .uri("tezos://jstz/withdraw")
+            .uri("jstz://jstz/withdraw")
             .header("Content-type", "application/json")
             .body(Some(
                 json!({
@@ -399,7 +399,7 @@ mod test {
         let source = Address::User(jstz_mock::account1());
         let code = r#"
         export default (request) => {
-            const withdrawRequest = new Request("tezos://jstz/withdraw", {
+            const withdrawRequest = new Request("jstz://jstz/withdraw", {
                 method: "POST",
                 headers: {
                     "Content-type": "application/json",
@@ -427,7 +427,7 @@ mod test {
 
         tx.begin();
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", smart_function).try_into().unwrap(),
+            uri: format!("jstz://{}/", smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -483,7 +483,7 @@ mod test {
             const handler = async () => {{
                 const myHeaders = new Headers();
                 myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
-                await fetch(new Request("tezos://{smart_function1}/", {{
+                await fetch(new Request("jstz://{smart_function1}/", {{
                     headers: myHeaders
                 }}));
                 return new Response();
@@ -499,7 +499,7 @@ mod test {
 
         // 6. Call the new smart function
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", &smart_function2).try_into().unwrap(),
+            uri: format!("jstz://{}/", &smart_function2).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -544,7 +544,7 @@ mod test {
             const handler = async () => {{
                 const myHeaders = new Headers();
                 myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
-                await fetch(new Request("tezos://{smart_function}/-/noop", {{
+                await fetch(new Request("jstz://{smart_function}/-/noop", {{
                     headers: myHeaders
                 }}));
                 return new Response();
@@ -560,7 +560,7 @@ mod test {
 
         // calling the smart function2
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", &smart_function2).try_into().unwrap(),
+            uri: format!("jstz://{}/", &smart_function2).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -599,7 +599,7 @@ mod test {
             const handler = async () => {{
                 const myHeaders = new Headers();
                 myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
-                await fetch(new Request("tezos://{source}", {{
+                await fetch(new Request("jstz://{source}", {{
                     headers: myHeaders
                 }}));
                 return new Response();
@@ -621,7 +621,7 @@ mod test {
         // 2. Call the smart function
         tx.begin();
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", &smart_function).try_into().unwrap(),
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -664,7 +664,7 @@ mod test {
             const handler = async () => {{
                 const myHeaders = new Headers();
                 myHeaders.append("X-JSTZ-TRANSFER", "1");
-                return await fetch(new Request("tezos://{source}", {{
+                return await fetch(new Request("jstz://{source}", {{
                     headers: myHeaders
                 }}));
             }};
@@ -681,7 +681,7 @@ mod test {
         // 3. Calling the smart function with insufficient funds should result in an error response
         tx.begin();
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", &smart_function).try_into().unwrap(),
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -738,7 +738,7 @@ mod test {
         let code = format!(
             r#"
             const handler = async() => {{
-                const response = await fetch(new Request("tezos://{refund_sf}"));
+                const response = await fetch(new Request("jstz://{refund_sf}"));
                 const refunded = response.headers.get("X-JSTZ-AMOUNT");
                 // propagate the refunded amount to the caller
                 return new Response(null, {{
@@ -764,7 +764,7 @@ mod test {
         let balance_before_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
         let balance_before_source = Account::balance(host, &mut tx, &source).unwrap();
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", &caller_sf).try_into().unwrap(),
+            uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -827,7 +827,7 @@ mod test {
         let code = format!(
             r#"
             const handler = () => {{
-                return fetch(new Request("tezos://{refund_sf}"));
+                return fetch(new Request("jstz://{refund_sf}"));
             }};
             export default handler;
             "#
@@ -848,7 +848,7 @@ mod test {
         let balance_before_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
         let balance_before_source = Account::balance(host, &mut tx, &source).unwrap();
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", &caller_sf).try_into().unwrap(),
+            uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -913,7 +913,7 @@ mod test {
         let code = format!(
             r#"
             const handler = async () => {{
-                await fetch(new Request("tezos://{fake_refund_sf}"));
+                await fetch(new Request("jstz://{fake_refund_sf}"));
                 return new Response();
             }};
             export default handler;
@@ -935,7 +935,7 @@ mod test {
         let balance_before_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
         let balance_before_source = Account::balance(host, &mut tx, &source).unwrap();
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", &caller_sf).try_into().unwrap(),
+            uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -1005,7 +1005,7 @@ mod test {
             const handler = async () => {{
                 const myHeaders = new Headers();
                 myHeaders.append("X-JSTZ-AMOUNT", "{initial_caller_sf_balance}");
-                return fetch(new Request("tezos://{fake_refund_sf}/", {{
+                return fetch(new Request("jstz://{fake_refund_sf}/", {{
                     headers: myHeaders
                 }}));
             }};
@@ -1027,7 +1027,7 @@ mod test {
         let balance_before_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
         let balance_before_source = Account::balance(host, &mut tx, &source).unwrap();
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", &caller_sf).try_into().unwrap(),
+            uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -1112,7 +1112,7 @@ mod test {
         let code = format!(
             r#"
             const handler = async () => {{
-                await fetch(new Request("tezos://{refund_sf}"));
+                await fetch(new Request("jstz://{refund_sf}"));
                 return new Response();
             }};
             export default handler;
@@ -1133,7 +1133,7 @@ mod test {
         tx.begin();
         let balance_before = Account::balance(host, &mut tx, &caller_sf).unwrap();
         let run_function = RunFunction {
-            uri: format!("tezos://{}/", &caller_sf).try_into().unwrap(),
+            uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -1212,7 +1212,7 @@ mod test {
                 export default (request) => {{
                     const url = new URL(request.url)
                     if (url.pathname === "/withdraw") {{
-                        const withdrawRequest = new Request("tezos://jstz/fa-withdraw", {{
+                        const withdrawRequest = new Request("jstz://jstz/fa-withdraw", {{
                             method: "POST",
                             headers: {{
                                 "Content-type": "application/json",
@@ -1257,7 +1257,7 @@ mod test {
         // 3. Call the smart function
         tx.begin();
         let run_function = RunFunction {
-            uri: format!("tezos://{}/withdraw", &token_smart_function)
+            uri: format!("jstz://{}/withdraw", &token_smart_function)
                 .try_into()
                 .unwrap(),
             method: Method::GET,
