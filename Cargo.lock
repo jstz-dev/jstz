@@ -2808,6 +2808,7 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "ansi_term",
  "anyhow",
+ "assert_cmd",
  "bip39",
  "boa_engine",
  "boa_gc",
@@ -2840,6 +2841,7 @@ dependencies = [
  "mockito",
  "nix 0.27.1",
  "octez",
+ "predicates",
  "prettytable",
  "rand 0.8.5",
  "regex",
