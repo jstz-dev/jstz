@@ -180,12 +180,12 @@
               src = builtins.fetchGit {
                 url = "https://gitlab.com/tezos/tezos.git";
                 ref = "master";
-                rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3";
+                rev = "8398643c5b8679631a6905169a19efacc25586d2";
               };
               cargoRoot = "src/riscv";
               buildAndTestSubdir = "src/riscv/sandbox";
               useFetchCargoVendor = true;
-              cargoHash = "sha256-ZhvEguaALAbxo/Icf3SIA6ROc5eq7GhNA/ZIfWoT5oc=";
+              cargoHash = "sha256-Qd23PyAzIXi5mACozpmvQy1J1Eqx2V5F4QRGqkLAXS8=";
               buildFeatures = ["supervisor"];
             };
 

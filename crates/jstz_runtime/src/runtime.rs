@@ -81,8 +81,10 @@ impl JstzRuntime {
     /// with custom extensions
     pub fn options() -> RuntimeOptions {
         let extensions = init_extenions();
+        let v8_single_threaded = v8::Platform::new_single_threaded(true).make_shared();
         RuntimeOptions {
             extensions,
+            v8_platform: Some(v8_single_threaded),
             ..Default::default()
         }
     }
@@ -92,9 +94,11 @@ impl JstzRuntime {
         let mut extensions = init_extenions();
         extensions.extend(options.extensions);
 
+        let v8_single_threaded = v8::Platform::new_single_threaded(true).make_shared();
         let mut runtime = JsRuntime::new(RuntimeOptions {
             extensions,
             module_loader: Some(options.module_loader),
+            v8_platform: Some(v8_single_threaded),
             ..Default::default()
         });
 

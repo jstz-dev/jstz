@@ -170,15 +170,15 @@ version = "0.6.0"
 default-features = false
 
 [patch.crates-io]
-tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git", rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3" }
-tezos-smart-rollup-host = { git = "https://gitlab.com/tezos/tezos.git", rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3" }
-tezos-smart-rollup-core = { git = "https://gitlab.com/tezos/tezos.git", rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3" }
-tezos-smart-rollup-mock = { git = "https://gitlab.com/tezos/tezos.git", rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3" }
-tezos-smart-rollup-encoding = { git = "https://gitlab.com/tezos/tezos.git", rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3" }
-tezos-smart-rollup-entrypoint = { git = "https://gitlab.com/tezos/tezos.git", rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3" }
-tezos-smart-rollup-debug = { git = "https://gitlab.com/tezos/tezos.git", rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3" }
-tezos-smart-rollup-panic-hook = { git = "https://gitlab.com/tezos/tezos.git", rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3" }
-tezos-smart-rollup-storage = { git = "https://gitlab.com/tezos/tezos.git", rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3" }
+tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git", rev = "8398643c5b8679631a6905169a19efacc25586d2" }
+tezos-smart-rollup-host = { git = "https://gitlab.com/tezos/tezos.git", rev = "8398643c5b8679631a6905169a19efacc25586d2" }
+tezos-smart-rollup-core = { git = "https://gitlab.com/tezos/tezos.git", rev = "8398643c5b8679631a6905169a19efacc25586d2" }
+tezos-smart-rollup-mock = { git = "https://gitlab.com/tezos/tezos.git", rev = "8398643c5b8679631a6905169a19efacc25586d2" }
+tezos-smart-rollup-encoding = { git = "https://gitlab.com/tezos/tezos.git", rev = "8398643c5b8679631a6905169a19efacc25586d2" }
+tezos-smart-rollup-entrypoint = { git = "https://gitlab.com/tezos/tezos.git", rev = "8398643c5b8679631a6905169a19efacc25586d2" }
+tezos-smart-rollup-debug = { git = "https://gitlab.com/tezos/tezos.git", rev = "8398643c5b8679631a6905169a19efacc25586d2" }
+tezos-smart-rollup-panic-hook = { git = "https://gitlab.com/tezos/tezos.git", rev = "8398643c5b8679631a6905169a19efacc25586d2" }
+tezos-smart-rollup-storage = { git = "https://gitlab.com/tezos/tezos.git", rev = "8398643c5b8679631a6905169a19efacc25586d2" }
 boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
 boa_engine = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
 boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
