@@ -22,6 +22,11 @@ import * as messagePort from "ext:deno_web/13_message_port.js";
 import * as compression from "ext:deno_web/14_compression.js";
 import * as performance from "ext:deno_web/15_performance.js";
 import * as imageData from "ext:deno_web/16_image_data.js";
+import * as headers from "ext:deno_fetch/20_headers.js";
+import * as formData from "ext:deno_fetch/21_formdata.js";
+import * as request from "ext:deno_fetch/23_request.js";
+import * as response from "ext:deno_fetch/23_response.js";
+import * as fetch from "ext:deno_fetch/26_fetch.js";
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope
 const workerGlobalScope = {
@@ -44,6 +49,8 @@ const workerGlobalScope = {
   EventTarget: core.propNonEnumerable(event.EventTarget),
   File: core.propNonEnumerable(file.File),
   FileReader: core.propNonEnumerable(fileReader.FileReader),
+  FormData: core.propNonEnumerable(formData.FormData),
+  Headers: core.propNonEnumerable(headers.Headers),
   ImageData: core.propNonEnumerable(imageData.ImageData),
   MessageChannel: core.propNonEnumerable(messagePort.MessageChannel),
   MessageEvent: core.propNonEnumerable(event.MessageEvent),
@@ -58,6 +65,8 @@ const workerGlobalScope = {
   ReadableStreamDefaultReader: core.propNonEnumerable(
     streams.ReadableStreamDefaultReader,
   ),
+  Request: core.propNonEnumerable(request.Request),
+  Response: core.propNonEnumerable(response.Response),
   TextDecoder: core.propNonEnumerable(encoding.TextDecoder),
   TextEncoder: core.propNonEnumerable(encoding.TextEncoder),
   TextDecoderStream: core.propNonEnumerable(encoding.TextDecoderStream),
@@ -94,6 +103,7 @@ const workerGlobalScope = {
   clearInterval: core.propWritable(timers.clearInterval),
   clearTimeout: core.propWritable(timers.clearTimeout),
   console: core.propNonEnumerable(jstzConsole),
+  fetch: core.propWritable(fetch.fetch),
   location: location.workerLocationDescriptor,
   performance: core.propWritable(performance.performance),
   reportError: core.propWritable(event.reportError),
