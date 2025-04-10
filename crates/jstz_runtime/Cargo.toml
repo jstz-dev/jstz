@@ -14,6 +14,7 @@ description = "Javascript runtime for Jstz"
 bincode.workspace = true
 deno_core.workspace = true
 deno_console.workspace = true
+deno_error.workspace = true
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 serde.workspace = true
@@ -35,7 +36,6 @@ default-features = false
 
 [dev-dependencies]
 anyhow.workspace = true
-deno_error.workspace = true
 derive_more.workspace = true
 jstz_wpt = { path = "../jstz_wpt" }
 serde_json.workspace = true
