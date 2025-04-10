@@ -9,6 +9,8 @@ use std::{
 };
 
 use crate::error::Result;
+use crate::ext::jstz_fetch;
+use crate::ext::jstz_fetch::NotSupportedFetch;
 use deno_core::{error::JsError, *};
 use serde::Deserialize;
 use tokio;
@@ -49,6 +51,7 @@ pub struct JstzRuntimeOptions {
     /// Not to be confused with ES modules registered by extensions
     /// (these are static, and treated differently)
     pub module_loader: Rc<dyn ModuleLoader>,
+    pub fetch: Extension,
 }
 
 impl Default for JstzRuntimeOptions {
@@ -57,6 +60,7 @@ impl Default for JstzRuntimeOptions {
             protocol: Default::default(),
             extensions: Default::default(),
             module_loader: Rc::new(NoopModuleLoader),
+            fetch: jstz_fetch::jstz_fetch::init_ops_and_esm::<NotSupportedFetch>(()),
         }
     }
 }
@@ -89,6 +93,7 @@ impl JstzRuntime {
     /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`]
     pub fn new(options: JstzRuntimeOptions) -> Self {
         let mut extensions = init_extenions();
+        extensions.push(options.fetch);
         extensions.extend(options.extensions);
 
         let mut runtime = JsRuntime::new(RuntimeOptions {
