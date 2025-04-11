@@ -14,18 +14,26 @@ The `Request` object includes this data:
 
 - The data payload of the request as a JSON object, in the `request.json()` promise
 - The address of the account that sent the request (which can be a `tz1` user account of a `KT1` smart function), in the `Referer` header
-- The HTTP method of the request, in the `request.method` property
 - The URL called, in the `request.url` property
+- The HTTP method of the request, in the `request.method` property
+- The query parameters from the URL, in the `url.searchParams` object
 
 For example, this code prints the information from the `Request` object:
 
 ```typescript
 const handler = async (request: Request): Promise<Response> => {
-  console.log(await request.json());
-  console.log(request.headers.get("Referer") as Address);
-  console.log(JSON.stringify(request.url));
-  console.log(JSON.stringify(request.method));
+  const requestBody = await request.json();
+  console.log(JSON.stringify(requestBody, null, 2));
 
+  console.log("Caller:", request.headers.get("Referer") as Address);
+
+  const url = new URL(request.url);
+  console.log("Full URL:", url.toString());
+  console.log("URL path:", url.pathname);
+  console.log("Method:", JSON.stringify(request.method));
+  url.searchParams.forEach((value, key) =>
+    console.log(`Query param: ${value}: ${key}`),
+  );
   // ...
 };
 ```
