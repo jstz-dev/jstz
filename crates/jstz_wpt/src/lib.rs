@@ -201,6 +201,6 @@ impl Wpt {
             }
         }
 
-        WptServe::new(child)
+        WptServe::new("http://localhost:8000", child)
     }
 }
