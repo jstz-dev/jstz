@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use env_logger::Env;
+use jstz_node::config::KeyPair;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
@@ -40,6 +41,9 @@ struct Args {
 
     #[arg(long, default_value = DEFAULT_KERNEL_LOG_PATH)]
     kernel_log_path: PathBuf,
+
+    #[arg(long)]
+    preimages_dir: PathBuf,
 }
 
 #[tokio::main]
@@ -52,8 +56,17 @@ async fn main() -> anyhow::Result<()> {
                 args.rollup_node_rpc_addr, args.rollup_node_rpc_port
             ));
 
-            jstz_node::run(&args.addr, args.port, rollup_endpoint, args.kernel_log_path)
-                .await
+            jstz_node::run(
+                &args.addr,
+                args.port,
+                rollup_endpoint,
+                args.preimages_dir,
+                args.kernel_log_path,
+                // TODO: make the keypair configurable
+                // https://linear.app/tezos/issue/JSTZ-424/make-keypair-configurable-in-jstz-main
+                KeyPair::default(),
+            )
+            .await
         }
         Command::Spec { out } => {
             let spec = jstz_node::openapi_json_raw()?;

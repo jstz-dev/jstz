@@ -654,7 +654,7 @@ mod tests {
     use std::path::PathBuf;
     use std::str::FromStr;
 
-    use jstz_node::config::JstzNodeConfig;
+    use jstz_node::config::{JstzNodeConfig, KeyPair};
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::{Address, OctezClientConfigBuilder},
@@ -772,6 +772,8 @@ mod tests {
                 &Endpoint::default(),
                 &Endpoint::default(),
                 &PathBuf::from("/foo"),
+                &PathBuf::from("/foo"),
+                KeyPair::default(),
             ),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(
