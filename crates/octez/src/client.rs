@@ -6,6 +6,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use regex::Regex;
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::{path_or_default, run_command, run_command_with_output};
@@ -119,11 +120,12 @@ impl OctezClient {
         to: &str,
         entrypoint: &str,
         parameter: &str,
-        amount: u64,
+        amount: &Decimal,
     ) -> Result<()> {
+        let amount = amount.to_string();
         run_command(self.command().args([
             "transfer",
-            &format!("{}", amount),
+            &amount,
             "from",
             from,
             "to",
