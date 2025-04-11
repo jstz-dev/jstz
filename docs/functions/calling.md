@@ -1,13 +1,13 @@
 # Calling other smart functions
 
 Smart functions can call other smart functions with the `SmartFunction.call()` method, which returns a promise that resolves to a Jstz [`Response`](/api/response) object.
-Here is an example of calling another contract:
+Here is an example of calling another smart function:
 
 ```typescript
-const targetContract: Address = "KT1L8ZzGDzaXZSTmzHkoF2azQRf7dCAfxtqx";
+const targetFunction: Address = "KT1L8ZzGDzaXZSTmzHkoF2azQRf7dCAfxtqx";
 
 const response = await SmartFunction.call(
-  new Request(`tezos://${targetContract}`, {
+  new Request(`tezos://${targetFunction}`, {
     method: "POST",
     body: JSON.stringify({ message: "hello" }),
   }),
