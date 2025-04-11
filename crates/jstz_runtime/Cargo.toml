@@ -35,6 +35,7 @@ jstz_wpt = { path = "../jstz_wpt" }
 serde_json.workspace = true
 tezos-smart-rollup-mock.workspace = true
 tokio.workspace = true
+url.workspace = true
 
 [features]
 skip-wpt = []
