@@ -35,7 +35,7 @@ jstz sandbox start -d
 # Deploy smart function
 jstz deploy index.js --name example
 # Send request to smart function
-jstz run jstz://example/
+jstz run tezos://example/
 ```
 
 For a more detailed quick start, see [Quick start](https://jstz-dev.github.io/jstz/quick_start.html).
