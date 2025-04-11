@@ -9,7 +9,7 @@ use std::{
 };
 
 use crate::error::Result;
-use deno_core::{error::JsError, *};
+use deno_core::*;
 use serde::Deserialize;
 use tokio;
 
@@ -110,7 +110,7 @@ impl JstzRuntime {
 
     /// Executes traditional, non-ECMAScript-module JavaScript code, ignoring
     /// its result
-    pub fn execute(mut self, code: &str) -> Result<()> {
+    pub fn execute(&mut self, code: &str) -> Result<()> {
         self.execute_script("jstz://run", code.to_string())?;
         Ok(())
     }
@@ -151,13 +151,6 @@ impl JstzRuntime {
         }?)
     }
 
-    pub async fn run_event_loop(
-        &mut self,
-        poll_options: PollEventLoopOptions,
-    ) -> Result<()> {
-        Ok(self.runtime.run_event_loop(poll_options).await?)
-    }
-
     /// Loads, instantiates and executes the specified JavaScript module.
     ///
     /// This module is treated as the "main" module. See [`preload_main_module`]
@@ -177,30 +170,18 @@ impl JstzRuntime {
     pub async fn call_default_handler(
         &mut self,
         id: ModuleId,
+        args: &[v8::Global<v8::Value>],
     ) -> Result<v8::Global<v8::Value>> {
         let ns = self.runtime.get_module_namespace(id)?;
-        let scope = &mut self.handle_scope();
-
-        let default_value = get_default_export(ns, scope);
-        let default_fn = v8::Local::<v8::Function>::try_from(default_value)?;
-
-        let result = {
-            let tc_scope = &mut v8::TryCatch::new(scope);
-            let undefined = v8::undefined(tc_scope);
-
-            // TODO():
-            // Support passing values to the handler
-            let result = default_fn.call(tc_scope, undefined.into(), &[]);
-
-            if let Some(exn) = tc_scope.exception() {
-                let error = JsError::from_v8_exception(tc_scope, exn);
-                return Err(error.into());
-            }
-
-            result
+        let default_fn = {
+            let scope = &mut self.handle_scope();
+            let default_value = get_default_export(ns, scope);
+            let default_fn = v8::Local::<v8::Function>::try_from(default_value)?;
+            v8::Global::new(scope, default_fn)
         };
-
-        Ok(v8::Global::new(scope, result.unwrap()))
+        let fut = self.call_with_args(&default_fn, args);
+        let result = self.with_event_loop_promise(fut, Default::default()).await;
+        Ok(result?)
     }
 }
 
@@ -285,8 +266,10 @@ mod test {
 
     #[test]
     fn test_init_jstz_runtime() {
-        init_test_setup!(runtime, host, tx, sink, address);
-
+        init_test_setup! {
+            runtime = runtime;
+            sink = sink;
+        };
         let code = r#"
             Kv.set("hello", "world");
             Kv.set("abc", 42);
@@ -308,17 +291,12 @@ mod test {
     async fn init_and_call_default_handler(
         code: &'static str,
     ) -> (JstzRuntime, Result<v8::Global<v8::Value>>) {
-        let specifier =
-            resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
-        let module_loader = StaticModuleLoader::with(specifier.clone(), code);
-
-        let mut rt = JstzRuntime::new(JstzRuntimeOptions {
-            module_loader: Rc::new(module_loader),
-            ..Default::default()
-        });
-
+        init_test_setup! {
+            runtime = rt;
+            specifier = (specifier, code);
+        };
         let id = rt.execute_main_module(&specifier).await.unwrap();
-        let result = rt.call_default_handler(id).await;
+        let result = rt.call_default_handler(id, &[]).await;
         (rt, result)
     }
 
@@ -368,5 +346,30 @@ export default handler;
         let scope = &mut rt.handle_scope();
         let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
         assert_eq!(result_i64, 42);
+    }
+
+    #[tokio::test]
+    async fn test_call_default_handler_with_arguments() {
+        let code = r#"
+function handler(value) {
+    return 42 + value;
+}
+
+export default handler;
+        "#;
+        init_test_setup! {
+            runtime = rt;
+            specifier = (specifier, code);
+        };
+        let id = rt.execute_main_module(&specifier).await.unwrap();
+        let value = {
+            let scope = &mut rt.handle_scope();
+            let value = v8::Integer::new(scope, 20_i32).cast::<v8::Value>();
+            v8::Global::new(scope, value)
+        };
+        let result = rt.call_default_handler(id, &[value]).await;
+        let scope = &mut rt.handle_scope();
+        let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
+        assert_eq!(result_i64, 62);
     }
 }

@@ -54,7 +54,9 @@ mod test {
 
     #[test]
     fn kv() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! {
+            runtime = runtime;
+        };
         let code = r#"
             Kv.set("hello", "world")
             let value = Kv.get("hello");

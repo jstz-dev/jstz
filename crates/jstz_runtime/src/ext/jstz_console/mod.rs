@@ -37,7 +37,10 @@ mod test {
 
     #[test]
     fn console_log() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! {
+            runtime = runtime;
+            sink = sink;
+        };
         let code = r#"console.log("hello")"#;
         runtime.execute(code).unwrap();
         assert_eq!(sink.to_string(), "[INFO] hello\n");
@@ -45,7 +48,10 @@ mod test {
 
     #[test]
     fn console_info() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! {
+            runtime = runtime;
+            sink = sink;
+        };
         let code = r#"console.info("hello")"#;
         runtime.execute(code).unwrap();
         assert_eq!(sink.to_string(), "[INFO] hello\n");
@@ -53,7 +59,10 @@ mod test {
 
     #[test]
     fn console_warn() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! {
+            runtime = runtime;
+            sink = sink;
+        };
         let code = r#"console.warn("hello")"#;
         runtime.execute(code).unwrap();
         assert_eq!(sink.to_string(), "[WARN] hello\n");
@@ -61,7 +70,10 @@ mod test {
 
     #[test]
     fn console_error() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! {
+            runtime = runtime;
+            sink = sink;
+        };
         let code = r#"console.error("hello")"#;
         runtime.execute(code).unwrap();
         assert_eq!(sink.to_string(), "[ERROR] hello\n");
@@ -69,7 +81,10 @@ mod test {
 
     #[test]
     fn console_debug() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! {
+            runtime = runtime;
+            sink = sink;
+        };
         let code = r#"console.debug("hello")"#;
         runtime.execute(code).unwrap();
         assert_eq!(sink.to_string(), "[DEBUG] hello\n");
@@ -77,7 +92,10 @@ mod test {
 
     #[test]
     fn console_js_types() {
-        init_test_setup!(runtime, host, tx, sink, address);
+        init_test_setup! {
+            runtime = runtime;
+            sink = sink;
+        };
         let code = r#"
             console.info(123)
             console.info(false)
