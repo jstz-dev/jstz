@@ -54,7 +54,6 @@ daemonize = "0.5.0"
 deno_console = "0.190.0"
 deno_core = "0.336.0"
 deno_error = "0.5.5"
-deno_fs = "0.100.0"
 deno_url = "0.190.0"
 deno_web = "0.221.0"
 deno_webidl = "0.190.0"
@@ -90,7 +89,7 @@ pretty_assertions = "1.4.1"
 proptest = "1.1"
 rand = "0.8"
 regex = "1"
-reqwest = { version = "0.11.24", features = ["json", "blocking"] }
+reqwest = { version = "0.12.15", features = ["json", "blocking"] }
 reqwest-eventsource = "0.5.0"
 rust-embed = { version = "8.5.0", features = ["interpolate-folder-path", "include-exclude"] }
 rustyline = "14.0.0"
