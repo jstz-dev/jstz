@@ -13,6 +13,7 @@ use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReport, WptReportTest,
     WptServe, WptSubtest, WptSubtestStatus, WptTestStatus,
 };
+use regex::Regex;
 use std::{fs::OpenOptions, future::IntoFuture, path::Path};
 use tezos_smart_rollup_mock::MockHost;
 use tokio::io::AsyncWriteExt;
@@ -289,6 +290,21 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
     data
 }
 
+fn process_subtests(url_path: &str, substests: Vec<WptSubtest>) -> Vec<WptSubtest> {
+    let re = Regex::new(r".*\/request\-cache.*").unwrap();
+    if re.is_match(url_path) {
+        substests
+            .iter()
+            .map(|subtest| WptSubtest {
+                message: Some("Message omitted to stabilize report".to_string()),
+                ..subtest.clone()
+            })
+            .collect()
+    } else {
+        substests
+    }
+}
+
 fn run_wpt_test(
     wpt_serve: &WptServe,
     test: TestToRun,
@@ -303,7 +319,10 @@ fn run_wpt_test(
         // was not even triggered and we should fix that.
         let status = report.status.clone().unwrap_or(WptTestStatus::Err);
         let subtests = report.subtests.clone();
-        Ok(WptReportTest::new(status, subtests))
+        Ok(WptReportTest::new(
+            status,
+            process_subtests(&test.url_path, subtests),
+        ))
     }
 }
 
