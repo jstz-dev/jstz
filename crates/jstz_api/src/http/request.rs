@@ -148,7 +148,7 @@ impl Request {
     }
 
     fn check_url_scheme(url: &Url) -> JsResult<()> {
-        if url.scheme() != "tezos" {
+        if url.scheme() != "jstz" {
             return Err(JsError::from_native(
                 JsNativeError::typ().with_message("Invalid scheme"),
             ));
@@ -211,7 +211,7 @@ impl Request {
             }
         };
 
-        // TEZOS SPECIFIC: Check if URL scheme is "tezos"
+        // TEZOS SPECIFIC: Check if URL scheme is "jstz"
         Request::check_url_scheme(&request.url)?;
 
         // 7-24. (FIXME:) SKIPPED
