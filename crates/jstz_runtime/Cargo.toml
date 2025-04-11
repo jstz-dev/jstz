@@ -38,6 +38,7 @@ default-features = false
 anyhow.workspace = true
 derive_more.workspace = true
 jstz_wpt = { path = "../jstz_wpt" }
+regex.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup-mock.workspace = true
 tokio.workspace = true
