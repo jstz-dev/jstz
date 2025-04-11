@@ -117,7 +117,7 @@ pub async fn exec(
     info!(
         "Run with `{}{}{}`",
         styles::command("jstz run "),
-        styles::url(format!("tezos://{}/", address)),
+        styles::url(format!("jstz://{}/", address)),
         styles::command(network_flag)
     );
 

@@ -30,7 +30,7 @@ pub async fn exec(
     debug!("resolved `to` -> {}", &receiver.to_base58());
 
     let amount = convert_tez_to_mutez(amount)?;
-    let url = "tezos://jstz/withdraw".to_string();
+    let url = "jstz://jstz/withdraw".to_string();
     let http_method = "POST".to_string();
     let gas_limit = 10; // TODO: set proper gas limit
     let withdraw = jstz_proto::executor::withdraw::Withdrawal { amount, receiver };
