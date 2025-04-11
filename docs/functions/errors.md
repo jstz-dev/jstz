@@ -26,7 +26,7 @@ const handler = async (request: Request): Promise<Response> => {
   // Standard JavaScript try/catch
   try {
     await SmartFunction.call(
-      new Request(`tezos://${alwaysFails}`, {
+      new Request(`jstz://${alwaysFails}`, {
         method: "POST",
         body: "",
       }),
@@ -37,7 +37,7 @@ const handler = async (request: Request): Promise<Response> => {
 
   // .catch function on promise
   await SmartFunction.call(
-    new Request(`tezos://${alwaysFails}`, {
+    new Request(`jstz://${alwaysFails}`, {
       method: "POST",
       body: "",
     }),
