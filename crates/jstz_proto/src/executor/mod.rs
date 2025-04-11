@@ -1,11 +1,12 @@
 use crate::{
     operation::{
-        self, ExternalOperation, Operation, OperationHash, RevealType, SignedOperation,
+        self, Content, ExternalOperation, Operation, OperationHash, SignedOperation,
     },
     receipt::{self, Receipt},
     Error, Result,
 };
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::RevealData};
+use jstz_crypto::public_key::PublicKey;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 pub mod deposit;
 pub mod fa_deposit;
@@ -14,22 +15,12 @@ pub mod smart_function;
 pub mod withdraw;
 pub const JSTZ_HOST: &str = "jstz";
 
-fn verify_signed_op(
-    hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
-    signed_op: SignedOperation,
-) -> Result<Operation> {
-    signed_op.verify().and_then(|op| {
-        op.verify_nonce(hrt, tx)?;
-        Ok(op)
-    })
-}
-
 fn execute_operation_inner(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     op: Operation,
     ticketer: &ContractKt1Hash,
+    injector: &PublicKey,
 ) -> Result<(OperationHash, receipt::ReceiptContent)> {
     let op_hash = op.hash();
     let source = op.source();
@@ -50,18 +41,20 @@ fn execute_operation_inner(
             };
             Ok((op_hash, receipt::ReceiptContent::RunFunction(result)))
         }
-        operation::Content::RevealLargePayloadOperation(reveal) => {
+        operation::Content::RevealLargePayload(reveal) => {
+            if op.public_key != *injector {
+                return Err(Error::InvalidInjector);
+            }
             let revealed_op = RevealData::reveal_and_decode::<_, SignedOperation>(
                 hrt,
                 &reveal.root_hash,
-            )?;
-            let revealed_op = verify_signed_op(hrt, tx, revealed_op)?;
-            match (reveal.reveal_type, &revealed_op.content) {
-                (RevealType::DeployFunction, &operation::Content::DeployFunction(_)) => {
-                    execute_operation_inner(hrt, tx, revealed_op, ticketer)
-                }
-                _ => Err(Error::RevealTypeMismatch),
+            )?
+            .verify()?;
+            revealed_op.verify_nonce(hrt, tx)?;
+            if reveal.reveal_type == revealed_op.content().try_into()? {
+                return execute_operation_inner(hrt, tx, revealed_op, ticketer, injector);
             }
+            Err(Error::RevealTypeMismatch)
         }
     }
 }
@@ -84,14 +77,27 @@ pub fn execute_operation(
     tx: &mut Transaction,
     signed_operation: SignedOperation,
     ticketer: &ContractKt1Hash,
+    injector: &PublicKey,
 ) -> Receipt {
-    let operation_hash = signed_operation.hash();
-    let result = verify_signed_op(hrt, tx, signed_operation)
-        .and_then(|op| execute_operation_inner(hrt, tx, op, ticketer));
-    match result {
-        Ok((hash, content)) => Receipt::new(hash, Ok(content)),
-        Err(e) => Receipt::new(operation_hash, Err(e)),
-    }
+    let op_hash = signed_operation.hash();
+    let op = signed_operation.verify();
+    let op_hash = match &op {
+        // If the operation is a reveal large payload operation, use the original operation hash
+        Ok(Operation {
+            content: Content::RevealLargePayload(reveal),
+            ..
+        }) => reveal.op_hash_to_reveal.clone(),
+        _ => op_hash,
+    };
+
+    op.and_then(|op| {
+        op.verify_nonce(hrt, tx)?;
+        execute_operation_inner(hrt, tx, op, ticketer, injector)
+    })
+    .map_or_else(
+        |e| Receipt::new(op_hash, Err(e)),
+        |(hash, content)| Receipt::new(hash, Ok(content)),
+    )
 }
 
 #[cfg(test)]
@@ -102,13 +108,14 @@ mod tests {
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
     };
+    use operation::RevealType;
     use tezos_crypto_rs::hash::HashTrait;
     use tezos_smart_rollup_mock::MockHost;
 
     use super::*;
     use crate::{
         context::account::{Nonce, ParsedCode},
-        operation::{Content, DeployFunction, RevealLargePayloadOperation, RunFunction},
+        operation::{Content, DeployFunction, RevealLargePayload, RunFunction},
         receipt::ReceiptResult,
     };
 
@@ -165,8 +172,7 @@ mod tests {
         })
     }
 
-    fn make_signed_op(content: Content) -> SignedOperation {
-        let (_, pk, sk) = bootstrap2();
+    fn make_signed_op(content: Content, pk: PublicKey, sk: SecretKey) -> SignedOperation {
         let deploy_op = Operation {
             public_key: pk,
             nonce: Nonce(0),
@@ -176,17 +182,21 @@ mod tests {
         SignedOperation::new(sig, deploy_op)
     }
 
-    fn signed_rdc_op(root_hash: PreimageHash) -> SignedOperation {
-        let rdc_op = RevealLargePayloadOperation {
+    fn signed_rdc_op(
+        root_hash: PreimageHash,
+        pk: PublicKey,
+        sk: SecretKey,
+    ) -> SignedOperation {
+        let rdc_op = RevealLargePayload {
             root_hash,
             reveal_type: RevealType::DeployFunction,
+            op_hash_to_reveal: OperationHash::default(),
         };
         let rdc_op_content = rdc_op;
-        let (_, pk, sk) = bootstrap1();
         let rdc_op: Operation = Operation {
             public_key: pk,
             nonce: Nonce(0),
-            content: Content::RevealLargePayloadOperation(rdc_op_content),
+            content: Content::RevealLargePayload(rdc_op_content),
         };
         let sig = sk.sign(rdc_op.hash()).unwrap();
         SignedOperation::new(sig, rdc_op)
@@ -206,41 +216,66 @@ mod tests {
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
         tx.begin();
-        let deploy_op = make_signed_op(deploy_function_content());
+        let (_, pk1, sk1) = bootstrap1();
+        let (_, pk2, sk2) = bootstrap2();
+        let deploy_op = make_signed_op(deploy_function_content(), pk2, sk2);
         let root_hash = make_data_available(&mut host, deploy_op);
-        let rdc_op = signed_rdc_op(root_hash);
+        let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1);
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer);
+        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
     }
     #[test]
-    fn throws_error_if_reveal_type_mismatch() {
+    fn throws_error_if_reveal_type_not_supported() {
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
         tx.begin();
-        let run_op = make_signed_op(run_function_content());
+        let (_, pk1, sk1) = bootstrap1();
+        let (_, pk2, sk2) = bootstrap2();
+        let run_op = make_signed_op(run_function_content(), pk2.clone(), sk2.clone());
         let root_hash = make_data_available(&mut host, run_op);
-        let rdc_op = signed_rdc_op(root_hash);
+        let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1.clone());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer);
+        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
+        println!("receipt: {:?}", receipt);
         assert!(matches!(
             receipt.result,
-            ReceiptResult::Failed(e) if e.contains("RevealTypeMismatch")
+            ReceiptResult::Failed(e) if e.contains("RevealNotSupported")
         ));
     }
 
     #[test]
-    fn throws_for_invalid_nonce() {
+    fn throws_if_nonce_is_invalid() {
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
         tx.begin();
-        let deploy_op = make_signed_op(deploy_function_content());
+        let (_, pk, sk) = bootstrap1();
+        let deploy_op = make_signed_op(deploy_function_content(), pk.clone(), sk.clone());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer);
+        let receipt =
+            execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer, &pk);
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
-        let receipt = execute_operation(&mut host, &mut tx, deploy_op, &ticketer);
+        let receipt = execute_operation(&mut host, &mut tx, deploy_op, &ticketer, &pk);
         assert!(
             matches!(receipt.result, ReceiptResult::Failed(e) if e.contains("InvalidNonce"))
         );
+    }
+
+    #[test]
+    fn throws_if_injector_is_invalid() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+        let (_, pk1, sk1) = bootstrap1();
+        let (_, pk2, sk2) = bootstrap2();
+        let deploy_op = make_signed_op(deploy_function_content(), pk1.clone(), sk1);
+        let root_hash = make_data_available(&mut host, deploy_op.clone());
+        let rdc_op = signed_rdc_op(root_hash, pk2.clone(), sk2);
+        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
+        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
+        assert!(
+            matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidInjector"))
+        );
+        assert_eq!(receipt.hash().to_string(), deploy_op.hash().to_string());
     }
 }

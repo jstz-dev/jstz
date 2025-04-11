@@ -426,7 +426,7 @@
         },
         "responses": {
           "200": {
-            "description": "Operation successfully injectedd"
+            "description": "Operation successfully injected"
           },
           "400": {
             "description": ""
@@ -609,7 +609,7 @@
           {
             "allOf": [
               {
-                "$ref": "#/components/schemas/RevealLargePayloadOperation"
+                "$ref": "#/components/schemas/RevealLargePayload"
               },
               {
                 "type": "object",
@@ -620,13 +620,13 @@
                   "_type": {
                     "type": "string",
                     "enum": [
-                      "RevealLargePayloadOperation"
+                      "RevealLargePayload"
                     ]
                   }
                 }
               }
             ],
-            "title": "RevealLargePayloadOperation"
+            "title": "RevealLargePayload"
           }
         ],
         "discriminator": {
@@ -1001,7 +1001,7 @@
           }
         ]
       },
-      "RevealLargePayloadOperation": {
+      "RevealLargePayload": {
         "type": "object",
         "description": "An operation to reveal an operation with a large payload of type `RevealType`. The root hash is the hash of the SignedOperation and the data is assumed to be available.",
         "required": [

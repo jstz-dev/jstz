@@ -141,7 +141,9 @@ pub(crate) async fn build_config(
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
+        &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
+        None,
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
