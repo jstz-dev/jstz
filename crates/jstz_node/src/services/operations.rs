@@ -1,19 +1,33 @@
+use std::fs;
+use std::path;
+
+use crate::config::KeyPair;
+use crate::services::accounts::get_account_nonce;
+
 use super::error::{ServiceError, ServiceResult};
 use super::{AppState, Service};
 use anyhow::anyhow;
+use anyhow::Context;
 use axum::{
     extract::{Path, State},
     Json,
 };
 
+use jstz_core::reveal_data::{PreimageHash, RevealData, MAX_REVEAL_SIZE};
 use jstz_core::BinEncodable;
-use jstz_proto::operation::{Operation, SignedOperation};
+use jstz_proto::context::account::Nonce;
+use jstz_proto::operation::{Content, Operation, SignedOperation};
 use jstz_proto::receipt::Receipt;
+use octez::OctezRollupClient;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
 
+use tokio::task::JoinSet;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
+
+/// The maximum operation size in bytes that can be directly included without using the reveal mechanism.
+const MAX_DIRECT_OPERATION_SIZE: usize = 3915;
 
 pub struct OperationsService;
 
@@ -21,29 +35,111 @@ const OPERATIONS_TAG: &str = "Operations";
 
 type HexEncodedOperationHash = String;
 
+// Given a large operation, encode it into preimages and store them in the rollup's preimages directory
+async fn prepare_rlp_operation(
+    rollup_client: &OctezRollupClient,
+    signer: KeyPair,
+    operation: &SignedOperation,
+    rollup_preimages_dir: &path::Path,
+) -> ServiceResult<SignedOperation> {
+    let reveal_type = operation
+        .verify_ref()
+        .map_err(|e| anyhow!("Invalid operation: {}", e))?
+        .content()
+        .try_into()
+        .map_err(|e| {
+            ServiceError::BadRequest(format!(
+                "Large payload operation not supported: {}",
+                e,
+            ))
+        })?;
+
+    let mut write_tasks = JoinSet::new();
+    let save_preimages = |hash: PreimageHash, preimage: Vec<u8>| {
+        let path = rollup_preimages_dir.join(hash.to_string());
+        write_tasks.spawn(async move { fs::write(&path, preimage) });
+    };
+    let KeyPair(public_key, secret_key) = signer;
+    let root_hash = RevealData::encode_and_prepare_preimages(operation, save_preimages)
+        .map_err(|e| anyhow::anyhow!("{}", e))
+        .context("failed to prepare reveal large payload operation")?;
+    write_tasks
+        .join_all()
+        .await
+        .into_iter()
+        .collect::<Result<Vec<()>, _>>()
+        .map_err(|e| anyhow!("failed to save preimages: {e}"))?;
+
+    let nonce = get_account_nonce(rollup_client, &public_key.hash()).await?;
+    let rlp_operation = Operation {
+        public_key,
+        nonce: nonce.unwrap_or(Nonce::default()),
+        content: Content::new_reveal_large_payload(root_hash, reveal_type),
+    };
+    let signature = secret_key
+        .sign(rlp_operation.hash())
+        .map_err(|e| anyhow!("failed to sign reval large payload operation: {e}"))?;
+    Ok(SignedOperation::new(signature, rlp_operation))
+}
+
+// Encode an operation. if the operation is too large, encode it into a reveal large payload operation
+async fn encode_operation(
+    operation: &SignedOperation,
+    rollup_client: &OctezRollupClient,
+    injector: KeyPair,
+    rollup_preimages_dir: &path::Path,
+) -> ServiceResult<Vec<u8>> {
+    let encoded_op = operation
+        .encode()
+        .map_err(|e| anyhow!("Failed to serialize operation: {e}"))?;
+
+    let contents = match encoded_op.len() {
+        size if size <= MAX_DIRECT_OPERATION_SIZE => encoded_op,
+        size if size <= MAX_REVEAL_SIZE => prepare_rlp_operation(
+            rollup_client,
+            injector,
+            operation,
+            rollup_preimages_dir,
+        )
+        .await?
+        .encode()
+        .map_err(|_| anyhow!("Failed to encode rlp operation"))?,
+        size => Err(anyhow!(
+            "Operation size exceeds maximum allowed size ({} bytes > {} MB)",
+            size,
+            MAX_REVEAL_SIZE / 1024 / 1024
+        ))?,
+    };
+
+    Ok(contents)
+}
+
 /// Inject an operation into Jstz
 #[utoipa::path(
         post,
         path = "",
         tag = OPERATIONS_TAG,
         responses(
-            (status = 200, description = "Operation successfully injectedd"),
+            (status = 200, description = "Operation successfully injected"),
             (status = 400),
             (status = 500)
         )
     )]
 async fn inject(
-    State(AppState { rollup_client, .. }): State<AppState>,
+    State(AppState {
+        rollup_client,
+        rollup_preimages_dir,
+        injector,
+        ..
+    }): State<AppState>,
     Json(operation): Json<SignedOperation>,
 ) -> ServiceResult<()> {
-    let encoded_operation = operation
-        .encode()
-        .map_err(|_| anyhow!("Failed to serialize operation"))?;
+    let contents =
+        encode_operation(&operation, &rollup_client, injector, &rollup_preimages_dir)
+            .await?;
+
     let address = rollup_client.get_rollup_address().await?;
-    let message_frame = ExternalMessageFrame::Targetted {
-        address,
-        contents: encoded_operation,
-    };
+    let message_frame = ExternalMessageFrame::Targetted { address, contents };
     let mut binary_contents = Vec::new();
     message_frame
         .bin_write(&mut binary_contents)
@@ -108,5 +204,171 @@ impl Service for OperationsService {
             .routes(routes!(hash_operation));
 
         OpenApiRouter::new().nest("/operations", routes)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use std::{fs, path::Path};
+
+    use jstz_core::reveal_data::MAX_REVEAL_SIZE;
+    use jstz_crypto::{
+        hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
+        secret_key::SecretKey,
+    };
+    use jstz_proto::{
+        context::account::{Amount, Nonce, ParsedCode},
+        operation::{Content, DeployFunction, Operation, SignedOperation},
+    };
+    use octez::OctezRollupClient;
+
+    use crate::{
+        config::KeyPair,
+        services::{error::ServiceError, operations::encode_operation},
+    };
+
+    use super::MAX_DIRECT_OPERATION_SIZE;
+
+    fn bootstrap1() -> (PublicKeyHash, PublicKey, SecretKey) {
+        (
+            PublicKeyHash::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap(),
+            PublicKey::from_base58(
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+            )
+            .unwrap(),
+            SecretKey::from_base58(
+                "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+            )
+            .unwrap(),
+        )
+    }
+
+    fn make_signed_op(content: Content) -> SignedOperation {
+        let (_, pk, sk) = bootstrap1();
+        let deploy_op = Operation {
+            public_key: pk,
+            nonce: Nonce(0),
+            content,
+        };
+        let sig = sk.sign(deploy_op.hash()).unwrap();
+        SignedOperation::new(sig, deploy_op)
+    }
+
+    fn mock_code(size: usize) -> String {
+        "a".repeat(size)
+    }
+
+    fn get_dir_size(path: &Path) -> u64 {
+        let mut size = 0;
+        for entry_result in fs::read_dir(path).unwrap() {
+            let entry = entry_result.unwrap();
+            let metadata = entry.metadata().unwrap();
+            if metadata.is_dir() {
+                // Recurse into subdirectories
+                size += get_dir_size(&entry.path());
+            } else {
+                // Add up file sizes
+                size += metadata.len();
+            }
+        }
+        size
+    }
+
+    #[tokio::test]
+    async fn encodes_normal_operation() {
+        let (_, pk, sk) = bootstrap1();
+        let client = OctezRollupClient::new("http://localhost:8732".to_string());
+        let code = mock_code(1);
+        let operation = make_signed_op(Content::DeployFunction(DeployFunction {
+            account_credit: Amount::default(),
+            function_code: ParsedCode(code),
+        }));
+        let key_pair = KeyPair(pk, sk);
+        let temp_dir = tempfile::tempdir().unwrap();
+        let result =
+            encode_operation(&operation, &client, key_pair, temp_dir.path()).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn encodes_large_payload_operation_and_make_data_available() {
+        let (pkh, pk, sk) = bootstrap1();
+        let mut server = mockito::Server::new_async().await;
+        let url = format!(
+            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{}",
+            pkh
+        );
+        server
+            .mock("GET", url.as_str())
+            .with_status(200)
+            .with_body(r#""01000000000000000000000000000000000000000901000000000000636f6e7374204b4559203d2022636f756e746572223b0a0a636f6e73742068616e646c6572203d202829203d3e207b0a20206c657420636f756e746572203d204b762e676574284b4559293b0a2020636f6e736f6c652e6c6f672860436f756e7465723a20247b636f756e7465727d60293b0a202069662028636f756e746572203d3d3d206e756c6c29207b0a20202020636f756e746572203d20303b0a20207d20656c7365207b0a20202020636f756e7465722b2b3b0a20207d0a20204b762e736574284b45592c20636f756e746572293b0a202072657475726e206e657720526573706f6e736528293b0a7d3b0a0a6578706f72742064656661756c742068616e646c65723b0a""#)
+            .create();
+        let client = OctezRollupClient::new(server.url());
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let code = mock_code(MAX_DIRECT_OPERATION_SIZE);
+        let code_size: u64 = code.len() as u64;
+        let operation = make_signed_op(Content::DeployFunction(DeployFunction {
+            account_credit: Amount::default(),
+            function_code: ParsedCode(code),
+        }));
+        let key_pair = KeyPair(pk, sk);
+        let result =
+            encode_operation(&operation, &client, key_pair, temp_dir.path()).await;
+        assert!(result.is_ok());
+        let dir_size = get_dir_size(temp_dir.path());
+        assert!(
+            dir_size > code_size,
+            "Expected temp_dir to have some file data, but got size = 0"
+        );
+    }
+
+    #[tokio::test]
+    async fn encodes_operation_throws_if_operation_is_too_large() {
+        let (_, pk, sk) = bootstrap1();
+        let client = OctezRollupClient::new("http://localhost:8732".to_string());
+        let code = mock_code(MAX_REVEAL_SIZE + 1);
+        let operation = make_signed_op(Content::DeployFunction(DeployFunction {
+            account_credit: Amount::default(),
+            function_code: ParsedCode(code),
+        }));
+        let key_pair = KeyPair(pk, sk);
+        let temp_dir = tempfile::tempdir().unwrap();
+        let result =
+            encode_operation(&operation, &client, key_pair, temp_dir.path()).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn encodes_large_payload_operation_throws_if_write_preimages_fails() {
+        let (pkh, pk, sk) = bootstrap1();
+        let mut server = mockito::Server::new_async().await;
+        let url = format!(
+            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{}",
+            pkh
+        );
+        server
+            .mock("GET", url.as_str())
+            .with_status(200)
+            .with_body(r#""01000000000000000000000000000000000000000901000000000000636f6e7374204b4559203d2022636f756e746572223b0a0a636f6e73742068616e646c6572203d202829203d3e207b0a20206c657420636f756e746572203d204b762e676574284b4559293b0a2020636f6e736f6c652e6c6f672860436f756e7465723a20247b636f756e7465727d60293b0a202069662028636f756e746572203d3d3d206e756c6c29207b0a20202020636f756e746572203d20303b0a20207d20656c7365207b0a20202020636f756e7465722b2b3b0a20207d0a20204b762e736574284b45592c20636f756e746572293b0a202072657475726e206e657720526573706f6e736528293b0a7d3b0a0a6578706f72742064656661756c742068616e646c65723b0a""#)
+            .create();
+        let client = OctezRollupClient::new(server.url());
+
+        let code = mock_code(MAX_DIRECT_OPERATION_SIZE);
+        let operation = make_signed_op(Content::DeployFunction(DeployFunction {
+            account_credit: Amount::default(),
+            function_code: ParsedCode(code),
+        }));
+        let key_pair = KeyPair(pk, sk);
+        let result =
+            encode_operation(&operation, &client, key_pair, Path::new("invalid path"))
+                .await;
+        assert!(result.is_err_and(|e| {
+            matches!(
+                e,
+                ServiceError::FromAnyhow(e) if e.to_string().contains("failed to save preimages")
+            )
+        }));
     }
 }

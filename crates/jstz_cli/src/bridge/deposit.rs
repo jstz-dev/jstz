@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use jstz_proto::context::account::Addressable;
 use log::{debug, info};
 
@@ -7,7 +9,7 @@ use crate::{
     sandbox::{
         assert_sandbox_running, JSTZD_SERVER_BASE_URL, SANDBOX_BOOTSTRAP_ACCOUNTS,
     },
-    utils::AddressOrAlias,
+    utils::{AddressOrAlias, Tez},
 };
 
 // hardcoding it here instead of importing from jstzd simply to avoid adding jstzd
@@ -17,7 +19,7 @@ const NATIVE_BRIDGE_ADDRESS: &str = "KT1GFiPkkTjd14oHe6MrBPiRh5djzRkVWcni";
 pub async fn exec(
     from: String,
     to: AddressOrAlias,
-    amount: u64,
+    amount: Tez,
     network: Option<NetworkName>,
 ) -> Result<()> {
     let cfg = Config::load().await?;
@@ -41,7 +43,6 @@ pub async fn exec(
     }
     let pkh = to_pkh.to_base58();
     debug!("resolved `to` -> {}", &pkh);
-
     if use_sandbox {
         exec_sandbox(JSTZD_SERVER_BASE_URL, &from, &pkh, amount).await?;
     } else {
@@ -53,7 +54,7 @@ pub async fn exec(
                 NATIVE_BRIDGE_ADDRESS,
                 "deposit",
                 &format!("\"{}\"", &pkh),
-                amount,
+                amount.deref(),
             )
             .is_err()
         {
@@ -75,10 +76,13 @@ async fn exec_sandbox(
     jstzd_server_base_url: &str,
     from: &str,
     to_pkh: &str,
-    amount: u64,
+    amount: Tez,
 ) -> Result<()> {
     // go through jstzd server even when the sandbox is not in a container for simplicity
     let client = reqwest::Client::new();
+    // TODO: Use `Tez` for amount
+    // https://linear.app/tezos/issue/JSTZ-475/use-tez-or-decimals
+    let amount: f64 = amount.to_string().parse().unwrap();
     let res = client
         .post(format!("{jstzd_server_base_url}/contract_call"))
         .json(&serde_json::json!({
@@ -98,6 +102,10 @@ async fn exec_sandbox(
 
 #[cfg(test)]
 mod tests {
+    use rust_decimal::Decimal;
+
+    use crate::utils::Tez;
+
     use super::exec_sandbox;
 
     #[tokio::test]
@@ -105,13 +113,20 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         server.mock("POST", "/contract_call").create();
 
-        assert!(exec_sandbox(&server.url(), "", "", 1).await.is_ok());
+        assert!(exec_sandbox(
+            &server.url(),
+            "",
+            "",
+            Tez::try_from(Decimal::from(1)).unwrap()
+        )
+        .await
+        .is_ok());
     }
 
     #[tokio::test]
     async fn exec_sandbox_failed_to_send_request() {
         assert_eq!(
-            exec_sandbox("bad url", "", "", 1)
+            exec_sandbox("bad url", "", "", Tez::try_from(Decimal::from(1)).unwrap())
                 .await
                 .unwrap_err()
                 .to_string(),
@@ -127,6 +142,6 @@ mod tests {
             .with_status(422)
             .create();
 
-        assert_eq!(exec_sandbox(&server.url(), "", "", 1).await.unwrap_err().to_string(), "Failed to deposit XTZ. Please check whether the addresses and network are correct.");
+        assert_eq!(exec_sandbox(&server.url(), "", "", Tez::try_from(Decimal::from(1)).unwrap()).await.unwrap_err().to_string(), "Failed to deposit XTZ. Please check whether the addresses and network are correct.");
     }
 }
