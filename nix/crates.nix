@@ -18,9 +18,36 @@
   in
     lib.sourceByRegex (lib.cleanSource ../.) regexes;
 
+  cargoVendorDir = let
+    isDenoRepo = p: lib.hasPrefix "git+https://github.com/jstz-dev/deno" p.source;
+  in
+    craneLib.vendorCargoDeps {
+      inherit src;
+      overrideVendorGitCheckout = ps: drv:
+        if lib.any isDenoRepo ps
+        then
+          drv.overrideAttrs (_old: {
+            # Deno cli/bench crate depends on JS node modules which crane doesn't know
+            # how to obtain. Since we don't need the cli crate, we remove it for simplicity
+            patches = [
+              ./patches/crane/0001-deno-remove-cli.patch
+            ];
+
+            # Deno sources at tests/util/std have relative symbolic links that fail when
+            # crane tries to vendor them. We fix this by patching the symbolic links for
+            # sources in the temp directory
+            postPatch = ''
+              mkdir -p $TMPDIR/source/tests/util/std/fs/testdata/copy_dir_link_file/
+              ln -sf $src/tests/util/std/fs/testdata/copy_dir/0.txt $TMPDIR/source/tests/util/std/fs/testdata/copy_dir_link_file/0.txt
+            '';
+          })
+        else drv;
+    };
+
   common = with pkgs; {
     pname = "jstz";
     inherit src;
+    inherit cargoVendorDir;
 
     # Needed to get openssl-sys (required by `jstz_proto`) to use pkg-config.
     nativeBuildInputs = lib.optionals stdenv.isLinux [pkg-config];

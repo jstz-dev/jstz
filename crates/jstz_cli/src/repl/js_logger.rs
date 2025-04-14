@@ -14,11 +14,10 @@ impl JsLog for PrettyLogger {
         } = log_data;
 
         let indent = 2 * groups_len;
-        let symbol = level.symbol();
 
         runtime::with_js_hrt(|hrt| {
             for line in text.lines() {
-                debug_msg!(hrt, "[{symbol}] {:>indent$}{line}\n", "");
+                debug_msg!(hrt, "[{level}] {:>indent$}{line}\n", "");
             }
         });
     }

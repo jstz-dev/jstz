@@ -46,7 +46,7 @@ where
                 if let Ok(log_record) = serde_json::from_str::<LogRecord>(&message.data) {
                     let LogRecord { level, text, .. } = log_record;
                     if level <= log_level {
-                        info!("[{}]: {}", level.symbol(), text);
+                        info!("[{}]: {}", level, text);
                     }
                 }
             }

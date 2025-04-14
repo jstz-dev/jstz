@@ -28,17 +28,6 @@ impl Display for LogLevel {
     }
 }
 
-impl LogLevel {
-    pub fn symbol(&self) -> char {
-        match self {
-            LogLevel::ERROR => '🔴',
-            LogLevel::WARN => '🟠',
-            LogLevel::INFO => '🟢',
-            LogLevel::LOG => '🪵',
-        }
-    }
-}
-
 impl TryFrom<&str> for LogLevel {
     type Error = String;
 

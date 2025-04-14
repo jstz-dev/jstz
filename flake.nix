@@ -72,8 +72,8 @@
             patches =
               (old.patches or [])
               ++ [
-                ./nix/patches/0001-fix-octez-rust-deps-for-nix.patch
-                ./nix/patches/0002-allow-floats-in-wasm-rollup.patch
+                ./nix/patches/octez/0001-fix-octez-rust-deps-for-nix.patch
+                ./nix/patches/octez/0002-allow-floats-in-wasm-rollup.patch
               ];
 
             # Network access for fetching cargo dependencies is disabled in sandboxed

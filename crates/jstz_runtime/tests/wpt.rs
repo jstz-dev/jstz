@@ -14,6 +14,7 @@ use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReport, WptReportTest,
     WptServe, WptSubtest, WptSubtestStatus, WptTestStatus,
 };
+use regex::Regex;
 use serde::Deserialize;
 use std::{
     fs::{File, OpenOptions},
@@ -295,6 +296,34 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
     data
 }
 
+fn process_subtests(url_path: &str, mut substests: Vec<WptSubtest>) -> Vec<WptSubtest> {
+    let files = [
+        // fetch related
+        r".*\/request\-cache.*",
+        r".*\/cache\.https\.any.*",
+        r".*\/conditional\-get.*",
+        r".*\/stale\-while\-revalidate",
+        // misc
+        r".*\/general\.any.*",
+        // http
+        r".*\/redirect\-count\.any.*",
+        r".*\/http\-response\-code\.any.*",
+        r".*\/http\-cache.*",
+    ]
+    .join("|");
+
+    let re = Regex::new(files.as_str()).unwrap();
+    if re.is_match(url_path) {
+        substests.iter_mut().for_each(|subtest| {
+            if subtest.status == WptSubtestStatus::Fail {
+                subtest.message = Some("Message omitted to stabilize report".to_string())
+            }
+        });
+    }
+
+    substests
+}
+
 fn run_wpt_test(
     wpt_serve: &WptServe,
     test: TestToRun,
@@ -309,7 +338,10 @@ fn run_wpt_test(
         // was not even triggered and we should fix that.
         let status = report.status.clone().unwrap_or(WptTestStatus::Err);
         let subtests = report.subtests.clone();
-        Ok(WptReportTest::new(status, subtests))
+        Ok(WptReportTest::new(
+            status,
+            process_subtests(&test.url_path, subtests),
+        ))
     }
 }
 
@@ -440,6 +472,7 @@ async fn test_wpt() -> anyhow::Result<()> {
         let expected: WptReport = serde_json::from_reader(reader).unwrap();
         assert_eq!(expected, report);
     }
+
     if let Ok(v) = std::env::var("STATS_PATH") {
         dump_stats(&report, &v).await?;
     }
