@@ -1,5 +1,3 @@
-use std::num::NonZeroU64;
-
 use clap::Parser;
 use clap_complete::Shell;
 
@@ -23,7 +21,7 @@ use config::{Config, NetworkName};
 use error::Result;
 use log::debug;
 use run::DEFAULT_GAS_LIMIT;
-use utils::AddressOrAlias;
+use utils::{AddressOrAlias, Tez};
 
 #[derive(Debug, Parser)]
 #[command(name = "jstz", author = "TriliTech <contact@trili.tech>", version)]
@@ -34,8 +32,8 @@ enum Command {
         #[arg(value_name = "CODE|PATH", default_value = None, value_hint = clap::ValueHint::FilePath)]
         code: Option<String>,
         /// Initial balance of the function in XTZ.
-        #[arg(short, long, default_value_t = 0)]
-        balance: u64,
+        #[arg(short, long, default_value = None)]
+        balance: Option<Tez>,
         /// Name (or alias) of the function.
         #[arg(long, default_value = None)]
         name: Option<String>,
@@ -48,7 +46,7 @@ enum Command {
     Transfer {
         /// The amount in XTZ to transfer.
         #[arg(value_name = "AMOUNT")]
-        amount: NonZeroU64,
+        amount: Tez,
 
         /// Destination address or alias of the account (user or smart function).
         #[arg(value_name = "ADDRESS|ALIAS")]
@@ -83,7 +81,7 @@ enum Command {
         json_data: Option<String>,
         /// The amount in XTZ to transfer.
         #[arg(short, long, default_value = None)]
-        amount: Option<NonZeroU64>,
+        amount: Option<Tez>,
         /// Specifies the network from the config file, defaulting to the configured default network.
         ///  Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]

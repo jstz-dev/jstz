@@ -19,6 +19,7 @@ http.workspace = true
 jstz_crypto = {path = "../jstz_crypto"}
 regex.workspace = true
 reqwest.workspace = true
+rust_decimal.workspace = true
 rust-embed.workspace = true
 serde.workspace = true
 serde_json.workspace = true

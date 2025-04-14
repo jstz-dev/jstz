@@ -90,7 +90,7 @@ impl Operation {
                 )
                 .as_bytes(),
             ),
-            Content::RevealLargePayloadOperation(RevealLargePayloadOperation {
+            Content::RevealLargePayload(RevealLargePayload {
                 root_hash,
                 reveal_type,
             }) => Blake2b::from(
@@ -158,7 +158,7 @@ impl TryFrom<&Content> for RevealType {
     description = "An operation to reveal an operation with a large payload of type `RevealType`. \
             The root hash is the hash of the SignedOperation and the data is assumed to be available."
 )]
-pub struct RevealLargePayloadOperation {
+pub struct RevealLargePayload {
     #[schema(value_type = String)]
     pub root_hash: PreimageHash,
     #[schema(value_type = String, example = "DeployFunction")]
@@ -174,8 +174,8 @@ pub enum Content {
     DeployFunction(#[bincode(with_serde)] DeployFunction),
     #[schema(title = "RunFunction")]
     RunFunction(#[bincode(with_serde)] RunFunction),
-    #[schema(title = "RevealLargePayloadOperation")]
-    RevealLargePayloadOperation(#[bincode(with_serde)] RevealLargePayloadOperation),
+    #[schema(title = "RevealLargePayload")]
+    RevealLargePayload(#[bincode(with_serde)] RevealLargePayload),
 }
 
 impl Content {
@@ -183,7 +183,7 @@ impl Content {
         root_hash: PreimageHash,
         reveal_type: RevealType,
     ) -> Self {
-        Content::RevealLargePayloadOperation(RevealLargePayloadOperation {
+        Content::RevealLargePayload(RevealLargePayload {
             root_hash,
             reveal_type,
         })
@@ -302,9 +302,7 @@ pub mod openapi {
 
 #[cfg(test)]
 mod test {
-    use super::{
-        Content, DeployFunction, RevealLargePayloadOperation, RevealType, RunFunction,
-    };
+    use super::{Content, DeployFunction, RevealLargePayload, RevealType, RunFunction};
     use super::{Operation, SignedOperation};
     use crate::context::account::{Account, Nonce, ParsedCode};
     use http::{HeaderMap, Method, Uri};
@@ -500,7 +498,7 @@ mod test {
     #[test]
     fn test_reveal_large_payload_operation_json_round_trip() {
         let reveal_large_payload_operation =
-            Content::RevealLargePayloadOperation(RevealLargePayloadOperation {
+            Content::RevealLargePayload(RevealLargePayload {
                 root_hash: PreimageHash::default(),
                 reveal_type: RevealType::DeployFunction,
             });
@@ -509,10 +507,7 @@ mod test {
 
         // Check the structure without hardcoding the exact serialization of root_hash
         let json_obj = json.as_object().unwrap();
-        assert_eq!(
-            json_obj.get("_type").unwrap(),
-            "RevealLargePayloadOperation"
-        );
+        assert_eq!(json_obj.get("_type").unwrap(), "RevealLargePayload");
         assert_eq!(json_obj.get("reveal_type").unwrap(), "DeployFunction");
         assert!(json_obj.contains_key("root_hash"));
 
@@ -523,7 +518,7 @@ mod test {
     #[test]
     fn test_reveal_large_payload_operation_bin_round_trip() {
         let reveal_large_payload_operation =
-            Content::RevealLargePayloadOperation(RevealLargePayloadOperation {
+            Content::RevealLargePayload(RevealLargePayload {
                 root_hash: PreimageHash::default(),
                 reveal_type: RevealType::DeployFunction,
             });

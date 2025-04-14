@@ -13,12 +13,12 @@ use crate::{
     error::{anyhow, bail, bail_user_error, user_error, Result},
     sandbox::{assert_sandbox_running, JSTZD_SERVER_BASE_URL},
     term::styles,
-    utils::{read_file_or_input_or_piped, MUTEZ_PER_TEZ},
+    utils::{read_file_or_input_or_piped, Tez},
 };
 
 pub async fn exec(
     code_op: Option<String>,
-    balance: u64,
+    balance: Option<Tez>,
     name: Option<String>,
     network: Option<NetworkName>,
 ) -> Result<()> {
@@ -73,7 +73,7 @@ pub async fn exec(
         nonce,
         content: Content::DeployFunction(DeployFunction {
             function_code: code,
-            account_credit: balance * MUTEZ_PER_TEZ,
+            account_credit: balance.map(|b| b.to_mutez()).unwrap_or(0),
         }),
     };
 

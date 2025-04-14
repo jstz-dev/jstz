@@ -25,16 +25,14 @@ use crate::{
     utils::AddressOrAlias,
 };
 
-// hardcoding it here instead of importing from jstzd simply to avoid adding jstzd
-// as a new depedency of jstz_cli just for this so that build time remains the same
 #[cfg(not(test))]
 pub fn jstz_home_dir() -> PathBuf {
-    if let Ok(value) = std::env::var("JSTZ_HOME") {
+    if let Ok(value) = std::env::var("XDG_CONFIG_HOME") {
         PathBuf::from(value)
     } else {
         dirs::home_dir()
             .expect("Could not find home directory")
-            .join(".jstz")
+            .join(".config/jstz")
     }
 }
 

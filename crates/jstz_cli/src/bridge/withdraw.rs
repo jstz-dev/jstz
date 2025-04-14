@@ -1,10 +1,9 @@
 use crate::{
-    bridge::convert_tez_to_mutez,
     config::{Config, NetworkName},
     error::{bail_user_error, Result},
     run::{self, RunArgs},
     sandbox::{assert_sandbox_running, JSTZD_SERVER_BASE_URL},
-    utils::AddressOrAlias,
+    utils::{AddressOrAlias, Tez},
 };
 use anyhow::Context;
 use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
@@ -14,7 +13,7 @@ use reqwest::StatusCode;
 
 pub async fn exec(
     to: AddressOrAlias,
-    amount: f64,
+    amount: Tez,
     network: Option<NetworkName>,
 ) -> Result<()> {
     let cfg = Config::load().await?;
@@ -29,7 +28,7 @@ pub async fn exec(
 
     debug!("resolved `to` -> {}", &receiver.to_base58());
 
-    let amount = convert_tez_to_mutez(amount)?;
+    let amount = amount.to_mutez();
     let url = "jstz://jstz/withdraw".to_string();
     let http_method = "POST".to_string();
     let gas_limit = 10; // TODO: set proper gas limit
