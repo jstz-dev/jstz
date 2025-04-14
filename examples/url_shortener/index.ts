@@ -27,7 +27,7 @@ const handler = async (request: Request): Promise<Response> => {
     const { originalUrl } = await request.json();
     const shortCode = shortenUrl(originalUrl);
     return new Response(
-      JSON.stringify({ shortUrl: `jstz://${url.host}/${shortCode}` }),
+      JSON.stringify({ shortUrl: `tezos://${url.host}/${shortCode}` }),
       {
         headers: { "Content-Type": "application/json" },
       },

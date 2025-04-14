@@ -34,7 +34,7 @@ pub fn default (request: Request) -> Response {
   }
 
   await fetch(
-    new Request(`jstz://${smartFunctionAddress}/`, {
+    new Request(`tezos://${smartFunctionAddress}/`, {
       method: "POST",
       body: "Hello World",
     }),

@@ -35,7 +35,7 @@ const handler = async () => {
 
   // Redirect
   {
-    const myResponse = Response.redirect(`jstz://${Ledger.selfAddress}`);
+    const myResponse = Response.redirect(`tezos://${Ledger.selfAddress}`);
     console.log(myResponse.url);
   }
 
