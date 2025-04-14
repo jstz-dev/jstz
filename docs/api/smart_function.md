@@ -30,7 +30,7 @@ async function handler(_: Request): Promise<Response> {
   const newAddress = await SmartFunction.create(
     "export default handler () => new Response()",
   );
-  return SmartFunction.call(new Request(`jstz://${newAddress}`));
+  return SmartFunction.call(new Request(`tezos://${newAddress}`));
 }
 ```
 

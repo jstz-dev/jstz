@@ -56,7 +56,7 @@ jstz bridge withdraw --to tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU \
 will output the following response on success:
 
 ```bash
-Running function at jstz://jstz/withdraw
+Running function at tezos://jstz/withdraw
 Status code: 200 OK
 Headers: {}
 ```
