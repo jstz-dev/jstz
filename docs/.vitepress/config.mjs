@@ -32,7 +32,6 @@ export default defineConfig({
           { text: "Accounts", link: "/accounts" },
           { text: "Architecture", link: "/architecture" },
           { text: "jstzd", link: "/jstzd" },
-          { text: "Transfer", link: "/transfer" },
         ],
       },
 
@@ -43,6 +42,7 @@ export default defineConfig({
           { text: "Handling requests", link: "/functions/requests" },
           { text: "Storing data", link: "/functions/data_storage" },
           { text: "Calling other smart functions", link: "/functions/calling" },
+          { text: "Managing tokens", link: "/functions/tokens" },
           { text: "Handling errors", link: "/functions/errors" },
         ],
       },
