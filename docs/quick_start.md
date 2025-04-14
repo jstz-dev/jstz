@@ -238,7 +238,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     Logged in to account alan with address tz1N8BsvfrSjGdomFi5V9RwwYLasgD8s4pxF
 
     Smart function deployed by alan at address: KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw
-    Run with `jstz run jstz://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/ --data <args> --trace`
+    Run with `jstz run tezos://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/ --data <args> --trace`
 
     </code>
     </pre>
@@ -248,7 +248,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     This address is its identifier, similar to an IP address or a smart contract address.
 
     In the example above, the smart function was deployed to the address `KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw`.
-    Now the smart function is accessible through a URL of the format `jstz://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/`.
+    Now the smart function is accessible through a URL of the format `tezos://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/`.
 
     After you deploy the smart function, you cannot delete it or change it.
 
@@ -269,7 +269,7 @@ After a successful deployment, you can call the smart function in a way similar 
 1. Ask the smart function for tez in an impolite way by running this command, with your smart function's address:
 
    ```sh
-   jstz run jstz://<ADDRESS>/ --data '{"message":"Give me tez now."}' -n dev
+   jstz run tezos://<ADDRESS>/ --data '{"message":"Give me tez now."}' -n dev
    ```
 
    The smart function returns the message "Sorry, I only fulfill polite requests."
@@ -277,7 +277,7 @@ After a successful deployment, you can call the smart function in a way similar 
 1. Ask the smart function politely by running this command, which includes the word "please" in the message:
 
    ```sh
-   jstz run jstz://<ADDRESS>/ --data '{"message":"Please, give me some tez."}' -n dev
+   jstz run tezos://<ADDRESS>/ --data '{"message":"Please, give me some tez."}' -n dev
    ```
 
    The function returns the message "Thank you for your polite request. You received 1 tez!"
@@ -349,7 +349,7 @@ Follow these steps to build and run this application:
 
    The CLI accepts two commands.
    If you input the text `show`, it prints the history of commands.
-   If you input any other text, it sends that text as a request to the smart function, as in the command you ran earlier: `jstz run jstz://<ADDRESS>/ --data '{"message":"Please, give me some tez."}' -n dev`.
+   If you input any other text, it sends that text as a request to the smart function, as in the command you ran earlier: `jstz run tezos://<ADDRESS>/ --data '{"message":"Please, give me some tez."}' -n dev`.
 
 1. Send a request that includes the word "please" and see that the smart function sends you one tez.
 
@@ -393,7 +393,7 @@ Essentially, it is a WASM program directly compiled from the core Jstz Rust code
 Although it is semantically correct, do not use this library in production because it involves copying users' secret keys, which is not secure.
 :::
 
-The `buildRequest` function constructs a `RunFunction` operation that calls the smart function by its `jstz://<ADDRESS>` URL.
+The `buildRequest` function constructs a `RunFunction` operation that calls the smart function by its `tezos://<ADDRESS>` URL.
 
 ```typescript
 function buildRequest(
@@ -412,7 +412,7 @@ function buildRequest(
     gas_limit: 55000,
     headers: {},
     method: "GET",
-    uri: `jstz://${contractAddress}`,
+    uri: `tezos://${contractAddress}`,
   };
 }
 ```

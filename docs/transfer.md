@@ -14,7 +14,7 @@ const ONE_TEZ = "1000000"; // 1 XTZ in mutez
 const handler = async (request) => {
   // Transfer 1 XTZ to smart function B
   const smartFunctionB = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5";
-  const call_request = new Request(`jstz://${smartFunctionB}`, {
+  const call_request = new Request(`tezos://${smartFunctionB}`, {
     headers: {
       "X-JSTZ-TRANSFER": ONE_TEZ,
     },
@@ -51,7 +51,7 @@ const ONE_TEZ = "1000000"; // 1 XTZ in mutez
 const handler = async (request) => {
   // Transfer 1 XTZ to smart function B
   const smartFunctionB = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5";
-  const call_request = new Request(`jstz://${smartFunctionB}`, {
+  const call_request = new Request(`tezos://${smartFunctionB}`, {
     headers: {
       "X-JSTZ-TRANSFER": ONE_TEZ,
     },

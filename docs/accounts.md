@@ -74,7 +74,7 @@ jstz account -a <ALIAS_OR_ADDRESS> -n dev
 To call a smart function from the command line, use the `jstz run` command and pass the address or alias, as in this example from the [Quick start](/quick_start):
 
 ```bash
-jstz run jstz://<ALIAS_OR_ADDRESS>/ --data '{"message":"Give me tez now."}' -n dev
+jstz run tezos://<ALIAS_OR_ADDRESS>/ --data '{"message":"Give me tez now."}' -n dev
 ```
 
 The Jstz command-line client sends the command from the active local user account.
