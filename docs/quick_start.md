@@ -156,7 +156,10 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     git clone https://github.com/jstz-dev/jstz.git && cd jstz/examples/get-tez
     ```
 
-    Install the dependencies for the smart function:
+    You may see an error that says `.envrc is blocked.`
+    You can ignore this error because it refers to setting up a development environment to build Jstz locally.
+
+1.  Install the dependencies for the smart function:
 
     ```sh
     npm install
@@ -211,7 +214,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     </pre>
     </details>
 
-1.  Compile and deploy the smart function to the sandbox:
+1.  Open a new terminal window, go to the `jstz/examples/get-tez` folder, and run this command to compile and deploy the smart function to the sandbox:
 
     ```sh
     npm run build
