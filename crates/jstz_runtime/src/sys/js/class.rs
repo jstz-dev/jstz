@@ -121,7 +121,6 @@ pub(crate) fn instance_get<'s>(
         WebSysError::PropertyMissing(property_name.to_rust_string_lossy(scope))
     })?)
 }
-
 pub(crate) fn instance_set(
     scope: &mut v8::HandleScope,
     this: &v8::Local<v8::Object>,

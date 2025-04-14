@@ -10,7 +10,7 @@
 //! use deno_core::v8;
 //! use jstz_runtime::sys::js::convert::ToV8;
 //!
-//! struct Response<'s>)(v8::Local<'s, v8::Object>);
+//! struct Response<'s>(v8::Local<'s, v8::Object>);
 //!
 //! impl<'s> ToV8<'s> for Response<'s> {
 //!    fn to_v8(self, scope: &mut v8::HandleScope<'s>) -> Result<v8::Local<'s, v8::Value>> {
@@ -27,12 +27,14 @@
 
 use deno_core::{
     serde_v8::{self, V8Sliceable},
-    v8,
+    v8, ByteString,
 };
 use derive_more::{Deref, DerefMut, From};
 use std::borrow::Cow;
 
 use crate::error::{Result, RuntimeError};
+
+use super::class::instance_get;
 
 /// A conversion from a v8 value to a rust value.
 pub trait FromV8<'a>: Sized {
@@ -155,6 +157,8 @@ impl_to_v8!(for &'a str where |value, scope|
     v8::String::new(scope, value)
         .ok_or_else(|| RuntimeError::cannot_alloc("String"))?);
 
+impl_to_v8!(for ByteString where |value, scope| Serde(value).to_v8(scope)?);
+impl_from_v8!(for ByteString where |value, scope| Serde::<ByteString>::from_v8(scope, value)?.0);
 impl_from_v8!(for String where |value, scope| value.to_rust_string_lossy(scope));
 
 // Buffers
@@ -249,5 +253,23 @@ where
         value: v8::Local<'a, v8::Value>,
     ) -> Result<Self> {
         Ok(Serde(serde_v8::from_v8(scope, value)?))
+    }
+}
+
+impl<'s, T, U> FromV8<'s> for (T, U)
+where
+    T: FromV8<'s>,
+    U: FromV8<'s>,
+{
+    fn from_v8(
+        scope: &mut v8::HandleScope<'s>,
+        value: v8::Local<'s, v8::Value>,
+    ) -> Result<Self> {
+        let object = value.try_cast::<v8::Object>()?;
+        let fs_key = v8::String::new(scope, "0").unwrap();
+        let fs = instance_get(scope, &object, fs_key)?;
+        let snd_key = v8::String::new(scope, "1").unwrap();
+        let snd = instance_get(scope, &object, snd_key)?;
+        Ok((T::from_v8(scope, fs)?, U::from_v8(scope, snd)?))
     }
 }
