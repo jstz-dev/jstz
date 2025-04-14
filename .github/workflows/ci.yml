@@ -19,10 +19,25 @@ jobs:
   # FIXME(https://linear.app/tezos/issue/JSTZ-49):
   # Add build and tests for LIGO contracts
 
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      docs: ${{ steps.filter.outputs.docs }}
+    steps:
+    - uses: dorny/paths-filter@v3
+      id: filter
+      with:
+        filters: |
+          docs:
+            - 'docs/**'
+
   build:
     name: Build
     runs-on: [x86_64, linux, nix]
-    needs: [commitlint]
+    needs: [commitlint, changes]
+    if: ${{ needs.changes.outputs.docs == 'false' }}
     steps:
       - uses: actions/checkout@v4
       - run: nix --version
@@ -75,6 +90,8 @@ jobs:
 
   wpt:
     name: Web Platform Test
+    needs: [changes]
+    if: ${{ needs.changes.outputs.docs == 'false' }}
     runs-on: ubuntu-latest
     container:
       image: rust:1.82-slim
