@@ -70,7 +70,7 @@ const handler = async (request: Request): Promise<Response> => {
     const { originalUrl } = await request.json();
     const shortCode = await shortenUrl(originalUrl);
     return new Response(
-      JSON.stringify({ shortUrl: `jstz://${url.host}/${shortCode}` }),
+      JSON.stringify({ shortUrl: `tezos://${url.host}/${shortCode}` }),
       {
         headers: { "Content-Type": "application/json" },
       },
@@ -128,7 +128,7 @@ jstz deploy dist/index.js -n dev
 Replace `<your-smart-function-address>` with the address returned after deployment.
 
 ```sh
-jstz run jstz://<your-smart-function-address>/shorten --data '{"originalUrl":"https://beata.com"}' -n dev --request POST
+jstz run tezos://<your-smart-function-address>/shorten --data '{"originalUrl":"https://beata.com"}' -n dev --request POST
 ```
 
 ## Retrieve the Original URL
@@ -136,7 +136,7 @@ jstz run jstz://<your-smart-function-address>/shorten --data '{"originalUrl":"ht
 Replace `<your-smart-function-address>` and `/<shortCode>` with the actual values:
 
 ```sh
-jstz run jstz://<your-smart-function-address>/<shortCode> -n dev
+jstz run tezos://<your-smart-function-address>/<shortCode> -n dev
 ```
 
 ## Summary
