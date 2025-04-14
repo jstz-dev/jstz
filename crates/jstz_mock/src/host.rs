@@ -4,7 +4,7 @@ use jstz_core::{host::HostRuntime, kv::Storage};
 
 use crate::message::MockInternalMessage;
 use derive_more::{Deref, DerefMut};
-use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
     michelson::{
@@ -34,6 +34,7 @@ pub const MOCK_PROXY_FUNCTION: &str = r#"
 pub const MOCK_TICKETER: &str = "KT1H28iie4mW9LmmJeYLjH6zkC8wwSmfHf5P";
 
 pub const TICKETER_PATH: RefPath = RefPath::assert_from(b"/ticketer");
+pub const INJECTOR_PATH: RefPath = RefPath::assert_from(b"/injector");
 pub type RollupType = MichelsonOr<
     MichelsonPair<MichelsonContract, FA2_1Ticket>,
     MichelsonPair<
@@ -88,6 +89,12 @@ impl Default for JstzMockHost {
                 .unwrap()
                 .into();
         Storage::insert(&mut mock_host, &TICKETER_PATH, &ticketer)
+            .expect("Could not insert ticketer");
+        let injector: PublicKey = PublicKey::from_base58(
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        )
+        .unwrap();
+        Storage::insert(&mut mock_host, &INJECTOR_PATH, &injector)
             .expect("Could not insert ticketer");
         mock_host.set_debug_handler(empty());
         Self(mock_host)

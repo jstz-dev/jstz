@@ -2,8 +2,8 @@
 
 use std::sync::Once;
 
-use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use jstz_crypto::{hash::Hash, public_key::PublicKey};
 use tezos_smart_rollup::{entrypoint, storage::path::RefPath};
 use tezos_smart_rollup_core::smart_rollup_core::SmartRollupCore;
 use tezos_smart_rollup_host::runtime::Runtime;
@@ -27,6 +27,18 @@ pub fn entry(host: &mut impl Runtime) {
             host.store_write(
                 &TICKETER,
                 &bincode::encode_to_vec(&ticketer, bincode::config::legacy()).unwrap(),
+                0,
+            )
+            .unwrap();
+
+            let injector = PublicKey::from_base58(
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+            )
+            .unwrap();
+            const INJECTOR: RefPath = RefPath::assert_from(b"/injector");
+            host.store_write(
+                &INJECTOR,
+                &bincode::encode_to_vec(&injector, bincode::config::legacy()).unwrap(),
                 0,
             )
             .unwrap();
