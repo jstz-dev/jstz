@@ -1,5 +1,5 @@
 use jstz_core::kv::{Storage, Transaction};
-use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
 use jstz_proto::{executor, Result};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
@@ -13,9 +13,14 @@ pub mod inbox;
 pub mod parsing;
 
 pub const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
+pub const INJECTOR: RefPath = RefPath::assert_from(b"/injector");
 
 fn read_ticketer(rt: &impl Runtime) -> Option<SmartFunctionHash> {
     Storage::get(rt, &TICKETER).ok()?
+}
+
+fn read_data_injector(rt: &impl Runtime) -> Option<PublicKey> {
+    Storage::get(rt, &INJECTOR).ok()?
 }
 
 fn handle_message(
@@ -23,6 +28,7 @@ fn handle_message(
     message: Message,
     ticketer: &ContractKt1Hash,
     tx: &mut Transaction,
+    injector: &PublicKey,
 ) -> Result<()> {
     match message {
         Message::Internal(external_operation) => {
@@ -32,8 +38,13 @@ fn handle_message(
         }
         Message::External(signed_operation) => {
             debug_msg!(hrt, "External operation: {signed_operation:?}\n");
-            let receipt =
-                executor::execute_operation(hrt, tx, signed_operation, ticketer);
+            let receipt = executor::execute_operation(
+                hrt,
+                tx,
+                signed_operation,
+                ticketer,
+                injector,
+            );
             debug_msg!(hrt, "Receipt: {receipt:?}\n");
             receipt.write(hrt, tx)?
         }
@@ -44,11 +55,14 @@ fn handle_message(
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
+    // TODO: we should organize protocol consts into a struct
+    // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
     let ticketer = read_ticketer(rt).expect("Ticketer not found");
+    let injector = read_data_injector(rt).expect("Revealer not found");
     let mut tx = Transaction::default();
     tx.begin();
     if let Some(message) = read_message(rt, &ticketer) {
-        handle_message(rt, message, &ticketer, &mut tx)
+        handle_message(rt, message, &ticketer, &mut tx, &injector)
             .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
     }
     if let Err(commit_error) = tx.commit(rt) {
