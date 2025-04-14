@@ -15,7 +15,6 @@ use axum::{
 
 use jstz_core::reveal_data::{PreimageHash, RevealData, MAX_REVEAL_SIZE};
 use jstz_core::BinEncodable;
-use jstz_proto::context::account::Nonce;
 use jstz_proto::operation::{Content, Operation, SignedOperation};
 use jstz_proto::receipt::Receipt;
 use octez::OctezRollupClient;
@@ -70,11 +69,17 @@ async fn prepare_rlp_operation(
         .collect::<Result<Vec<()>, _>>()
         .map_err(|e| anyhow!("failed to save preimages: {e}"))?;
 
-    let nonce = get_account_nonce(rollup_client, &public_key.hash()).await?;
+    let nonce = get_account_nonce(rollup_client, &public_key.hash())
+        .await?
+        .unwrap_or_default();
     let rlp_operation = Operation {
         public_key,
-        nonce: nonce.unwrap_or(Nonce::default()),
-        content: Content::new_reveal_large_payload(root_hash, reveal_type),
+        nonce,
+        content: Content::new_reveal_large_payload(
+            root_hash,
+            reveal_type,
+            operation.hash(),
+        ),
     };
     let signature = secret_key
         .sign(rlp_operation.hash())
