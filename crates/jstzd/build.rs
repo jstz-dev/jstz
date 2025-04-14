@@ -1,6 +1,6 @@
 use anyhow::Result;
-use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_kernel::TICKETER;
+use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
+use jstz_kernel::{INJECTOR, TICKETER};
 use std::{
     env, fs,
     path::{Path, PathBuf},
@@ -127,6 +127,14 @@ fn make_kernel_installer(kernel_file: &Path, preimages_dir: &Path) -> Result<Str
                 bincode::config::legacy(),
             )?),
             OwnedPath::from(TICKETER),
+        ),
+        // 3. Set `jstz` injector as the `jstz_node` account
+        OwnedConfigInstruction::set_instr(
+            OwnedBytes(bincode::encode_to_vec(
+                PublicKey::from_base58(INJECTOR_PK)?,
+                bincode::config::legacy(),
+            )?),
+            OwnedPath::from(INJECTOR),
         ),
     ]);
     let installer = installer::with_config_program(installer_program);
