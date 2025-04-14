@@ -9,6 +9,10 @@ inputs:
   repo_token:
     description: API token that gives access to manage the target repo
     required: true
+outputs:
+  artefact_name:
+    description: Name of the uploaded artefact
+    value: ${{ steps.output.outputs.artefact_name }}
 runs:
   using: "composite"
   steps:
@@ -24,10 +28,11 @@ runs:
     - name: Build
       shell: bash
       run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_cli
-    - name: Upload binaries to release
-      uses: svenstaro/upload-release-action@v2
+    - uses: actions/upload-artifact@v4
       with:
-        repo_token: ${{ inputs.repo_token }}
-        file: result/bin/jstz
-        asset_name: jstz_${{ inputs.platform }}_${{ inputs.arch }}
-        tag: ${{ github.ref_name }}
+        name: jstz_${{ inputs.platform }}_${{ inputs.arch }}
+        path: result/bin/jstz
+    - name: Output
+      id: output
+      shell: bash
+      run: echo "artefact_name=jstz_${{ inputs.platform }}_${{ inputs.arch }}" >> $GITHUB_OUTPUT
