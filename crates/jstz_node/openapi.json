@@ -1006,15 +1006,22 @@
         "description": "An operation to reveal an operation with a large payload of type `RevealType`. The root hash is the hash of the SignedOperation and the data is assumed to be available.",
         "required": [
           "root_hash",
-          "reveal_type"
+          "reveal_type",
+          "original_op_hash"
         ],
         "properties": {
+          "original_op_hash": {
+            "$ref": "#/components/schemas/Blake2b",
+            "description": "The original operation hash that is being revealed."
+          },
           "reveal_type": {
             "type": "string",
+            "description": "The type of operation being revealed.",
             "example": "DeployFunction"
           },
           "root_hash": {
-            "type": "string"
+            "type": "string",
+            "description": "The root hash of the preimage of the operation used to reveal the operation data."
           }
         }
       },

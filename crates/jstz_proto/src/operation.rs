@@ -93,8 +93,13 @@ impl Operation {
             Content::RevealLargePayload(RevealLargePayload {
                 root_hash,
                 reveal_type,
+                original_op_hash,
             }) => Blake2b::from(
-                format!("{}{}{}{}", public_key, nonce, root_hash, reveal_type).as_bytes(),
+                format!(
+                    "{}{}{}{}{}",
+                    public_key, nonce, root_hash, reveal_type, original_op_hash,
+                )
+                .as_bytes(),
             ),
         }
     }
@@ -159,10 +164,14 @@ impl TryFrom<&Content> for RevealType {
             The root hash is the hash of the SignedOperation and the data is assumed to be available."
 )]
 pub struct RevealLargePayload {
+    /// The root hash of the preimage of the operation used to reveal the operation data.
     #[schema(value_type = String)]
     pub root_hash: PreimageHash,
+    /// The type of operation being revealed.
     #[schema(value_type = String, example = "DeployFunction")]
     pub reveal_type: RevealType,
+    /// The original operation hash that is being revealed.
+    pub original_op_hash: OperationHash,
 }
 
 #[derive(
@@ -182,10 +191,12 @@ impl Content {
     pub fn new_reveal_large_payload(
         root_hash: PreimageHash,
         reveal_type: RevealType,
+        original_op_hash: OperationHash,
     ) -> Self {
         Content::RevealLargePayload(RevealLargePayload {
             root_hash,
             reveal_type,
+            original_op_hash,
         })
     }
 }
@@ -305,6 +316,7 @@ mod test {
     use super::{Content, DeployFunction, RevealLargePayload, RevealType, RunFunction};
     use super::{Operation, SignedOperation};
     use crate::context::account::{Account, Nonce, ParsedCode};
+    use crate::operation::OperationHash;
     use http::{HeaderMap, Method, Uri};
     use jstz_core::reveal_data::PreimageHash;
     use jstz_core::{kv::Transaction, BinEncodable};
@@ -501,6 +513,7 @@ mod test {
             Content::RevealLargePayload(RevealLargePayload {
                 root_hash: PreimageHash::default(),
                 reveal_type: RevealType::DeployFunction,
+                original_op_hash: OperationHash::default(),
             });
 
         let json = serde_json::to_value(&reveal_large_payload_operation).unwrap();
@@ -521,6 +534,7 @@ mod test {
             Content::RevealLargePayload(RevealLargePayload {
                 root_hash: PreimageHash::default(),
                 reveal_type: RevealType::DeployFunction,
+                original_op_hash: OperationHash::default(),
             });
 
         let binary = reveal_large_payload_operation.encode().unwrap();
