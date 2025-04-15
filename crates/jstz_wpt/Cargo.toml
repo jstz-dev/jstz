@@ -17,6 +17,7 @@ include = ["config.json", "hosts", "manifest.json", "src"]
 anyhow.workspace = true
 clap.workspace = true
 ctrlc.workspace = true
+mockito.workspace = true
 nix.workspace = true
 regex.workspace = true
 reqwest.workspace = true
