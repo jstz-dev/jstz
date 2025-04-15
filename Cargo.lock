@@ -2913,6 +2913,7 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
+ "bip39",
  "boa_gc",
  "derive_more",
  "hex",
@@ -3091,6 +3092,7 @@ version = "0.1.0-alpha.0"
 dependencies = [
  "base64 0.21.7",
  "bincode 2.0.0-rc.3",
+ "bip39",
  "boa_gc",
  "clap 4.5.20",
  "hex",

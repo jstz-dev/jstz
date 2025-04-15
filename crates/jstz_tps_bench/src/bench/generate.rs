@@ -6,12 +6,11 @@ use std::error::Error;
 use std::path::Path;
 
 use base64::{engine::general_purpose::URL_SAFE, Engine};
+use bip39::{Language, Mnemonic};
 use http::{HeaderMap, Method, Uri};
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_crypto::{
-    keypair_from_passphrase, public_key::PublicKey, secret_key::SecretKey,
-};
+use jstz_crypto::{keypair_from_mnemonic, public_key::PublicKey, secret_key::SecretKey};
 use jstz_proto::context::account::{Address, Addressable, Nonce, ParsedCode};
 use jstz_proto::operation::{
     Content, DeployFunction, Operation, RunFunction, SignedOperation,
@@ -256,8 +255,11 @@ fn deploy_fa2(
 fn gen_keys(num: usize) -> Result<Vec<Account>> {
     let mut res = Vec::with_capacity(num);
 
-    for i in 0..num {
-        let (sk, pk) = keypair_from_passphrase(&i.to_string())?;
+    for _ in 0..num {
+        let mnemonic = Mnemonic::generate_in(Language::English, 12)
+            .expect("generate_in should generate mnemonics")
+            .to_string();
+        let (sk, pk) = keypair_from_mnemonic(&mnemonic, "")?;
         let account = Account {
             address: Address::from_base58(&pk.hash())?,
             sk,
