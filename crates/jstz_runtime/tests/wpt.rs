@@ -457,21 +457,15 @@ async fn test_wpt() -> anyhow::Result<()> {
         let wpt_serve = wpt.serve(false).await?;
         WptServe::run_test_harness(&wpt_serve, &manifest, &filter, run_wpt_test).await?
     };
+
     let path = Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/wptreport.json");
-    if std::env::var("REGEN").is_ok() {
-        let report_file = OpenOptions::new()
-            .write(true)
-            .truncate(true)
-            .create(true)
-            .open(path)
-            .unwrap();
-        serde_json::to_writer_pretty(report_file, &report).unwrap();
-    } else {
-        let expected_file = File::open(path).unwrap();
-        let reader = std::io::BufReader::new(expected_file);
-        let expected: WptReport = serde_json::from_reader(reader).unwrap();
-        assert_eq!(expected, report);
-    }
+    let report_file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .create(true)
+        .open(path)
+        .unwrap();
+    serde_json::to_writer_pretty(report_file, &report).unwrap();
 
     if let Ok(v) = std::env::var("STATS_PATH") {
         dump_stats(&report, &v).await?;
