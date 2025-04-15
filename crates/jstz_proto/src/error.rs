@@ -45,6 +45,7 @@ pub enum Error {
     AccountExists,
     RevealTypeMismatch,
     RevealNotSupported,
+    InvalidInjector,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -125,6 +126,9 @@ impl From<Error> for JsError {
             Error::RevealNotSupported => JsNativeError::eval()
                 .with_message("RevealNotSupported")
                 .into(),
+            Error::InvalidInjector => {
+                JsNativeError::eval().with_message("InvalidInjector").into()
+            }
         }
     }
 }
