@@ -57,14 +57,16 @@ impl Bundle {
 pub struct WptServe {
     process: Arc<Mutex<Child>>,
     pid: i32,
+    base_url: Url,
 }
 
 impl WptServe {
-    pub(crate) fn new(process: Child) -> Result<Self> {
+    pub(crate) fn new(base_url: &str, process: Child) -> Result<Self> {
         if let Some(pid) = process.id() {
             Ok(Self {
                 process: Arc::new(Mutex::new(process)),
                 pid: pid as i32,
+                base_url: Url::parse(base_url)?,
             })
         } else {
             Err(anyhow::anyhow!("Failed to get process id"))
@@ -103,7 +105,7 @@ impl WptServe {
 
     /// Determine if the server is running
     pub async fn is_running(&self) -> Result<bool> {
-        match reqwest::get("http://localhost:8000").await {
+        match reqwest::get(self.base_url.clone()).await {
             Ok(res) if res.status().is_success() => Ok(true),
             _ => Ok(false),
         }
@@ -111,7 +113,7 @@ impl WptServe {
 
     /// Bundle a test file
     pub async fn bundle(&self, test: &str) -> Result<Bundle> {
-        let url = Url::parse(&format!("http://localhost:8000/{}", test))?;
+        let url = self.base_url.join(test)?;
 
         let body = self.resource(url.as_str()).await?;
 
@@ -137,6 +139,15 @@ impl WptServe {
         });
 
         let mut bundle = Bundle::default();
+        if let Some(s) = url.query() {
+            // Manually set location.search here based on the URL because location.search
+            // lives in the runtime and the server might not reference this information
+            // when it returns the scripts. The scripts, however, might later reference
+            // this information, so we manually set location.search in advance so that
+            // the scripts can run properly.
+            bundle.push_inline(format!("location.search = '?{s}';",));
+        }
+
         for script in scripts {
             match script {
                 Script::Inline(content) => bundle.push_inline(content.to_string()),
@@ -177,5 +188,65 @@ impl WptServe {
         }
 
         Ok(report)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{BundleItem, WptServe};
+
+    #[tokio::test]
+    async fn is_running() {
+        let mut server = mockito::Server::new_async().await;
+        server.mock("GET", "/").create();
+
+        let wpt = WptServe::new(
+            &server.url(),
+            tokio::process::Command::new("echo").spawn().unwrap(),
+        )
+        .unwrap();
+        assert!(wpt.is_running().await.is_ok_and(|v| v));
+
+        let wpt = WptServe::new(
+            "http://dummy/",
+            tokio::process::Command::new("echo").spawn().unwrap(),
+        )
+        .unwrap();
+        assert!(wpt.is_running().await.is_ok_and(|v| !v));
+    }
+
+    #[tokio::test]
+    async fn serve() {
+        let mut server = mockito::Server::new_async().await;
+        server.mock("GET", "/foo").with_body("").create();
+        let wpt = WptServe::new(
+            &server.url(),
+            tokio::process::Command::new("echo").spawn().unwrap(),
+        )
+        .unwrap();
+
+        let b = wpt.bundle("/foo").await.unwrap();
+        assert_eq!(
+            b.items
+                .iter()
+                .map(|v| match v {
+                    BundleItem::Inline(s) => s.to_owned(),
+                    _ => String::new(),
+                })
+                .collect::<Vec<String>>(),
+            Vec::<String>::new()
+        );
+
+        let b = wpt.bundle("/foo?a=b").await.unwrap();
+        assert_eq!(
+            b.items
+                .iter()
+                .map(|v| match v {
+                    BundleItem::Inline(s) => s.to_owned(),
+                    _ => String::new(),
+                })
+                .collect::<Vec<String>>(),
+            vec!["location.search = '?a=b';".to_string()]
+        );
     }
 }

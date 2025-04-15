@@ -3114,6 +3114,7 @@ dependencies = [
  "anyhow",
  "clap 4.5.20",
  "ctrlc",
+ "mockito",
  "nix 0.27.1",
  "regex",
  "reqwest",
