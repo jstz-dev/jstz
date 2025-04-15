@@ -11,15 +11,17 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};
 use jstz_wpt::{
-    Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReport, WptReportTest,
-    WptServe, WptSubtest, WptSubtestStatus, WptTestStatus,
+    Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReportTest, WptServe,
+    WptSubtest, WptSubtestStatus, WptTestStatus,
 };
 use regex::Regex;
 use serde::Deserialize;
 use std::{
+    collections::BTreeMap,
     fs::{File, OpenOptions},
     future::IntoFuture,
     path::{Path, PathBuf},
+    str::FromStr,
 };
 use tezos_smart_rollup_mock::MockHost;
 use tokio::io::AsyncWriteExt;
@@ -361,6 +363,48 @@ impl DenoReport {
         serde_json::from_reader::<_, DenoReport>(f)
             .context("failed to deserialise deno report")
     }
+
+    pub fn stats(&self) -> BTreeMap<String, (u64, u64)> {
+        let mut map = BTreeMap::new();
+        let base_url = url::Url::parse("http://host/").unwrap();
+        for result in &self.results {
+            let key = base_url
+                .join(&result.test)
+                .expect("should be able to parse test names (URL path to test suite)")
+                // Only the path is used as the key here, which means subtests filtered by
+                // query parameters are aggregated into the same test suite.
+                .path()
+                .to_string();
+            let test_count = match result.subtests.len() {
+                // If there is no subtest, the test suite itself is the test.
+                0 => 1,
+                v => v,
+            } as u64;
+            let expected_pass_count = match (&result.status, result.subtests.len()) {
+                // If there is no subtest, the test suite itself is the test, and if the status
+                // of the suite is OK, it means that this test suite itself works
+                (DenoTestStatus::Ok, 0) => 1,
+                // When a test suite has other statuses, it might mean that it completely failed
+                // or partially completed, so we need to look through its subtests. If a test suite
+                // does not have any subtest and its status is not OK, it means that it doesn't work
+                // completely and we don't count it as an expected pass.
+                _ => result.subtests.iter().fold(0, |acc, t| {
+                    acc + match t.expected {
+                        Some(DenoSubtestStatus::Fail) => 0,
+                        _ => 1,
+                    }
+                }),
+            };
+            let value = match map.get(&key) {
+                Some((total, passed)) => {
+                    (test_count + total, expected_pass_count + passed)
+                }
+                None => (test_count, expected_pass_count),
+            };
+            map.insert(key, value);
+        }
+        map
+    }
 }
 
 #[derive(Deserialize)]
@@ -379,13 +423,12 @@ enum DenoSubtestStatus {
     Fail,
 }
 
+/// Result of a test suite.
 #[derive(Deserialize)]
 struct DenoResult {
     /// URL path to the test suite, e.g. `/xhr/send-send.any.worker.html`.
     test: String,
-    #[allow(unused)]
     subtests: Vec<DenoSubtestResult>,
-    #[allow(unused)]
     /// Status of the test suite.
     status: DenoTestStatus,
 }
@@ -394,46 +437,60 @@ struct DenoResult {
 /// result of a test here.
 #[derive(Deserialize)]
 struct DenoSubtestResult {
-    #[allow(unused)]
     // This field is `Some` only when the execution status differs from the expected status.
     expected: Option<DenoSubtestStatus>,
 }
 
-async fn dump_stats(report: &WptReport, output_path: &str) -> anyhow::Result<()> {
+async fn dump_stats(
+    expected: BTreeMap<String, (u64, u64)>,
+    actual: BTreeMap<String, WptMetrics>,
+    output_path: &str,
+) -> anyhow::Result<()> {
     let mut file = tokio::fs::File::create(output_path).await?;
-    let mut full_metrics = WptMetrics::default();
-    let mut lines =
-        "|Test suite|Passed|Failed|Timed out|\n|---|---|---|---|\n".to_string();
+    let mut total_passed = 0;
+    let mut expected_total = 0;
+    let mut expected_passed = 0;
+    let mut lines = String::new();
+    let max_width = 55;
+    let default_metrics = &WptMetrics::default();
 
-    let max_width = 45; // line width is around 80
-    for (suite_name, metrics) in report.stats() {
-        full_metrics.passed += metrics.passed;
-        full_metrics.failed += metrics.failed;
-        full_metrics.timed_out += metrics.timed_out;
+    for (suite_name, (total, passed)) in &expected {
+        let key = PathBuf::from_str(&suite_name[1..])
+            .expect("should parse folder into pathbuf")
+            // Test suites in our own report all end in .js while those in deno's report
+            // all end in .html, so we need to change the extension here to search in
+            // the other map.
+            .with_extension("js")
+            .to_str()
+            .expect("should dump folder path into str")
+            .to_string();
+
+        let metrics = actual.get(&key).unwrap_or(default_metrics);
+        total_passed += metrics.passed;
+        expected_total += total;
+        expected_passed += passed;
+
         let name = if suite_name.len() > max_width {
             format!(
                 "...{}",
                 &suite_name[(suite_name.len() - max_width + 3)..suite_name.len()]
             )
         } else {
-            suite_name
+            suite_name.clone()
         };
-        lines += &format!(
-            "|{}|{}|{}|{}|\n",
-            name, metrics.passed, metrics.failed, metrics.timed_out
-        );
+
+        lines += &format!("|{}|{}|{}|{}|\n", name, total, passed, metrics.passed);
     }
 
     lines += &format!(
         "|Total|{}|{}|{}|\n",
-        full_metrics.passed, full_metrics.failed, full_metrics.timed_out
+        expected_total, expected_passed, total_passed
     );
     file.write_all(
         format!(
-            "### WPT summary\nTotal pass rate: {:.2}%\n{}",
-            100f64 * full_metrics.passed as f64
-                / (full_metrics.passed + full_metrics.failed + full_metrics.timed_out)
-                    as f64,
+            "### WPT summary\nTotal pass rate: {:.2}%\n|Test suite|Test count|Should pass|Passed|\n|---|---|---|---|\n|Total|{}|{}|{}|\n{}",
+            100f64 * total_passed as f64 / expected_total as f64,
+            expected_total, expected_passed, total_passed,
             lines
         )
         .as_bytes(),
@@ -468,7 +525,7 @@ async fn test_wpt() -> anyhow::Result<()> {
     serde_json::to_writer_pretty(report_file, &report).unwrap();
 
     if let Ok(v) = std::env::var("STATS_PATH") {
-        dump_stats(&report, &v).await?;
+        dump_stats(deno_report.stats(), report.stats(), &v).await?;
     }
     Ok(())
 }
