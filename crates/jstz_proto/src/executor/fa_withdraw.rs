@@ -27,20 +27,22 @@ use crate::{
 
 const WITHDRAW_ENTRYPOINT: &str = "withdraw";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FaWithdraw {
     pub amount: Amount,
     pub routing_info: RoutingInfo,
     pub ticket_info: TicketInfo,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct RoutingInfo {
     pub receiver: Address,
     pub proxy_l1_contract: ContractKt1Hash,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TicketInfo {
     pub id: u32,
     pub content: Option<Vec<u8>>,
@@ -83,6 +85,7 @@ impl TryFrom<FA2_1Ticket> for Ticket {
 type OutboxMessageId = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
 pub struct FaWithdrawReceipt {
     pub source: Address,
     pub outbox_message_id: OutboxMessageId,
@@ -347,5 +350,40 @@ mod test {
 
         let result = fa_withdrawal.execute(&mut rt, &mut tx, &source, 100);
         assert!(matches!(result, Err(Error::ZeroAmountNotAllowed)));
+    }
+
+    #[test]
+    fn fa_withdraw_json_roundtrip() {
+        let fa_withdraw = FaWithdraw {
+            amount: 100,
+            routing_info: RoutingInfo {
+                receiver: Address::from(jstz_mock::account1()),
+                proxy_l1_contract: jstz_mock::kt1_account1(),
+            },
+            ticket_info: TicketInfo {
+                id: 245,
+                content: None,
+                ticketer: jstz_mock::kt1_account1(),
+            },
+        };
+        let raw_json = r#"{
+  "amount": 100,
+  "routingInfo": {
+    "receiver": "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx",
+    "proxyL1Contract": "KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV"
+  },
+  "ticketInfo": {
+    "id": 245,
+    "content": null,
+    "ticketer": "KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV"
+  }
+}"#;
+        assert_eq!(
+            raw_json,
+            serde_json::to_string_pretty(&fa_withdraw).unwrap()
+        );
+        let value: FaWithdraw = serde_json::from_str(raw_json).unwrap();
+
+        assert_eq!(fa_withdraw, value)
     }
 }

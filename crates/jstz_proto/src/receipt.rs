@@ -55,6 +55,7 @@ pub struct DeployFunctionReceipt {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct RunFunctionReceipt {
     #[schema(schema_with = crate::operation::openapi::http_body_schema)]
     pub body: HttpBody,
@@ -69,6 +70,7 @@ pub struct RunFunctionReceipt {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
 pub struct DepositReceipt {
     pub account: Address,
     pub updated_balance: u64,

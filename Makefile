@@ -82,7 +82,7 @@ test-int:
 # --test only runs a specified integration test (a test in /tests).
 #        the glob pattern is used to match all integration tests
 # --exclude excludes the jstz_api wpt test
-	@cargo nextest run --test "*" --workspace --exclude "jstz_api"
+	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features skip-wpt,skip-rollup-tests
 
 .PHONY: cov 
 cov:

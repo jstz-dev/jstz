@@ -221,6 +221,7 @@ pub struct UserAccount {
 }
 
 #[derive(Debug, Default, Clone, Serialize, Deserialize, Encode, Decode, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct SmartFunctionAccount {
     pub amount: Amount,
     pub nonce: Nonce,

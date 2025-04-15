@@ -1219,18 +1219,19 @@ mod test {
                             }},
                             body: JSON.stringify({{
                                 amount: {withdraw_amount},
-                                routing_info: {{
+                                routingInfo: {{
                                     receiver: "{receiver}",
-                                    proxy_l1_contract: "{l1_proxy_contract}"
+                                    proxyL1Contract: "{l1_proxy_contract}"
                                 }},
-                                ticket_info: {{
+                                ticketInfo: {{
                                     id: {ticket_id},
                                     content: {json_ticket_content},
                                     ticketer: "{ticketer_string}"
                                 }}
                             }}),
                         }});
-                        return SmartFunction.call(withdrawRequest);
+                        let result = SmartFunction.call(withdrawRequest);
+                        return result
                     }}
                     else {{
                         return Response.error();
