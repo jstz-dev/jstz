@@ -4,7 +4,7 @@ use bip39::{Language, Mnemonic};
 use clap::Subcommand;
 use dialoguer::{Confirm, Input};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_crypto::{keypair_from_passphrase, public_key_hash::PublicKeyHash};
+use jstz_crypto::{keypair_from_mnemonic, public_key_hash::PublicKeyHash};
 use log::{debug, info, warn};
 
 use crate::utils::MUTEZ_PER_TEZ;
@@ -24,7 +24,7 @@ fn generate_passphrase() -> String {
 
 impl User {
     pub fn from_passphrase(passphrase: String) -> Result<Self> {
-        let (sk, pk) = keypair_from_passphrase(passphrase.as_str())?;
+        let (sk, pk) = keypair_from_mnemonic(passphrase.as_str(), "")?;
 
         let address = PublicKeyHash::from(&pk);
 
@@ -357,11 +357,22 @@ pub async fn exec(command: Command) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use crate::config::User;
+
     #[test]
     fn generate_passphrase() {
         // Just to make sure that generate_passphrase works with the current version of Mnemonic.
         // If anything changes in the library and fails our logic, the unwrap call will lead to
         // a panic and we can capture that issue here.
         assert_ne!(super::generate_passphrase(), super::generate_passphrase());
+    }
+
+    #[test]
+    fn user_from_passphrase() {
+        let user = User::from_passphrase("author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business".to_owned()).expect("should instantiate user");
+        assert_eq!(
+            user.address.to_string(),
+            "tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h"
+        );
     }
 }
