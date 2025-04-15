@@ -24,6 +24,26 @@ targets:
 client_settings:
   opts: {}
 
+custom_casings:
+  "function_code":
+    camel: functionCode
+  "account_credit":
+    camel: accountCredit
+  "updated_balance":
+    camel: updatedBalance
+  "root_hash":
+    camel: rootHash
+  "reveal_type":
+    camel: revealType
+  "gas_limit":
+    camel: gasLimit
+  "operation_hash":
+    camel: operationHash
+  "status_code":
+    camel: statusCode
+  "ticket_balance":
+    camel: ticketBalanc
+
 # `environments` are a map of the name of the environment (e.g. "sandbox",
 # "production") to the corresponding url to use.
 environments:

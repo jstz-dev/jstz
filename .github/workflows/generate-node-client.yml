@@ -1,6 +1,7 @@
 name: Upload OpenAPI spec to Stainless
 
 on:
+  pull_request:
   push:
     branches: [main]
 
