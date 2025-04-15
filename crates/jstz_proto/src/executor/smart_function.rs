@@ -1309,11 +1309,11 @@ pub mod jstz_run {
             let ticket_info = TicketInfo {
                 id: 1234,
                 content: Some(b"random ticket content".to_vec()),
-                ticketer: jstz_mock::kt1_account1(),
+                ticketer: jstz_mock::kt1_account1().into(),
             };
             let routing_info = RoutingInfo {
                 receiver: Address::User(jstz_mock::account2()),
-                proxy_l1_contract: jstz_mock::kt1_account1(),
+                proxy_l1_contract: jstz_mock::kt1_account1().into(),
             };
             let fa_withdrawal = FaWithdraw {
                 amount: 10,
@@ -1522,7 +1522,7 @@ pub mod jstz_run {
             let ticket = TicketInfo {
                 id: 1234,
                 content: Some(b"random ticket content".to_vec()),
-                ticketer: jstz_mock::kt1_account1(),
+                ticketer: jstz_mock::kt1_account1().into(),
             }
             .to_ticket(1)
             .unwrap();
