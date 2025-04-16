@@ -33,12 +33,41 @@ use utoipa::{schema, ToSchema};
     value_type = String,
     example = json!("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
 )]
-pub struct SmartFunctionHash(pub ContractKt1Hash);
+pub struct Kt1Hash(pub ContractKt1Hash);
 
-impl_bincode_for_hash!(SmartFunctionHash, ContractKt1Hash);
+impl_bincode_for_hash!(Kt1Hash, ContractKt1Hash);
+
+#[derive(
+    Deref,
+    From,
+    Debug,
+    Clone,
+    PartialEq,
+    Eq,
+    Hash,
+    Serialize,
+    Deserialize,
+    Finalize,
+    Encode,
+    Decode,
+    ToSchema,
+)]
+pub struct SmartFunctionHash(pub Kt1Hash);
 
 unsafe impl Trace for SmartFunctionHash {
     empty_trace!();
+}
+
+impl From<SmartFunctionHash> for ContractKt1Hash {
+    fn from(value: SmartFunctionHash) -> ContractKt1Hash {
+        value.0 .0
+    }
+}
+
+impl From<ContractKt1Hash> for SmartFunctionHash {
+    fn from(value: ContractKt1Hash) -> Self {
+        Kt1Hash(value).into()
+    }
 }
 
 impl FromStr for SmartFunctionHash {
@@ -61,7 +90,9 @@ impl<'a> Hash<'a> for SmartFunctionHash {
             return Err(Error::InvalidSmartFunctionHash);
         }
         match &data[..3] {
-            "KT1" => Ok(SmartFunctionHash(ContractKt1Hash::from_base58_check(data)?)),
+            "KT1" => Ok(SmartFunctionHash(
+                ContractKt1Hash::from_base58_check(data)?.into(),
+            )),
             _ => Err(Error::InvalidSmartFunctionHash),
         }
     }
@@ -77,7 +108,9 @@ impl<'a> Hash<'a> for SmartFunctionHash {
     fn digest(data: &[u8]) -> Result<Self> {
         let out_len = ContractKt1Hash::hash_size();
         let bytes = blake2b::digest(data, out_len)?;
-        Ok(SmartFunctionHash(ContractKt1Hash::try_from_bytes(&bytes)?))
+        Ok(SmartFunctionHash(
+            ContractKt1Hash::try_from_bytes(&bytes)?.into(),
+        ))
     }
 }
 
