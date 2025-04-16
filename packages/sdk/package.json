@@ -10,6 +10,6 @@
   },
   "dependencies": {
     "@zcabter/jstz-client": "0.1.0-alpha",
-    "jstz_sdk": "file:../../crates/jstz_sdk/pkg"
+    "jstz_sdk": "0.1.0-alpha.0"
   }
 }
