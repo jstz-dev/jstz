@@ -1,0 +1,26 @@
+name: Test basic CLI usability
+inputs:
+  artefact_name:
+    description: Name of the uploaded CLI artefact
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.artefact_name }}
+    - name: Test
+      shell: sh
+      run: |
+        check() {
+          if [[ "$1" != *"$2"* ]]; then
+            echo "check failed: '$1' should contain '$2'"
+            exit 1
+          fi
+        }
+
+        chmod +x ./jstz
+        export PATH=$PATH:$PWD
+        check "$(jstz account create test 2>&1)" "User created with address"
+        check "$(jstz account list 2>&1)" "test:"
+        check "$(jstz login test 2>&1)" "Logged in to account test with address"

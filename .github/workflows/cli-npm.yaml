@@ -9,12 +9,23 @@ jobs:
   macos-arm64:
     name: Build CLI for MacOS Arm64
     runs-on: macos
+    outputs:
+      artefact_name: ${{ steps.build.outputs.artefact_name }}
     steps:
       - uses: jstz-dev/jstz/.github/actions/build-cli@main
+        id: build
         with:
           platform: darwin # To match the platform name in Node.js. This will be referenced by the npm package
           arch: arm64
           repo_token: ${{ secrets.GITHUB_TOKEN }}
+  test-macos-arm64:
+    name: Test basic CLI usability for MacOS Arm64
+    runs-on: macos-14
+    needs: [macos-arm64]
+    steps:
+      - uses: jstz-dev/jstz/.github/actions/test-cli@main
+        with:
+          artefact_name: ${{ needs.macos-arm64.outputs.artefact_name }}
   linux-amd64:
     name: Build CLI for Linux AMD64
     runs-on: ubuntu-24.04
@@ -34,13 +45,21 @@ jobs:
       - name: Build
         shell: sh
         run: make build-cli
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
+      - uses: actions/upload-artifact@v4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/release/jstz
-          asset_name: jstz_linux_x64
-          tag: ${{ github.ref_name }}
+          name: jstz_linux_x64
+          path: target/release/jstz
+  test-linux-amd64:
+    name: Test basic CLI usability for Linux AMD64
+    runs-on: ubuntu-24.04
+    needs: [linux-amd64]
+    # run in a clean environment without dependencies
+    container:
+      image: alpine:3.21
+    steps:
+      - uses: jstz-dev/jstz/.github/actions/test-cli@main
+        with:
+          artefact_name: jstz_linux_x64
   linux-arm64:
     # cannot easily build with nix on arm64 because mozjs does not have prebuilds for linux arm64
     # so we need to use make build-cli here
@@ -74,10 +93,51 @@ jobs:
       - name: Build
         shell: sh
         run: make build-cli
-      - name: Upload binaries to release
-        uses: svenstaro/upload-release-action@v2
+      - uses: actions/upload-artifact@v4
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: target/release/jstz
-          asset_name: jstz_linux_arm64
-          tag: ${{ github.ref_name }}
+          name: jstz_linux_arm64
+          path: target/release/jstz
+  test-linux-arm64:
+    name: Test basic CLI usability for Linux Arm64
+    runs-on: ubuntu-24.04-arm
+    needs: [linux-arm64]
+    # run in a clean environment without dependencies
+    container:
+      image: alpine:3.21
+      volumes:
+        - /:/host
+    steps:
+      # hack for github actions to work with arm64
+      # https://github.com/actions/runner/issues/801#issuecomment-2394425757
+      - name: Patch native Alpine NodeJS into Runner environment
+        run: |
+          apk add nodejs
+          sed -i "s:ID=alpine:ID=NotpineForGHA:" /etc/os-release
+          cd /host/home/runner/runners/*/externals/
+          rm -rf node20/*
+          mkdir node20/bin
+          ln -s /usr/bin/node node20/bin/node
+        shell: sh
+      - uses: jstz-dev/jstz/.github/actions/test-cli@main
+        with:
+          artefact_name: jstz_linux_arm64
+  upload-github-release:
+    name: Upload to github release
+    runs-on: ubuntu-24.04
+    needs: [test-macos-arm64, test-linux-arm64, test-linux-amd64]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: download
+      # All downloaded artefacts will be placed in their individual folders with the folder names
+      # being the artefact names. We want the final uploaded binaries to be in those artefact names,
+      # so this step renames those binaries in individual folders after the folder names.
+      - name: Rename artefacts
+        run: |
+          source="$(pwd)/download"
+          for v in $(ls $source); do mv "$source/$v/$(ls $source/$v)" "$v"; done
+      - name: Upload release to GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: jstz_*
