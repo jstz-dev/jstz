@@ -740,6 +740,11 @@
           }
         ]
       },
+      "Kt1Hash": {
+        "type": "string",
+        "title": "KT1",
+        "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
+      },
       "KvValue": {
         "type": "string",
         "format": "json",
@@ -1200,9 +1205,7 @@
         }
       },
       "SmartFunctionHash": {
-        "type": "string",
-        "title": "KT1",
-        "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
+        "$ref": "#/components/schemas/Kt1Hash"
       },
       "String": {
         "type": "string"

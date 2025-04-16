@@ -51,7 +51,7 @@ pub struct TicketInfo {
 impl TicketInfo {
     pub(super) fn to_ticket(&self, amount: Amount) -> Result<Ticket> {
         FA2_1Ticket::new(
-            Contract::Originated(self.ticketer.0.clone()),
+            Contract::Originated(self.ticketer.clone().into()),
             MichelsonPair(
                 self.id.into(),
                 MichelsonOption(self.content.clone().map(MichelsonBytes)),
@@ -105,7 +105,7 @@ fn create_fa_withdrawal_message(
     ticket: FA2_1Ticket,
 ) -> Result<OutboxMessage> {
     let receiver_pkh = routing_info.receiver.to_base58();
-    let destination = Contract::Originated(routing_info.proxy_l1_contract.0.clone());
+    let destination = Contract::Originated(routing_info.proxy_l1_contract.clone().into());
     let message = OutboxMessage::new_withdrawal_message(
         &Contract::try_from(receiver_pkh).unwrap(),
         &destination,
@@ -275,7 +275,7 @@ mod test {
                     vec![OutboxMessageTransaction {
                         parameters,
                         destination: Contract::Originated(
-                            routing_info.clone().proxy_l1_contract.0
+                            routing_info.clone().proxy_l1_contract.into()
                         ),
                         entrypoint: Entrypoint::try_from(WITHDRAW_ENTRYPOINT.to_string())
                             .unwrap(),
