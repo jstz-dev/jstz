@@ -263,7 +263,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
 
     This command bridges tez from a layer 1 bootstrap account to a Jstz account.
     Like Tezos smart contracts, Jstz smart functions are a type of account and can store and transfer tez.
-    For more information about bridging to Jstz, see [Asset Bridge](bridge.md).
+    For more information about bridging to Jstz, see [Asset Bridge](/architecture/bridge).
 
 ## 3. Calling the smart function
 

@@ -28,10 +28,16 @@ export default defineConfig({
           { text: "Installation", link: "/installation" },
           { text: "Quick Start", link: "/quick_start" },
           { text: "CLI", link: "/cli" },
-          { text: "Asset Bridge", link: "/bridge" },
-          { text: "Accounts", link: "/accounts" },
-          { text: "Architecture", link: "/architecture" },
-          { text: "jstzd", link: "/jstzd" },
+          { text: "Sandbox", link: "/jstzd" },
+        ],
+      },
+
+      {
+        text: "Architecture",
+        items: [
+          { text: "Overview", link: "/architecture/overview" },
+          { text: "Asset bridge", link: "/architecture/bridge" },
+          { text: "Accounts", link: "/architecture/accounts" },
         ],
       },
 
