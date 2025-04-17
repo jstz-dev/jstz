@@ -1,9 +1,9 @@
 use boa_engine::JsError;
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use jstz_proto::{
-    context::account::ParsedCode,
     operation::{Content, DeployFunction, Operation, SignedOperation},
     receipt::{ReceiptContent, ReceiptResult},
+    runtime::ParsedCode,
 };
 use log::{debug, info};
 

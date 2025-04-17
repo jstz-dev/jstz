@@ -174,9 +174,10 @@ mod test {
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
-        context::{account::Address, account::ParsedCode, ticket_table::TicketTable},
+        context::{account::Address, ticket_table::TicketTable},
         executor::fa_deposit::{FaDeposit, FaDepositReceipt},
         receipt::{Receipt, ReceiptContent, ReceiptResult},
+        runtime::ParsedCode,
     };
 
     fn mock_fa_deposit(proxy: Option<SmartFunctionHash>) -> FaDeposit {
@@ -281,7 +282,7 @@ mod test {
         "#;
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
-        let proxy = crate::executor::smart_function::Script::deploy(
+        let proxy = crate::executor::smart_function::deploy::deploy_smart_function(
             &mut host,
             &mut tx,
             &source,
@@ -335,7 +336,7 @@ mod test {
         "#;
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
-        let proxy = crate::executor::smart_function::Script::deploy(
+        let proxy = crate::executor::smart_function::deploy::deploy_smart_function(
             &mut host,
             &mut tx,
             &source,
@@ -390,7 +391,7 @@ mod test {
         }
         "#;
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let proxy = crate::executor::smart_function::Script::deploy(
+        let proxy = crate::executor::smart_function::deploy::deploy_smart_function(
             &mut host,
             &mut tx,
             &source,

@@ -1,5 +1,6 @@
 use crate::{
-    context::account::{Account, Address, Amount, Nonce, ParsedCode},
+    context::account::{Account, Address, Amount, Nonce},
+    runtime::ParsedCode,
     Error, Result,
 };
 use bincode::{Decode, Encode};
@@ -304,7 +305,10 @@ pub mod openapi {
 mod test {
     use super::{Content, DeployFunction, RevealLargePayload, RevealType, RunFunction};
     use super::{Operation, SignedOperation};
-    use crate::context::account::{Account, Nonce, ParsedCode};
+    use crate::{
+        context::account::{Account, Nonce},
+        runtime::ParsedCode,
+    };
     use http::{HeaderMap, Method, Uri};
     use jstz_core::reveal_data::PreimageHash;
     use jstz_core::{kv::Transaction, BinEncodable};

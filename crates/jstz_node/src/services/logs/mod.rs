@@ -8,11 +8,11 @@ use axum::{
 };
 use broadcaster::InfallibleSSeStream;
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use jstz_proto::js_logger::{LogRecord, LOG_PREFIX};
 #[cfg(feature = "persistent-logging")]
 use jstz_proto::request_logger::{
     RequestEvent, REQUEST_END_PREFIX, REQUEST_START_PREFIX,
 };
+use jstz_proto::runtime::{LogRecord, LOG_PREFIX};
 use serde::Deserialize;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;

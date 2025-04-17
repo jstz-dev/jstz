@@ -1,7 +1,6 @@
 use jstz_core::kv::{Storage, Transaction};
 use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
 use jstz_proto::{executor, Result};
-use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
     entrypoint,
     prelude::{debug_msg, Runtime},
@@ -26,7 +25,6 @@ fn read_injector(rt: &impl Runtime) -> Option<PublicKey> {
 fn handle_message(
     hrt: &mut impl Runtime,
     message: Message,
-    ticketer: &ContractKt1Hash,
     tx: &mut Transaction,
     injector: &PublicKey,
 ) -> Result<()> {
@@ -38,13 +36,8 @@ fn handle_message(
         }
         Message::External(signed_operation) => {
             debug_msg!(hrt, "External operation: {signed_operation:?}\n");
-            let receipt = executor::execute_operation(
-                hrt,
-                tx,
-                signed_operation,
-                ticketer,
-                injector,
-            );
+            let receipt =
+                executor::execute_operation(hrt, tx, signed_operation, injector);
             debug_msg!(hrt, "Receipt: {receipt:?}\n");
             receipt.write(hrt, tx)?
         }
@@ -62,7 +55,7 @@ pub fn entry(rt: &mut impl Runtime) {
     let mut tx = Transaction::default();
     tx.begin();
     if let Some(message) = read_message(rt, &ticketer) {
-        handle_message(rt, message, &ticketer, &mut tx, &injector)
+        handle_message(rt, message, &mut tx, &injector)
             .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
     }
     if let Err(commit_error) = tx.commit(rt) {
@@ -79,10 +72,9 @@ mod test {
         host::{JstzMockHost, MOCK_SOURCE},
         message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
     };
-    use jstz_proto::context::{
-        account::Address,
-        account::{Account, ParsedCode},
-        ticket_table::TicketTable,
+    use jstz_proto::{
+        context::{account::Account, account::Address, ticket_table::TicketTable},
+        runtime::ParsedCode,
     };
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
 
@@ -134,7 +126,7 @@ mod test {
                 .unwrap(),
         );
         Account::set_balance(host.rt(), tx, &addr, 200).unwrap();
-        let proxy = crate::executor::smart_function::Script::deploy(
+        let proxy = crate::executor::smart_function::deploy(
             host.rt(),
             tx,
             &addr,

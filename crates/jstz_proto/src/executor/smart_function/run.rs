@@ -1,394 +1,509 @@
-use boa_engine::{
-    js_string,
-    object::{builtins::JsPromise, ErasedObject, ObjectInitializer},
-    property::Attribute,
-    Context, JsArgs, JsData, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
-};
-
-use jstz_api::http::{
-    request::Request,
-    response::{Response, ResponseBuilder, ResponseClass},
-};
-use jstz_core::{
-    host::HostRuntime,
-    host_defined,
-    kv::Transaction,
-    native::JsNativeObject,
-    runtime::{self},
-    value::IntoJs,
-};
-use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use jstz_core::{host::HostRuntime, kv::Transaction};
 
 use crate::{
-    context::account::{Account, Address, Amount, ParsedCode},
-    executor::{
-        smart_function::{
-            headers, run::NOOP_PATH, try_apply_to_value_or_promise, HostScript, Script,
-        },
-        JSTZ_HOST,
-    },
-    operation::OperationHash,
-    Error, Result,
+    context::account::Addressable,
+    error::Result,
+    operation::{self, OperationHash},
+    receipt::RunFunctionReceipt,
+    runtime,
 };
 
-use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
+pub const JSTZ_HOST: &str = "jstz";
+pub const NOOP_PATH: &str = "/-/noop";
 
-#[derive(JsData)]
-pub struct TraceData {
-    pub address: SmartFunctionHash,
-    pub operation_hash: OperationHash,
-}
+pub fn execute(
+    hrt: &mut impl HostRuntime,
+    tx: &mut Transaction,
+    source: &(impl Addressable + 'static),
+    run_operation: operation::RunFunction,
+    operation_hash: OperationHash,
+) -> Result<RunFunctionReceipt> {
+    // Wrap in a root transaction -- this ensures atomicity of the entire operation
+    // if the response is not 2xx (or an error occurs).
+    // tx.begin();
 
-impl Finalize for TraceData {}
-
-unsafe impl Trace for TraceData {
-    empty_trace!();
-}
-
-#[derive(JsData)]
-struct SmartFunction {
-    address: SmartFunctionHash,
-}
-impl Finalize for SmartFunction {}
-
-unsafe impl Trace for SmartFunction {
-    empty_trace!();
-}
-
-impl SmartFunction {
-    fn from_js_value(value: &JsValue) -> JsResult<GcRefMut<'_, ErasedObject, Self>> {
-        value
-            .as_object()
-            .and_then(|obj| obj.downcast_mut::<Self>())
-            .ok_or_else(|| {
-                JsNativeError::typ()
-                    .with_message(
-                        "Failed to convert js value into rust type `SmartFunction`",
-                    )
-                    .into()
-            })
-    }
-
-    fn create(
-        &self,
-        hrt: &mut impl HostRuntime,
-        tx: &mut Transaction,
-        function_code: ParsedCode,
-        initial_balance: Amount,
-    ) -> Result<String> {
-        let deployer = &self.address;
-        let balance = Account::balance(hrt, tx, deployer)?;
-        if balance < initial_balance {
-            return Err(Error::BalanceOverflow);
-        }
-
-        // 1. Deploy the smart function
-        let deployed = Address::SmartFunction(Script::deploy(
-            hrt,
-            tx,
-            deployer,
-            function_code,
-            initial_balance,
-        )?);
-
-        // 2. Increment nonce of current account
-        let nonce = Account::nonce(hrt, tx, deployer)?;
-        nonce.increment();
-
-        // 3. Transfer the balance to the associated account
-        Account::transfer(hrt, tx, deployer, &deployed, initial_balance)?;
-
-        Ok(deployed.to_string())
-    }
-
-    // Invariant: The function should always be called within a js_host_context
-    fn call(
-        self_address: &SmartFunctionHash,
-        request: &JsNativeObject<Request>,
-        operation_hash: OperationHash,
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
-        // 1. Get address from request
-        let mut request_deref = request.deref_mut();
-        match request_deref.url().domain() {
-            Some(JSTZ_HOST) => HostScript::run(self_address, &mut request_deref, context),
-            Some(callee_address) => {
-                let callee_address =
-                    Address::from_base58(callee_address).map_err(|_| {
-                        JsError::from_native(
-                            JsNativeError::error().with_message("Invalid host"),
-                        )
-                    })?;
-
-                let transfer_result = HostScript::handle_transfer(
-                    &mut request_deref.headers().deref_mut(),
-                    self_address,
-                    &callee_address,
-                );
-
-                // If the transfer fails, return an error response
-                // TODO: Convert JSTZ proto error to Response with error message
-                // https://linear.app/tezos/issue/JSTZ-296/handle-jstz-proto-error-for-smart-function-execution
-                if transfer_result.is_err() {
-                    return JsNativeObject::new::<ResponseClass>(
-                        ResponseBuilder::error(context)?,
-                        context,
-                    )
-                    .map(|obj| obj.inner().clone());
-                }
-
-                let is_noop = request_deref.url().path() == NOOP_PATH;
-                match callee_address {
-                    Address::SmartFunction(callee_address) if !is_noop => {
-                        // Set the referrer of the request to the current smart function address
-                        headers::test_and_set_referrer(&request_deref, self_address)?;
-
-                        // Load, init and run!
-                        let response = Script::load_init_run(
-                            callee_address.clone(),
-                            operation_hash,
-                            request.inner(),
-                            context,
-                        );
-                        // TODO: avoid cloning
-                        // https://linear.app/tezos/issue/JSTZ-331/avoid-cloning-for-address-in-proto
-                        let self_address = self_address.clone();
-                        try_apply_to_value_or_promise(
-                            response,
-                            move |value, _context| {
-                                let response = Response::try_from_js(value)?;
-                                HostScript::handle_transfer(
-                                    &mut response.headers().deref_mut(),
-                                    &callee_address,
-                                    &self_address,
-                                )?;
-                                Ok(())
-                            },
-                            |_context| Ok(()),
-                            context,
-                        )
-                    }
-                    _ => {
-                        // Return a default response if it is a noop request or user addresses
-                        let response = Response::new(
-                            Default::default(),
-                            Default::default(),
-                            context,
-                        )?;
-                        JsNativeObject::new::<ResponseClass>(response, context)
-                            .map(|obj| obj.inner().clone())
-                    }
-                }
-            }
-            None => Err(JsError::from_native(
-                JsNativeError::error().with_message("Invalid host"),
-            ))?,
-        }
-    }
-}
-
-pub struct SmartFunctionApi {
-    pub address: SmartFunctionHash,
-}
-
-impl SmartFunctionApi {
-    const NAME: &'static str = "SmartFunction";
-
-    fn fetch(
-        address: &SmartFunctionHash,
-        args: &[JsValue],
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
-        host_defined!(context, host_defined);
-        let trace_data = host_defined
-            .get::<TraceData>()
-            .expect("trace data undefined");
-
-        let request: JsNativeObject<Request> =
-            args.get_or_undefined(0).clone().try_into()?;
-
-        SmartFunction::call(
-            address,
-            &request,
-            trace_data.operation_hash.clone(),
-            context,
-        )
-    }
-
-    fn call(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
-        let smart_function = SmartFunction::from_js_value(this)?;
-        Self::fetch(&smart_function.address, args, context)
-    }
-
-    fn create(
-        this: &JsValue,
-        args: &[JsValue],
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
-        let smart_function = SmartFunction::from_js_value(this)?;
-
-        let function_code: String = args
-            .first()
-            .ok_or_else(|| {
-                JsNativeError::typ()
-                    .with_message("Expected at least 1 argument but 0 provided")
-            })?
-            .try_js_into(context)?;
-        let parsed_code: ParsedCode = function_code.try_into()?;
-
-        let initial_balance = match args.get(1) {
-            None => 0,
-            Some(balance) => balance.to_big_uint64(context)?,
-        };
-
-        let promise = JsPromise::new(
-            move |resolvers, context| {
-                let address = runtime::with_js_hrt_and_tx(|hrt, tx| {
-                    smart_function.create(hrt, tx, parsed_code, initial_balance as Amount)
-                })?;
-
-                resolvers.resolve.call(
-                    &JsValue::undefined(),
-                    &[address.into_js(context)],
-                    context,
-                )?;
-                Ok(JsValue::undefined())
-            },
-            context,
-        );
-
-        Ok(promise.into())
-    }
-}
-
-impl jstz_core::Api for SmartFunctionApi {
-    fn init(self, context: &mut Context) {
-        let smart_function = ObjectInitializer::with_native_data(
-            SmartFunction {
-                address: self.address.clone(),
-            },
-            context,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::call),
-            js_string!("call"),
-            1,
-        )
-        .function(
-            NativeFunction::from_fn_ptr(Self::create),
-            js_string!("create"),
-            2,
-        )
-        .build();
-
-        context
-            .register_global_property(
-                js_string!(Self::NAME),
-                smart_function,
-                Attribute::all(),
-            )
-            .expect("The smart function object shouldn't exist yet");
-
-        context
-            .register_global_builtin_callable(
-                js_string!("fetch"),
-                1,
-                NativeFunction::from_copy_closure_with_captures(
-                    |_, args, this, ctx| Self::fetch(&this.address, args, ctx),
-                    SmartFunction {
-                        address: self.address,
-                    },
-                ),
-            )
-            .expect("The fetch function shouldn't exist yet");
-    }
+    runtime::run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash)
 }
 
 #[cfg(test)]
 mod test {
-
+    use super::*;
     use http::{HeaderMap, Method};
-    use jstz_api::http::request::{Request, RequestClass};
-    use jstz_core::{
-        kv::Transaction,
-        native::JsNativeObject,
-        runtime::{self, with_js_hrt_and_tx},
-        Runtime,
-    };
-    use jstz_crypto::{
-        hash::{Blake2b, Hash},
-        public_key_hash::PublicKeyHash,
-        smart_function_hash::SmartFunctionHash,
-    };
+    use jstz_core::kv::Transaction;
+    use jstz_crypto::{hash::Blake2b, smart_function_hash::SmartFunctionHash};
     use jstz_mock::host::JstzMockHost;
     use serde_json::json;
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
         context::{
-            account::{Account, Address, ParsedCode},
+            account::{Account, Address},
             ticket_table::TicketTable,
         },
-        executor::smart_function::{self, register_web_apis, Script, X_JSTZ_TRANSFER},
+        executor::smart_function::{
+            self,
+            deploy::deploy_smart_function,
+            host::{X_JSTZ_AMOUNT, X_JSTZ_TRANSFER},
+        },
         operation::RunFunction,
+        runtime::ParsedCode,
     };
 
-    use super::SmartFunction;
+    #[test]
+    fn transfer_xtz_to_and_from_smart_function_succeeds() {
+        let source = Address::User(jstz_mock::account1());
+        // 1. Deploy the smart function
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+        let transfer_amount = 3;
+        let refund_amount = 2;
+        tx.begin();
+        Account::add_balance(host, &mut tx, &source, transfer_amount)
+            .expect("add balance");
+        let source_balance = Account::balance(host, &mut tx, &source).unwrap();
+        assert_eq!(source_balance, transfer_amount);
+        tx.commit(host).unwrap();
+
+        // 1. Deploy the smart function that transfers the balance to the source
+        let code = format!(
+            r#"
+        const handler = async (request) => {{
+            const transferred_amount = request.headers.get("X-JSTZ-AMOUNT");
+            if (transferred_amount !== "{transfer_amount}") {{
+                return Response.error("Invalid transferred amount");
+            }}
+            const headers = {{"X-JSTZ-TRANSFER": "{refund_amount}"}};
+            return new Response(null, {{headers}});
+        }};
+        export default handler;
+        "#
+        );
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        tx.begin();
+        let smart_function =
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+        let balance_before = Account::balance(host, &mut tx, &smart_function).unwrap();
+        assert_eq!(balance_before, 0);
+
+        tx.commit(host).unwrap();
+
+        // 2. Call the smart function
+        tx.begin();
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            X_JSTZ_TRANSFER,
+            transfer_amount.to_string().try_into().unwrap(),
+        );
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
+            method: Method::GET,
+            headers,
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        let response = execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            fake_op_hash.clone(),
+        )
+        .expect("run function expected");
+
+        assert!(response.headers.get(X_JSTZ_TRANSFER).is_none());
+        assert!(response.headers.get(X_JSTZ_AMOUNT).is_some_and(|amt| amt
+            .to_str()
+            .unwrap()
+            .parse::<u64>()
+            .unwrap()
+            == refund_amount));
+        tx.commit(host).unwrap();
+
+        // 3. assert the transfer to the sf and refund to the source
+        tx.begin();
+        let balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
+        assert_eq!(
+            balance_after - balance_before,
+            transfer_amount - refund_amount
+        );
+        assert_eq!(
+            Account::balance(host, &mut tx, &source).unwrap(),
+            refund_amount
+        );
+
+        // 4. transferring to the smart function should fail (source has insufficient funds)
+        let result = execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            fake_op_hash.clone(),
+        )
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
+        // 5. transferring from the smart function should fail with insufficient funds and the balance is rolled back
+        let balance_before = Account::balance(host, &mut tx, &source).unwrap();
+        // drain the balance of the smart function
+        Account::set_balance(host, &mut tx, &smart_function, 0).unwrap();
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            X_JSTZ_TRANSFER,
+            transfer_amount.to_string().try_into().unwrap(),
+        );
+        let result = execute(
+            host,
+            &mut tx,
+            &source,
+            RunFunction {
+                headers,
+                ..run_function
+            },
+            fake_op_hash.clone(),
+        )
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
+        // tx rolled back as smart function has insufficient funds
+        let balance_after = Account::balance(host, &mut tx, &source).unwrap();
+        assert_eq!(balance_after, balance_before);
+    }
 
     #[test]
-    fn call_system_script_succeeds() {
-        let mut mock_host = JstzMockHost::default();
-        let rt = mock_host.rt();
-
-        let mut jstz_rt = Runtime::new(10000).unwrap();
-        let realm = jstz_rt.realm().clone();
-        let context = jstz_rt.context();
-
-        register_web_apis(&realm, context);
-
-        let self_address = SmartFunctionHash::digest(b"random bytes").unwrap();
-
-        let amount = 100;
-
-        let operation_hash = Blake2b::from(b"operation_hash".as_ref());
-        let receiver = Address::User(PublicKeyHash::digest(b"receiver address").unwrap());
-        let http_request = http::Request::builder()
-            .method(Method::POST)
-            .uri("jstz://jstz/withdraw")
-            .header("Content-type", "application/json")
-            .body(Some(
-                json!({
-                    "receiver": receiver,
-                    "amount": 100
-                })
-                .to_string()
-                .as_bytes()
-                .to_vec(),
-            ))
-            .unwrap();
-
-        let request = Request::from_http_request(http_request, context).unwrap();
-
+    fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
+        let source = Address::User(jstz_mock::account1());
+        // 1. Deploy the smart function
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
         let mut tx = Transaction::default();
-        runtime::enter_js_host_context(rt, &mut tx, || {
-            with_js_hrt_and_tx(|hrt, tx| {
-                tx.begin();
-                Account::add_balance(hrt, tx, &self_address, amount).unwrap();
-                tx.commit(hrt).unwrap();
-            });
+        let initial_balance = 1;
+        tx.begin();
+        Account::add_balance(host, &mut tx, &source, initial_balance)
+            .expect("add balance");
+        let source_balance = Account::balance(host, &mut tx, &source).unwrap();
+        assert_eq!(source_balance, initial_balance);
+        tx.commit(host).unwrap();
 
-            SmartFunction::call(
-                &self_address,
-                &JsNativeObject::new::<RequestClass>(request, context).unwrap(),
-                operation_hash,
-                context,
-            )
-            .unwrap();
-        });
+        // 1. Deploy the smart function that refunds the balance to the source
+        let code = format!(
+            r#"
+            const handler = async () => {{
+                await fetch(new Request("jstz://{source}", {{
+                    headers: {{"X-JSTZ-TRANSFER": "{initial_balance}"}}
+                }}));
+                return new Response();
+            }};
+            export default handler;
+            "#
+        );
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        tx.begin();
+        let smart_function =
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+        let balance_before = Account::balance(host, &mut tx, &smart_function).unwrap();
+        assert_eq!(balance_before, 0);
+
+        tx.commit(host).unwrap();
+
+        // transfer should happen with `/-/noop` path
+        tx.begin();
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            X_JSTZ_TRANSFER,
+            initial_balance.to_string().try_into().unwrap(),
+        );
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/-/noop", &smart_function)
+                .try_into()
+                .unwrap(),
+            method: Method::GET,
+            headers,
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        execute(host, &mut tx, &source, run_function.clone(), fake_op_hash)
+            .expect("run function expected");
+        tx.commit(host).unwrap();
+
+        tx.begin();
+        let balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
+        assert_eq!(balance_after - balance_before, initial_balance);
+        assert_eq!(Account::balance(host, &mut tx, &source).unwrap(), 0);
+    }
+
+    #[test]
+    fn transfer_xtz_to_user_succeeds() {
+        let source = Address::User(jstz_mock::account1());
+        let destination = Address::User(jstz_mock::account2());
+        // 1. Deploy the smart function
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+        let initial_balance = 1;
+        tx.begin();
+        Account::add_balance(host, &mut tx, &source, initial_balance)
+            .expect("add balance");
+        let source_balance = Account::balance(host, &mut tx, &source).unwrap();
+        assert_eq!(source_balance, initial_balance);
+        tx.commit(host).unwrap();
+
+        // 2. sending request to transfer from source to the destination
+        tx.begin();
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            X_JSTZ_TRANSFER,
+            initial_balance.to_string().try_into().unwrap(),
+        );
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &destination).try_into().unwrap(),
+            method: Method::GET,
+            headers,
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        let result = execute(host, &mut tx, &source, run_function.clone(), fake_op_hash);
+        assert!(result.is_ok());
+
+        tx.commit(host).unwrap();
+
+        tx.begin();
+        let balance_after = Account::balance(host, &mut tx, &source).unwrap();
+        assert_eq!(balance_after, 0);
+        assert_eq!(
+            Account::balance(host, &mut tx, &destination).unwrap(),
+            initial_balance
+        );
+
+        // 3. transferring again should fail
+        let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
+        let result =
+            execute(host, &mut tx, &source, run_function, fake_op_hash2).unwrap();
+        assert!(result.status_code.is_server_error());
+    }
+
+    #[test]
+    fn invalid_request_should_fails() {
+        let source = Address::User(jstz_mock::account1());
+        // 1. Deploy the smart function
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+        let initial_balance = 1;
+        tx.begin();
+        Account::add_balance(host, &mut tx, &source, initial_balance)
+            .expect("add balance");
+        tx.commit(host).unwrap();
+
+        let code = r#"
+            const handler = () => {{
+                return new Response();
+            }};
+            export default handler;
+            "#;
+
+        // 1. Deploy smart function
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        tx.begin();
+        let smart_function =
+            deploy_smart_function(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+        tx.commit(host).unwrap();
+
+        // Calling the smart function should error or return an error response
+        tx.begin();
+
+        let sf_balance_before = Account::balance(host, &mut tx, &smart_function).unwrap();
+        let source_balance_before = Account::balance(host, &mut tx, &source).unwrap();
+        let mut invalid_headers = HeaderMap::new();
+        invalid_headers.insert(
+            X_JSTZ_AMOUNT,
+            initial_balance.to_string().try_into().unwrap(),
+        );
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
+            method: Method::GET,
+            headers: invalid_headers,
+            body: None,
+            gas_limit: 1000,
+        };
+        let result = execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            Blake2b::from(b"fake_op_hash".as_ref()),
+        );
+        let sf_balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
+        let source_balance_after = Account::balance(host, &mut tx, &source).unwrap();
+
+        assert_eq!(sf_balance_before, sf_balance_after);
+        assert_eq!(source_balance_before, source_balance_after);
+        let call_failed = match result {
+            Ok(receipt) => receipt.status_code.is_server_error(),
+            _ => true,
+        };
+        assert!(call_failed);
+    }
+
+    #[test]
+    fn invalid_response_should_fails() {
+        let source = Address::User(jstz_mock::account1());
+        // 1. Deploy the smart function
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+        let initial_balance = 1;
+        tx.begin();
+        Account::add_balance(host, &mut tx, &source, initial_balance)
+            .expect("add balance");
+        tx.commit(host).unwrap();
+
+        let code = format!(
+            r#"
+            const handler = () => {{
+                const headers = new Headers();
+                return new Response(null, {{
+                    headers: {{ "X-JSTZ-AMOUNT": "{initial_balance}" }},
+                }});
+            }};
+            export default handler;
+            "#
+        );
+
+        // 1. Deploy smart function
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        tx.begin();
+        let smart_function =
+            smart_function::deploy(host, &mut tx, &source, parsed_code, initial_balance)
+                .unwrap();
+
+        let sf_balance_before = Account::balance(host, &mut tx, &smart_function).unwrap();
+        let source_balance_before = Account::balance(host, &mut tx, &source).unwrap();
+
+        tx.commit(host).unwrap();
+
+        // Calling the smart function should error or return an error response
+        tx.begin();
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
+            method: Method::GET,
+            headers: Default::default(),
+            body: None,
+            gas_limit: 1000,
+        };
+        let result = execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            Blake2b::from(b"fake_op_hash".as_ref()),
+        );
+        let sf_balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
+        let source_balance_after = Account::balance(host, &mut tx, &source).unwrap();
+
+        assert_eq!(sf_balance_before, sf_balance_after);
+        assert_eq!(source_balance_before, source_balance_after);
+
+        let call_failed = match result {
+            Ok(receipt) => receipt.status_code.is_server_error(),
+            _ => true,
+        };
+        assert!(call_failed);
+    }
+
+    #[test]
+    fn transfer_xtz_and_smart_function_call_is_atomic1() {
+        let invalid_code = r#"
+       const handler = () => {{
+           invalid();
+       }};
+       export default handler;
+       "#;
+        transfer_xtz_and_run_erroneous_sf(invalid_code);
+    }
+
+    #[test]
+    fn transfer_xtz_and_smart_function_call_is_atomic2() {
+        let invalid_code = r#"
+       const handler = () => {{
+            return Response.error("error!");
+       }};
+       export default handler;
+       "#;
+        transfer_xtz_and_run_erroneous_sf(invalid_code);
+    }
+
+    #[test]
+    fn transfer_xtz_and_smart_function_call_is_atomic3() {
+        let invalid_code = r#"
+       const handler = () => {{
+        return 3;
+       }};
+       export default handler;
+       "#;
+        transfer_xtz_and_run_erroneous_sf(invalid_code);
+    }
+
+    fn transfer_xtz_and_run_erroneous_sf(code: &str) {
+        let source = Address::User(jstz_mock::account1());
+        // 1. Deploy the smart function
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+        let initial_balance = 1;
+        tx.begin();
+        Account::add_balance(host, &mut tx, &source, initial_balance)
+            .expect("add balance");
+        tx.commit(host).unwrap();
+
+        // 1. Deploy smart function
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        tx.begin();
+        let smart_function =
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+        tx.commit(host).unwrap();
+
+        // Calling the smart function should error or return an error response
+        tx.begin();
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            X_JSTZ_TRANSFER,
+            initial_balance.to_string().try_into().unwrap(),
+        );
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
+            method: Method::GET,
+            headers,
+            body: None,
+            gas_limit: 1000,
+        };
+        let result = execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            Blake2b::from(b"fake_op_hash".as_ref()),
+        );
+        let call_failed = match result {
+            Ok(receipt) => receipt.status_code.is_server_error(),
+            _ => true,
+        };
+        assert!(call_failed);
+
+        // The balance should not be affected
+        assert_eq!(
+            Account::balance(host, &mut tx, &source).unwrap(),
+            initial_balance
+        );
+        let balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
+        assert_eq!(balance_after, 0);
     }
 
     #[test]
@@ -415,7 +530,7 @@ mod test {
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
         Account::add_balance(host, &mut tx, &source, 1000).unwrap();
-        let smart_function = crate::executor::smart_function::Script::deploy(
+        let smart_function = smart_function::deploy::deploy_smart_function(
             host,
             &mut tx,
             &source,
@@ -494,7 +609,7 @@ mod test {
         let parsed_code2 = ParsedCode::try_from(code2.to_string()).unwrap();
         tx.begin();
         let smart_function2 =
-            Script::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
+            smart_function::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
                 .unwrap();
 
         // 6. Call the new smart function
@@ -555,7 +670,7 @@ mod test {
         let parsed_code2 = ParsedCode::try_from(code2.to_string()).unwrap();
         tx.begin();
         let smart_function2 =
-            Script::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
+            smart_function::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
                 .unwrap();
 
         // calling the smart function2
@@ -609,9 +724,14 @@ mod test {
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
-        let smart_function =
-            Script::deploy(host, tx, &source, parsed_code.clone(), initial_sf_balance)
-                .unwrap();
+        let smart_function = smart_function::deploy(
+            host,
+            tx,
+            &source,
+            parsed_code.clone(),
+            initial_sf_balance,
+        )
+        .unwrap();
 
         let balance_before = Account::balance(host, tx, &smart_function).unwrap();
         assert_eq!(balance_before, initial_sf_balance);
@@ -674,7 +794,7 @@ mod test {
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
         let smart_function =
-            Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
 
         tx.commit(host).unwrap();
 
@@ -725,7 +845,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
-        let refund_sf = Script::deploy(
+        let refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -749,7 +869,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -813,7 +933,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
-        let refund_sf = Script::deploy(
+        let refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -833,7 +953,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -855,14 +975,16 @@ mod test {
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-        smart_function::run::execute(
+        let result = smart_function::run::execute(
             host,
             &mut tx,
             &source,
             run_function.clone(),
             fake_op_hash.clone(),
         )
-        .expect_err("Invalid header X-JSTZ-AMOUNT");
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
         tx.commit(host).unwrap();
 
         tx.begin();
@@ -899,7 +1021,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(invalid_refund_code.to_string()).unwrap();
-        let fake_refund_sf = Script::deploy(
+        let fake_refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -920,7 +1042,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -949,7 +1071,7 @@ mod test {
             run_function.clone(),
             fake_op_hash.clone(),
         )
-        .expect_err("Invalid header X-JSTZ-AMOUNT");
+        .unwrap();
         tx.commit(host).unwrap();
 
         tx.begin();
@@ -989,7 +1111,7 @@ mod test {
             export default handler;
             "#;
         let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
-        let fake_refund_sf = Script::deploy(
+        let fake_refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -1012,7 +1134,7 @@ mod test {
             export default handler;
             "#
         );
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -1099,7 +1221,7 @@ mod test {
 
         // 1. Deploy the smart function that refunds to the caller
         let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
-        let refund_sf = Script::deploy(
+        let refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -1112,14 +1234,18 @@ mod test {
         let code = format!(
             r#"
             const handler = async () => {{
-                await fetch(new Request("jstz://{refund_sf}"));
-                return new Response();
+                const response = await fetch(new Request("jstz://{refund_sf}"));
+                if (response.ok) {{
+                    return new Response();
+                }} else {{
+                    return Response.error();
+                }}  
             }};
             export default handler;
             "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -1164,7 +1290,7 @@ mod test {
             X_JSTZ_TRANSFER,
             transfer_amount.to_string().try_into().unwrap(),
         );
-        let error = smart_function::run::execute(
+        let result = smart_function::run::execute(
             host,
             &mut tx,
             &source,
@@ -1174,12 +1300,10 @@ mod test {
             },
             fake_op_hash,
         )
-        .expect_err("Expected error");
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
         let balance_after = Account::balance(host, &mut tx, &source).unwrap();
-        assert_eq!(
-            error.to_string(),
-            "EvalError: Transfer failed: InsufficientFunds"
-        );
         assert_eq!(balance_before, balance_after);
     }
 
@@ -1241,7 +1365,7 @@ mod test {
         );
         let parsed_code = ParsedCode::try_from(token_contract_code.to_string()).unwrap();
         let token_smart_function =
-            Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
 
         // 2. Add its ticket blance
         TicketTable::add(

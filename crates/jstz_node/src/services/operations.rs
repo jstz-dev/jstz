@@ -218,8 +218,9 @@ mod tests {
         secret_key::SecretKey,
     };
     use jstz_proto::{
-        context::account::{Amount, Nonce, ParsedCode},
+        context::account::{Amount, Nonce},
         operation::{Content, DeployFunction, Operation, SignedOperation},
+        runtime::ParsedCode,
     };
     use octez::OctezRollupClient;
 

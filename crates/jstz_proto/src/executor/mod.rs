@@ -5,12 +5,13 @@ use crate::{
 };
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::RevealData};
 use jstz_crypto::public_key::PublicKey;
-use tezos_crypto_rs::hash::ContractKt1Hash;
+
 pub mod deposit;
 pub mod fa_deposit;
 pub mod fa_withdraw;
 pub mod smart_function;
 pub mod withdraw;
+
 pub const JSTZ_HOST: &str = "jstz";
 
 fn verify_signed_op(
@@ -28,7 +29,6 @@ fn execute_operation_inner(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     op: Operation,
-    ticketer: &ContractKt1Hash,
     injector: &PublicKey,
 ) -> Result<(OperationHash, receipt::ReceiptContent)> {
     let op_hash = op.hash();
@@ -40,14 +40,8 @@ fn execute_operation_inner(
             Ok((op_hash, receipt::ReceiptContent::DeployFunction(result)))
         }
         operation::Content::RunFunction(run) => {
-            let result = match run.uri.host() {
-                Some(JSTZ_HOST) => {
-                    smart_function::jstz_run::execute(hrt, tx, ticketer, &source, run)?
-                }
-                _ => {
-                    smart_function::run::execute(hrt, tx, &source, run, op_hash.clone())?
-                }
-            };
+            let result =
+                smart_function::run::execute(hrt, tx, &source, run, op_hash.clone())?;
             Ok((op_hash, receipt::ReceiptContent::RunFunction(result)))
         }
         operation::Content::RevealLargePayload(reveal) => {
@@ -60,7 +54,7 @@ fn execute_operation_inner(
             )?;
             let revealed_op = verify_signed_op(hrt, tx, revealed_op)?;
             if reveal.reveal_type == revealed_op.content().try_into()? {
-                return execute_operation_inner(hrt, tx, revealed_op, ticketer, injector);
+                return execute_operation_inner(hrt, tx, revealed_op, injector);
             }
             Err(Error::RevealTypeMismatch)
         }
@@ -84,12 +78,11 @@ pub fn execute_operation(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     signed_operation: SignedOperation,
-    ticketer: &ContractKt1Hash,
     injector: &PublicKey,
 ) -> Receipt {
     let operation_hash = signed_operation.hash();
     let result = verify_signed_op(hrt, tx, signed_operation)
-        .and_then(|op| execute_operation_inner(hrt, tx, op, ticketer, injector));
+        .and_then(|op| execute_operation_inner(hrt, tx, op, injector));
     match result {
         Ok((hash, content)) => Receipt::new(hash, Ok(content)),
         Err(e) => Receipt::new(operation_hash, Err(e)),
@@ -105,14 +98,14 @@ mod tests {
         secret_key::SecretKey,
     };
     use operation::RevealType;
-    use tezos_crypto_rs::hash::HashTrait;
     use tezos_smart_rollup_mock::MockHost;
 
     use super::*;
     use crate::{
-        context::account::{Nonce, ParsedCode},
+        context::account::Nonce,
         operation::{Content, DeployFunction, RevealLargePayload, RunFunction},
         receipt::ReceiptResult,
+        runtime::ParsedCode,
     };
 
     fn bootstrap1() -> (PublicKeyHash, PublicKey, SecretKey) {
@@ -216,8 +209,7 @@ mod tests {
         let deploy_op = make_signed_op(deploy_function_content(), pk2, sk2);
         let root_hash = make_data_available(&mut host, deploy_op);
         let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1);
-        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
+        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &pk1);
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
     }
     #[test]
@@ -230,8 +222,7 @@ mod tests {
         let run_op = make_signed_op(run_function_content(), pk2.clone(), sk2.clone());
         let root_hash = make_data_available(&mut host, run_op);
         let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1.clone());
-        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
+        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &pk1);
         println!("receipt: {:?}", receipt);
         assert!(matches!(
             receipt.result,
@@ -246,11 +237,9 @@ mod tests {
         tx.begin();
         let (_, pk, sk) = bootstrap1();
         let deploy_op = make_signed_op(deploy_function_content(), pk.clone(), sk.clone());
-        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt =
-            execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer, &pk);
+        let receipt = execute_operation(&mut host, &mut tx, deploy_op.clone(), &pk);
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
-        let receipt = execute_operation(&mut host, &mut tx, deploy_op, &ticketer, &pk);
+        let receipt = execute_operation(&mut host, &mut tx, deploy_op, &pk);
         assert!(
             matches!(receipt.result, ReceiptResult::Failed(e) if e.contains("InvalidNonce"))
         );
@@ -266,8 +255,7 @@ mod tests {
         let deploy_op = make_signed_op(deploy_function_content(), pk1.clone(), sk1);
         let root_hash = make_data_available(&mut host, deploy_op);
         let rdc_op = signed_rdc_op(root_hash, pk2.clone(), sk2);
-        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
+        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &pk1);
         assert!(
             matches!(receipt.result, ReceiptResult::Failed(e) if e.contains("InvalidInjector"))
         );

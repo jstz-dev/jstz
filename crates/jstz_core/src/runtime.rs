@@ -263,7 +263,14 @@ impl Runtime {
         match promise.state() {
             PromiseState::Pending => Poll::Pending,
             PromiseState::Fulfilled(result) => Poll::Ready(Ok(result)),
-            PromiseState::Rejected(err) => Poll::Ready(Err(JsError::from_opaque(err))),
+            PromiseState::Rejected(err) => {
+                let mut context = Context::default();
+                println!(
+                    "Promise rejected: {:?}",
+                    err.to_string(&mut context).unwrap().to_std_string()
+                );
+                Poll::Ready(Err(JsError::from_opaque(err)))
+            }
         }
     }
 

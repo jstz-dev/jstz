@@ -2928,7 +2928,6 @@ name = "jstz_kernel"
 version = "0.1.0-alpha.0"
 dependencies = [
  "bincode 2.0.0-rc.3",
- "boa_engine",
  "http 1.1.0",
  "http-serde",
  "jstz_api",
