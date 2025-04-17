@@ -24,7 +24,7 @@ fn generate_mnemonic() -> String {
 
 impl User {
     pub fn from_mnemonic(mnemonic: String, passphrase: String) -> Result<Self> {
-        let (sk, pk) = keypair_from_mnemonic(&mnemonic, &passphrase)?;
+        let (pk, sk) = keypair_from_mnemonic(&mnemonic, &passphrase)?;
 
         let address = PublicKeyHash::from(&pk);
 
