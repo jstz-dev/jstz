@@ -76,6 +76,7 @@ url.workspace = true
 assert_cmd.workspace = true
 mockito.workspace = true
 predicates.workspace = true
+rexpect.workspace = true
 
 [[bin]]
 name = "jstz"
