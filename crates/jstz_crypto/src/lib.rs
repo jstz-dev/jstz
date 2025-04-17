@@ -26,6 +26,12 @@ pub fn keypair_from_mnemonic(
     Ok((SecretKey::Ed25519(sk), PublicKey::Ed25519(pk.into())))
 }
 
+pub fn keypair_from_secret_key(secret_key_str: &str) -> Result<(SecretKey, PublicKey)> {
+    let seed = SeedEd25519::from_base58_check(secret_key_str)?;
+    let (pk, sk) = seed.keypair()?;
+    Ok((SecretKey::Ed25519(sk), PublicKey::Ed25519(pk.into())))
+}
+
 #[macro_export]
 macro_rules! impl_bincode_for_hash {
     ($newtype:ident, $hash:ident) => {
@@ -85,5 +91,26 @@ mod tests {
             let sig = sk.sign(&message).unwrap();
             assert!(sig.verify(&pk, &message).is_ok());
         }
+    }
+
+    #[test]
+    fn keypair_from_secret_key() {
+        let (sk, pk) = super::keypair_from_secret_key(
+            "edsk3a3gq6ocr51rGDqqSb8sxxV46v77GZYmhyKyjqWjckhVTJXYCf",
+        )
+        .unwrap();
+
+        assert_eq!(
+            sk.to_string(),
+            "edsk3a3gq6ocr51rGDqqSb8sxxV46v77GZYmhyKyjqWjckhVTJXYCf"
+        );
+        assert_eq!(pk.hash(), "tz1ficxJFv7MUtsCimF8bmT9SYPDok52ySg6");
+
+        assert_eq!(
+            super::keypair_from_secret_key("edskaaa")
+                .unwrap_err()
+                .to_string(),
+            "invalid checksum"
+        );
     }
 }
