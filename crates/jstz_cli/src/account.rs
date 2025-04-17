@@ -53,7 +53,7 @@ async fn add_smart_function(alias: String, address: SmartFunctionHash) -> Result
     Ok(())
 }
 
-async fn create_account(alias: String, passphrase: Option<String>) -> Result<()> {
+async fn create_account(alias: String, _passphrase: Option<String>) -> Result<()> {
     let mut cfg = Config::load().await?;
 
     if cfg.accounts.contains(&alias) {
@@ -63,24 +63,32 @@ async fn create_account(alias: String, passphrase: Option<String>) -> Result<()>
         );
     }
 
-    let passphrase = match passphrase {
-        Some(passphrase) => passphrase,
-        None => {
-            let passphrase = generate_passphrase();
-            info!("Generated passphrase: {}", passphrase);
-            passphrase
-        }
-    };
-
-    let user = User::from_passphrase(passphrase)?;
-
-    debug!("User created: {:?}", user);
-    info!("User created with address: {}", user.address);
+    let user = _create_account()?;
 
     cfg.accounts.insert(alias, user);
     cfg.save()?;
 
     Ok(())
+}
+
+fn _create_account() -> Result<User> {
+    let passphrase: String = Input::new()
+                .with_prompt("Enter the passphrase for the new account (or leave empty to generate a random one)")
+                .allow_empty(true)
+                .interact()?;
+
+    let passphrase = if passphrase.is_empty() {
+        let generated_passphrase = generate_passphrase();
+        info!("Generated passphrase: {}", generated_passphrase);
+        generated_passphrase
+    } else {
+        passphrase
+    };
+
+    let user = User::from_passphrase(passphrase)?;
+    debug!("User created: {:?}", user);
+    info!("User created with address: {}", user.address);
+    Ok(user)
 }
 
 async fn delete_account(alias: String) -> Result<()> {
@@ -134,21 +142,7 @@ pub async fn login(alias: String) -> Result<()> {
                 bail_user_error!("Login aborted");
             }
 
-            let passphrase: String = Input::new()
-                .with_prompt("Enter the passphrase for the new account (or leave empty to generate a random one)")
-                .allow_empty(true)
-                .interact()?;
-
-            let passphrase = if passphrase.is_empty() {
-                let generated_passphrase = generate_passphrase();
-                info!("Generated passphrase: {}", generated_passphrase);
-                generated_passphrase
-            } else {
-                passphrase
-            };
-
-            let user = User::from_passphrase(passphrase)?;
-
+            let user = _create_account()?;
             entry.insert(user.into())
         }
     };
