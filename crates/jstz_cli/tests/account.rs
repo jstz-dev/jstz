@@ -24,8 +24,9 @@ fn create_account() {
     process.send_line("").unwrap();
 
     let output = process.exp_eof().unwrap();
-    assert!(output.contains("Enter the passphrase for the new account"));
-    assert!(output.contains("Generated passphrase:"));
+    assert!(output.contains("Enter the passphrase for the new account or leave empty"));
+    assert!(output.contains("Generated mnemonic:"));
+    assert!(output.contains("Please keep the mnemonic and the passphrase safe"));
     assert!(output.contains("User created with address: tz1"));
 }
 
@@ -44,8 +45,8 @@ fn login_new_account() {
     assert!(output.contains("Account not found. Do you want to create it? [y/n]"));
     // after accepting 'y'
     assert!(output.contains("Account not found. Do you want to create it? yes"));
-    assert!(output.contains("Enter the passphrase for the new account"));
-    assert!(output.contains("Generated passphrase:"));
+    assert!(output.contains("Enter the passphrase for the new account or leave empty"));
+    assert!(output.contains("Generated mnemonic:"));
     assert!(output.contains("User created with address: tz1"));
     assert!(output.contains("Logged in to account foo with address tz1"));
 }

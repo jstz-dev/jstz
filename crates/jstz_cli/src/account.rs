@@ -14,7 +14,7 @@ use crate::{
     utils::AddressOrAlias,
 };
 
-fn generate_passphrase() -> String {
+fn generate_mnemonic() -> String {
     // unwrap is okay here because we are using a fixed value for word count and it's always
     // valid unless the library stops supporting word count 12
     let mnemonic = Mnemonic::generate_in(Language::English, 12)
@@ -23,8 +23,8 @@ fn generate_passphrase() -> String {
 }
 
 impl User {
-    pub fn from_passphrase(passphrase: String) -> Result<Self> {
-        let (sk, pk) = keypair_from_mnemonic(passphrase.as_str(), "")?;
+    pub fn from_mnemonic(mnemonic: String, passphrase: String) -> Result<Self> {
+        let (sk, pk) = keypair_from_mnemonic(&mnemonic, &passphrase)?;
 
         let address = PublicKeyHash::from(&pk);
 
@@ -53,7 +53,7 @@ async fn add_smart_function(alias: String, address: SmartFunctionHash) -> Result
     Ok(())
 }
 
-async fn create_account(alias: String, _passphrase: Option<String>) -> Result<()> {
+async fn create_account(alias: String) -> Result<()> {
     let mut cfg = Config::load().await?;
 
     if cfg.accounts.contains(&alias) {
@@ -72,20 +72,16 @@ async fn create_account(alias: String, _passphrase: Option<String>) -> Result<()
 }
 
 fn _create_account() -> Result<User> {
+    let mnemonic = generate_mnemonic();
     let passphrase: String = Input::new()
-                .with_prompt("Enter the passphrase for the new account (or leave empty to generate a random one)")
-                .allow_empty(true)
-                .interact()?;
+        .with_prompt("Enter the passphrase for the new account or leave empty")
+        .allow_empty(true)
+        .interact()?;
 
-    let passphrase = if passphrase.is_empty() {
-        let generated_passphrase = generate_passphrase();
-        info!("Generated passphrase: {}", generated_passphrase);
-        generated_passphrase
-    } else {
-        passphrase
-    };
+    info!("Generated mnemonic: '{}'", mnemonic);
+    info!("Please keep the mnemonic and the passphrase safe to be able to recover your account later on.");
 
-    let user = User::from_passphrase(passphrase)?;
+    let user = User::from_mnemonic(mnemonic, passphrase)?;
     debug!("User created: {:?}", user);
     info!("User created with address: {}", user.address);
     Ok(user)
@@ -290,9 +286,6 @@ pub enum Command {
         /// User alias.
         #[arg(value_name = "ALIAS")]
         alias: String,
-        /// User passphrase. If undefined, a random passphrase will be generated.
-        #[arg(short, long)]
-        passphrase: Option<String>,
     },
     /// ❌ Deletes an account (user or smart function).
     Delete {
@@ -341,7 +334,7 @@ pub enum Command {
 pub async fn exec(command: Command) -> Result<()> {
     match command {
         Command::Alias { alias, address } => add_smart_function(alias, address).await,
-        Command::Create { alias, passphrase } => create_account(alias, passphrase).await,
+        Command::Create { alias } => create_account(alias).await,
         Command::Delete { alias } => delete_account(alias).await,
         Command::List { long } => list_accounts(long).await,
         Command::Code { account, network } => get_code(account, network).await,
@@ -354,19 +347,28 @@ mod tests {
     use crate::config::User;
 
     #[test]
-    fn generate_passphrase() {
-        // Just to make sure that generate_passphrase works with the current version of Mnemonic.
+    fn generate_mnemonic() {
+        // Just to make sure that generate_mnemonic works with the current version of Mnemonic.
         // If anything changes in the library and fails our logic, the unwrap call will lead to
         // a panic and we can capture that issue here.
-        assert_ne!(super::generate_passphrase(), super::generate_passphrase());
+        assert_ne!(super::generate_mnemonic(), super::generate_mnemonic());
     }
 
     #[test]
-    fn user_from_passphrase() {
-        let user = User::from_passphrase("author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business".to_owned()).expect("should instantiate user");
+    fn user_from_mnemonic() {
+        let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business".to_owned();
+        let user = User::from_mnemonic(mnemonic.clone(), String::new())
+            .expect("should instantiate user");
         assert_eq!(
             user.address.to_string(),
             "tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h"
+        );
+
+        let user = User::from_mnemonic(mnemonic, "foobar".to_string())
+            .expect("should instantiate user");
+        assert_eq!(
+            user.address.to_string(),
+            "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg"
         );
     }
 }
