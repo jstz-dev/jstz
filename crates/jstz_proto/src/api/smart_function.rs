@@ -23,12 +23,13 @@ use crate::{
     context::account::{Account, Address, Amount, ParsedCode},
     executor::{
         smart_function::{
-            headers, run::NOOP_PATH, try_apply_to_value_or_promise, HostScript, Script,
+            self, headers, run::NOOP_PATH, try_apply_to_value_or_promise, HostScript,
+            Script,
         },
         JSTZ_HOST,
     },
-    operation::OperationHash,
-    Error, Result,
+    operation::{DeployFunction, OperationHash},
+    Result,
 };
 
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
@@ -76,29 +77,21 @@ impl SmartFunction {
         function_code: ParsedCode,
         initial_balance: Amount,
     ) -> Result<String> {
-        let deployer = &self.address;
-        let balance = Account::balance(hrt, tx, deployer)?;
-        if balance < initial_balance {
-            return Err(Error::BalanceOverflow);
-        }
-
         // 1. Deploy the smart function
-        let deployed = Address::SmartFunction(Script::deploy(
+        let deploy_receipt = smart_function::deploy::execute(
             hrt,
             tx,
-            deployer,
-            function_code,
-            initial_balance,
-        )?);
+            &self.address,
+            DeployFunction {
+                function_code,
+                account_credit: initial_balance,
+            },
+        )?;
 
         // 2. Increment nonce of current account
-        let nonce = Account::nonce(hrt, tx, deployer)?;
-        nonce.increment();
+        Account::nonce(hrt, tx, &self.address)?.increment();
 
-        // 3. Transfer the balance to the associated account
-        Account::transfer(hrt, tx, deployer, &deployed, initial_balance)?;
-
-        Ok(deployed.to_string())
+        Ok(deploy_receipt.address.to_string())
     }
 
     // Invariant: The function should always be called within a js_host_context
