@@ -39,6 +39,8 @@ export default defineConfig({
         text: "Smart functions",
         items: [
           { text: "Overview", link: "/functions/overview" },
+          { text: "Building", link: "/functions/building" },
+          { text: "Deploying", link: "/functions/deploying" },
           { text: "Handling requests", link: "/functions/requests" },
           { text: "Storing data", link: "/functions/data_storage" },
           { text: "Calling other smart functions", link: "/functions/calling" },
