@@ -2,13 +2,10 @@ use boa_engine::{
     js_string,
     object::{builtins::JsPromise, ErasedObject, ObjectInitializer},
     property::Attribute,
-    Context, JsArgs, JsData, JsError, JsNativeError, JsResult, JsValue, NativeFunction,
+    Context, JsArgs, JsData, JsNativeError, JsResult, JsValue, NativeFunction,
 };
 
-use jstz_api::http::{
-    request::Request,
-    response::{Response, ResponseBuilder, ResponseClass},
-};
+use jstz_api::http::request::Request;
 use jstz_core::{
     host::HostRuntime,
     host_defined,
@@ -20,14 +17,8 @@ use jstz_core::{
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 
 use crate::{
-    context::account::{Account, Address, Amount, ParsedCode},
-    executor::{
-        smart_function::{
-            self, headers, run::NOOP_PATH, try_apply_to_value_or_promise, HostScript,
-            Script,
-        },
-        JSTZ_HOST,
-    },
+    context::account::{Account, Amount, ParsedCode},
+    executor::smart_function,
     operation::{DeployFunction, OperationHash},
     Result,
 };
@@ -101,82 +92,7 @@ impl SmartFunction {
         operation_hash: OperationHash,
         context: &mut Context,
     ) -> JsResult<JsValue> {
-        // 1. Get address from request
-        let mut request_deref = request.deref_mut();
-        match request_deref.url().domain() {
-            Some(JSTZ_HOST) => HostScript::run(self_address, &mut request_deref, context),
-            Some(callee_address) => {
-                let callee_address =
-                    Address::from_base58(callee_address).map_err(|_| {
-                        JsError::from_native(
-                            JsNativeError::error().with_message("Invalid host"),
-                        )
-                    })?;
-
-                let transfer_result = HostScript::handle_transfer(
-                    &mut request_deref.headers().deref_mut(),
-                    self_address,
-                    &callee_address,
-                );
-
-                // If the transfer fails, return an error response
-                // TODO: Convert JSTZ proto error to Response with error message
-                // https://linear.app/tezos/issue/JSTZ-296/handle-jstz-proto-error-for-smart-function-execution
-                if transfer_result.is_err() {
-                    return JsNativeObject::new::<ResponseClass>(
-                        ResponseBuilder::error(context)?,
-                        context,
-                    )
-                    .map(|obj| obj.inner().clone());
-                }
-
-                let is_noop = request_deref.url().path() == NOOP_PATH;
-                match callee_address {
-                    Address::SmartFunction(callee_address) if !is_noop => {
-                        // Set the referrer of the request to the current smart function address
-                        headers::test_and_set_referrer(&request_deref, self_address)?;
-
-                        // Load, init and run!
-                        let response = Script::load_init_run(
-                            callee_address.clone(),
-                            operation_hash,
-                            request.inner(),
-                            context,
-                        );
-                        // TODO: avoid cloning
-                        // https://linear.app/tezos/issue/JSTZ-331/avoid-cloning-for-address-in-proto
-                        let self_address = self_address.clone();
-                        try_apply_to_value_or_promise(
-                            response,
-                            move |value, _context| {
-                                let response = Response::try_from_js(value)?;
-                                HostScript::handle_transfer(
-                                    &mut response.headers().deref_mut(),
-                                    &callee_address,
-                                    &self_address,
-                                )?;
-                                Ok(())
-                            },
-                            |_context| Ok(()),
-                            context,
-                        )
-                    }
-                    _ => {
-                        // Return a default response if it is a noop request or user addresses
-                        let response = Response::new(
-                            Default::default(),
-                            Default::default(),
-                            context,
-                        )?;
-                        JsNativeObject::new::<ResponseClass>(response, context)
-                            .map(|obj| obj.inner().clone())
-                    }
-                }
-            }
-            None => Err(JsError::from_native(
-                JsNativeError::error().with_message("Invalid host"),
-            ))?,
-        }
+        smart_function::run::fetch(self_address, operation_hash, request, context)
     }
 }
 
@@ -847,14 +763,16 @@ mod test {
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-        smart_function::run::execute(
+        let result = smart_function::run::execute(
             host,
             &mut tx,
             &source,
             run_function.clone(),
             fake_op_hash.clone(),
         )
-        .expect_err("Invalid header X-JSTZ-AMOUNT");
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
         tx.commit(host).unwrap();
 
         tx.begin();
@@ -905,8 +823,12 @@ mod test {
         let code = format!(
             r#"
             const handler = async () => {{
-                await fetch(new Request("jstz://{fake_refund_sf}"));
-                return new Response();
+                const response = await fetch(new Request("jstz://{fake_refund_sf}"));
+                if (response.ok) {{
+                    return new Response(); 
+                }} else {{
+                    return Response.error();
+                }}
             }};
             export default handler;
             "#
@@ -934,14 +856,16 @@ mod test {
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-        smart_function::run::execute(
+        let result = smart_function::run::execute(
             host,
             &mut tx,
             &source,
             run_function.clone(),
             fake_op_hash.clone(),
         )
-        .expect_err("Invalid header X-JSTZ-AMOUNT");
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
         tx.commit(host).unwrap();
 
         tx.begin();
@@ -1104,8 +1028,12 @@ mod test {
         let code = format!(
             r#"
             const handler = async () => {{
-                await fetch(new Request("jstz://{refund_sf}"));
-                return new Response();
+                const response = await fetch(new Request("jstz://{refund_sf}"));
+                if (response.ok) {{
+                    return new Response();
+                }} else {{
+                    return Response.error();
+                }}  
             }};
             export default handler;
             "#
@@ -1156,7 +1084,7 @@ mod test {
             X_JSTZ_TRANSFER,
             transfer_amount.to_string().try_into().unwrap(),
         );
-        let error = smart_function::run::execute(
+        let result = smart_function::run::execute(
             host,
             &mut tx,
             &source,
@@ -1166,12 +1094,10 @@ mod test {
             },
             fake_op_hash,
         )
-        .expect_err("Expected error");
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
         let balance_after = Account::balance(host, &mut tx, &source).unwrap();
-        assert_eq!(
-            error.to_string(),
-            "EvalError: Transfer failed: InsufficientFunds"
-        );
         assert_eq!(balance_before, balance_after);
     }
 
