@@ -73,6 +73,17 @@ impl Display for Nonce {
 )]
 pub struct ParsedCode(String);
 
+impl ParsedCode {
+    /// Creates a new `ParsedCode`.
+    ///
+    /// # Safety
+    ///
+    /// `code` must be well-formed JavaScript code
+    pub unsafe fn new_unchecked(code: String) -> Self {
+        Self(code)
+    }
+}
+
 impl From<ParsedCode> for String {
     fn from(ParsedCode(code): ParsedCode) -> Self {
         code
