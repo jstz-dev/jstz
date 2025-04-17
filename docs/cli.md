@@ -2,6 +2,8 @@
 
 This guide will instruct through how to use the command line interface for `jstz` where the user can easily run the sandbox environment and test smart functions.
 
+To install the CLI, see [Installing Jstz](/installation).
+
 `jstz` offers a number of commands to manage and test your smart functions.
 
 - [sandbox](#sandbox) - Locally deploy a sandbox environment.
