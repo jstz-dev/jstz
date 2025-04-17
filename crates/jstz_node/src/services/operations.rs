@@ -260,8 +260,9 @@ mod tests {
         SignedOperation::new(sig, deploy_op)
     }
 
-    fn mock_code(size: usize) -> String {
-        "a".repeat(size)
+    fn mock_code(size: usize) -> ParsedCode {
+        // SAFETY: This code is never interpreted (so does not need to be parsable)
+        unsafe { ParsedCode::new_unchecked("a".repeat(size)) }
     }
 
     fn get_dir_size(path: &Path) -> u64 {
@@ -287,7 +288,7 @@ mod tests {
         let code = mock_code(1);
         let operation = make_signed_op(Content::DeployFunction(DeployFunction {
             account_credit: Amount::default(),
-            function_code: ParsedCode::try_from(code).unwrap(),
+            function_code: code,
         }));
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
@@ -316,7 +317,7 @@ mod tests {
         let code_size: u64 = code.len() as u64;
         let operation = make_signed_op(Content::DeployFunction(DeployFunction {
             account_credit: Amount::default(),
-            function_code: ParsedCode::try_from(code).unwrap(),
+            function_code: code,
         }));
         let key_pair = KeyPair(pk, sk);
         let result =
@@ -336,7 +337,7 @@ mod tests {
         let code = mock_code(MAX_REVEAL_SIZE + 1);
         let operation = make_signed_op(Content::DeployFunction(DeployFunction {
             account_credit: Amount::default(),
-            function_code: ParsedCode::try_from(code).unwrap(),
+            function_code: code,
         }));
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
@@ -363,7 +364,7 @@ mod tests {
         let code = mock_code(MAX_DIRECT_OPERATION_SIZE);
         let operation = make_signed_op(Content::DeployFunction(DeployFunction {
             account_credit: Amount::default(),
-            function_code: ParsedCode::try_from(code).unwrap(),
+            function_code: code,
         }));
         let key_pair = KeyPair(pk, sk);
         let result =
