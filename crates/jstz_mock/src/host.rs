@@ -13,7 +13,7 @@ use tezos_smart_rollup::{
     },
     storage::path::RefPath,
 };
-use tezos_smart_rollup_mock::{MockHost, TransferMetadata};
+use tezos_smart_rollup_mock::{DefaultSink, MockHost, TransferMetadata};
 
 pub const NATIVE_TICKETER: &str = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5";
 pub const MOCK_RECEIVER: &str = "tz1PCXYfph1FQBy1jBEXVAhzgzoBww4vkjC8";
@@ -78,6 +78,11 @@ impl JstzMockHost {
 
     pub fn rt(&mut self) -> &mut MockHost {
         &mut self.0
+    }
+
+    pub fn enable_stdout(mut self) -> Self {
+        self.set_debug_handler(DefaultSink);
+        self
     }
 }
 
