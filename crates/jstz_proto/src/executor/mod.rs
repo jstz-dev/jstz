@@ -5,13 +5,13 @@ use crate::{
 };
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::RevealData};
 use jstz_crypto::public_key::PublicKey;
+use smart_function::JSTZ_HOST;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 pub mod deposit;
 pub mod fa_deposit;
 pub mod fa_withdraw;
 pub mod smart_function;
 pub mod withdraw;
-pub const JSTZ_HOST: &str = "jstz";
 
 fn verify_signed_op(
     hrt: &mut impl HostRuntime,
@@ -42,7 +42,7 @@ fn execute_operation_inner(
         operation::Content::RunFunction(run) => {
             let result = match run.uri.host() {
                 Some(JSTZ_HOST) => {
-                    smart_function::jstz_run::execute(hrt, tx, ticketer, &source, run)?
+                    smart_function::host::execute(hrt, tx, ticketer, &source, run)?
                 }
                 _ => {
                     smart_function::run::execute(hrt, tx, &source, run, op_hash.clone())?
