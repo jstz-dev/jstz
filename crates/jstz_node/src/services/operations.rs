@@ -287,7 +287,7 @@ mod tests {
         let code = mock_code(1);
         let operation = make_signed_op(Content::DeployFunction(DeployFunction {
             account_credit: Amount::default(),
-            function_code: ParsedCode(code),
+            function_code: ParsedCode::try_from(code).unwrap(),
         }));
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
@@ -316,7 +316,7 @@ mod tests {
         let code_size: u64 = code.len() as u64;
         let operation = make_signed_op(Content::DeployFunction(DeployFunction {
             account_credit: Amount::default(),
-            function_code: ParsedCode(code),
+            function_code: ParsedCode::try_from(code).unwrap(),
         }));
         let key_pair = KeyPair(pk, sk);
         let result =
@@ -336,7 +336,7 @@ mod tests {
         let code = mock_code(MAX_REVEAL_SIZE + 1);
         let operation = make_signed_op(Content::DeployFunction(DeployFunction {
             account_credit: Amount::default(),
-            function_code: ParsedCode(code),
+            function_code: ParsedCode::try_from(code).unwrap(),
         }));
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
@@ -363,7 +363,7 @@ mod tests {
         let code = mock_code(MAX_DIRECT_OPERATION_SIZE);
         let operation = make_signed_op(Content::DeployFunction(DeployFunction {
             account_credit: Amount::default(),
-            function_code: ParsedCode(code),
+            function_code: ParsedCode::try_from(code).unwrap(),
         }));
         let key_pair = KeyPair(pk, sk);
         let result =
