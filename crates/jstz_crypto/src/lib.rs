@@ -15,7 +15,7 @@ use tezos_crypto_rs::{hash::SeedEd25519, CryptoError};
 pub fn keypair_from_mnemonic(
     mnemonic: &str,
     passphrase: &str,
-) -> Result<(SecretKey, PublicKey)> {
+) -> Result<(PublicKey, SecretKey)> {
     let m = Mnemonic::parse_in(Language::English, mnemonic).map_err(|e| {
         CryptoError::InvalidKey {
             reason: format!("failed to parse mnemonic: {e}"),
@@ -23,7 +23,13 @@ pub fn keypair_from_mnemonic(
     })?;
     let seed = SeedEd25519::try_from(m.to_seed(passphrase)[0..32].to_vec())?;
     let (pk, sk) = seed.keypair()?;
-    Ok((SecretKey::Ed25519(sk), PublicKey::Ed25519(pk.into())))
+    Ok((PublicKey::Ed25519(pk.into()), SecretKey::Ed25519(sk)))
+}
+
+pub fn keypair_from_secret_key(secret_key_str: &str) -> Result<(PublicKey, SecretKey)> {
+    let seed = SeedEd25519::from_base58_check(secret_key_str)?;
+    let (pk, sk) = seed.keypair()?;
+    Ok((PublicKey::Ed25519(pk.into()), SecretKey::Ed25519(sk)))
 }
 
 #[macro_export]
@@ -61,12 +67,12 @@ mod tests {
     #[test]
     fn keypair_from_mnemonic_should_align_with_octez_client() {
         let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
-        let (_, pk) = keypair_from_mnemonic(mnemonic, "").unwrap();
+        let (pk, _) = keypair_from_mnemonic(mnemonic, "").unwrap();
         // This address is acquired from octez-client with the mnemonic above and an empty passphrase:
         // echo $'author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business\n' | octez-client import keys from mnemonic test --force
         assert_eq!(pk.hash(), "tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h");
 
-        let (_, pk) = keypair_from_mnemonic(mnemonic, "foobar").unwrap();
+        let (pk, _) = keypair_from_mnemonic(mnemonic, "foobar").unwrap();
         // This address is acquired from octez-client with the mnemonic above and passphrase 'foobar':
         // echo $'author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business\nfoobar\n' | octez-client import keys from mnemonic test --force
         assert_eq!(pk.hash(), "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg");
@@ -81,9 +87,30 @@ mod tests {
         #[test]
         fn test_keygen_verify(passphrase in any::<String>(), message in any::<Vec<u8>>()) {
             let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
-            let (sk, pk) = keypair_from_mnemonic(mnemonic, &passphrase).unwrap();
+            let (pk, sk) = keypair_from_mnemonic(mnemonic, &passphrase).unwrap();
             let sig = sk.sign(&message).unwrap();
             assert!(sig.verify(&pk, &message).is_ok());
         }
+    }
+
+    #[test]
+    fn keypair_from_secret_key() {
+        let (pk, sk) = super::keypair_from_secret_key(
+            "edsk3a3gq6ocr51rGDqqSb8sxxV46v77GZYmhyKyjqWjckhVTJXYCf",
+        )
+        .unwrap();
+
+        assert_eq!(
+            sk.to_string(),
+            "edsk3a3gq6ocr51rGDqqSb8sxxV46v77GZYmhyKyjqWjckhVTJXYCf"
+        );
+        assert_eq!(pk.hash(), "tz1ficxJFv7MUtsCimF8bmT9SYPDok52ySg6");
+
+        assert_eq!(
+            super::keypair_from_secret_key("edskaaa")
+                .unwrap_err()
+                .to_string(),
+            "invalid checksum"
+        );
     }
 }

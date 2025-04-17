@@ -259,7 +259,7 @@ fn gen_keys(num: usize) -> Result<Vec<Account>> {
         let mnemonic = Mnemonic::generate_in(Language::English, 12)
             .expect("generate_in should generate mnemonics")
             .to_string();
-        let (sk, pk) = keypair_from_mnemonic(&mnemonic, "")?;
+        let (pk, sk) = keypair_from_mnemonic(&mnemonic, "")?;
         let account = Account {
             address: Address::from_base58(&pk.hash())?,
             sk,
