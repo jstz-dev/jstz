@@ -242,7 +242,7 @@ mod test {
             account::{Account, Address, ParsedCode},
             ticket_table::TicketTable,
         },
-        executor::smart_function::{self, register_web_apis, X_JSTZ_TRANSFER},
+        executor::smart_function::{self, script::register_web_apis, X_JSTZ_TRANSFER},
         operation::{OperationHash, RunFunction},
     };
 
@@ -1247,6 +1247,7 @@ mod test {
         .unwrap();
         let request = JsNativeObject::new::<RequestClass>(request, context).unwrap();
         let operation_hash = OperationHash::from(b"abcdefghijslmnop".as_slice());
+
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
         tx.begin();
