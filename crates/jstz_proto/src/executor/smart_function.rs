@@ -755,18 +755,15 @@ pub mod run {
             );
 
             // 4. transferring to the smart function should fail (source has insufficient funds)
-            let error = execute(
+            let result = execute(
                 host,
                 &mut tx,
                 &source,
                 run_function.clone(),
                 fake_op_hash.clone(),
             )
-            .expect_err("Expected error");
-            assert_eq!(
-                error.to_string(),
-                "EvalError: Transfer failed: InsufficientFunds"
-            );
+            .unwrap();
+            assert!(result.status_code.is_server_error());
 
             // 5. transferring from the smart function should fail with insufficient funds and the balance is rolled back
             let balance_before = Account::balance(host, &mut tx, &source).unwrap();
@@ -777,7 +774,7 @@ pub mod run {
                 X_JSTZ_TRANSFER,
                 transfer_amount.to_string().try_into().unwrap(),
             );
-            let error = execute(
+            let result = execute(
                 host,
                 &mut tx,
                 &source,
@@ -787,13 +784,11 @@ pub mod run {
                 },
                 fake_op_hash.clone(),
             )
-            .expect_err("Expected error");
-            let balance_after = Account::balance(host, &mut tx, &source).unwrap();
-            assert_eq!(
-                error.to_string(),
-                "EvalError: Transfer failed: InsufficientFunds"
-            );
+            .unwrap();
+            assert!(result.status_code.is_server_error());
+
             // tx rolled back as smart function has insufficient funds
+            let balance_after = Account::balance(host, &mut tx, &source).unwrap();
             assert_eq!(balance_after, balance_before);
         }
 
@@ -909,12 +904,9 @@ pub mod run {
 
             // 3. transferring again should fail
             let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
-            let error = execute(host, &mut tx, &source, run_function, fake_op_hash2)
-                .expect_err("Expected error");
-            assert_eq!(
-                error.to_string(),
-                "EvalError: Transfer failed: InsufficientFunds"
-            );
+            let result =
+                execute(host, &mut tx, &source, run_function, fake_op_hash2).unwrap();
+            assert!(result.status_code.is_server_error());
         }
 
         #[test]

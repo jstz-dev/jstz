@@ -763,14 +763,16 @@ mod test {
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-        smart_function::run::execute(
+        let result = smart_function::run::execute(
             host,
             &mut tx,
             &source,
             run_function.clone(),
             fake_op_hash.clone(),
         )
-        .expect_err("Invalid header X-JSTZ-AMOUNT");
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
         tx.commit(host).unwrap();
 
         tx.begin();
@@ -821,8 +823,12 @@ mod test {
         let code = format!(
             r#"
             const handler = async () => {{
-                await fetch(new Request("jstz://{fake_refund_sf}"));
-                return new Response();
+                const response = await fetch(new Request("jstz://{fake_refund_sf}"));
+                if (response.ok) {{
+                    return new Response(); 
+                }} else {{
+                    return Response.error();
+                }}
             }};
             export default handler;
             "#
@@ -850,14 +856,16 @@ mod test {
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-        smart_function::run::execute(
+        let result = smart_function::run::execute(
             host,
             &mut tx,
             &source,
             run_function.clone(),
             fake_op_hash.clone(),
         )
-        .expect_err("Invalid header X-JSTZ-AMOUNT");
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
         tx.commit(host).unwrap();
 
         tx.begin();
@@ -1020,8 +1028,12 @@ mod test {
         let code = format!(
             r#"
             const handler = async () => {{
-                await fetch(new Request("jstz://{refund_sf}"));
-                return new Response();
+                const response = await fetch(new Request("jstz://{refund_sf}"));
+                if (response.ok) {{
+                    return new Response();
+                }} else {{
+                    return Response.error();
+                }}  
             }};
             export default handler;
             "#
@@ -1072,7 +1084,7 @@ mod test {
             X_JSTZ_TRANSFER,
             transfer_amount.to_string().try_into().unwrap(),
         );
-        let error = smart_function::run::execute(
+        let result = smart_function::run::execute(
             host,
             &mut tx,
             &source,
@@ -1082,12 +1094,10 @@ mod test {
             },
             fake_op_hash,
         )
-        .expect_err("Expected error");
+        .unwrap();
+        assert!(result.status_code.is_server_error());
+
         let balance_after = Account::balance(host, &mut tx, &source).unwrap();
-        assert_eq!(
-            error.to_string(),
-            "EvalError: Transfer failed: InsufficientFunds"
-        );
         assert_eq!(balance_before, balance_after);
     }
 
