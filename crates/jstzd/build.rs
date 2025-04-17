@@ -123,7 +123,9 @@ fn make_kernel_installer(kernel_file: &Path, preimages_dir: &Path) -> Result<Str
         // 2. Set `jstz` ticketer as the bridge contract address
         OwnedConfigInstruction::set_instr(
             OwnedBytes(bincode::encode_to_vec(
-                SmartFunctionHash(ContractKt1Hash::from_base58_check(EXCHANGER_ADDRESS)?),
+                SmartFunctionHash(
+                    ContractKt1Hash::from_base58_check(EXCHANGER_ADDRESS)?.into(),
+                ),
                 bincode::config::legacy(),
             )?),
             OwnedPath::from(TICKETER),

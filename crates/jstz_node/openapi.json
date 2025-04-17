@@ -703,20 +703,47 @@
           }
         }
       },
-      "FaWithdrawReceipt": {
+      "FaWithdraw": {
         "type": "object",
         "required": [
-          "source",
-          "outbox_message_id"
+          "amount",
+          "routing_info",
+          "ticket_info"
         ],
         "properties": {
-          "outbox_message_id": {
-            "$ref": "#/components/schemas/String"
+          "amount": {
+            "$ref": "#/components/schemas/u64"
           },
-          "source": {
-            "$ref": "#/components/schemas/Address"
+          "routing_info": {
+            "$ref": "#/components/schemas/RoutingInfo"
+          },
+          "ticket_info": {
+            "$ref": "#/components/schemas/TicketInfo"
           }
         }
+      },
+      "FaWithdrawReceipt": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FaWithdraw"
+          },
+          {
+            "type": "object",
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "$ref": "#/components/schemas/Address"
+              }
+            }
+          }
+        ]
+      },
+      "Kt1Hash": {
+        "type": "string",
+        "title": "KT1",
+        "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
       },
       "KvValue": {
         "type": "string",
@@ -1025,6 +1052,21 @@
           }
         }
       },
+      "RoutingInfo": {
+        "type": "object",
+        "required": [
+          "receiver",
+          "proxy_l1_contract"
+        ],
+        "properties": {
+          "proxy_l1_contract": {
+            "$ref": "#/components/schemas/SmartFunctionHash"
+          },
+          "receiver": {
+            "$ref": "#/components/schemas/Address"
+          }
+        }
+      },
       "RunFunction": {
         "type": "object",
         "description": "Request used to run a smart function. The target smart function is given by the host part of the uri. The rest of the attributes will be handled by the smart function itself.",
@@ -1163,12 +1205,38 @@
         }
       },
       "SmartFunctionHash": {
-        "type": "string",
-        "title": "KT1",
-        "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
+        "$ref": "#/components/schemas/Kt1Hash"
       },
       "String": {
         "type": "string"
+      },
+      "TicketInfo": {
+        "type": "object",
+        "required": [
+          "id",
+          "ticketer"
+        ],
+        "properties": {
+          "content": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "ticketer": {
+            "$ref": "#/components/schemas/SmartFunctionHash"
+          }
+        }
       },
       "UserAccount": {
         "type": "object",
