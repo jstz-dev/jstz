@@ -3,7 +3,6 @@ use std::{num::NonZeroU64, ops::BitXor};
 use boa_engine::{
     js_string,
     object::{builtins::JsPromise, ErasedObject, FunctionObjectBuilder},
-    parser::source::ReadChar,
     Context, JsArgs, JsError, JsNativeError, JsResult, JsValue, NativeFunction, Source,
 };
 use boa_gc::{Finalize, GcRefMut, Trace};
@@ -11,7 +10,7 @@ use derive_more::{Deref, DerefMut};
 use http::Uri;
 use jstz_api::{
     http::{
-        body::{Body, BodyWithType, HttpBody},
+        body::{Body, BodyWithType},
         header::Headers,
         request::{Request, RequestClass},
         response::{Response, ResponseClass, ResponseOptions},
@@ -20,7 +19,7 @@ use jstz_api::{
 };
 use jstz_core::{
     host::HostRuntime, host_defined, kv::Transaction, native::JsNativeObject, runtime,
-    Module, Realm,
+    Module, Realm, Runtime,
 };
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use tezos_smart_rollup::prelude::debug_msg;
@@ -70,7 +69,7 @@ pub fn try_apply_to_value_or_promise<F1, F2>(
     context: &mut Context,
 ) -> JsResult<JsValue>
 where
-    F1: Fn(&JsValue, &mut Context) -> JsResult<()> + 'static,
+    F1: Fn(JsValue, &mut Context) -> JsResult<JsValue> + 'static,
     F2: Fn(&mut Context) -> JsResult<()> + 'static,
 {
     match value_or_promise {
@@ -82,8 +81,7 @@ where
                             NativeFunction::from_closure(
                                 move |_, args, context| -> JsResult<JsValue> {
                                     let value = args.get_or_undefined(0).clone();
-                                    on_fulfilled(&value, context)?;
-                                    Ok(value)
+                                    on_fulfilled(value, context)
                                 },
                             )
                         })
@@ -93,9 +91,8 @@ where
                         FunctionObjectBuilder::new(context.realm(), unsafe {
                             NativeFunction::from_closure(
                                 move |_, args, context| -> JsResult<JsValue> {
-                                    let reason = JsError::from_opaque(
-                                        args.get_or_undefined(0).clone(),
-                                    );
+                                    let value = args.get_or_undefined(0).clone();
+                                    let reason = JsError::from_opaque(value);
                                     on_rejected(context)?;
                                     Err(reason)
                                 },
@@ -107,10 +104,7 @@ where
                 );
                 Ok(result.into())
             }
-            None => {
-                on_fulfilled(&value, context)?;
-                Ok(value)
-            }
+            None => on_fulfilled(value, context),
         },
         Err(err) => {
             on_rejected(context)?;
@@ -140,6 +134,7 @@ pub fn register_web_apis(realm: &Realm, context: &mut Context) {
     realm.register_api(jstz_api::ConsoleApi, context);
     realm.register_api(jstz_api::file::FileApi, context);
 }
+
 pub fn register_jstz_apis(
     realm: &Realm,
     address: &SmartFunctionHash,
@@ -193,22 +188,12 @@ impl Script {
         handler.call(this, args, context)
     }
 
-    pub fn load(
-        hrt: &mut impl HostRuntime,
-        tx: &mut Transaction,
-        address: &SmartFunctionHash,
-        context: &mut Context,
-    ) -> Result<Self> {
-        let src = Account::function_code(hrt, tx, address)?;
-
-        Ok(Self::parse(Source::from_bytes(src), context)?)
-    }
-
-    pub fn parse<R: ReadChar>(
-        src: Source<'_, R>,
-        context: &mut Context,
-    ) -> JsResult<Self> {
-        let module = Module::parse(src, Some(Realm::new(context)?), context)?;
+    pub fn load(src: &ParsedCode, context: &mut Context) -> JsResult<Self> {
+        let module = Module::parse(
+            Source::from_bytes(src.as_bytes()),
+            Some(Realm::new(context)?),
+            context,
+        )?;
         Ok(Self(module))
     }
 
@@ -225,105 +210,52 @@ impl Script {
             compute_seed(address, operation_hash),
             context,
         );
+
+        let context = &mut self.realm().context_handle(context);
+
+        host_defined!(context, mut host_defined);
+        host_defined.insert(TraceData {
+            address: address.clone(),
+            operation_hash: operation_hash.clone(),
+        });
     }
 
     /// Initialize the script, registering all associated runtime APIs
     /// and evaluating the module of the script
-    pub fn init(
-        &self,
-        address: &SmartFunctionHash,
-        operation_hash: &OperationHash,
-        context: &mut Context,
-    ) -> JsPromise {
-        self.register_apis(address, operation_hash, context);
-
+    pub fn init(&self, context: &mut Context) -> JsPromise {
         self.realm().eval_module(self, context)
     }
 
     /// Runs the script
-    pub fn run(
-        &self,
-        address: &SmartFunctionHash,
-        operation_hash: &OperationHash,
-        request: &JsValue,
-        context: &mut Context,
-    ) -> JsResult<JsValue> {
-        let context = &mut self.realm().context_handle(context);
-
-        // 1. Begin a new transaction
-        runtime::with_js_tx(|tx| tx.begin());
-
-        // 2. Initialize host defined data
-
-        {
-            host_defined!(context, mut host_defined);
-
-            let trace_data = TraceData {
-                address: address.clone(),
-                operation_hash: operation_hash.clone(),
-            };
-
-            host_defined.insert(trace_data);
-        }
-
-        // 3. Set logger
+    pub fn run(&self, request: &JsValue, context: &mut Context) -> JsResult<JsValue> {
         set_js_logger(&JsonLogger);
-        log_request_start(address.clone(), operation_hash.to_string());
-
-        // 4. Invoke the script's handler
-        let result =
-            self.invoke_handler(&JsValue::undefined(), &[request.clone()], context);
-
-        // TODO: decode request and add more fields to the request (status, header etc).
-        log_request_end(address.clone(), operation_hash.to_string());
-
-        // 4. Ensure that the transaction is committed
-        try_apply_to_value_or_promise(
-            result,
-            |value, _context| {
-                runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<()> {
-                    match Response::try_from_js(value) {
-                        // commit if the value returned is a response with a 2xx status code
-                        Ok(response) if response.ok() => {
-                            tx.commit(hrt)?;
-                        }
-                        _ => tx.rollback()?,
-                    };
-
-                    Ok(())
-                })
-            },
-            |_context| Ok(runtime::with_js_tx(|tx| tx.rollback())?),
-            context,
-        )
+        self.invoke_handler(&JsValue::undefined(), &[request.clone()], context)
     }
 
     /// Loads, initializes and runs the script
     pub fn load_init_run(
+        src: &ParsedCode,
         address: SmartFunctionHash,
         operation_hash: OperationHash,
         request: &JsValue,
         context: &mut Context,
     ) -> JsResult<JsValue> {
         // 1. Load script
-        let script = runtime::with_js_hrt_and_tx(|hrt, tx| {
-            Script::load(hrt, tx, &address, context)
-        })?;
+        let script = Self::load(src, context)?;
 
-        // 2. Evaluate the script's module
-        let script_promise = script.init(&address, &operation_hash, context);
+        // 2. Register the APIs for the script's realm
+        script.register_apis(&address, &operation_hash, context);
 
-        // 3. Once evaluated, call the script's handler
+        // 3. Evaluate the script's module
+        let script_promise = script.init(context);
+
+        // 4. Once evaluated, call the script's handler
         let result = script_promise.then(
             Some(
                 FunctionObjectBuilder::new(context.realm(), unsafe {
                     NativeFunction::from_closure_with_captures(
-                        |_, _, (address, operation_hash, script, request), context| {
-                            {
-                                script.run(address, operation_hash, request, context)
-                            }
-                        },
-                        (address, operation_hash, script, request.clone()),
+                        |_, _, (script, request), context| script.run(request, context),
+                        (script, request.clone()),
                     )
                 })
                 .build(),
@@ -336,54 +268,84 @@ impl Script {
     }
 }
 
+pub fn runtime_and_request_from_run_operation(
+    run_operation: RunFunction,
+) -> Result<(Runtime, JsNativeObject<Request>)> {
+    let RunFunction {
+        uri,
+        method,
+        headers,
+        body,
+        gas_limit,
+    } = run_operation;
+
+    let mut rt = Runtime::new(gas_limit)?;
+    register_http_api(&rt.realm().clone(), &mut rt);
+
+    let mut http_request_builder = http::Request::builder().uri(uri).method(method);
+
+    *http_request_builder
+        .headers_mut()
+        .ok_or(Error::InvalidHttpRequest)? = headers;
+
+    let http_request = http_request_builder
+        .body(body)
+        .map_err(|_| Error::InvalidHttpRequest)?;
+    let request = JsNativeObject::new::<RequestClass>(
+        Request::from_http_request(http_request, &mut rt)?,
+        &mut rt,
+    )?;
+
+    Ok((rt, request))
+}
+
+fn run_function_from_request(
+    request_deref: &mut GcRefMut<'_, ErasedObject, Request>,
+    gas_limit: usize,
+) -> JsResult<RunFunction> {
+    let method = request_deref.method().clone();
+    let uri = Uri::try_from(request_deref.url().clone().to_string()).map_err(|_| {
+        JsError::from_native(JsNativeError::error().with_message("Invalid host"))
+    })?;
+    let body = request_deref.body().clone().to_http_body();
+    let headers = request_deref.headers().deref_mut().to_http_headers();
+    Ok(RunFunction {
+        uri,
+        method,
+        body,
+        headers,
+        gas_limit,
+    })
+}
+
+fn response_from_run_receipt(
+    run_receipt: RunFunctionReceipt,
+    context: &mut Context,
+) -> JsResult<Response> {
+    let body = Body::from_http_body(run_receipt.body, context)?;
+    let options = ResponseOptions::from(run_receipt.status_code, run_receipt.headers);
+    Response::new(
+        BodyWithType {
+            body,
+            content_type: None,
+        },
+        options,
+        context,
+    )
+}
+
 pub const X_JSTZ_TRANSFER: &str = "X-JSTZ-TRANSFER";
 pub const X_JSTZ_AMOUNT: &str = "X-JSTZ-AMOUNT";
 
 pub struct HostScript;
 
 impl HostScript {
-    fn create_run_function_from_request(
-        request_deref: &mut GcRefMut<'_, ErasedObject, Request>,
-        gas_limit: usize,
-    ) -> JsResult<RunFunction> {
-        let method = request_deref.method().clone();
-        let uri =
-            Uri::try_from(request_deref.url().clone().to_string()).map_err(|_| {
-                JsError::from_native(JsNativeError::error().with_message("Invalid host"))
-            })?;
-        let body = request_deref.body().clone().to_http_body();
-        let headers = request_deref.headers().deref_mut().to_http_headers();
-        Ok(RunFunction {
-            uri,
-            method,
-            body,
-            headers,
-            gas_limit,
-        })
-    }
-
-    fn create_response_from_run_receipt(
-        run_receipt: RunFunctionReceipt,
-        context: &mut Context,
-    ) -> JsResult<Response> {
-        let body = Body::from_http_body(run_receipt.body, context)?;
-        let options = ResponseOptions::from(run_receipt.status_code, run_receipt.headers);
-        Response::new(
-            BodyWithType {
-                body,
-                content_type: None,
-            },
-            options,
-            context,
-        )
-    }
-
     pub fn run(
-        self_address: &SmartFunctionHash,
+        self_address: &impl Addressable,
         request: &mut GcRefMut<'_, ErasedObject, Request>,
         context: &mut Context,
     ) -> JsResult<JsValue> {
-        let run = Self::create_run_function_from_request(request, 1)?;
+        let run = run_function_from_request(request, 1)?;
         let response = runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<Response> {
             // 1. Begin a new transaction
             tx.begin();
@@ -398,7 +360,7 @@ impl HostScript {
                     } else {
                         tx.rollback()?;
                     }
-                    Self::create_response_from_run_receipt(run_receipt, context)
+                    response_from_run_receipt(run_receipt, context)
                 }
                 Err(err) => {
                     tx.rollback()?;
@@ -482,11 +444,12 @@ impl HostScript {
 
 pub mod run {
 
-    use jstz_core::Runtime;
+    use jstz_api::http::response::ResponseBuilder;
 
     use super::*;
     use crate::{
         context::account::Address,
+        executor::JSTZ_HOST,
         operation::{self, OperationHash},
         receipt::RunFunctionReceipt,
     };
@@ -494,72 +457,170 @@ pub mod run {
     /// skips the execution of the smart function for noop requests
     pub const NOOP_PATH: &str = "/-/noop";
 
-    fn create_http_request(
-        uri: http::Uri,
-        method: http::Method,
-        headers: http::HeaderMap,
-        body: HttpBody,
-    ) -> Result<http::Request<HttpBody>> {
-        let mut builder = http::Request::builder().uri(uri).method(method);
-
-        *builder.headers_mut().ok_or(Error::InvalidHttpRequest)? = headers;
-
-        builder.body(body).map_err(|_| Error::InvalidHttpRequest)
-    }
-
-    /// Handles the refund from the smart function if the response is successful.
-    /// Returns the receipt of the response.
-    fn handle_refund(
-        response: &JsValue,
-        from: &SmartFunctionHash,
-        to: &impl Addressable,
-    ) -> Result<RunFunctionReceipt> {
-        let response = Response::try_from_js(response)?;
-        if response.ok() {
-            HostScript::handle_transfer(&mut response.headers().deref_mut(), from, to)?;
-        }
-        let (http_parts, body) = Response::to_http_response(&response).into_parts();
-        Ok(RunFunctionReceipt {
-            body,
-            status_code: http_parts.status,
-            headers: http_parts.headers,
-        })
-    }
-
-    fn register_apis(rt: &mut Runtime, address: &Address) {
-        match address {
-            Address::SmartFunction(_) => {
-                register_web_apis(&rt.realm().clone(), rt);
-            }
-            Address::User(_) => {
-                register_http_api(&rt.realm().clone(), rt);
-            }
+    /// Handles the transfer (or a refund) (if any) and returns [`Ok(None)`] if the transfer
+    /// succeeded. If the transfer fails, it rolls back the transaction and returns an error response
+    /// as [`Ok(Some(err_response))`].
+    fn handle_transfer_or_rollback_and_return_response(
+        headers: &mut Headers,
+        source_address: &impl Addressable,
+        dest_address: &impl Addressable,
+        context: &mut Context,
+    ) -> Result<Option<JsValue>> {
+        if HostScript::handle_transfer(headers, source_address, dest_address).is_err() {
+            // If the transfer fails, return an error response
+            runtime::with_js_tx(|tx| tx.rollback())?;
+            Ok(Some(
+                JsNativeObject::new::<ResponseClass>(
+                    ResponseBuilder::error(context)?,
+                    context,
+                )?
+                .into(),
+            ))
+        } else {
+            Ok(None)
         }
     }
 
-    fn execute_smart_function(
+    // Handles a fetch request to a smart function or a user address in the Jstz protocol.
+    pub fn fetch(
+        source_address: &(impl Addressable + 'static),
+        operation_hash: OperationHash,
+        request: &JsNativeObject<Request>,
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        let mut request_deref = request.deref_mut();
+        match request_deref.url().domain() {
+            Some(JSTZ_HOST) => {
+                HostScript::run(source_address, &mut request_deref, context)
+            }
+            Some(dest_address) => {
+                let dest_address = Address::from_base58(dest_address).map_err(|_| {
+                    JsError::from_native(
+                        JsNativeError::error().with_message("Invalid host"),
+                    )
+                })?;
+
+                runtime::with_js_tx(|tx| tx.begin());
+
+                // 1. Handle the transfer operation in request headers
+                if let Some(error) = handle_transfer_or_rollback_and_return_response(
+                    &mut request_deref.headers().deref_mut(),
+                    source_address,
+                    &dest_address,
+                    context,
+                )? {
+                    // If the transfer fails, return an error response
+                    return Ok(error);
+                }
+
+                // 3. Handle request
+                let is_noop = request_deref.url().path() == NOOP_PATH;
+                match dest_address {
+                    Address::SmartFunction(dest_address) if !is_noop => {
+                        // 5. Set the referrer of the request to the current smart function address
+                        headers::test_and_set_referrer(&request_deref, source_address)?;
+
+                        // 6. Load, init and run the smart function
+                        let src_code = runtime::with_js_hrt_and_tx(
+                            |hrt, tx| -> Result<ParsedCode> {
+                                Ok(Account::function_code(hrt, tx, &dest_address)?
+                                    .clone())
+                            },
+                        )?;
+
+                        log_request_start(
+                            dest_address.clone(),
+                            operation_hash.to_string(),
+                        );
+                        let response = Script::load_init_run(
+                            &src_code,
+                            dest_address.clone(),
+                            operation_hash.clone(),
+                            request.inner(),
+                            context,
+                        );
+
+                        // TODO: avoid cloning
+                        // https://linear.app/tezos/issue/JSTZ-331/avoid-cloning-for-address-in-proto
+                        let source_address_clone = source_address.clone();
+                        let dest_address_clone = dest_address.clone();
+                        let response = try_apply_to_value_or_promise(
+                            response,
+                            move |value, context| -> JsResult<JsValue> {
+                                match Response::try_from_js(&value) {
+                                    Ok(response) => {
+                                        if let Some(error) =
+                                            handle_transfer_or_rollback_and_return_response(
+                                                &mut response.headers().deref_mut(),
+                                                &dest_address_clone,
+                                                &source_address_clone,
+                                                context,
+                                            )?
+                                        {
+                                            return Ok(error);
+                                        }
+
+                                        // If the smart function returns a valid response, commit the inner
+                                        // transaction iff the response is ok
+                                        runtime::with_js_hrt_and_tx(|hrt, tx| {
+                                            if response.ok() {
+                                                tx.commit(hrt)
+                                            } else {
+                                                tx.rollback()
+                                            }
+                                        })?;
+                                    }
+                                    _ => {
+                                        // If the smart function doesn't return a valid response,
+                                        // rollback the inner transaction (abort)
+                                        runtime::with_js_tx(|tx| tx.rollback())?;
+                                    }
+                                }
+                                Ok(value)
+                            },
+                            |_context| Ok(runtime::with_js_tx(|tx| tx.rollback())?),
+                            context,
+                        );
+
+                        log_request_end(dest_address.clone(), operation_hash.to_string());
+                        response
+                    }
+                    _ => {
+                        // Request is a noop request or to a user address
+                        runtime::with_js_hrt_and_tx(|hrt, tx| tx.commit(hrt))?;
+
+                        // Return a default response
+                        let response = Response::new(
+                            Default::default(),
+                            Default::default(),
+                            context,
+                        )?;
+                        JsNativeObject::new::<ResponseClass>(response, context)
+                            .map(|obj| obj.inner().clone())
+                    }
+                }
+            }
+            None => Err(JsError::from_native(
+                JsNativeError::error().with_message("Invalid host"),
+            ))?,
+        }
+    }
+
+    pub fn run_toplevel_fetch(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        rt: &mut Runtime,
-        source: &impl Addressable,
-        sf_address: SmartFunctionHash,
-        request: JsNativeObject<Request>,
+        source_address: &(impl Addressable + 'static),
+        run_operation: RunFunction,
         operation_hash: OperationHash,
-    ) -> Result<JsValue> {
-        // Set referrer as the source address of the operation
-        headers::test_and_set_referrer(&request.deref(), source)?;
-        // Run :)
-        {
-            let rt = &mut *rt;
+    ) -> Result<RunFunctionReceipt> {
+        let gas_limit = run_operation.gas_limit;
+        let (mut rt, request) = runtime_and_request_from_run_operation(run_operation)?;
+
+        let result = {
+            let rt = &mut rt;
             runtime::enter_js_host_context(hrt, tx, || {
                 jstz_core::future::block_on(async move {
-                    let result = Script::load_init_run(
-                        sf_address,
-                        operation_hash,
-                        request.inner(),
-                        rt,
-                    )?;
-
+                    let result = fetch(source_address, operation_hash, &request, rt)?;
                     rt.resolve_value(&result).await
                 })
             })
@@ -570,84 +631,27 @@ pub mod run {
             } else {
                 err.into()
             }
+        })?;
+
+        debug_msg!(hrt, "🚀 Smart function executed successfully with value: {:?} (in {:?} instructions)\n", result, gas_limit - rt.instructions_remaining());
+
+        let response = Response::try_from_js(&result)?;
+        let (http_parts, body) = Response::to_http_response(&response).into_parts();
+        Ok(RunFunctionReceipt {
+            body,
+            status_code: http_parts.status,
+            headers: http_parts.headers,
         })
     }
 
     pub fn execute(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        source: &impl Addressable,
-        run: operation::RunFunction,
+        source: &(impl Addressable + 'static),
+        run_operation: operation::RunFunction,
         operation_hash: OperationHash,
     ) -> Result<RunFunctionReceipt> {
-        let operation::RunFunction {
-            uri,
-            method,
-            headers,
-            body,
-            gas_limit,
-        } = run;
-        // 1. Extract address from request
-        let address = Address::from_base58(uri.host().ok_or(Error::InvalidAddress)?)?;
-
-        // 2. Initialize runtime with http api
-        let rt = &mut Runtime::new(gas_limit)?;
-        register_apis(rt, &address);
-
-        // 3. Deserialize request
-        let http_request = create_http_request(uri, method, headers, body)?;
-        let request = JsNativeObject::new::<RequestClass>(
-            Request::from_http_request(http_request, rt)?,
-            rt,
-        )?;
-
-        // 4. Handle transfer if the header is present (without committing)
-        tx.begin();
-        let transfer_result = runtime::enter_js_host_context(hrt, tx, || {
-            HostScript::handle_transfer(
-                &mut request.deref().headers().deref_mut(),
-                source,
-                &address,
-            )
-        });
-        if let Err(err) = transfer_result {
-            tx.rollback()?;
-            return Err(err.into());
-        }
-        let is_noop = request.deref().url().path() == NOOP_PATH;
-        // 5. For smart functions, execute the smart function, otherwise commit the transaction
-        match address {
-            Address::SmartFunction(sf_address) if !is_noop => {
-                // Execute smart function
-                let result = execute_smart_function(
-                    hrt,
-                    tx,
-                    rt,
-                    source,
-                    // TODO: avoid cloning
-                    // https://linear.app/tezos/issue/JSTZ-331/avoid-cloning-for-address-in-proto
-                    sf_address.clone(),
-                    request,
-                    operation_hash,
-                );
-                debug_msg!(hrt, "🚀 Smart function executed successfully with value: {:?} (in {:?} instructions)\n", result, gas_limit - rt.instructions_remaining());
-                // Commit or rollback based on the result
-                let result = result.and_then(|response| {
-                    runtime::enter_js_host_context(hrt, tx, || {
-                        handle_refund(&response, &sf_address, source)
-                    })
-                });
-                match &result {
-                    Ok(receipt) if receipt.status_code.is_success() => tx.commit(hrt)?,
-                    _ => tx.rollback()?,
-                }
-                result
-            }
-            _ => {
-                tx.commit(hrt)?;
-                Ok(RunFunctionReceipt::default())
-            }
-        }
+        run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash)
     }
 
     #[cfg(test)]
