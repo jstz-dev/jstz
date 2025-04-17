@@ -80,6 +80,7 @@ Smart functions look like ordinary JavaScript functions, but because they run on
 - Smart functions are permissionless, so anyone can call them, but you can add your own logic to them to restrict who can call them.
 - Anyone can inspect the code and storage of deployed smart functions.
 - Because smart functions run in a decentralized manner on many Jstz Smart Rollup nodes, they are censorship-resistant.
+- Smart functions must be built with Jstz dependencies as described in [Building smart functions](/functions/building).
 
 ## Limitations of smart functions
 
