@@ -89,7 +89,24 @@ Smart functions behave much like other serverless JavaScript/TypeScript applicat
 - Smart functions are currently restricted to 3915 bytes.
 - Smart functions can import and use packages, but they can use only certain JavaScript APIs, which limits the packages that they can use.
 - Smart functions run in an isolated context; each time a smart function runs, it is as if it is running for the first time.
-  Therefore, smart functions cannot store persistent data such as persistent global variables.
-  They must use the key-value store as described in [Storing data](/functions/data_storage).
-- Unlike smart contracts, smart functions have only a single entrypoint.
+Therefore, smart functions cannot store persistent data such as persistent global variables.
+They must use the key-value store as described in [Storing data](/functions/data_storage).
 <!-- https://huancheng-trili.github.io/jstz-api-coverage/ -->
+
+## Similarities and differences from smart contracts
+
+Smart functions are similar to Tezos [smart contracts](https://docs.tezos.com/smart-contracts) in many ways, including:
+
+- They are transparent, persistent, and cannot be changed after deployment
+- They have dedicated storage that only they can write to but is readable to outside clients
+- They can accept, store, and transfer tez between accounts
+
+Smart functions have these differences from smart contracts:
+
+- Unlike smart contracts, smart functions have only a single entrypoint
+- Smart contracts are compiled from higher-level languages to the Michelson stack-based language, while Jstz runs the TypeScript code of smart functions directly
+
+Here are some other things to know about smart functions and smart contracts:
+
+- Jstz does not support Tezos smart contracts, only Jstz smart functions
+- Smart functions cannot directly call smart contracts, and smart contracts cannot directly call smart functions
