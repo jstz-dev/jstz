@@ -660,6 +660,7 @@ pub mod run {
 
         use crate::{
             context::account::{Account, Address, ParsedCode},
+            executor::smart_function,
             operation::RunFunction,
         };
 
@@ -696,7 +697,7 @@ pub mod run {
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
             tx.begin();
             let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+                smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
 
             let balance_before =
                 Account::balance(host, &mut tx, &smart_function).unwrap();
@@ -822,7 +823,7 @@ pub mod run {
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
             tx.begin();
             let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+                smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
 
             let balance_before =
                 Account::balance(host, &mut tx, &smart_function).unwrap();
@@ -936,7 +937,7 @@ pub mod run {
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
             tx.begin();
             let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+                smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
 
             tx.commit(host).unwrap();
 
@@ -1006,9 +1007,14 @@ pub mod run {
             // 1. Deploy smart function
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
             tx.begin();
-            let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, initial_balance)
-                    .unwrap();
+            let smart_function = smart_function::deploy(
+                host,
+                &mut tx,
+                &source,
+                parsed_code,
+                initial_balance,
+            )
+            .unwrap();
 
             let sf_balance_before =
                 Account::balance(host, &mut tx, &smart_function).unwrap();
@@ -1094,7 +1100,7 @@ pub mod run {
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
             tx.begin();
             let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+                smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
 
             tx.commit(host).unwrap();
 
