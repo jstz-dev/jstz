@@ -366,11 +366,13 @@ where {
         if let Some(prev_ctxt) = self.stack.last_mut() {
             // TODO: These clones are probably uncessary since the entry of btree will always be occupied.
             for key in curr_ctxt.remove_edits {
+                self.lookup_map.rollback(&key)?;
                 self.lookup_map.update(key.clone(), prev_idx);
                 prev_ctxt.remove(key);
             }
 
             for (key, value) in curr_ctxt.insert_edits {
+                self.lookup_map.rollback(&key)?;
                 self.lookup_map.update(key.clone(), prev_idx);
                 prev_ctxt.insert(key, value);
             }
