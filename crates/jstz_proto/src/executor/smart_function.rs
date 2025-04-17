@@ -27,13 +27,15 @@ use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
     api::{self, TraceData},
-    context::account::{Account, Addressable, Amount, ParsedCode},
+    context::account::{Account, Addressable, ParsedCode},
     js_logger::JsonLogger,
     operation::{OperationHash, RunFunction},
     receipt::RunFunctionReceipt,
     request_logger::{log_request_end, log_request_start},
     Error, Result,
 };
+
+pub use deploy::deploy_smart_function as deploy;
 
 pub mod headers {
 
@@ -236,41 +238,6 @@ impl Script {
         self.register_apis(address, operation_hash, context);
 
         self.realm().eval_module(self, context)
-    }
-
-    /// Deploys a script
-    pub fn deploy(
-        hrt: &mut impl HostRuntime,
-        tx: &mut Transaction,
-        source: &impl Addressable,
-        code: ParsedCode,
-        balance: Amount,
-    ) -> Result<SmartFunctionHash> {
-        // SAFETY: Smart function creation and sub_balance must be atomic
-        tx.begin();
-        let address = Account::create_smart_function(hrt, tx, source, balance, code)
-            .and_then(|address| {
-                Account::sub_balance(hrt, tx, source, balance)?;
-                Ok(address)
-            });
-
-        match address {
-            Ok(address) => {
-                tx.commit(hrt)?;
-                debug_msg!(hrt, "[📜] Smart function deployed: {}\n", address);
-                Ok(address)
-            }
-            Err(err @ Error::AccountExists) => {
-                tx.rollback()?;
-                debug_msg!(hrt, "[📜] Smart function was already deployed\n");
-                Err(err)
-            }
-            Err(err) => {
-                tx.rollback()?;
-                debug_msg!(hrt, "[📜] Smart function deployment failed. \n");
-                Err(err)
-            }
-        }
     }
 
     /// Runs the script
@@ -1552,6 +1519,24 @@ pub mod deploy {
     use super::*;
     use crate::{operation, receipt};
 
+    pub fn deploy_smart_function(
+        hrt: &mut impl HostRuntime,
+        tx: &mut Transaction,
+        source: &impl Addressable,
+        function_code: ParsedCode,
+        account_credit: u64,
+    ) -> Result<SmartFunctionHash> {
+        let address = Account::create_smart_function(
+            hrt,
+            tx,
+            source,
+            account_credit,
+            function_code,
+        )?;
+        Account::sub_balance(hrt, tx, source, account_credit)?;
+        Ok(address)
+    }
+
     pub fn execute(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
@@ -1563,9 +1548,25 @@ pub mod deploy {
             account_credit,
         } = deployment;
 
-        let address = Script::deploy(hrt, tx, source, function_code, account_credit)?;
-
-        Ok(receipt::DeployFunctionReceipt { address })
+        // SAFETY: Smart function creation and sub_balance must be atomic
+        tx.begin();
+        match deploy_smart_function(hrt, tx, source, function_code, account_credit) {
+            Ok(address) => {
+                tx.commit(hrt)?;
+                debug_msg!(hrt, "[📜] Smart function deployed: {}\n", address);
+                Ok(receipt::DeployFunctionReceipt { address })
+            }
+            Err(err @ Error::AccountExists) => {
+                tx.rollback()?;
+                debug_msg!(hrt, "[📜] Smart function was already deployed\n");
+                Err(err)
+            }
+            Err(err) => {
+                tx.rollback()?;
+                debug_msg!(hrt, "[📜] Smart function deployment failed. \n");
+                Err(err)
+            }
+        }
     }
 
     #[cfg(test)]
