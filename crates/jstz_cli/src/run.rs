@@ -3,9 +3,7 @@ use std::str::FromStr;
 use anyhow::bail;
 use http::{HeaderMap, HeaderValue, Method, Uri};
 use jstz_proto::context::account::{Address, Addressable};
-use jstz_proto::executor::smart_function::run::NOOP_PATH;
-use jstz_proto::executor::smart_function::X_JSTZ_TRANSFER;
-use jstz_proto::executor::JSTZ_HOST;
+use jstz_proto::executor::smart_function::{JSTZ_HOST, NOOP_PATH, X_JSTZ_TRANSFER};
 use jstz_proto::{
     operation::{Content as OperationContent, Operation, RunFunction, SignedOperation},
     receipt::{ReceiptContent, ReceiptResult},
