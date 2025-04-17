@@ -23,12 +23,13 @@ use crate::{
     context::account::{Account, Address, Amount, ParsedCode},
     executor::{
         smart_function::{
-            headers, run::NOOP_PATH, try_apply_to_value_or_promise, HostScript, Script,
+            self, headers, run::NOOP_PATH, try_apply_to_value_or_promise, HostScript,
+            Script,
         },
         JSTZ_HOST,
     },
-    operation::OperationHash,
-    Error, Result,
+    operation::{DeployFunction, OperationHash},
+    Result,
 };
 
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
@@ -76,29 +77,21 @@ impl SmartFunction {
         function_code: ParsedCode,
         initial_balance: Amount,
     ) -> Result<String> {
-        let deployer = &self.address;
-        let balance = Account::balance(hrt, tx, deployer)?;
-        if balance < initial_balance {
-            return Err(Error::BalanceOverflow);
-        }
-
         // 1. Deploy the smart function
-        let deployed = Address::SmartFunction(Script::deploy(
+        let deploy_receipt = smart_function::deploy::execute(
             hrt,
             tx,
-            deployer,
-            function_code,
-            initial_balance,
-        )?);
+            &self.address,
+            DeployFunction {
+                function_code,
+                account_credit: initial_balance,
+            },
+        )?;
 
         // 2. Increment nonce of current account
-        let nonce = Account::nonce(hrt, tx, deployer)?;
-        nonce.increment();
+        Account::nonce(hrt, tx, &self.address)?.increment();
 
-        // 3. Transfer the balance to the associated account
-        Account::transfer(hrt, tx, deployer, &deployed, initial_balance)?;
-
-        Ok(deployed.to_string())
+        Ok(deploy_receipt.address.to_string())
     }
 
     // Invariant: The function should always be called within a js_host_context
@@ -333,7 +326,7 @@ mod test {
             account::{Account, Address, ParsedCode},
             ticket_table::TicketTable,
         },
-        executor::smart_function::{self, register_web_apis, Script, X_JSTZ_TRANSFER},
+        executor::smart_function::{self, register_web_apis, X_JSTZ_TRANSFER},
         operation::RunFunction,
     };
 
@@ -415,14 +408,8 @@ mod test {
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
         Account::add_balance(host, &mut tx, &source, 1000).unwrap();
-        let smart_function = crate::executor::smart_function::Script::deploy(
-            host,
-            &mut tx,
-            &source,
-            parsed_code,
-            5,
-        )
-        .unwrap();
+        let smart_function =
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 5).unwrap();
         tx.commit(host).unwrap();
 
         tx.begin();
@@ -494,7 +481,7 @@ mod test {
         let parsed_code2 = ParsedCode::try_from(code2.to_string()).unwrap();
         tx.begin();
         let smart_function2 =
-            Script::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
+            smart_function::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
                 .unwrap();
 
         // 6. Call the new smart function
@@ -555,7 +542,7 @@ mod test {
         let parsed_code2 = ParsedCode::try_from(code2.to_string()).unwrap();
         tx.begin();
         let smart_function2 =
-            Script::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
+            smart_function::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
                 .unwrap();
 
         // calling the smart function2
@@ -609,9 +596,14 @@ mod test {
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
-        let smart_function =
-            Script::deploy(host, tx, &source, parsed_code.clone(), initial_sf_balance)
-                .unwrap();
+        let smart_function = smart_function::deploy(
+            host,
+            tx,
+            &source,
+            parsed_code.clone(),
+            initial_sf_balance,
+        )
+        .unwrap();
 
         let balance_before = Account::balance(host, tx, &smart_function).unwrap();
         assert_eq!(balance_before, initial_sf_balance);
@@ -674,7 +666,7 @@ mod test {
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
         let smart_function =
-            Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
 
         tx.commit(host).unwrap();
 
@@ -725,7 +717,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
-        let refund_sf = Script::deploy(
+        let refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -749,7 +741,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -813,7 +805,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
-        let refund_sf = Script::deploy(
+        let refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -833,7 +825,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -899,7 +891,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(invalid_refund_code.to_string()).unwrap();
-        let fake_refund_sf = Script::deploy(
+        let fake_refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -920,7 +912,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -989,7 +981,7 @@ mod test {
             export default handler;
             "#;
         let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
-        let fake_refund_sf = Script::deploy(
+        let fake_refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -1012,7 +1004,7 @@ mod test {
             export default handler;
             "#
         );
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -1099,7 +1091,7 @@ mod test {
 
         // 1. Deploy the smart function that refunds to the caller
         let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
-        let refund_sf = Script::deploy(
+        let refund_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -1119,7 +1111,7 @@ mod test {
             "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let caller_sf = Script::deploy(
+        let caller_sf = smart_function::deploy(
             host,
             &mut tx,
             &source,
@@ -1241,7 +1233,7 @@ mod test {
         );
         let parsed_code = ParsedCode::try_from(token_contract_code.to_string()).unwrap();
         let token_smart_function =
-            Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
 
         // 2. Add its ticket blance
         TicketTable::add(
