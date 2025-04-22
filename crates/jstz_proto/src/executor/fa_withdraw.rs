@@ -5,7 +5,7 @@ use jstz_core::{
     host::HostRuntime,
     kv::{outbox::OutboxMessage, Transaction},
 };
-use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use jstz_crypto::smart_function_hash::Kt1Hash;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tezos_smart_rollup::{
@@ -37,7 +37,7 @@ pub struct FaWithdraw {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Encode, Decode)]
 pub struct RoutingInfo {
     pub receiver: Address,
-    pub proxy_l1_contract: SmartFunctionHash,
+    pub proxy_l1_contract: Kt1Hash,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Encode, Decode)]
@@ -45,7 +45,7 @@ pub struct TicketInfo {
     pub id: u32,
     pub content: Option<Vec<u8>>,
     #[bincode(with_serde)]
-    pub ticketer: SmartFunctionHash,
+    pub ticketer: Kt1Hash,
 }
 
 impl TicketInfo {
