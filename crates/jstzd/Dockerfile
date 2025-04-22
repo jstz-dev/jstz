@@ -1,4 +1,4 @@
-ARG OCTEZ_TAG
+ARG OCTEZ_TAG=octez-v22.0
 FROM tezos/tezos:${OCTEZ_TAG} AS octez
 USER root
 RUN mkdir /octez-bin && mv /usr/local/bin/octez-client /usr/local/bin/octez-node /usr/local/bin/octez-smart-rollup-node /usr/local/bin/octez-baker-* /octez-bin
