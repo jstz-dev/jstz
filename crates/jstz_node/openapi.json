@@ -1095,6 +1095,14 @@
           "headers": {
             "type": "object",
             "description": "Any valid HTTP headers",
+            "properties": {
+              "X-JSTZ-TRANSFER": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Amount in mutez to transfer on request",
+                "minimum": 1
+              }
+            },
             "additionalProperties": true
           },
           "method": {
@@ -1140,6 +1148,15 @@
           "headers": {
             "type": "object",
             "description": "Any valid HTTP headers",
+            "properties": {
+              "X-JSTZ-AMOUNT": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Amount in mutez that was transferred on response",
+                "readOnly": true,
+                "minimum": 1
+              }
+            },
             "additionalProperties": true
           },
           "statusCode": {
