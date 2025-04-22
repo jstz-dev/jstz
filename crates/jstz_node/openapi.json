@@ -1060,7 +1060,7 @@
         ],
         "properties": {
           "proxy_l1_contract": {
-            "$ref": "#/components/schemas/SmartFunctionHash"
+            "$ref": "#/components/schemas/Kt1Hash"
           },
           "receiver": {
             "$ref": "#/components/schemas/Address"
@@ -1234,7 +1234,7 @@
             "minimum": 0
           },
           "ticketer": {
-            "$ref": "#/components/schemas/SmartFunctionHash"
+            "$ref": "#/components/schemas/Kt1Hash"
           }
         }
       },

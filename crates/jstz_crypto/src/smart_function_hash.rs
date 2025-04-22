@@ -37,6 +37,12 @@ pub struct Kt1Hash(pub ContractKt1Hash);
 
 impl_bincode_for_hash!(Kt1Hash, ContractKt1Hash);
 
+impl From<Kt1Hash> for ContractKt1Hash {
+    fn from(value: Kt1Hash) -> Self {
+        value.0
+    }
+}
+
 #[derive(
     Deref,
     From,
