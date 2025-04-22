@@ -157,7 +157,7 @@ jstz run [OPTIONS] <URL>
 
 - `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
 
-- `--request (-r) <request>`: Specifies the HTTP method used in the request. Default is `GET`.
+- `--method (-m) <method>`: Specifies the HTTP method used in the request. Default is `GET`.
 
 - `--data (-d) <data>`: Defines the JSON data to be included in the request body.
 

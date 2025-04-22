@@ -74,7 +74,7 @@ enum Command {
         #[arg(short, long, default_value_t = DEFAULT_GAS_LIMIT)]
         gas_limit: u32,
         /// The HTTP method used in the request.
-        #[arg(name = "request", short, long, default_value = "GET")]
+        #[arg(name = "method", short, long, default_value = "GET")]
         http_method: String,
         /// The JSON data in the request body.
         #[arg(name = "data", short, long, default_value = None, value_hint = clap::ValueHint::FilePath)]
