@@ -23,7 +23,7 @@ const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
 // TODO: Figure out a more effective way of serializing values using json
 /// A value stored in the Key-Value store. Always valid JSON.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[schema(value_type = String, format = "json")]
+#[schema(value_type = Value)]
 pub struct KvValue(pub serde_json::Value);
 
 impl Decode for KvValue {

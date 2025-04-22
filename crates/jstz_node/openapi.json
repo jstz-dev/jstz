@@ -746,8 +746,6 @@
         "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
       },
       "KvValue": {
-        "type": "string",
-        "format": "json",
         "description": "A value stored in the Key-Value store. Always valid JSON."
       },
       "LogLevel": {
