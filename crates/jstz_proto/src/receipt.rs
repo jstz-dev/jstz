@@ -65,7 +65,7 @@ pub struct RunFunctionReceipt {
     pub status_code: StatusCode,
     /// Any valid HTTP headers
     #[serde(with = "http_serde::header_map")]
-    #[schema(schema_with = crate::operation::openapi::http_headers)]
+    #[schema(schema_with = crate::operation::openapi::response_headers)]
     pub headers: HeaderMap,
 }
 

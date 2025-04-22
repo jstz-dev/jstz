@@ -138,7 +138,7 @@ pub struct RunFunction {
     pub method: Method,
     /// Any valid HTTP headers
     #[serde(with = "http_serde::header_map")]
-    #[schema(schema_with = openapi::http_headers)]
+    #[schema(schema_with = openapi::request_headers)]
     pub headers: HeaderMap,
     #[schema(schema_with = openapi::http_body_schema)]
     pub body: HttpBody,
@@ -299,19 +299,48 @@ pub enum ExternalOperation {
 
 pub mod openapi {
     use utoipa::{
-        openapi::{schema::AdditionalProperties, Array, Object, ObjectBuilder},
+        openapi::{
+            schema::AdditionalProperties, Array, Object, ObjectBuilder, RefOr, Schema,
+        },
         schema,
     };
+
+    use crate::executor::smart_function::{X_JSTZ_AMOUNT, X_JSTZ_TRANSFER};
 
     pub fn http_body_schema() -> Array {
         schema!(Option<Vec<u8>>).build()
     }
 
-    pub fn http_headers() -> Object {
-        ObjectBuilder::new()
+    fn http_headers(
+        properties: Vec<(impl Into<String>, impl Into<RefOr<Schema>>)>,
+    ) -> Object {
+        let mut builder = ObjectBuilder::new();
+        for (property_name, component) in properties {
+            builder = builder.property(property_name, component);
+        }
+        builder
             .additional_properties(Some(AdditionalProperties::FreeForm(true)))
             .description(Some("Any valid HTTP headers"))
             .build()
+    }
+
+    pub fn request_headers() -> Object {
+        http_headers(vec![(
+            X_JSTZ_TRANSFER,
+            schema!(u64)
+                .minimum(Some(1))
+                .description(Some("Amount in mutez to transfer on request")),
+        )])
+    }
+
+    pub fn response_headers() -> Object {
+        http_headers(vec![(
+            X_JSTZ_AMOUNT,
+            schema!(u64)
+                .minimum(Some(1))
+                .read_only(Some(true))
+                .description(Some("Amount in mutez that was transferred on response")),
+        )])
     }
 }
 
