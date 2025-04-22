@@ -36,7 +36,7 @@ macro_rules! js_impl_scoped_iterator {
             &self,
             scope: &mut v8::HandleScope<'s>,
         ) -> $crate::sys::js::iterator::ScopedIterator<'s, $return_type> {
-            let method_name = v8::String::new(scope, stringify!(kind)).unwrap();
+            let method_name = v8::String::new(scope, stringify!($kind)).unwrap();
             let js_iterator = $crate::sys::js::class::instance_call_method(scope, &self.0, method_name, &[])
                 .try_cast()
                 .unwrap();
