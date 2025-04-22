@@ -17,6 +17,7 @@ use utoipa::ToSchema;
 #[derive(
     Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
 )]
+#[serde(rename_all = "camelCase")]
 pub struct Operation {
     /// The public key of the account which was used to sign the operation
     pub public_key: PublicKey,
@@ -106,6 +107,7 @@ impl Operation {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct DeployFunction {
     /// Smart function code
     pub function_code: ParsedCode,
@@ -117,6 +119,7 @@ pub struct DeployFunction {
 #[schema(description = "Request used to run a smart function. \
     The target smart function is given by the host part of the uri. \
     The rest of the attributes will be handled by the smart function itself.")]
+#[serde(rename_all = "camelCase")]
 pub struct RunFunction {
     /// Smart function URI in the form jstz://{smart_function_address}/rest/of/path
     #[serde(with = "http_serde::uri")]
@@ -163,6 +166,7 @@ impl TryFrom<&Content> for RevealType {
     description = "An operation to reveal an operation with a large payload of type `RevealType`. \
             The root hash is the hash of the SignedOperation and the data is assumed to be available."
 )]
+#[serde(rename_all = "camelCase")]
 pub struct RevealLargePayload {
     /// The root hash of the preimage of the operation used to reveal the operation data.
     #[schema(value_type = String)]
@@ -363,7 +367,7 @@ mod test {
             json!({
                 "_type":"RunFunction",
                 "body":[34,118,97,108,117,101,34,58,49,34],
-                "gas_limit":10000,
+                "gasLimit":10000,
                 "headers":{},
                 "method":"POST",
                 "uri":"jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"
@@ -389,8 +393,8 @@ mod test {
             json,
             json!({
                 "_type":"DeployFunction",
-                "account_credit":100000,
-                "function_code":"export default handler = () => new Response(\"hello world!\");"
+                "accountCredit":100000,
+                "functionCode":"export default handler = () => new Response(\"hello world!\");"
             })
         );
         let decoded = serde_json::from_value::<Content>(json).unwrap();
@@ -521,8 +525,8 @@ mod test {
         // Check the structure without hardcoding the exact serialization of root_hash
         let json_obj = json.as_object().unwrap();
         assert_eq!(json_obj.get("_type").unwrap(), "RevealLargePayload");
-        assert_eq!(json_obj.get("reveal_type").unwrap(), "DeployFunction");
-        assert!(json_obj.contains_key("root_hash"));
+        assert_eq!(json_obj.get("revealType").unwrap(), "DeployFunction");
+        assert!(json_obj.contains_key("rootHash"));
 
         let decoded = serde_json::from_value::<Content>(json).unwrap();
         assert_eq!(reveal_large_payload_operation, decoded);

@@ -28,6 +28,7 @@ use crate::{
 const WITHDRAW_ENTRYPOINT: &str = "withdraw";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
 pub struct FaWithdraw {
     pub amount: Amount,
     pub routing_info: RoutingInfo,
@@ -35,6 +36,7 @@ pub struct FaWithdraw {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
 pub struct RoutingInfo {
     pub receiver: Address,
     pub proxy_l1_contract: Kt1Hash,
@@ -82,6 +84,7 @@ impl TryFrom<FA2_1Ticket> for Ticket {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
 pub struct FaWithdrawReceipt {
     pub source: Address,
     #[serde(flatten)]
