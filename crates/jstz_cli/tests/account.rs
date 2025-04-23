@@ -1,11 +1,13 @@
 #[path = "./utils.rs"]
 mod utils;
 
+use regex::Regex;
 use utils::jstz_cmd;
 
 #[test]
 fn create_account() {
-    let (mut process, _tmp_dir) = jstz_cmd(["account", "create", "foo"], None);
+    let address_pattern = Regex::new(r"tz1\w{33}").unwrap();
+    let (mut process, tmp_dir) = jstz_cmd(["account", "create", "foo"], None);
 
     // empty passphrase
     process.send_line("").unwrap();
@@ -15,6 +17,27 @@ fn create_account() {
     assert!(output.contains("Generated mnemonic:"));
     assert!(output.contains("Please keep the mnemonic and the passphrase safe"));
     assert!(output.contains("User created with address: tz1"));
+    let address1 = address_pattern.captures(&output).unwrap();
+
+    let (mut process, tmp_dir) = jstz_cmd(["account", "create", "foo"], Some(tmp_dir));
+
+    let output = process.exp_eof().unwrap();
+    assert!(output.contains("The account 'foo' already exists."));
+
+    let (mut process, _) =
+        jstz_cmd(["account", "create", "foo", "--force"], Some(tmp_dir));
+
+    // empty passphrase
+    process.send_line("").unwrap();
+
+    let output = process.exp_eof().unwrap();
+    assert!(output.contains("Enter the passphrase for the new account or leave empty"));
+    assert!(output.contains("Generated mnemonic:"));
+    assert!(output.contains("Please keep the mnemonic and the passphrase safe"));
+    assert!(output.contains("User created with address: tz1"));
+    let address2 = address_pattern.captures(&output).unwrap();
+
+    assert_ne!(&address1[0], &address2[0]);
 }
 
 #[test]
