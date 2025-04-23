@@ -21,6 +21,7 @@ pub async fn exec(
     balance: Option<Tez>,
     name: Option<String>,
     network: Option<NetworkName>,
+    force: bool,
 ) -> Result<()> {
     let mut cfg = Config::load().await?;
     // Load sandbox if the selected network is Dev and sandbox is not already loaded
@@ -36,11 +37,11 @@ pub async fn exec(
         styles::command("jstz login")
     ))?;
 
-    // 1. Check if smart function account already exists
+    // 1. Check if the name already exists
     if let Some(name) = &name {
-        if cfg.accounts.contains(name) {
+        if cfg.accounts.contains(name) && !force {
             bail_user_error!(
-                "A user/smart function with the alias '{}' already exists.",
+                "The name '{}' is already used by another smart function or a user account. Please choose another name or specify the `--force` flag to overwrite the name.",
                 name
             );
         }
