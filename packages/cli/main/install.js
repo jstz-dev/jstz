@@ -51,7 +51,7 @@ function makeRequest(url) {
 
 async function downloadBinaryFromGithubRelease(binName) {
   const downloadBuffer = await makeRequest(
-    `https://github.com/jstz-dev/jstz/releases/download/${process.env.npm_package_version}/${binName}`,
+    `https://github.com/huancheng-trili/test-cli/releases/download/${process.env.npm_package_version}/${binName}`,
   );
 
   fs.writeFileSync(FALLBACK_BINARY_PATH, downloadBuffer);

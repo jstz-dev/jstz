@@ -1,11 +1,14 @@
 {
   "name": "@jstz-dev/cli",
-  "version": "0.1.1-alpha.0",
-  "dependencies": {},
+  "version": "0.2.0",
+  "dependencies": {
+    "@jstz-dev/jstzd": "https://gitpkg.vercel.app/jstz-dev/jstz/packages/jstzd?huanchengchang/jstz-482"
+  },
   "scripts": {
     "postinstall": "node install.js"
   },
   "bin": {
-    "jstz": "run.mjs"
+    "jstz": "run.mjs",
+    "jstzd": "run_jstzd.mjs"
   }
 }
