@@ -1,18 +1,19 @@
-use std::collections::hash_map::Entry;
-
-use bip39::{Language, Mnemonic};
-use clap::Subcommand;
-use dialoguer::{Confirm, Input};
-use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_crypto::{keypair_from_mnemonic, public_key_hash::PublicKeyHash};
-use log::{debug, info, warn};
-
 use crate::utils::MUTEZ_PER_TEZ;
 use crate::{
     config::{Account, Config, NetworkName, SmartFunction, User},
     error::{bail_user_error, user_error, Result},
     utils::AddressOrAlias,
 };
+use anyhow::Context;
+use bip39::{Language, Mnemonic};
+use clap::Subcommand;
+use dialoguer::{Confirm, Input};
+use jstz_crypto::hash::Hash;
+use jstz_crypto::keypair_from_secret_key;
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use jstz_crypto::{keypair_from_mnemonic, public_key_hash::PublicKeyHash};
+use log::{debug, info, warn};
+use std::collections::hash_map::Entry;
 
 fn generate_mnemonic() -> String {
     // unwrap is okay here because we are using a fixed value for word count and it's always
@@ -32,6 +33,16 @@ impl User {
             address,
             secret_key: sk,
             public_key: pk,
+        })
+    }
+
+    pub fn from_secret_key(secret_key_str: &str) -> Result<Self> {
+        let (public_key, secret_key) = keypair_from_secret_key(secret_key_str)?;
+        let address = public_key.hash();
+        Ok(Self {
+            public_key,
+            address: PublicKeyHash::from_base58(&address)?,
+            secret_key,
         })
     }
 }
@@ -85,6 +96,39 @@ fn _create_account() -> Result<User> {
     debug!("User created: {:?}", user);
     info!("User created with address: {}", user.address);
     Ok(user)
+}
+
+async fn import_account(alias: String, force: bool) -> Result<()> {
+    let mut cfg = Config::load().await?;
+
+    if cfg.accounts.contains(&alias) && !force {
+        bail_user_error!(
+            "The account '{}' already exists. Please choose another name or specify the `--force` flag to overwrite the account.",
+            alias
+        );
+    }
+
+    let secret_key_str: String = Input::new()
+        .with_prompt("Enter the secret key of your account")
+        .allow_empty(true)
+        .interact()?;
+
+    if secret_key_str.is_empty() {
+        bail_user_error!("Import aborted");
+    }
+
+    // Only from secret keys for now
+    // https://linear.app/tezos/issue/JSTZ-494/figure-out-how-to-align-differences-in-key-derivation
+    let user =
+        User::from_secret_key(&secret_key_str).context("Failed to process secret key")?;
+
+    debug!("User imported: {:?}", user);
+    info!("User {} imported with address: {}", alias, user.address);
+
+    cfg.accounts.insert(alias, user);
+    cfg.save()?;
+
+    Ok(())
 }
 
 async fn delete_account(alias: String) -> Result<()> {
@@ -287,6 +331,14 @@ pub enum Command {
         #[arg(value_name = "ALIAS")]
         alias: String,
     },
+    /// 📥 Imports a user account from a secret key.
+    Import {
+        #[arg(value_name = "ALIAS")]
+        alias: String,
+        /// Overwrites an existing alias.
+        #[arg(short, long)]
+        force: bool,
+    },
     /// ❌ Deletes an account (user or smart function).
     Delete {
         /// User or smart function alias to be deleted.
@@ -334,6 +386,7 @@ pub enum Command {
 pub async fn exec(command: Command) -> Result<()> {
     match command {
         Command::Alias { alias, address } => add_smart_function(alias, address).await,
+        Command::Import { alias, force } => import_account(alias, force).await,
         Command::Create { alias } => create_account(alias).await,
         Command::Delete { alias } => delete_account(alias).await,
         Command::List { long } => list_accounts(long).await,
@@ -344,6 +397,8 @@ pub async fn exec(command: Command) -> Result<()> {
 
 #[cfg(test)]
 mod tests {
+    use jstz_crypto::secret_key::SecretKey;
+
     use crate::config::User;
 
     #[test]
@@ -370,5 +425,12 @@ mod tests {
             user.address.to_string(),
             "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg"
         );
+    }
+
+    #[test]
+    fn secret_key() {
+        let secret_key_str = "edsk4YBTjLtZgLNWKUN95unbAZ6cfq2eXhRveVt4J5oFPYHMzadpc8";
+        let s = SecretKey::from_base58(secret_key_str).unwrap();
+        assert_eq!(s.to_base58(), secret_key_str);
     }
 }
