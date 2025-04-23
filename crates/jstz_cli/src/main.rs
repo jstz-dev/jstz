@@ -41,6 +41,9 @@ enum Command {
         /// Use `dev` for the local sandbox.
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
+        /// Overwrites an existing function name. Effective only when `name` is specified.
+        #[arg(short, long)]
+        force: bool,
     },
     /// 🏃 Send a request to a transfer XTZ
     Transfer {
@@ -158,7 +161,8 @@ async fn exec(command: Command) -> Result<()> {
             balance,
             name,
             network,
-        } => deploy::exec(code, balance, name, network).await,
+            force,
+        } => deploy::exec(code, balance, name, network, force).await,
         Command::Transfer {
             amount,
             to,
