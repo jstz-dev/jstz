@@ -1,0 +1,11 @@
+{
+  "name": "@jstz-dev/jstzd",
+  "version": "0.2.0",
+  "dependencies": {},
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "bin": {
+    "jstzd": "run.mjs"
+  }
+}
