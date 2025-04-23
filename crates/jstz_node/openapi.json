@@ -636,15 +636,15 @@
       "DeployFunction": {
         "type": "object",
         "required": [
-          "function_code",
-          "account_credit"
+          "functionCode",
+          "accountCredit"
         ],
         "properties": {
-          "account_credit": {
+          "accountCredit": {
             "$ref": "#/components/schemas/u64",
             "description": "Amount of tez to credit to the smart function account, debited from the sender"
           },
-          "function_code": {
+          "functionCode": {
             "$ref": "#/components/schemas/ParsedCode",
             "description": "Smart function code"
           }
@@ -665,13 +665,13 @@
         "type": "object",
         "required": [
           "account",
-          "updated_balance"
+          "updatedBalance"
         ],
         "properties": {
           "account": {
             "$ref": "#/components/schemas/Address"
           },
-          "updated_balance": {
+          "updatedBalance": {
             "type": "integer",
             "format": "int64",
             "minimum": 0
@@ -682,13 +682,13 @@
         "type": "object",
         "required": [
           "receiver",
-          "ticket_balance"
+          "ticketBalance"
         ],
         "properties": {
           "receiver": {
             "$ref": "#/components/schemas/Address"
           },
-          "run_function": {
+          "runFunction": {
             "oneOf": [
               {
                 "type": "null"
@@ -698,29 +698,54 @@
               }
             ]
           },
-          "ticket_balance": {
+          "ticketBalance": {
             "$ref": "#/components/schemas/u64"
           }
         }
       },
-      "FaWithdrawReceipt": {
+      "FaWithdraw": {
         "type": "object",
         "required": [
-          "source",
-          "outbox_message_id"
+          "amount",
+          "routingInfo",
+          "ticketInfo"
         ],
         "properties": {
-          "outbox_message_id": {
-            "$ref": "#/components/schemas/String"
+          "amount": {
+            "$ref": "#/components/schemas/u64"
           },
-          "source": {
-            "$ref": "#/components/schemas/Address"
+          "routingInfo": {
+            "$ref": "#/components/schemas/RoutingInfo"
+          },
+          "ticketInfo": {
+            "$ref": "#/components/schemas/TicketInfo"
           }
         }
       },
-      "KvValue": {
+      "FaWithdrawReceipt": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FaWithdraw"
+          },
+          {
+            "type": "object",
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "$ref": "#/components/schemas/Address"
+              }
+            }
+          }
+        ]
+      },
+      "Kt1Hash": {
         "type": "string",
-        "format": "json",
+        "title": "KT1",
+        "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
+      },
+      "KvValue": {
         "description": "A value stored in the Key-Value store. Always valid JSON."
       },
       "LogLevel": {
@@ -736,7 +761,7 @@
         "type": "object",
         "required": [
           "address",
-          "request_id",
+          "requestId",
           "level",
           "text"
         ],
@@ -747,7 +772,7 @@
           "level": {
             "$ref": "#/components/schemas/LogLevel"
           },
-          "request_id": {
+          "requestId": {
             "type": "string"
           },
           "text": {
@@ -763,7 +788,7 @@
       "Operation": {
         "type": "object",
         "required": [
-          "public_key",
+          "publicKey",
           "nonce",
           "content"
         ],
@@ -776,7 +801,7 @@
             "$ref": "#/components/schemas/Nonce",
             "description": "Nonce is used to avoid replay attacks."
           },
-          "public_key": {
+          "publicKey": {
             "$ref": "#/components/schemas/PublicKey",
             "description": "The public key of the account which was used to sign the operation"
           }
@@ -1005,23 +1030,38 @@
         "type": "object",
         "description": "An operation to reveal an operation with a large payload of type `RevealType`. The root hash is the hash of the SignedOperation and the data is assumed to be available.",
         "required": [
-          "root_hash",
-          "reveal_type",
-          "original_op_hash"
+          "rootHash",
+          "revealType",
+          "originalOpHash"
         ],
         "properties": {
-          "original_op_hash": {
+          "originalOpHash": {
             "$ref": "#/components/schemas/Blake2b",
             "description": "The original operation hash that is being revealed."
           },
-          "reveal_type": {
+          "revealType": {
             "type": "string",
             "description": "The type of operation being revealed.",
             "example": "DeployFunction"
           },
-          "root_hash": {
+          "rootHash": {
             "type": "string",
             "description": "The root hash of the preimage of the operation used to reveal the operation data."
+          }
+        }
+      },
+      "RoutingInfo": {
+        "type": "object",
+        "required": [
+          "receiver",
+          "proxyL1Contract"
+        ],
+        "properties": {
+          "proxyL1Contract": {
+            "$ref": "#/components/schemas/Kt1Hash"
+          },
+          "receiver": {
+            "$ref": "#/components/schemas/Address"
           }
         }
       },
@@ -1033,7 +1073,7 @@
           "method",
           "headers",
           "body",
-          "gas_limit"
+          "gasLimit"
         ],
         "properties": {
           "body": {
@@ -1047,7 +1087,7 @@
               "minimum": 0
             }
           },
-          "gas_limit": {
+          "gasLimit": {
             "type": "integer",
             "description": "Maximum amount of gas that is allowed for the execution of this operation",
             "minimum": 0
@@ -1055,6 +1095,14 @@
           "headers": {
             "type": "object",
             "description": "Any valid HTTP headers",
+            "properties": {
+              "X-JSTZ-TRANSFER": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Amount in mutez to transfer on request",
+                "minimum": 1
+              }
+            },
             "additionalProperties": true
           },
           "method": {
@@ -1082,7 +1130,7 @@
         "type": "object",
         "required": [
           "body",
-          "status_code",
+          "statusCode",
           "headers"
         ],
         "properties": {
@@ -1100,9 +1148,18 @@
           "headers": {
             "type": "object",
             "description": "Any valid HTTP headers",
+            "properties": {
+              "X-JSTZ-AMOUNT": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Amount in mutez that was transferred on response",
+                "readOnly": true,
+                "minimum": 1
+              }
+            },
             "additionalProperties": true
           },
-          "status_code": {
+          "statusCode": {
             "type": "integer",
             "description": "Valid status code",
             "minimum": 0
@@ -1148,13 +1205,13 @@
         "required": [
           "amount",
           "nonce",
-          "function_code"
+          "functionCode"
         ],
         "properties": {
           "amount": {
             "$ref": "#/components/schemas/u64"
           },
-          "function_code": {
+          "functionCode": {
             "$ref": "#/components/schemas/ParsedCode"
           },
           "nonce": {
@@ -1163,12 +1220,38 @@
         }
       },
       "SmartFunctionHash": {
-        "type": "string",
-        "title": "KT1",
-        "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
+        "$ref": "#/components/schemas/Kt1Hash"
       },
       "String": {
         "type": "string"
+      },
+      "TicketInfo": {
+        "type": "object",
+        "required": [
+          "id",
+          "ticketer"
+        ],
+        "properties": {
+          "content": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "ticketer": {
+            "$ref": "#/components/schemas/Kt1Hash"
+          }
+        }
       },
       "UserAccount": {
         "type": "object",

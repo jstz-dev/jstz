@@ -12,7 +12,7 @@ pub fn try_parse_contract(contract: &Contract) -> Result<Address> {
             Ok(Address::User(PublicKeyHash::Tz1(tz1.clone().into())))
         }
         Contract::Originated(contract_kt1_hash) => Ok(Address::SmartFunction(
-            SmartFunctionHash(contract_kt1_hash.clone()),
+            SmartFunctionHash(contract_kt1_hash.clone().into()),
         )),
         _ => Err(jstz_proto::Error::InvalidAddress),
     }

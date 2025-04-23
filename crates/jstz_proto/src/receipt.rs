@@ -55,6 +55,7 @@ pub struct DeployFunctionReceipt {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+#[serde(rename_all = "camelCase")]
 pub struct RunFunctionReceipt {
     #[schema(schema_with = crate::operation::openapi::http_body_schema)]
     pub body: HttpBody,
@@ -64,11 +65,12 @@ pub struct RunFunctionReceipt {
     pub status_code: StatusCode,
     /// Any valid HTTP headers
     #[serde(with = "http_serde::header_map")]
-    #[schema(schema_with = crate::operation::openapi::http_headers)]
+    #[schema(schema_with = crate::operation::openapi::response_headers)]
     pub headers: HeaderMap,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
 pub struct DepositReceipt {
     pub account: Address,
     pub updated_balance: u64,

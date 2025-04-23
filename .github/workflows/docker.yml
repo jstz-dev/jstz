@@ -43,7 +43,7 @@ jobs:
       - id: run
         run: |
           input_tag=${{ inputs.octez-tag }}
-          octez_tag=${input_tag:-"master_d21359af_20241220171048"}
+          octez_tag=${input_tag:-"octez-v22.0"}
           echo "OCTEZ_TAG=${octez_tag}" >> ${GITHUB_OUTPUT}
   build-kernel:
     name: Build (Kernel)

@@ -5,9 +5,9 @@ use jstz_core::{
     host::HostRuntime,
     kv::{outbox::OutboxMessage, Transaction},
 };
+use jstz_crypto::smart_function_hash::Kt1Hash;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::{
     michelson::{
         ticket::{FA2_1Ticket, TicketHash},
@@ -27,30 +27,33 @@ use crate::{
 
 const WITHDRAW_ENTRYPOINT: &str = "withdraw";
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
 pub struct FaWithdraw {
     pub amount: Amount,
     pub routing_info: RoutingInfo,
     pub ticket_info: TicketInfo,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
 pub struct RoutingInfo {
     pub receiver: Address,
-    pub proxy_l1_contract: ContractKt1Hash,
+    pub proxy_l1_contract: Kt1Hash,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema, Encode, Decode)]
 pub struct TicketInfo {
     pub id: u32,
     pub content: Option<Vec<u8>>,
-    pub ticketer: ContractKt1Hash,
+    #[bincode(with_serde)]
+    pub ticketer: Kt1Hash,
 }
 
 impl TicketInfo {
     pub(super) fn to_ticket(&self, amount: Amount) -> Result<Ticket> {
         FA2_1Ticket::new(
-            Contract::Originated(self.ticketer.clone()),
+            Contract::Originated(self.ticketer.clone().into()),
             MichelsonPair(
                 self.id.into(),
                 MichelsonOption(self.content.clone().map(MichelsonBytes)),
@@ -80,12 +83,12 @@ impl TryFrom<FA2_1Ticket> for Ticket {
     }
 }
 
-type OutboxMessageId = String;
-
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
 pub struct FaWithdrawReceipt {
     pub source: Address,
-    pub outbox_message_id: OutboxMessageId,
+    #[serde(flatten)]
+    pub withdrawal: FaWithdraw,
 }
 
 impl FaWithdrawReceipt {
@@ -105,7 +108,7 @@ fn create_fa_withdrawal_message(
     ticket: FA2_1Ticket,
 ) -> Result<OutboxMessage> {
     let receiver_pkh = routing_info.receiver.to_base58();
-    let destination = Contract::Originated(routing_info.proxy_l1_contract.clone());
+    let destination = Contract::Originated(routing_info.proxy_l1_contract.clone().into());
     let message = OutboxMessage::new_withdrawal_message(
         &Contract::try_from(receiver_pkh).unwrap(),
         &destination,
@@ -125,13 +128,13 @@ fn withdraw_from_ticket_owner(
     routing_info: &RoutingInfo,
     amount: Amount,
     ticket: Ticket,
-) -> Result<OutboxMessageId> {
+) -> Result<()> {
     TicketTable::sub(rt, tx, ticket_owner, &ticket.hash, amount)?;
     let message = create_fa_withdrawal_message(routing_info, ticket.value)?;
     tx.queue_outbox_message(rt, message)?;
     // TODO: https://linear.app/tezos/issue/JSTZ-113/implement-outbox-message-id
     // Implement outbox message id
-    Ok("".to_string())
+    Ok(())
 }
 
 impl FaWithdraw {
@@ -156,13 +159,12 @@ impl FaWithdraw {
             amount,
             routing_info,
             ticket_info,
-        } = self;
-        let ticket = ticket_info.to_ticket(amount)?;
-        let outbox_message_id =
-            withdraw_from_ticket_owner(rt, tx, source, &routing_info, amount, ticket)?;
+        } = &self;
+        let ticket = ticket_info.to_ticket(*amount)?;
+        withdraw_from_ticket_owner(rt, tx, source, routing_info, *amount, ticket)?;
         Ok(FaWithdrawReceipt {
             source: source.clone().into(),
-            outbox_message_id,
+            withdrawal: self,
         })
     }
 
@@ -206,11 +208,11 @@ mod test {
         let ticket_info = TicketInfo {
             id: 1234,
             content: Some(b"random ticket content".to_vec()),
-            ticketer: jstz_mock::kt1_account1(),
+            ticketer: jstz_mock::kt1_account1().into(),
         };
         let routing_info = RoutingInfo {
             receiver: Address::User(jstz_mock::account2()),
-            proxy_l1_contract: jstz_mock::kt1_account1(),
+            proxy_l1_contract: jstz_mock::kt1_account1().into(),
         };
         FaWithdraw {
             amount: 10,
@@ -243,13 +245,14 @@ mod test {
 
         tx.begin();
         let fa_withdrawal_receipt_content = fa_withdrawal
+            .clone()
             .execute(&mut rt, &mut tx, &source, 100)
             .expect("Should succeed");
         tx.commit(&mut rt).unwrap();
         assert_eq!(
             FaWithdrawReceipt {
                 source,
-                outbox_message_id: "".to_string() // outbox message not implemented yet
+                withdrawal: fa_withdrawal
             },
             fa_withdrawal_receipt_content,
         );
@@ -275,7 +278,7 @@ mod test {
                     vec![OutboxMessageTransaction {
                         parameters,
                         destination: Contract::Originated(
-                            routing_info.clone().proxy_l1_contract
+                            routing_info.clone().proxy_l1_contract.into()
                         ),
                         entrypoint: Entrypoint::try_from(WITHDRAW_ENTRYPOINT.to_string())
                             .unwrap(),
@@ -322,11 +325,11 @@ mod test {
         let ticket_info = TicketInfo {
             id: 1234,
             content: Some(b"random ticket content".to_vec()),
-            ticketer: jstz_mock::kt1_account1(),
+            ticketer: jstz_mock::kt1_account1().into(),
         };
         let routing_info = RoutingInfo {
             receiver: Address::User(jstz_mock::account2()),
-            proxy_l1_contract: jstz_mock::kt1_account1(),
+            proxy_l1_contract: jstz_mock::kt1_account1().into(),
         };
         let fa_withdrawal = FaWithdraw {
             amount: 0,

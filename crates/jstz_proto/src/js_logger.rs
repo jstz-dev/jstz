@@ -14,6 +14,7 @@ pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
 pub const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG] ";
 
 #[derive(Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 pub struct LogRecord {
     pub address: SmartFunctionHash,
     pub request_id: String,
