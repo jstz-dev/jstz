@@ -25,7 +25,7 @@ impl FromStr for BakerBinaryPath {
         Ok(match s {
             #[cfg(not(feature = "disable-alpha"))]
             "octez-baker-alpha" => BakerBinaryPath::Env(Protocol::Alpha),
-            "octez-baker-PsParisC" => BakerBinaryPath::Env(Protocol::ParisC),
+            "octez-baker-PsRiotum" => BakerBinaryPath::Env(Protocol::Rio),
             "octez-baker-PsQuebec" => BakerBinaryPath::Env(Protocol::Quebec),
             _ => BakerBinaryPath::Custom(PathBuf::from_str(s)?),
         })
@@ -37,8 +37,8 @@ impl Display for BakerBinaryPath {
         match self {
             #[cfg(not(feature = "disable-alpha"))]
             BakerBinaryPath::Env(Protocol::Alpha) => write!(f, "octez-baker-alpha"),
-            BakerBinaryPath::Env(Protocol::ParisC) => {
-                write!(f, "octez-baker-PsParisC")
+            BakerBinaryPath::Env(Protocol::Rio) => {
+                write!(f, "octez-baker-PsRiotum")
             }
             BakerBinaryPath::Env(Protocol::Quebec) => {
                 write!(f, "octez-baker-PsQuebec")
@@ -189,8 +189,8 @@ mod test {
         );
 
         assert_eq!(
-            serde_json::to_string(&BakerBinaryPath::Env(Protocol::ParisC)).unwrap(),
-            "\"octez-baker-PsParisC\""
+            serde_json::to_string(&BakerBinaryPath::Env(Protocol::Rio)).unwrap(),
+            "\"octez-baker-PsRiotum\""
         );
 
         assert_eq!(
@@ -209,7 +209,7 @@ mod test {
             Endpoint::try_from(Uri::from_static("http://localhost:8732")).unwrap();
         let log_file = NamedTempFile::new().unwrap().into_temp_path();
         let config = OctezBakerConfigBuilder::new()
-            .set_binary_path(BakerBinaryPath::Env(Protocol::ParisC))
+            .set_binary_path(BakerBinaryPath::Env(Protocol::Rio))
             .set_octez_client_base_dir(base_dir.path().to_str().unwrap())
             .set_octez_node_endpoint(&endpoint)
             .set_log_file(log_file.to_path_buf().as_path())
@@ -220,7 +220,7 @@ mod test {
             serde_json::json!({
                 "octez_client_base_dir": base_dir.path().to_string_lossy(),
                 "octez_node_endpoint": "http://localhost:8732",
-                "binary_path": "octez-baker-PsParisC",
+                "binary_path": "octez-baker-PsRiotum",
                 "log_file": log_file.to_string_lossy()
             })
         )
@@ -234,8 +234,8 @@ mod test {
             BakerBinaryPath::Env(Protocol::Alpha)
         );
         assert_eq!(
-            BakerBinaryPath::from_str("octez-baker-PsParisC").unwrap(),
-            BakerBinaryPath::Env(Protocol::ParisC)
+            BakerBinaryPath::from_str("octez-baker-PsRiotum").unwrap(),
+            BakerBinaryPath::Env(Protocol::Rio)
         );
         assert_eq!(
             BakerBinaryPath::from_str("/foo/bar").unwrap(),
@@ -251,8 +251,8 @@ mod test {
             BakerBinaryPath::Env(Protocol::Alpha)
         );
         assert_eq!(
-            serde_json::from_str::<BakerBinaryPath>("\"octez-baker-PsParisC\"").unwrap(),
-            BakerBinaryPath::Env(Protocol::ParisC)
+            serde_json::from_str::<BakerBinaryPath>("\"octez-baker-PsRiotum\"").unwrap(),
+            BakerBinaryPath::Env(Protocol::Rio)
         );
         assert_eq!(
             serde_json::from_str::<BakerBinaryPath>("\"/foo/bar\"").unwrap(),
