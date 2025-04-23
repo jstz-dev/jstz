@@ -64,15 +64,9 @@ async fn add_smart_function(alias: String, address: SmartFunctionHash) -> Result
     Ok(())
 }
 
-async fn create_account(alias: String) -> Result<()> {
+async fn create_account(alias: String, force: bool) -> Result<()> {
     let mut cfg = Config::load().await?;
-
-    if cfg.accounts.contains(&alias) {
-        bail_user_error!(
-            "The account '{}' already exists. Please choose another name.",
-            alias
-        );
-    }
+    check_alias_uniqueness(&cfg, &alias, force)?;
 
     let user = _create_account()?;
 
@@ -98,15 +92,19 @@ fn _create_account() -> Result<User> {
     Ok(user)
 }
 
-async fn import_account(alias: String, force: bool) -> Result<()> {
-    let mut cfg = Config::load().await?;
-
-    if cfg.accounts.contains(&alias) && !force {
+fn check_alias_uniqueness(cfg: &Config, alias: &str, force: bool) -> Result<()> {
+    if cfg.accounts.contains(alias) && !force {
         bail_user_error!(
             "The account '{}' already exists. Please choose another name or specify the `--force` flag to overwrite the account.",
             alias
         );
     }
+    Ok(())
+}
+
+async fn import_account(alias: String, force: bool) -> Result<()> {
+    let mut cfg = Config::load().await?;
+    check_alias_uniqueness(&cfg, &alias, force)?;
 
     let secret_key_str: String = Input::new()
         .with_prompt("Enter the secret key of your account")
@@ -330,6 +328,9 @@ pub enum Command {
         /// User alias.
         #[arg(value_name = "ALIAS")]
         alias: String,
+        /// Overwrites an existing alias.
+        #[arg(short, long)]
+        force: bool,
     },
     /// 📥 Imports a user account from a secret key.
     Import {
@@ -387,7 +388,7 @@ pub async fn exec(command: Command) -> Result<()> {
     match command {
         Command::Alias { alias, address } => add_smart_function(alias, address).await,
         Command::Import { alias, force } => import_account(alias, force).await,
-        Command::Create { alias } => create_account(alias).await,
+        Command::Create { alias, force } => create_account(alias, force).await,
         Command::Delete { alias } => delete_account(alias).await,
         Command::List { long } => list_accounts(long).await,
         Command::Code { account, network } => get_code(account, network).await,
