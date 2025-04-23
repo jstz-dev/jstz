@@ -435,7 +435,7 @@ mod tests {
     fn deserialize_config_protocol() {
         let config = serde_json::from_value::<Config>(serde_json::json!({
             "protocol": {
-                "protocol": "parisC",
+                "protocol": "rio",
                 "constants": "sandbox",
                 "bootstrap_accounts": [["edpktkhoky4f5kqm2EVwYrMBq5rY9sLYdpFgXixQDWifuBHjhuVuNN", "1"]],
                 "bootstrap_contracts": [{"amount":"1", "script": "dummy-script-no-hash"}],
@@ -450,7 +450,7 @@ mod tests {
         .unwrap();
         let mut expected = ProtocolParameterBuilder::new();
         expected
-            .set_protocol(Protocol::ParisC)
+            .set_protocol(Protocol::Rio)
             .set_constants(ProtocolConstants::Sandbox)
             .set_bootstrap_accounts([BootstrapAccount::new(
                 "edpktkhoky4f5kqm2EVwYrMBq5rY9sLYdpFgXixQDWifuBHjhuVuNN",
@@ -495,7 +495,7 @@ mod tests {
             .unwrap();
         let baker_builder = OctezBakerConfigBuilder::new().set_log_file(&log_file);
         let protocol_params = ProtocolParameterBuilder::new()
-            .set_protocol(Protocol::ParisC)
+            .set_protocol(Protocol::Rio)
             .set_bootstrap_accounts([BootstrapAccount::new(
                 ACCOUNT_PUBLIC_KEY,
                 40_000_000_000,
@@ -516,7 +516,7 @@ mod tests {
         assert_eq!(
             baker_config,
             OctezBakerConfigBuilder::new()
-                .set_binary_path(BakerBinaryPath::Env(Protocol::ParisC))
+                .set_binary_path(BakerBinaryPath::Env(Protocol::Rio))
                 .set_octez_client_base_dir(tmp_dir.path().to_str().unwrap())
                 .set_octez_node_endpoint(&Endpoint::localhost(5678))
                 .set_log_file(&log_file)
