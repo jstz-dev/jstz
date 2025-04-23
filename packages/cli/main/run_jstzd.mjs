@@ -23,7 +23,7 @@ function getBinaryPath() {
   try {
     // Resolving will fail if the optionalDependency was not installed
     return require.resolve(
-      `${BINARY_DISTRIBUTION_PACKAGE[PLATFORM_ARCH_KEY]}/bin/${BINARY_NAME}`,
+      `jstzd/${BINARY_NAME}`,
     );
   } catch {
     return path.join(__dirname, BINARY_NAME);
