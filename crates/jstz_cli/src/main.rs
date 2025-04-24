@@ -45,7 +45,7 @@ enum Command {
         #[arg(short, long)]
         force: bool,
     },
-    /// 🏃 Send a request to a transfer XTZ
+    /// 💵 Send a request to a transfer XTZ
     Transfer {
         /// The amount in XTZ to transfer.
         #[arg(value_name = "AMOUNT")]
@@ -68,7 +68,7 @@ enum Command {
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
-    /// 🏃 Send a request to a deployed smart function
+    /// 🏃 Send a request to run a deployed smart function
     Run {
         /// The URL containing the functions's address or alias.
         #[arg(value_name = "URL")]
