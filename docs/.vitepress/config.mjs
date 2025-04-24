@@ -28,7 +28,7 @@ export default defineConfig({
           { text: "Installation", link: "/installation" },
           { text: "Quick Start", link: "/quick_start" },
           { text: "CLI", link: "/cli" },
-          { text: "Sandbox", link: "/jstzd" },
+          { text: "Sandbox", link: "/sandbox" },
         ],
       },
 
