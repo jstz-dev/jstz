@@ -19,6 +19,7 @@ pub enum Error {
     InsufficientFunds,
     InvalidNonce,
     InvalidAddress,
+    InvalidScheme,
     RefererShouldNotBeSet,
     GasLimitExceeded,
     UnsupportedPath,
@@ -128,6 +129,9 @@ impl From<Error> for JsError {
                 .into(),
             Error::InvalidInjector => {
                 JsNativeError::eval().with_message("InvalidInjector").into()
+            }
+            Error::InvalidScheme => {
+                JsNativeError::eval().with_message("InvalidScheme").into()
             }
         }
     }
