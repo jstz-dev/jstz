@@ -1,9 +1,26 @@
+#![allow(unused)]
+// Use module path attribute to import this module into integration test
+// files
+//
+// ```
+// #[path = "./utils.rs"]
+// mod utils
+// ```
+
+use derive_more::{Deref, DerefMut};
 use rexpect::session::{spawn_command, PtySession};
 use std::process::Command;
 use tempfile::TempDir;
 
-#[allow(unused)]
-pub fn jstz_cmd<'a, T>(args: T, home_dir: Option<TempDir>) -> (PtySession, TempDir)
+#[derive(Deref, DerefMut)]
+pub struct ProcessSession {
+    #[deref]
+    #[deref_mut]
+    process: PtySession,
+    pub tmp: TempDir,
+}
+
+pub fn jstz_cmd<'a, T>(args: T, home_dir: Option<TempDir>) -> ProcessSession
 where
     T: IntoIterator<Item = &'a str>,
 {
@@ -17,5 +34,16 @@ where
     )
     .args(args);
     let process = spawn_command(cmd, Some(30000)).unwrap();
-    (process, tmp_dir)
+    ProcessSession {
+        process,
+        tmp: tmp_dir,
+    }
+}
+
+/// Runs `jstz <command>`
+///
+/// Config will be created in a temp directory and returned if not provided.
+pub fn jstz(command: &str, config_dir: Option<TempDir>) -> ProcessSession {
+    let args = command.split(" ");
+    jstz_cmd(args, config_dir)
 }
