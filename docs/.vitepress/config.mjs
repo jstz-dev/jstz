@@ -36,6 +36,7 @@ export default defineConfig({
         text: "Architecture",
         items: [
           { text: "Overview", link: "/architecture/overview" },
+          { text: "Components", link: "/architecture/components" },
           { text: "Asset bridge", link: "/architecture/bridge" },
           { text: "Accounts", link: "/architecture/accounts" },
         ],

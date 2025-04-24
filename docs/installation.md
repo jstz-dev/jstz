@@ -1,12 +1,15 @@
-# 📦 Installing `jstz`
+# 📦 Installing Jstz
 
-## Download and Install
+Jstz has several [components](/architecture/components), but the primary tool that you need to develop on Jstz is the [Jstz CLI](/cli), which is available as the package [`@jstz-dev/cli`](https://www.npmjs.com/package/@jstz-dev/cli).
+It allows you to start the Jstz sandbox, deploy smart functions to it, and interact with them.
+
+Follow these instructions to install the Jstz CLI:
 
 ::: danger
 ⚠️ `jstz` is only available on Unix-based systems. ⚠️
 :::
 
-Ensure `docker` is installed on your system. If not, please follow [this guide](https://docs.docker.com/get-docker/).
+Ensure that `docker` is installed on your system. If not, please follow [this guide](https://docs.docker.com/get-docker/).
 Download and install `jstz` via NPM with this command:
 
 ```sh
@@ -24,7 +27,7 @@ You are now ready to [write your first smart function](./quick_start.md) 🚀.
 
 ## Building from Source
 
-Below are instruction on how to build `jstz` from source. Additionally, this section details how to install all the prerequisites needed to build `jstz` from sources.
+Below are instructions on how to build `jstz` from source. Additionally, this section covers how to install all the prerequisites needed to build `jstz` from sources.
 
 ### Cloning the Repository
 
@@ -34,7 +37,7 @@ git clone https://github.com/jstz-dev/jstz.git
 
 ### Prerequisites 📋
 
-::: tip  
+::: tip
 Both `jstz` and Octez are packaged with Nix, a package manager and system configuration tool that makes building from sources easy! See the [Nix docs](https://nixos.org/download.html) for instructions for your system. Additionally, ensure [Nix flakes are enabled](https://nixos.wiki/wiki/Flakes#Enable_flakes).
 :::
 
