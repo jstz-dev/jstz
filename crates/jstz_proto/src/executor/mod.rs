@@ -31,6 +31,9 @@ fn execute_operation_inner(
             Ok((op_hash, receipt::ReceiptContent::DeployFunction(result)))
         }
         operation::Content::RunFunction(run) => {
+            if run.uri.scheme_str() != Some("jstz") {
+                return Err(Error::InvalidScheme);
+            }
             let result = match run.uri.host() {
                 Some(JSTZ_HOST) => {
                     smart_function::jstz_run::execute(hrt, tx, ticketer, &source, run)?
@@ -279,5 +282,34 @@ mod tests {
             matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidInjector"))
         );
         assert_eq!(receipt.hash().to_string(), deploy_op.hash().to_string());
+    }
+
+    #[test]
+    fn run_function_with_invalid_scheme_fails() {
+        let mut host = MockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+        let (_, pk1, sk1) = bootstrap1();
+        let run_op = make_signed_op(
+            Content::RunFunction(RunFunction {
+                uri: Uri::try_from(
+                    "tezos://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
+                )
+                .unwrap(),
+                method: Method::GET,
+                headers: HeaderMap::new(),
+                body: None,
+                gas_limit: 10000,
+            }),
+            pk1.clone(),
+            sk1,
+        );
+        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
+
+        let receipt = execute_operation(&mut host, &mut tx, run_op, &ticketer, &pk1);
+
+        assert!(
+            matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidScheme"))
+        );
     }
 }
