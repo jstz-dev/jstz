@@ -7,7 +7,7 @@ use utils::jstz_cmd;
 #[test]
 fn create_account() {
     let address_pattern = Regex::new(r"tz1\w{33}").unwrap();
-    let (mut process, tmp_dir) = jstz_cmd(["account", "create", "foo"], None);
+    let mut process = jstz_cmd(["account", "create", "foo"], None);
 
     // empty passphrase
     process.send_line("").unwrap();
@@ -19,13 +19,13 @@ fn create_account() {
     assert!(output.contains("User created with address: tz1"));
     let address1 = address_pattern.captures(&output).unwrap();
 
-    let (mut process, tmp_dir) = jstz_cmd(["account", "create", "foo"], Some(tmp_dir));
+    let mut process = jstz_cmd(["account", "create", "foo"], Some(process.tmp));
 
     let output = process.exp_eof().unwrap();
     assert!(output.contains("The account 'foo' already exists."));
 
-    let (mut process, _) =
-        jstz_cmd(["account", "create", "foo", "--force"], Some(tmp_dir));
+    let mut process =
+        jstz_cmd(["account", "create", "foo", "--force"], Some(process.tmp));
 
     // empty passphrase
     process.send_line("").unwrap();
@@ -42,7 +42,7 @@ fn create_account() {
 
 #[test]
 fn login_new_account() {
-    let (mut process, _tmp_dir) = jstz_cmd(["login", "foo"], None);
+    let mut process = jstz_cmd(["login", "foo"], None);
 
     process.send_line("y").unwrap();
     // empty passphrase
@@ -61,7 +61,7 @@ fn login_new_account() {
 
 #[test]
 fn import_account() {
-    let (mut process, tmp_dir) = jstz_cmd(["account", "import", "foo"], None);
+    let mut process = jstz_cmd(["account", "import", "foo"], None);
 
     process
         .send_line("edsk4YBTjLtZgLNWKUN95unbAZ6cfq2eXhRveVt4J5oFPYHMzadpc8")
@@ -74,14 +74,14 @@ fn import_account() {
     ));
 
     // import to the same alias should fail
-    let (mut process, tmp_dir) = jstz_cmd(["account", "import", "foo"], Some(tmp_dir));
+    let mut process = jstz_cmd(["account", "import", "foo"], Some(process.tmp));
 
     let output = process.exp_eof().unwrap();
     assert!(output.contains("The account 'foo' already exists."));
 
     // import to the same alias with --force should work
-    let (mut process, _) =
-        jstz_cmd(["account", "import", "foo", "--force"], Some(tmp_dir));
+    let mut process =
+        jstz_cmd(["account", "import", "foo", "--force"], Some(process.tmp));
 
     process
         .send_line("edsk3a3gq6ocr51rGDqqSb8sxxV46v77GZYmhyKyjqWjckhVTJXYCf")
@@ -96,7 +96,7 @@ fn import_account() {
 
 #[test]
 fn import_account_empty_input() {
-    let (mut process, _) = jstz_cmd(["account", "import", "foo"], None);
+    let mut process = jstz_cmd(["account", "import", "foo"], None);
 
     process.send_line("").unwrap();
 
@@ -106,7 +106,7 @@ fn import_account_empty_input() {
 
 #[test]
 fn import_account_bad_key() {
-    let (mut process, _) = jstz_cmd(["account", "import", "foo"], None);
+    let mut process = jstz_cmd(["account", "import", "foo"], None);
 
     process.send_line("aaa").unwrap();
 
