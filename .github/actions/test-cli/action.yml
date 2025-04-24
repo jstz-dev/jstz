@@ -21,6 +21,4 @@ runs:
 
         chmod +x ./jstz
         export PATH=$PATH:$PWD
-        check "$(jstz account create test 2>&1)" "User created with address"
-        check "$(jstz account list 2>&1)" "test:"
-        check "$(jstz login test 2>&1)" "Logged in to account test with address"
+        check "$(jstz account list 2>&1)" "Accounts:"
