@@ -185,7 +185,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     <details>
     <summary>Output</summary>
     <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
-    <code style="color: #FFF;">$ jstz sandbox start
+    <code>$ jstz sandbox start
 
                __________
                \  jstz  /
@@ -228,7 +228,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     <details>
     <summary>Output</summary>
     <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
-    <code style="color: #FFF;">$ npm run build
+    <code>$ npm run build
     > @jstz-dev/get-tez@0.0.0 build
     > esbuild index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js
 
