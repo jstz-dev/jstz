@@ -3,7 +3,7 @@ mod ext;
 pub mod runtime;
 pub mod sys;
 
-pub use runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};
+pub use runtime::{JstzRuntime, JstzRuntimeOptions, ProtocolContext};
 
 #[cfg(test)]
 mod test_utils {
@@ -93,7 +93,7 @@ mod test_utils {
                 let module_loader = deno_core::StaticModuleLoader::with($specifier.clone(), $code);
             )?
             #[allow(unused)]
-            let protocol  = Some($crate::Protocol::new(&mut init_host, &mut init_tx, init_addr.clone()));
+            let protocol  = Some($crate::ProtocolContext::new(&mut init_host, &mut init_tx, init_addr.clone()));
             #[allow(unused)]
             let mut $runtime = $crate::JstzRuntime::new($crate::JstzRuntimeOptions {
                 protocol,
