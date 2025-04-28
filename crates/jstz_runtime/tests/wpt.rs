@@ -9,7 +9,7 @@ use deno_error::JsErrorBox;
 use derive_more::{From, Into};
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, Protocol};
+use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, ProtocolContext};
 use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReportTest, WptServe,
     WptSubtest, WptSubtestStatus, WptTestStatus,
@@ -253,7 +253,7 @@ fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntim
         .push(test_harness_api::init_ops_and_esm());
 
     let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
-        protocol: Some(Protocol::new(host, tx, address)),
+        protocol: Some(ProtocolContext::new(host, tx, address)),
         extensions: vec![test_harness_api::init_ops_and_esm()],
         ..Default::default()
     });

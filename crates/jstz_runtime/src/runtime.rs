@@ -43,7 +43,7 @@ pub struct JstzRuntime {
 }
 
 pub struct JstzRuntimeOptions {
-    pub protocol: Option<Protocol>,
+    pub protocol: Option<ProtocolContext>,
     /// Additional extensions to be registered on initialization.
     pub extensions: Vec<Extension>,
     /// Implementation of the `ModuleLoader` which will be
@@ -207,13 +207,13 @@ impl DerefMut for JstzRuntime {
     }
 }
 
-pub struct Protocol {
+pub struct ProtocolContext {
     pub host: JsHostRuntime<'static>,
     pub tx: &'static mut Transaction,
     pub kv: Kv,
 }
 
-impl Protocol {
+impl ProtocolContext {
     pub fn new(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
@@ -228,7 +228,7 @@ impl Protocol {
         let tx = unsafe {
             std::mem::transmute::<&mut Transaction, &'static mut Transaction>(tx)
         };
-        Protocol {
+        ProtocolContext {
             host,
             tx,
             kv: Kv::new(address.to_base58()),

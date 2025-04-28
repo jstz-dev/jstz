@@ -1,7 +1,7 @@
 use deno_core::*;
 use kv::KvValue;
 
-use crate::runtime::Protocol;
+use crate::runtime::ProtocolContext;
 
 pub mod kv;
 
@@ -12,7 +12,7 @@ impl Kv {
     #[static_method]
     #[serde]
     fn get(op_state: &mut OpState, #[string] key: &str) -> Option<serde_json::Value> {
-        let Protocol { host, tx, kv } = op_state.borrow_mut::<Protocol>();
+        let ProtocolContext { host, tx, kv } = op_state.borrow_mut::<ProtocolContext>();
         kv.get(host, tx, key).map(|v| v.0.clone())
     }
 
@@ -22,21 +22,24 @@ impl Kv {
         #[string] key: &str,
         #[serde] value: serde_json::Value,
     ) -> bool {
-        let Protocol { tx, kv, .. } = &mut op_state.borrow_mut::<Protocol>();
+        let ProtocolContext { tx, kv, .. } =
+            &mut op_state.borrow_mut::<ProtocolContext>();
         kv.set(tx, key, KvValue(value)).is_some()
     }
 
     #[fast]
     #[static_method]
     fn delete(op_state: &mut OpState, #[string] key: &str) -> bool {
-        let Protocol { tx, kv, .. } = &mut op_state.borrow_mut::<Protocol>();
+        let ProtocolContext { tx, kv, .. } =
+            &mut op_state.borrow_mut::<ProtocolContext>();
         kv.delete(tx, key).is_some()
     }
 
     #[fast]
     #[static_method]
     fn contains(op_state: &mut OpState, #[string] key: &str) -> bool {
-        let Protocol { tx, kv, host } = &mut op_state.borrow_mut::<Protocol>();
+        let ProtocolContext { tx, kv, host } =
+            &mut op_state.borrow_mut::<ProtocolContext>();
         kv.has(host, tx, key).is_some_and(|t| t)
     }
 }
