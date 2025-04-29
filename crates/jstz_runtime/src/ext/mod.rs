@@ -1,4 +1,4 @@
-pub mod jstz_console;
-pub mod jstz_fetch;
+pub(crate) mod jstz_console;
+pub(crate) mod jstz_fetch;
 pub mod jstz_kv;
-pub mod jstz_main;
+pub(crate) mod jstz_main;
