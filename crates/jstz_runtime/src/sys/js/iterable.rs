@@ -6,10 +6,11 @@ use deno_core::v8;
 use super::class::{instance_call_method, instance_get, JsClass};
 use super::convert::FromV8;
 use crate::error::Result;
-const VALUE_KEY: v8::OneByteConst =
-    v8::String::create_external_onebyte_const("value".as_bytes());
+
 const NEXT_KEY: v8::OneByteConst =
     v8::String::create_external_onebyte_const("next".as_bytes());
+const VALUE_KEY: v8::OneByteConst =
+    v8::String::create_external_onebyte_const("value".as_bytes());
 
 /// Javascript Iterable type
 pub struct Iterable<'s, T: FromV8<'s>> {
