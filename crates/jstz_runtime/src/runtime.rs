@@ -3,6 +3,9 @@ use jstz_core::host::JsHostRuntime;
 use jstz_core::kv::Transaction;
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use parking_lot::FairMutex as Mutex;
+use std::mem::ManuallyDrop;
+use std::sync::Arc;
 use std::{
     ops::{Deref, DerefMut},
     rc::Rc,
@@ -39,10 +42,36 @@ fn get_default_export<'s>(
 /// provides [`JsRuntime`] with the instiatiated [`HostRuntime`]
 /// and protocol capabilities
 pub struct JstzRuntime {
-    runtime: JsRuntime,
+    runtime: std::mem::ManuallyDrop<JsRuntime>,
 }
 
+impl Drop for JstzRuntime {
+    fn drop(&mut self) {
+        // Safety
+        //
+        // Deno automatically enters the Isolate upon creation of a new runtime.
+        // Additionally, it implements RAII-like behaviour on OwnedIsolates to ensure
+        // that the isolate is always up cleaned up and exited (unlocked) upon drop.
+        // Its drop behaviour relies on the fact that the isolate being dropped is the currently
+        // entered one which effectively makes it impossible to progress runtimes concurrently because
+        // other runtimes could have been created and not dropped between the start and end of lifetime
+        // of the original isolate.
+        //
+        // Locking isolates is redundant in a single threaded environment since only one isolate can ever
+        // be scheduled at a time. Crucially, the main thread is always allowed to progress any of the isolates. To
+        // suport this behaviour, we do two things
+        // 1. Since V8 automatically enters the isolate upon creation, we explicitly exit
+        //    it. See [`JstzRuntime::new`]
+        // 2. Before dropping the runtime, we re-enter it to ensure we satisfy the JsRuntime's
+        //    Drop precondition
+        unsafe {
+            self.runtime.v8_isolate().enter();
+            ManuallyDrop::drop(&mut self.runtime);
+        };
+    }
+}
 pub struct JstzRuntimeOptions {
+    /// Protocol context accessible by protocol defined APIs
     pub protocol: Option<ProtocolContext>,
     /// Additional extensions to be registered on initialization.
     pub extensions: Vec<Extension>,
@@ -52,6 +81,7 @@ pub struct JstzRuntimeOptions {
     /// Not to be confused with ES modules registered by extensions
     /// (these are static, and treated differently)
     pub module_loader: Rc<dyn ModuleLoader>,
+    /// Fetch extension
     pub fetch: Extension,
 }
 
@@ -93,22 +123,27 @@ impl JstzRuntime {
 
     /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`]
     pub fn new(options: JstzRuntimeOptions) -> Self {
+        // Register extensions
         let mut extensions = init_extenions();
         extensions.push(options.fetch);
         extensions.extend(options.extensions);
 
-        let mut runtime = JsRuntime::new(RuntimeOptions {
+        // Construct Runtime options
+        let js_runtime_options = RuntimeOptions {
             extensions,
             module_loader: Some(options.module_loader),
             ..Default::default()
-        });
+        };
 
+        // SAFETY: See `impl Drop for JstzRuntime`
+        let mut runtime = ManuallyDrop::new(JsRuntime::new(js_runtime_options));
+        unsafe { runtime.v8_isolate().exit() };
+
+        // Give protocol access to the running script
         let op_state = runtime.op_state();
-
         if let Some(protocol) = options.protocol {
             op_state.borrow_mut().put(protocol);
         };
-
         op_state.borrow_mut().put(JstzPermissions);
 
         Self { runtime }
@@ -188,7 +223,7 @@ impl JstzRuntime {
         // Note: [`call_with_args`] wraps the scope with TryCatch for us and converts
         // any exception into an error
         let fut = self.call_with_args(&default_fn, args);
-        let result = self.with_event_loop_promise(fut, Default::default()).await;
+        let result = self.with_event_loop_future(fut, Default::default()).await;
         Ok(result?)
     }
 }
@@ -209,29 +244,23 @@ impl DerefMut for JstzRuntime {
 
 pub struct ProtocolContext {
     pub host: JsHostRuntime<'static>,
-    pub tx: &'static mut Transaction,
+    pub tx: Arc<Mutex<Transaction>>,
     pub kv: Kv,
+    pub address: SmartFunctionHash,
 }
 
 impl ProtocolContext {
     pub fn new(
         hrt: &mut impl HostRuntime,
-        tx: &mut Transaction,
+        tx: Arc<Mutex<Transaction>>,
         address: SmartFunctionHash,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
-
-        // Safety: Since we synchronisely execute Operations, the tx will not be dropped before
-        // the runtime, so this is safe
-        // TODO: Replace with Arc<Mutex<Transaction>>
-        // https://linear.app/tezos/issue/JSTZ-375/replace-andmut-transaction-with-arcmutextransaction
-        let tx = unsafe {
-            std::mem::transmute::<&mut Transaction, &'static mut Transaction>(tx)
-        };
         ProtocolContext {
             host,
             tx,
-            kv: Kv::new(address.to_base58()),
+            kv: Kv::new(address.clone().to_base58()),
+            address,
         }
     }
 }

@@ -84,9 +84,9 @@ test-int:
 # --exclude excludes the jstz_api wpt test
 	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features skip-wpt,skip-rollup-tests
 
-.PHONY: cov 
+.PHONY: cov
 cov:
-	@cargo llvm-cov --workspace --exclude-from-test "jstz_api" --html --open 
+	@cargo llvm-cov --workspace --exclude-from-test "jstz_api" --html --open
 
 .PHONY: check
 check: lint fmt

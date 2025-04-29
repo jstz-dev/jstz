@@ -1,10 +1,12 @@
 //! Raw API bindings for Web APIs
 
 mod interfaces;
-pub(crate) mod js;
+pub mod js;
 
 use deno_core::v8;
 pub use interfaces::*;
+
+pub use js::convert::{FromV8, ToV8};
 
 /// Getter for the `WorkerGlobalScope` object
 ///
