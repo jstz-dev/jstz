@@ -95,10 +95,14 @@ impl JstzRuntime {
         extensions.extend(options.extensions);
 
         let v8_single_threaded = v8::Platform::new_single_threaded(true).make_shared();
+        let create_params = v8::CreateParams::default()
+            .heap_limits(300_000_000, 300_000_000)
+            .heap_limits_from_system_memory(300_000_000, 300_000_000);
         let mut runtime = JsRuntime::new(RuntimeOptions {
             extensions,
             module_loader: Some(options.module_loader),
             v8_platform: Some(v8_single_threaded),
+            create_params: Some(create_params),
             ..Default::default()
         });
 
