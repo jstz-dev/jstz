@@ -12,8 +12,10 @@ impl Kv {
     #[static_method]
     #[serde]
     fn get(op_state: &mut OpState, #[string] key: &str) -> Option<serde_json::Value> {
-        let ProtocolContext { host, tx, kv } = op_state.borrow_mut::<ProtocolContext>();
-        kv.get(host, tx, key).map(|v| v.0.clone())
+        let protocol_context = op_state.borrow_mut::<ProtocolContext>();
+        let ProtocolContext { host, tx, kv } = &mut *protocol_context;
+        let mut guard = tx.lock();
+        kv.get(host, &mut guard, key).map(|v| v.0.clone())
     }
 
     #[static_method]
@@ -22,25 +24,25 @@ impl Kv {
         #[string] key: &str,
         #[serde] value: serde_json::Value,
     ) -> bool {
-        let ProtocolContext { tx, kv, .. } =
-            &mut op_state.borrow_mut::<ProtocolContext>();
-        kv.set(tx, key, KvValue(value)).is_some()
+        let protocol_context = op_state.borrow_mut::<ProtocolContext>();
+        let ProtocolContext { tx, kv, .. } = &mut *protocol_context;
+        kv.set(&mut tx.lock(), key, KvValue(value)).is_some()
     }
 
     #[fast]
     #[static_method]
     fn delete(op_state: &mut OpState, #[string] key: &str) -> bool {
-        let ProtocolContext { tx, kv, .. } =
-            &mut op_state.borrow_mut::<ProtocolContext>();
-        kv.delete(tx, key).is_some()
+        let protocol_context = op_state.borrow_mut::<ProtocolContext>();
+        let ProtocolContext { tx, kv, .. } = &mut *protocol_context;
+        kv.delete(&mut tx.lock(), key).is_some()
     }
 
     #[fast]
     #[static_method]
     fn contains(op_state: &mut OpState, #[string] key: &str) -> bool {
-        let ProtocolContext { tx, kv, host } =
-            &mut op_state.borrow_mut::<ProtocolContext>();
-        kv.has(host, tx, key).is_some_and(|t| t)
+        let protocol_context = op_state.borrow_mut::<ProtocolContext>();
+        let ProtocolContext { tx, kv, host } = &mut *protocol_context;
+        kv.has(host, &mut tx.lock(), key).is_some_and(|t| t)
     }
 }
 

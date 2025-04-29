@@ -10,10 +10,12 @@ use jstz_core::{
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use jstz_proto::executor::smart_function::{register_jstz_apis, register_web_apis};
 use log::{debug, error, info, warn};
+use parking_lot::FairMutex as Mutex;
 use rustyline::{
     completion::Completer, error::ReadlineError, highlight::Highlighter, hint::Hinter,
     validate::Validator, Editor, Helper,
 };
+use std::sync::Arc;
 use syntect::{
     easy::HighlightLines,
     highlighting::{Style, Theme, ThemeSet},
@@ -127,8 +129,9 @@ pub async fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     // 2. Setup runtime
     let mut rt = Runtime::new(DEFAULT_GAS_LIMIT)
         .map_err(|_| anyhow!("Failed to initialize jstz's JavaScript runtime."))?;
-    let mut tx = Transaction::default();
-    tx.begin();
+    #[allow(clippy::arc_with_non_send_sync)]
+    let tx = Arc::new(Mutex::new(Transaction::default()));
+    tx.lock().begin();
 
     set_js_logger(&PrettyLogger);
 
@@ -156,7 +159,7 @@ pub async fn exec(account: Option<AddressOrAlias>) -> Result<()> {
                 // Add the line to history so you can use arrow keys to recall it
                 rl.add_history_entry(line.as_str())?;
 
-                let result = evaluate(input, &mut rt, &mut mock_hrt, &mut tx);
+                let result = evaluate(input, &mut rt, &mut mock_hrt, tx.clone());
                 print_rt_result(result, &mut rt);
             }
             Err(ReadlineError::Interrupted) => {
@@ -208,9 +211,9 @@ fn evaluate(
     input: &str,
     rt: &mut Runtime,
     hrt: &mut (impl HostRuntime + 'static),
-    tx: &mut Transaction,
+    tx: Arc<Mutex<Transaction>>,
 ) -> JsResult<JsValue> {
-    runtime::enter_js_host_context(hrt, tx, || {
+    runtime::enter_js_host_context(hrt, tx.clone(), || {
         let result = rt.eval(Source::from_bytes(input))?;
         jstz_core::future::block_on(async {
             rt.run_event_loop().await;

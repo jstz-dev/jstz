@@ -79,10 +79,14 @@ mod test_utils {
             $(sink = $sink:ident;)?
             $(address = $addr:ident;)?
         ) => {
+            use parking_lot::FairMutex as Mutex;
+            use std::sync::Arc;
+
             #[allow(unused)]
             let mut init_host = tezos_smart_rollup_mock::MockHost::default();
             let mut init_tx = jstz_core::kv::Transaction::default();
             init_tx.begin();
+            let init_tx = Arc::new(Mutex::new(init_tx));
             #[allow(unused)]
             let module_loader = deno_core::NoopModuleLoader;
             let init_addr =
@@ -93,7 +97,7 @@ mod test_utils {
                 let module_loader = deno_core::StaticModuleLoader::with($specifier.clone(), $code);
             )?
             #[allow(unused)]
-            let protocol  = Some($crate::ProtocolContext::new(&mut init_host, &mut init_tx, init_addr.clone()));
+            let protocol  = Some($crate::ProtocolContext::new(&mut init_host, init_tx.clone(), init_addr.clone()));
             #[allow(unused)]
             let mut $runtime = $crate::JstzRuntime::new($crate::JstzRuntimeOptions {
                 protocol,

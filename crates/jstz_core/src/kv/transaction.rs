@@ -1,10 +1,12 @@
+#![allow(clippy::arc_with_non_send_sync)]
 use std::{
     collections::{btree_map, BTreeMap, BTreeSet},
     marker::PhantomData,
-    mem,
+    sync::Arc,
 };
 
 use derive_more::{Deref, DerefMut};
+use parking_lot::FairMutex as Mutex;
 
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
@@ -582,20 +584,21 @@ impl<'a, V> OccupiedEntry<'a, V> {
     }
 }
 
-#[derive(Debug, Deref, DerefMut)]
+#[derive(Clone, Debug)]
 pub struct JsTransaction {
-    inner: &'static mut Transaction,
+    inner: Arc<Mutex<Transaction>>,
 }
 
 impl JsTransaction {
-    pub fn new(tx: &mut Transaction) -> Self {
-        // SAFETY
-        // From the pov of the `JsTransaction` struct, it is permitted to cast
-        // the `tx` reference to `'static` since the lifetime of `JsTransaction`
-        // is always shorter than the lifetime of `tx`
-        let rt: &'static mut Transaction = unsafe { mem::transmute(tx) };
+    pub fn new(inner: Arc<Mutex<Transaction>>) -> Self {
+        Self { inner }
+    }
 
-        Self { inner: rt }
+    pub fn lock(
+        &self,
+    ) -> parking_lot::lock_api::MutexGuard<'_, parking_lot::RawFairMutex, Transaction>
+    {
+        self.inner.lock()
     }
 }
 
@@ -622,7 +625,7 @@ mod test {
         Storage,
     };
 
-    use super::Transaction;
+    use super::*;
 
     fn make_withdrawal(account: &PublicKeyHash) -> OutboxMessage {
         let creator =
@@ -647,7 +650,8 @@ mod test {
     #[test]
     fn test_nested_transactions() {
         let hrt = &mut MockHost::default();
-        let tx = &mut Transaction::default();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        let js_tx = JsTransaction::new(tx.clone());
 
         #[derive(Clone, Serialize, Deserialize, Debug, Default, Encode, Decode)]
         struct Account {
@@ -675,52 +679,53 @@ mod test {
         }
 
         // Start transaction (tx0)
-        tx.begin();
+        let mut guard = js_tx.lock();
+        guard.begin();
 
         let account1 = &Account::path("tz1notanaddress1");
         let account2 = &Account::path("tz1notanaddress2");
 
-        assert_eq!(0, Account::get(hrt, tx, account1).amount);
-        assert_eq!(0, Account::get(hrt, tx, account2).amount);
+        assert_eq!(0, Account::get(hrt, &mut guard, account1).amount);
+        assert_eq!(0, Account::get(hrt, &mut guard, account2).amount);
 
         // Start transaction (tx1)
-        tx.begin();
+        guard.begin();
 
-        Account::get(hrt, tx, account2).amount += 25;
+        Account::get(hrt, &mut guard, account2).amount += 25;
 
-        assert_eq!(0, Account::get(hrt, tx, account1).amount);
-        assert_eq!(25, Account::get(hrt, tx, account2).amount);
+        assert_eq!(0, Account::get(hrt, &mut guard, account1).amount);
+        assert_eq!(25, Account::get(hrt, &mut guard, account2).amount);
 
         // Start transaction (tx2)
-        tx.begin();
+        guard.begin();
 
-        Account::get(hrt, tx, account1).amount += 57;
+        Account::get(hrt, &mut guard, account1).amount += 57;
 
-        assert_eq!(57, Account::get(hrt, tx, account1).amount);
-        assert_eq!(25, Account::get(hrt, tx, account2).amount);
+        assert_eq!(57, Account::get(hrt, &mut guard, account1).amount);
+        assert_eq!(25, Account::get(hrt, &mut guard, account2).amount);
 
         // Commit transaction (tx2)
-        tx.commit(hrt).unwrap();
+        guard.commit(hrt).unwrap();
 
         // In transaction (tx1)
 
-        Account::get(hrt, tx, account1).amount += 57;
+        Account::get(hrt, &mut guard, account1).amount += 57;
 
-        assert_eq!(2 * 57, Account::get(hrt, tx, account1).amount);
-        assert_eq!(25, Account::get(hrt, tx, account2).amount);
+        assert_eq!(2 * 57, Account::get(hrt, &mut guard, account1).amount);
+        assert_eq!(25, Account::get(hrt, &mut guard, account2).amount);
 
         // Commit transaction (tx1)
-        tx.commit(hrt).unwrap();
+        guard.commit(hrt).unwrap();
 
         // In transaction (tx0)
 
-        assert_eq!(2 * 57, Account::get(hrt, tx, account1).amount);
+        assert_eq!(2 * 57, Account::get(hrt, &mut guard, account1).amount);
 
-        Account::get(hrt, tx, account1).amount += 57;
+        Account::get(hrt, &mut guard, account1).amount += 57;
 
-        assert_eq!(3 * 57, Account::get(hrt, tx, account1).amount);
+        assert_eq!(3 * 57, Account::get(hrt, &mut guard, account1).amount);
 
-        tx.commit(hrt).unwrap();
+        guard.commit(hrt).unwrap();
 
         // Check storage
 
@@ -731,25 +736,30 @@ mod test {
     #[test]
     fn push_outbox_message_succeeds_until_outbox_queue_is_full() {
         let mut host = MockHost::default();
-        let mut tx = Transaction {
+        let tx = Arc::new(Mutex::new(Transaction {
             persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
             ..Transaction::default()
-        };
+        }));
+        let js_tx = JsTransaction::new(tx.clone());
 
         for i in 0..120 {
             if i % 10 == 0 {
-                tx.begin();
+                js_tx.lock().begin();
             }
             let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
-            tx.queue_outbox_message(&mut host, message).unwrap();
+            js_tx
+                .lock()
+                .queue_outbox_message(&mut host, message)
+                .unwrap();
         }
 
-        assert_eq!(120, tx.snapshot_outbox_len);
+        assert_eq!(120, js_tx.lock().snapshot_outbox_len);
 
         // Adding an additional message to a full outbox queue without
         // flushing should fail
-        let error = tx
+        let error = js_tx
+            .lock()
             .queue_outbox_message(
                 &mut host,
                 make_withdrawal(
@@ -770,23 +780,26 @@ mod test {
     #[test]
     fn non_final_commit_appends_outbox_messages_to_previous_snapshot() {
         let mut host = MockHost::default();
-        let mut tx = Transaction {
+        let tx = Arc::new(Mutex::new(Transaction {
             persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
             ..Transaction::default()
-        };
+        }));
+        let js_tx = JsTransaction::new(tx.clone());
 
         for i in 0..120 {
+            let mut guard = js_tx.lock();
             if i % 60 == 0 {
-                tx.begin();
+                guard.begin();
             }
             let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
-            tx.queue_outbox_message(&mut host, message).unwrap();
+            guard.queue_outbox_message(&mut host, message).unwrap();
         }
 
-        tx.commit(&mut host).unwrap();
+        js_tx.lock().commit(&mut host).unwrap();
 
-        assert_eq!(120, tx.snapshot_outbox_len);
+        let guard = js_tx.lock();
+        assert_eq!(120, guard.snapshot_outbox_len);
 
         let level = host.run_level(|_| {});
         let outbox = host.outbox_at(level);
@@ -798,23 +811,27 @@ mod test {
     #[ignore]
     fn final_commit_resets_snapshot_queue_len() {
         let mut host = MockHost::default();
-        let mut tx = Transaction {
+        let tx = Arc::new(Mutex::new(Transaction {
             persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
             ..Transaction::default()
-        };
+        }));
+        let js_tx = JsTransaction::new(tx.clone());
 
         for i in 0..120 {
+            let mut guard = js_tx.lock();
             if i % 60 == 0 {
-                tx.begin();
+                guard.begin();
             }
             let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
-            tx.queue_outbox_message(&mut host, message).unwrap();
+            guard.queue_outbox_message(&mut host, message).unwrap();
         }
 
-        tx.commit(&mut host).unwrap();
-        tx.commit(&mut host).unwrap();
-        assert_eq!(0, tx.snapshot_outbox_len);
+        js_tx.lock().commit(&mut host).unwrap();
+        js_tx.lock().commit(&mut host).unwrap();
+
+        let guard = js_tx.lock();
+        assert_eq!(0, guard.snapshot_outbox_len);
 
         let level = host.run_level(|_| {});
         let outbox = host.outbox_at(level);
@@ -825,25 +842,29 @@ mod test {
     #[test]
     fn final_commit_flush_outbox_messages_in_enqueue_order() {
         let mut host = MockHost::default();
-        let mut tx = Transaction {
+        let tx = Arc::new(Mutex::new(Transaction {
             persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
             ..Transaction::default()
-        };
+        }));
+        let js_tx = JsTransaction::new(tx.clone());
 
         // Enqueue 120 messages, 60 per snapshot
         for i in 0..120 {
             if i % 60 == 0 {
-                tx.begin();
+                js_tx.lock().begin();
             }
 
             let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
-            tx.queue_outbox_message(&mut host, message).unwrap();
+            js_tx
+                .lock()
+                .queue_outbox_message(&mut host, message)
+                .unwrap();
         }
 
         // Commit both snapshots
-        tx.commit(&mut host).unwrap();
-        tx.commit(&mut host).unwrap();
+        js_tx.lock().commit(&mut host).unwrap();
+        js_tx.lock().commit(&mut host).unwrap();
 
         let level = host.run_level(|_| {});
         let outbox = host.outbox_at(level);
@@ -851,7 +872,7 @@ mod test {
         // Maximum number of outbox messages per level is 100.
         // The remaining 20 messages are left in the persistent queue.
         assert_eq!(100, outbox.len());
-        assert_eq!(20, tx.persistent_outbox.len(&mut host).unwrap());
+        assert_eq!(20, js_tx.lock().persistent_outbox.len(&mut host).unwrap());
 
         for (i, outbox_message) in outbox.iter().enumerate() {
             let (_, message) =
@@ -867,14 +888,14 @@ mod test {
             );
         }
 
-        tx.begin();
-        tx.commit(&mut host).unwrap();
+        js_tx.lock().begin();
+        js_tx.lock().commit(&mut host).unwrap();
 
         let level = host.run_level(|_| {});
         let outbox = host.outbox_at(level);
 
         assert_eq!(20, outbox.len());
-        assert_eq!(0, tx.persistent_outbox.len(&mut host).unwrap());
+        assert_eq!(0, js_tx.lock().persistent_outbox.len(&mut host).unwrap());
 
         for (i, outbox_message) in outbox.iter().enumerate().take(20) {
             let (_, message) =
@@ -906,23 +927,26 @@ mod tests {
     #[test]
     fn test_entry_or_insert_default() {
         let hrt = &MockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        let js_tx = JsTransaction::new(tx.clone());
+
+        let mut guard = js_tx.lock();
+        guard.begin();
 
         // Create a test path
         let try_from = OwnedPath::try_from("/test".to_string());
         let path = try_from.unwrap();
 
         // Test or_insert_default on vacant entry
-        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let entry = guard.entry::<TestValue>(hrt, path.clone()).unwrap();
         let value = entry.or_insert_default();
         assert_eq!(value.0, 0);
 
         // Test or_insert_default on occupied entry
-        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let entry = guard.entry::<TestValue>(hrt, path.clone()).unwrap();
         entry.or_insert_default().0 = 42;
         // Get entry again, should return existing value
-        let entry = tx.entry::<TestValue>(hrt, path).unwrap();
+        let entry = guard.entry::<TestValue>(hrt, path).unwrap();
         let value = entry.or_insert_default();
         assert_eq!(value.0, 42);
     }
@@ -930,24 +954,27 @@ mod tests {
     #[test]
     fn test_entry_or_insert_with() {
         let hrt = &MockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        let js_tx = JsTransaction::new(tx.clone());
+
+        let mut guard = js_tx.lock();
+        guard.begin();
 
         let path = OwnedPath::try_from("/test".to_string()).unwrap();
 
         // Test or_insert_with on vacant entry
-        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let entry = guard.entry::<TestValue>(hrt, path.clone()).unwrap();
         let value = entry.or_insert_with(|| TestValue(100));
         assert_eq!(value.0, 100); // Custom value should be used
 
         // Test or_insert_with on occupied entry
-        let entry = tx.entry::<TestValue>(hrt, path.clone()).unwrap();
+        let entry = guard.entry::<TestValue>(hrt, path.clone()).unwrap();
         let value = entry.or_insert_with(|| TestValue(200));
         assert_eq!(value.0, 100); // Should keep existing value, not call closure
 
         // Test closure is not called for occupied entry
         let mut called = false;
-        let entry = tx.entry::<TestValue>(hrt, path).unwrap();
+        let entry = guard.entry::<TestValue>(hrt, path).unwrap();
         let _value = entry.or_insert_with(|| {
             called = true;
             TestValue(300)

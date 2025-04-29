@@ -5,6 +5,7 @@ use std::{
     num::NonZeroU32,
     ops::{Deref, DerefMut},
     rc::Rc,
+    sync::Arc,
     task::Poll,
 };
 
@@ -14,6 +15,7 @@ use boa_engine::{
     JsNativeError, JsResult, JsValue, Source,
 };
 use getrandom::{register_custom_getrandom, Error as RandomError};
+use parking_lot::FairMutex as Mutex;
 
 use crate::{
     future,
@@ -118,7 +120,7 @@ thread_local! {
 /// Enters a new host context, running the closure `f` with the new context
 pub fn enter_js_host_context<F, R>(
     hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    tx: Arc<Mutex<Transaction>>,
     f: F,
 ) -> R
 where
@@ -126,7 +128,8 @@ where
 {
     JS_HOST_RUNTIME.with(|js_hrt| *js_hrt.borrow_mut() = Some(JsHostRuntime::new(hrt)));
 
-    JS_TRANSACTION.with(|js_tx| *js_tx.borrow_mut() = Some(JsTransaction::new(tx)));
+    JS_TRANSACTION
+        .with(|js_tx| *js_tx.borrow_mut() = Some(JsTransaction::new(tx.clone())));
 
     let result = f();
 
@@ -159,10 +162,13 @@ pub fn with_js_tx<F, R>(f: F) -> R
 where
     F: FnOnce(&mut Transaction) -> R,
 {
-    JS_TRANSACTION.with(|tx| {
-        f(tx.borrow_mut()
-            .as_mut()
-            .expect("`JS_TRANSACTION` should be set"))
+    JS_TRANSACTION.with(|tx_cell| {
+        let tx_ref = tx_cell.borrow();
+        let js_tx = tx_ref.as_ref().expect("`JS_TRANSACTION` should be set");
+
+        // explicit critical-section
+        let mut guard = js_tx.lock();
+        f(&mut guard)
     })
 }
 
