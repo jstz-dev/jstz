@@ -9,6 +9,7 @@ documentation.workspace = true
 readme.workspace = true
 license-file.workspace = true
 description.workspace = true
+exclude = [ "src/runtime/v2/tests" ]
 
 [dependencies]
 bincode.workspace = true
@@ -29,8 +30,21 @@ tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
 utoipa.workspace = true
 
+# Required by v2 runtime
+deno_core = { workspace = true, optional = true }
+deno_error = { workspace = true, optional = true }
+deno_fetch_base = { workspace = true, optional = true }
+jstz_runtime = { path = "../jstz_runtime", optional = true }
+tokio = { workspace = true, optional = true }
+parking_lot.workspace = true
+thiserror.workspace = true
+url.workspace = true
+
 [dev-dependencies]
 jstz_mock = { path = "../jstz_mock" }
 tezos-smart-rollup-mock.workspace = true
 bincode.workspace = true
+
+[features]
+riscv = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_base", "dep:deno_error", "dep:tokio"]
 
