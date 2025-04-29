@@ -64,8 +64,8 @@ jobs:
           path: dest_repo
       - name: setup git config
         run: |
+          cd $GITHUB_WORKSPACE/dest_repo/ && find . -mindepth 1 -maxdepth 1 ! -name '.git' -type d -exec rm -rf {} +
           mv $GITHUB_WORKSPACE/docs/* $GITHUB_WORKSPACE/dest_repo/
-          cd $GITHUB_WORKSPACE/dest_repo
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
           git add .
