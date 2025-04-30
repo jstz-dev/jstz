@@ -4,7 +4,7 @@ async function fa2_balance_of(fa2, minter, token_id) {
   const encodedRequests = btoa(JSON.stringify(balance_request));
 
   const response = await fetch(
-    new Request(`tezos://${fa2}/balance_of?requests=${encodedRequests}`),
+    new Request(`jstz://${fa2}/balance_of?requests=${encodedRequests}`),
   );
   const balances = await response.json();
   console.log(
@@ -24,7 +24,7 @@ async function handler(request) {
   const tokens = [{ token_id, owner: minter, amount: n }];
 
   await SmartFunction.call(
-    new Request(`tezos://${fa2}/mint_new`, {
+    new Request(`jstz://${fa2}/mint_new`, {
       method: "POST",
       body: JSON.stringify(tokens),
     }),
@@ -41,7 +41,7 @@ async function handler(request) {
 
   for (let i = 0; i < n; i++) {
     await SmartFunction.call(
-      new Request(`tezos://${fa2}/transfer`, {
+      new Request(`jstz://${fa2}/transfer`, {
         method: "POST",
         body: JSON.stringify(transfers),
       }),

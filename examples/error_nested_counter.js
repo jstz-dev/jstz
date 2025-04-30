@@ -16,7 +16,7 @@ const handler = async (request) => {
   if (n > 0) {
     console.log(`Nested transaction: ${n}`);
     // Nested transaction
-    await fetch(new Request(`tezos://${Ledger.selfAddress}/?n=${n - 1}`));
+    await fetch(new Request(`jstz://${Ledger.selfAddress}/?n=${n - 1}`));
   }
 
   // Throw an error at the most nested level

@@ -29,6 +29,7 @@ export default defineConfig({
           { text: "Quick Start", link: "/quick_start" },
           { text: "CLI", link: "/cli" },
           { text: "Sandbox", link: "/sandbox" },
+          { text: "Transfer", link: "/transfer" },
         ],
       },
 

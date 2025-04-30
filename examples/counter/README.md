@@ -14,7 +14,7 @@ Follow these steps to use it:
 4. Call the smart function with the Jstz CLI by running this command, replacing `<ADDRESS>` with the address of the deployed smart function:
 
 ```shell
-jstz run tezos://<ADDRESS>/increment --network dev
+jstz run jstz://<ADDRESS>/increment --network dev
 ```
 
 The response shows that the number in storage was incremented and what the current number is.
