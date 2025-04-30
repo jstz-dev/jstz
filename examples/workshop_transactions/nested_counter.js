@@ -16,7 +16,7 @@ const handler = async (request) => {
 
   if (n > 1) {
     // Nested transaction
-    await fetch(new Request(`tezos://${Ledger.selfAddress}/?n=${n - 1}`));
+    await fetch(new Request(`jstz://${Ledger.selfAddress}/?n=${n - 1}`));
   }
 
   return new Response();

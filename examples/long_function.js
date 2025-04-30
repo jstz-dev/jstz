@@ -76,7 +76,7 @@ export default (request) => {
   const smartFunctionAddress = await SmartFunction.create(code);
   console.log("created", smartFunctionAddress);
 
-  await fetch(new Request(`tezos://${smartFunctionAddress}/`));
+  await fetch(new Request(`jstz://${smartFunctionAddress}/`));
 
   return new Response();
 }
