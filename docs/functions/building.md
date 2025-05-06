@@ -66,7 +66,7 @@ See [Deploying](/functions/deploying).
 
 ::: tip
 
-You can verify the size of the built smart function with the `du` command, as in `du -b dist/index.ts`.
-Smart functions must be less than 3915 bytes to be deployed.
+You can verify the size of the built smart function with the `du` command, as in `du -bh dist/index.ts`.
+Smart functions must be less than 10MB to be deployed.
 
 :::

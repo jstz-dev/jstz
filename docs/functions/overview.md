@@ -88,7 +88,7 @@ Smart functions look like ordinary JavaScript functions, but because they run on
 Smart functions behave much like other serverless JavaScript/TypeScript applications, but they have these limitations:
 
 - Smart functions cannot call external APIs.
-- Smart functions are currently restricted to 3915 bytes.
+- Smart functions are restricted to 10MB in size.
 - Smart functions can import and use packages, but they can use only certain JavaScript APIs, which limits the packages that they can use.
 - Smart functions run in an isolated context; each time a smart function runs, it is as if it is running for the first time.
 For this reason, smart functions themselves have no persistent state; they must store all persistent data in the key-value store, as described in [Storing data](/functions/data_storage).
