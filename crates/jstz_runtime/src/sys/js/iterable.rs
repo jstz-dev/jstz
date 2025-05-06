@@ -142,3 +142,35 @@ macro_rules! js_keys {
         $crate::js_impl_known_iterable!(keys);
     };
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::init_test_setup;
+    use deno_core::v8;
+
+    #[test]
+    fn test_iter() {
+        init_test_setup! { runtime = runtime; };
+        let scope = &mut runtime.handle_scope();
+        let array = v8::Array::new(scope, 3);
+        let i1 = v8::String::new(scope, "0").unwrap();
+        let v1 = v8::String::new(scope, "1").unwrap();
+        let i2 = v8::String::new(scope, "1").unwrap();
+        let v2 = v8::String::new(scope, "2").unwrap();
+        array.set(scope, i1.into(), v1.into()).unwrap();
+        array.set(scope, i2.into(), v2.into()).unwrap();
+        let method_name = v8::String::new(scope, "values").unwrap();
+        let iter = instance_call_method::<Iterable<String>>(
+            scope,
+            &array.into(),
+            method_name,
+            &[],
+        )
+        .unwrap();
+        let iter = Iterable::<String>::new(iter.try_cast().unwrap());
+        assert_eq!(iter.next(scope).unwrap(), Some(String::from("1")));
+        assert_eq!(iter.next(scope).unwrap(), Some(String::from("2")));
+        assert_eq!(iter.next(scope).unwrap(), None);
+    }
+}
