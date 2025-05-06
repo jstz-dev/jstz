@@ -63,3 +63,10 @@ Follow these steps to create and build a TypeScript project for your smart funct
 
 Now you can deploy the smart function to the local sandbox.
 See [Deploying](/functions/deploying).
+
+::: tip
+
+You can verify the size of the built smart function with the `du` command, as in `du -b dist/index.ts`.
+Smart functions must be less than 3915 bytes to be deployed.
+
+:::
