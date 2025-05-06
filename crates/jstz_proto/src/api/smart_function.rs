@@ -110,6 +110,9 @@ impl SmartFunction {
     ) -> JsResult<JsValue> {
         // 1. Get address from request
         let mut request_deref = request.deref_mut();
+        if request_deref.url().scheme() != "jstz" {
+            return Err(Error::InvalidScheme.into());
+        }
         match request_deref.url().domain() {
             Some(JSTZ_HOST) => HostScript::run(self_address, &mut request_deref, context),
             Some(callee_address) => {
@@ -334,7 +337,7 @@ mod test {
             ticket_table::TicketTable,
         },
         executor::smart_function::{self, register_web_apis, Script, X_JSTZ_TRANSFER},
-        operation::RunFunction,
+        operation::{OperationHash, RunFunction},
     };
 
     use super::SmartFunction;
@@ -1306,5 +1309,32 @@ mod test {
             "EvalError: TicketTableError: InsufficientFunds",
             error.to_string()
         );
+    }
+
+    #[test]
+    fn call_smart_function_with_invalid_scheme_fails() {
+        let kt1 = jstz_mock::kt1_account1();
+        let self_address = jstz_mock::sf_account1();
+        let mut jstz_rt = Runtime::new(10000).unwrap();
+        let realm = jstz_rt.realm().clone();
+        let context = jstz_rt.context();
+
+        register_web_apis(&realm, context);
+
+        let request = Request::from_http_request(
+            http::Request::builder()
+                .uri(format!("tezos://{kt1}"))
+                .method("GET")
+                .body(None)
+                .unwrap(),
+            context,
+        )
+        .unwrap();
+        let request = JsNativeObject::new::<RequestClass>(request, context).unwrap();
+        let operation_hash = OperationHash::from(b"abcdefghijslmnop".as_slice());
+        let js_error =
+            SmartFunction::call(&self_address, &request, operation_hash, context)
+                .unwrap_err();
+        assert_eq!("EvalError: InvalidScheme", js_error.to_string())
     }
 }

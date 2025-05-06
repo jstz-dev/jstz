@@ -1,4 +1,4 @@
-use crate::runtime::Protocol;
+use crate::runtime::ProtocolContext;
 use deno_core::*;
 use tezos_smart_rollup::prelude::debug_msg;
 
@@ -9,7 +9,7 @@ use tezos_smart_rollup::prelude::debug_msg;
 //  3    error
 #[op2(fast)]
 pub fn op_debug_msg(op_state: &mut OpState, #[string] msg: &str, level: u32) {
-    let proto = op_state.borrow_mut::<Protocol>();
+    let proto = op_state.borrow_mut::<ProtocolContext>();
     debug_msg!(proto.host, "{} {}", level_to_symbol(level), msg);
 }
 

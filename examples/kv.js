@@ -27,7 +27,7 @@ const handler = async (request) => {
         if (!functionAddress) {
           throw `${name} does not exist`;
         }
-        await fetch(new Request(`tezos://${functionAddress}`));
+        await fetch(new Request(`jstz://${functionAddress}`));
         console.log(`Incremened account ${name} at ${functionAddress}`);
         break;
       default:

@@ -7,7 +7,7 @@ Here is an example of calling another contract:
 const targetContract: Address = "KT1L8ZzGDzaXZSTmzHkoF2azQRf7dCAfxtqx";
 
 const response = await SmartFunction.call(
-  new Request(`tezos://${targetContract}`, {
+  new Request(`jstz://${targetContract}`, {
     method: "POST",
     body: JSON.stringify({ message: "hello" }),
   }),
@@ -15,7 +15,7 @@ const response = await SmartFunction.call(
 console.log(await response.json());
 ```
 
-The URL for the [`Request`](/api/request) object must be `tezos://` followed by the address of a Jstz smart function.
+The URL for the [`Request`](/api/request) object must be `jstz://` followed by the address of a Jstz smart function.
 Smart functions cannot call external APIs or Tezos smart contracts directly.
 You can set the method in the `Request` object but you cannot set the `Referer` header because it automatically becomes the address of the smart function.
 

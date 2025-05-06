@@ -5,7 +5,7 @@ use deno_core::*;
 use deno_error::{JsError, JsErrorBox};
 use deno_fetch_base::FetchHandler;
 
-use crate::Protocol;
+use crate::ProtocolContext;
 
 #[allow(non_camel_case_types)]
 pub type jstz_fetch = deno_fetch_base::deno_fetch;

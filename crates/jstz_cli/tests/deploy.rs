@@ -71,7 +71,7 @@ fn deploy() {
         .write_all("export default (() => new Response('hello world'))".as_bytes())
         .unwrap();
 
-    let (mut process, tmp_dir) = jstz_cmd(
+    let mut process = jstz_cmd(
         [
             "deploy",
             source_file.path().to_str().unwrap(),
@@ -83,21 +83,21 @@ fn deploy() {
     let output = process.exp_eof().unwrap();
     assert!(output.contains(success_msg));
 
-    let (mut process, tmp_dir) = jstz_cmd(
+    let mut process = jstz_cmd(
         [
             "deploy",
             source_file.path().to_str().unwrap(),
             "--name",
             "dummy",
         ],
-        Some(tmp_dir),
+        Some(process.tmp),
     );
     let output = process.exp_eof().unwrap();
     assert!(output.contains(
         "The name 'dummy' is already used by another smart function or a user account."
     ));
 
-    let (mut process, tmp_dir) = jstz_cmd(
+    let mut process = jstz_cmd(
         [
             "deploy",
             source_file.path().to_str().unwrap(),
@@ -105,13 +105,13 @@ fn deploy() {
             "dummy",
             "--force",
         ],
-        Some(tmp_dir),
+        Some(process.tmp),
     );
     let output = process.exp_eof().unwrap();
     assert!(output.contains(success_msg));
 
     // a new name with force should work
-    let (mut process, tmp_dir) = jstz_cmd(
+    let mut process = jstz_cmd(
         [
             "deploy",
             source_file.path().to_str().unwrap(),
@@ -119,15 +119,15 @@ fn deploy() {
             "dummy-new",
             "--force",
         ],
-        Some(tmp_dir),
+        Some(process.tmp),
     );
     let output = process.exp_eof().unwrap();
     assert!(output.contains(success_msg));
 
     // force without a name should work
-    let (mut process, _tmp_dir) = jstz_cmd(
+    let mut process = jstz_cmd(
         ["deploy", source_file.path().to_str().unwrap(), "--force"],
-        Some(tmp_dir),
+        Some(process.tmp),
     );
     let output = process.exp_eof().unwrap();
     assert!(output.contains(success_msg));

@@ -185,30 +185,38 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     <details>
     <summary>Output</summary>
     <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
-    <code style="color: #FFF;">$ jstz sandbox start
+    <code>$ jstz sandbox start
 
-               __________
-               \  jstz  /
-                )______(
-                |""""""|_.-._,.---------.,_.-._
-                |      | | |               | | ''-.
-                |      |_| |_             _| |_..-'
-                |______| '-' `'---------'` '-'
-                )""""""(
-               /________\
-               `'------'`
-             .------------.
-            /______________\
+             __________
+             \  jstz  /
+              )______(
+              |""""""|_.-._,.---------.,_.-._
+              |      | | |               | | ''-.
+              |      |_| |_             _| |_..-'
+              |______| '-' `'---------'` '-'
+              )""""""(
+             /________\
+             `'------'`
+           .------------.
+          /______________\
 
-            0.1.0-alpha.0 https://github.com/jstz-dev/jstz
+          0.1.1-alpha.1 https://github.com/jstz-dev/jstz
 
-    +--------------------------------------+---------------------+
-    | Address | XTZ Balance (mutez) |
-    +======================================+=====================+
-    | tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV | 40000000000 |
-    +--------------------------------------+---------------------+
-    | tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx | 60000000000 |
-    +--------------------------------------+---------------------+
+    +---------------------------------------------------+---------------------+
+    | Address                                           | XTZ Balance (mutez) |
+    +===================================================+=====================+
+    | (bootstrap0) tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV | 100000000000        |
+    +---------------------------------------------------+---------------------+
+    | (bootstrap1) tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx | 100000000000        |
+    +---------------------------------------------------+---------------------+
+    | (bootstrap2) tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN | 100000000000        |
+    +---------------------------------------------------+---------------------+
+    | (bootstrap3) tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU | 100000000000        |
+    +---------------------------------------------------+---------------------+
+    | (bootstrap4) tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv | 100000000000        |
+    +---------------------------------------------------+---------------------+
+    | (bootstrap5) tz1ddb9NMYHZi5UzPdzTZMYQQZoMub195zgv | 100000000000        |
+    +---------------------------------------------------+---------------------+
 
     </code>
     </pre>
@@ -228,7 +236,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     <details>
     <summary>Output</summary>
     <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
-    <code style="color: #FFF;">$ npm run build
+    <code>$ npm run build
     > @jstz-dev/get-tez@0.0.0 build
     > esbuild index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js
 
@@ -241,7 +249,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     Logged in to account alan with address tz1N8BsvfrSjGdomFi5V9RwwYLasgD8s4pxF
 
     Smart function deployed by alan at address: KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw
-    Run with `jstz run tezos://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/ --data <args> --trace`
+    Run with `jstz run jstz://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/ --data <args> --trace`
 
     </code>
     </pre>
@@ -251,7 +259,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     This address is its identifier, similar to an IP address or a smart contract address.
 
     In the example above, the smart function was deployed to the address `KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw`.
-    Now the smart function is accessible through a URL of the format `tezos://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/`.
+    Now the smart function is accessible through a URL of the format `jstz://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/`.
 
     After you deploy the smart function, you cannot delete it or change it.
 
@@ -263,7 +271,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
 
     This command bridges tez from a layer 1 bootstrap account to a Jstz account.
     Like Tezos smart contracts, Jstz smart functions are a type of account and can store and transfer tez.
-    For more information about bridging to Jstz, see [Asset Bridge](bridge.md).
+    For more information about bridging to Jstz, see [Asset Bridge](/architecture/bridge).
 
 ## 3. Calling the smart function
 
@@ -272,7 +280,7 @@ After a successful deployment, you can call the smart function in a way similar 
 1. Ask the smart function for tez in an impolite way by running this command, with your smart function's address:
 
    ```sh
-   jstz run tezos://<ADDRESS>/ --data '{"message":"Give me tez now."}' -n dev
+   jstz run jstz://<ADDRESS>/ --data '{"message":"Give me tez now."}' -n dev
    ```
 
    The smart function returns the message "Sorry, I only fulfill polite requests."
@@ -280,7 +288,7 @@ After a successful deployment, you can call the smart function in a way similar 
 1. Ask the smart function politely by running this command, which includes the word "please" in the message:
 
    ```sh
-   jstz run tezos://<ADDRESS>/ --data '{"message":"Please, give me some tez."}' -n dev
+   jstz run jstz://<ADDRESS>/ --data '{"message":"Please, give me some tez."}' -n dev
    ```
 
    The function returns the message "Thank you for your polite request. You received 1 tez!"
@@ -352,7 +360,7 @@ Follow these steps to build and run this application:
 
    The CLI accepts two commands.
    If you input the text `show`, it prints the history of commands.
-   If you input any other text, it sends that text as a request to the smart function, as in the command you ran earlier: `jstz run tezos://<ADDRESS>/ --data '{"message":"Please, give me some tez."}' -n dev`.
+   If you input any other text, it sends that text as a request to the smart function, as in the command you ran earlier: `jstz run jstz://<ADDRESS>/ --data '{"message":"Please, give me some tez."}' -n dev`.
 
 1. Send a request that includes the word "please" and see that the smart function sends you one tez.
 
@@ -396,7 +404,7 @@ Essentially, it is a WASM program directly compiled from the core Jstz Rust code
 Although it is semantically correct, do not use this library in production because it involves copying users' secret keys, which is not secure.
 :::
 
-The `buildRequest` function constructs a `RunFunction` operation that calls the smart function by its `tezos://<ADDRESS>` URL.
+The `buildRequest` function constructs a `RunFunction` operation that calls the smart function by its `jstz://<ADDRESS>` URL.
 
 ```typescript
 function buildRequest(
@@ -415,7 +423,7 @@ function buildRequest(
     gas_limit: 55000,
     headers: {},
     method: "GET",
-    uri: `tezos://${contractAddress}`,
+    uri: `jstz://${contractAddress}`,
   };
 }
 ```

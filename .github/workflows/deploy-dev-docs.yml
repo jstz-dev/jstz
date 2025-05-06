@@ -1,0 +1,73 @@
+name: Deploy dev docs
+
+on:
+  push:
+    branches: [main]
+  # In case the push build fails
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: dev-docs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Not needed if lastUpdated is not enabled
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Install dependencies
+        run: npm ci
+      - name: Build with VitePress
+        # Overwriting the base (which is specified in docs/.vitepress/config.mjs) so that the pages
+        # are loaded correctly in the target repo. The base should be the name of the target repo.
+        run: |
+          npm run docs:build -- --base /dev-docs/
+          touch docs/.vitepress/dist/.nojekyll
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          path: docs/.vitepress/dist
+          name: built-docs
+          retention-days: 1
+  push:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download generated template
+        uses: actions/download-artifact@v4
+        with:
+          name: built-docs
+          path: docs
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          repository: jstz-dev/dev-docs
+          ref: main
+          # This token should have write access to the target repo content and github pages over there
+          token: ${{ secrets.DEV_DOC_REPO_TOKEN }}
+          path: dest_repo
+      - name: setup git config
+        run: |
+          cd $GITHUB_WORKSPACE/dest_repo/ && find . -mindepth 1 -maxdepth 1 ! -name '.git' -type d -exec rm -rf {} +
+          mv $GITHUB_WORKSPACE/docs/* $GITHUB_WORKSPACE/dest_repo/
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+          git add .
+          git commit -m "Docs built from ${{ github.sha }}"
+          git push origin main
