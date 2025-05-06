@@ -1,6 +1,8 @@
+use crate::{
+    js_class, js_constructor, js_entries, js_keys, js_method, js_values,
+    sys::js::convert::Serde,
+};
 use deno_core::{v8, ByteString};
-
-use crate::{js_class, js_constructor, js_entries, js_method, sys::js::convert::Serde};
 
 js_class!(Headers);
 
@@ -30,6 +32,10 @@ impl<'s> Headers<'s> {
         #[js_name(forEach)]
         fn for_each(callback: v8::Local<'s, v8::Function>)
     }
+
+    js_keys! {}
+
+    js_values! {ByteString}
 
     js_entries!(ByteString);
 }

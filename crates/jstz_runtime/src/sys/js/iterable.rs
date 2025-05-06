@@ -6,7 +6,6 @@ use deno_core::v8;
 use super::class::{instance_call_method, instance_get, JsClass};
 use super::convert::FromV8;
 use crate::error::Result;
-
 const VALUE_KEY: v8::OneByteConst =
     v8::String::create_external_onebyte_const("value".as_bytes());
 const NEXT_KEY: v8::OneByteConst =
@@ -16,6 +15,15 @@ const NEXT_KEY: v8::OneByteConst =
 pub struct Iterable<'s, T: FromV8<'s>> {
     pub js_iterator: v8::Local<'s, v8::Object>,
     pub marker: PhantomData<T>,
+}
+
+impl<'s, T: FromV8<'s>> Iterable<'s, T> {
+    pub fn new(js_iterator: v8::Local<'s, v8::Object>) -> Self {
+        Self {
+            js_iterator,
+            marker: PhantomData,
+        }
+    }
 }
 
 impl<'s, T> Iterable<'s, T>
@@ -78,11 +86,13 @@ macro_rules! js_impl_iterable {
             &self,
             scope: &mut v8::HandleScope<'s>,
         ) -> $crate::error::Result<$crate::sys::js::iterable::Iterable<'s, $return_type>>
+        where
+            Self: std::ops::Deref<Target = v8::Local<'s, v8::Object>>,
         {
             let method_name = v8::String::new(scope, stringify!($kind)).unwrap();
             let js_iterator = $crate::sys::js::class::instance_call_method::<Self>(
                 scope,
-                &self.0,
+                &self,
                 method_name,
                 &[],
             )?
