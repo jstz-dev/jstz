@@ -483,7 +483,7 @@ pub struct Response {
     status: u16,
     status_text: String,
     headers: Vec<(ByteString, ByteString)>,
-    body: Body,
+    pub body: Body,
 }
 
 #[derive(Debug)]
@@ -644,7 +644,13 @@ impl<'s> ToV8<'s> for Body {
 #[cfg(test)]
 #[allow(unused)]
 mod test {
-    use std::{collections::HashMap, path::Path, rc::Rc, sync::Arc};
+    use std::{
+        cell::{OnceCell, RefCell},
+        collections::HashMap,
+        path::Path,
+        rc::Rc,
+        sync::{Arc, LazyLock, OnceLock},
+    };
 
     use boa_engine::JsValue;
     use deno_core::{
@@ -724,44 +730,55 @@ mod test {
     // eg. jstz://<host address>/<remote address> will call fetch("jstz://<remote address>")
     const SIMPLE_REMOTE_CALLER: &str = "export default async (req) => await fetch(`jstz://${new URL(req.url).pathname.substring(1)}`)";
 
+    static TOKIO: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
+        tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap()
+    });
+
     // Run behaviour
 
     // Fetch with `jstz` scheme runs a smart function.
-    #[tokio::test]
-    async fn fetch_runs_smart_function() {
-        // Code
-        let run = SIMPLE_REMOTE_CALLER;
-        let remote = r#"export default async (_req) => new Response("hello world")"#;
+    #[test]
+    fn fetch_runs_smart_function() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (_req) => new Response("hello world")"#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            host,
-            tx,
-            source_address.into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                host,
+                tx,
+                source_address.into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        // Assert
-        assert_eq!(
-            "hello world",
-            String::from_utf8(response.body.into()).unwrap()
-        );
+            // Assert
+            assert_eq!(
+                "hello world",
+                String::from_utf8(response.body.into()).unwrap()
+            );
+        });
     }
 
     // Fetch rejects unsupported schemes runs a smart function.
-    #[tokio::test]
-    async fn fetch_rejects_unsupported_scheme() {
+    #[test]
+    fn fetch_rejects_unsupported_scheme() {
+        TOKIO.block_on(async {
+
         // Code
         let run = "export default async (req) => await fetch(`tezos://${new URL(req.url).pathname.substring(1)}`)";
 
@@ -791,359 +808,389 @@ mod test {
             serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
                 .unwrap()
         );
+    });
     }
 
     // Fetch rejects unsupported schemes runs a smart function.
-    #[tokio::test]
-    async fn fetch_rejects_unsupported_address_scheme() {
-        // Code
-        let run = "export default async (req) => await fetch(`jstz://abc123`)";
+    #[test]
+    fn fetch_rejects_unsupported_address_scheme() {
+        TOKIO.block_on(async {
+            // Code
+            let run = "export default async (req) => await fetch(`jstz://abc123`)";
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run]);
-        let run_address = hashes[0].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run]);
+            let run_address = hashes[0].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            host,
-            tx,
-            source_address.into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                host,
+                tx,
+                source_address.into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        // Assert
-        assert_eq!(response.status, 500);
-        assert_eq!(response.status_text, "InternalServerError");
-        assert_eq!(
-            json!({"class":"RuntimeError","message":"InvalidAddress"}),
-            serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
-                .unwrap()
-        );
+            // Assert
+            assert_eq!(response.status, 500);
+            assert_eq!(response.status_text, "InternalServerError");
+            assert_eq!(
+                json!({"class":"RuntimeError","message":"InvalidAddress"}),
+                serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
+                    .unwrap()
+            );
+        });
     }
 
     // Smart functions must return a Response if successfully ran
-    #[tokio::test]
-    async fn smart_function_must_return_response() {
-        // Code
-        let run = SIMPLE_REMOTE_CALLER;
-        let remote = r#"export default async (_req) => {}"#;
+    #[test]
+    fn smart_function_must_return_response() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (_req) => {}"#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            host,
-            tx,
-            source_address.into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                host,
+                tx,
+                source_address.into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        assert_eq!("InternalServerError", response.status_text);
-        assert_eq!(500, response.status);
-        assert_eq!(
-            json!({"class": "TypeError","message":"Invalid Response type"}),
-            serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
-                .unwrap()
-        );
+            assert_eq!("InternalServerError", response.status_text);
+            assert_eq!(500, response.status);
+            assert_eq!(
+                json!({"class": "TypeError","message":"Invalid Response type"}),
+                serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
+                    .unwrap()
+            );
+        });
     }
 
-    #[tokio::test]
-    async fn fetch_supports_empty_response_body() {
-        // Code
-        let run = SIMPLE_REMOTE_CALLER;
-        let remote = r#"export default async (_req) => new Response()"#;
+    #[test]
+    fn fetch_supports_empty_response_body() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (_req) => new Response()"#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
-        // Run
-        let response = process_and_dispatch_request(
-            host,
-            tx,
-            source_address.into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+            // Run
+            let response = process_and_dispatch_request(
+                host,
+                tx,
+                source_address.into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        let body: Vec<u8> = response.body.into();
-        assert!(body.is_empty());
+            let body: Vec<u8> = response.body.into();
+            assert!(body.is_empty());
+        })
     }
 
     // Global changes are isolated between smart function calls
-    #[tokio::test]
-    async fn fetch_provides_isolation() {
-        // Code
-        let run = r#"export default async (req) => {
+    #[test]
+    fn fetch_provides_isolation() {
+        TOKIO.block_on(async {
+            // Code
+            let run = r#"export default async (req) => {
             let address = new URL(req.url).pathname.substring(1);
             globalThis.leakyState = "abc"
             return await fetch(`jstz://${address}`)
         }"#;
-        let remote = r#"export default async (_req) => {
+            let remote = r#"export default async (_req) => {
             if (globalThis.leakyState ===  "abc") {  throw new Error("leak detected!"); }
             return new Response("hello world")
         }"#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            host,
-            tx,
-            source_address.into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                host,
+                tx,
+                source_address.into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        // Assert
-        assert_eq!(
-            "hello world",
-            String::from_utf8(response.body.into()).unwrap()
-        )
+            // Assert
+            assert_eq!(
+                "hello world",
+                String::from_utf8(response.body.into()).unwrap()
+            )
+        });
     }
 
     // Fetch can be called recursively (re-entrant)
     // FIXME: Smart functions should not be re-entrant by default
-    #[tokio::test]
-    async fn fetch_recursive() {
-        // Code
-        let run = include_str!("tests/resources/recursive/run.js");
+    #[test]
+    fn fetch_recursive() {
+        TOKIO.block_on(async {
+            // Code
+            let run = include_str!("tests/resources/recursive/run.js");
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run]);
-        let run_address = hashes[0].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run]);
+            let run_address = hashes[0].clone();
 
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx,
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx,
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        let json = serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
-            .unwrap();
-        assert_eq!(
-            json!({
-                "count": 3
-            }),
-            json
-        )
+            let json =
+                serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
+                    .unwrap();
+            assert_eq!(
+                json!({
+                    "count": 3
+                }),
+                json
+            )
+        })
     }
 
     // Racing multiple fetch calls is awaitable at different points of the program
-    #[tokio::test]
-    async fn fetch_raceable() {
-        // Code
-        let run = include_str!("tests/resources/raceable/run.js");
-        let remote = include_str!("tests/resources/raceable/remote.js");
+    #[test]
+    fn fetch_raceable() {
+        TOKIO.block_on(async {
+            // Code
+            let run = include_str!("tests/resources/raceable/run.js");
+            let remote = include_str!("tests/resources/raceable/remote.js");
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx,
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx,
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        // Assert
-        let json = serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
-            .unwrap();
-        assert_eq!(
-            json!({
-                "data": 3
-            }),
-            json
-        )
+            // Assert
+            let json =
+                serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
+                    .unwrap();
+            assert_eq!(
+                json!({
+                    "data": 3
+                }),
+                json
+            )
+        });
     }
 
     // The default behaviour of deno async is to run eagerly, even when not awaited on, for
     // latency reasons. This means that side effects like KV updates and transfers are performed
     // when the execution completes successfully even when not awaited on
-    #[tokio::test]
-    async fn fetch_eagerly_executes() {
-        // Code
-        let run = r#"export default async (req) => {
+    #[test]
+    fn fetch_eagerly_executes() {
+        TOKIO.block_on(async {
+            // Code
+            let run = r#"export default async (req) => {
             let address = new URL(req.url).pathname.substring(1);
             fetch(`jstz://${address}/5`)
             fetch(`jstz://${address}/-3`)
             return new Response()
         }"#;
-        let remote = r#"export default async (req) => {
+            let remote = r#"export default async (req) => {
             let incr = Number.parseInt(new URL(req.url).pathname.substring(1));
             let value = Kv.get("value") ?? 0;
             Kv.set("value", value + incr);
             return new Response()
         }"#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        // Assert
-        // check transaction was commited with unawaited on values
-        let kv = jstz_runtime::ext::jstz_kv::kv::Kv::new(remote_address.to_string());
-        let result = kv
-            .get(&mut host, &mut tx.lock(), "value")
-            .unwrap()
-            .0
-            .clone();
-        assert_eq!(2, serde_json::from_value::<usize>(result).unwrap());
+            // Assert
+            // check transaction was commited with unawaited on values
+            let kv = jstz_runtime::ext::jstz_kv::kv::Kv::new(remote_address.to_string());
+            let result = kv
+                .get(&mut host, &mut tx.lock(), "value")
+                .unwrap()
+                .0
+                .clone();
+            assert_eq!(2, serde_json::from_value::<usize>(result).unwrap());
+        });
     }
 
     // Headers processing behaviour
 
-    #[tokio::test]
-    async fn fetch_default_headers() {
-        // Code
-        let run = SIMPLE_REMOTE_CALLER;
-        let remote = r#"export default async (req) => {
+    #[test]
+    fn fetch_default_headers() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
             let body = Object.fromEntries(req.headers.entries());
             return new Response(JSON.stringify(body))
         }"#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        let request_headers =
-            serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
-                .unwrap();
-        assert_eq!(
-            json!({
-                "accept":"*/*",
-                "accept-language":"*",
-                "referrer":"KT1WEAA8whopt6FqPodVErxnQysYSkTan4wS"
-            }),
-            request_headers
-        );
+            let request_headers =
+                serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
+                    .unwrap();
+            assert_eq!(
+                json!({
+                    "accept":"*/*",
+                    "accept-language":"*",
+                    "referrer":"KT1WEAA8whopt6FqPodVErxnQysYSkTan4wS"
+                }),
+                request_headers
+            );
 
-        let response_headers: HashMap<String, String> = response
-            .headers
-            .into_iter()
-            .map(|(k, v)| {
-                (
-                    String::from_utf8(k.as_slice().to_vec()).unwrap(),
-                    String::from_utf8(v.as_slice().to_vec()).unwrap(),
-                )
-            })
-            .collect();
-        assert_eq!(
-            json!({
-                "content-type":"text/plain;charset=UTF-8",
-            }),
-            serde_json::to_value(response_headers).unwrap()
-        );
+            let response_headers: HashMap<String, String> = response
+                .headers
+                .into_iter()
+                .map(|(k, v)| {
+                    (
+                        String::from_utf8(k.as_slice().to_vec()).unwrap(),
+                        String::from_utf8(v.as_slice().to_vec()).unwrap(),
+                    )
+                })
+                .collect();
+            assert_eq!(
+                json!({
+                    "content-type":"text/plain;charset=UTF-8",
+                }),
+                serde_json::to_value(response_headers).unwrap()
+            );
+        })
     }
 
-    #[tokio::test]
-    async fn request_header_has_referrer() {
-        // Code
-        let run = SIMPLE_REMOTE_CALLER;
-        let remote = r#"export default async (req) => {
+    #[test]
+    fn request_header_has_referrer() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
             let body = Object.fromEntries(req.headers.entries());
             return new Response(JSON.stringify(body))
         }"#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        let request_headers =
-            serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
-                .unwrap();
-        assert!(request_headers["referrer"] == run_address.to_string());
+            let request_headers =
+                serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
+                    .unwrap();
+            assert!(request_headers["referrer"] == run_address.to_string());
+        })
     }
 
-    #[tokio::test]
-    async fn fetch_replaces_referrer_in_request_header() {
+    #[test]
+    fn fetch_replaces_referrer_in_request_header() {
+        TOKIO.block_on(async {
+
         // Code
         let run = r#"export default async (req) => {
             let address = new URL(req.url).pathname.substring(1);
@@ -1180,127 +1227,140 @@ mod test {
             run_address.to_string(),
             String::from_utf8(response.body.to_vec()).unwrap()
         );
+    })
     }
 
-    #[tokio::test]
-    async fn transfer_succeeds() {
-        // Code
-        let run = include_str!("tests/resources/transfer_succeeds/run.js");
-        let remote = include_str!("tests/resources/transfer_succeeds/remote.js");
+    #[test]
+    fn transfer_succeeds() {
+        TOKIO.block_on(async {
+            // Code
+            let run = include_str!("tests/resources/transfer_succeeds/run.js");
+            let remote = include_str!("tests/resources/transfer_succeeds/remote.js");
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Adds 10 XTZ
-        Account::add_balance(&mut host, &mut tx.lock(), &run_address, 10_000_000);
+            // Adds 10 XTZ
+            Account::add_balance(&mut host, &mut tx.lock(), &run_address, 10_000_000);
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        assert!(response.status == 200);
-        assert_eq!(
-            8_000_000,
-            Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
-        );
-        assert_eq!(
-            2_000_000,
-            Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
-        );
+            assert!(response.status == 200);
+            assert_eq!(
+                8_000_000,
+                Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
+            );
+            assert_eq!(
+                2_000_000,
+                Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
+            );
+        })
     }
 
-    #[tokio::test]
-    async fn transfer_fails_when_error_thrown() {
-        let run = include_str!("tests/resources/transfer_fails_when_error_thrown/run.js");
-        let remote =
-            include_str!("tests/resources/transfer_fails_when_error_thrown/remote.js");
+    #[test]
+    fn transfer_fails_when_error_thrown() {
+        TOKIO.block_on(async {
+            let run =
+                include_str!("tests/resources/transfer_fails_when_error_thrown/run.js");
+            let remote = include_str!(
+                "tests/resources/transfer_fails_when_error_thrown/remote.js"
+            );
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Adds 10 XTZ
-        Account::add_balance(&mut host, &mut tx.lock(), &run_address, 10_000_000);
+            // Adds 10 XTZ
+            Account::add_balance(&mut host, &mut tx.lock(), &run_address, 10_000_000);
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        assert_eq!(
-            10_000_000,
-            Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
-        );
-        assert_eq!(
-            0,
-            Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
-        );
+            assert_eq!(
+                10_000_000,
+                Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
+            );
+            assert_eq!(
+                0,
+                Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
+            );
+        })
     }
 
-    #[tokio::test]
-    async fn fetch_cleans_headers() {
-        let run = include_str!("tests/resources/fetch_cleans_headers/run.js");
-        let remote = include_str!("tests/resources/fetch_cleans_headers/remote.js");
+    #[test]
+    fn fetch_cleans_headers() {
+        TOKIO.block_on(async {
+            let run = include_str!("tests/resources/fetch_cleans_headers/run.js");
+            let remote = include_str!("tests/resources/fetch_cleans_headers/remote.js");
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Adds 10 XTZ
-        Account::add_balance(&mut host, &mut tx.lock(), &run_address, 10_000_000);
+            // Adds 10 XTZ
+            Account::add_balance(&mut host, &mut tx.lock(), &run_address, 10_000_000);
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        assert!(response.status == 200);
-        assert_eq!(
-            9_000_000,
-            Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
-        );
-        assert_eq!(
-            1_000_000,
-            Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
-        );
+            assert!(response.status == 200);
+            assert_eq!(
+                9_000_000,
+                Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
+            );
+            assert_eq!(
+                1_000_000,
+                Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
+            );
+        })
     }
 
-    #[tokio::test]
-    async fn transfer_rejects_when_invalid() {
-        let run = SIMPLE_REMOTE_CALLER;
-        let remote = r#"
+    #[test]
+    fn transfer_rejects_when_invalid() {
+        TOKIO.block_on(async {
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"
             export default async (req) => {
                 return new Response(null, {
                     headers: {
@@ -1310,37 +1370,40 @@ mod test {
             }
         "#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        assert_eq!(500, response.status);
-        assert_eq!(
-            json!({"class":"RuntimeError","message":"InsufficientFunds"}),
-            serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
-                .unwrap()
-        )
+            assert_eq!(500, response.status);
+            assert_eq!(
+                json!({"class":"RuntimeError","message":"InsufficientFunds"}),
+                serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
+                    .unwrap()
+            )
+        })
     }
 
-    #[tokio::test]
-    async fn transfer_fails_when_status_not_2xx() {
-        let run = SIMPLE_REMOTE_CALLER;
-        let remote = r#"
+    #[test]
+    fn transfer_fails_when_status_not_2xx() {
+        TOKIO.block_on(async {
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"
             export default async (req) => {
                 return new Response(null, {
                     status: 400,
@@ -1351,117 +1414,127 @@ mod test {
             }
         "#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Adds 10 XTZ
-        Account::add_balance(&mut host, &mut tx.lock(), &remote_address, 10_000_000);
+            // Adds 10 XTZ
+            Account::add_balance(&mut host, &mut tx.lock(), &remote_address, 10_000_000);
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        assert_eq!(400, response.status);
-        assert_eq!(
-            0,
-            Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
-        );
-        assert_eq!(
-            10_000_000,
-            Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
-        );
+            assert_eq!(400, response.status);
+            assert_eq!(
+                0,
+                Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
+            );
+            assert_eq!(
+                10_000_000,
+                Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
+            );
+        });
     }
 
     // Transaction behaviour
 
-    #[tokio::test]
-    async fn transaction_rolled_back_when_error_thrown() {
-        // Code
-        let run = SIMPLE_REMOTE_CALLER;
-        let remote = r#"export default async (_req) => {
+    #[test]
+    fn transaction_rolled_back_when_error_thrown() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (_req) => {
             Kv.set("test", 123)
             throw new Error("boom")
         }"#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        // check transaction was commited with unawaited on values
-        let kv = jstz_runtime::ext::jstz_kv::kv::Kv::new(remote_address.to_string());
-        let mut tx = tx.lock();
-        let result = kv.get(&mut host, &mut tx, "test");
-        assert!(result.is_none())
+            // check transaction was commited with unawaited on values
+            let kv = jstz_runtime::ext::jstz_kv::kv::Kv::new(remote_address.to_string());
+            let mut tx = tx.lock();
+            let result = kv.get(&mut host, &mut tx, "test");
+            assert!(result.is_none())
+        });
     }
 
-    #[tokio::test]
-    async fn transaction_rolled_back_when_status_not_2xx() {
-        // Code
-        let run = SIMPLE_REMOTE_CALLER;
-        let remote = r#"export default async (_req) => {
+    #[test]
+    fn transaction_rolled_back_when_status_not_2xx() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (_req) => {
             Kv.set("test", 123)
             return new Response(null, { status: 500 })
         }"#;
 
-        // Setup
-        let mut host = tezos_smart_rollup_mock::MockHost::default();
-        let (mut host, mut tx, source_address, hashes) = setup(&mut host, [run, remote]);
-        let run_address = hashes[0].clone();
-        let remote_address = hashes[1].clone();
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
 
-        // Run
-        let response = process_and_dispatch_request(
-            JsHostRuntime::new(&mut host),
-            tx.clone(),
-            jstz_mock::account1().into(),
-            "GET".into(),
-            Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
-                .unwrap(),
-            vec![],
-            None,
-        )
-        .await;
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
 
-        // check transaction was commited with unawaited on values
-        let kv = jstz_runtime::Kv::new(remote_address.to_string());
-        let mut tx = tx.lock();
-        let result = kv.get(&mut host, &mut tx, "test");
-        assert!(result.is_none())
+            // check transaction was commited with unawaited on values
+            let kv = jstz_runtime::Kv::new(remote_address.to_string());
+            let mut tx = tx.lock();
+            let result = kv.get(&mut host, &mut tx, "test");
+            assert!(result.is_none())
+        });
     }
 
     // Error behaviour
 
     // Errors that are a result of evaluating the request (server side issues) are converted
     // into an error response
-    #[tokio::test]
-    async fn error_during_sf_execution_converts_to_error_response() {
+    #[test]
+    fn error_during_sf_execution_converts_to_error_response() {
+        TOKIO.block_on(async {
+
         // Code
         let run = SIMPLE_REMOTE_CALLER;
         let remote = r#"export default async (_req) => {
@@ -1494,9 +1567,10 @@ mod test {
             serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
                 .unwrap()
         );
+    });
     }
 
     // Fetch API compliance
     // TODO: https://github.com/jstz-dev/jstz/pull/982
-    async fn request_get_reader_supported() {}
+    fn request_get_reader_supported() {}
 }
