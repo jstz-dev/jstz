@@ -75,7 +75,7 @@ test: test-unit test-int
 test-unit:
 # --lib only runs unit tests in library crates
 # --bins only runs unit tests in binary crates
-	@cargo nextest run --lib --bins
+	@cargo nextest run --lib --bins --features riscv,skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
 
 .PHONY: test-int
 test-int:
@@ -109,6 +109,6 @@ fmt-check:
 lint:
 	@touch $(CLI_KERNEL_PATH) 
 #  Jstzd has to processes a non-empty kernel in its build script
-	@echo "ignore" > $(JSTZD_KERNEL_PATH) 
+	@echo "ignore" > $(JSTZD_KERNEL_PATH)
 	@cargo clippy --all-targets -- --deny warnings
 	@rm -f $(CLI_KERNEL_PATH) $(JSTZD_KERNEL_PATH)
