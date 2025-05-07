@@ -180,7 +180,7 @@ in let
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
         doCheck = true;
         # Run the unit tests
-        cargoNextestExtraArgs = "--bins --lib";
+        cargoNextestExtraArgs = "--bins --lib --features \"riscv\" --features \"skip-wpt\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-test-int = craneLib.cargoNextest (commonWorkspace

@@ -106,12 +106,12 @@ impl<'s> ResponseInit<'s> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::{
         init_test_setup,
         sys::js::convert::{FromV8, ToV8},
     };
-
-    use super::*;
+    use jstz_utils::TOKIO;
 
     #[test]
     fn test_new() {
@@ -149,29 +149,31 @@ mod test {
         assert_eq!(response.status_text(scope).unwrap(), "SuperSmashingGreat");
     }
 
-    #[tokio::test]
-    async fn test_new_json() {
-        init_test_setup! { runtime = runtime; };
+    #[test]
+    fn test_new_json() {
+        TOKIO.block_on(async {
+            init_test_setup! { runtime = runtime; };
 
-        let array_buffer = {
-            let scope = &mut runtime.handle_scope();
+            let array_buffer = {
+                let scope = &mut runtime.handle_scope();
 
-            let value = v8::String::new(scope, "Hello World").unwrap();
-            let response = Response::new_json(scope, value.into()).unwrap();
-            assert_eq!(response.status(scope).unwrap(), 200);
-            assert_eq!(response.r#type(scope).unwrap(), "default");
-            assert!(response.is_ok(scope).unwrap());
-            assert!(!response.is_redirected(scope).unwrap());
-            assert!(!response.is_body_used(scope).unwrap());
+                let value = v8::String::new(scope, "Hello World").unwrap();
+                let response = Response::new_json(scope, value.into()).unwrap();
+                assert_eq!(response.status(scope).unwrap(), 200);
+                assert_eq!(response.r#type(scope).unwrap(), "default");
+                assert!(response.is_ok(scope).unwrap());
+                assert!(!response.is_redirected(scope).unwrap());
+                assert!(!response.is_body_used(scope).unwrap());
 
-            response.array_buffer(scope).unwrap()
-        };
+                response.array_buffer(scope).unwrap()
+            };
 
-        let array_buffer = array_buffer.with_runtime(&mut runtime).await.unwrap();
-        let buffer = array_buffer.as_ref();
+            let array_buffer = array_buffer.with_runtime(&mut runtime).await.unwrap();
+            let buffer = array_buffer.as_ref();
 
-        assert_eq!(buffer.len(), 13);
-        assert_eq!(buffer, b"\"Hello World\"");
+            assert_eq!(buffer.len(), 13);
+            assert_eq!(buffer, b"\"Hello World\"");
+        })
     }
 
     #[test]
@@ -237,28 +239,30 @@ mod test {
         );
     }
 
-    #[tokio::test]
-    async fn test_array_buffer() {
-        init_test_setup! { runtime = runtime ;};
+    #[test]
+    fn test_array_buffer() {
+        TOKIO.block_on(async {
+            init_test_setup! { runtime = runtime ;};
 
-        let (global_response, array_buffer) = {
+            let (global_response, array_buffer) = {
+                let scope = &mut runtime.handle_scope();
+                let body = v8::String::new(scope, "Hello World").unwrap();
+                let response = Response::new_with_body(scope, body.into()).unwrap();
+                let response_value = response.clone().to_v8(scope).unwrap();
+                let global_response = v8::Global::new(scope, response_value);
+                (global_response, response.array_buffer(scope).unwrap())
+            };
+
+            let array_buffer = array_buffer.with_runtime(&mut runtime).await.unwrap();
+            let buffer = array_buffer.as_ref();
+
+            assert_eq!(buffer, b"Hello World");
+            assert_eq!(buffer.len(), 11);
+
             let scope = &mut runtime.handle_scope();
-            let body = v8::String::new(scope, "Hello World").unwrap();
-            let response = Response::new_with_body(scope, body.into()).unwrap();
-            let response_value = response.clone().to_v8(scope).unwrap();
-            let global_response = v8::Global::new(scope, response_value);
-            (global_response, response.array_buffer(scope).unwrap())
-        };
-
-        let array_buffer = array_buffer.with_runtime(&mut runtime).await.unwrap();
-        let buffer = array_buffer.as_ref();
-
-        assert_eq!(buffer, b"Hello World");
-        assert_eq!(buffer.len(), 11);
-
-        let scope = &mut runtime.handle_scope();
-        let response_value = v8::Local::new(scope, global_response);
-        let response = Response::from_v8(scope, response_value).unwrap();
-        assert!(response.is_body_used(scope).unwrap());
+            let response_value = v8::Local::new(scope, global_response);
+            let response = Response::from_v8(scope, response_value).unwrap();
+            assert!(response.is_body_used(scope).unwrap());
+        })
     }
 }

@@ -59,12 +59,12 @@ impl<'s> RequestInit<'s> {
 
 #[cfg(test)]
 mod test {
+    use super::*;
     use crate::{
         init_test_setup,
         sys::js::convert::{FromV8, ToV8},
     };
-
-    use super::*;
+    use jstz_utils::TOKIO;
 
     #[test]
     fn test_new() {
@@ -264,42 +264,44 @@ mod test {
         assert!(!body.unwrap().is_promise());
     }
 
-    #[tokio::test]
-    async fn test_array_buffer() {
-        init_test_setup! { runtime = runtime; };
+    #[test]
+    fn test_array_buffer() {
+        TOKIO.block_on(async {
+            init_test_setup! { runtime = runtime; };
 
-        let (global_request, array_buffer) = {
+            let (global_request, array_buffer) = {
+                let scope = &mut runtime.handle_scope();
+                let init = RequestInit::new(scope);
+                let body = v8::String::new(scope, "Hello World").unwrap();
+                let headers = Headers::new(scope).unwrap();
+                headers
+                    .append(scope, "Content-Type".into(), "text/plain".into())
+                    .unwrap();
+                init.set_method(scope, ByteString::from("POST").into())
+                    .unwrap();
+                init.set_body(scope, body.into()).unwrap();
+                init.set_headers(scope, headers).unwrap();
+                let request = Request::new_with_string_and_init(
+                    scope,
+                    "https://example.com".into(),
+                    init,
+                )
+                .unwrap();
+                let request_value = request.clone().to_v8(scope).unwrap();
+                let global_request = v8::Global::new(scope, request_value);
+                (global_request, request.array_buffer(scope).unwrap())
+            };
+
+            let array_buffer = array_buffer.with_runtime(&mut runtime).await.unwrap();
+            let buffer = array_buffer.as_ref();
+
+            assert_eq!(buffer, b"Hello World");
+            assert_eq!(buffer.len(), 11);
+
             let scope = &mut runtime.handle_scope();
-            let init = RequestInit::new(scope);
-            let body = v8::String::new(scope, "Hello World").unwrap();
-            let headers = Headers::new(scope).unwrap();
-            headers
-                .append(scope, "Content-Type".into(), "text/plain".into())
-                .unwrap();
-            init.set_method(scope, ByteString::from("POST").into())
-                .unwrap();
-            init.set_body(scope, body.into()).unwrap();
-            init.set_headers(scope, headers).unwrap();
-            let request = Request::new_with_string_and_init(
-                scope,
-                "https://example.com".into(),
-                init,
-            )
-            .unwrap();
-            let request_value = request.clone().to_v8(scope).unwrap();
-            let global_request = v8::Global::new(scope, request_value);
-            (global_request, request.array_buffer(scope).unwrap())
-        };
-
-        let array_buffer = array_buffer.with_runtime(&mut runtime).await.unwrap();
-        let buffer = array_buffer.as_ref();
-
-        assert_eq!(buffer, b"Hello World");
-        assert_eq!(buffer.len(), 11);
-
-        let scope = &mut runtime.handle_scope();
-        let request_value = v8::Local::new(scope, global_request);
-        let request = Request::from_v8(scope, request_value).unwrap();
-        assert!(request.is_body_used(scope).unwrap());
+            let request_value = v8::Local::new(scope, global_request);
+            let request = Request::from_v8(scope, request_value).unwrap();
+            assert!(request.is_body_used(scope).unwrap());
+        })
     }
 }

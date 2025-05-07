@@ -35,6 +35,7 @@ parking_lot.workspace = true
 anyhow.workspace = true
 derive_more.workspace = true
 jstz_wpt = { path = "../jstz_wpt" }
+jstz_utils = { path = "../jstz_utils" }
 regex.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

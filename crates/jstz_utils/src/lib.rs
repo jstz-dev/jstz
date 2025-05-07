@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 pub async fn poll<'a, F, T>(
     max_attempts: u16,
     interval_ms: u64,
@@ -15,6 +17,13 @@ where
     }
     None
 }
+
+// Global tokio instance to prevent races among v2 runtime tests
+pub static TOKIO: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
+    tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap()
+});
 
 #[cfg(test)]
 mod tests {
