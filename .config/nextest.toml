@@ -1,2 +1,9 @@
 [profile.default]
 slow-timeout = { period = "120s", terminate-after = 1 }
+
+[[profile.default.overrides]]
+filter = 'package(jstz_proto) and test(runtime::v2::)'
+test-group = 'serial'
+
+[test-groups]
+serial= { max-threads = 1 }
