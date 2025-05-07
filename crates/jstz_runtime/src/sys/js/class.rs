@@ -121,7 +121,6 @@ pub(crate) fn instance_get<'s>(
         WebSysError::PropertyMissing(property_name.to_rust_string_lossy(scope))
     })?)
 }
-
 pub(crate) fn instance_set(
     scope: &mut v8::HandleScope,
     this: &v8::Local<v8::Object>,
@@ -161,7 +160,8 @@ macro_rules! js_method {
             &self,
             scope: &mut v8::HandleScope<'s>,
             $($method_arg_name: $method_arg_type),*
-        ) -> $crate::error::Result<($($method_return)?)> {
+        ) -> $crate::error::Result<($($method_return)?)>
+            where Self: std::ops::Deref<Target = v8::Local<'s, v8::Object>> {
             let method_name = $crate::sys::js::class::property_name(scope, stringify!($js_name))?;
             let args =
                 [
@@ -169,7 +169,7 @@ macro_rules! js_method {
                 ];
 
             #[allow(unused)]
-            let result = $crate::sys::js::class::instance_call_method::<Self>(scope, &self.0, method_name, &args)?;
+            let result = $crate::sys::js::class::instance_call_method::<Self>(scope, &self, method_name, &args)?;
 
             Ok(
                 ($(<$method_return as $crate::sys::js::convert::FromV8>::from_v8(scope, result)?)?)
@@ -266,11 +266,13 @@ macro_rules! js_getter {
         pub fn $getter_name(
             &self,
             scope: &mut v8::HandleScope<'s>,
-        ) -> $crate::error::Result<$getter_return> {
+        ) -> $crate::error::Result<$getter_return>
+        where
+            Self: std::ops::Deref<Target = v8::Local<'s, v8::Object>>,
+        {
             let getter_name =
                 $crate::sys::js::class::property_name(scope, stringify!($js_name))?;
-            let result =
-                $crate::sys::js::class::instance_get(scope, &self.0, getter_name)?;
+            let result = $crate::sys::js::class::instance_get(scope, &self, getter_name)?;
             <$getter_return as $crate::sys::js::convert::FromV8>::from_v8(scope, result)
         }
     };
@@ -340,9 +342,16 @@ macro_rules! js_class {
             }
         }
 
-        impl<'s> $crate::sys::js::class::JsClass for $name<'s> {
+        impl<'a> $crate::sys::js::class::JsClass for $name<'a> {
             const JS_CLASS_NAME: deno_core::FastStaticString =
                 deno_core::ascii_str!(stringify!($name));
+        }
+
+        impl<'a> std::ops::Deref for $name<'a> {
+            type Target = v8::Local<'a, v8::Object>;
+            fn deref(&self) -> &Self::Target {
+                &self.0
+            }
         }
     };
 }

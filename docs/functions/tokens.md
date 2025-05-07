@@ -9,42 +9,104 @@ Internally, Jstz tracks tez not as individual tez but as _mutez_, which are equa
 
 :::
 
-::: warning
-
-The Ledger API used on this page is deprecated and will be removed in future versions of Jstz.
-
-:::
-
 ## Sending tez
 
-If a smart function has a balance of tez, it can send tez to a user account or smart function by passing the target address and the amount in mutez to the `Ledger.transfer` function, as in this example:
+If a smart function has tez, it can send tez to a user account or smart function as part of a request by putting the amount of mutez in the `X-JSTZ-TRANSFER` header in requests, as in this example:
 
 ```typescript
 // 1 tez = 1 million mutez
 const ONE_TEZ = 1000000;
+// Transfer 1 XTZ to smart function B
+const smartFunctionB = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5";
+const send_request = new Request(`jstz://${smartFunctionB}`, {
+  headers: {
+    "X-JSTZ-TRANSFER": ONE_TEZ,
+  },
+});
+await fetch(send_request);
+```
 
-// Main function: handle calls to the smart function
-const handler = (request: Request): Response => {
-  // Extract the requester's address and message from the request
-  const requester = request.headers.get("Referer") as Address;
+To send tez to a smart function without calling the smart function and running its handler function, send the tez in a request to `jstz://<ADDRESS>/-/noop`, as in this example:
 
-  console.log(
-    `Requester's account has ${Ledger.balance(requester) / ONE_TEZ} tez.`,
-  );
+```typescript
+const ONE_TEZ = 1000000;
+const call_request = new Request(`jstz://${smart_function}/-/noop`, {
+  headers: {
+    "X-JSTZ-TRANSFER": ONE_TEZ.toString(),
+  },
+});
+```
 
-  const myBalance = Ledger.balance(Ledger.selfAddress) / ONE_TEZ;
-  console.log(`I have ${myBalance} tez.`);
+As described in [Errors](/functions/calling#errors), any transfers are reverted if a smart function throws an uncaught error.
 
-  if (Ledger.balance(Ledger.selfAddress) > ONE_TEZ) {
-    Ledger.transfer(requester, ONE_TEZ);
+## Transferring tez in a response
+
+A smart function can transfer tez in a response by setting the `X-JSTZ-TRANSFER` header in the response.
+For example, this smart function receives tez and returns it in the response:
+
+```typescript
+const ONE_TEZ = 1000000; // 1 XTZ in mutez
+
+const handler = async (request: Request): Promise<Response> => {
+  const transferred_amount_string = request.headers.get("X-JSTZ-AMOUNT");
+  const transferred_amount = parseInt(transferred_amount_string || "0");
+  console.log(`Received ${transferred_amount} mutez`);
+
+  if (transferred_amount < ONE_TEZ) {
+    throw "Send at least one tez and I will return it";
   }
 
-  return new Response(JSON.stringify("OK"));
+  return new Response("Thank you!", {
+    headers: {
+      "Content-Type": "text/utf-8",
+      "X-JSTZ-TRANSFER": transferred_amount.toString(),
+    },
+  });
 };
 
 export default handler;
 ```
 
-Smart functions automatically accept tez sent to them.
+## Receiving tez
 
-As described in [Errors](/functions/calling#errors), any transfers are reverted if a smart function throws an uncaught error.
+Smart functions automatically accept tez sent to them.
+You can see how many mutez are in a request by checking the `X-JSTZ-AMOUNT` header, which includes the amount as a string:
+
+```typescript
+const ONE_TEZ = 1000000; // 1 XTZ in mutez
+
+const handler = async (request: Request): Promise<Response> => {
+  const transferred_amount_string = request.headers.get("X-JSTZ-AMOUNT");
+  const transferred_amount = parseInt(transferred_amount_string || "0");
+  console.log(`Received ${transferred_amount} mutez.`);
+
+  return new Response("Thank you!", {
+    headers: {
+      "Content-Type": "text/utf-8",
+      "X-JSTZ-TRANSFER": ONE_TEZ.toString(),
+    },
+  });
+};
+
+export default handler;
+```
+
+To prevent a smart function from receiving tez, throw an exception to revert the transfer if the `X-JSTZ-AMOUNT` header is set, as in this example:
+
+```typescript
+const handler = (request: Request): Response => {
+  const transferred_amount_string = request.headers.get("X-JSTZ-AMOUNT");
+  const transferred_amount = parseInt(transferred_amount_string || "0");
+  console.log(`Received ${transferred_amount} mutez`);
+  if (transferred_amount > 0) {
+    throw "Don't send tez to this smart function.";
+  }
+  return new Response("OK", {
+    headers: {
+      "Content-Type": "text/utf-8",
+    },
+  });
+};
+
+export default handler;
+```
