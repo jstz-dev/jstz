@@ -297,9 +297,12 @@ fn init_extenions() -> Vec<Extension> {
 
 #[cfg(test)]
 mod test {
+
     use super::*;
 
     use crate::{error::RuntimeError, init_test_setup};
+
+    use jstz_utils::TOKIO;
 
     #[test]
     fn test_init_jstz_runtime() {
@@ -337,92 +340,102 @@ mod test {
         (rt, result)
     }
 
-    #[tokio::test]
-    async fn test_call_default_handler_with_exn() {
-        let (_rt, result) = init_and_call_default_handler(
-            r#"
+    #[test]
+    fn test_call_default_handler_with_exn() {
+        TOKIO.block_on(async {
+            let (_rt, result) = init_and_call_default_handler(
+                r#"
 function handler() {
     throw "error";
 }
 
 export default handler;
         "#,
-        )
-        .await;
+            )
+            .await;
 
-        assert!(result.is_err())
+            assert!(result.is_err())
+        })
     }
 
-    #[tokio::test]
-    async fn test_call_default_handler_with_missing_export() {
-        let (_rt, result) = init_and_call_default_handler(
-            r#"
+    #[test]
+    fn test_call_default_handler_with_missing_export() {
+        TOKIO.block_on(async {
+            let (_rt, result) = init_and_call_default_handler(
+                r#"
 export function handler() {
     return 42;
 }
         "#,
-        )
-        .await;
+            )
+            .await;
 
-        assert!(result.is_err())
+            assert!(result.is_err())
+        })
     }
 
-    #[tokio::test]
-    async fn test_call_default_handler() {
-        let (mut rt, result) = init_and_call_default_handler(
-            r#"
+    #[test]
+    fn test_call_default_handler() {
+        TOKIO.block_on(async {
+            let (mut rt, result) = init_and_call_default_handler(
+                r#"
 function handler() {
     return 42;
 }
 
 export default handler;
         "#,
-        )
-        .await;
+            )
+            .await;
 
-        let scope = &mut rt.handle_scope();
-        let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
-        assert_eq!(result_i64, 42);
+            let scope = &mut rt.handle_scope();
+            let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
+            assert_eq!(result_i64, 42);
+        })
     }
 
-    #[tokio::test]
-    async fn call_default_handler_returns_error() {
-        let (_rt, result) = init_and_call_default_handler(
-            r#"
+    #[test]
+    fn call_default_handler_returns_error() {
+        TOKIO.block_on(async {
+            let (_rt, result) = init_and_call_default_handler(
+                r#"
 function handler() {
     throw new Error("boom")
 }
 export default handler;
         "#,
-        )
-        .await;
+            )
+            .await;
 
-        let result = result.unwrap_err();
-        assert!(matches!(result, RuntimeError::DenoCore(_)));
+            let result = result.unwrap_err();
+            assert!(matches!(result, RuntimeError::DenoCore(_)));
+        })
     }
 
-    #[tokio::test]
-    async fn test_call_default_handler_with_arguments() {
-        let code = r#"
+    #[test]
+    fn test_call_default_handler_with_arguments() {
+        TOKIO.block_on(async {
+            let code = r#"
     function handler(value) {
         return 42 + value;
     }
 
     export default handler;
             "#;
-        init_test_setup! {
-            runtime = rt;
-            specifier = (specifier, code);
-        };
-        let id = rt.execute_main_module(&specifier).await.unwrap();
-        let value = {
+            init_test_setup! {
+                runtime = rt;
+                specifier = (specifier, code);
+            };
+            let id = rt.execute_main_module(&specifier).await.unwrap();
+            let value = {
+                let scope = &mut rt.handle_scope();
+                let value = v8::Integer::new(scope, 20_i32).cast::<v8::Value>();
+                v8::Global::new(scope, value)
+            };
+            let result = rt.call_default_handler(id, &[value]).await;
             let scope = &mut rt.handle_scope();
-            let value = v8::Integer::new(scope, 20_i32).cast::<v8::Value>();
-            v8::Global::new(scope, value)
-        };
-        let result = rt.call_default_handler(id, &[value]).await;
-        let scope = &mut rt.handle_scope();
-        let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
-        assert_eq!(result_i64, 62);
+            let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
+            assert_eq!(result_i64, 62);
+        })
     }
 }
