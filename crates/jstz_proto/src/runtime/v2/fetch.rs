@@ -1,9 +1,13 @@
+use bytes::Bytes;
+use deno_core::futures::{future, stream};
 use deno_core::{
-    resolve_import, serde_v8, v8, AsyncResult, BufView, ByteString, JsBuffer, OpState,
-    Resource, ResourceId, StaticModuleLoader, ToJsBuffer,
+    resolve_import, serde_v8, v8, ByteString, JsBuffer, OpState, Resource, ResourceId,
+    StaticModuleLoader, ToJsBuffer,
 };
 use deno_error::JsErrorClass;
-use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
+use deno_fetch_base::{
+    BytesStream, FetchHandler, FetchResponse, FetchResponseResource, FetchReturn,
+};
 use jstz_core::host::JsHostRuntime;
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
@@ -101,6 +105,29 @@ impl FetchHandler for ProtoFetchHandler {
         Err(FetchError::NotSupported(
             "custom_client op is not supported",
         ))
+    }
+}
+
+struct JstzResponse {
+    body: Bytes,
+}
+
+impl From<JstzResponse> for BytesStream {
+    fn from(response: JstzResponse) -> Self {
+        match response.body.len() {
+            0 => Box::pin(stream::empty()),
+            _ => Box::pin(stream::once(future::ready(Ok(response.body)))),
+        }
+    }
+}
+
+impl JstzResponse {
+    pub fn new(body: Bytes) -> Self {
+        Self { body }
+    }
+
+    pub fn body_size(&self) -> u64 {
+        self.body.len() as u64
     }
 }
 
@@ -330,12 +357,12 @@ async fn fetch_send(
         .expect("multiple op_fetch_send ongoing");
 
     let response = request.future.await;
-    let response_rid = state
-        .borrow_mut()
-        .resource_table
-        .add(FetchResponseResource {
-            body: RefCell::new(Some(response.body)),
-        });
+    let jstz_response = JstzResponse::new(response.body.into());
+    let body_size = jstz_response.body_size();
+    let response_rid =
+        state.borrow_mut().resource_table.add(
+            FetchResponseResource::<JstzResponse>::new(jstz_response, Some(body_size)),
+        );
 
     Ok(deno_fetch_base::FetchResponse {
         status: response.status,
@@ -512,6 +539,15 @@ impl From<Body> for Vec<u8> {
     }
 }
 
+impl From<Body> for Bytes {
+    fn from(body: Body) -> Self {
+        match body {
+            Body::Vector(items) => Bytes::from(items),
+            Body::Buffer(js_buffer) => Bytes::from(js_buffer.to_vec()),
+        }
+    }
+}
+
 pub enum SupportedScheme {
     Jstz,
 }
@@ -545,25 +581,7 @@ pub struct FetchRequestResource {
     pub from: SmartFunctionHash,
 }
 
-pub struct FetchResponseResource {
-    body: RefCell<Option<Body>>,
-}
-
 impl Resource for FetchRequestResource {}
-
-impl Resource for FetchResponseResource {
-    fn read(self: Rc<Self>, _limit: usize) -> AsyncResult<BufView> {
-        Box::pin(async move {
-            if let Some(body) = self.body.borrow_mut().take() {
-                return Ok(match body {
-                    Body::Buffer(body) => BufView::from(body),
-                    Body::Vector(body) => BufView::from(body),
-                });
-            }
-            Ok(BufView::empty())
-        })
-    }
-}
 
 // Errors
 
@@ -647,10 +665,12 @@ mod test {
     use std::{collections::HashMap, path::Path, rc::Rc, sync::Arc};
 
     use boa_engine::JsValue;
+    use bytes::Bytes;
     use deno_core::{
-        include_js_files, resolve_import, snapshot::get_js_files, v8, ByteString,
-        StaticModuleLoader, ToV8,
+        futures::StreamExt, include_js_files, resolve_import, snapshot::get_js_files, v8,
+        ByteString, StaticModuleLoader, ToV8,
     };
+    use deno_fetch_base::BytesStream;
     use jstz_core::{
         host::{HostRuntime, JsHostRuntime},
         kv::Transaction,
@@ -665,11 +685,11 @@ mod test {
     use tezos_smart_rollup::storage::path::OwnedPath;
     use url::Url;
 
-    use super::{load_and_run, process_and_dispatch_request, ProtoFetchHandler};
-    use crate::{
-        context::account::{Account, Address, Addressable, Amount, ParsedCode},
-        runtime::v2::fetch::{convert_js_to_response, Body},
+    use super::{
+        convert_js_to_response, load_and_run, process_and_dispatch_request, Body,
+        JstzResponse, ProtoFetchHandler,
     };
+    use crate::context::account::{Account, Address, Addressable, Amount, ParsedCode};
 
     // Deploy a vec of smart functions from the same creator, each
     // with `amount` XTZ. Returns a vec of hashes corresponding to
@@ -1499,4 +1519,113 @@ mod test {
     // Fetch API compliance
     // TODO: https://github.com/jstz-dev/jstz/pull/982
     async fn request_get_reader_supported() {}
+
+    #[tokio::test]
+    async fn test_fetch_response_body_stream() {
+        let mut host = tezos_smart_rollup_mock::MockHost::default();
+        let address =
+            SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton")
+                .unwrap();
+        let mut tx = jstz_core::kv::Transaction::default();
+        tx.begin();
+        let tx = Arc::new(Mutex::new(tx));
+        let protocol = Some(ProtocolContext::new(&mut host, tx.clone(), address.clone()));
+        let source = Address::User(jstz_mock::account1());
+        let fetched_script = r#"
+            const handler = async (req) => {
+                let reqBody = await req.arrayBuffer();
+                return new Response(reqBody, {
+                    headers: {
+                        "content-type": "application/octet-stream"
+                    }
+                });
+            }
+            export default handler;
+        "#;
+        let mut tx_guard = tx.lock();
+        Account::add_balance(&mut host, &mut tx_guard, &source, 10000)
+            .expect("add balance");
+        let func_addr = Account::create_smart_function(
+            &mut host,
+            &mut tx_guard,
+            &source,
+            100,
+            ParsedCode(fetched_script.to_string()),
+        )
+        .unwrap();
+        drop(tx_guard);
+
+        let code = format!(
+            r#"
+            const call = async () => {{
+                const body = [1,2,3,4,5,6,7,8,9,10];
+                const expectedBytes = body.length;
+                let request = new Request("jstz://{func_addr}", {{
+                    method: "POST",
+                    body: new Uint8Array(body),
+                    headers: {{
+                        "content-type": "application/octet-stream",
+                    }}
+                }})
+                let response = await fetch(request);
+                const CHUNK_SIZE = 3;          
+                let actualBytes = 0;    
+                let count = 0;       
+                const reader = response.body.getReader({{ mode: "byob" }});   
+                while (true) {{
+                    const buf = new Uint8Array(CHUNK_SIZE);
+                    const {{ value, done }} = await reader.read(buf);    
+                    if (done) break;
+                    actualBytes += value.byteLength;
+                    count += 1;
+                }}
+                if (actualBytes !== expectedBytes) {{
+                    throw new Error("size is incorrect");
+                }}
+                const expectedCount = Math.floor(actualBytes / CHUNK_SIZE) + 1; 
+                if (count !== expectedCount) {{
+                    throw new Error("count is incorrect");
+                }}
+                return response
+            }}
+
+            export default call;
+        "#
+        );
+        let specifier =
+            resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
+        let module_loader = StaticModuleLoader::with(specifier.clone(), code);
+        let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
+            protocol,
+            fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
+            module_loader: Rc::new(module_loader),
+            ..Default::default()
+        });
+        let id = runtime.execute_main_module(&specifier).await.unwrap();
+        let _ = runtime.call_default_handler(id, &[]).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_jstz_response() {
+        // Test creating response with body
+        let body = Bytes::from("test body");
+        let response = JstzResponse::new(body.clone());
+        assert!(response.body.len() > 0);
+        assert_eq!(response.body_size(), body.len() as u64);
+
+        // Test converting to BytesStream
+        let stream: BytesStream = response.into();
+        let mut stream = stream;
+        let result = stream.next().await;
+        assert!(result.is_some());
+        let bytes = result.unwrap().unwrap();
+        assert_eq!(bytes, body);
+
+        // Test empty stream
+        let empty_response = JstzResponse::new(Bytes::default());
+        assert_eq!(empty_response.body_size(), 0);
+        let stream: BytesStream = empty_response.into();
+        let mut stream = stream;
+        assert!(stream.next().await.is_none());
+    }
 }
