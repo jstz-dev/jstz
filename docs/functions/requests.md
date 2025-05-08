@@ -1,4 +1,6 @@
-# Handling requests
+---
+title: Handling requests
+---
 
 Jstz smart functions accept requests from smart functions and clients via their `handler` function, which they must export as their default function.
 Smart functions can have only this single entrypoint.

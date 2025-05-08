@@ -1,4 +1,7 @@
-# 💸 Asset Bridge
+---
+title: 💸 Asset bridge
+sidebar_label: Asset bridge
+---
 
 `jstz` maintains a persistent ledger of all accounts and their balances of L2 tez (stored as mutez).
 
@@ -34,7 +37,7 @@ Deposited 42 XTZ to tz4N7y3T2e2dfCyHB1Ama68jnt3Fps7Ufu6d
 
 ### Withdraw
 
-::: danger
+:::danger
 ⚠️ Withdrawals on `jstz` to Tezos is still a work in progress
 :::
 
@@ -63,7 +66,7 @@ Headers: {}
 
 Communication from L2 and L1 within the Tezos ecosystem is performed through [outbox messages](https://tezos.gitlab.io/shell/smart_rollup_node.html#triggering-the-execution-of-an-outbox-message). Use [execute_latest_outbox_message](https://github.com/jstz-dev/jstz/blob/main/scripts/execute_latest_outbox_message.sh) to execute the withdraw message.
 
-::: warning
+:::warning
 ⚠️ The following example will not work with `octez-client` in the Nix shell.
 :::
 
@@ -74,6 +77,6 @@ Communication from L2 and L1 within the Tezos ecosystem is performed through [ou
 
 ## How it Works?
 
-::: danger
+:::danger
 ⚠️ Under construction ⚠️
 :::

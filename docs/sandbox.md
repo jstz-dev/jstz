@@ -1,4 +1,6 @@
-# Sandbox
+---
+title: Sandbox
+---
 
 The Jstz sandbox is a local environment that you can use to develop and test smart functions.
 Its core features are:
@@ -8,7 +10,7 @@ Its core features are:
 - Pre-deployed native bridge
 - Centralized configuration between Jstz and Octez infrastructure
 
-::: note
+:::note
 
 The sandbox runs in a Docker container, so it persists only as long as you leave that container running.
 
@@ -31,7 +33,7 @@ jstz sandbox --container start
 
 If you see an error that says that the configuration file is improperly configured, delete the `~/.config/jstz/` folder and try to start the sandbox again.
 
-::: tip
+:::tip
 
 The `--detach` (`-d`) flag starts the sandbox in the background, allowing you to continue working in the same terminal.
 You can stop or reset the sandbox with the commands `jstz sandbox --container stop` or `jstz sandbox --container restart`, but the state of the sandbox is not persistent.
@@ -88,7 +90,7 @@ Then you can deploy and call smart functions in the sandbox.
 The `jstzd` daemon orchestrates and manages the core components of the `jstz` local sandbox.
 It serves as the central coordinator for setting up the necessary infrastructure, such as the Jstz node and Octez binaries that run an instance of the Jstz kernel.
 
-::: note
+:::note
 
 The `jstzd` daemon does not run a complete sandbox by itself.
 Running the sandbox without using the `jstz sandbox` command requires you to configure the Octez binaries for use with the daemon and to configure the Jstz CLI to use it.
