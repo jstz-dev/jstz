@@ -28,6 +28,7 @@ deno_webidl.workspace = true
 deno_web.workspace = true
 deno_url.workspace = true
 deno_error.workspace = true
+parking_lot.workspace = true
 
 [dependencies.deno_fetch_base]
 git = "https://github.com/jstz-dev/deno"

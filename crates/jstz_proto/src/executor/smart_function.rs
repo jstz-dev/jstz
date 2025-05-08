@@ -1,4 +1,4 @@
-use std::{num::NonZeroU64, ops::BitXor};
+use std::{num::NonZeroU64, ops::BitXor, sync::Arc};
 
 use boa_engine::{
     js_string,
@@ -23,6 +23,7 @@ use jstz_core::{
     Module, Realm,
 };
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+use parking_lot::FairMutex as Mutex;
 use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
@@ -572,7 +573,7 @@ pub mod run {
 
     fn execute_smart_function(
         hrt: &mut impl HostRuntime,
-        tx: &mut Transaction,
+        tx: Arc<Mutex<Transaction>>,
         rt: &mut Runtime,
         source: &impl Addressable,
         sf_address: SmartFunctionHash,
@@ -584,7 +585,7 @@ pub mod run {
         // Run :)
         {
             let rt = &mut *rt;
-            runtime::enter_js_host_context(hrt, tx, || {
+            runtime::enter_js_host_context(hrt, tx.clone(), || {
                 jstz_core::future::block_on(async move {
                     let result = Script::load_init_run(
                         sf_address,
@@ -608,7 +609,7 @@ pub mod run {
 
     pub fn execute(
         hrt: &mut impl HostRuntime,
-        tx: &mut Transaction,
+        tx: Arc<Mutex<Transaction>>,
         source: &impl Addressable,
         run: operation::RunFunction,
         operation_hash: OperationHash,
@@ -635,8 +636,11 @@ pub mod run {
         )?;
 
         // 4. Handle transfer if the header is present (without committing)
-        tx.begin();
-        let transfer_result = runtime::enter_js_host_context(hrt, tx, || {
+        {
+            let mut guard = tx.lock();
+            guard.begin();
+        }
+        let transfer_result = runtime::enter_js_host_context(hrt, tx.clone(), || {
             HostScript::handle_transfer(
                 &mut request.deref().headers().deref_mut(),
                 source,
@@ -644,7 +648,7 @@ pub mod run {
             )
         });
         if let Err(err) = transfer_result {
-            tx.rollback()?;
+            tx.lock().rollback()?;
             return Err(err.into());
         }
         let is_noop = request.deref().url().path() == NOOP_PATH;
@@ -654,7 +658,7 @@ pub mod run {
                 // Execute smart function
                 let result = execute_smart_function(
                     hrt,
-                    tx,
+                    tx.clone(),
                     rt,
                     source,
                     // TODO: avoid cloning
@@ -666,18 +670,20 @@ pub mod run {
                 debug_msg!(hrt, "🚀 Smart function executed successfully with value: {:?} (in {:?} instructions)\n", result, gas_limit - rt.instructions_remaining());
                 // Commit or rollback based on the result
                 let result = result.and_then(|response| {
-                    runtime::enter_js_host_context(hrt, tx, || {
+                    runtime::enter_js_host_context(hrt, tx.clone(), || {
                         handle_refund(&response, &sf_address, source)
                     })
                 });
                 match &result {
-                    Ok(receipt) if receipt.status_code.is_success() => tx.commit(hrt)?,
-                    _ => tx.rollback()?,
+                    Ok(receipt) if receipt.status_code.is_success() => {
+                        tx.lock().commit(hrt)?
+                    }
+                    _ => tx.lock().rollback()?,
                 }
                 result
             }
             _ => {
-                tx.commit(hrt)?;
+                tx.lock().commit(hrt)?;
                 Ok(RunFunctionReceipt::default())
             }
         }
@@ -690,6 +696,8 @@ pub mod run {
         use jstz_core::kv::Transaction;
         use jstz_crypto::hash::Blake2b;
         use jstz_mock::host::JstzMockHost;
+        use parking_lot::FairMutex as Mutex;
+        use std::sync::Arc;
 
         use crate::{
             context::account::{Account, Address, ParsedCode},
@@ -702,15 +710,15 @@ pub mod run {
             // 1. Deploy the smart function
             let mut jstz_mock_host = JstzMockHost::default();
             let host = jstz_mock_host.rt();
-            let mut tx = Transaction::default();
+            let tx = Arc::new(Mutex::new(Transaction::default()));
             let transfer_amount = 3;
             let refund_amount = 2;
-            tx.begin();
-            Account::add_balance(host, &mut tx, &source, transfer_amount)
+            tx.lock().begin();
+            Account::add_balance(host, &mut tx.lock(), &source, transfer_amount)
                 .expect("add balance");
-            let source_balance = Account::balance(host, &mut tx, &source).unwrap();
+            let source_balance = Account::balance(host, &mut tx.lock(), &source).unwrap();
             assert_eq!(source_balance, transfer_amount);
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // 1. Deploy the smart function that transfers the balance to the source
             let code = format!(
@@ -727,18 +735,18 @@ pub mod run {
             "#
             );
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-            tx.begin();
+            tx.lock().begin();
             let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+                Script::deploy(host, &mut tx.lock(), &source, parsed_code, 0).unwrap();
 
             let balance_before =
-                Account::balance(host, &mut tx, &smart_function).unwrap();
+                Account::balance(host, &mut tx.lock(), &smart_function).unwrap();
             assert_eq!(balance_before, 0);
 
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // 2. Call the smart function
-            tx.begin();
+            tx.lock().begin();
             let mut headers = HeaderMap::new();
             headers.insert(
                 X_JSTZ_TRANSFER,
@@ -754,7 +762,7 @@ pub mod run {
             let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
             let response = execute(
                 host,
-                &mut tx,
+                tx.clone(),
                 &source,
                 run_function.clone(),
                 fake_op_hash.clone(),
@@ -768,24 +776,25 @@ pub mod run {
                 .parse::<u64>()
                 .unwrap()
                 == refund_amount));
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // 3. assert the transfer to the sf and refund to the source
-            tx.begin();
-            let balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
+            tx.lock().begin();
+            let balance_after =
+                Account::balance(host, &mut tx.lock(), &smart_function).unwrap();
             assert_eq!(
                 balance_after - balance_before,
                 transfer_amount - refund_amount
             );
             assert_eq!(
-                Account::balance(host, &mut tx, &source).unwrap(),
+                Account::balance(host, &mut tx.lock(), &source).unwrap(),
                 refund_amount
             );
 
             // 4. transferring to the smart function should fail (source has insufficient funds)
             let error = execute(
                 host,
-                &mut tx,
+                tx.clone(),
                 &source,
                 run_function.clone(),
                 fake_op_hash.clone(),
@@ -797,9 +806,9 @@ pub mod run {
             );
 
             // 5. transferring from the smart function should fail with insufficient funds and the balance is rolled back
-            let balance_before = Account::balance(host, &mut tx, &source).unwrap();
+            let balance_before = Account::balance(host, &mut tx.lock(), &source).unwrap();
             // drain the balance of the smart function
-            Account::set_balance(host, &mut tx, &smart_function, 0).unwrap();
+            Account::set_balance(host, &mut tx.lock(), &smart_function, 0).unwrap();
             let mut headers = HeaderMap::new();
             headers.insert(
                 X_JSTZ_TRANSFER,
@@ -807,7 +816,7 @@ pub mod run {
             );
             let error = execute(
                 host,
-                &mut tx,
+                tx.clone(),
                 &source,
                 RunFunction {
                     headers,
@@ -816,7 +825,7 @@ pub mod run {
                 fake_op_hash.clone(),
             )
             .expect_err("Expected error");
-            let balance_after = Account::balance(host, &mut tx, &source).unwrap();
+            let balance_after = Account::balance(host, &mut tx.lock(), &source).unwrap();
             assert_eq!(
                 error.to_string(),
                 "EvalError: Transfer failed: InsufficientFunds"
@@ -831,14 +840,14 @@ pub mod run {
             // 1. Deploy the smart function
             let mut jstz_mock_host = JstzMockHost::default();
             let host = jstz_mock_host.rt();
-            let mut tx = Transaction::default();
+            let tx = Arc::new(Mutex::new(Transaction::default()));
             let initial_balance = 1;
-            tx.begin();
-            Account::add_balance(host, &mut tx, &source, initial_balance)
+            tx.lock().begin();
+            Account::add_balance(host, &mut tx.lock(), &source, initial_balance)
                 .expect("add balance");
-            let source_balance = Account::balance(host, &mut tx, &source).unwrap();
+            let source_balance = Account::balance(host, &mut tx.lock(), &source).unwrap();
             assert_eq!(source_balance, initial_balance);
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // 1. Deploy the smart function that refunds the balance to the source
             let code = format!(
@@ -853,18 +862,18 @@ pub mod run {
                 "#
             );
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-            tx.begin();
+            tx.lock().begin();
             let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+                Script::deploy(host, &mut tx.lock(), &source, parsed_code, 0).unwrap();
 
             let balance_before =
-                Account::balance(host, &mut tx, &smart_function).unwrap();
+                Account::balance(host, &mut tx.lock(), &smart_function).unwrap();
             assert_eq!(balance_before, 0);
 
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // transfer should happen with `/-/noop` path
-            tx.begin();
+            tx.lock().begin();
             let mut headers = HeaderMap::new();
             headers.insert(
                 X_JSTZ_TRANSFER,
@@ -880,14 +889,21 @@ pub mod run {
                 gas_limit: 1000,
             };
             let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-            execute(host, &mut tx, &source, run_function.clone(), fake_op_hash)
-                .expect("run function expected");
-            tx.commit(host).unwrap();
+            execute(
+                host,
+                tx.clone(),
+                &source,
+                run_function.clone(),
+                fake_op_hash,
+            )
+            .expect("run function expected");
+            tx.lock().commit(host).unwrap();
 
-            tx.begin();
-            let balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
+            tx.lock().begin();
+            let balance_after =
+                Account::balance(host, &mut tx.lock(), &smart_function).unwrap();
             assert_eq!(balance_after - balance_before, initial_balance);
-            assert_eq!(Account::balance(host, &mut tx, &source).unwrap(), 0);
+            assert_eq!(Account::balance(host, &mut tx.lock(), &source).unwrap(), 0);
         }
 
         #[test]
@@ -897,17 +913,17 @@ pub mod run {
             // 1. Deploy the smart function
             let mut jstz_mock_host = JstzMockHost::default();
             let host = jstz_mock_host.rt();
-            let mut tx = Transaction::default();
+            let tx = Arc::new(Mutex::new(Transaction::default()));
             let initial_balance = 1;
-            tx.begin();
-            Account::add_balance(host, &mut tx, &source, initial_balance)
+            tx.lock().begin();
+            Account::add_balance(host, &mut tx.lock(), &source, initial_balance)
                 .expect("add balance");
-            let source_balance = Account::balance(host, &mut tx, &source).unwrap();
+            let source_balance = Account::balance(host, &mut tx.lock(), &source).unwrap();
             assert_eq!(source_balance, initial_balance);
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // 2. sending request to transfer from source to the destination
-            tx.begin();
+            tx.lock().begin();
             let mut headers = HeaderMap::new();
             headers.insert(
                 X_JSTZ_TRANSFER,
@@ -921,23 +937,28 @@ pub mod run {
                 gas_limit: 1000,
             };
             let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-            let result =
-                execute(host, &mut tx, &source, run_function.clone(), fake_op_hash);
+            let result = execute(
+                host,
+                tx.clone(),
+                &source,
+                run_function.clone(),
+                fake_op_hash,
+            );
             assert!(result.is_ok());
 
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
-            tx.begin();
-            let balance_after = Account::balance(host, &mut tx, &source).unwrap();
+            tx.lock().begin();
+            let balance_after = Account::balance(host, &mut tx.lock(), &source).unwrap();
             assert_eq!(balance_after, 0);
             assert_eq!(
-                Account::balance(host, &mut tx, &destination).unwrap(),
+                Account::balance(host, &mut tx.lock(), &destination).unwrap(),
                 initial_balance
             );
 
             // 3. transferring again should fail
             let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
-            let error = execute(host, &mut tx, &source, run_function, fake_op_hash2)
+            let error = execute(host, tx.clone(), &source, run_function, fake_op_hash2)
                 .expect_err("Expected error");
             assert_eq!(
                 error.to_string(),
@@ -951,12 +972,12 @@ pub mod run {
             // 1. Deploy the smart function
             let mut jstz_mock_host = JstzMockHost::default();
             let host = jstz_mock_host.rt();
-            let mut tx = Transaction::default();
+            let tx = Arc::new(Mutex::new(Transaction::default()));
             let initial_balance = 1;
-            tx.begin();
-            Account::add_balance(host, &mut tx, &source, initial_balance)
+            tx.lock().begin();
+            Account::add_balance(host, &mut tx.lock(), &source, initial_balance)
                 .expect("add balance");
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             let code = r#"
                 const handler = () => {{
@@ -967,18 +988,19 @@ pub mod run {
 
             // 1. Deploy smart function
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-            tx.begin();
+            tx.lock().begin();
             let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+                Script::deploy(host, &mut tx.lock(), &source, parsed_code, 0).unwrap();
 
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // Calling the smart function should error or return an error response
-            tx.begin();
+            tx.lock().begin();
 
             let sf_balance_before =
-                Account::balance(host, &mut tx, &smart_function).unwrap();
-            let source_balance_before = Account::balance(host, &mut tx, &source).unwrap();
+                Account::balance(host, &mut tx.lock(), &smart_function).unwrap();
+            let source_balance_before =
+                Account::balance(host, &mut tx.lock(), &source).unwrap();
             let mut invalid_headers = HeaderMap::new();
             invalid_headers.insert(
                 X_JSTZ_AMOUNT,
@@ -993,14 +1015,15 @@ pub mod run {
             };
             let result = execute(
                 host,
-                &mut tx,
+                tx.clone(),
                 &source,
                 run_function.clone(),
                 Blake2b::from(b"fake_op_hash".as_ref()),
             );
             let sf_balance_after =
-                Account::balance(host, &mut tx, &smart_function).unwrap();
-            let source_balance_after = Account::balance(host, &mut tx, &source).unwrap();
+                Account::balance(host, &mut tx.lock(), &smart_function).unwrap();
+            let source_balance_after =
+                Account::balance(host, &mut tx.lock(), &source).unwrap();
 
             assert_eq!(sf_balance_before, sf_balance_after);
             assert_eq!(source_balance_before, source_balance_after);
@@ -1017,12 +1040,12 @@ pub mod run {
             // 1. Deploy the smart function
             let mut jstz_mock_host = JstzMockHost::default();
             let host = jstz_mock_host.rt();
-            let mut tx = Transaction::default();
+            let tx = Arc::new(Mutex::new(Transaction::default()));
             let initial_balance = 1;
-            tx.begin();
-            Account::add_balance(host, &mut tx, &source, initial_balance)
+            tx.lock().begin();
+            Account::add_balance(host, &mut tx.lock(), &source, initial_balance)
                 .expect("add balance");
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             let code = format!(
                 r#"
@@ -1038,19 +1061,25 @@ pub mod run {
 
             // 1. Deploy smart function
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-            tx.begin();
-            let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, initial_balance)
-                    .unwrap();
+            tx.lock().begin();
+            let smart_function = Script::deploy(
+                host,
+                &mut tx.lock(),
+                &source,
+                parsed_code,
+                initial_balance,
+            )
+            .unwrap();
 
             let sf_balance_before =
-                Account::balance(host, &mut tx, &smart_function).unwrap();
-            let source_balance_before = Account::balance(host, &mut tx, &source).unwrap();
+                Account::balance(host, &mut tx.lock(), &smart_function).unwrap();
+            let source_balance_before =
+                Account::balance(host, &mut tx.lock(), &source).unwrap();
 
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // Calling the smart function should error or return an error response
-            tx.begin();
+            tx.lock().begin();
             let run_function = RunFunction {
                 uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
                 method: Method::GET,
@@ -1060,14 +1089,15 @@ pub mod run {
             };
             let result = execute(
                 host,
-                &mut tx,
+                tx.clone(),
                 &source,
                 run_function.clone(),
                 Blake2b::from(b"fake_op_hash".as_ref()),
             );
             let sf_balance_after =
-                Account::balance(host, &mut tx, &smart_function).unwrap();
-            let source_balance_after = Account::balance(host, &mut tx, &source).unwrap();
+                Account::balance(host, &mut tx.lock(), &smart_function).unwrap();
+            let source_balance_after =
+                Account::balance(host, &mut tx.lock(), &source).unwrap();
 
             assert_eq!(sf_balance_before, sf_balance_after);
             assert_eq!(source_balance_before, source_balance_after);
@@ -1116,23 +1146,23 @@ pub mod run {
             // 1. Deploy the smart function
             let mut jstz_mock_host = JstzMockHost::default();
             let host = jstz_mock_host.rt();
-            let mut tx = Transaction::default();
+            let tx = Arc::new(Mutex::new(Transaction::default()));
             let initial_balance = 1;
-            tx.begin();
-            Account::add_balance(host, &mut tx, &source, initial_balance)
+            tx.lock().begin();
+            Account::add_balance(host, &mut tx.lock(), &source, initial_balance)
                 .expect("add balance");
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // 1. Deploy smart function
             let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-            tx.begin();
+            tx.lock().begin();
             let smart_function =
-                Script::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+                Script::deploy(host, &mut tx.lock(), &source, parsed_code, 0).unwrap();
 
-            tx.commit(host).unwrap();
+            tx.lock().commit(host).unwrap();
 
             // Calling the smart function should error or return an error response
-            tx.begin();
+            tx.lock().begin();
             let mut headers = HeaderMap::new();
             headers.insert(
                 X_JSTZ_TRANSFER,
@@ -1147,7 +1177,7 @@ pub mod run {
             };
             let result = execute(
                 host,
-                &mut tx,
+                tx.clone(),
                 &source,
                 run_function.clone(),
                 Blake2b::from(b"fake_op_hash".as_ref()),
@@ -1160,10 +1190,11 @@ pub mod run {
 
             // The balance should not be affected
             assert_eq!(
-                Account::balance(host, &mut tx, &source).unwrap(),
+                Account::balance(host, &mut tx.lock(), &source).unwrap(),
                 initial_balance
             );
-            let balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
+            let balance_after =
+                Account::balance(host, &mut tx.lock(), &smart_function).unwrap();
             assert_eq!(balance_after, 0);
         }
     }

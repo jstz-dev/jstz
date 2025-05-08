@@ -22,6 +22,9 @@ use deno_url;
 use deno_web::TimersPermission;
 use deno_webidl;
 
+use parking_lot::FairMutex as Mutex;
+use std::sync::Arc;
+
 /// Returns the default object of the specified JavaScript namespace (Object).
 ///
 /// Returns `null` if default export is not defined
@@ -209,25 +212,18 @@ impl DerefMut for JstzRuntime {
 
 pub struct ProtocolContext {
     pub host: JsHostRuntime<'static>,
-    pub tx: &'static mut Transaction,
+    pub tx: Arc<Mutex<Transaction>>,
     pub kv: Kv,
 }
 
 impl ProtocolContext {
     pub fn new(
         hrt: &mut impl HostRuntime,
-        tx: &mut Transaction,
+        tx: Arc<Mutex<Transaction>>,
         address: SmartFunctionHash,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
 
-        // Safety: Since we synchronisely execute Operations, the tx will not be dropped before
-        // the runtime, so this is safe
-        // TODO: Replace with Arc<Mutex<Transaction>>
-        // https://linear.app/tezos/issue/JSTZ-375/replace-andmut-transaction-with-arcmutextransaction
-        let tx = unsafe {
-            std::mem::transmute::<&mut Transaction, &'static mut Transaction>(tx)
-        };
         ProtocolContext {
             host,
             tx,
