@@ -52,7 +52,6 @@ fn run_runtime_example(host: &mut impl Runtime) {
     //tx.begin();
 
     // Create runtime options
-
     let options = JstzRuntimeOptions {
         protocol: Some(Protocol::new(/*,host  &mut tx, address*/)),
         extensions: vec![],
