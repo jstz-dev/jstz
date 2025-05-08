@@ -1,10 +1,7 @@
 ---
 title: 👨‍⚖️ jstz
+displayed_sidebar: documentationSidebar
 ---
-
-<script setup>
-import VPButton from "vitepress/dist/client/theme-default/components/VPButton.vue";
-</script>
 
 # 👨‍⚖️ Jstz
 
@@ -19,6 +16,6 @@ In particular, Jstz is:
 
 The Jstz command-line toolkit, sandbox, SDK, and other tools in this repository are free and open source software under the [MIT license](https://github.com/jstz-dev/jstz/blob/main/LICENSE).
 
-<VPButton href="/quick_start" size="big" theme="alt" text="Get Started!" style="border-radius:4px;text-decoration:none" />
-
 Jstz smart functions look like ordinary JavaScript functions, but they have some differences and limitations; see [Smart functions](/functions/overview).
+
+To get started, try the [Quick start](/quick_start).

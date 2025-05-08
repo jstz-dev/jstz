@@ -1,9 +1,12 @@
-# 🆗 Response
+---
+title: 🆗 Response
+sidebar_label: Response
+---
 
 `jstz`'s [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) implementation is based on the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) specification.
 The `Response` interface of the Fetch API represents the response to a request.
 
-::: danger
+:::danger
 ⚠️ `jstz`'s implementation is not spec compliant ⚠️
 :::
 
@@ -35,7 +38,7 @@ function handler(): Response {
 
 Creates a new `Response` object.
 
-::: danger
+:::danger
 **Spec deviation**: `Blob`, `FormData`, `ReadableStream` and `URLSearchParams` are not supported for `BodyInit`.
 :::
 
@@ -96,7 +99,7 @@ Returns a `Response` object associated with a network error.
 
 ### `Response.json(value: unknown): Response`
 
-::: danger
+:::danger
 **Spec deviation**: `Response.json` doesn't permit an optional `init` parameter.
 :::
 

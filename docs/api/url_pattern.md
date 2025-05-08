@@ -1,8 +1,11 @@
-# 🧩 URLPattern
+---
+title: 🧩 URLPattern
+sidebar_label: URLPattern
+---
 
 `jstz`'s [`URLPattern`](hhttps://developer.mozilla.org/en-US/docs/Web/API/URLPattern) implementation is based on the [URL Pattern](https://urlpattern.spec.whatwg.org/) specification and using [`rust-urlpattern`](https://docs.rs/urlpattern/latest/urlpattern/).
 
-::: danger
+:::danger
 ⚠️ `jstz`'s implementation is not spec compliant ⚠️
 :::
 
@@ -27,7 +30,7 @@ console.log(match.pathname); // prints { input: "/books/123", groups: { "id": "1
 
 Creates a new `URLPattern` object from a given URL string or `URLPatternInit` and an optional base URL.
 
-::: danger
+:::danger
 **Spec deviation**: `options` argument is not supported in the constructor.
 :::
 

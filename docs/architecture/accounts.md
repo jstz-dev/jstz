@@ -1,4 +1,6 @@
-# Accounts
+---
+title: Accounts
+---
 
 Jstz works with two kinds of accounts:
 
@@ -10,7 +12,7 @@ Jstz works with two kinds of accounts:
 
 User accounts are stored in the local file `~/.jstz/config.json`, including the alias, address, public key, and secret key for each account.
 
-::: warning
+:::warning
 
 You must keep the secret keys for the accounts secure.
 Jstz does not yet support storing keys in wallets, on hardware devices, or with remote signers.

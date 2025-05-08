@@ -9,15 +9,16 @@
     "examples/dashboard",
     "examples/fa2",
     "examples/hello-world",
-    "examples/get-tez"
+    "examples/get-tez",
+    "docs"
   ],
   "scripts": {
     "commitlint": "commitlint --from HEAD~1 --to HEAD --verbose",
     "check:format": "prettier . --check --ignore-unknown",
     "format": "prettier . --write --ignore-unknown",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:dev": "npm run start --workspace=docs",
+    "docs:build": "npm run build --workspace=docs",
+    "docs:serve": "npm run serve --workspace=docs"
   },
   "dependencies": {
     "@jstz-dev/dashboard": "^0.0.0",
@@ -31,7 +32,6 @@
     "@commitlint/config-conventional": "^19.1.0",
     "esbuild": "^0.20.2",
     "prettier": "^3.2.5",
-    "typescript": "^5.4.2",
-    "vitepress": "^1.0.0-rc.45"
+    "typescript": "^5.4.2"
   }
 }
