@@ -66,7 +66,7 @@ build-native-kernel:
 
 .PHONE: riscv-runtime
 riscv-runtime:
-	@RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs cargo build -p jstz_runtime --target riscv64gc-unknown-linux-musl
+	@RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs RUSTFLAGS="-C target-feature=+crt-static -C link-arg=-lstdc++ -C link-arg=-lsupc++ -C link-arg=-lc -C link-arg=-lgcc -C link-arg=-lgcc -C link-arg=-latomic" CARGO_TARGET_RISCV64GC_UNKNOWN_LINUX_MUSL_LINKER=riscv64-unknown-linux-musl-gcc cargo build -p jstz_runtime --release --target riscv64gc-unknown-linux-musl
 
 .PHONY: test
 test: test-unit test-int

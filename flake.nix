@@ -174,37 +174,27 @@
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
 
-          riscvSandbox = with pkgs;
-            rustPlatform.buildRustPackage {
-              name = "riscv-sandbox";
-              src = builtins.fetchGit {
-                url = "https://gitlab.com/tezos/tezos.git";
-                ref = "master";
-                rev = "8398643c5b8679631a6905169a19efacc25586d2";
-              };
-              cargoRoot = "src/riscv";
-              buildAndTestSubdir = "src/riscv/sandbox";
-              useFetchCargoVendor = true;
-              cargoHash = "sha256-Qd23PyAzIXi5mACozpmvQy1J1Eqx2V5F4QRGqkLAXS8=";
-              buildFeatures = ["supervisor"];
-            };
+          # ──────────────────────────────────────────────────────────
+          # Nightly tool-chain (needed for Rust edition 2024 support)
+          # ──────────────────────────────────────────────────────────
+          rustNightly = pkgs.rust-bin.nightly.latest.default;
 
-          llvmPackages = pkgs.llvmPackages_16;
-
-          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
-          js-packages = pkgs.callPackage ./nix/js-packages.nix {};
+          nightlyPlatform = pkgs.makeRustPlatform {
+            cargo = rustNightly;
+            rustc = rustNightly;
+          };
 
           # It is necessary to use fetchurl instead of fetchTarball to
           # preserve the hash compatability among case (in/)sensitive file systems
           riscvV8 = with pkgs; let
             tarball = fetchurl {
               url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/130.0.7/librusty_v8.tar.gz";
-              sha256 = "sha256-8cywAe9kofNPxCwdzdkegtlRPwlqqR986m25wvDWbyo=";
+              sha256 = "sha256-vZ8BEOZVJnLi9HiTi+ttCDqonU3jMMmNesv1TUxA3n4=";
             };
           in
             runCommand "fetch-riscv-v8" {} ''
               mkdir -p $out
-              tar -xzf ${tarball} -C $out --strip-components=1
+              tar -xzf ${tarball} -C $out
             '';
 
           fmt = treefmt.lib.evalModule pkgs {
@@ -255,6 +245,32 @@
             };
           in
             crossPkgs.pkgsCross.riscv64;
+
+          # ──────────────────────────────────────────────────────────
+          # riscv-sandbox (builds with edition 2024 → nightly + opt-in)
+          # ──────────────────────────────────────────────────────────
+          riscvSandbox = with pkgs;
+            nightlyPlatform.buildRustPackage {
+              name = "riscv-sandbox";
+              src = builtins.fetchGit {
+                url = "https://gitlab.com/tezos/tezos.git";
+                ref = "master";
+                rev = "d57cc210a8db36be72b5c89c9c41acf9f1fca110";
+              };
+              cargoRoot = "src/riscv";
+              buildAndTestSubdir = "src/riscv/sandbox";
+              useFetchCargoVendor = true;
+              cargoHash = "sha256-/fw3Ef4X5MX9AOTBALPKTvZVE8dBcjogL7YSQq9SPP0=";
+              # opt-in to the unstable `edition2024` feature
+              # postPatch = ''
+              #  sed -i '1s;^;cargo-features = ["edition2024"]\n;' ${buildAndTestSubdir}/Cargo.toml
+              #'';
+            };
+
+          llvmPackages = pkgs.llvmPackages_16;
+
+          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
+          js-packages = pkgs.callPackage ./nix/js-packages.nix {};
         in {
           packages =
             crates.packages
