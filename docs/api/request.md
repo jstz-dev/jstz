@@ -1,8 +1,11 @@
-# 🙏 Request
+---
+title: 🙏 Request
+sidebar_label: Request
+---
 
 `jstz`'s [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) implementation is based on the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) specification. This API permits you to manipulate and inspect HTTP requests.
 
-::: danger
+:::danger
 ⚠️ `jstz`'s implementation is not spec compliant ⚠️
 :::
 
@@ -10,7 +13,7 @@
 
 ### `new Request(input: Request)`
 
-::: danger
+:::danger
 **Spec deviation**: The `referer` is copied from the given request. Additionally the `mode` conversion is not supported.
 :::
 
@@ -18,7 +21,7 @@ Constructs a new `Request` object as a copy of the given request.
 
 ### `new Request(input: string, init?: RequestInit)`
 
-::: danger
+:::danger
 **Spec deviation**: Many of the `RequestInit` properties are not supported.
 :::
 
@@ -35,7 +38,7 @@ The possible settings are:
 
 - `body` (`BodyInit | null`, optional)
 
-  ::: danger
+  :::danger
   **Spec deviation**: `Blob`, `FormData`, `ReadableStream` and `URLSearchParams` are not supported for `BodyInit`.
   :::
 

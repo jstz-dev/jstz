@@ -1,4 +1,6 @@
-# Storing data
+---
+title: Storing data
+---
 
 Smart functions store persistent data in a key-value database that is specific to each function.
 Only the function itself can write to its storage.

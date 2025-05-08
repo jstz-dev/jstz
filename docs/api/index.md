@@ -1,9 +1,12 @@
-# 🧰 API Reference
+---
+title: 🧰 API reference
+sidebar_label: API reference
+---
 
 This is a reference for all runtime APIs available in `jstz`. Since `jstz` is a JavaScript server runtime
 running on Tezos's smart optimistic rollups, some APIs are not available (e.g. `DOM`).
 
-::: danger
+:::danger
 ⚠️ `jstz`'s APIs are currently very unstable and not compliant with specifications. ⚠️
 :::
 

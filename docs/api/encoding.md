@@ -1,9 +1,12 @@
-# 🔣 Encoding
+---
+title: 🔣 Encoding
+sidebar_label: Encoding
+---
 
 An implementation of the Web standard encoding API.
 The Encoding API provides a mechanism for handling text in various character encodings, including legacy non-UTF-8 encodings.
 
-::: danger
+:::danger
 ⚠️ `jstz`'s implementation is not fully spec compliant ⚠️
 :::
 
