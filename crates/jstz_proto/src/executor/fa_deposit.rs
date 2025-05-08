@@ -175,8 +175,14 @@ mod test {
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
-        context::{account::Address, account::ParsedCode, ticket_table::TicketTable},
-        executor::fa_deposit::{FaDeposit, FaDepositReceipt},
+        context::{
+            account::{Address, ParsedCode},
+            ticket_table::TicketTable,
+        },
+        executor::{
+            fa_deposit::{FaDeposit, FaDepositReceipt},
+            smart_function,
+        },
         receipt::{Receipt, ReceiptContent, ReceiptResult},
     };
 
@@ -282,14 +288,8 @@ mod test {
         "#;
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
-        let proxy = crate::executor::smart_function::Script::deploy(
-            &mut host,
-            &mut tx,
-            &source,
-            parsed_code,
-            0,
-        )
-        .unwrap();
+        let proxy =
+            smart_function::deploy(&mut host, &mut tx, &source, parsed_code, 0).unwrap();
 
         let fa_deposit = mock_fa_deposit(Some(proxy.clone()));
         let ticket_hash = fa_deposit.ticket_hash.clone();
@@ -336,14 +336,8 @@ mod test {
         "#;
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
-        let proxy = crate::executor::smart_function::Script::deploy(
-            &mut host,
-            &mut tx,
-            &source,
-            parsed_code,
-            0,
-        )
-        .unwrap();
+        let proxy =
+            smart_function::deploy(&mut host, &mut tx, &source, parsed_code, 0).unwrap();
 
         let fa_deposit1 = mock_fa_deposit(Some(proxy.clone()));
         let ticket_hash = fa_deposit1.ticket_hash.clone();
@@ -391,14 +385,8 @@ mod test {
         }
         "#;
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        let proxy = crate::executor::smart_function::Script::deploy(
-            &mut host,
-            &mut tx,
-            &source,
-            parsed_code,
-            0,
-        )
-        .unwrap();
+        let proxy =
+            smart_function::deploy(&mut host, &mut tx, &source, parsed_code, 0).unwrap();
 
         let fa_deposit = mock_fa_deposit(Some(proxy.clone()));
         let expected_receiver = fa_deposit.receiver.clone();
