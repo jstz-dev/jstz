@@ -1,8 +1,11 @@
-# 🎮 console
+---
+title: 🎮 Console
+sidebar_label: Console
+---
 
 An implementation of the Web standard [`console`](https://developer.mozilla.org/en-US/docs/Web/API/console) API suitable for logging and debugging `jstz` smart functions.
 
-::: danger
+:::danger
 ⚠️ `jstz`'s implementation is not spec compliant ⚠️
 :::
 

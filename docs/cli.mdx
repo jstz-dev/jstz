@@ -1,4 +1,7 @@
-# 💻 CLI for `jstz`
+---
+title: 💻 Jstz CLI
+sidebar_label: CLI
+---
 
 This guide will instruct through how to use the command line interface for `jstz` where the user can easily run the sandbox environment and test smart functions.
 
@@ -11,7 +14,7 @@ This guide will instruct through how to use the command line interface for `jstz
 - [transfer](#transfer) - Transfer XTZ across `jstz` accounts.
 - [repl](#repl) - Enter an interactive REPL for the `jstz` runtime.
 
-::: tip
+:::tip
 
 - `jstz help`: Displays a general help message or help information for specific subcommands.
 
@@ -19,40 +22,25 @@ This guide will instruct through how to use the command line interface for `jstz
 
 :::
 
-# Config
+## Config
 
-<!-- In order to run `jstz` cli, you need to create a setup file in `~/.jstz/config.json` that looks as follows: -->
-
-::: danger
+:::danger
 ⚠️ Under construction ⚠️
 :::
 
-<!-- ```json
-{
-  "jstz_path": "<path_to_jstz>",
-  "octez_path": "<path_to_octez>",
-  "octez_node_port": <octez_node_port_number>, # typically 18731
-  "octez_node_rpc_port": <octez_node_rpc_port_number>, # typically 18730
-  "sandbox": null
-}
-``` -->
+## Commands
 
-<!-- In the file, you should set your path to `jstz` and `octez` and also set the port numbers.
-Once the sandbox gets started with the `sandbox start` command, the `"sandbox"` property will contain the information about its run. -->
-
-# Commands
-
-::: tip
+:::tip
 
 Remember, the `-h` or `--help` flag can always be used after any command or subcommand to receive more detailed information about its usage. This guide is a brief overview, and the `help` command will provide the most current and detailed instructions.
 
 :::
 
-## Sandbox
+### Sandbox
 
 The sandbox commands are responsible for managing the `jstz` sandbox environment.
 
-### Commands:
+#### Commands:
 
 - `start`: Starts the sandbox environment.
 
@@ -60,7 +48,7 @@ The sandbox commands are responsible for managing the `jstz` sandbox environment
 
 - `restart`: Restarts the sandbox.
 
-### Usage:
+#### Usage:
 
 ```bash
 jstz sandbox start [OPTIONS]
@@ -68,11 +56,11 @@ jstz sandbox restart [OPTIONS]
 jstz sandbox stop
 ```
 
-### Options:
+#### Options:
 
 - `--detach (-d)`: Detach the process to run in the background.
 
-### Example:
+#### Example:
 
 ```bash
 $ jstz sandbox start -d
@@ -82,21 +70,21 @@ $ jstz sandbox restart -d
 $ jstz sandbox stop
 ```
 
-## Bridge
+### Bridge
 
 Bridge commands facilitate the interaction between L1 and L2.
 
-### Commands:
+#### Commands:
 
 - `deposit`: Deposits CTEZ from an existing Tezos L1 address to a jstz address.
 
-### Usage:
+#### Usage:
 
 ```bash
 jstz bridge deposit [OPTIONS]
 ```
 
-### Options:
+#### Options:
 
 - `--from (-f) <ALIAS|ADDRESS>`: Tezos L1 address or alias to withdraw from (must be stored in octez-client's wallet).
 
@@ -106,27 +94,27 @@ jstz bridge deposit [OPTIONS]
 
 - `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
 
-### Example:
+#### Example:
 
 ```bash
 $ jstz bridge deposit --from tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU --to tz1iA2Mu65WR3enRHEx9HDfBNRNTecwoz263 --amount 57
 ```
 
-## Deploy
+### Deploy
 
 This command allows users to deploy smart functions.
 
-### Usage:
+#### Usage:
 
 ```bash
 jstz deploy [OPTIONS] [CODE|PATH]
 ```
 
-### Arguments:
+#### Arguments:
 
 - `[CODE|PATH]`: Function code or the file path to the function code.
 
-### Options:
+#### Options:
 
 - `--balance (-b) <BALANCE>`: Specifies the initial balance for the function.
 
@@ -134,27 +122,27 @@ jstz deploy [OPTIONS] [CODE|PATH]
 
 - `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
 
-### Example
+#### Example
 
 ```bash
 $ jstz deploy examples/counter.js --name my_counter --balance 42
 ```
 
-## Run
+### Run
 
 Execute a smart function using a specified URL.
 
-### Usage:
+#### Usage:
 
 ```bash
 jstz run [OPTIONS] <URL>
 ```
 
-### Arguments:
+#### Arguments:
 
 - `<URL>`: The URL containing the function's address or alias.
 
-### Options:
+#### Options:
 
 - `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
 
@@ -170,7 +158,7 @@ jstz run [OPTIONS] <URL>
 
 - `--trace (-t)`: Flag to show the logs of the function.
 
-### Example
+#### Example
 
 ```bash
 $ export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
@@ -189,23 +177,23 @@ You should be able to see an output of the counter smart function looking like t
 [🪵] Counter: 2
 ```
 
-## Transfer
+### Transfer
 
 Transfer XTZ.
 
-### Usage:
+#### Usage:
 
 ```bash
 jstz transfer [OPTIONS] <AMOUNT> <ADDRESS|ALIAS>
 ```
 
-### Arguments:
+#### Arguments:
 
 - `<AMOUNT>`: The amount in XTZ to transfer.
 
 - `<ADDRESS|ALIAS>`: Destination address or alias of the account (user or smart function).
 
-### Options:
+#### Options:
 
 - `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
 
@@ -213,27 +201,27 @@ jstz transfer [OPTIONS] <AMOUNT> <ADDRESS|ALIAS>
 
 - `--include (-i)`: Include response headers in the output.
 
-### Example
+#### Example
 
 ```bash
 $ jstz transfer 2 KT1CexuXoXuShARedvKSmxwDTLxRHNcvxqKR
 ```
 
-## REPL
+### REPL
 
 Starts a REPL environment for experimentation and testing of smart functions.
 
-### Usage:
+#### Usage:
 
 ```bash
 jstz repl [OPTIONS]
 ```
 
-### Options:
+#### Options:
 
 - `--account (-a) <ADDRESS|ALIAS>`: Sets the address of the REPL environment.
 
-### Example
+#### Example
 
 ```bash
 $ jstz repl
@@ -243,31 +231,31 @@ $ [🪵] hey
 $ >> exit
 ```
 
-## Logs
+### Logs
 
 Explore logs from deployed smart functions. The full output of a smart function can also be checked with --trace flag when running it.
 
-### Commands:
+#### Commands:
 
 - `trace`: Trace the logs from the function that is running.
 
-### Usage:
+#### Usage:
 
 ```bash
 jstz logs trace [OPTIONS] <ALIAS|ADDRESS>
 ```
 
-### Arguments:
+#### Arguments:
 
 - `<ALIAS|ADDRESS>`: The function's address or alias.
 
-### Options:
+#### Options:
 
 - `--level (-l) <level>`: Specifies the level of log. Default is `log`.
 
 - `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
 
-### Example
+#### Example
 
 ```bash
 $ jstz deploy examples/logs.js --name my_function

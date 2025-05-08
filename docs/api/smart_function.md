@@ -1,4 +1,7 @@
-# 💡 SmartFunction
+---
+title: 💡 SmartFunction
+sidebar_label: SmartFunction
+---
 
 The `SmartFunction` namespace provides an API to create and call`jstz` smart functions.
 New smart functions can be created with the `SmartFunction.create()` method
