@@ -1,4 +1,7 @@
-# Building smart functions
+---
+title: Building smart functions
+sidebar_label: Building
+---
 
 Smart functions are written and run in ordinary TypeScript, but you must still build them with the Jstz dependencies before deploying them.
 

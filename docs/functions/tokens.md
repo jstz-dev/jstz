@@ -1,9 +1,11 @@
-# Managing tokens
+---
+title: Managing tokens
+---
 
 Jstz maintains a ledger of how many tez tokens (also known as XTZ) each user and smart function account owns, similar to but separate from the ledger that Tezos layer 1 uses.
 You can use the [Asset bridge](/architecture/bridge) to move tez from layer 1 to Jstz and back.
 
-::: tip
+:::tip
 
 Internally, Jstz tracks tez not as individual tez but as _mutez_, which are equal to one-millionth of one tez.
 
