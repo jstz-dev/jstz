@@ -1,4 +1,7 @@
-# Calling other smart functions
+---
+title: Calling other smart functions
+sidebar_label: Calling
+---
 
 Smart functions can call other smart functions with the `SmartFunction.call()` method, which returns a promise that resolves to a Jstz [`Response`](/api/response) object.
 Here is an example of calling another contract:
@@ -19,7 +22,7 @@ The URL for the [`Request`](/api/request) object must be `jstz://` followed by t
 Smart functions cannot call external APIs or Tezos smart contracts directly.
 You can set the method in the `Request` object but you cannot set the `Referer` header because it automatically becomes the address of the smart function.
 
-::: tip
+:::tip
 
 To transfer tez with the call, use the `X-JSTZ-TRANSFER` header as described in [Managing tokens](/functions/tokens).
 

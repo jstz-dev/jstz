@@ -1,8 +1,11 @@
-# 📦 Installing `jstz`
+---
+title: 📦 Installing Jstz
+sidebar_label: Installation
+---
 
 ## Download and Install
 
-::: danger
+:::danger
 ⚠️ `jstz` is only available on Unix-based systems. ⚠️
 :::
 
@@ -34,39 +37,45 @@ git clone https://github.com/jstz-dev/jstz.git
 
 ### Prerequisites 📋
 
-::: tip  
+:::tip
 Both `jstz` and Octez are packaged with Nix, a package manager and system configuration tool that makes building from sources easy! See the [Nix docs](https://nixos.org/download.html) for instructions for your system. Additionally, ensure [Nix flakes are enabled](https://nixos.wiki/wiki/Flakes#Enable_flakes).
 :::
 
 #### LLVM 🛠️
 
-::: code-group
+MacOS:
 
-```sh [MacOS]
+```sh
 brew install llvm
 export CC="$(brew --prefix llvm)/bin/clang"
 ```
 
-```sh [Ubuntu]
+Ubuntu:
+
+```sh
 sudo apt-get install clang-11
 export CC=clang-11
 ```
 
-```sh [Fedora]
+Fedora:
+
+```sh
 sudo dnf install clang
 export CC=clang
 ```
 
-```sh [Arch Linux]
+Linux:
+
+```sh Arch
 pacman -S clang
 export CC=clang
 ```
 
-```sh [Nix]
+Nix:
+
+```sh
 nix-env -iA nixpkgs.llvm
 ```
-
-:::
 
 #### Rust 🦀
 
@@ -80,7 +89,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 #### Octez 🐙
 
-::: tip
+:::tip
 
 The Nix shell ships with Octez binaries for convenience but it does take a little while to build for the very first time.
 Skip ahead to [Building](#building-👷‍♂️)
@@ -96,7 +105,7 @@ Once Octez has been built, copy the following binaries to `jstz`:
 
 ### Building 👷‍♂️
 
-::: tip
+:::tip
 Using Nix, simply run `nix develop` to enter a shell with all build dependencies or use `direnv` to automatically enter the shell when you `cd` into the `jstz` directory.
 :::
 

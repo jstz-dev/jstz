@@ -1,4 +1,7 @@
-# 🚀 Quick Start
+---
+title: 🚀 Quick start
+sidebar_label: Quick start
+---
 
 This guide will instruct you in writing, deploying, and using your first Jstz _smart function_ in under 10 minutes.
 
@@ -173,7 +176,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
 
     If you see an error that says that the configuration file is improperly configured, delete the `~/.jstz/` folder and try to start the sandbox again.
 
-    ::: tip
+    :::tip
 
     The `--detach` (`-d`) flag starts the sandbox in the background, allowing you to continue working in the same terminal.
     You can stop or reset the sandbox with the commands `jstz sandbox --container stop` or `jstz sandbox --container restart`, but the state of the sandbox is not persistent.
@@ -181,46 +184,6 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     :::
 
     When the sandbox starts, it shows the bootstrap accounts and their balances on Tezos layer 1, which you can use to fund smart functions and user accounts in Jstz:
-
-    <details>
-    <summary>Output</summary>
-    <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
-    <code>$ jstz sandbox start
-
-             __________
-             \  jstz  /
-              )______(
-              |""""""|_.-._,.---------.,_.-._
-              |      | | |               | | ''-.
-              |      |_| |_             _| |_..-'
-              |______| '-' `'---------'` '-'
-              )""""""(
-             /________\
-             `'------'`
-           .------------.
-          /______________\
-
-          0.1.1-alpha.1 https://github.com/jstz-dev/jstz
-
-    +---------------------------------------------------+---------------------+
-    | Address                                           | XTZ Balance (mutez) |
-    +===================================================+=====================+
-    | (bootstrap0) tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV | 100000000000        |
-    +---------------------------------------------------+---------------------+
-    | (bootstrap1) tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx | 100000000000        |
-    +---------------------------------------------------+---------------------+
-    | (bootstrap2) tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN | 100000000000        |
-    +---------------------------------------------------+---------------------+
-    | (bootstrap3) tz1faswCTDciRzE4oJ9jn2Vm2dvjeyA9fUzU | 100000000000        |
-    +---------------------------------------------------+---------------------+
-    | (bootstrap4) tz1b7tUupMgCNw2cCLpKTkSD1NZzB5TkP2sv | 100000000000        |
-    +---------------------------------------------------+---------------------+
-    | (bootstrap5) tz1ddb9NMYHZi5UzPdzTZMYQQZoMub195zgv | 100000000000        |
-    +---------------------------------------------------+---------------------+
-
-    </code>
-    </pre>
-    </details>
 
 1.  Open a new terminal window, go to the `jstz/examples/get-tez` folder, and run this command to compile and deploy the smart function to the sandbox:
 
@@ -232,28 +195,6 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     If this is your first time deploying a smart function, the `deploy` command prompts you to create a Jstz account.
     You can use any local name and passphrase for the account.
     Later, you can create accounts with the `jstz account create` and switch accounts with the `jstz login` and `jstz account` commands.
-
-    <details>
-    <summary>Output</summary>
-    <pre style="border: 1px solid #ccc; padding: 10px; border-radius: 4px; overflow-x: auto;">
-    <code>$ npm run build
-    > @jstz-dev/get-tez@0.0.0 build
-    > esbuild index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js
-
-    dist/index.js 777b
-
-    ⚡ Done in 10ms
-
-    $ jstz deploy dist/index.js -n dev
-    You are not logged in. Please type the account name that you want to log into or create as new: alan
-    Logged in to account alan with address tz1N8BsvfrSjGdomFi5V9RwwYLasgD8s4pxF
-
-    Smart function deployed by alan at address: KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw
-    Run with `jstz run jstz://KT1FZuQ4SDP7ahLRyybtNnNxNnRskBGyAXVw/ --data <args> --trace`
-
-    </code>
-    </pre>
-    </details>
 
     Upon successful deployment, Jstz assigns the smart function a unique `KT1` address.
     This address is its identifier, similar to an IP address or a smart contract address.
@@ -326,7 +267,7 @@ After a successful deployment, you can call the smart function in a way similar 
 
 Congratulations! 🎉 You have now successfully deployed and crafted a Jstz request to run your first smart function.
 
-::: tip
+:::tip
 For debugging, you can listen to the log of a smart function with the command `jstz logs trace` which behaves like the Linux command `tail -f`.
 
 You can also send a request and view the log messages generated from that request by adding the `--trace` flag to the `jstz run` command.
@@ -398,7 +339,7 @@ import JstzType from "@jstz-dev/jstz-client";
 import * as signer from "jstz_sdk"; // <- signing library
 ```
 
-::: warning
+:::warning
 The signing library is a temporary solution while we build out the secure signing interface.
 Essentially, it is a WASM program directly compiled from the core Jstz Rust code.
 Although it is semantically correct, do not use this library in production because it involves copying users' secret keys, which is not secure.

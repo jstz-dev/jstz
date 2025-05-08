@@ -1,4 +1,6 @@
-# Handling errors
+---
+title: Handling errors
+---
 
 Jstz processes calls to smart functions as an atomic unit that succeeds entirely or fails entirely.
 Failed calls to smart functions immediately revert all calls that came from that transaction and any side effects they may have had.

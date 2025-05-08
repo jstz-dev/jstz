@@ -1,8 +1,11 @@
-# 🔡 TextDecoder
+---
+title: 🔡 TextDecoder
+sidebar_label: TextDecoder
+---
 
 The TextDecoder interface represents a decoder for a specific text encoding, such as `UTF-8`, `ISO-8859-2`, `KOI8-R`, `GBK`, etc. A decoder takes a stream of bytes as input and emits a stream of code points.
 
-::: danger
+:::danger
 ⚠️ `jstz`'s implementation is not fully spec compliant ⚠️
 :::
 
@@ -47,7 +50,7 @@ The `ignoreBOM` read-only property of the `TextDecoder` interface is a boolean i
 
 ### `TextDecoder.decode(input?: BufferSource, options?: TextDecodeOptions): string`
 
-::: danger
+:::danger
 ⚠️ Spec deviation: input can not be a `SharedArrayBuffer` ⚠️
 :::
 

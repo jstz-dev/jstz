@@ -1,4 +1,7 @@
-# 🔗 URL
+---
+title: 🔗 URL
+sidebar_label: URL
+---
 
 `jstz`'s implementation of the `URL` API defines utilities for URL resolution and parsing according to the [URL specification](https://url.spec.whatwg.org/#urlsearchparams).
 
