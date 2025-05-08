@@ -1,8 +1,11 @@
-# 🔣 TextEncoder
+---
+title: 🔣 TextEncoder
+sidebar_label: TextEncoder
+---
 
 The `TextEncoder` interface takes a stream of code points as input and emits a stream of UTF-8 bytes.
 
-::: danger
+:::danger
 ⚠️ `jstz`'s implementation is not fully spec compliant ⚠️
 :::
 
