@@ -52,7 +52,6 @@ console = "0.15.8"
 crossterm = "0.27"
 ctrlc = "3.4.2"
 daemonize = "0.5.0"
-deno_console = "0.190.0"
 deno_core = "0.336.0"
 deno_error = "0.5.5"
 deno_url = "0.190.0"
@@ -177,6 +176,10 @@ version = "0.2.2"
 [workspace.dependencies.tezos_crypto_rs]
 version = "0.6.0"
 default-features = false
+
+[workspace.dependencies.deno_console]
+git = "https://github.com/jstz-dev/deno"
+branch = "v2.1.10-jstz"
 
 [patch.crates-io]
 tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }

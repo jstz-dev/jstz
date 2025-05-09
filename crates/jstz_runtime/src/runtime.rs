@@ -326,10 +326,7 @@ mod test {
 
         let result = runtime.execute_with_result::<u32>(code).unwrap();
         assert_eq!(result, 50);
-        assert_eq!(
-            sink.to_string(),
-            "[INFO] world\n[INFO] \u{1b}[33m42\u{1b}[39m\n".to_string()
-        )
+        assert_eq!(sink.to_string(), "[INFO] world\n[INFO] 42\n".to_string())
     }
 
     async fn init_and_call_default_handler(
