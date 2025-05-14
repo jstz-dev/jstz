@@ -20,6 +20,7 @@ http.workspace = true
 indicatif.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_node = {path = "../jstz_node"}
+jstz_utils = { path = "../jstz_utils" }
 octez = { path = "../octez" }
 prettytable.workspace = true
 regex.workspace = true

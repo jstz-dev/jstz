@@ -1,0 +1,17 @@
+[package]
+name = "jstz_utils"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description = "Utility functions"
+
+[dependencies]
+anyhow.workspace = true
+reqwest.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
