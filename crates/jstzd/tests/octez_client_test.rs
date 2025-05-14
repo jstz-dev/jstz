@@ -1,6 +1,7 @@
 use anyhow::Context;
 use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
-use jstzd::task::{utils::poll, Task};
+use jstz_utils::poll;
+use jstzd::task::Task;
 use octez::r#async::{
     client::{OctezClient, OctezClientConfigBuilder, Signature},
     endpoint::Endpoint,

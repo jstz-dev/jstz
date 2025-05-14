@@ -13,6 +13,7 @@ members = [
   "crates/jstz_rollup",
   "crates/jstz_sdk",
   "crates/jstz_tps_bench",
+  "crates/jstz_utils",
   "crates/jstz_wpt",
   "crates/jstzd",
   "crates/octez",

@@ -3118,6 +3118,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "jstz_utils"
+version = "0.1.1-alpha.1"
+dependencies = [
+ "anyhow",
+ "reqwest",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "jstz_wpt"
 version = "0.1.1-alpha.1"
 dependencies = [
@@ -3156,6 +3166,7 @@ dependencies = [
  "jstz_crypto",
  "jstz_kernel",
  "jstz_node",
+ "jstz_utils",
  "octez",
  "predicates",
  "prettytable",
