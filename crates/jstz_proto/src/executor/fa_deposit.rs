@@ -4,7 +4,9 @@ use http::{header::CONTENT_TYPE, HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
+use parking_lot::FairMutex as Mutex;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 use tezos_smart_rollup::{michelson::ticket::TicketHash, prelude::debug_msg};
 use utoipa::ToSchema;
 
@@ -40,12 +42,15 @@ pub enum FaDepositError {
 
 fn deposit_to_receiver(
     rt: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    tx: Arc<Mutex<Transaction>>,
     receiver: &Address,
     ticket_hash: &TicketHash,
     amount: Amount,
 ) -> Result<FaDepositReceipt> {
-    let final_balance = TicketTable::add(rt, tx, receiver, ticket_hash, amount)?;
+    let final_balance = {
+        let mut guard = tx.lock();
+        TicketTable::add(rt, &mut guard, receiver, ticket_hash, amount)?
+    };
     Ok(FaDepositReceipt {
         receiver: receiver.clone(),
         ticket_balance: final_balance,
@@ -80,24 +85,32 @@ fn new_run_function(
 
 fn deposit_to_proxy_contract(
     rt: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    tx: Arc<Mutex<Transaction>>,
     deposit: &FaDeposit,
     proxy_contract: &Address,
 ) -> Result<FaDepositReceipt> {
     let run = new_run_function(deposit.to_http_body(), proxy_contract)?;
     let source = PublicKeyHash::from_base58(NULL_ADDRESS)?;
-    let result =
-        smart_function::run::execute(rt, tx, &Address::User(source), run, deposit.hash());
+    let result = smart_function::run::execute(
+        rt,
+        tx.clone(),
+        &Address::User(source),
+        run,
+        deposit.hash(),
+    );
     match result {
         Ok(run_receipt) => {
             if run_receipt.status_code.is_success() {
-                let final_balance = TicketTable::add(
-                    rt,
-                    tx,
-                    proxy_contract,
-                    &deposit.ticket_hash,
-                    deposit.amount,
-                )?;
+                let final_balance = {
+                    let mut guard = tx.lock();
+                    TicketTable::add(
+                        rt,
+                        &mut guard,
+                        proxy_contract,
+                        &deposit.ticket_hash,
+                        deposit.amount,
+                    )?
+                };
                 Ok(FaDepositReceipt {
                     receiver: proxy_contract.clone(),
                     ticket_balance: final_balance,
@@ -106,7 +119,7 @@ fn deposit_to_proxy_contract(
             } else {
                 let mut result = deposit_to_receiver(
                     rt,
-                    tx,
+                    tx.clone(),
                     &deposit.receiver,
                     &deposit.ticket_hash,
                     deposit.amount,
@@ -122,7 +135,7 @@ fn deposit_to_proxy_contract(
             );
             let result = deposit_to_receiver(
                 rt,
-                tx,
+                tx.clone(),
                 &deposit.receiver,
                 &deposit.ticket_hash,
                 deposit.amount,
@@ -134,29 +147,29 @@ fn deposit_to_proxy_contract(
 
 fn execute_inner(
     rt: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    tx: Arc<Mutex<Transaction>>,
     deposit: &FaDeposit,
 ) -> Result<FaDepositReceipt> {
     match &deposit.proxy_smart_function {
         None => deposit_to_receiver(
             rt,
-            tx,
+            tx.clone(),
             &deposit.receiver,
             &deposit.ticket_hash,
             deposit.amount,
         ),
         Some(proxy_contract) => {
-            deposit_to_proxy_contract(rt, tx, deposit, proxy_contract)
+            deposit_to_proxy_contract(rt, tx.clone(), deposit, proxy_contract)
         }
     }
 }
 
 pub fn execute(
     rt: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    tx: Arc<Mutex<Transaction>>,
     deposit: FaDeposit,
 ) -> Receipt {
-    let content = execute_inner(rt, tx, &deposit)
+    let content = execute_inner(rt, tx.clone(), &deposit)
         .expect("Unreachable: Failed to execute fa deposit!\n");
     let operation_hash = deposit.hash();
     Receipt::new(
@@ -180,6 +193,9 @@ mod test {
         receipt::{Receipt, ReceiptContent, ReceiptResult},
     };
 
+    use parking_lot::FairMutex as Mutex;
+    use std::sync::Arc;
+
     fn mock_fa_deposit(proxy: Option<SmartFunctionHash>) -> FaDeposit {
         FaDeposit {
             inbox_id: 34,
@@ -198,9 +214,9 @@ mod test {
         let expected_balance = fa_deposit.amount;
         let expected_hash = fa_deposit.hash();
         let mut host = MockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
-        let receipt = super::execute(&mut host, &mut tx, fa_deposit);
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        tx.lock().begin();
+        let receipt = super::execute(&mut host, tx.clone(), fa_deposit);
 
         assert_eq!(expected_hash, *receipt.hash());
 
@@ -216,7 +232,7 @@ mod test {
 
                 let balance = TicketTable::get_balance(
                     &mut host,
-                    &mut tx,
+                    &mut tx.lock(),
                     &expected_receiver,
                     &ticket_hash,
                 )
@@ -235,11 +251,11 @@ mod test {
         let ticket_hash = fa_deposit2.ticket_hash.clone();
         let expected_hash = fa_deposit2.hash();
         let mut host = MockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        tx.lock().begin();
 
-        let _ = super::execute(&mut host, &mut tx, fa_deposit1);
-        let receipt = super::execute(&mut host, &mut tx, fa_deposit2);
+        let _ = super::execute(&mut host, tx.clone(), fa_deposit1);
+        let receipt = super::execute(&mut host, tx.clone(), fa_deposit2);
 
         assert_eq!(expected_hash, *receipt.hash());
 
@@ -254,7 +270,7 @@ mod test {
                 assert!(run_function.is_none());
                 let balance = TicketTable::get_balance(
                     &mut host,
-                    &mut tx,
+                    &mut tx.lock(),
                     &expected_receiver,
                     &ticket_hash,
                 )
@@ -269,7 +285,7 @@ mod test {
     fn execute_fa_deposit_into_proxy_succeeds() {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
-        let mut tx = Transaction::default();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
         let source = Address::User(jstz_mock::account1());
         let code = r#"
         export default (request) => {
@@ -281,10 +297,10 @@ mod test {
         }
         "#;
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        tx.begin();
+        tx.lock().begin();
         let proxy = crate::executor::smart_function::Script::deploy(
             &mut host,
-            &mut tx,
+            &mut tx.lock(),
             &source,
             parsed_code,
             0,
@@ -295,7 +311,7 @@ mod test {
         let ticket_hash = fa_deposit.ticket_hash.clone();
 
         let Receipt { result: inner, .. } =
-            super::execute(&mut host, &mut tx, fa_deposit);
+            super::execute(&mut host, tx.clone(), fa_deposit);
 
         match inner {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
@@ -308,7 +324,7 @@ mod test {
                 assert!(run_function.is_some());
                 let balance = TicketTable::get_balance(
                     &mut host,
-                    &mut tx,
+                    &mut tx.lock(),
                     &Address::SmartFunction(proxy),
                     &ticket_hash,
                 )
@@ -323,7 +339,7 @@ mod test {
     fn execute_multiple_fa_deposit_into_proxy_succeeds() {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
-        let mut tx = Transaction::default();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
         let source = Address::User(jstz_mock::account1());
         let code = r#"
         export default (request) => {
@@ -335,10 +351,10 @@ mod test {
         }
         "#;
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
-        tx.begin();
+        tx.lock().begin();
         let proxy = crate::executor::smart_function::Script::deploy(
             &mut host,
-            &mut tx,
+            &mut tx.lock(),
             &source,
             parsed_code,
             0,
@@ -348,12 +364,12 @@ mod test {
         let fa_deposit1 = mock_fa_deposit(Some(proxy.clone()));
         let ticket_hash = fa_deposit1.ticket_hash.clone();
 
-        let _ = super::execute(&mut host, &mut tx, fa_deposit1);
+        let _ = super::execute(&mut host, tx.clone(), fa_deposit1);
 
         let fa_deposit2 = mock_fa_deposit(Some(proxy.clone()));
 
         let Receipt { result: inner, .. } =
-            super::execute(&mut host, &mut tx, fa_deposit2);
+            super::execute(&mut host, tx.clone(), fa_deposit2);
 
         match inner {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
@@ -366,7 +382,7 @@ mod test {
                 assert!(run_function.is_some());
                 let balance = TicketTable::get_balance(
                     &mut host,
-                    &mut tx,
+                    &mut tx.lock(),
                     &Address::SmartFunction(proxy),
                     &ticket_hash,
                 )
@@ -381,8 +397,8 @@ mod test {
     fn execute_fa_deposit_fails_when_proxy_contract_fails() {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
-        let mut tx = Transaction::default();
-        tx.begin();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        tx.lock().begin();
         let source = Address::User(jstz_mock::account1());
         let code = r#"
         export default (request) => {
@@ -393,7 +409,7 @@ mod test {
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         let proxy = crate::executor::smart_function::Script::deploy(
             &mut host,
-            &mut tx,
+            &mut tx.lock(),
             &source,
             parsed_code,
             0,
@@ -405,7 +421,7 @@ mod test {
         let ticket_hash = fa_deposit.ticket_hash.clone();
 
         let Receipt { result: inner, .. } =
-            super::execute(&mut host, &mut tx, fa_deposit);
+            super::execute(&mut host, tx.clone(), fa_deposit);
 
         match inner {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
@@ -418,7 +434,7 @@ mod test {
                 assert_eq!(42, ticket_balance);
                 let proxy_balance = TicketTable::get_balance(
                     &mut host,
-                    &mut tx,
+                    &mut tx.lock(),
                     &Address::SmartFunction(proxy),
                     &ticket_hash,
                 )
@@ -427,7 +443,7 @@ mod test {
 
                 let receiver_balance = TicketTable::get_balance(
                     &mut host,
-                    &mut tx,
+                    &mut tx.lock(),
                     &expected_receiver,
                     &ticket_hash,
                 )

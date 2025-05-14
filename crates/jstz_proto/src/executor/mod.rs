@@ -7,6 +7,8 @@ use crate::{
 };
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::RevealData};
 use jstz_crypto::public_key::PublicKey;
+use parking_lot::FairMutex as Mutex;
+use std::sync::Arc;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 pub mod deposit;
 pub mod fa_deposit;
@@ -17,7 +19,7 @@ pub const JSTZ_HOST: &str = "jstz";
 
 fn execute_operation_inner(
     hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    tx: Arc<Mutex<Transaction>>,
     op: Operation,
     ticketer: &ContractKt1Hash,
     injector: &PublicKey,
@@ -27,7 +29,10 @@ fn execute_operation_inner(
 
     match op.content {
         operation::Content::DeployFunction(deployment) => {
-            let result = smart_function::deploy::execute(hrt, tx, &source, deployment)?;
+            let result = {
+                let mut guard = tx.lock();
+                smart_function::deploy::execute(hrt, &mut guard, &source, deployment)?
+            };
             Ok((op_hash, receipt::ReceiptContent::DeployFunction(result)))
         }
         operation::Content::RunFunction(run) => {
@@ -36,11 +41,18 @@ fn execute_operation_inner(
             }
             let result = match run.uri.host() {
                 Some(JSTZ_HOST) => {
-                    smart_function::jstz_run::execute(hrt, tx, ticketer, &source, run)?
+                    let mut guard = tx.lock();
+                    smart_function::jstz_run::execute(
+                        hrt, &mut guard, ticketer, &source, run,
+                    )?
                 }
-                _ => {
-                    smart_function::run::execute(hrt, tx, &source, run, op_hash.clone())?
-                }
+                _ => smart_function::run::execute(
+                    hrt,
+                    tx.clone(),
+                    &source,
+                    run,
+                    op_hash.clone(),
+                )?,
             };
             Ok((op_hash, receipt::ReceiptContent::RunFunction(result)))
         }
@@ -53,7 +65,7 @@ fn execute_operation_inner(
                 &reveal.root_hash,
             )?
             .verify()?;
-            revealed_op.verify_nonce(hrt, tx)?;
+            revealed_op.verify_nonce(hrt, &mut tx.lock())?;
             if reveal.reveal_type == revealed_op.content().try_into()? {
                 return execute_operation_inner(hrt, tx, revealed_op, ticketer, injector);
             }
@@ -64,20 +76,23 @@ fn execute_operation_inner(
 
 pub fn execute_external_operation(
     hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    tx: Arc<Mutex<Transaction>>,
     external_operation: ExternalOperation,
 ) -> Receipt {
     match external_operation {
-        ExternalOperation::Deposit(deposit) => deposit::execute(hrt, tx, deposit),
+        ExternalOperation::Deposit(deposit) => {
+            let mut guard = tx.lock();
+            deposit::execute(hrt, &mut guard, deposit)
+        }
         ExternalOperation::FaDeposit(fa_deposit) => {
-            fa_deposit::execute(hrt, tx, fa_deposit)
+            fa_deposit::execute(hrt, tx.clone(), fa_deposit)
         }
     }
 }
 
 pub fn execute_operation(
     hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    tx: Arc<Mutex<Transaction>>,
     signed_operation: SignedOperation,
     ticketer: &ContractKt1Hash,
     injector: &PublicKey,
@@ -94,8 +109,8 @@ pub fn execute_operation(
     };
 
     op.and_then(|op| {
-        op.verify_nonce(hrt, tx)?;
-        execute_operation_inner(hrt, tx, op, ticketer, injector)
+        op.verify_nonce(hrt, &mut tx.lock())?;
+        execute_operation_inner(hrt, tx.clone(), op, ticketer, injector)
     })
     .map_or_else(
         |e| Receipt::new(op_hash, Err(e)),
@@ -218,29 +233,29 @@ mod tests {
     #[test]
     fn reveals_large_payload_operation() {
         let mut host = MockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        tx.lock().begin();
         let (_, pk1, sk1) = bootstrap1();
         let (_, pk2, sk2) = bootstrap2();
         let deploy_op = make_signed_op(deploy_function_content(), pk2, sk2);
         let root_hash = make_data_available(&mut host, deploy_op.clone());
         let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1, deploy_op.hash());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
+        let receipt = execute_operation(&mut host, tx.clone(), rdc_op, &ticketer, &pk1);
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
     }
     #[test]
     fn throws_error_if_reveal_type_not_supported() {
         let mut host = MockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        tx.lock().begin();
         let (_, pk1, sk1) = bootstrap1();
         let (_, pk2, sk2) = bootstrap2();
         let run_op = make_signed_op(run_function_content(), pk2.clone(), sk2.clone());
         let root_hash = make_data_available(&mut host, run_op.clone());
         let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1.clone(), run_op.hash());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
+        let receipt = execute_operation(&mut host, tx.clone(), rdc_op, &ticketer, &pk1);
         println!("receipt: {:?}", receipt);
         assert!(matches!(
             receipt.result,
@@ -251,15 +266,15 @@ mod tests {
     #[test]
     fn throws_if_nonce_is_invalid() {
         let mut host = MockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        tx.lock().begin();
         let (_, pk, sk) = bootstrap1();
         let deploy_op = make_signed_op(deploy_function_content(), pk.clone(), sk.clone());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt =
-            execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer, &pk);
+            execute_operation(&mut host, tx.clone(), deploy_op.clone(), &ticketer, &pk);
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
-        let receipt = execute_operation(&mut host, &mut tx, deploy_op, &ticketer, &pk);
+        let receipt = execute_operation(&mut host, tx.clone(), deploy_op, &ticketer, &pk);
         assert!(
             matches!(receipt.result, ReceiptResult::Failed(e) if e.contains("InvalidNonce"))
         );
@@ -268,8 +283,8 @@ mod tests {
     #[test]
     fn throws_if_injector_is_invalid() {
         let mut host = MockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        tx.lock().begin();
         let (_, pk1, sk1) = bootstrap1();
         let (_, pk2, sk2) = bootstrap2();
         let deploy_op = make_signed_op(deploy_function_content(), pk1.clone(), sk1);
@@ -277,7 +292,7 @@ mod tests {
         let rdc_op = signed_rdc_op(root_hash, pk2.clone(), sk2, deploy_op.hash());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt =
-            execute_operation(&mut host, &mut tx, rdc_op.clone(), &ticketer, &pk1);
+            execute_operation(&mut host, tx.clone(), rdc_op.clone(), &ticketer, &pk1);
         assert!(
             matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidInjector"))
         );
@@ -287,8 +302,8 @@ mod tests {
     #[test]
     fn run_function_with_invalid_scheme_fails() {
         let mut host = MockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
+        let tx = Arc::new(Mutex::new(Transaction::default()));
+        tx.lock().begin();
         let (_, pk1, sk1) = bootstrap1();
         let run_op = make_signed_op(
             Content::RunFunction(RunFunction {
@@ -306,7 +321,7 @@ mod tests {
         );
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
 
-        let receipt = execute_operation(&mut host, &mut tx, run_op, &ticketer, &pk1);
+        let receipt = execute_operation(&mut host, tx.clone(), run_op, &ticketer, &pk1);
 
         assert!(
             matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidScheme"))

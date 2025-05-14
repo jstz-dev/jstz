@@ -28,6 +28,7 @@ tezos-smart-rollup-host.workspace = true
 tezos-smart-rollup.workspace = true
 thiserror.workspace = true
 hex.workspace = true
+parking_lot.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true 
