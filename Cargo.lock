@@ -2856,6 +2856,7 @@ dependencies = [
  "jstz_node",
  "jstz_proto",
  "jstz_rollup",
+ "jstzd",
  "log",
  "mockito",
  "nix 0.27.1",
