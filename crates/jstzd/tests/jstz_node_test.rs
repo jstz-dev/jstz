@@ -17,6 +17,7 @@ async fn jstz_node_test() {
         &preimages_dir_path,
         &path,
         KeyPair::default(),
+        jstz_node::RunMode::Default,
     );
     let mut jstz_node = jstzd::task::jstz_node::JstzNode::spawn(jstz_node_config)
         .await
