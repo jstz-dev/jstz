@@ -6,6 +6,7 @@ pub mod accounts;
 pub mod error;
 pub mod logs;
 pub mod operations;
+pub mod utils;
 
 pub trait Service {
     fn router_with_openapi() -> OpenApiRouter<AppState>;

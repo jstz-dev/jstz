@@ -4,6 +4,8 @@ use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
 use octez::r#async::endpoint::Endpoint;
 use serde::Serialize;
 
+use crate::RunMode;
+
 /// Jstz node's signer defaults to `bootstrap1` account
 /// Make sure to update　the `INJECTOR_PK` in `jstzd/build_config.rs` if you change this
 pub const JSTZ_NODE_DEFAULT_PK: &str =
@@ -35,6 +37,8 @@ pub struct JstzNodeConfig {
     pub kernel_log_file: PathBuf,
     /// The injector of the operation. Currently, it's used for signing `RevealLargePayload` operation.
     pub injector: KeyPair,
+    /// The mode in which the rollup node will run.
+    pub mode: RunMode,
 }
 
 impl JstzNodeConfig {
@@ -47,6 +51,7 @@ impl JstzNodeConfig {
         rollup_preimages_dir: &Path,
         kernel_log_file: &Path,
         injector: KeyPair,
+        mode: RunMode,
     ) -> Self {
         Self {
             endpoint: endpoint.clone(),
@@ -54,6 +59,7 @@ impl JstzNodeConfig {
             rollup_preimages_dir: rollup_preimages_dir.to_path_buf(),
             kernel_log_file: kernel_log_file.to_path_buf(),
             injector,
+            mode,
         }
     }
 }
@@ -79,6 +85,7 @@ mod tests {
                 )
                 .unwrap(),
             ),
+            RunMode::Default,
         );
 
         let json = serde_json::to_value(&config).unwrap();
@@ -105,6 +112,7 @@ mod tests {
             Path::new("/tmp/preimages"),
             Path::new("/tmp/kernel.log"),
             KeyPair::default(),
+            RunMode::Default,
         );
 
         assert_eq!(config.injector, KeyPair::default());
