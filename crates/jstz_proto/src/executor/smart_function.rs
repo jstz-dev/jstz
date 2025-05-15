@@ -341,7 +341,7 @@ pub struct HostScript;
 
 impl HostScript {
     pub fn run(
-        self_address: &impl Addressable,
+        source_address: &impl Addressable,
         request: &mut GcRefMut<'_, ErasedObject, Request>,
         context: &mut Context,
     ) -> JsResult<JsValue> {
@@ -350,7 +350,7 @@ impl HostScript {
             // 1. Begin a new transaction
             tx.begin();
             // 2. Execute jstz host smart function
-            let result = jstz_run::execute_without_ticketer(hrt, tx, self_address, run);
+            let result = jstz_run::execute_without_ticketer(hrt, tx, source_address, run);
 
             // 3. Commit or rollback the transaction
             match result {
@@ -489,6 +489,9 @@ pub mod run {
         context: &mut Context,
     ) -> JsResult<JsValue> {
         let mut request_deref = request.deref_mut();
+        if request_deref.url().scheme() != "jstz" {
+            return Err(Error::InvalidScheme.into());
+        }
         match request_deref.url().domain() {
             Some(JSTZ_HOST) => {
                 HostScript::run(source_address, &mut request_deref, context)
