@@ -6,6 +6,7 @@ use jstz_proto::{
     receipt::{ReceiptContent, ReceiptResult},
 };
 use log::{debug, info};
+use std::path::PathBuf;
 
 use crate::{
     account,
@@ -22,8 +23,10 @@ pub async fn exec(
     name: Option<String>,
     network: Option<NetworkName>,
     force: bool,
+    config_path: Option<PathBuf>,
 ) -> Result<()> {
-    let mut cfg = Config::load().await?;
+    let mut cfg = Config::load_path(config_path.clone()).await?;
+
     // Load sandbox if the selected network is Dev and sandbox is not already loaded
     if cfg.network_name(&network)? == NetworkName::Dev {
         assert_sandbox_running(JSTZD_SERVER_BASE_URL).await?;
@@ -31,7 +34,7 @@ pub async fn exec(
 
     // Get the current user and check if we are logged in
     account::login_quick(&mut cfg).await?;
-    cfg.reload().await?;
+    cfg.reload_path(config_path.clone()).await?;
     let (user_name, user) = cfg.accounts.current_user().ok_or(anyhow!(
         "Failed to setup the account. Please run `{}`.",
         styles::command("jstz login")
@@ -126,7 +129,7 @@ pub async fn exec(
         cfg.accounts.insert(name, SmartFunction { address });
     }
 
-    cfg.save()?;
+    cfg.save_to_path(config_path)?;
 
     Ok(())
 }

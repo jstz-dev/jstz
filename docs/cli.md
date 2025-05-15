@@ -134,6 +134,10 @@ jstz deploy [OPTIONS] [CODE|PATH]
 
 - `--network (-n) <NETWORK>`: Specifies the network from the config file. Use `dev` for the local sandbox.
 
+- `--force (-f) <NETWORK>`: Overwrites an existing function name. Effective only when `name` is specified.
+
+- `--config <PATH>`: Overrides the path to the config file.
+
 ### Example
 
 ```bash
