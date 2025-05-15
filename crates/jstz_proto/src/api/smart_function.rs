@@ -1247,9 +1247,13 @@ mod test {
         .unwrap();
         let request = JsNativeObject::new::<RequestClass>(request, context).unwrap();
         let operation_hash = OperationHash::from(b"abcdefghijslmnop".as_slice());
-        let js_error =
+        let mut host = MockHost::default();
+        let mut tx = Transaction::default();
+        tx.begin();
+        let js_error = runtime::enter_js_host_context(&mut host, &mut tx, || {
             SmartFunction::call(&self_address, &request, operation_hash, context)
-                .unwrap_err();
+                .unwrap_err()
+        });
         assert_eq!("EvalError: InvalidScheme", js_error.to_string())
     }
 }
