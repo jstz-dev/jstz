@@ -27,6 +27,9 @@ use crate::{
 
 #[cfg(not(test))]
 pub fn jstz_home_dir() -> PathBuf {
+    if let Ok(value) = std::env::var("JSTZ_HOME") {
+        return PathBuf::from(value);
+    }
     if let Ok(value) = std::env::var("XDG_CONFIG_HOME") {
         PathBuf::from(value)
     } else {
@@ -74,9 +77,9 @@ pub struct SmartFunction {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct AccountConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
-    current_alias: Option<String>,
+    pub current_alias: Option<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    accounts: HashMap<String, Account>,
+    pub accounts: HashMap<String, Account>,
 }
 
 impl AccountConfig {
@@ -248,6 +251,9 @@ pub struct Config {
     /// Path to octez installation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub octez_path: Option<PathBuf>,
+    /// The octez client directory to use
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub octez_client_dir: Option<PathBuf>,
     /// List of accounts
     #[serde(flatten)]
     pub accounts: AccountConfig,
@@ -289,7 +295,7 @@ impl FromStr for NetworkName {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-struct Network {
+pub struct Network {
     pub octez_node_rpc_endpoint: String,
     pub jstz_node_endpoint: String,
 }
@@ -298,9 +304,9 @@ struct Network {
 pub struct NetworkConfig {
     // if None, the users have to specify the network in the command
     #[serde(skip_serializing_if = "Option::is_none")]
-    default_network: Option<NetworkName>,
+    pub default_network: Option<NetworkName>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    networks: HashMap<String, Network>,
+    pub networks: HashMap<String, Network>,
 }
 
 impl Config {
@@ -381,7 +387,7 @@ impl Config {
                 .octez_path
                 .as_ref()
                 .map(|path| path.join("octez-client")),
-            octez_client_dir: None,
+            octez_client_dir: self.octez_client_dir.clone(),
             endpoint: network.octez_node_rpc_endpoint,
             disable_disclaimer: true,
         })
@@ -449,6 +455,21 @@ impl Config {
                     ),
                 }),
             },
+        }
+    }
+
+    pub fn new(
+        octez_client_dir: Option<PathBuf>,
+        accounts: AccountConfig,
+        networks: NetworkConfig,
+    ) -> Self {
+        Self {
+            octez_path: None,
+            octez_client_dir,
+            accounts,
+            networks,
+            sandbox_logs_dir: None,
+            jstzd_config: None,
         }
     }
 }

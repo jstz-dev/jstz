@@ -1,13 +1,16 @@
 use clap::Subcommand;
+use deploy::DeployBridge;
 
+pub mod deploy;
 mod deposit;
 mod withdraw;
 
 use crate::{
     config::NetworkName,
-    error::Result,
     utils::{AddressOrAlias, Tez},
 };
+
+use anyhow::Result;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
@@ -42,6 +45,8 @@ pub enum Command {
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
+    /// Deploys an FA token bridge with minimal functionality.
+    FaDeploy(DeployBridge),
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -57,5 +62,9 @@ pub async fn exec(command: Command) -> Result<()> {
             amount,
             network,
         } => withdraw::exec(to, amount, network).await,
+        Command::FaDeploy(deploy) => {
+            let _ = deploy.exec().await;
+            Ok(())
+        }
     }
 }
