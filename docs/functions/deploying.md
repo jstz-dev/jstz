@@ -1,4 +1,7 @@
-# Deploying smart functions
+---
+title: Deploying smart functions
+sidebar_label: Deploying
+---
 
 Deploying a smart function to Jstz is different from deploying most web or JavaScript/TypeScript applications because you cannot change the code of a smart function or delete it after you deploy it.
 When you deploy a smart function, Jstz records code of the smart function in its ledger of transactions and there is no way to change or delete entries from the ledger.

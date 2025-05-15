@@ -1,8 +1,11 @@
-# 📰 Headers
+---
+title: 📰 Headers
+sidebar_label: Headers
+---
 
 `jstz`'s [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) implementation is based on the [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) specification. This API permits you to manipulate and inspect HTTP request and response headers.
 
-::: danger
+:::danger
 ⚠️ `jstz`'s implementation is not spec compliant ⚠️
 :::
 
