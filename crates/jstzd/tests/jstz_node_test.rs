@@ -18,6 +18,7 @@ async fn jstz_node_test() {
         &path,
         KeyPair::default(),
         jstz_node::RunMode::Default,
+        0,
     );
     let mut jstz_node = jstzd::task::jstz_node::JstzNode::spawn(jstz_node_config)
         .await

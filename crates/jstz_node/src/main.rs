@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use clap::Parser;
 use env_logger::Env;
-use jstz_node::{config::KeyPair, RunMode};
+use jstz_node::{config::KeyPair, RunMode, RunOptions};
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
@@ -12,6 +12,7 @@ const DEFAULT_KERNEL_LOG_PATH: &str = "logs/kernel.log";
 const DEFAULT_JSTZ_NODE_ADDR: &str = "127.0.0.1";
 const DEFAULT_JSTZ_NODE_PORT: u16 = 8933;
 const DEFAULT_RUN_MODE: &str = "default";
+const DEFAULT_QUEUE_CAPACITY: usize = 1024;
 
 #[derive(Debug, Parser)]
 enum Command {
@@ -48,6 +49,9 @@ struct Args {
 
     #[arg(long, default_value = DEFAULT_RUN_MODE)]
     mode: RunMode,
+
+    #[arg(long, default_value_t = DEFAULT_QUEUE_CAPACITY)]
+    capacity: usize,
 }
 
 #[tokio::main]
@@ -60,17 +64,18 @@ async fn main() -> anyhow::Result<()> {
                 args.rollup_node_rpc_addr, args.rollup_node_rpc_port
             ));
 
-            jstz_node::run(
-                &args.addr,
-                args.port,
+            jstz_node::run(RunOptions {
+                addr: args.addr,
+                port: args.port,
                 rollup_endpoint,
-                args.preimages_dir,
-                args.kernel_log_path,
+                rollup_preimages_dir: args.preimages_dir,
+                kernel_log_path: args.kernel_log_path,
                 // TODO: make the keypair configurable
                 // https://linear.app/tezos/issue/JSTZ-424/make-keypair-configurable-in-jstz-main
-                KeyPair::default(),
-                args.mode,
-            )
+                injector: KeyPair::default(),
+                mode: args.mode,
+                capacity: args.capacity,
+            })
             .await
         }
         Command::Spec { out } => {

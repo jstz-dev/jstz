@@ -8,6 +8,7 @@ use axum::{
 use config::{JstzNodeConfig, KeyPair};
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use octez::OctezRollupClient;
+use sequencer::queue::OperationQueue;
 use serde::{Deserialize, Serialize};
 use services::{
     accounts::AccountsService,
@@ -15,7 +16,10 @@ use services::{
     operations::OperationsService,
     utils,
 };
-use std::{path::PathBuf, sync::Arc};
+use std::{
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -38,6 +42,7 @@ pub struct AppState {
     pub db: Db,
     pub injector: KeyPair,
     pub mode: RunMode,
+    pub queue: Arc<RwLock<OperationQueue>>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum)]
@@ -47,30 +52,45 @@ pub enum RunMode {
     Default,
 }
 
+pub struct RunOptions {
+    pub addr: String,
+    pub port: u16,
+    pub rollup_endpoint: String,
+    pub rollup_preimages_dir: PathBuf,
+    pub kernel_log_path: PathBuf,
+    pub injector: KeyPair,
+    pub mode: RunMode,
+    pub capacity: usize,
+}
+
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
     let endpoint_addr = config.endpoint.host();
     let endpoint_port = config.endpoint.port();
     let rollup_endpoint = config.rollup_endpoint.to_string();
-    run(
-        endpoint_addr,
-        endpoint_port,
+    run(RunOptions {
+        addr: endpoint_addr.to_string(),
+        port: endpoint_port,
         rollup_endpoint,
-        config.rollup_preimages_dir.to_path_buf(),
-        config.kernel_log_file.to_path_buf(),
-        config.injector,
-        config.mode,
-    )
+        rollup_preimages_dir: config.rollup_preimages_dir.to_path_buf(),
+        kernel_log_path: config.kernel_log_file.to_path_buf(),
+        injector: config.injector,
+        mode: config.mode,
+        capacity: config.capacity,
+    })
     .await
 }
 
 pub async fn run(
-    addr: &str,
-    port: u16,
-    rollup_endpoint: String,
-    rollup_preimages_dir: PathBuf,
-    kernel_log_path: PathBuf,
-    injector: KeyPair,
-    mode: RunMode,
+    RunOptions {
+        addr,
+        port,
+        rollup_endpoint,
+        rollup_preimages_dir,
+        kernel_log_path,
+        injector,
+        mode,
+        capacity,
+    }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
 
@@ -85,6 +105,7 @@ pub async fn run(
         db,
         injector,
         mode,
+        queue: Arc::new(RwLock::new(OperationQueue::new(capacity))),
     };
 
     let cors = CorsLayer::new()
@@ -128,7 +149,7 @@ mod test {
     use pretty_assertions::assert_eq;
     use tempfile::NamedTempFile;
 
-    use crate::{run, KeyPair, RunMode};
+    use crate::{run, KeyPair, RunMode, RunOptions};
 
     #[test]
     fn api_doc_regression() {
@@ -149,15 +170,16 @@ mod test {
         async fn check_mode(mode: RunMode, expected: &str) {
             let port = unused_port();
             let log_file = NamedTempFile::new().unwrap();
-            let h = tokio::spawn(run(
-                "0.0.0.0",
+            let h = tokio::spawn(run(RunOptions {
+                addr: "0.0.0.0".to_string(),
                 port,
-                "0.0.0.0:5678".to_string(),
-                PathBuf::new(),
-                log_file.path().to_path_buf(),
-                KeyPair::default(),
-                mode.clone(),
-            ));
+                rollup_endpoint: "0.0.0.0:5678".to_string(),
+                rollup_preimages_dir: PathBuf::new(),
+                kernel_log_path: log_file.path().to_path_buf(),
+                injector: KeyPair::default(),
+                mode: mode.clone(),
+                capacity: 0,
+            }));
 
             let res = jstz_utils::poll(10, 500, || async {
                 reqwest::get(format!("http://0.0.0.0:{}/mode", port))
