@@ -145,6 +145,7 @@ pub(crate) async fn build_config(
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
         KeyPair::default(),
+        jstz_node::RunMode::Default,
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);

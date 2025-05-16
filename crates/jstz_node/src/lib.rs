@@ -8,10 +8,12 @@ use axum::{
 use config::{JstzNodeConfig, KeyPair};
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use octez::OctezRollupClient;
+use serde::{Deserialize, Serialize};
 use services::{
     accounts::AccountsService,
     logs::{broadcaster::Broadcaster, db::Db, LogsService},
     operations::OperationsService,
+    utils,
 };
 use std::{path::PathBuf, sync::Arc};
 use tokio::net::TcpListener;
@@ -34,6 +36,14 @@ pub struct AppState {
     pub broadcaster: Arc<Broadcaster>,
     pub db: Db,
     pub injector: KeyPair,
+    pub mode: RunMode,
+}
+
+#[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum)]
+#[serde(rename_all = "lowercase")]
+pub enum RunMode {
+    Sequencer,
+    Default,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -47,6 +57,7 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         config.rollup_preimages_dir.to_path_buf(),
         config.kernel_log_file.to_path_buf(),
         config.injector,
+        config.mode,
     )
     .await
 }
@@ -58,6 +69,7 @@ pub async fn run(
     rollup_preimages_dir: PathBuf,
     kernel_log_path: PathBuf,
     injector: KeyPair,
+    mode: RunMode,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
 
@@ -71,6 +83,7 @@ pub async fn run(
         broadcaster,
         db,
         injector,
+        mode,
     };
 
     let cors = CorsLayer::new()
@@ -95,6 +108,7 @@ fn router() -> OpenApiRouter<AppState> {
         .merge(OperationsService::router_with_openapi())
         .merge(AccountsService::router_with_openapi())
         .merge(LogsService::router_with_openapi())
+        .route("/mode", get(utils::get_mode))
         .route("/health", get(http::StatusCode::OK))
         .layer(DefaultBodyLimit::max(MAX_REVEAL_SIZE))
 }
@@ -109,7 +123,11 @@ pub fn openapi_json_raw() -> anyhow::Result<String> {
 mod test {
     use std::path::PathBuf;
 
+    use octez::unused_port;
     use pretty_assertions::assert_eq;
+    use tempfile::NamedTempFile;
+
+    use crate::{run, KeyPair, RunMode};
 
     #[test]
     fn api_doc_regression() {
@@ -123,5 +141,43 @@ mod test {
         generated_spec,
         "API doc regression detected. Run the 'spec' command to update:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
     );
+    }
+
+    #[tokio::test]
+    async fn test_run() {
+        async fn check_mode(mode: RunMode, expected: &str) {
+            let port = unused_port();
+            let log_file = NamedTempFile::new().unwrap();
+            let h = tokio::spawn(run(
+                "0.0.0.0",
+                port,
+                "0.0.0.0:5678".to_string(),
+                PathBuf::new(),
+                log_file.path().to_path_buf(),
+                KeyPair::default(),
+                mode.clone(),
+            ));
+
+            let res = jstz_utils::poll(10, 500, || async {
+                reqwest::get(format!("http://0.0.0.0:{}/mode", port))
+                    .await
+                    .ok()
+            })
+            .await
+            .expect("should get response")
+            .text()
+            .await
+            .expect("should get text body");
+
+            assert_eq!(
+                res, expected,
+                "expecting '{expected}' for mode '{mode:?}' but got '{res}'"
+            );
+
+            h.abort();
+        }
+
+        check_mode(RunMode::Default, "\"default\"").await;
+        check_mode(RunMode::Sequencer, "\"sequencer\"").await;
     }
 }
