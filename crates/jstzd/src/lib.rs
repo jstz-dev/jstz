@@ -12,6 +12,8 @@ use std::io::{stdout, Write};
 use std::process::exit;
 use tokio::signal::unix::{signal, SignalKind};
 
+pub use config::*;
+
 include!("../build_config.rs");
 pub const JSTZ_ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 pub const JSTZ_NATIVE_BRIDGE_ADDRESS: &str = "KT1GFiPkkTjd14oHe6MrBPiRh5djzRkVWcni";
@@ -32,7 +34,7 @@ const JSTZ_BANNER: &str = r#"
 
 /// The `main` function for running jstzd
 pub async fn main(config_path: &Option<String>) {
-    match config::build_config(config_path).await {
+    match config::build_config_from_path(config_path).await {
         Ok((port, config)) => run(port, config).await,
         Err(e) => {
             match config_path {

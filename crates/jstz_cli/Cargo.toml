@@ -74,9 +74,13 @@ url.workspace = true
 
 [dev-dependencies]
 assert_cmd.workspace = true
+jstzd = { path = "../jstzd" }
 mockito.workspace = true
 predicates.workspace = true
 rexpect.workspace = true
+
+[features]
+skip-rollup-tests = []
 
 [[bin]]
 name = "jstz"
