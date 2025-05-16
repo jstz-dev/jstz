@@ -3003,6 +3003,7 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tokio-util",
+ "tower",
  "tower-http",
  "utoipa",
  "utoipa-axum",

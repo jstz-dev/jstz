@@ -1,8 +1,12 @@
 use std::fs;
 use std::path;
+use std::sync::Arc;
+use std::sync::RwLock;
 
 use crate::config::KeyPair;
+use crate::sequencer::queue::OperationQueue;
 use crate::services::accounts::get_account_nonce;
+use crate::RunMode;
 
 use super::error::{ServiceError, ServiceResult};
 use super::{AppState, Service};
@@ -135,12 +139,37 @@ async fn inject(
         rollup_client,
         rollup_preimages_dir,
         injector,
+        mode,
+        queue,
         ..
     }): State<AppState>,
     Json(operation): Json<SignedOperation>,
 ) -> ServiceResult<()> {
+    match mode {
+        RunMode::Default => {
+            inject_rollup_message(
+                &rollup_client,
+                &rollup_preimages_dir,
+                injector,
+                operation,
+            )
+            .await?;
+        }
+        RunMode::Sequencer => {
+            insert_operation_queue(&queue, operation).await?;
+        }
+    }
+    Ok(())
+}
+
+async fn inject_rollup_message(
+    rollup_client: &OctezRollupClient,
+    rollup_preimages_dir: &path::Path,
+    injector: KeyPair,
+    operation: SignedOperation,
+) -> ServiceResult<()> {
     let contents =
-        encode_operation(&operation, &rollup_client, injector, &rollup_preimages_dir)
+        encode_operation(&operation, rollup_client, injector, rollup_preimages_dir)
             .await?;
 
     let address = rollup_client.get_rollup_address().await?;
@@ -150,6 +179,22 @@ async fn inject(
         .bin_write(&mut binary_contents)
         .map_err(|_| anyhow!("Failed to write binary frame"))?;
     rollup_client.batcher_injection([binary_contents]).await?;
+    Ok(())
+}
+
+async fn insert_operation_queue(
+    queue: &Arc<RwLock<OperationQueue>>,
+    operation: SignedOperation,
+) -> ServiceResult<()> {
+    queue
+        .write()
+        .map_err(|e| {
+            ServiceError::FromAnyhow(anyhow::anyhow!(
+                "failed to insert operation to the queue: {e}"
+            ))
+        })?
+        .insert(operation)
+        .map_err(|e| ServiceError::ServiceUnavailable(Some(e)))?;
     Ok(())
 }
 
@@ -215,22 +260,40 @@ impl Service for OperationsService {
 #[cfg(test)]
 mod tests {
 
-    use std::{fs, path::Path};
+    use std::borrow::BorrowMut;
+    use std::{
+        fs,
+        path::{Path, PathBuf},
+        sync::{Arc, RwLock},
+    };
 
+    use axum::{
+        body::Body,
+        http::{HeaderMap, Method, Request, Uri},
+    };
     use jstz_core::reveal_data::MAX_REVEAL_SIZE;
     use jstz_crypto::{
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
-        secret_key::SecretKey,
+        secret_key::SecretKey, signature::Signature,
     };
     use jstz_proto::{
         context::account::{Amount, Nonce, ParsedCode},
-        operation::{Content, DeployFunction, Operation, SignedOperation},
+        operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
     };
     use octez::OctezRollupClient;
+    use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
+    use tower::ServiceExt;
 
     use crate::{
         config::KeyPair,
-        services::{error::ServiceError, operations::encode_operation},
+        sequencer::queue::OperationQueue,
+        services::{
+            error::ServiceError,
+            logs::{broadcaster::Broadcaster, db::Db},
+            operations::{encode_operation, OperationsService},
+            Service,
+        },
+        AppState, RunMode,
     };
 
     use super::MAX_DIRECT_OPERATION_SIZE;
@@ -278,6 +341,48 @@ mod tests {
             }
         }
         size
+    }
+
+    fn inject_operation_request() -> Request<Body> {
+        let dummy_op = SignedOperation::new(
+            Signature::Ed25519(Ed25519Signature::from_base58_check("edsigtbD6jADoivxf1iho6mDYPGiVvXw4Hnurn6VzDLG1boyMmmHEAykSrUJjJpvEsHHjQNvLWfm9PdyMBfJ8CX7jSEkh3yrB6m").unwrap().into()),
+            Operation {
+                public_key: PublicKey::Ed25519(
+                    PublicKeyEd25519::from_base58_check(
+                        "edpkuUXUFt2E51TkMjRarDEVWXGB4kLKoTryMDyMhNyxFCRTsPDd1K",
+                    )
+                    .unwrap()
+                    .into(),
+                ),
+                nonce: Nonce(0),
+                content: Content::RunFunction(RunFunction {
+                    uri: Uri::from_static("http://http://"),
+                    method: Method::HEAD,
+                    headers: HeaderMap::new(),
+                    body: None,
+                    gas_limit: 0,
+                }),
+            },
+        );
+
+        Request::builder()
+            .uri("/operations")
+            .method("POST")
+            .header("content-type", "application/json")
+            .body(Body::from(serde_json::to_string(&dummy_op).unwrap()))
+            .unwrap()
+    }
+
+    async fn mock_app_state(rollup_endpoint: &str, mode: RunMode) -> AppState {
+        AppState {
+            rollup_client: OctezRollupClient::new(rollup_endpoint.to_string()),
+            rollup_preimages_dir: PathBuf::new(),
+            broadcaster: Broadcaster::new(),
+            db: Db::init().await.unwrap(),
+            injector: KeyPair::default(),
+            mode,
+            queue: Arc::new(RwLock::new(OperationQueue::new(1))),
+        }
     }
 
     #[tokio::test]
@@ -375,5 +480,52 @@ mod tests {
                 ServiceError::FromAnyhow(e) if e.to_string().contains("failed to save preimages")
             )
         }));
+    }
+
+    #[tokio::test]
+    async fn inject_default() {
+        let mut server = mockito::Server::new_async().await;
+        let mock_injection = server.mock("POST", "/local/batcher/injection").create();
+        let mock_rollup_addr = server
+            .mock("GET", "/global/smart_rollup_address")
+            .with_body("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK")
+            .create();
+
+        let state = mock_app_state(&server.url(), RunMode::Default).await;
+        let queue = state.queue.clone();
+        assert_eq!(queue.read().unwrap().len(), 0);
+        let (router, _) = OperationsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+        let res = router.oneshot(inject_operation_request()).await.unwrap();
+        assert_eq!(res.status(), 200);
+        assert_eq!(queue.read().unwrap().len(), 0);
+        mock_injection.assert();
+        mock_rollup_addr.assert();
+    }
+
+    #[tokio::test]
+    async fn inject_sequencer() {
+        let state = mock_app_state("", RunMode::Sequencer).await;
+        let queue = state.queue.clone();
+        assert_eq!(queue.read().unwrap().len(), 0);
+        let (mut router, _) = OperationsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+        let res = router
+            .borrow_mut()
+            .oneshot(inject_operation_request())
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 200);
+        assert_eq!(queue.read().unwrap().len(), 1);
+
+        // sending the operation again should fail because the queue is full
+        let res = router
+            .borrow_mut()
+            .oneshot(inject_operation_request())
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 503);
     }
 }
