@@ -102,6 +102,9 @@ mod test {
             console.info({ message: "abc" })
         "#;
         runtime.execute(code).unwrap();
-        assert_eq!(sink.to_string(), "[INFO] \u{1b}[33m123\u{1b}[39m\n[INFO] \u{1b}[33mfalse\u{1b}[39m\n[INFO] { message: \u{1b}[32m\"abc\"\u{1b}[39m }\n");
+        assert_eq!(
+            sink.to_string(),
+            "[INFO] 123\n[INFO] false\n[INFO] { message: \"abc\" }\n"
+        );
     }
 }
