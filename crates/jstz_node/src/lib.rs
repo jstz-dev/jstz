@@ -8,7 +8,7 @@ use axum::{
 use config::{JstzNodeConfig, KeyPair};
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use octez::OctezRollupClient;
-use sequencer::queue::OperationQueue;
+use sequencer::{queue::OperationQueue, worker};
 use serde::{Deserialize, Serialize};
 use services::{
     accounts::AccountsService,
@@ -98,6 +98,19 @@ pub async fn run(
     let (broadcaster, db, tail_file_handle) =
         LogsService::init(&kernel_log_path, &cancellation_token).await?;
 
+    let _worker = match mode {
+        #[cfg(not(test))]
+        RunMode::Sequencer => Some(worker::spawn(|| {})),
+        #[cfg(test)]
+        RunMode::Sequencer => {
+            let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
+            Some(worker::spawn(move || {
+                std::fs::File::create(p).unwrap();
+            }))
+        }
+        RunMode::Default => None,
+    };
+
     let state = AppState {
         rollup_client,
         rollup_preimages_dir,
@@ -147,7 +160,8 @@ mod test {
 
     use octez::unused_port;
     use pretty_assertions::assert_eq;
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, TempDir};
+    use tokio::time::{sleep, Duration};
 
     use crate::{run, KeyPair, RunMode, RunOptions};
 
@@ -202,5 +216,30 @@ mod test {
 
         check_mode(RunMode::Default, "\"default\"").await;
         check_mode(RunMode::Sequencer, "\"sequencer\"").await;
+    }
+
+    #[tokio::test]
+    async fn worker() {
+        let port = unused_port();
+        let log_file = NamedTempFile::new().unwrap();
+        let preimages_dir = TempDir::new().unwrap().into_path();
+        let h = tokio::spawn(run(RunOptions {
+            addr: "0.0.0.0".to_string(),
+            port,
+            rollup_endpoint: "test-worker-endpoint".to_string(),
+            rollup_preimages_dir: preimages_dir.clone(),
+            kernel_log_path: log_file.path().to_path_buf(),
+            injector: KeyPair::default(),
+            mode: RunMode::Sequencer,
+            capacity: 0,
+        }));
+
+        sleep(Duration::from_secs(1)).await;
+        h.abort();
+        // wait for the worker in run to be dropped
+        sleep(Duration::from_secs(1)).await;
+
+        // the test worker's on_exit function should create this file
+        assert!(preimages_dir.join("test-worker-endpoint.txt").exists());
     }
 }
