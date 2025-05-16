@@ -1,0 +1,96 @@
+{ parameter
+    (or (list %update_operators
+           (or (pair %addOperator (address %owner) (address %operator) (nat %token_id))
+               (pair %removeOperator (address %owner) (address %operator) (nat %token_id))))
+        (list %transfer
+           (pair (address %from_) (list %txs (pair (address %to) (nat %token_id) (nat %amount)))))) ;
+  storage
+    (pair (nat %total_supply)
+          (big_map %balances address nat)
+          (big_map %operators address (set address))) ;
+  code { UNPAIR ;
+         IF_LEFT
+           { DUP 2 ;
+             GET 4 ;
+             SWAP ;
+             ITER { IF_LEFT
+                      { UNPAIR 3 ;
+                        PUSH nat 1 ;
+                        DIG 3 ;
+                        COMPARE ;
+                        NEQ ;
+                        IF { PUSH string "Token id must be 1n" ; FAILWITH } {} ;
+                        DUP 3 ;
+                        DIG 3 ;
+                        DUP 3 ;
+                        GET ;
+                        IF_NONE { EMPTY_SET address } {} ;
+                        PUSH bool True ;
+                        DIG 4 ;
+                        UPDATE ;
+                        SOME ;
+                        DIG 2 ;
+                        UPDATE }
+                      { UNPAIR 3 ;
+                        PUSH nat 1 ;
+                        DIG 3 ;
+                        COMPARE ;
+                        NEQ ;
+                        IF { PUSH string "Token id must be 1n" ; FAILWITH } {} ;
+                        DUP 3 ;
+                        DIG 3 ;
+                        DUP 3 ;
+                        GET ;
+                        IF_NONE { EMPTY_SET address } {} ;
+                        PUSH bool False ;
+                        DIG 4 ;
+                        UPDATE ;
+                        SOME ;
+                        DIG 2 ;
+                        UPDATE } } ;
+             UPDATE 4 }
+           { DUP 2 ;
+             GET 3 ;
+             SWAP ;
+             ITER { UNPAIR ;
+                    DUG 2 ;
+                    ITER { UNPAIR 3 ;
+                           DUP 4 ;
+                           DUP 6 ;
+                           GET ;
+                           IF_NONE { PUSH string "MAP FIND" ; FAILWITH } {} ;
+                           PUSH nat 1 ;
+                           DIG 3 ;
+                           COMPARE ;
+                           NEQ ;
+                           IF { PUSH string "Token id must be 1n" ; FAILWITH } {} ;
+                           DUP 3 ;
+                           DUP 2 ;
+                           COMPARE ;
+                           LT ;
+                           IF { PUSH string "Insufficient token balance" ; FAILWITH } {} ;
+                           DUP 4 ;
+                           DUP 4 ;
+                           DIG 2 ;
+                           SUB ;
+                           ABS ;
+                           DUP 6 ;
+                           DUG 2 ;
+                           SOME ;
+                           DIG 2 ;
+                           UPDATE ;
+                           DIG 2 ;
+                           DIG 3 ;
+                           DUP 4 ;
+                           GET ;
+                           IF_NONE { PUSH nat 0 } {} ;
+                           ADD ;
+                           SOME ;
+                           DIG 2 ;
+                           UPDATE } ;
+                    SWAP ;
+                    DROP } ;
+             UPDATE 3 } ;
+         NIL operation ;
+         PAIR } }
+

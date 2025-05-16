@@ -1,7 +1,6 @@
-use std::path::PathBuf;
-
 use clap::Parser;
 use clap_complete::Shell;
+use std::path::PathBuf;
 
 mod account;
 pub mod bridge;
