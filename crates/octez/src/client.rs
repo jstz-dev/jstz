@@ -204,6 +204,25 @@ impl OctezClient {
         })
     }
 
+    pub fn resolve_contract(&self, alias: &str) -> Result<String> {
+        let output = run_command_with_output(
+            self.command().args(["show", "known", "contract", alias]),
+        )?;
+
+        let address = regex_extract(r"(KT1[^\s]+)", &output)?;
+        Ok(address)
+    }
+
+    pub fn resolve_jstz_addres(&self, alias: &str) -> Result<String> {
+        let output = run_command_with_output(
+            self.command()
+                .args(["show", "known", "smart", "rollup", alias]),
+        )?;
+
+        let address = regex_extract(r"(sr1[^\s]+)", &output)?;
+        Ok(address)
+    }
+
     /// Retrieve the info of an account with the given `alias`
     pub fn balance(&self, account: &str) -> Result<u64> {
         let output = run_command_with_output(

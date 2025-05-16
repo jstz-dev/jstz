@@ -1,13 +1,16 @@
 use clap::Subcommand;
+use deploy::DeployBridge;
 
+pub mod deploy;
 mod deposit;
 mod withdraw;
 
 use crate::{
     config::NetworkName,
-    error::Result,
     utils::{AddressOrAlias, Tez},
 };
+
+use anyhow::Result;
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
@@ -42,6 +45,15 @@ pub enum Command {
         #[arg(short, long, default_value = None)]
         network: Option<NetworkName>,
     },
+    /// Deploys an FA token bridge with minimal functionality.
+    /// Given a valid a valid L1 FA token contract and jstz token smart function, it will deploy the corresponding L1 bridge and ticket contracts.
+    ///
+    /// For example, the flow of depositing a FA token via the bridge involves:
+    /// 1. Approving the FA token contract to transfer tokens from the depositor to the bridge by calling the `update_operators` function.
+    /// 2. Transferring the FA token to the bridge contract.
+    /// 3. Locking the FA token and minting the same amount of tickets to the bridge contract.
+    /// 4. The tickets are then sent to the L2 and can be redeemed for the FA token on the L2.
+    FaDeploy(DeployBridge),
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -57,5 +69,9 @@ pub async fn exec(command: Command) -> Result<()> {
             amount,
             network,
         } => withdraw::exec(to, amount, network).await,
+        Command::FaDeploy(deploy) => {
+            let _ = deploy.exec().await?;
+            Ok(())
+        }
     }
 }
