@@ -16,6 +16,7 @@ members = [
   "crates/jstz_wpt",
   "crates/jstzd",
   "crates/octez",
+  "crates/jstz_arc_test",
 ]
 
 [workspace.package]
