@@ -32,7 +32,7 @@ pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
 ];
-pub(crate) const BOOTSTRAP_ACCOUNTS: [(&str, &str, &str); 6] = [
+pub const BOOTSTRAP_ACCOUNTS: [(&str, &str, &str); 6] = [
     (
         "bootstrap0",
         "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
@@ -78,7 +78,7 @@ pub struct BootstrapContractFile;
 struct BootstrapRollupFile;
 
 #[derive(Deserialize, Default)]
-struct Config {
+pub struct Config {
     server_port: Option<u16>,
     #[serde(default)]
     octez_node: OctezNodeConfigBuilder,
@@ -100,13 +100,17 @@ async fn parse_config(path: &str) -> Result<Config> {
     Ok(serde_json::from_str::<Config>(&s)?)
 }
 
-pub(crate) async fn build_config(
+pub(crate) async fn build_config_from_path(
     config_path: &Option<String>,
 ) -> Result<(u16, JstzdConfig)> {
-    let mut config = match config_path {
+    let config = match config_path {
         Some(p) => parse_config(p).await?,
         None => Config::default(),
     };
+    build_config(config).await
+}
+
+pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
     patch_octez_node_config(&mut config.octez_node);
     let octez_node_config = config.octez_node.build()?;
     let octez_client_config = match config.octez_client {
@@ -572,10 +576,11 @@ mod tests {
         .unwrap();
         tmp_file.write_all(content.as_bytes()).unwrap();
 
-        let (port, config) =
-            super::build_config(&Some(tmp_file.path().to_str().unwrap().to_owned()))
-                .await
-                .unwrap();
+        let (port, config) = super::build_config_from_path(&Some(
+            tmp_file.path().to_str().unwrap().to_owned(),
+        ))
+        .await
+        .unwrap();
         assert_eq!(
             config.octez_client_config().octez_node_endpoint(),
             &Endpoint::localhost(9999)
@@ -616,7 +621,7 @@ mod tests {
 
     #[tokio::test]
     async fn build_config_with_default_config() {
-        let (_, config) = super::build_config(&None).await.unwrap();
+        let (_, config) = super::build_config_from_path(&None).await.unwrap();
         assert_eq!(
             config.octez_node_config().run_options.history_mode(),
             Some(&OctezNodeHistoryMode::Rolling(15))
@@ -668,10 +673,11 @@ mod tests {
         }))
         .unwrap();
         tmp_file.write_all(content.as_bytes()).unwrap();
-        let (_, config) =
-            super::build_config(&Some(tmp_file.path().to_str().unwrap().to_owned()))
-                .await
-                .unwrap();
+        let (_, config) = super::build_config_from_path(&Some(
+            tmp_file.path().to_str().unwrap().to_owned(),
+        ))
+        .await
+        .unwrap();
         assert_eq!(
             config.octez_client_config().octez_node_endpoint(),
             &Endpoint::localhost(8888)

@@ -1,14 +1,18 @@
-use crate::error::{self, Error, Result};
+use crate::{
+    config::{Config, NetworkName},
+    error::{self, user_error, Error, Result},
+};
 use anyhow::anyhow;
+use derive_more::Display;
 use jstz_proto::context::account::Address;
 use rust_decimal::Decimal;
 use std::{
-    fmt::{self, Display},
-    fs,
+    fmt, fs,
     io::{self, IsTerminal},
     ops::Deref,
     str::FromStr,
 };
+use tezos_crypto_rs::hash::ContractKt1Hash;
 
 const JSTZ_ADDRESS_PREFIXES: [&str; 4] = ["tz1", "tz2", "tz3", "KT1"];
 
@@ -42,11 +46,51 @@ impl FromStr for AddressOrAlias {
     }
 }
 
-impl Display for AddressOrAlias {
+impl fmt::Display for AddressOrAlias {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Address(address) => write!(f, "{}", address),
             Self::Alias(alias) => write!(f, "{}", alias),
+        }
+    }
+}
+
+#[derive(Clone, Debug, Display)]
+pub enum OriginatedOrAlias {
+    Address(ContractKt1Hash),
+    Alias(String),
+}
+
+impl OriginatedOrAlias {
+    pub fn resolve(
+        &self,
+        cfg: &Config,
+        network: &Option<NetworkName>,
+    ) -> Result<ContractKt1Hash> {
+        match self {
+            OriginatedOrAlias::Address(kt1) => Ok(kt1.clone()),
+            OriginatedOrAlias::Alias(alias) => {
+                let address = cfg.octez_client(network)?
+                    .resolve_contract(alias).map_err(|_|user_error!(
+                        "Alias '{}' not found in octez-client. Please provide a valid address or alias.",
+                        alias
+                    ))?;
+
+                let address = ContractKt1Hash::from_base58_check(&address)?;
+                Ok(address)
+            }
+        }
+    }
+}
+
+impl FromStr for OriginatedOrAlias {
+    type Err = Error;
+
+    fn from_str(address_or_alias: &str) -> Result<Self> {
+        if address_or_alias.starts_with("KT1") {
+            Ok(Self::Address(address_or_alias.parse()?))
+        } else {
+            Ok(Self::Alias(address_or_alias.to_string()))
         }
     }
 }
@@ -119,7 +163,7 @@ impl From<Tez> for Decimal {
     }
 }
 
-impl Display for Tez {
+impl fmt::Display for Tez {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
