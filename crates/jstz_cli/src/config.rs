@@ -307,6 +307,21 @@ pub struct NetworkConfig {
 }
 
 impl Config {
+    pub fn new(
+        octez_client_dir: Option<PathBuf>,
+        accounts: AccountConfig,
+        networks: NetworkConfig,
+    ) -> Self {
+        Self {
+            octez_path: None,
+            octez_client_dir,
+            accounts,
+            networks,
+            sandbox_logs_dir: None,
+            jstzd_config: None,
+        }
+    }
+
     /// Path to the default configuration file in the home directory
     pub fn default_path() -> PathBuf {
         jstz_home_dir().join("config.json")
