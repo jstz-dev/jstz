@@ -1,14 +1,13 @@
 use std::{
     fmt::{self, Display},
-    result,
     str::FromStr,
 };
 
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    runtime::v1::ParsedCode,
+};
 use bincode::{Decode, Encode};
-use boa_engine::{Context, JsError, JsResult, Module, Source};
-use boa_gc::{empty_trace, Finalize, Trace};
-use derive_more::Deref;
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
@@ -50,59 +49,6 @@ impl Nonce {
 impl Display for Nonce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
-    }
-}
-
-// Invariant: if code is present it parses successfully
-#[derive(
-    Default,
-    PartialEq,
-    Eq,
-    Debug,
-    Clone,
-    Serialize,
-    Deserialize,
-    ToSchema,
-    Encode,
-    Decode,
-    Deref,
-)]
-#[schema(
-    format = "javascript",
-    example = "export default (request) => new Response('Hello world!')"
-)]
-pub struct ParsedCode(String);
-
-impl ParsedCode {
-    /// Creates a new `ParsedCode`.
-    ///
-    /// # Safety
-    ///
-    /// `code` must be well-formed JavaScript code
-    pub unsafe fn new_unchecked(code: String) -> Self {
-        Self(code)
-    }
-}
-
-impl From<ParsedCode> for String {
-    fn from(ParsedCode(code): ParsedCode) -> Self {
-        code
-    }
-}
-
-impl Display for ParsedCode {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> result::Result<(), fmt::Error> {
-        Display::fmt(&self.0, formatter)
-    }
-}
-
-impl TryFrom<String> for ParsedCode {
-    type Error = JsError;
-    fn try_from(code: String) -> JsResult<Self> {
-        let src = Source::from_bytes(code.as_bytes());
-        let mut context = Context::default();
-        Module::parse(src, None, &mut context)?;
-        Ok(Self(code))
     }
 }
 
@@ -151,27 +97,13 @@ impl Addressable for PublicKeyHash {
 }
 
 #[derive(
-    Debug,
-    Clone,
-    PartialEq,
-    Eq,
-    Hash,
-    Serialize,
-    Deserialize,
-    Finalize,
-    ToSchema,
-    Encode,
-    Decode,
+    Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, ToSchema, Encode, Decode,
 )]
 #[schema(description = "Tezos Address")]
 #[serde(untagged)]
 pub enum Address {
     User(PublicKeyHash),
     SmartFunction(SmartFunctionHash),
-}
-
-unsafe impl Trace for Address {
-    empty_trace!();
 }
 
 impl Display for Address {
@@ -805,7 +737,7 @@ mod test {
 
             // Test empty initial code
             let code = Account::function_code(&host, &mut tx, sf_hash).unwrap();
-            assert_eq!(code.as_str(), "");
+            assert_eq!(code.0, "");
 
             // Test empty function code
             assert!(
@@ -823,7 +755,7 @@ mod test {
             )
             .is_ok());
             let updated_code = Account::function_code(&host, &mut tx, sf_hash).unwrap();
-            assert_eq!(updated_code.as_str(), valid_code.as_str());
+            assert_eq!(updated_code.0, valid_code.as_str());
 
             let account = Account::get_mut(&host, &mut tx, &user_addr).unwrap();
             assert!(matches!(account, Account::User(_)));

@@ -3,10 +3,11 @@ use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::{
-    context::account::{Account, Addressable, ParsedCode},
+    context::account::{Account, Addressable},
     error::Result,
     operation::DeployFunction,
     receipt::DeployFunctionReceipt,
+    runtime::v1::ParsedCode,
     Error,
 };
 
@@ -23,7 +24,7 @@ pub fn deploy_smart_function(
     Ok(address)
 }
 
-pub(crate) fn execute(
+pub fn execute(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     source: &impl Addressable,

@@ -81,10 +81,11 @@ mod test {
     };
     use jstz_proto::{
         context::{
-            account::{Account, Address, ParsedCode},
+            account::{Account, Address},
             ticket_table::TicketTable,
         },
         executor::smart_function,
+        runtime::ParsedCode,
     };
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
 

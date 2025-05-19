@@ -70,7 +70,10 @@ impl AccountApi {
         let address = try_parse_smart_function_address(account.as_str())?;
 
         runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<JsValue> {
-            match Account::function_code(hrt.deref(), tx, &address)?.as_str() {
+            match Account::function_code(hrt.deref(), tx, &address)?
+                .0
+                .as_str()
+            {
                 "" => Ok(JsValue::null()),
                 value => Ok(JsValue::String(value.to_string().into())),
             }

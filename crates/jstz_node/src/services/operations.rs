@@ -223,8 +223,9 @@ mod tests {
         secret_key::SecretKey,
     };
     use jstz_proto::{
-        context::account::{Amount, Nonce, ParsedCode},
+        context::account::{Amount, Nonce},
         operation::{Content, DeployFunction, Operation, SignedOperation},
+        runtime::ParsedCode,
     };
     use octez::OctezRollupClient;
 
@@ -314,7 +315,7 @@ mod tests {
 
         let temp_dir = tempfile::tempdir().unwrap();
         let code = mock_code(MAX_DIRECT_OPERATION_SIZE);
-        let code_size: u64 = code.len() as u64;
+        let code_size: u64 = code.0.len() as u64;
         let operation = make_signed_op(Content::DeployFunction(DeployFunction {
             account_credit: Amount::default(),
             function_code: code,

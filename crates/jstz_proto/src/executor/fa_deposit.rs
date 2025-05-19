@@ -175,15 +175,13 @@ mod test {
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
-        context::{
-            account::{Address, ParsedCode},
-            ticket_table::TicketTable,
-        },
+        context::{account::Address, ticket_table::TicketTable},
         executor::{
             fa_deposit::{FaDeposit, FaDepositReceipt},
             smart_function,
         },
         receipt::{Receipt, ReceiptContent, ReceiptResult},
+        runtime::v1::ParsedCode,
     };
 
     fn mock_fa_deposit(proxy: Option<SmartFunctionHash>) -> FaDeposit {

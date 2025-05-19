@@ -7,7 +7,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::api::TraceData;
+use crate::runtime::v1::api::ProtocolData;
 
 pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
 
@@ -33,9 +33,9 @@ impl Display for LogRecord {
 impl LogRecord {
     pub fn new(log_data: LogData, context: &mut Context) -> Self {
         host_defined!(context, host_defined);
-        let trace_data = host_defined
-            .get::<TraceData>()
-            .expect("TraceData not found");
+        let proto_data = host_defined
+            .get::<ProtocolData>()
+            .expect("ProtocolData not found");
 
         let LogData {
             level,
@@ -45,8 +45,8 @@ impl LogRecord {
 
         let indent = 2 * groups_len;
         LogRecord {
-            address: trace_data.address.clone(),
-            request_id: trace_data.operation_hash.to_string(),
+            address: proto_data.address.clone(),
+            request_id: proto_data.operation_hash.to_string(),
             level,
             text: " ".repeat(indent) + &text,
         }

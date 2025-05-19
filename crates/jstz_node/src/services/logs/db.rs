@@ -4,9 +4,9 @@ use std::fs;
 use super::Line;
 use anyhow::{anyhow, Result};
 use jstz_api::js_log::LogLevel;
-use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use jstz_proto::{
-    context::account::Address, js_logger::LogRecord, request_logger::RequestEvent,
+    context::account::Address, request_logger::RequestEvent, runtime::LogRecord,
 };
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
@@ -151,7 +151,7 @@ impl Db {
                 level: LogLevel::try_from(level.as_str())
                     .map_err(|e| anyhow!(e.to_string()))?,
                 text,
-                address: PublicKeyHash::from_base58(address.as_str())?,
+                address: <SmartFunctionHash as Hash>::from_base58(address.as_str())?,
                 request_id,
             };
             logs.push(log_record)

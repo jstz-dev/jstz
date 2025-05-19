@@ -1,5 +1,6 @@
 use crate::{
-    context::account::{Account, Address, Amount, Nonce, ParsedCode},
+    context::account::{Account, Address, Amount, Nonce},
+    runtime::ParsedCode,
     Error, Result,
 };
 use bincode::{Decode, Encode};
@@ -305,7 +306,7 @@ pub mod openapi {
         schema,
     };
 
-    use crate::executor::smart_function::{X_JSTZ_AMOUNT, X_JSTZ_TRANSFER};
+    use crate::executor::smart_function::run::{X_JSTZ_AMOUNT, X_JSTZ_TRANSFER};
 
     pub fn http_body_schema() -> Array {
         schema!(Option<Vec<u8>>).build()
@@ -348,8 +349,9 @@ pub mod openapi {
 mod test {
     use super::{Content, DeployFunction, RevealLargePayload, RevealType, RunFunction};
     use super::{Operation, SignedOperation};
-    use crate::context::account::{Account, Nonce, ParsedCode};
+    use crate::context::account::{Account, Nonce};
     use crate::operation::OperationHash;
+    use crate::runtime::ParsedCode;
     use http::{HeaderMap, Method, Uri};
     use jstz_core::reveal_data::PreimageHash;
     use jstz_core::{kv::Transaction, BinEncodable};

@@ -51,7 +51,7 @@ pub struct TicketInfo {
 }
 
 impl TicketInfo {
-    pub(super) fn to_ticket(&self, amount: Amount) -> Result<Ticket> {
+    pub fn to_ticket(&self, amount: Amount) -> Result<Ticket> {
         FA2_1Ticket::new(
             Contract::Originated(self.ticketer.clone().into()),
             MichelsonPair(
@@ -69,7 +69,7 @@ impl TicketInfo {
 // Computing the hash requires copying ticket content into a new
 // buffer which can be costly for large contents. Exposed to super
 // for use in test
-pub(super) struct Ticket {
+pub struct Ticket {
     pub value: FA2_1Ticket,
     pub hash: TicketHash,
 }
