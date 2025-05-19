@@ -160,7 +160,10 @@ nav.navbar {
 .menu__list > .theme-doc-sidebar-item-category {
   padding-bottom: 25px;
 }
-.menu__list > .theme-doc-sidebar-item-category .menu__list-item-collapsible .menu__link {
+.menu__list
+  > .theme-doc-sidebar-item-category
+  .menu__list-item-collapsible
+  .menu__link {
   font-weight: bold;
 }
 /* End fixes */

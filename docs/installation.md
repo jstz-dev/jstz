@@ -92,7 +92,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 :::tip
 
 The Nix shell ships with Octez binaries for convenience but it does take a little while to build for the very first time.
-Skip ahead to [Building](#building-👷‍♂️)
+Skip ahead to [Building](#building-%EF%B8%8F)
 
 :::
 The jstz sandbox uses a custom distribution of Octez found [here](https://gitlab.com/tezos/tezos/-/tree/jstz@octez-dev). See the [Octez docs](https://tezos.gitlab.io/introduction/howtoget.html?highlight=building#compiling-with-make) for instructions on building Octez from source.

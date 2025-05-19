@@ -16,6 +16,7 @@ node_modules/
 debug/
 target/
 result/
+docs/build
 
 # tooling artifacts
 /.direnv
