@@ -18,5 +18,5 @@ Additional documentation:
 - [Cloudflare workers docs](link)
 - [`jstz` docs](https://jstz-dev.github.io/jstz/)
 
-The documentation is to be added to the `jstz` vitepress documentation site.
+The documentation is to be added to the `jstz` documentation site.
 See [CONTRIBUTING](/CONTRIBUTING.md#documentation-) for more information to contribute to the documentation.

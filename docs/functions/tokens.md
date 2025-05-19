@@ -39,7 +39,7 @@ const call_request = new Request(`jstz://${smart_function}/-/noop`, {
 });
 ```
 
-As described in [Errors](/functions/calling#errors), any transfers are reverted if a smart function throws an uncaught error.
+As described in [Errors](/functions/errors), any transfers are reverted if a smart function throws an uncaught error.
 
 ## Transferring tez in a response
 
