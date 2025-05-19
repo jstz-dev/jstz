@@ -74,9 +74,9 @@ pub struct SmartFunction {
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct AccountConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
-    current_alias: Option<String>,
+    pub current_alias: Option<String>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    accounts: HashMap<String, Account>,
+    pub accounts: HashMap<String, Account>,
 }
 
 impl AccountConfig {
@@ -248,6 +248,9 @@ pub struct Config {
     /// Path to octez installation
     #[serde(skip_serializing_if = "Option::is_none")]
     pub octez_path: Option<PathBuf>,
+    /// The octez client directory to use
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub octez_client_dir: Option<PathBuf>,
     /// List of accounts
     #[serde(flatten)]
     pub accounts: AccountConfig,
@@ -289,7 +292,7 @@ impl FromStr for NetworkName {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-struct Network {
+pub struct Network {
     pub octez_node_rpc_endpoint: String,
     pub jstz_node_endpoint: String,
 }
@@ -298,25 +301,33 @@ struct Network {
 pub struct NetworkConfig {
     // if None, the users have to specify the network in the command
     #[serde(skip_serializing_if = "Option::is_none")]
-    default_network: Option<NetworkName>,
+    pub default_network: Option<NetworkName>,
     #[serde(default, skip_serializing_if = "HashMap::is_empty")]
-    networks: HashMap<String, Network>,
+    pub networks: HashMap<String, Network>,
 }
 
 impl Config {
-    /// Path to the configuration file
-    pub fn path() -> PathBuf {
+    /// Path to the default configuration file in the home directory
+    pub fn default_path() -> PathBuf {
         jstz_home_dir().join("config.json")
     }
 
     pub async fn reload(&mut self) -> Result<()> {
-        *self = Self::load().await?;
+        self.reload_path(None).await
+    }
+
+    pub async fn reload_path(&mut self, config_path: Option<PathBuf>) -> Result<()> {
+        *self = Self::load_path(config_path).await?;
         Ok(())
     }
 
-    /// Load the configuration from the file
+    /// Load the configuration from the default config file
     pub async fn load() -> Result<Self> {
-        let path = Self::path();
+        Self::load_path(None).await
+    }
+
+    pub async fn load_path(config_path: Option<PathBuf>) -> Result<Self> {
+        let path = config_path.unwrap_or_else(Self::default_path);
 
         let mut config = if path.exists() {
             let json = fs::read_to_string(&path)?;
@@ -352,11 +363,10 @@ impl Config {
         Ok(c)
     }
 
-    /// Save the configuration to the file
-    pub fn save(&self) -> Result<()> {
+    pub fn save_to_path(&self, config_path: Option<PathBuf>) -> Result<()> {
         debug!("Config (on save): {:?}", self);
 
-        let path = Self::path();
+        let path = config_path.unwrap_or_else(Self::default_path);
 
         if !path.exists() {
             if let Some(parent) = path.parent() {
@@ -370,6 +380,11 @@ impl Config {
         Ok(())
     }
 
+    /// Save the configuration to the default config file
+    pub fn save(&self) -> Result<()> {
+        self.save_to_path(None)
+    }
+
     pub fn octez_client(
         &self,
         network_name: &Option<NetworkName>,
@@ -381,7 +396,7 @@ impl Config {
                 .octez_path
                 .as_ref()
                 .map(|path| path.join("octez-client")),
-            octez_client_dir: None,
+            octez_client_dir: self.octez_client_dir.clone(),
             endpoint: network.octez_node_rpc_endpoint,
             disable_disclaimer: true,
         })

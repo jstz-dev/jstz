@@ -1,6 +1,8 @@
+use crate::{
+    js_class, js_constructor, js_entries, js_keys, js_method, js_values,
+    sys::js::convert::Serde,
+};
 use deno_core::{v8, ByteString};
-
-use crate::{js_class, js_constructor, js_method, sys::js::convert::Serde};
 
 js_class!(Headers);
 
@@ -30,6 +32,12 @@ impl<'s> Headers<'s> {
         #[js_name(forEach)]
         fn for_each(callback: v8::Local<'s, v8::Function>)
     }
+
+    js_keys! {}
+
+    js_values! {ByteString}
+
+    js_entries!(ByteString);
 }
 
 #[cfg(test)]
@@ -260,5 +268,57 @@ mod test {
             headers.get(scope, "Content-Type".into()).unwrap().unwrap(),
             "text/html"
         );
+    }
+
+    #[test]
+    fn test_keys() {
+        init_test_setup! { runtime = runtime; };
+        let scope = &mut runtime.handle_scope();
+
+        let headers = Headers::new(scope).unwrap();
+
+        headers.append(scope, "key".into(), "value".into()).unwrap();
+
+        let keys = headers.keys(scope).unwrap();
+
+        let item = keys.next(scope).unwrap().unwrap();
+        assert_eq!(item.as_ref(), b"key");
+
+        assert_eq!(keys.next(scope).unwrap(), None);
+    }
+
+    #[test]
+    fn test_values() {
+        init_test_setup! { runtime = runtime; };
+        let scope = &mut runtime.handle_scope();
+
+        let headers = Headers::new(scope).unwrap();
+
+        headers.append(scope, "key".into(), "value".into()).unwrap();
+
+        let values = headers.values(scope).unwrap();
+
+        let item = values.next(scope).unwrap().unwrap();
+        assert_eq!(item.as_ref(), b"value");
+
+        assert_eq!(values.next(scope).unwrap(), None);
+    }
+
+    #[test]
+    fn test_entries() {
+        init_test_setup! { runtime = runtime; };
+        let scope = &mut runtime.handle_scope();
+
+        let headers = Headers::new(scope).unwrap();
+
+        headers.append(scope, "key".into(), "value".into()).unwrap();
+
+        let entries = headers.entries(scope).unwrap();
+
+        let item: (ByteString, ByteString) = entries.next(scope).unwrap().unwrap();
+        assert_eq!(item.0.as_ref(), b"key");
+        assert_eq!(item.1.as_ref(), b"value");
+
+        assert_eq!(entries.next(scope).unwrap(), None);
     }
 }

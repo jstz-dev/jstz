@@ -8,6 +8,7 @@ use crate::error::{Error, Result};
 use bincode::{Decode, Encode};
 use boa_engine::{Context, JsError, JsResult, Module, Source};
 use boa_gc::{empty_trace, Finalize, Trace};
+use derive_more::Deref;
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
@@ -54,23 +55,47 @@ impl Display for Nonce {
 
 // Invariant: if code is present it parses successfully
 #[derive(
-    Default, PartialEq, Eq, Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode,
+    Default,
+    PartialEq,
+    Eq,
+    Debug,
+    Clone,
+    Serialize,
+    Deserialize,
+    ToSchema,
+    Encode,
+    Decode,
+    Deref,
 )]
 #[schema(
     format = "javascript",
     example = "export default (request) => new Response('Hello world!')"
 )]
-pub struct ParsedCode(pub String);
+pub struct ParsedCode(String);
+
+impl ParsedCode {
+    /// Creates a new `ParsedCode`.
+    ///
+    /// # Safety
+    ///
+    /// `code` must be well-formed JavaScript code
+    pub unsafe fn new_unchecked(code: String) -> Self {
+        Self(code)
+    }
+}
+
 impl From<ParsedCode> for String {
     fn from(ParsedCode(code): ParsedCode) -> Self {
         code
     }
 }
+
 impl Display for ParsedCode {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> result::Result<(), fmt::Error> {
         Display::fmt(&self.0, formatter)
     }
 }
+
 impl TryFrom<String> for ParsedCode {
     type Error = JsError;
     fn try_from(code: String) -> JsResult<Self> {
@@ -321,11 +346,11 @@ impl Account {
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         addr: &SmartFunctionHash,
-    ) -> Result<&'a str> {
+    ) -> Result<&'a ParsedCode> {
         let account = Self::get_mut(hrt, tx, addr)?;
         match account {
             Self::SmartFunction(SmartFunctionAccount { function_code, .. }) => {
-                Ok(&function_code.0)
+                Ok(function_code)
             }
             Self::User(_) => Err(Error::AddressTypeMismatch),
         }
@@ -780,7 +805,7 @@ mod test {
 
             // Test empty initial code
             let code = Account::function_code(&host, &mut tx, sf_hash).unwrap();
-            assert_eq!(code, "");
+            assert_eq!(code.as_str(), "");
 
             // Test empty function code
             assert!(
@@ -798,7 +823,7 @@ mod test {
             )
             .is_ok());
             let updated_code = Account::function_code(&host, &mut tx, sf_hash).unwrap();
-            assert_eq!(updated_code, valid_code);
+            assert_eq!(updated_code.as_str(), valid_code.as_str());
 
             let account = Account::get_mut(&host, &mut tx, &user_addr).unwrap();
             assert!(matches!(account, Account::User(_)));

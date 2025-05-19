@@ -79,10 +79,12 @@ mod test {
         host::{JstzMockHost, MOCK_SOURCE},
         message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
     };
-    use jstz_proto::context::{
-        account::Address,
-        account::{Account, ParsedCode},
-        ticket_table::TicketTable,
+    use jstz_proto::{
+        context::{
+            account::{Account, Address, ParsedCode},
+            ticket_table::TicketTable,
+        },
+        executor::smart_function,
     };
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
 
@@ -134,14 +136,8 @@ mod test {
                 .unwrap(),
         );
         Account::set_balance(host.rt(), tx, &addr, 200).unwrap();
-        let proxy = crate::executor::smart_function::Script::deploy(
-            host.rt(),
-            tx,
-            &addr,
-            parsed_code,
-            100,
-        )
-        .unwrap();
+        let proxy =
+            smart_function::deploy(host.rt(), tx, &addr, parsed_code, 100).unwrap();
         tx.commit(host.rt()).unwrap();
 
         let deposit = MockFaDeposit {

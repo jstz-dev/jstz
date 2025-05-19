@@ -232,8 +232,20 @@
               # Dot files
               [".direnv"]
               ++
+              # Toml files (the only formatter available is toml-sort but it's problematic with Cargo.toml)
+              ["*.toml"]
+              ++
+              # Test files
+              ["crates/jstzd/tests/toy_rollup/**" "crates/jstzd/tests/resources/rollup/sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao/**"]
+              ++
+              # Resource files
+              ["crates/octez/resources/protocol_parameters/sandbox/**" "crates/jstz_node/src/services/logs/create_db.sql" "crates/jstz_wpt/hosts" "crates/jstz_wpt/wpt" "*.png" "*.umdx"]
+              ++
+              # Miscellaneous files
+              ["*/**/.gitignore" "Makefile" "LICENSE" ".dockerignore" ".env.example" ".prettierignore" ".prettierrc"]
+              ++
               # Unsupported languages (LIGO, Docker)
-              ["contracts/**" "Dockerfile"];
+              ["contracts/**" "*/**/Dockerfile"];
           };
 
           mkFrameworkFlags = frameworks:

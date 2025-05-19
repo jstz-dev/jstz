@@ -65,6 +65,7 @@ impl OctezNode {
                 "--data-dir",
                 self.octez_node_dir.to_str().expect("Invalid path"),
                 "--singleprocess",
+                "--cors-origin=*",
             ])
             .args(options)
             .stdout(Stdio::from(log_file.try_clone()?))

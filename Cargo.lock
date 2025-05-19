@@ -2968,6 +2968,7 @@ name = "jstz_node"
 version = "0.1.1-alpha.1"
 dependencies = [
  "anyhow",
+ "assert_cmd",
  "axum",
  "base64 0.21.7",
  "bincode 2.0.0-rc.3",
@@ -2981,6 +2982,7 @@ dependencies = [
  "jstz_core",
  "jstz_crypto",
  "jstz_proto",
+ "jstz_utils",
  "log",
  "mockito",
  "octez",
@@ -3118,6 +3120,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "jstz_utils"
+version = "0.1.1-alpha.1"
+dependencies = [
+ "anyhow",
+ "reqwest",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "jstz_wpt"
 version = "0.1.1-alpha.1"
 dependencies = [
@@ -3156,6 +3168,7 @@ dependencies = [
  "jstz_crypto",
  "jstz_kernel",
  "jstz_node",
+ "jstz_utils",
  "octez",
  "predicates",
  "prettytable",

@@ -174,6 +174,7 @@ async fn create_jstzd_server(
         &preimages_dir_path,
         &kernel_debug_file_path,
         KeyPair::default(),
+        jstz_node::RunMode::Default,
     );
     let config = JstzdConfig::new(
         octez_node_config,

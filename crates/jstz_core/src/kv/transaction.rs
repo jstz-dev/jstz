@@ -366,11 +366,13 @@ where {
         if let Some(prev_ctxt) = self.stack.last_mut() {
             // TODO: These clones are probably uncessary since the entry of btree will always be occupied.
             for key in curr_ctxt.remove_edits {
+                self.lookup_map.rollback(&key)?;
                 self.lookup_map.update(key.clone(), prev_idx);
                 prev_ctxt.remove(key);
             }
 
             for (key, value) in curr_ctxt.insert_edits {
+                self.lookup_map.rollback(&key)?;
                 self.lookup_map.update(key.clone(), prev_idx);
                 prev_ctxt.insert(key, value);
             }
@@ -890,6 +892,40 @@ mod test {
                 .into()
             );
         }
+    }
+
+    #[test]
+    fn test_snapshot_idx_is_removed_on_commit() {
+        let hrt = &mut MockHost::default();
+        let tx = &mut Transaction::default();
+        tx.begin();
+        tx.begin();
+
+        // Insert a value in the inner transaction (setting the snapshot idx to 1)
+        let try_from = OwnedPath::try_from("/test".to_string());
+        let path = try_from.unwrap();
+        tx.insert(path.clone(), 42).unwrap();
+
+        let snapshot_idx = tx.lookup_map.get(&path).unwrap();
+        // The snapshot index should be [1] after the insert
+        assert_eq!(snapshot_idx.len(), 1);
+        assert_eq!(snapshot_idx[0], 1);
+
+        // Commit the transaction
+        tx.commit(hrt).unwrap();
+
+        // Check that the snapshot index is removed
+        let snapshot_idx = tx.lookup_map.get(&path).unwrap();
+
+        // The snapshot index should be [0] after the commit
+        assert_eq!(snapshot_idx.len(), 1);
+        assert_eq!(snapshot_idx[0], 0);
+
+        tx.commit(hrt).unwrap();
+
+        // Check that the snapshot index is removed
+        let snapshot_idx = tx.lookup_map.get(&path);
+        assert!(snapshot_idx.is_none());
     }
 }
 
