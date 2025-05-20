@@ -3,10 +3,10 @@ use std::time::Duration;
 use anyhow::{bail, Result};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_proto::{
-    api::KvValue,
     context::account::{Address, Addressable, Nonce},
     operation::{OperationHash, SignedOperation},
     receipt::Receipt,
+    runtime::KvValue,
 };
 use log::debug;
 use reqwest::StatusCode;

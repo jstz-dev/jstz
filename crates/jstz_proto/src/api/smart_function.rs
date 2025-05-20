@@ -20,22 +20,11 @@ use crate::{
     context::account::{Account, Amount, ParsedCode},
     executor::smart_function,
     operation::{DeployFunction, OperationHash},
+    runtime::ProtocolData,
     Result,
 };
 
 use boa_gc::{empty_trace, Finalize, GcRefMut, Trace};
-
-#[derive(JsData)]
-pub struct TraceData {
-    pub address: SmartFunctionHash,
-    pub operation_hash: OperationHash,
-}
-
-impl Finalize for TraceData {}
-
-unsafe impl Trace for TraceData {
-    empty_trace!();
-}
 
 #[derive(JsData)]
 struct SmartFunction {
@@ -109,8 +98,8 @@ impl SmartFunctionApi {
         context: &mut Context,
     ) -> JsResult<JsValue> {
         host_defined!(context, host_defined);
-        let trace_data = host_defined
-            .get::<TraceData>()
+        let proto_data = host_defined
+            .get::<ProtocolData>()
             .expect("trace data undefined");
 
         let request: JsNativeObject<Request> =
@@ -119,7 +108,7 @@ impl SmartFunctionApi {
         SmartFunction::call(
             address,
             &request,
-            trace_data.operation_hash.clone(),
+            proto_data.operation_hash.clone(),
             context,
         )
     }
