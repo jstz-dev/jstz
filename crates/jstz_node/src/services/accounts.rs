@@ -5,11 +5,11 @@ use axum::{
 };
 use jstz_core::BinEncodable;
 use jstz_proto::{
-    api::KvValue,
     context::account::{
         Account, Nonce, ParsedCode, SmartFunctionAccount, UserAccount,
         ACCOUNTS_PATH_PREFIX,
     },
+    runtime::KvValue,
 };
 use octez::OctezRollupClient;
 use serde::Deserialize;
