@@ -12,6 +12,7 @@ use jstz_core::{
     kv::Transaction,
     native::JsNativeObject,
     runtime::{self},
+    value::IntoJs,
 };
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 

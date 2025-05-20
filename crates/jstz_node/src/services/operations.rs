@@ -222,8 +222,9 @@ mod tests {
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
     };
+    use jstz_proto::runtime::ParsedCode;
     use jstz_proto::{
-        context::account::{Amount, Nonce, ParsedCode},
+        context::account::{Amount, Nonce},
         operation::{Content, DeployFunction, Operation, SignedOperation},
     };
     use octez::OctezRollupClient;
