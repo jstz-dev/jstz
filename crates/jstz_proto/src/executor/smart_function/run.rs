@@ -1,119 +1,25 @@
-use boa_engine::{Context, JsResult};
-use jstz_api::http::{
-    body::{Body, BodyWithType},
-    request::{Request, RequestClass},
-    response::{Response, ResponseOptions},
-};
-use jstz_core::{
-    host::HostRuntime, kv::Transaction, native::JsNativeObject, runtime, Runtime,
-};
-use tezos_smart_rollup::prelude::debug_msg;
+use jstz_core::{host::HostRuntime, kv::Transaction};
 
-use crate::runtime::{fetch, v1::api::WebApi};
 use crate::{
     context::account::Addressable,
     error::Result,
-    operation::{OperationHash, RunFunction},
+    operation::{self, OperationHash},
     receipt::RunFunctionReceipt,
-    Error,
+    runtime,
 };
 
-fn runtime_and_request_from_run_operation(
-    run_operation: RunFunction,
-) -> Result<(Runtime, JsNativeObject<Request>)> {
-    let RunFunction {
-        uri,
-        method,
-        headers,
-        body,
-        gas_limit,
-    } = run_operation;
-
-    let mut rt = Runtime::new(gas_limit)?;
-    rt.realm().clone().register_api(WebApi, &mut rt);
-
-    let mut http_request_builder = http::Request::builder().uri(uri).method(method);
-
-    *http_request_builder
-        .headers_mut()
-        .ok_or(Error::InvalidHttpRequest)? = headers;
-
-    let http_request = http_request_builder
-        .body(body)
-        .map_err(|_| Error::InvalidHttpRequest)?;
-    let request = JsNativeObject::new::<RequestClass>(
-        Request::from_http_request(http_request, &mut rt)?,
-        &mut rt,
-    )?;
-
-    Ok((rt, request))
-}
-
-pub(crate) fn response_from_run_receipt(
-    run_receipt: RunFunctionReceipt,
-    context: &mut Context,
-) -> JsResult<Response> {
-    let body = Body::from_http_body(run_receipt.body, context)?;
-    let options = ResponseOptions::from(run_receipt.status_code, run_receipt.headers);
-    Response::new(
-        BodyWithType {
-            body,
-            content_type: None,
-        },
-        options,
-        context,
-    )
-}
-
-/// skips the execution of the smart function for noop requests
 pub const NOOP_PATH: &str = "/-/noop";
-
-fn run_toplevel_fetch(
-    hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
-    source_address: &(impl Addressable + 'static),
-    run_operation: RunFunction,
-    operation_hash: OperationHash,
-) -> Result<RunFunctionReceipt> {
-    let gas_limit = run_operation.gas_limit;
-    let (mut rt, request) = runtime_and_request_from_run_operation(run_operation)?;
-
-    let result = {
-        let rt = &mut rt;
-        runtime::enter_js_host_context(hrt, tx, || {
-            jstz_core::future::block_on(async move {
-                let result = fetch(source_address, operation_hash, &request, rt)?;
-                rt.resolve_value(&result).await
-            })
-        })
-    }
-    .map_err(|err| {
-        if rt.instructions_remaining() == 0 {
-            Error::GasLimitExceeded
-        } else {
-            err.into()
-        }
-    })?;
-
-    debug_msg!(hrt, "🚀 Smart function executed successfully with value: {:?} (in {:?} instructions)\n", result, gas_limit - rt.instructions_remaining());
-
-    let response = Response::try_from_js(&result)?;
-    let (http_parts, body) = Response::to_http_response(&response).into_parts();
-    Ok(RunFunctionReceipt {
-        body,
-        status_code: http_parts.status,
-        headers: http_parts.headers,
-    })
-}
+pub const X_JSTZ_TRANSFER: &str = "X-JSTZ-TRANSFER";
+pub const X_JSTZ_AMOUNT: &str = "X-JSTZ-AMOUNT";
 
 pub fn execute(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     source: &(impl Addressable + 'static),
-    run_operation: RunFunction,
+    run_operation: operation::RunFunction,
     operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt> {
-    run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash)
+    runtime::run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash)
 }
 
 #[cfg(test)]
@@ -131,10 +37,7 @@ mod test {
             account::{Account, Address},
             ticket_table::TicketTable,
         },
-        executor::smart_function::{
-            self,
-            host_script::{X_JSTZ_AMOUNT, X_JSTZ_TRANSFER},
-        },
+        executor::smart_function::{self, deploy::deploy_smart_function},
         operation::RunFunction,
         runtime::ParsedCode,
     };
@@ -158,16 +61,16 @@ mod test {
         // 1. Deploy the smart function that transfers the balance to the source
         let code = format!(
             r#"
-         const handler = async (request) => {{
-             const transferred_amount = request.headers.get("X-JSTZ-AMOUNT");
-             if (transferred_amount !== "{transfer_amount}") {{
-                 return Response.error("Invalid transferred amount");
-             }}
-             const headers = {{"X-JSTZ-TRANSFER": "{refund_amount}"}};
-             return new Response(null, {{headers}});
-         }};
-         export default handler;
-         "#
+        const handler = async (request) => {{
+            const transferred_amount = request.headers.get("X-JSTZ-AMOUNT");
+            if (transferred_amount !== "{transfer_amount}") {{
+                return Response.error("Invalid transferred amount");
+            }}
+            const headers = {{"X-JSTZ-TRANSFER": "{refund_amount}"}};
+            return new Response(null, {{headers}});
+        }};
+        export default handler;
+        "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
@@ -280,14 +183,14 @@ mod test {
         // 1. Deploy the smart function that refunds the balance to the source
         let code = format!(
             r#"
-             const handler = async () => {{
-                 await fetch(new Request("jstz://{source}", {{
-                     headers: {{"X-JSTZ-TRANSFER": "{initial_balance}"}}
-                 }}));
-                 return new Response();
-             }};
-             export default handler;
-             "#
+            const handler = async () => {{
+                await fetch(new Request("jstz://{source}", {{
+                    headers: {{"X-JSTZ-TRANSFER": "{initial_balance}"}}
+                }}));
+                return new Response();
+            }};
+            export default handler;
+            "#
         );
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
@@ -391,17 +294,17 @@ mod test {
         tx.commit(host).unwrap();
 
         let code = r#"
-             const handler = () => {{
-                 return new Response();
-             }};
-             export default handler;
-             "#;
+            const handler = () => {{
+                return new Response();
+            }};
+            export default handler;
+            "#;
 
         // 1. Deploy smart function
         let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
         tx.begin();
         let smart_function =
-            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+            deploy_smart_function(host, &mut tx, &source, parsed_code, 0).unwrap();
 
         tx.commit(host).unwrap();
 
@@ -456,14 +359,14 @@ mod test {
 
         let code = format!(
             r#"
-             const handler = () => {{
-                 const headers = new Headers();
-                 return new Response(null, {{
-                     headers: {{ "X-JSTZ-AMOUNT": "{initial_balance}" }},
-                 }});
-             }};
-             export default handler;
-             "#
+            const handler = () => {{
+                const headers = new Headers();
+                return new Response(null, {{
+                    headers: {{ "X-JSTZ-AMOUNT": "{initial_balance}" }},
+                }});
+            }};
+            export default handler;
+            "#
         );
 
         // 1. Deploy smart function
@@ -499,6 +402,7 @@ mod test {
 
         assert_eq!(sf_balance_before, sf_balance_after);
         assert_eq!(source_balance_before, source_balance_after);
+
         let call_failed = match result {
             Ok(receipt) => receipt.status_code.is_server_error(),
             _ => true,
@@ -509,33 +413,33 @@ mod test {
     #[test]
     fn transfer_xtz_and_smart_function_call_is_atomic1() {
         let invalid_code = r#"
-        const handler = () => {{
-            invalid();
-        }};
-        export default handler;
-        "#;
+       const handler = () => {{
+           invalid();
+       }};
+       export default handler;
+       "#;
         transfer_xtz_and_run_erroneous_sf(invalid_code);
     }
 
     #[test]
     fn transfer_xtz_and_smart_function_call_is_atomic2() {
         let invalid_code = r#"
-        const handler = () => {{
-             return Response.error("error!");
-        }};
-        export default handler;
-        "#;
+       const handler = () => {{
+            return Response.error("error!");
+       }};
+       export default handler;
+       "#;
         transfer_xtz_and_run_erroneous_sf(invalid_code);
     }
 
     #[test]
     fn transfer_xtz_and_smart_function_call_is_atomic3() {
         let invalid_code = r#"
-        const handler = () => {{
-         return 3;
-        }};
-        export default handler;
-        "#;
+       const handler = () => {{
+        return 3;
+       }};
+       export default handler;
+       "#;
         transfer_xtz_and_run_erroneous_sf(invalid_code);
     }
 

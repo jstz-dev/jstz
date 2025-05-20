@@ -7,7 +7,7 @@ use serde::Deserialize;
 use serde::Serialize;
 use utoipa::ToSchema;
 
-use crate::runtime::v1::api::ProtocolData;
+use crate::runtime::ProtocolData;
 
 pub use jstz_api::js_log::{JsLog, LogData, LogLevel};
 
