@@ -6,10 +6,9 @@ use axum::{
 use jstz_core::BinEncodable;
 use jstz_proto::{
     context::account::{
-        Account, Nonce, ParsedCode, SmartFunctionAccount, UserAccount,
-        ACCOUNTS_PATH_PREFIX,
+        Account, Nonce, SmartFunctionAccount, UserAccount, ACCOUNTS_PATH_PREFIX,
     },
-    runtime::KvValue,
+    runtime::{KvValue, ParsedCode},
 };
 use octez::OctezRollupClient;
 use serde::Deserialize;

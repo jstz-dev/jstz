@@ -2,8 +2,9 @@ use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use tezos_smart_rollup::prelude::debug_msg;
 
+use crate::runtime::ParsedCode;
 use crate::{
-    context::account::{Account, Addressable, ParsedCode},
+    context::account::{Account, Addressable},
     error::Result,
     operation::DeployFunction,
     receipt::DeployFunctionReceipt,

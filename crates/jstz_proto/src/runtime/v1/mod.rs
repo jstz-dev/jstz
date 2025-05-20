@@ -1,3 +1,9 @@
-pub mod api;
+mod api;
+mod fetch_handler;
+mod script;
 
-pub use api::*;
+pub use api::{Kv, KvValue, ProtocolApi, ProtocolData, WebApi};
+pub use fetch_handler::{
+    fetch, response_from_run_receipt, runtime_and_request_from_run_operation,
+};
+pub use script::ParsedCode;

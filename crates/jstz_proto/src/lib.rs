@@ -7,6 +7,5 @@ pub mod operation;
 pub mod receipt;
 pub mod request_logger;
 pub use error::{Error, Result};
-pub mod api;
 
 pub mod runtime;

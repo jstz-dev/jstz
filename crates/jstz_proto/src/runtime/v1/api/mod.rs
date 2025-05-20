@@ -1,5 +1,6 @@
 mod kv;
 mod ledger;
+mod smart_function;
 
 use std::ops::BitXor;
 
@@ -9,6 +10,7 @@ use jstz_core::host_defined;
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use kv::KvApi;
 use ledger::LedgerApi;
+use smart_function::SmartFunctionApi;
 
 use crate::{operation::OperationHash, runtime::v1::api};
 
@@ -64,7 +66,8 @@ impl jstz_core::Api for ProtocolApi {
             address: self.address.clone(),
         }
         .init(context);
-        crate::api::smart_function::SmartFunctionApi {
+
+        api::SmartFunctionApi {
             address: self.address.clone(),
         }
         .init(context);
