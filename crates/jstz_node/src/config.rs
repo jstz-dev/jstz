@@ -39,6 +39,8 @@ pub struct JstzNodeConfig {
     pub injector: KeyPair,
     /// The mode in which the rollup node will run.
     pub mode: RunMode,
+    /// Capacity of the operation queue.
+    pub capacity: usize,
 }
 
 impl JstzNodeConfig {
@@ -52,6 +54,7 @@ impl JstzNodeConfig {
         kernel_log_file: &Path,
         injector: KeyPair,
         mode: RunMode,
+        capacity: usize,
     ) -> Self {
         Self {
             endpoint: endpoint.clone(),
@@ -60,6 +63,7 @@ impl JstzNodeConfig {
             kernel_log_file: kernel_log_file.to_path_buf(),
             injector,
             mode,
+            capacity,
         }
     }
 }
@@ -86,6 +90,7 @@ mod tests {
                 .unwrap(),
             ),
             RunMode::Default,
+            0,
         );
 
         let json = serde_json::to_value(&config).unwrap();
@@ -113,6 +118,7 @@ mod tests {
             Path::new("/tmp/kernel.log"),
             KeyPair::default(),
             RunMode::Default,
+            0,
         );
 
         assert_eq!(config.injector, KeyPair::default());

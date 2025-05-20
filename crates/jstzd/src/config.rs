@@ -146,6 +146,7 @@ pub(crate) async fn build_config(
         &kernel_debug_file_path,
         KeyPair::default(),
         jstz_node::RunMode::Default,
+        0,
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);

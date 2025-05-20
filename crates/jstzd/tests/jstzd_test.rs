@@ -175,6 +175,7 @@ async fn create_jstzd_server(
         &kernel_debug_file_path,
         KeyPair::default(),
         jstz_node::RunMode::Default,
+        0,
     );
     let config = JstzdConfig::new(
         octez_node_config,
