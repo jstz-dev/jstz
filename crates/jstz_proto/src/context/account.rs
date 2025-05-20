@@ -1,14 +1,14 @@
 use std::{
     fmt::{self, Display},
-    result,
     str::FromStr,
 };
 
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    runtime::ParsedCode,
+};
 use bincode::{Decode, Encode};
-use boa_engine::{Context, JsError, JsResult, Module, Source};
 use boa_gc::{empty_trace, Finalize, Trace};
-use derive_more::Deref;
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
@@ -50,59 +50,6 @@ impl Nonce {
 impl Display for Nonce {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
-    }
-}
-
-// Invariant: if code is present it parses successfully
-#[derive(
-    Default,
-    PartialEq,
-    Eq,
-    Debug,
-    Clone,
-    Serialize,
-    Deserialize,
-    ToSchema,
-    Encode,
-    Decode,
-    Deref,
-)]
-#[schema(
-    format = "javascript",
-    example = "export default (request) => new Response('Hello world!')"
-)]
-pub struct ParsedCode(String);
-
-impl ParsedCode {
-    /// Creates a new `ParsedCode`.
-    ///
-    /// # Safety
-    ///
-    /// `code` must be well-formed JavaScript code
-    pub unsafe fn new_unchecked(code: String) -> Self {
-        Self(code)
-    }
-}
-
-impl From<ParsedCode> for String {
-    fn from(ParsedCode(code): ParsedCode) -> Self {
-        code
-    }
-}
-
-impl Display for ParsedCode {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> result::Result<(), fmt::Error> {
-        Display::fmt(&self.0, formatter)
-    }
-}
-
-impl TryFrom<String> for ParsedCode {
-    type Error = JsError;
-    fn try_from(code: String) -> JsResult<Self> {
-        let src = Source::from_bytes(code.as_bytes());
-        let mut context = Context::default();
-        Module::parse(src, None, &mut context)?;
-        Ok(Self(code))
     }
 }
 

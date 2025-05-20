@@ -7,7 +7,6 @@ use crate::{
 };
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::RevealData};
 use jstz_crypto::public_key::PublicKey;
-use smart_function::JSTZ_HOST;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 pub mod deposit;
 pub mod fa_deposit;
@@ -19,7 +18,7 @@ fn execute_operation_inner(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     op: Operation,
-    ticketer: &ContractKt1Hash,
+    _ticketer: &ContractKt1Hash,
     injector: &PublicKey,
 ) -> Result<(OperationHash, receipt::ReceiptContent)> {
     let op_hash = op.hash();
@@ -31,17 +30,8 @@ fn execute_operation_inner(
             Ok((op_hash, receipt::ReceiptContent::DeployFunction(result)))
         }
         operation::Content::RunFunction(run) => {
-            if run.uri.scheme_str() != Some("jstz") {
-                return Err(Error::InvalidScheme);
-            }
-            let result = match run.uri.host() {
-                Some(JSTZ_HOST) => {
-                    smart_function::host_script::execute(hrt, tx, ticketer, &source, run)?
-                }
-                _ => {
-                    smart_function::run::execute(hrt, tx, &source, run, op_hash.clone())?
-                }
-            };
+            let result =
+                smart_function::run::execute(hrt, tx, &source, run, op_hash.clone())?;
             Ok((op_hash, receipt::ReceiptContent::RunFunction(result)))
         }
         operation::Content::RevealLargePayload(reveal) => {
@@ -55,7 +45,13 @@ fn execute_operation_inner(
             .verify()?;
             revealed_op.verify_nonce(hrt, tx)?;
             if reveal.reveal_type == revealed_op.content().try_into()? {
-                return execute_operation_inner(hrt, tx, revealed_op, ticketer, injector);
+                return execute_operation_inner(
+                    hrt,
+                    tx,
+                    revealed_op,
+                    _ticketer,
+                    injector,
+                );
             }
             Err(Error::RevealTypeMismatch)
         }
@@ -117,10 +113,12 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::account::{Nonce, ParsedCode},
+        context::account::Nonce,
         operation::{Content, DeployFunction, RevealLargePayload, RunFunction},
         receipt::ReceiptResult,
     };
+
+    use crate::runtime::ParsedCode;
 
     fn bootstrap1() -> (PublicKeyHash, PublicKey, SecretKey) {
         (

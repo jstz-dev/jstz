@@ -7,8 +7,11 @@ use jstz_core::{
     kv::Transaction,
     runtime::{self, Runtime},
 };
-use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use jstz_proto::executor::smart_function::{register_jstz_apis, register_web_apis};
+use jstz_crypto::{
+    hash::{Blake2b, Hash},
+    smart_function_hash::SmartFunctionHash,
+};
+use jstz_proto::runtime::v1::api::{ProtocolApi, WebApi};
 use log::{debug, error, info, warn};
 use rustyline::{
     completion::Completer, error::ReadlineError, highlight::Highlighter, hint::Hinter,
@@ -103,7 +106,6 @@ impl Completer for JsHighlighter {
 
 const DEFAULT_SMART_FUNCTION_ADDRESS: &str = "KT1KRj5VMNmhxobTJBPq7u2kacqbxu9Cntx6";
 const DEFAULT_GAS_LIMIT: usize = usize::MAX;
-const DEFAULT_RANDOM_SEED: u64 = 42;
 
 pub async fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     let cfg = Config::load().await?;
@@ -135,8 +137,14 @@ pub async fn exec(account: Option<AddressOrAlias>) -> Result<()> {
     let mut mock_hrt = MockHost::default();
     let realm = rt.realm().clone();
 
-    register_web_apis(&realm, &mut rt);
-    register_jstz_apis(&realm, &address, DEFAULT_RANDOM_SEED, &mut rt);
+    realm.register_api(WebApi, &mut rt);
+    realm.register_api(
+        ProtocolApi {
+            address: address.clone(),
+            operation_hash: Blake2b::from(b"fake_op_hash".as_ref()),
+        },
+        &mut rt,
+    );
 
     // realm.register_api(ConsoleApi, rt.context());
     realm.register_api(StreamApi, rt.context());
