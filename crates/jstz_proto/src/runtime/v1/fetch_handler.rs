@@ -13,7 +13,7 @@ use jstz_core::{native::JsNativeObject, runtime, Runtime};
 use crate::{
     context::account::{Account, Address, Addressable},
     error::{self, Result},
-    executor::smart_function::{host_script::HostScript, JSTZ_HOST, NOOP_PATH},
+    executor::smart_function::{JSTZ_HOST, NOOP_PATH},
     operation::{OperationHash, RunFunction},
     receipt::RunFunctionReceipt,
     request_logger::{log_request_end, log_request_start},
@@ -22,6 +22,7 @@ use crate::{
 
 use super::{
     api::{ProtocolApi, WebApi},
+    host_script::HostScript,
     script::{ParsedCode, Script},
 };
 
