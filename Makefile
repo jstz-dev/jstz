@@ -75,7 +75,7 @@ test: test-unit test-int
 test-unit:
 # --lib only runs unit tests in library crates
 # --bins only runs unit tests in binary crates
-	@cargo nextest run --lib --bins
+	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench"
 
 .PHONY: test-int
 test-int:
