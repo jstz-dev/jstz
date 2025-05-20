@@ -1,6 +1,6 @@
 use futures_util::{stream::StreamExt, Future};
 use jstz_api::js_log::LogLevel;
-use jstz_proto::js_logger::LogRecord;
+use jstz_proto::runtime::LogRecord;
 use log::{debug, error, info};
 use reqwest_eventsource::{Event, EventSource};
 

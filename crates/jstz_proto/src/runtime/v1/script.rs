@@ -16,7 +16,7 @@ use jstz_core::{Module, Realm};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-use crate::js_logger::JsonLogger;
+use super::js_logger::JsonLogger;
 
 // Invariant: if code is present it parses successfully
 #[derive(
