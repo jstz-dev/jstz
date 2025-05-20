@@ -1,4 +1,3 @@
-#![allow(unused)]
 use std::collections::VecDeque;
 
 use jstz_proto::operation::SignedOperation;
@@ -31,6 +30,11 @@ impl OperationQueue {
 
     pub fn is_full(&self) -> bool {
         self.queue.len() >= self.capacity
+    }
+
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.queue.len()
     }
 }
 
