@@ -9,13 +9,16 @@ use boa_gc::{Finalize, Trace};
 use derive_more::{Deref, DerefMut};
 use jstz_api::js_log::set_js_logger;
 use jstz_core::{host_defined, Module, Realm};
-use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+use jstz_crypto::{
+    hash::{Blake2b, Hash},
+    smart_function_hash::SmartFunctionHash,
+};
 
 use crate::{
-    api::{self, TraceData},
     context::account::ParsedCode,
     js_logger::JsonLogger,
     operation::OperationHash,
+    runtime::{ProtocolApi, ProtocolData},
 };
 
 fn compute_seed(address: &SmartFunctionHash, operation_hash: &OperationHash) -> u64 {
@@ -43,25 +46,13 @@ pub fn register_web_apis(realm: &Realm, context: &mut Context) {
 pub fn register_jstz_apis(
     realm: &Realm,
     address: &SmartFunctionHash,
-    seed: u64,
+    _seed: u64,
     context: &mut Context,
 ) {
     realm.register_api(
-        api::KvApi {
+        ProtocolApi {
             address: address.clone(),
-        },
-        context,
-    );
-    realm.register_api(jstz_api::RandomApi { seed }, context);
-    realm.register_api(
-        api::LedgerApi {
-            address: address.clone(),
-        },
-        context,
-    );
-    realm.register_api(
-        api::SmartFunctionApi {
-            address: address.clone(),
+            operation_hash: Blake2b::from(b"fake_op_hash".as_ref()),
         },
         context,
     );
@@ -119,7 +110,7 @@ impl Script {
         let context = &mut self.realm().context_handle(context);
 
         host_defined!(context, mut host_defined);
-        host_defined.insert(TraceData {
+        host_defined.insert(ProtocolData {
             address: address.clone(),
             operation_hash: operation_hash.clone(),
         });

@@ -5,7 +5,7 @@ use boa_engine::{
     NativeFunction,
 };
 use jstz_core::runtime;
-use jstz_proto::api::{Kv, KvValue};
+use jstz_proto::runtime::{Kv, KvValue};
 
 pub struct KvApi;
 
