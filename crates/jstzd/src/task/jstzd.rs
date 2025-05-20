@@ -775,6 +775,7 @@ mod tests {
                 &PathBuf::from("/foo"),
                 KeyPair::default(),
                 jstz_node::RunMode::Default,
+                0,
             ),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(
