@@ -14,8 +14,8 @@ use jstz_core::{native::JsNativeObject, runtime};
 
 use crate::{
     context::account::{Account, Addressable},
-    executor::smart_function::run::response_from_run_receipt,
     operation::RunFunction,
+    runtime::v1::response_from_run_receipt,
 };
 
 use jstz_core::{

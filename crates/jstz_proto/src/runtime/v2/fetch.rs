@@ -659,7 +659,8 @@ mod test {
     use url::Url;
 
     use super::process_and_dispatch_request;
-    use crate::context::account::{Account, Addressable, Amount, ParsedCode};
+    use crate::context::account::{Account, Addressable, Amount};
+    use crate::runtime::ParsedCode;
 
     // Deploy a vec of smart functions from the same creator, each
     // with `amount` XTZ. Returns a vec of hashes corresponding to

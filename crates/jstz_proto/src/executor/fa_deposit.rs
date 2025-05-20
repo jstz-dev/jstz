@@ -170,21 +170,18 @@ mod test {
 
     use std::io::empty;
 
-    use jstz_core::kv::Transaction;
-    use jstz_crypto::smart_function_hash::SmartFunctionHash;
-    use tezos_smart_rollup_mock::MockHost;
-
+    use crate::runtime::ParsedCode;
     use crate::{
-        context::{
-            account::{Address, ParsedCode},
-            ticket_table::TicketTable,
-        },
+        context::{account::Address, ticket_table::TicketTable},
         executor::{
             fa_deposit::{FaDeposit, FaDepositReceipt},
             smart_function,
         },
         receipt::{Receipt, ReceiptContent, ReceiptResult},
     };
+    use jstz_core::kv::Transaction;
+    use jstz_crypto::smart_function_hash::SmartFunctionHash;
+    use tezos_smart_rollup_mock::MockHost;
 
     fn mock_fa_deposit(proxy: Option<SmartFunctionHash>) -> FaDeposit {
         FaDeposit {

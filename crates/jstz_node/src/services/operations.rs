@@ -276,9 +276,11 @@ mod tests {
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
     };
+    use jstz_proto::operation::RunFunction;
+    use jstz_proto::runtime::ParsedCode;
     use jstz_proto::{
-        context::account::{Amount, Nonce, ParsedCode},
-        operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
+        context::account::{Amount, Nonce},
+        operation::{Content, DeployFunction, Operation, SignedOperation},
     };
     use octez::OctezRollupClient;
     use tower::ServiceExt;

@@ -11,10 +11,11 @@ use http::{HeaderMap, Method, Uri};
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_crypto::{keypair_from_mnemonic, public_key::PublicKey, secret_key::SecretKey};
-use jstz_proto::context::account::{Address, Addressable, Nonce, ParsedCode};
+use jstz_proto::context::account::{Address, Addressable, Nonce};
 use jstz_proto::operation::{
     Content, DeployFunction, Operation, RunFunction, SignedOperation,
 };
+use jstz_proto::runtime::ParsedCode;
 use serde::{Serialize, Serializer};
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
