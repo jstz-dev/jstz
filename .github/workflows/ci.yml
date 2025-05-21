@@ -71,5 +71,5 @@ jobs:
 
       - run: npm ci
 
-      - name: Build with VitePress
+      - name: Build
         run: npm run docs:build

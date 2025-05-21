@@ -33,16 +33,14 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Install dependencies
         run: npm ci
-      - name: Build with VitePress
-        # Overwriting the base (which is specified in docs/.vitepress/config.mjs) so that the pages
-        # are loaded correctly in the target repo. The base should be the name of the target repo.
+      - name: Build
         run: |
-          npm run docs:build -- --base /dev-docs/
-          touch docs/.vitepress/dist/.nojekyll
+          DOC_URL=https://jstz-dev.github.io DOC_BASE_URL=/dev-docs/ npm run docs:build
+          touch docs/build/.nojekyll
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          path: docs/.vitepress/dist
+          path: docs/build
           name: built-docs
           retention-days: 1
   push:
