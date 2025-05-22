@@ -51,6 +51,7 @@ pub async fn spawn_rollup(
             .unwrap(),
         "bootstrap1".to_string(),
         installer_path,
+        None,
     )
     .set_data_dir(RollupDataDir::TempWithPreImages { preimages_dir })
     .build()

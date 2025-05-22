@@ -1,4 +1,5 @@
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
+use octez::r#async::rollup::HistoryMode;
 use rust_embed::Embed;
 
 use crate::task::jstzd::JstzdConfig;
@@ -65,6 +66,7 @@ pub(crate) const BOOTSTRAP_ACCOUNTS: [(&str, &str, &str); 6] = [
 ];
 pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
 const BOOTSTRAP_ACCOUNT_BALANCE: u64 = 100_000_000_000;
+const DEFAULT_ROLLUP_HISTORY_MODE: HistoryMode = HistoryMode::Archive;
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
@@ -119,7 +121,6 @@ pub(crate) async fn build_config(
         &octez_client_config,
         &protocol_params,
     )?;
-
     let octez_node_endpoint = octez_node_config.rpc_endpoint.clone();
     let kernel_debug_file = FileWrapper::default();
     let kernel_debug_file_path = kernel_debug_file.path();
@@ -129,6 +130,7 @@ pub(crate) async fn build_config(
         SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
         ROLLUP_OPERATOR_ACCOUNT_ALIAS.to_string(),
         jstz_rollup_path::kernel_installer_path(),
+        Some(DEFAULT_ROLLUP_HISTORY_MODE),
     )
     .set_data_dir(RollupDataDir::TempWithPreImages {
         preimages_dir: jstz_rollup_path::preimages_path(),
