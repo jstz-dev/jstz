@@ -25,7 +25,7 @@ octez = { path = "../octez" }
 rust_decimal.workspace = true
 serde.workspace = true
 serde_json.workspace = true
-tezos-smart-rollup-host.workspace = true
+tezos-smart-rollup.workspace = true
 tezos-smart-rollup-installer-config.workspace = true
 tezos-smart-rollup-installer.workspace = true
 tezos_crypto_rs.workspace = true
