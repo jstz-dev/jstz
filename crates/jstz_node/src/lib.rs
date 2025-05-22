@@ -98,13 +98,15 @@ pub async fn run(
     let (broadcaster, db, tail_file_handle) =
         LogsService::init(&kernel_log_path, &cancellation_token).await?;
 
+    let queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
+
     let _worker = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => Some(worker::spawn()),
+        RunMode::Sequencer => Some(worker::spawn(queue.clone())),
         #[cfg(test)]
         RunMode::Sequencer => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
-            Some(worker::spawn(move || {
+            Some(worker::spawn(queue.clone(), move || {
                 std::fs::File::create(p).unwrap();
             }))
         }
@@ -118,7 +120,7 @@ pub async fn run(
         db,
         injector,
         mode,
-        queue: Arc::new(RwLock::new(OperationQueue::new(capacity))),
+        queue,
     };
 
     let cors = CorsLayer::new()
