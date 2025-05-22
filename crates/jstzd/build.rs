@@ -6,7 +6,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup_host::path::OwnedPath;
+use tezos_smart_rollup::storage::path::OwnedPath;
 use tezos_smart_rollup_installer::{
     installer, preimages, KERNEL_BOOT_PATH, PREPARE_KERNEL_PATH,
 };
