@@ -5,6 +5,7 @@ use super::{bootstrap::SmartRollupPvmKind, endpoint::Endpoint};
 use anyhow::Result;
 use http::Uri;
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use std::process::Stdio;
 use std::{
     path::{Path, PathBuf},
@@ -60,6 +61,8 @@ pub struct OctezRollupConfigBuilder {
     kernel_debug_file: Option<FileWrapper>,
     /// Path to the log file.
     log_file: Option<PathBuf>,
+    /// The history mode
+    history_mode: HistoryMode,
 }
 
 impl OctezRollupConfigBuilder {
@@ -69,6 +72,7 @@ impl OctezRollupConfigBuilder {
         address: SmartRollupHash,
         operator: String,
         boot_sector_file: PathBuf,
+        history_mode: Option<HistoryMode>,
     ) -> Self {
         OctezRollupConfigBuilder {
             binary_path: None,
@@ -82,6 +86,7 @@ impl OctezRollupConfigBuilder {
             rpc_endpoint: None,
             kernel_debug_file: None,
             log_file: None,
+            history_mode: history_mode.unwrap_or_default(),
         }
     }
 
@@ -110,6 +115,11 @@ impl OctezRollupConfigBuilder {
         self
     }
 
+    pub fn set_history_mode(mut self, history_mode: HistoryMode) -> Self {
+        self.history_mode = history_mode;
+        self
+    }
+
     pub fn build(self) -> Result<OctezRollupConfig> {
         Ok(OctezRollupConfig {
             binary_path: self
@@ -131,6 +141,7 @@ impl OctezRollupConfigBuilder {
                 Some(v) => FileWrapper::try_from(v)?,
                 None => FileWrapper::default(),
             }),
+            history_mode: self.history_mode,
         })
     }
 }
@@ -150,6 +161,24 @@ pub struct OctezRollupConfig {
     pub pvm_kind: SmartRollupPvmKind,
     pub kernel_debug_file: Option<Arc<FileWrapper>>,
     pub log_file: Arc<FileWrapper>,
+    pub history_mode: HistoryMode,
+}
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+pub enum HistoryMode {
+    #[default]
+    Full,
+    Archive,
+}
+
+impl fmt::Display for HistoryMode {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            HistoryMode::Full => write!(f, "full"),
+            HistoryMode::Archive => write!(f, "archive"),
+        }
+    }
 }
 
 pub struct OctezRollup {
@@ -201,6 +230,7 @@ impl OctezRollup {
         &self,
         address: &SmartRollupHash,
         operator: &str,
+        history_mode: &HistoryMode,
         boot_sector_file: Option<&Path>,
         kernel_debug_file: Option<&Path>,
     ) -> Result<Child> {
@@ -222,6 +252,8 @@ impl OctezRollup {
             "--acl-override",
             "allow-all",
             "--unsafe-disable-wasm-kernel-checks",
+            "--history-mode",
+            &history_mode.to_string(),
         ]);
         if let Some(boot_sector_file) = boot_sector_file {
             command.args(["--boot-sector-file", &boot_sector_file.to_string_lossy()]);
@@ -252,8 +284,10 @@ mod test {
             SmartRollupHash::from_str("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK").unwrap(),
             "operator".to_owned(),
             PathBuf::from("/tmp/boot_sector.hex"),
+            None,
         )
         .set_kernel_debug_file(FileWrapper::TempFile(kernel_debug_file))
+        .set_history_mode(HistoryMode::Archive)
         .build()
         .unwrap();
         assert_eq!(rollup_config.pvm_kind, SmartRollupPvmKind::Wasm);
@@ -286,6 +320,7 @@ mod test {
             rollup_config.kernel_debug_file.map(|v| v.path()),
             Some(kernel_debug_file_path)
         );
+        assert_eq!(rollup_config.history_mode, HistoryMode::Archive);
     }
 
     #[test]
@@ -299,6 +334,7 @@ mod test {
             SmartRollupHash::from_str("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK").unwrap(),
             "operator".to_owned(),
             PathBuf::from("/tmp/boot_sector.hex"),
+            None,
         )
         .set_kernel_debug_file(FileWrapper::TempFile(kernel_debug_file))
         .set_data_dir(RollupDataDir::TempWithPreImages {
@@ -321,7 +357,8 @@ mod test {
                 "boot_sector_file": "/tmp/boot_sector.hex",
                 "rpc_endpoint": format!("http://127.0.0.1:{}", config.rpc_endpoint.port()),
                 "kernel_debug_file": kernel_debug_file_path.to_string_lossy(),
-                "log_file": log_file.to_string_lossy()
+                "log_file": log_file.to_string_lossy(),
+                "history_mode": "full"
             })
         );
     }

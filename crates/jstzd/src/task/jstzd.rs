@@ -765,6 +765,7 @@ mod tests {
                     .unwrap(),
                 "foo".to_owned(),
                 PathBuf::from("/foo"),
+                None,
             )
             .build()
             .unwrap(),

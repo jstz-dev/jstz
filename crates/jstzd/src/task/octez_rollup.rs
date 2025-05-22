@@ -64,6 +64,7 @@ impl Task for OctezRollup {
             rollup.run(
                 &config.address,
                 &config.operator,
+                &config.history_mode,
                 Some(&config.boot_sector_file),
                 config
                     .kernel_debug_file

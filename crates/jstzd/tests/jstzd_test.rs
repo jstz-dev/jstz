@@ -160,6 +160,7 @@ async fn create_jstzd_server(
         SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
         JSTZ_ROLLUP_OPERATOR_ALIAS.to_string(),
         rollup_kernel_installer,
+        None,
     )
     .set_data_dir(RollupDataDir::TempWithPreImages {
         preimages_dir: rollup_preimages_dir,
