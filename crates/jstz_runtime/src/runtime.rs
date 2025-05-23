@@ -1,3 +1,4 @@
+use deno_core::v8::new_single_threaded_default_platform;
 use jstz_core::host::HostRuntime;
 use jstz_core::host::JsHostRuntime;
 use jstz_core::kv::Transaction;
@@ -128,10 +129,13 @@ impl JstzRuntime {
         extensions.push(options.fetch);
         extensions.extend(options.extensions);
 
+        let v8_platform = Some(new_single_threaded_default_platform(false).make_shared());
+
         // Construct Runtime options
         let js_runtime_options = RuntimeOptions {
             extensions,
             module_loader: Some(options.module_loader),
+            v8_platform,
             ..Default::default()
         };
 
