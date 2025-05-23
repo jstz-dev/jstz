@@ -43,6 +43,7 @@ pub struct AppState {
     pub injector: KeyPair,
     pub mode: RunMode,
     pub queue: Arc<RwLock<OperationQueue>>,
+    pub runtime_db: sequencer::db::Db,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum)]
@@ -100,15 +101,20 @@ pub async fn run(
 
     let queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
 
+    let runtime_db = sequencer::db::Db::init(Some("/tmp/aaa"))?;
     let _worker = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => Some(worker::spawn(queue.clone())),
+        RunMode::Sequencer => Some(worker::spawn(queue.clone(), runtime_db.clone())),
         #[cfg(test)]
         RunMode::Sequencer => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
-            Some(worker::spawn(queue.clone(), move || {
-                std::fs::File::create(p).unwrap();
-            }))
+            Some(worker::spawn(
+                queue.clone(),
+                runtime_db.clone(),
+                move || {
+                    std::fs::File::create(p).unwrap();
+                },
+            ))
         }
         RunMode::Default => None,
     };
@@ -121,6 +127,7 @@ pub async fn run(
         injector,
         mode,
         queue,
+        runtime_db,
     };
 
     let cors = CorsLayer::new()

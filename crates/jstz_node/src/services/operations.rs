@@ -281,8 +281,10 @@ mod tests {
         operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
     };
     use octez::OctezRollupClient;
+    use tempfile::NamedTempFile;
     use tower::ServiceExt;
 
+    use crate::sequencer;
     use crate::{
         config::KeyPair,
         sequencer::queue::OperationQueue,
@@ -360,7 +362,11 @@ mod tests {
             .unwrap()
     }
 
-    async fn mock_app_state(rollup_endpoint: &str, mode: RunMode) -> AppState {
+    async fn mock_app_state(
+        rollup_endpoint: &str,
+        db_path: &str,
+        mode: RunMode,
+    ) -> AppState {
         AppState {
             rollup_client: OctezRollupClient::new(rollup_endpoint.to_string()),
             rollup_preimages_dir: PathBuf::new(),
@@ -369,6 +375,7 @@ mod tests {
             injector: KeyPair::default(),
             mode,
             queue: Arc::new(RwLock::new(OperationQueue::new(1))),
+            runtime_db: sequencer::db::Db::init(Some(db_path)).unwrap(),
         }
     }
 
@@ -478,7 +485,13 @@ mod tests {
             .with_body("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK")
             .create();
 
-        let state = mock_app_state(&server.url(), RunMode::Default).await;
+        let db_file = NamedTempFile::new().unwrap();
+        let state = mock_app_state(
+            &server.url(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Default,
+        )
+        .await;
         let queue = state.queue.clone();
         assert_eq!(queue.read().unwrap().len(), 0);
         let (router, _) = OperationsService::router_with_openapi()
@@ -493,7 +506,10 @@ mod tests {
 
     #[tokio::test]
     async fn inject_sequencer() {
-        let state = mock_app_state("", RunMode::Sequencer).await;
+        let db_file = NamedTempFile::new().unwrap();
+        let state =
+            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
+                .await;
         let queue = state.queue.clone();
         assert_eq!(queue.read().unwrap().len(), 0);
         let (mut router, _) = OperationsService::router_with_openapi()
