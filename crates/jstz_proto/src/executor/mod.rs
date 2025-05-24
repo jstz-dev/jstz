@@ -5,7 +5,11 @@ use crate::{
     receipt::{self, Receipt},
     Error, Result,
 };
-use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::RevealData};
+use jstz_core::{
+    host::{Host, HostRuntime},
+    kv::Transaction,
+    reveal_data::RevealData,
+};
 use jstz_crypto::public_key::PublicKey;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 pub mod deposit;
@@ -15,7 +19,7 @@ pub mod smart_function;
 pub mod withdraw;
 
 fn execute_operation_inner(
-    hrt: &mut impl HostRuntime,
+    hrt: &mut Host,
     tx: &mut Transaction,
     op: Operation,
     _ticketer: &ContractKt1Hash,
@@ -72,7 +76,7 @@ pub fn execute_external_operation(
 }
 
 pub fn execute_operation(
-    hrt: &mut impl HostRuntime,
+    hrt: &mut Host,
     tx: &mut Transaction,
     signed_operation: SignedOperation,
     ticketer: &ContractKt1Hash,
@@ -215,13 +219,14 @@ mod tests {
     }
     #[test]
     fn reveals_large_payload_operation() {
-        let mut host = MockHost::default();
+        let mut mock_host = MockHost::default();
+        let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
         tx.begin();
         let (_, pk1, sk1) = bootstrap1();
         let (_, pk2, sk2) = bootstrap2();
         let deploy_op = make_signed_op(deploy_function_content(), pk2, sk2);
-        let root_hash = make_data_available(&mut host, deploy_op.clone());
+        let root_hash = make_data_available(&mut mock_host, deploy_op.clone());
         let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1, deploy_op.hash());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
@@ -229,13 +234,14 @@ mod tests {
     }
     #[test]
     fn throws_error_if_reveal_type_not_supported() {
-        let mut host = MockHost::default();
+        let mut mock_host = MockHost::default();
+        let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
         tx.begin();
         let (_, pk1, sk1) = bootstrap1();
         let (_, pk2, sk2) = bootstrap2();
         let run_op = make_signed_op(run_function_content(), pk2.clone(), sk2.clone());
-        let root_hash = make_data_available(&mut host, run_op.clone());
+        let root_hash = make_data_available(&mut mock_host, run_op.clone());
         let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1.clone(), run_op.hash());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
@@ -248,7 +254,8 @@ mod tests {
 
     #[test]
     fn throws_if_nonce_is_invalid() {
-        let mut host = MockHost::default();
+        let mut mock_host = MockHost::default();
+        let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
         tx.begin();
         let (_, pk, sk) = bootstrap1();
@@ -265,13 +272,14 @@ mod tests {
 
     #[test]
     fn throws_if_injector_is_invalid() {
-        let mut host = MockHost::default();
+        let mut mock_host = MockHost::default();
+        let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
         tx.begin();
         let (_, pk1, sk1) = bootstrap1();
         let (_, pk2, sk2) = bootstrap2();
         let deploy_op = make_signed_op(deploy_function_content(), pk1.clone(), sk1);
-        let root_hash = make_data_available(&mut host, deploy_op.clone());
+        let root_hash = make_data_available(&mut mock_host, deploy_op.clone());
         let rdc_op = signed_rdc_op(root_hash, pk2.clone(), sk2, deploy_op.hash());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt =
@@ -284,7 +292,8 @@ mod tests {
 
     #[test]
     fn run_function_with_invalid_scheme_fails() {
-        let mut host = MockHost::default();
+        let mut mock_host = MockHost::default();
+        let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
         tx.begin();
         let (_, pk1, sk1) = bootstrap1();

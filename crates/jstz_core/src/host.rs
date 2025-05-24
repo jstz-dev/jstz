@@ -1,3 +1,5 @@
+use std::{cell::UnsafeCell, sync::Arc};
+
 use derive_more::Display;
 pub use tezos_smart_rollup_host::runtime::{
     Runtime as HostRuntime, RuntimeError as HostError,
@@ -586,5 +588,241 @@ impl<'a: 'static> HostRuntime for JsHostRuntime<'a> {
 
     fn runtime_version(&self) -> Result<String, HostError> {
         self.inner.runtime_version()
+    }
+}
+
+/// HostProvider provides references of the currently available host runtime
+/// by broadcasting change to the host runtime through shared memory
+pub struct HostProvider {
+    inner: Arc<UnsafeCell<JsHostRuntime<'static>>>,
+}
+
+impl HostProvider {
+    /// Creates a new global host
+    pub fn new(rt: &mut impl HostRuntime) -> Self {
+        let inner = JsHostRuntime::new(rt);
+        Self {
+            #[allow(clippy::arc_with_non_send_sync)]
+            inner: Arc::new(UnsafeCell::new(inner)),
+        }
+    }
+
+    /// Replaces the current host runtime. The new runtime will be reflected
+    /// to all hosts created from [`Self::new_host`]
+    pub fn replace(&self, rt: &mut impl HostRuntime) {
+        let rt = JsHostRuntime::new(rt);
+        let inner = unsafe { &mut *self.inner.get() };
+        *inner = rt
+    }
+
+    /// Creates a new host
+    pub fn new_host(&self) -> Host {
+        Host {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Host {
+    inner: Arc<UnsafeCell<JsHostRuntime<'static>>>,
+}
+
+impl Host {
+    /// Creates a new host
+    pub fn new(rt: &mut impl HostRuntime) -> Self {
+        let inner = JsHostRuntime::new(rt);
+        Self {
+            #[allow(clippy::arc_with_non_send_sync)]
+            inner: Arc::new(UnsafeCell::new(inner)),
+        }
+    }
+
+    fn with_runtime<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut JsHostRuntime<'static>) -> R,
+    {
+        // Safety
+        //
+        // Self does not expose mutable references to inner and the lifetime
+        // of self.inner cannot escape the closure `f`
+        let inner = unsafe { &mut *self.inner.get() };
+        f(inner)
+    }
+}
+
+impl HostRuntime for Host {
+    fn write_output(&mut self, from: &[u8]) -> Result<(), HostError> {
+        self.with_runtime(|rt| rt.write_output(from))
+    }
+
+    fn write_debug(&self, msg: &str) {
+        self.with_runtime(|rt| rt.write_debug(msg))
+    }
+
+    fn read_input(&mut self) -> Result<Option<input::Message>, HostError> {
+        self.with_runtime(|rt| rt.read_input())
+    }
+
+    fn store_has<T: Path>(&self, path: &T) -> Result<Option<ValueType>, HostError> {
+        self.with_runtime(|rt| rt.store_has(path))
+    }
+
+    fn store_read<T: Path>(
+        &self,
+        path: &T,
+        from_offset: usize,
+        max_bytes: usize,
+    ) -> Result<Vec<u8>, HostError> {
+        self.with_runtime(|rt| rt.store_read(path, from_offset, max_bytes))
+    }
+
+    fn store_read_slice<T: Path>(
+        &self,
+        path: &T,
+        from_offset: usize,
+        buffer: &mut [u8],
+    ) -> Result<usize, HostError> {
+        self.with_runtime(|rt| rt.store_read_slice(path, from_offset, buffer))
+    }
+
+    fn store_read_all(&self, path: &impl Path) -> Result<Vec<u8>, HostError> {
+        self.with_runtime(|rt| rt.store_read_all(path))
+    }
+
+    fn store_write<T: Path>(
+        &mut self,
+        path: &T,
+        src: &[u8],
+        at_offset: usize,
+    ) -> Result<(), HostError> {
+        self.with_runtime(|rt| rt.store_write(path, src, at_offset))
+    }
+
+    fn store_write_all<T: Path>(
+        &mut self,
+        path: &T,
+        src: &[u8],
+    ) -> Result<(), HostError> {
+        self.with_runtime(|rt| rt.store_write_all(path, src))
+    }
+
+    fn store_delete<T: Path>(&mut self, path: &T) -> Result<(), HostError> {
+        self.with_runtime(|rt| rt.store_delete(path))
+    }
+
+    fn store_delete_value<T: Path>(&mut self, path: &T) -> Result<(), HostError> {
+        self.with_runtime(|rt| rt.store_delete_value(path))
+    }
+
+    fn store_count_subkeys<T: Path>(&self, prefix: &T) -> Result<u64, HostError> {
+        self.with_runtime(|rt| rt.store_count_subkeys(prefix))
+    }
+
+    fn store_move(
+        &mut self,
+        from_path: &impl Path,
+        to_path: &impl Path,
+    ) -> Result<(), HostError> {
+        self.with_runtime(|rt| rt.store_move(from_path, to_path))
+    }
+
+    fn store_copy(
+        &mut self,
+        from_path: &impl Path,
+        to_path: &impl Path,
+    ) -> Result<(), HostError> {
+        self.with_runtime(|rt| rt.store_copy(from_path, to_path))
+    }
+
+    fn reveal_preimage(
+        &self,
+        hash: &[u8; tezos_smart_rollup::core_unsafe::PREIMAGE_HASH_SIZE],
+        destination: &mut [u8],
+    ) -> Result<usize, HostError> {
+        self.with_runtime(|rt| rt.reveal_preimage(hash, destination))
+    }
+
+    fn reveal_dal_page(
+        &self,
+        published_level: i32,
+        slot_index: u8,
+        page_index: i16,
+        destination: &mut [u8],
+    ) -> Result<usize, HostError> {
+        self.with_runtime(|rt| {
+            rt.reveal_dal_page(published_level, slot_index, page_index, destination)
+        })
+    }
+
+    fn reveal_dal_parameters(&self) -> RollupDalParameters {
+        self.with_runtime(|rt| rt.reveal_dal_parameters())
+    }
+
+    fn store_value_size(&self, path: &impl Path) -> Result<usize, HostError> {
+        self.with_runtime(|rt| rt.store_value_size(path))
+    }
+
+    fn mark_for_reboot(&mut self) -> Result<(), HostError> {
+        self.with_runtime(|rt| rt.mark_for_reboot())
+    }
+
+    fn reveal_metadata(&self) -> RollupMetadata {
+        self.with_runtime(|rt| rt.reveal_metadata())
+    }
+
+    fn last_run_aborted(&self) -> Result<bool, HostError> {
+        self.with_runtime(|rt| rt.last_run_aborted())
+    }
+
+    fn upgrade_failed(&self) -> Result<bool, HostError> {
+        self.with_runtime(|rt| rt.upgrade_failed())
+    }
+
+    fn restart_forced(&self) -> Result<bool, HostError> {
+        self.with_runtime(|rt| rt.restart_forced())
+    }
+
+    fn reboot_left(&self) -> Result<u32, HostError> {
+        self.with_runtime(|rt| rt.reboot_left())
+    }
+
+    fn runtime_version(&self) -> Result<String, HostError> {
+        self.with_runtime(|rt| rt.runtime_version())
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use tezos_smart_rollup_host::path::RefPath;
+    use tezos_smart_rollup_mock::MockHost;
+
+    use crate::kv::Storage;
+
+    use super::HostProvider;
+
+    #[test]
+    pub fn host_provider_replace_broadcasts_new_host_runtime() {
+        let mut mock_host = MockHost::default();
+        let key = RefPath::assert_from(b"/test");
+        Storage::insert(&mut mock_host, &key, &"hello".to_string()).unwrap();
+        let host_provider = HostProvider::new(&mut mock_host);
+        let host1 = host_provider.new_host();
+        let host2 = host_provider.new_host();
+
+        assert_eq!(
+            "hello".to_string(),
+            Storage::get::<String>(&host1, &key).unwrap().unwrap()
+        );
+        assert_eq!(
+            "hello".to_string(),
+            Storage::get::<String>(&host2, &key).unwrap().unwrap()
+        );
+
+        let mut mock_host = MockHost::default();
+        host_provider.replace(&mut mock_host);
+
+        assert!(Storage::get::<String>(&host1, &key).unwrap().is_none());
+        assert!(Storage::get::<String>(&host2, &key).unwrap().is_none());
     }
 }

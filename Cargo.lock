@@ -2947,6 +2947,7 @@ dependencies = [
  "num-traits",
  "serde",
  "tezos-smart-rollup",
+ "tezos-smart-rollup-mock",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
 ]
