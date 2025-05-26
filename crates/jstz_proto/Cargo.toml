@@ -29,6 +29,7 @@ tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
 utoipa.workspace = true
+futures.workspace = true
 
 # Required by v2 runtime
 deno_core = { workspace = true, optional = true }
@@ -45,6 +46,7 @@ jstz_mock = { path = "../jstz_mock" }
 jstz_utils = { path = "../jstz_utils" }
 tezos-smart-rollup-mock.workspace = true
 bincode.workspace = true
+tokio.workspace = true
 
 [features]
 riscv = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_base", "dep:deno_error", "dep:tokio"]

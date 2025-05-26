@@ -12,14 +12,14 @@ pub const NOOP_PATH: &str = "/-/noop";
 pub const X_JSTZ_TRANSFER: &str = "X-JSTZ-TRANSFER";
 pub const X_JSTZ_AMOUNT: &str = "X-JSTZ-AMOUNT";
 
-pub fn execute(
+pub async fn execute(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     source: &(impl Addressable + 'static),
     run_operation: operation::RunFunction,
     operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt> {
-    runtime::run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash)
+    runtime::run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash).await
 }
 
 #[cfg(test)]
@@ -42,8 +42,8 @@ mod test {
         runtime::ParsedCode,
     };
 
-    #[test]
-    fn transfer_xtz_to_and_from_smart_function_succeeds() {
+    #[tokio::test]
+    async fn transfer_xtz_to_and_from_smart_function_succeeds() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -104,6 +104,7 @@ mod test {
             run_function.clone(),
             fake_op_hash.clone(),
         )
+        .await
         .expect("run function expected");
 
         assert!(response.headers.get(X_JSTZ_TRANSFER).is_none());
@@ -135,6 +136,7 @@ mod test {
             run_function.clone(),
             fake_op_hash.clone(),
         )
+        .await
         .unwrap();
         assert!(result.status_code.is_server_error());
 
@@ -157,6 +159,7 @@ mod test {
             },
             fake_op_hash.clone(),
         )
+        .await
         .unwrap();
         assert!(result.status_code.is_server_error());
 
@@ -165,8 +168,8 @@ mod test {
         assert_eq!(balance_after, balance_before);
     }
 
-    #[test]
-    fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
+    #[tokio::test]
+    async fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -220,6 +223,7 @@ mod test {
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
         execute(host, &mut tx, &source, run_function.clone(), fake_op_hash)
+            .await
             .expect("run function expected");
         tx.commit(host).unwrap();
 
@@ -229,8 +233,8 @@ mod test {
         assert_eq!(Account::balance(host, &mut tx, &source).unwrap(), 0);
     }
 
-    #[test]
-    fn transfer_xtz_to_user_succeeds() {
+    #[tokio::test]
+    async fn transfer_xtz_to_user_succeeds() {
         let source = Address::User(jstz_mock::account1());
         let destination = Address::User(jstz_mock::account2());
         // 1. Deploy the smart function
@@ -260,7 +264,8 @@ mod test {
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-        let result = execute(host, &mut tx, &source, run_function.clone(), fake_op_hash);
+        let result =
+            execute(host, &mut tx, &source, run_function.clone(), fake_op_hash).await;
         assert!(result.is_ok());
 
         tx.commit(host).unwrap();
@@ -275,13 +280,14 @@ mod test {
 
         // 3. transferring again should fail
         let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
-        let result =
-            execute(host, &mut tx, &source, run_function, fake_op_hash2).unwrap();
+        let result = execute(host, &mut tx, &source, run_function, fake_op_hash2)
+            .await
+            .unwrap();
         assert!(result.status_code.is_server_error());
     }
 
-    #[test]
-    fn invalid_request_should_fails() {
+    #[tokio::test]
+    async fn invalid_request_should_fails() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -331,7 +337,8 @@ mod test {
             &source,
             run_function.clone(),
             Blake2b::from(b"fake_op_hash".as_ref()),
-        );
+        )
+        .await;
         let sf_balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
         let source_balance_after = Account::balance(host, &mut tx, &source).unwrap();
 
@@ -344,8 +351,8 @@ mod test {
         assert!(call_failed);
     }
 
-    #[test]
-    fn invalid_response_should_fails() {
+    #[tokio::test]
+    async fn invalid_response_should_fails() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -396,7 +403,8 @@ mod test {
             &source,
             run_function.clone(),
             Blake2b::from(b"fake_op_hash".as_ref()),
-        );
+        )
+        .await;
         let sf_balance_after = Account::balance(host, &mut tx, &smart_function).unwrap();
         let source_balance_after = Account::balance(host, &mut tx, &source).unwrap();
 
@@ -410,40 +418,40 @@ mod test {
         assert!(call_failed);
     }
 
-    #[test]
-    fn transfer_xtz_and_smart_function_call_is_atomic1() {
+    #[tokio::test]
+    async fn transfer_xtz_and_smart_function_call_is_atomic1() {
         let invalid_code = r#"
-       const handler = () => {{
-           invalid();
-       }};
-       export default handler;
-       "#;
-        transfer_xtz_and_run_erroneous_sf(invalid_code);
+        const handler = () => {{
+            invalid();
+        }};
+        export default handler;
+        "#;
+        transfer_xtz_and_run_erroneous_sf(invalid_code).await;
     }
 
-    #[test]
-    fn transfer_xtz_and_smart_function_call_is_atomic2() {
+    #[tokio::test]
+    async fn transfer_xtz_and_smart_function_call_is_atomic2() {
         let invalid_code = r#"
-       const handler = () => {{
-            return Response.error("error!");
-       }};
-       export default handler;
-       "#;
-        transfer_xtz_and_run_erroneous_sf(invalid_code);
+        const handler = () => {{
+             return Response.error("error!");
+        }};
+        export default handler;
+        "#;
+        transfer_xtz_and_run_erroneous_sf(invalid_code).await;
     }
 
-    #[test]
-    fn transfer_xtz_and_smart_function_call_is_atomic3() {
+    #[tokio::test]
+    async fn transfer_xtz_and_smart_function_call_is_atomic3() {
         let invalid_code = r#"
-       const handler = () => {{
-        return 3;
-       }};
-       export default handler;
-       "#;
-        transfer_xtz_and_run_erroneous_sf(invalid_code);
+        const handler = () => {{
+            return 3;
+        }};
+        export default handler;
+        "#;
+        transfer_xtz_and_run_erroneous_sf(invalid_code).await;
     }
 
-    fn transfer_xtz_and_run_erroneous_sf(code: &str) {
+    async fn transfer_xtz_and_run_erroneous_sf(code: &str) {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -483,7 +491,8 @@ mod test {
             &source,
             run_function.clone(),
             Blake2b::from(b"fake_op_hash".as_ref()),
-        );
+        )
+        .await;
         let call_failed = match result {
             Ok(receipt) => receipt.status_code.is_server_error(),
             _ => true,
@@ -499,8 +508,8 @@ mod test {
         assert_eq!(balance_after, 0);
     }
 
-    #[test]
-    fn host_script_withdraw_from_smart_function_succeeds() {
+    #[tokio::test]
+    async fn host_script_withdraw_from_smart_function_succeeds() {
         let mut mock_host = JstzMockHost::default();
         let host = mock_host.rt();
         let mut tx = Transaction::default();
@@ -549,6 +558,7 @@ mod test {
             run_function.clone(),
             fake_op_hash,
         )
+        .await
         .expect("Withdrawal expected to succeed");
         tx.commit(host).unwrap();
 
@@ -567,12 +577,13 @@ mod test {
             run_function,
             fake_op_hash2,
         )
+        .await
         .expect_err("Expected error");
         assert_eq!("EvalError: InsufficientFunds", error.to_string());
     }
 
-    #[test]
-    fn transfer_xtz_from_smart_function_succeeds() {
+    #[tokio::test]
+    async fn transfer_xtz_from_smart_function_succeeds() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
@@ -584,7 +595,8 @@ mod test {
             host,
             &mut tx,
             transfer_amount,
-        );
+        )
+        .await;
         // deploy a new smart function that transfers balance to a smart function address
         let code2 = format!(
             r#"
@@ -616,6 +628,7 @@ mod test {
         let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
         let source_before = Account::balance(host, &mut tx, &source).unwrap();
         smart_function::run::execute(host, &mut tx, &source, run_function, fake_op_hash2)
+            .await
             .unwrap();
         tx.commit(host).unwrap();
         tx.begin();
@@ -628,8 +641,8 @@ mod test {
         assert_eq!(source_after - source_before, transfer_amount);
     }
 
-    #[test]
-    fn transfer_xtz_from_smart_function_succeeds_with_noop() {
+    #[tokio::test]
+    async fn transfer_xtz_from_smart_function_succeeds_with_noop() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
@@ -643,7 +656,8 @@ mod test {
             host,
             &mut tx,
             transfer_amount,
-        );
+        )
+        .await;
 
         // deploy a new smart function that transfers balance to a smart function address
         // without executing the sf using /-/noop path
@@ -678,6 +692,7 @@ mod test {
         let source_before = Account::balance(host, &mut tx, &source).unwrap();
         let sf2_before = Account::balance(host, &mut tx, &smart_function2).unwrap();
         smart_function::run::execute(host, &mut tx, &source, run_function, fake_op_hash2)
+            .await
             .unwrap();
         tx.commit(host).unwrap();
         // the source shouldn't received balance as sf1 isn't executed
@@ -690,7 +705,7 @@ mod test {
 
     // deploy a smart function that transfers `transfer_amount` to the `source`
     // and executes it. returns the executed smart function address
-    fn deploy_transfer_sf_and_execute(
+    async fn deploy_transfer_sf_and_execute(
         source: Address,
         host: &mut MockHost,
         tx: &mut Transaction,
@@ -748,6 +763,7 @@ mod test {
             run_function.clone(),
             fake_op_hash,
         )
+        .await
         .expect("run function expected");
         tx.commit(host).unwrap();
 
@@ -763,8 +779,8 @@ mod test {
         smart_function
     }
 
-    #[test]
-    fn failure_on_transfer_xtz_from_smart_function_returns_error_response() {
+    #[tokio::test]
+    async fn failure_on_transfer_xtz_from_smart_function_returns_error_response() {
         let source = Address::User(jstz_mock::account2());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -808,13 +824,14 @@ mod test {
             run_function.clone(),
             fake_op_hash,
         )
+        .await
         .expect("run function expected receipt");
 
         assert!(receipt.status_code.is_server_error());
     }
 
-    #[test]
-    fn smart_function_refund_can_propagate() {
+    #[tokio::test]
+    async fn smart_function_refund_can_propagate() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
@@ -891,6 +908,7 @@ mod test {
             run_function.clone(),
             fake_op_hash.clone(),
         )
+        .await
         .expect("run function expected");
         let balance_after_caller = Account::balance(host, &mut tx, &caller_sf).unwrap();
         let balance_after_source = Account::balance(host, &mut tx, &source).unwrap();
@@ -901,8 +919,8 @@ mod test {
         assert_eq!(balance_before_source + refund_amount, balance_after_source);
     }
 
-    #[test]
-    fn propagating_smart_function_refund_fails() {
+    #[tokio::test]
+    async fn propagating_smart_function_refund_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
@@ -975,6 +993,7 @@ mod test {
             run_function.clone(),
             fake_op_hash.clone(),
         )
+        .await
         .unwrap();
         assert!(result.status_code.is_server_error());
 
@@ -989,8 +1008,8 @@ mod test {
         assert_eq!(balance_before_source, balance_after_source);
     }
 
-    #[test]
-    fn returning_invalid_refund_amount_in_response_fails() {
+    #[tokio::test]
+    async fn returning_invalid_refund_amount_in_response_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
@@ -1064,6 +1083,7 @@ mod test {
             run_function.clone(),
             fake_op_hash.clone(),
         )
+        .await
         .unwrap();
         tx.commit(host).unwrap();
 
@@ -1076,8 +1096,8 @@ mod test {
         assert_eq!(balance_before_source, balance_after_source);
     }
 
-    #[test]
-    fn returning_invalid_request_amount_fails() {
+    #[tokio::test]
+    async fn returning_invalid_request_amount_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
@@ -1156,6 +1176,7 @@ mod test {
             run_function.clone(),
             fake_op_hash.clone(),
         )
+        .await
         .unwrap();
         assert!(result.status_code.is_server_error());
         tx.commit(host).unwrap();
@@ -1169,8 +1190,8 @@ mod test {
         assert_eq!(balance_before_source, balance_after_source);
     }
 
-    #[test]
-    fn smart_function_refunds_succeeds() {
+    #[tokio::test]
+    async fn smart_function_refunds_succeeds() {
         let refund_amount = 1;
         let refund_code = format!(
             r#"
@@ -1182,11 +1203,11 @@ mod test {
             export default handler;
             "#
         );
-        test_smart_function_refund(refund_code, refund_amount);
+        test_smart_function_refund(refund_code, refund_amount).await;
     }
 
-    #[test]
-    fn smart_function_refunds_succeeds_async() {
+    #[tokio::test]
+    async fn smart_function_refunds_succeeds_async() {
         let refund_amount = 1;
         let refund_code = format!(
             r#"
@@ -1198,10 +1219,10 @@ mod test {
             export default handler;
             "#
         );
-        test_smart_function_refund(refund_code, refund_amount);
+        test_smart_function_refund(refund_code, refund_amount).await;
     }
 
-    fn test_smart_function_refund(refund_code: String, refund_amount: u64) {
+    async fn test_smart_function_refund(refund_code: String, refund_amount: u64) {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
         let host = jstz_mock_host.rt();
@@ -1266,6 +1287,7 @@ mod test {
             run_function.clone(),
             fake_op_hash.clone(),
         )
+        .await
         .expect("run function expected");
         let balance_after = Account::balance(host, &mut tx, &caller_sf).unwrap();
         tx.commit(host).unwrap();
@@ -1293,6 +1315,7 @@ mod test {
             },
             fake_op_hash,
         )
+        .await
         .unwrap();
         assert!(result.status_code.is_server_error());
 
@@ -1300,8 +1323,8 @@ mod test {
         assert_eq!(balance_before, balance_after);
     }
 
-    #[test]
-    fn host_script_fa_withdraw_from_smart_function_succeeds() {
+    #[tokio::test]
+    async fn host_script_fa_withdraw_from_smart_function_succeeds() {
         let receiver = Address::User(jstz_mock::account1());
         let source = Address::User(jstz_mock::account2());
         let ticketer = jstz_mock::kt1_account1();
@@ -1390,6 +1413,7 @@ mod test {
             run_function.clone(),
             fake_op_hash,
         )
+        .await
         .expect("Fa withdraw expected");
 
         tx.commit(host).unwrap();
@@ -1418,6 +1442,7 @@ mod test {
             run_function,
             fake_op_hash2,
         )
+        .await
         .expect_err("Expected error");
         assert_eq!(
             "EvalError: TicketTableError: InsufficientFunds",

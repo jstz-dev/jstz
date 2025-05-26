@@ -3054,6 +3054,7 @@ dependencies = [
  "derive_more",
  "either",
  "erased-serde",
+ "futures",
  "http 1.1.0",
  "http-serde",
  "jstz_api",

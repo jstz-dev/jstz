@@ -86,8 +86,14 @@ fn deposit_to_proxy_contract(
 ) -> Result<FaDepositReceipt> {
     let run = new_run_function(deposit.to_http_body(), proxy_contract)?;
     let source = PublicKeyHash::from_base58(NULL_ADDRESS)?;
-    let result =
-        smart_function::run::execute(rt, tx, &Address::User(source), run, deposit.hash());
+    // Temporarily block on
+    let result = futures::executor::block_on(smart_function::run::execute(
+        rt,
+        tx,
+        &Address::User(source),
+        run,
+        deposit.hash(),
+    ));
     match result {
         Ok(run_receipt) => {
             if run_receipt.status_code.is_success() {
