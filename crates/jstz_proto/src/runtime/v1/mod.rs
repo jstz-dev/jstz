@@ -21,7 +21,7 @@ use crate::{
     Error,
 };
 
-pub fn run_toplevel_fetch(
+pub async fn run_toplevel_fetch(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     source_address: &(impl Addressable + 'static),

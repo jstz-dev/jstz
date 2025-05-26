@@ -68,10 +68,15 @@ fn handle_message(
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
-    let host = &mut GLOBAL_HOST.with_borrow(|global_host| {
+    let host = GLOBAL_HOST.with_borrow(|global_host| {
         global_host.replace(rt);
         global_host.new_host()
     });
+    run(host);
+}
+
+fn run(mut host: Host) {
+    let host = &mut host;
     // TODO: we should organize protocol consts into a struct
     // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
     let ticketer = read_ticketer(host).expect("Ticketer not found");
@@ -80,17 +85,20 @@ pub fn entry(rt: &mut impl Runtime) {
     tx.begin();
     if let Some(message) = read_message(host, &ticketer) {
         handle_message(host, message, &ticketer, &mut tx, &injector)
-            .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
+            .unwrap_or_else(|err| debug_msg!(host, "[🔴] {err:?}\n"));
     }
-    if let Err(commit_error) = tx.commit(rt) {
-        debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");
+    if let Err(commit_error) = tx.commit(host) {
+        debug_msg!(host, "Failed to commit transaction: {commit_error:?}\n");
     }
 }
 
 #[cfg(test)]
 mod test {
 
-    use jstz_core::kv::Transaction;
+    use jstz_core::{
+        host::{Host, HostRuntime},
+        kv::Transaction,
+    };
     use jstz_crypto::hash::Hash;
     use jstz_mock::{
         host::{JstzMockHost, MOCK_SOURCE},
@@ -106,7 +114,12 @@ mod test {
     };
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
 
-    use crate::{entry, parsing::try_parse_contract, read_ticketer};
+    use crate::{parsing::try_parse_contract, read_ticketer, run};
+
+    fn wrapped_run(rt: &mut impl HostRuntime) {
+        let host = Host::new(rt);
+        run(host);
+    }
 
     #[test]
     fn read_ticketer_succeeds() {
@@ -121,7 +134,7 @@ mod test {
         let mut host = JstzMockHost::default();
         let deposit = MockNativeDeposit::default();
         host.add_internal_message(&deposit);
-        host.rt().run_level(entry);
+        host.rt().run_level(wrapped_run);
         let tx = &mut Transaction::default();
         tx.begin();
         match deposit.receiver {
@@ -164,7 +177,7 @@ mod test {
         };
 
         host.add_internal_message(&deposit);
-        host.rt().run_level(entry);
+        host.rt().run_level(wrapped_run);
         let ticket_hash = deposit.ticket_hash();
         match deposit.proxy_contract {
             Some(proxy) => {
@@ -194,7 +207,7 @@ mod test {
         let deposit = MockFaDeposit::default();
 
         host.add_internal_message(&deposit);
-        host.rt().run_level(entry);
+        host.rt().run_level(wrapped_run);
         let ticket_hash = deposit.ticket_hash();
         match deposit.proxy_contract {
             Some(proxy) => {
