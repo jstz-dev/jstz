@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 
+use futures::{executor::LocalPool, task::LocalSpawnExt};
 use inbox::read_message;
 use jstz_core::{
     host::{Host, HostProvider},
@@ -25,7 +26,10 @@ thread_local! {
     static GLOBAL_HOST: RefCell<HostProvider> = {
         let mut mock = tezos_smart_rollup_mock::MockHost::default();
         RefCell::new(HostProvider::new(&mut mock))
-    }
+    };
+
+    static LOCAL_POOL: RefCell<LocalPool> = RefCell::new(LocalPool::new());
+
 }
 
 fn read_ticketer(rt: &impl Runtime) -> Option<SmartFunctionHash> {
@@ -73,7 +77,10 @@ pub fn entry(rt: &mut impl Runtime) {
         global_host.replace(rt);
         global_host.new_host()
     });
-    futures::executor::block_on(run(host));
+    LOCAL_POOL.with_borrow_mut(|local_pool| {
+        local_pool.spawner().spawn_local(run(host)).unwrap();
+        local_pool.run_until_stalled();
+    });
 }
 
 async fn run(mut host: Host) {
