@@ -2937,6 +2937,7 @@ version = "0.1.1-alpha.1"
 dependencies = [
  "bincode 2.0.0-rc.3",
  "boa_engine",
+ "futures",
  "http 1.1.0",
  "http-serde",
  "jstz_api",
