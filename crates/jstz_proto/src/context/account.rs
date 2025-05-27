@@ -1,5 +1,7 @@
 use std::{
     fmt::{self, Display},
+    ops::Deref,
+    ops::DerefMut,
     result,
     str::FromStr,
 };
@@ -8,6 +10,7 @@ use crate::error::{Error, Result};
 use bincode::{Decode, Encode};
 use boa_engine::{Context, JsError, JsResult, Module, Source};
 use boa_gc::{empty_trace, Finalize, Trace};
+use jstz_core::kv::transaction::{Guarded, GuardedMut};
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
@@ -253,7 +256,7 @@ impl Account {
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         addr: &impl Addressable,
-    ) -> Result<&'a mut Self> {
+    ) -> Result<GuardedMut<'a, Account>> {
         let account_entry = tx.entry::<Self>(hrt, Self::path(addr)?)?;
         Ok(account_entry.or_insert_with(|| Self::default_account(addr)))
     }
@@ -277,24 +280,30 @@ impl Account {
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         addr: &impl Addressable,
-    ) -> Result<&'a mut Amount> {
-        let account = Self::get_mut(hrt, tx, addr)?;
-        match account {
-            Self::User(UserAccount { amount, .. }) => Ok(amount),
-            Self::SmartFunction(SmartFunctionAccount { amount, .. }) => Ok(amount),
-        }
+    ) -> Result<GuardedMut<'a, Amount>> {
+        let mut account = Self::get_mut(hrt, tx, addr)?;
+        Ok(GuardedMut::new(
+            account.clone_guard(),
+            match account.deref_mut() {
+                Self::User(UserAccount { amount, .. }) => amount,
+                Self::SmartFunction(SmartFunctionAccount { amount, .. }) => amount,
+            },
+        ))
     }
 
     pub fn nonce<'a>(
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         addr: &impl Addressable,
-    ) -> Result<&'a mut Nonce> {
-        let account = Self::get_mut(hrt, tx, addr)?;
-        match account {
-            Self::User(UserAccount { nonce, .. }) => Ok(nonce),
-            Self::SmartFunction(SmartFunctionAccount { nonce, .. }) => Ok(nonce),
-        }
+    ) -> Result<GuardedMut<'a, Nonce>> {
+        let mut account = Self::get_mut(hrt, tx, addr)?;
+        Ok(GuardedMut::new(
+            account.clone_guard(),
+            match account.deref_mut() {
+                Self::User(UserAccount { nonce, .. }) => nonce,
+                Self::SmartFunction(SmartFunctionAccount { nonce, .. }) => nonce,
+            },
+        ))
     }
 
     pub fn create_smart_function(
@@ -306,7 +315,8 @@ impl Account {
     ) -> Result<SmartFunctionHash> {
         let nonce = Self::nonce(hrt, tx, creator)?;
         let address = SmartFunctionHash::digest(
-            format!("{}{}{}", creator.to_base58(), function_code, nonce).as_bytes(),
+            format!("{}{}{}", creator.to_base58(), function_code, nonce.deref())
+                .as_bytes(),
         )?;
         let account = SmartFunctionAccount {
             amount,
@@ -321,11 +331,11 @@ impl Account {
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         addr: &SmartFunctionHash,
-    ) -> Result<&'a str> {
+    ) -> Result<Guarded<'a, str>> {
         let account = Self::get_mut(hrt, tx, addr)?;
-        match account {
+        match account.deref() {
             Self::SmartFunction(SmartFunctionAccount { function_code, .. }) => {
-                Ok(&function_code.0)
+                Ok(Guarded::new(account.clone_guard(), &function_code.0))
             }
             Self::User(_) => Err(Error::AddressTypeMismatch),
         }
@@ -339,8 +349,8 @@ impl Account {
         addr: &SmartFunctionHash,
         new_function_code: String,
     ) -> Result<()> {
-        let account = Self::get_mut(hrt, tx, addr)?;
-        match account {
+        let mut account = Self::get_mut(hrt, tx, addr)?;
+        match account.deref_mut() {
             Self::SmartFunction(SmartFunctionAccount { function_code, .. }) => {
                 *function_code = new_function_code.try_into()?;
                 Ok(())
@@ -364,8 +374,9 @@ impl Account {
         addr: &impl Addressable,
         amount: Amount,
     ) -> Result<u64> {
-        let balance = Self::balance_mut(hrt, tx, addr)?;
+        let mut balance = Self::balance_mut(hrt, tx, addr)?;
         let checked_balance = balance
+            .deref()
             .checked_add(amount)
             .ok_or(crate::error::Error::BalanceOverflow)?;
 
@@ -379,7 +390,7 @@ impl Account {
         addr: &impl Addressable,
         amount: Amount,
     ) -> Result<u64> {
-        let balance = Self::balance_mut(hrt, tx, addr)?;
+        let mut balance = Self::balance_mut(hrt, tx, addr)?;
         if *balance < amount {
             return Err(Error::InsufficientFunds)?;
         }
@@ -393,7 +404,7 @@ impl Account {
         addr: &impl Addressable,
         amount: Amount,
     ) -> Result<()> {
-        let balance = Self::balance_mut(hrt, tx, addr)?;
+        let mut balance = Self::balance_mut(hrt, tx, addr)?;
         *balance = amount;
         Ok(())
     }
@@ -405,13 +416,13 @@ impl Account {
         dst: &impl Addressable,
         amount: Amount,
     ) -> Result<()> {
-        let src_balance = Self::balance_mut(hrt, tx, src)?;
+        let mut src_balance = Self::balance_mut(hrt, tx, src)?;
         match src_balance.checked_sub(amount) {
             Some(amt) => *src_balance = amt,
             None => return Err(Error::InsufficientFunds),
         }
 
-        let dst_balance = Self::balance_mut(hrt, tx, dst)?;
+        let mut dst_balance = Self::balance_mut(hrt, tx, dst)?;
         match dst_balance.checked_add(amount) {
             Some(amt) => *dst_balance = amt,
             None => return Err(Error::BalanceOverflow),
@@ -600,7 +611,7 @@ mod test {
 
         fn setup_test_env() -> (MockHost, Transaction) {
             let host = MockHost::default();
-            let mut tx = Transaction::default();
+            let tx = Transaction::default();
             tx.begin();
             (host, tx)
         }
@@ -667,7 +678,7 @@ mod test {
             let (user_addr, sf_addr) = create_test_addresses();
 
             let user_account = Account::get_mut(&host, &mut tx, &user_addr).unwrap();
-            match user_account {
+            match user_account.deref() {
                 Account::User(account) => {
                     assert_eq!(account.amount, 0);
                     assert_eq!(account.nonce.0, 0);
@@ -676,7 +687,7 @@ mod test {
             }
 
             let sf_account = Account::get_mut(&host, &mut tx, &sf_addr).unwrap();
-            match sf_account {
+            match sf_account.deref() {
                 Account::SmartFunction(account) => {
                     assert_eq!(account.amount, 0);
                     assert_eq!(account.nonce.0, 0);
@@ -780,7 +791,7 @@ mod test {
 
             // Test empty initial code
             let code = Account::function_code(&host, &mut tx, sf_hash).unwrap();
-            assert_eq!(code, "");
+            assert_eq!(code.deref(), "");
 
             // Test empty function code
             assert!(
@@ -798,10 +809,10 @@ mod test {
             )
             .is_ok());
             let updated_code = Account::function_code(&host, &mut tx, sf_hash).unwrap();
-            assert_eq!(updated_code, valid_code);
+            assert_eq!(updated_code.deref(), valid_code);
 
             let account = Account::get_mut(&host, &mut tx, &user_addr).unwrap();
-            assert!(matches!(account, Account::User(_)));
+            assert!(matches!(account.deref(), Account::User(_)));
         }
 
         #[test]
@@ -819,7 +830,7 @@ mod test {
                 .is_ok());
 
             let retrieved_user = Account::get_mut(&host, &mut tx, &user_addr).unwrap();
-            match retrieved_user {
+            match retrieved_user.deref() {
                 Account::User(account) => {
                     assert_eq!(account.amount, 100);
                     assert_eq!(account.nonce.0, 0);
@@ -838,7 +849,7 @@ mod test {
                 .is_ok());
 
             let retrieved_sf = Account::get_mut(&host, &mut tx, &sf_addr).unwrap();
-            match retrieved_sf {
+            match retrieved_sf.deref() {
                 Account::SmartFunction(account) => {
                     assert_eq!(account.amount, 200);
                     assert_eq!(account.nonce.0, 0);
@@ -878,7 +889,7 @@ mod test {
             let (user_addr, _) = create_test_addresses();
 
             tx.begin();
-            let nonce = Account::nonce(&host, &mut tx, &user_addr).unwrap();
+            let mut nonce = Account::nonce(&host, &mut tx, &user_addr).unwrap();
             assert_eq!(nonce.0, 0);
 
             nonce.increment();
@@ -909,7 +920,7 @@ mod test {
 
             let sf_addr = Address::SmartFunction(sf_hash);
             let account = Account::get_mut(&host, &mut tx, &sf_addr).unwrap();
-            match account {
+            match account.deref() {
                 Account::SmartFunction(sf_account) => {
                     assert_eq!(sf_account.amount, amount);
                     assert_eq!(sf_account.nonce.0, 0);

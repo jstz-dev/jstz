@@ -92,7 +92,7 @@ impl SmartFunction {
         )?);
 
         // 2. Increment nonce of current account
-        let nonce = Account::nonce(hrt, tx, deployer)?;
+        let mut nonce = Account::nonce(hrt, tx, deployer)?;
         nonce.increment();
 
         // 3. Transfer the balance to the associated account

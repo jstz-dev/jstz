@@ -1,4 +1,4 @@
-use std::{num::NonZeroU64, ops::BitXor};
+use std::{num::NonZeroU64, ops::BitXor, ops::Deref};
 
 use boa_engine::{
     js_string,
@@ -199,7 +199,7 @@ impl Script {
     ) -> Result<Self> {
         let src = Account::function_code(hrt, tx, address)?;
 
-        Ok(Self::parse(Source::from_bytes(src), context)?)
+        Ok(Self::parse(Source::from_bytes(src.deref()), context)?)
     }
 
     pub fn parse<R: ReadChar>(

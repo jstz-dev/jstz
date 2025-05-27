@@ -9,6 +9,7 @@
 use bincode::error::{DecodeError, EncodeError};
 use bincode::{de::Decoder, enc::Encoder, Decode, Encode};
 use jstz_core::host::HostRuntime;
+use jstz_core::kv::transaction::Guarded;
 use jstz_core::kv::Transaction;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
@@ -69,7 +70,7 @@ impl Kv {
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         key: &str,
-    ) -> Option<&'a KvValue> {
+    ) -> Option<Guarded<'a, KvValue>> {
         tx.get::<KvValue>(hrt, self.key_path(key)?).ok()?
     }
 

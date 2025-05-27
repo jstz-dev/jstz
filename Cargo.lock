@@ -2903,6 +2903,7 @@ dependencies = [
  "hex",
  "jstz_crypto",
  "nom",
+ "parking_lot",
  "serde",
  "serde-big-array",
  "tezos-smart-rollup",

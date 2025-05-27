@@ -20,6 +20,7 @@ erased-serde.workspace = true
 getrandom.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
 nom.workspace = true
+parking_lot.workspace = true
 serde.workspace = true
 serde-big-array.workspace = true
 tezos_crypto_rs.workspace = true
