@@ -3,8 +3,10 @@
 //! This module provides a persistent transactional key-value store.
 
 use boa_gc::{Finalize, Trace};
-use tezos_smart_rollup_host::runtime::ValueType;
-use tezos_smart_rollup_host::{path::Path, runtime::Runtime};
+use tezos_smart_rollup::{
+    host::{Runtime, ValueType},
+    storage::path::Path,
+};
 
 use crate::error::Result;
 
