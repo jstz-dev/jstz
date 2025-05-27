@@ -21,6 +21,9 @@ all: build test check
 build: build-cli-kernel build-jstzd-kernel
 	@cargo build $(PROFILE_OPT)
 
+build-riscv: build-cli-kernel build-jstzd-kernel
+	@cargo build $(PROFILE_OPT) --features riscv
+
 .PHONY: build-bridge
 build-bridge:
 	@ligo compile contract --no-warn contracts/jstz_bridge.mligo \
@@ -38,7 +41,7 @@ build-kernel:
 build-jstzd-kernel: build-kernel
 	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(JSTZD_KERNEL_PATH)
 
-# TODO: Remove once jstzd replaces the sandbox 
+# TODO: Remove once jstzd replaces the sandbox
 # https://linear.app/tezos/issue/JSTZ-205/remove-build-for-jstz-cli
 .PHONY: build-cli-kernel
 build-cli-kernel: build-kernel
