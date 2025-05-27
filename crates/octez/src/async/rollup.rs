@@ -32,7 +32,8 @@ pub enum RollupDataDir {
     Temp,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize)]
+#[serde(default)]
 pub struct OctezRollupConfigBuilder {
     /// global options:
     /// Path to the octez-smart-rollup-node binary
@@ -62,8 +63,28 @@ pub struct OctezRollupConfigBuilder {
     /// Path to the log file.
     log_file: Option<PathBuf>,
     /// The history mode
-    #[serde(default)]
     history_mode: HistoryMode,
+}
+
+// Manual implementation of Default to allow for custom defaults for mandatory fields in the future
+#[allow(clippy::derivable_impls)]
+impl Default for OctezRollupConfigBuilder {
+    fn default() -> Self {
+        Self {
+            binary_path: None,
+            octez_client_base_dir: None,
+            octez_node_endpoint: None,
+            pvm_kind: None,
+            data_dir: None,
+            address: None,
+            operator: None,
+            boot_sector_file: None,
+            rpc_endpoint: None,
+            kernel_debug_file: None,
+            log_file: None,
+            history_mode: HistoryMode::default(),
+        }
+    }
 }
 
 impl OctezRollupConfigBuilder {
