@@ -8,7 +8,7 @@ use axum::{
 use config::{JstzNodeConfig, KeyPair};
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use octez::OctezRollupClient;
-use sequencer::{queue::OperationQueue, worker};
+use sequencer::{inbox, queue::OperationQueue, worker};
 use serde::{Deserialize, Serialize};
 use services::{
     accounts::AccountsService,
@@ -113,6 +113,16 @@ pub async fn run(
         RunMode::Default => None,
     };
 
+    let poller = match mode {
+        #[cfg(not(test))]
+        RunMode::Sequencer => Some(inbox::poll(rollup_endpoint, queue.clone(), 5)),
+        #[cfg(test)]
+        RunMode::Sequencer => {
+            Some(inbox::poll(rollup_endpoint, queue.clone(), 1, || async {}))
+        }
+        RunMode::Default => None,
+    };
+
     let state = AppState {
         rollup_client,
         rollup_preimages_dir,
@@ -137,6 +147,9 @@ pub async fn run(
 
     cancellation_token.cancel();
     tail_file_handle.await.unwrap()?;
+    if let Some(mut p) = poller {
+        p.shut_down().await;
+    }
     Ok(())
 }
 
