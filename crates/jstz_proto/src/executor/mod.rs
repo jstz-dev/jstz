@@ -5,12 +5,13 @@ use crate::{
     receipt::{self, Receipt},
     Error, Result,
 };
+use futures::future::FutureExt;
 use jstz_core::{
     host::{Host, HostRuntime},
     kv::Transaction,
     reveal_data::RevealData,
 };
-use jstz_crypto::public_key::PublicKey;
+use jstz_crypto::{hash::Blake2b, public_key::PublicKey};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 pub mod deposit;
 pub mod fa_deposit;
@@ -18,7 +19,7 @@ pub mod fa_withdraw;
 pub mod smart_function;
 pub mod withdraw;
 
-fn execute_operation_inner(
+async fn execute_operation_inner(
     hrt: &mut Host,
     tx: &mut Transaction,
     op: Operation,
@@ -34,26 +35,22 @@ fn execute_operation_inner(
             Ok((op_hash, receipt::ReceiptContent::DeployFunction(result)))
         }
         operation::Content::RunFunction(run) => {
-            // Temporarily block on
-            let result = futures::executor::block_on(smart_function::run::execute(
-                hrt,
-                tx,
-                &source,
-                run,
-                op_hash.clone(),
-            ))?;
+            let result =
+                smart_function::run::execute(hrt, tx, &source, run, op_hash.clone())
+                    .await?;
             Ok((op_hash, receipt::ReceiptContent::RunFunction(result)))
         }
         operation::Content::RevealLargePayload(reveal) => {
             if op.public_key != *injector {
                 return Err(Error::InvalidInjector);
             }
-            let revealed_op = RevealData::reveal_and_decode::<_, SignedOperation>(
+            let signed_op = RevealData::reveal_and_decode::<_, SignedOperation>(
                 hrt,
                 &reveal.root_hash,
-            )?
-            .verify()?;
-            revealed_op.verify_nonce(hrt, tx)?;
+            )?;
+            signed_op.verify()?;
+            signed_op.verify_nonce(hrt, tx)?;
+            let revealed_op: Operation = signed_op.into();
             if reveal.reveal_type == revealed_op.content().try_into()? {
                 return execute_operation_inner(
                     hrt,
@@ -61,7 +58,9 @@ fn execute_operation_inner(
                     revealed_op,
                     _ticketer,
                     injector,
-                );
+                )
+                .boxed_local()
+                .await;
             }
             Err(Error::RevealTypeMismatch)
         }
@@ -81,32 +80,37 @@ pub async fn execute_internal_operation(
     }
 }
 
-pub fn execute_operation(
+pub async fn execute_operation(
     hrt: &mut Host,
     tx: &mut Transaction,
     signed_operation: SignedOperation,
     ticketer: &ContractKt1Hash,
     injector: &PublicKey,
 ) -> Receipt {
-    let op_hash = signed_operation.hash();
-    let op: std::result::Result<Operation, Error> = signed_operation.verify();
-    let op_hash = match &op {
-        // If the operation is a reveal large payload operation, use the original operation hash
-        Ok(Operation {
-            content: Content::RevealLargePayload(reveal),
-            ..
-        }) => reveal.original_op_hash.clone(),
-        _ => op_hash,
+    let validity = signed_operation
+        .verify()
+        .and_then(|_| signed_operation.verify_nonce(hrt, tx));
+    let op = signed_operation.into();
+    let op_hash = resolve_operation_hash(&op);
+    let result = match validity {
+        Ok(_) => execute_operation_inner(hrt, tx, op, ticketer, injector).await,
+        Err(err) => Err(err),
     };
-
-    op.and_then(|op| {
-        op.verify_nonce(hrt, tx)?;
-        execute_operation_inner(hrt, tx, op, ticketer, injector)
-    })
-    .map_or_else(
+    result.map_or_else(
         |e| Receipt::new(op_hash, Err(e)),
         |(hash, content)| Receipt::new(hash, Ok(content)),
     )
+}
+
+fn resolve_operation_hash(op: &Operation) -> Blake2b {
+    match &op {
+        // If the operation is a reveal large payload operation, use the original operation hash
+        Operation {
+            content: Content::RevealLargePayload(reveal),
+            ..
+        } => reveal.original_op_hash.clone(),
+        _ => op.hash(),
+    }
 }
 
 #[cfg(test)]
@@ -223,8 +227,8 @@ mod tests {
         })
         .expect("should prepare preimages")
     }
-    #[test]
-    fn reveals_large_payload_operation() {
+    #[tokio::test]
+    async fn reveals_large_payload_operation() {
         let mut mock_host = MockHost::default();
         let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
@@ -235,11 +239,12 @@ mod tests {
         let root_hash = make_data_available(&mut mock_host, deploy_op.clone());
         let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1, deploy_op.hash());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
+        let receipt =
+            execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1).await;
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
     }
-    #[test]
-    fn throws_error_if_reveal_type_not_supported() {
+    #[tokio::test]
+    async fn throws_error_if_reveal_type_not_supported() {
         let mut mock_host = MockHost::default();
         let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
@@ -250,7 +255,8 @@ mod tests {
         let root_hash = make_data_available(&mut mock_host, run_op.clone());
         let rdc_op = signed_rdc_op(root_hash, pk1.clone(), sk1.clone(), run_op.hash());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let receipt = execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1);
+        let receipt =
+            execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1).await;
         println!("receipt: {:?}", receipt);
         assert!(matches!(
             receipt.result,
@@ -258,8 +264,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn throws_if_nonce_is_invalid() {
+    #[tokio::test]
+    async fn throws_if_nonce_is_invalid() {
         let mut mock_host = MockHost::default();
         let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
@@ -268,16 +274,18 @@ mod tests {
         let deploy_op = make_signed_op(deploy_function_content(), pk.clone(), sk.clone());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt =
-            execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer, &pk);
+            execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer, &pk)
+                .await;
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
-        let receipt = execute_operation(&mut host, &mut tx, deploy_op, &ticketer, &pk);
+        let receipt =
+            execute_operation(&mut host, &mut tx, deploy_op, &ticketer, &pk).await;
         assert!(
             matches!(receipt.result, ReceiptResult::Failed(e) if e.contains("InvalidNonce"))
         );
     }
 
-    #[test]
-    fn throws_if_injector_is_invalid() {
+    #[tokio::test]
+    async fn throws_if_injector_is_invalid() {
         let mut mock_host = MockHost::default();
         let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
@@ -289,15 +297,15 @@ mod tests {
         let rdc_op = signed_rdc_op(root_hash, pk2.clone(), sk2, deploy_op.hash());
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt =
-            execute_operation(&mut host, &mut tx, rdc_op.clone(), &ticketer, &pk1);
+            execute_operation(&mut host, &mut tx, rdc_op.clone(), &ticketer, &pk1).await;
         assert!(
             matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidInjector"))
         );
         assert_eq!(receipt.hash().to_string(), deploy_op.hash().to_string());
     }
 
-    #[test]
-    fn run_function_with_invalid_scheme_fails() {
+    #[tokio::test]
+    async fn run_function_with_invalid_scheme_fails() {
         let mut mock_host = MockHost::default();
         let mut host = Host::new(&mut mock_host);
         let mut tx = Transaction::default();
@@ -319,7 +327,8 @@ mod tests {
         );
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
 
-        let receipt = execute_operation(&mut host, &mut tx, run_op, &ticketer, &pk1);
+        let receipt =
+            execute_operation(&mut host, &mut tx, run_op, &ticketer, &pk1).await;
 
         assert!(
             matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidScheme"))
