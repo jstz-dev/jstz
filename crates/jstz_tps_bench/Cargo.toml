@@ -23,7 +23,6 @@ jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
 tezos-smart-rollup = { workspace = true, features =  ["utils"] }
 tezos-smart-rollup-core.workspace = true
-tezos-smart-rollup-host.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 serde.workspace = true

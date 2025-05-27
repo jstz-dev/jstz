@@ -6,7 +6,7 @@ use std::{
 
 use derive_more::{Deref, DerefMut};
 
-use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
+use tezos_smart_rollup::{host::Runtime, storage::path::OwnedPath};
 
 use super::{
     outbox::{

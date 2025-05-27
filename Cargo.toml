@@ -140,10 +140,6 @@ features = [
   "proto-alpha",
 ]
 
-[workspace.dependencies.tezos-smart-rollup-host]
-version = "0.2.2"
-features = ["proto-alpha"]
-
 [workspace.dependencies.tezos-smart-rollup-core]
 version = "0.2.2"
 
@@ -183,7 +179,6 @@ branch = "v2.1.10-jstz"
 
 [patch.crates-io]
 tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
-tezos-smart-rollup-host = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
 tezos-smart-rollup-core = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
 tezos-smart-rollup-mock = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
 tezos-smart-rollup-encoding = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
