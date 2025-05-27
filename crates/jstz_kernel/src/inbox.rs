@@ -1,6 +1,6 @@
 use jstz_core::{host::WriteDebug, BinEncodable};
 use jstz_proto::context::account::Address;
-use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperation};
+use jstz_proto::operation::{internal::Deposit, InternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
@@ -17,7 +17,7 @@ pub use tezos_smart_rollup::{
 use crate::parsing::try_parse_fa_deposit;
 
 pub type ExternalMessage = SignedOperation;
-pub type InternalMessage = ExternalOperation;
+pub type InternalMessage = InternalOperation;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Message {
@@ -224,12 +224,15 @@ fn read_external_message(
 #[cfg(test)]
 mod test {
     use jstz_core::host::WriteDebug;
-    use jstz_crypto::hash::Hash;
-    use jstz_crypto::smart_function_hash::SmartFunctionHash;
-    use jstz_mock::message::native_deposit::MockNativeDeposit;
-    use jstz_mock::{host::JstzMockHost, message::fa_deposit::MockFaDeposit};
-    use jstz_proto::context::account::{Address, Addressable};
-    use jstz_proto::operation::{external, Content, ExternalOperation};
+    use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+    use jstz_mock::{
+        host::JstzMockHost,
+        message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
+    };
+    use jstz_proto::{
+        context::account::{Address, Addressable},
+        operation::{internal, Content, InternalOperation},
+    };
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait, SmartRollupHash};
     use tezos_smart_rollup::types::SmartRollupAddress;
 
@@ -257,7 +260,7 @@ mod test {
         let deposit = MockNativeDeposit::default();
         let ticketer = host.get_ticketer();
         host.add_internal_message(&deposit);
-        if let Message::Internal(InternalMessage::Deposit(external::Deposit {
+        if let Message::Internal(InternalMessage::Deposit(internal::Deposit {
             amount,
             receiver,
             ..
@@ -317,7 +320,7 @@ mod test {
         let ticketer = host.get_ticketer();
         host.add_internal_message(&fa_deposit);
 
-        if let Message::Internal(InternalMessage::FaDeposit(external::FaDeposit {
+        if let Message::Internal(InternalMessage::FaDeposit(internal::FaDeposit {
             amount,
             receiver,
             proxy_smart_function,
@@ -399,7 +402,7 @@ mod test {
         };
 
         assert!(
-            matches!(transfer, ExternalOperation::Deposit(..)),
+            matches!(transfer, InternalOperation::Deposit(..)),
             "Expected Deposit"
         );
     }
