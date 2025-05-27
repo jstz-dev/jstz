@@ -32,27 +32,27 @@ pub enum RollupDataDir {
     Temp,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Default)]
 pub struct OctezRollupConfigBuilder {
     /// global options:
     /// Path to the octez-smart-rollup-node binary
     /// If None, use `octez-smart-rollup-node`
     binary_path: Option<PathBuf>,
     /// Path to octez client base dir
-    octez_client_base_dir: PathBuf,
+    octez_client_base_dir: Option<PathBuf>,
     /// RPC endpoint for the octez-node
-    octez_node_endpoint: Endpoint,
+    octez_node_endpoint: Option<Endpoint>,
     /// Type of Proof-generating Virtual Machine (PVM) that interprets the kernel
     pvm_kind: Option<SmartRollupPvmKind>,
     /// Run options:
     /// Path to the smart rollup data directory
     data_dir: Option<RollupDataDir>,
     /// The rollup address
-    address: SmartRollupHash,
+    address: Option<SmartRollupHash>,
     /// The rollup operator alias | address
-    operator: String,
+    operator: Option<String>,
     /// The path to the kernel installer hex file
-    boot_sector_file: PathBuf,
+    boot_sector_file: Option<PathBuf>,
     /// HTTP endpoint of the rollup node RPC interface,
     /// if None, use localhost with random port
     pub rpc_endpoint: Option<Endpoint>,
@@ -62,6 +62,7 @@ pub struct OctezRollupConfigBuilder {
     /// Path to the log file.
     log_file: Option<PathBuf>,
     /// The history mode
+    #[serde(default)]
     history_mode: HistoryMode,
 }
 
@@ -78,11 +79,11 @@ impl OctezRollupConfigBuilder {
             binary_path: None,
             pvm_kind: None,
             data_dir: None,
-            octez_node_endpoint,
-            octez_client_base_dir,
-            address,
-            operator,
-            boot_sector_file,
+            octez_node_endpoint: Some(octez_node_endpoint),
+            octez_client_base_dir: Some(octez_client_base_dir),
+            address: Some(address),
+            operator: Some(operator),
+            boot_sector_file: Some(boot_sector_file),
             rpc_endpoint: None,
             kernel_debug_file: None,
             log_file: None,
@@ -92,6 +93,31 @@ impl OctezRollupConfigBuilder {
 
     pub fn set_binary_path(mut self, binary_path: &str) -> Self {
         self.binary_path = Some(PathBuf::from(binary_path));
+        self
+    }
+
+    pub fn set_octez_client_base_dir(mut self, base_dir: PathBuf) -> Self {
+        self.octez_client_base_dir = Some(base_dir);
+        self
+    }
+
+    pub fn set_octez_node_endpoint(mut self, endpoint: &Endpoint) -> Self {
+        self.octez_node_endpoint = Some(endpoint.clone());
+        self
+    }
+
+    pub fn set_address(mut self, address: SmartRollupHash) -> Self {
+        self.address = Some(address);
+        self
+    }
+
+    pub fn set_operator(mut self, operator: String) -> Self {
+        self.operator = Some(operator);
+        self
+    }
+
+    pub fn set_boot_sector_file(mut self, file: PathBuf) -> Self {
+        self.boot_sector_file = Some(file);
         self
     }
 
@@ -120,20 +146,52 @@ impl OctezRollupConfigBuilder {
         self
     }
 
+    // Getter methods to check if fields are set
+    pub fn has_octez_client_base_dir(&self) -> bool {
+        self.octez_client_base_dir.is_some()
+    }
+
+    pub fn has_octez_node_endpoint(&self) -> bool {
+        self.octez_node_endpoint.is_some()
+    }
+
+    pub fn has_address(&self) -> bool {
+        self.address.is_some()
+    }
+
+    pub fn has_operator(&self) -> bool {
+        self.operator.is_some()
+    }
+
+    pub fn has_boot_sector_file(&self) -> bool {
+        self.boot_sector_file.is_some()
+    }
+
     pub fn build(self) -> Result<OctezRollupConfig> {
         Ok(OctezRollupConfig {
             binary_path: self
                 .binary_path
                 .unwrap_or(PathBuf::from(DEFAULT_BINARY_PATH)),
-            octez_client_base_dir: self.octez_client_base_dir,
-            octez_node_endpoint: self.octez_node_endpoint,
+            octez_client_base_dir: self
+                .octez_client_base_dir
+                .ok_or_else(|| anyhow::anyhow!("octez_client_base_dir is required"))?,
+            octez_node_endpoint: self
+                .octez_node_endpoint
+                .ok_or_else(|| anyhow::anyhow!("octez_node_endpoint is required"))?,
             pvm_kind: self.pvm_kind.unwrap_or(SmartRollupPvmKind::Wasm),
             data_dir: self.data_dir.unwrap_or(RollupDataDir::Temp),
-            address: self.address,
-            operator: self.operator,
-            boot_sector_file: self.boot_sector_file,
+            address: self
+                .address
+                .ok_or_else(|| anyhow::anyhow!("address is required"))?,
+            operator: self
+                .operator
+                .ok_or_else(|| anyhow::anyhow!("operator is required"))?,
+            boot_sector_file: self
+                .boot_sector_file
+                .ok_or_else(|| anyhow::anyhow!("boot_sector_file is required"))?,
             rpc_endpoint: self.rpc_endpoint.unwrap_or_else(|| {
-                let uri = Uri::from_str(&format!("127.0.0.1:{}", unused_port())).unwrap();
+                let port = unused_port();
+                let uri = Uri::from_str(&format!("127.0.0.1:{}", port)).unwrap();
                 Endpoint::try_from(uri).unwrap()
             }),
             kernel_debug_file: self.kernel_debug_file.map(Arc::new),
@@ -146,7 +204,7 @@ impl OctezRollupConfigBuilder {
     }
 }
 
-#[derive(Clone, Serialize)]
+#[derive(Clone, Serialize, Debug)]
 pub struct OctezRollupConfig {
     pub binary_path: PathBuf,
     pub octez_client_base_dir: PathBuf,
@@ -361,5 +419,51 @@ mod test {
                 "history_mode": "full"
             })
         );
+    }
+
+    #[test]
+    fn deserialize_minimal_config() {
+        // Test that we can deserialize a config with just rpc_endpoint
+        let json = serde_json::json!({
+            "rpc_endpoint": "http://0.0.0.0:18741"
+        });
+
+        let builder: OctezRollupConfigBuilder = serde_json::from_value(json).unwrap();
+        assert_eq!(
+            builder.rpc_endpoint.unwrap(),
+            Endpoint::try_from(Uri::from_str("http://0.0.0.0:18741").unwrap()).unwrap()
+        );
+        assert!(builder.octez_client_base_dir.is_none());
+        assert!(builder.octez_node_endpoint.is_none());
+        assert!(builder.address.is_none());
+        assert!(builder.operator.is_none());
+        assert!(builder.boot_sector_file.is_none());
+    }
+
+    #[test]
+    fn deserialize_empty_config() {
+        // Test that we can deserialize an empty config
+        let json = serde_json::json!({});
+
+        let builder: OctezRollupConfigBuilder = serde_json::from_value(json).unwrap();
+        assert!(builder.rpc_endpoint.is_none());
+        assert!(builder.octez_client_base_dir.is_none());
+        assert!(builder.octez_node_endpoint.is_none());
+        assert!(builder.address.is_none());
+        assert!(builder.operator.is_none());
+        assert!(builder.boot_sector_file.is_none());
+    }
+
+    #[test]
+    fn build_fails_without_required_fields() {
+        // Test that build() fails when required fields are missing
+        let builder = OctezRollupConfigBuilder::default().set_rpc_endpoint(
+            &Endpoint::try_from(Uri::from_str("http://0.0.0.0:18741").unwrap()).unwrap(),
+        );
+
+        let result = builder.build();
+        assert!(result.is_err());
+        let error_msg = format!("{}", result.unwrap_err());
+        assert!(error_msg.contains("octez_client_base_dir is required"));
     }
 }
