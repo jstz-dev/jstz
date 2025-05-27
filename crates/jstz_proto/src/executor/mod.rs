@@ -1,6 +1,6 @@
 use crate::{
     operation::{
-        self, Content, ExternalOperation, Operation, OperationHash, SignedOperation,
+        self, Content, InternalOperation, Operation, OperationHash, SignedOperation,
     },
     receipt::{self, Receipt},
     Error, Result,
@@ -64,15 +64,15 @@ fn execute_operation_inner(
     }
 }
 
-pub fn execute_external_operation(
+pub async fn execute_internal_operation(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
-    external_operation: ExternalOperation,
+    internal_operation: InternalOperation,
 ) -> Receipt {
-    match external_operation {
-        ExternalOperation::Deposit(deposit) => deposit::execute(hrt, tx, deposit),
-        ExternalOperation::FaDeposit(fa_deposit) => {
-            fa_deposit::execute(hrt, tx, fa_deposit)
+    match internal_operation {
+        InternalOperation::Deposit(deposit) => deposit::execute(hrt, tx, deposit),
+        InternalOperation::FaDeposit(fa_deposit) => {
+            fa_deposit::execute(hrt, tx, fa_deposit).await
         }
     }
 }

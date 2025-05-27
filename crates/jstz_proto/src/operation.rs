@@ -240,7 +240,7 @@ impl SignedOperation {
     }
 }
 
-pub mod external {
+pub mod internal {
     use tezos_smart_rollup::michelson::ticket::TicketHash;
 
     use super::*;
@@ -293,9 +293,9 @@ pub mod external {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub enum ExternalOperation {
-    Deposit(external::Deposit),
-    FaDeposit(external::FaDeposit),
+pub enum InternalOperation {
+    Deposit(internal::Deposit),
+    FaDeposit(internal::FaDeposit),
 }
 
 pub mod openapi {

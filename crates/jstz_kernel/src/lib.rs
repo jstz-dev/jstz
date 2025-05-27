@@ -23,7 +23,7 @@ fn read_injector(rt: &impl Runtime) -> Option<PublicKey> {
     Storage::get(rt, &INJECTOR).ok()?
 }
 
-fn handle_message(
+async fn handle_message(
     hrt: &mut impl Runtime,
     message: Message,
     ticketer: &ContractKt1Hash,
@@ -31,9 +31,9 @@ fn handle_message(
     injector: &PublicKey,
 ) -> Result<()> {
     match message {
-        Message::Internal(external_operation) => {
+        Message::Internal(internal_operation) => {
             let receipt =
-                executor::execute_external_operation(hrt, tx, external_operation);
+                executor::execute_internal_operation(hrt, tx, internal_operation).await;
             receipt.write(hrt, tx)?
         }
         Message::External(signed_operation) => {
@@ -55,19 +55,22 @@ fn handle_message(
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
-    // TODO: we should organize protocol consts into a struct
-    // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
-    let ticketer = read_ticketer(rt).expect("Ticketer not found");
-    let injector = read_injector(rt).expect("Revealer not found");
-    let mut tx = Transaction::default();
-    tx.begin();
-    if let Some(message) = read_message(rt, &ticketer) {
-        handle_message(rt, message, &ticketer, &mut tx, &injector)
-            .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
-    }
-    if let Err(commit_error) = tx.commit(rt) {
-        debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");
-    }
+    futures::executor::block_on(async {
+        // TODO: we should organize protocol consts into a struct
+        // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
+        let ticketer = read_ticketer(rt).expect("Ticketer not found");
+        let injector = read_injector(rt).expect("Revealer not found");
+        let mut tx = Transaction::default();
+        tx.begin();
+        if let Some(message) = read_message(rt, &ticketer) {
+            handle_message(rt, message, &ticketer, &mut tx, &injector)
+                .await
+                .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
+        }
+        if let Err(commit_error) = tx.commit(rt) {
+            debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");
+        }
+    })
 }
 
 #[cfg(test)]
@@ -173,7 +176,6 @@ mod test {
     #[test]
     fn entry_fa_deposit_succeeds_with_invalid_proxy() {
         let mut host = JstzMockHost::default();
-
         let deposit = MockFaDeposit::default();
 
         host.add_internal_message(&deposit);

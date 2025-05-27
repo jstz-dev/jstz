@@ -6,8 +6,10 @@
 use jstz_core::{host::WriteDebug, BinEncodable};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_proto::operation::external::FaDeposit;
-use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperation};
+use jstz_proto::operation::{
+    internal::{Deposit, FaDeposit},
+    InternalOperation, SignedOperation,
+};
 use jstz_proto::{context::account::Address, Result};
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
@@ -23,7 +25,7 @@ pub use tezos_smart_rollup::{
 };
 
 pub type ExternalMessage = SignedOperation;
-pub type InternalMessage = ExternalOperation;
+pub type InternalMessage = InternalOperation;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Message {
@@ -267,8 +269,8 @@ mod test {
     use jstz_core::host::WriteDebug;
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_proto::context::account::{Address, Addressable};
-    use jstz_proto::operation::external::FaDeposit;
-    use jstz_proto::operation::{Content, ExternalOperation};
+    use jstz_proto::operation::internal::FaDeposit;
+    use jstz_proto::operation::{Content, InternalOperation};
     use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
     use tezos_smart_rollup::michelson::ticket::{FA2_1Ticket, Ticket};
     use tezos_smart_rollup::michelson::{
@@ -337,7 +339,7 @@ mod test {
         };
 
         assert!(
-            matches!(transfer, ExternalOperation::Deposit(..)),
+            matches!(transfer, InternalOperation::Deposit(..)),
             "Expected Deposit"
         );
     }

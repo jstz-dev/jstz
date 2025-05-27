@@ -1,6 +1,6 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_proto::operation::external::FaDeposit;
+use jstz_proto::operation::internal::FaDeposit;
 use jstz_proto::{context::account::Address, Result};
 use num_traits::ToPrimitive;
 use tezos_smart_rollup::michelson::{ticket::FA2_1Ticket, MichelsonContract};
@@ -57,7 +57,7 @@ mod test {
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_proto::{
         context::account::{Address, Addressable},
-        operation::external::FaDeposit,
+        operation::internal::FaDeposit,
     };
     use tezos_smart_rollup::{
         michelson::{

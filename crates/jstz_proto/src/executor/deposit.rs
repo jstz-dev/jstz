@@ -3,7 +3,7 @@ use jstz_crypto::hash::Blake2b;
 
 use crate::{
     context::account::Account,
-    operation::external::Deposit,
+    operation::internal::Deposit,
     receipt::{DepositReceipt, Receipt},
 };
 
@@ -36,7 +36,7 @@ mod test {
 
     use crate::{
         context::account::Address,
-        operation::external::Deposit,
+        operation::internal::Deposit,
         receipt::{DepositReceipt, ReceiptContent, ReceiptResult},
     };
 
