@@ -57,7 +57,8 @@ async fn handle_message(
                 signed_operation,
                 ticketer,
                 injector,
-            );
+            )
+            .await;
             debug_msg!(hrt, "Receipt: {receipt:?}\n");
             receipt.write(hrt, tx)?
         }
