@@ -36,7 +36,7 @@ fn read_injector(rt: &impl Runtime) -> Option<PublicKey> {
     Storage::get(rt, &INJECTOR).ok()?
 }
 
-fn handle_message(
+async fn handle_message(
     hrt: &mut Host,
     message: Message,
     ticketer: &ContractKt1Hash,
@@ -44,9 +44,9 @@ fn handle_message(
     injector: &PublicKey,
 ) -> Result<()> {
     match message {
-        Message::Internal(external_operation) => {
+        Message::Internal(internal_operation) => {
             let receipt =
-                executor::execute_external_operation(hrt, tx, external_operation);
+                executor::execute_internal_operation(hrt, tx, internal_operation).await;
             receipt.write(hrt, tx)?
         }
         Message::External(signed_operation) => {
@@ -72,10 +72,10 @@ pub fn entry(rt: &mut impl Runtime) {
         global_host.replace(rt);
         global_host.new_host()
     });
-    run(host);
+    futures::executor::block_on(run(host));
 }
 
-fn run(mut host: Host) {
+async fn run(mut host: Host) {
     let host = &mut host;
     // TODO: we should organize protocol consts into a struct
     // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
@@ -85,6 +85,7 @@ fn run(mut host: Host) {
     tx.begin();
     if let Some(message) = read_message(host, &ticketer) {
         handle_message(host, message, &ticketer, &mut tx, &injector)
+            .await
             .unwrap_or_else(|err| debug_msg!(host, "[🔴] {err:?}\n"));
     }
     if let Err(commit_error) = tx.commit(host) {
@@ -118,7 +119,7 @@ mod test {
 
     fn wrapped_run(rt: &mut impl HostRuntime) {
         let host = Host::new(rt);
-        run(host);
+        futures::executor::block_on(run(host))
     }
 
     #[test]
@@ -203,7 +204,6 @@ mod test {
     #[test]
     fn entry_fa_deposit_succeeds_with_invalid_proxy() {
         let mut host = JstzMockHost::default();
-
         let deposit = MockFaDeposit::default();
 
         host.add_internal_message(&deposit);

@@ -1,6 +1,6 @@
 use jstz_core::BinEncodable;
 use jstz_proto::context::account::Address;
-use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperation};
+use jstz_proto::operation::{internal::Deposit, InternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
@@ -18,7 +18,7 @@ use tezos_smart_rollup::{
 use crate::parsing::try_parse_fa_deposit;
 
 pub type ExternalMessage = SignedOperation;
-pub type InternalMessage = ExternalOperation;
+pub type InternalMessage = InternalOperation;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Message {
@@ -196,7 +196,7 @@ mod test {
     use jstz_mock::message::native_deposit::MockNativeDeposit;
     use jstz_mock::{host::JstzMockHost, message::fa_deposit::MockFaDeposit};
     use jstz_proto::context::account::{Address, Addressable};
-    use jstz_proto::operation::external;
+    use jstz_proto::operation::internal;
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
     use tezos_smart_rollup::types::SmartRollupAddress;
 
@@ -224,7 +224,7 @@ mod test {
         let deposit = MockNativeDeposit::default();
         let ticketer = host.get_ticketer();
         host.add_internal_message(&deposit);
-        if let Message::Internal(InternalMessage::Deposit(external::Deposit {
+        if let Message::Internal(InternalMessage::Deposit(internal::Deposit {
             amount,
             receiver,
             ..
@@ -284,7 +284,7 @@ mod test {
         let ticketer = host.get_ticketer();
         host.add_internal_message(&fa_deposit);
 
-        if let Message::Internal(InternalMessage::FaDeposit(external::FaDeposit {
+        if let Message::Internal(InternalMessage::FaDeposit(internal::FaDeposit {
             amount,
             receiver,
             proxy_smart_function,
