@@ -3009,6 +3009,7 @@ dependencies = [
  "derive_more",
  "dirs 3.0.2",
  "env_logger",
+ "futures",
  "futures-util",
  "hex",
  "jstz_api",

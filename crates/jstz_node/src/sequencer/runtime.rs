@@ -58,7 +58,9 @@ pub fn process_message(rt: &mut impl Runtime, op: SignedOperation) -> anyhow::Re
     let injector = read_injector(rt).ok_or(anyhow!("Revealer not found"))?;
     let mut tx = Transaction::default();
     tx.begin();
-    let receipt = execute_operation(rt, &mut tx, op, &ticketer, &injector);
+    let receipt = futures::executor::block_on(execute_operation(
+        rt, &mut tx, op, &ticketer, &injector,
+    ));
     receipt
         .write(rt, &mut tx)
         .map_err(|e| anyhow!("failed to write receipt: {e}"))?;
