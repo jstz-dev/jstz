@@ -1,5 +1,4 @@
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
-use octez::r#async::rollup::HistoryMode;
 use rust_embed::Embed;
 
 use crate::task::jstzd::JstzdConfig;
@@ -66,7 +65,6 @@ pub const BOOTSTRAP_ACCOUNTS: [(&str, &str, &str); 6] = [
 ];
 pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
 const BOOTSTRAP_ACCOUNT_BALANCE: u64 = 100_000_000_000;
-const DEFAULT_ROLLUP_HISTORY_MODE: HistoryMode = HistoryMode::Archive;
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
@@ -85,6 +83,8 @@ pub struct Config {
     #[serde(default)]
     octez_baker: OctezBakerConfigBuilder,
     octez_client: Option<OctezClientConfigBuilder>,
+    #[serde(default)]
+    octez_rollup: Option<OctezRollupConfigBuilder>,
     #[serde(default)]
     protocol: ProtocolParameterBuilder,
 }
@@ -128,20 +128,37 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
     let octez_node_endpoint = octez_node_config.rpc_endpoint.clone();
     let kernel_debug_file = FileWrapper::default();
     let kernel_debug_file_path = kernel_debug_file.path();
-    let octez_rollup_config = OctezRollupConfigBuilder::new(
-        octez_node_endpoint,
-        octez_client_config.base_dir().into(),
-        SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
-        ROLLUP_OPERATOR_ACCOUNT_ALIAS.to_string(),
-        jstz_rollup_path::kernel_installer_path(),
-        Some(DEFAULT_ROLLUP_HISTORY_MODE),
-    )
-    .set_data_dir(RollupDataDir::TempWithPreImages {
-        preimages_dir: jstz_rollup_path::preimages_path(),
-    })
-    .set_kernel_debug_file(kernel_debug_file)
-    .build()
-    .unwrap();
+
+    let mut rollup_builder = config.octez_rollup.unwrap_or_default();
+
+    if !rollup_builder.has_octez_client_base_dir() {
+        rollup_builder = rollup_builder
+            .set_octez_client_base_dir(octez_client_config.base_dir().into());
+    }
+    if !rollup_builder.has_octez_node_endpoint() {
+        rollup_builder = rollup_builder.set_octez_node_endpoint(&octez_node_endpoint);
+    }
+    if !rollup_builder.has_address() {
+        rollup_builder = rollup_builder.set_address(
+            SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap(),
+        );
+    }
+    if !rollup_builder.has_operator() {
+        rollup_builder =
+            rollup_builder.set_operator(ROLLUP_OPERATOR_ACCOUNT_ALIAS.to_string());
+    }
+    if !rollup_builder.has_boot_sector_file() {
+        rollup_builder = rollup_builder
+            .set_boot_sector_file(jstz_rollup_path::kernel_installer_path());
+    }
+
+    let octez_rollup_config = rollup_builder
+        .set_data_dir(RollupDataDir::TempWithPreImages {
+            preimages_dir: jstz_rollup_path::preimages_path(),
+        })
+        .set_kernel_debug_file(kernel_debug_file)
+        .build()
+        .unwrap();
 
     let jstz_node_rpc_endpoint =
         Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
@@ -487,6 +504,62 @@ mod tests {
             serde_json::from_value::<Config>(serde_json::json!({"server_port":5678}))
                 .unwrap();
         assert_eq!(config.server_port, Some(5678));
+    }
+
+    #[test]
+    fn deserialize_config_partial_rollup() {
+        let config = serde_json::from_value::<Config>(serde_json::json!({
+            "octez_rollup": {
+                "rpc_endpoint": "http://0.0.0.0:18741"
+            }
+        }))
+        .unwrap();
+
+        assert!(config.octez_rollup.is_some());
+        let builder = config.octez_rollup.unwrap();
+        assert!(builder.rpc_endpoint.is_some());
+        assert!(!builder.has_octez_client_base_dir());
+        assert!(!builder.has_octez_node_endpoint());
+        assert!(!builder.has_address());
+        assert!(!builder.has_operator());
+        assert!(!builder.has_boot_sector_file());
+    }
+
+    #[tokio::test]
+    async fn build_config_with_partial_rollup() {
+        let mut tmp_file = NamedTempFile::new().unwrap();
+        let content = serde_json::to_string(&serde_json::json!({
+            "octez_rollup": {
+                "rpc_endpoint": "http://0.0.0.0:18741"
+            }
+        }))
+        .unwrap();
+        tmp_file.write_all(content.as_bytes()).unwrap();
+
+        let (port, config) = super::build_config_from_path(&Some(
+            tmp_file.path().to_str().unwrap().to_owned(),
+        ))
+        .await
+        .unwrap();
+
+        // Should successfully build with defaults
+        assert_eq!(port, super::DEFAULT_JSTZD_SERVER_PORT);
+
+        // Check that the RPC endpoint was preserved
+        assert_eq!(
+            config.octez_rollup_config().rpc_endpoint,
+            Endpoint::try_from(Uri::from_str("http://0.0.0.0:18741").unwrap()).unwrap()
+        );
+
+        // Check that defaults were applied
+        assert_eq!(
+            config.octez_rollup_config().address.to_base58_check(),
+            JSTZ_ROLLUP_ADDRESS
+        );
+        assert_eq!(
+            config.octez_rollup_config().operator,
+            super::ROLLUP_OPERATOR_ACCOUNT_ALIAS
+        );
     }
 
     #[test]

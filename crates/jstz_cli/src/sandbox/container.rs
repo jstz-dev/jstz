@@ -57,6 +57,7 @@ pub(crate) async fn start_container(
         mounts,
         Some(vec![
             SANDBOX_OCTEZ_NODE_RPC_PORT,
+            SANDBOX_OCTEZ_ROLLUP_RPC_PORT,
             SANDBOX_JSTZ_NODE_PORT,
             54321,
         ]),
@@ -178,6 +179,9 @@ async fn create_config_file_and_client_dir() -> Result<(PathBuf, PathBuf)> {
         },
         "octez_node": {
             "rpc_endpoint": format!("0.0.0.0:{SANDBOX_OCTEZ_NODE_RPC_PORT}")
+        },
+        "octez_rollup": {
+            "rpc_endpoint": format!("http://0.0.0.0:{SANDBOX_OCTEZ_ROLLUP_RPC_PORT}")
         },
     })).context("Failed to serialise sandbox config")?;
     let config_file_path = NamedTempFile::new()
@@ -343,7 +347,7 @@ async fn attach_container(
 
 #[cfg(test)]
 mod tests {
-    use crate::sandbox::SANDBOX_OCTEZ_NODE_RPC_PORT;
+    use crate::sandbox::{SANDBOX_OCTEZ_NODE_RPC_PORT, SANDBOX_OCTEZ_ROLLUP_RPC_PORT};
     use bollard::{
         container::{Config as ContainerConfig, CreateContainerOptions},
         secret::{HostConfig, Mount, MountTypeEnum, PortBinding},
@@ -477,6 +481,9 @@ mod tests {
                 },
                 "octez_node": {
                     "rpc_endpoint": format!("0.0.0.0:{SANDBOX_OCTEZ_NODE_RPC_PORT}")
+                },
+                "octez_rollup": {
+                    "rpc_endpoint": format!("http://0.0.0.0:{SANDBOX_OCTEZ_ROLLUP_RPC_PORT}")
                 },
             })
         );
