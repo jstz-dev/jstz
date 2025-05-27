@@ -17,6 +17,7 @@ crate-type = ["cdylib", "lib"]
 bincode.workspace = true
 boa_engine.workspace = true
 hex.workspace = true
+futures.workspace = true
 http-serde.workspace = true
 http.workspace = true
 jstz_api = { path = "../jstz_api" }

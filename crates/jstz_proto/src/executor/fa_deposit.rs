@@ -11,7 +11,7 @@ use utoipa::ToSchema;
 use crate::{
     context::{account::Address, account::Amount, ticket_table::TicketTable},
     executor::smart_function,
-    operation::{external::FaDeposit, RunFunction},
+    operation::{internal::FaDeposit, RunFunction},
     receipt::Receipt,
     Result,
 };
@@ -78,7 +78,7 @@ fn new_run_function(
     })
 }
 
-fn deposit_to_proxy_contract(
+async fn deposit_to_proxy_contract(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
     deposit: &FaDeposit,
@@ -86,14 +86,9 @@ fn deposit_to_proxy_contract(
 ) -> Result<FaDepositReceipt> {
     let run = new_run_function(deposit.to_http_body(), proxy_contract)?;
     let source = PublicKeyHash::from_base58(NULL_ADDRESS)?;
-    // Temporarily block on
-    let result = futures::executor::block_on(smart_function::run::execute(
-        rt,
-        tx,
-        &Address::User(source),
-        run,
-        deposit.hash(),
-    ));
+    let result =
+        smart_function::run::execute(rt, tx, &Address::User(source), run, deposit.hash())
+            .await;
     match result {
         Ok(run_receipt) => {
             if run_receipt.status_code.is_success() {
@@ -138,7 +133,7 @@ fn deposit_to_proxy_contract(
     }
 }
 
-fn execute_inner(
+async fn execute_inner(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
     deposit: &FaDeposit,
@@ -152,17 +147,18 @@ fn execute_inner(
             deposit.amount,
         ),
         Some(proxy_contract) => {
-            deposit_to_proxy_contract(rt, tx, deposit, proxy_contract)
+            deposit_to_proxy_contract(rt, tx, deposit, proxy_contract).await
         }
     }
 }
 
-pub fn execute(
+pub async fn execute(
     rt: &mut impl HostRuntime,
     tx: &mut Transaction,
     deposit: FaDeposit,
 ) -> Receipt {
     let content = execute_inner(rt, tx, &deposit)
+        .await
         .expect("Unreachable: Failed to execute fa deposit!\n");
     let operation_hash = deposit.hash();
     Receipt::new(
@@ -199,8 +195,8 @@ mod test {
         }
     }
 
-    #[test]
-    fn execute_fa_deposit_into_account_succeeds() {
+    #[tokio::test]
+    async fn execute_fa_deposit_into_account_succeeds() {
         let fa_deposit = mock_fa_deposit(None);
         let expected_receiver = fa_deposit.receiver.clone();
         let ticket_hash = fa_deposit.ticket_hash.clone();
@@ -209,7 +205,7 @@ mod test {
         let mut host = MockHost::default();
         let mut tx = Transaction::default();
         tx.begin();
-        let receipt = super::execute(&mut host, &mut tx, fa_deposit);
+        let receipt = super::execute(&mut host, &mut tx, fa_deposit).await;
 
         assert_eq!(expected_hash, *receipt.hash());
 
@@ -236,8 +232,8 @@ mod test {
         }
     }
 
-    #[test]
-    fn execute_multiple_fa_deposit_into_account_succeeds() {
+    #[tokio::test]
+    async fn execute_multiple_fa_deposit_into_account_succeeds() {
         let fa_deposit1 = mock_fa_deposit(None);
         let fa_deposit2 = mock_fa_deposit(None);
         let expected_receiver = fa_deposit2.receiver.clone();
@@ -247,8 +243,8 @@ mod test {
         let mut tx = Transaction::default();
         tx.begin();
 
-        let _ = super::execute(&mut host, &mut tx, fa_deposit1);
-        let receipt = super::execute(&mut host, &mut tx, fa_deposit2);
+        let _ = super::execute(&mut host, &mut tx, fa_deposit1).await;
+        let receipt = super::execute(&mut host, &mut tx, fa_deposit2).await;
 
         assert_eq!(expected_hash, *receipt.hash());
 
@@ -274,8 +270,8 @@ mod test {
         }
     }
 
-    #[test]
-    fn execute_fa_deposit_into_proxy_succeeds() {
+    #[tokio::test]
+    async fn execute_fa_deposit_into_proxy_succeeds() {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
         let mut tx = Transaction::default();
@@ -298,7 +294,7 @@ mod test {
         let ticket_hash = fa_deposit.ticket_hash.clone();
 
         let Receipt { result: inner, .. } =
-            super::execute(&mut host, &mut tx, fa_deposit);
+            super::execute(&mut host, &mut tx, fa_deposit).await;
 
         match inner {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
@@ -322,8 +318,8 @@ mod test {
         }
     }
 
-    #[test]
-    fn execute_multiple_fa_deposit_into_proxy_succeeds() {
+    #[tokio::test]
+    async fn execute_multiple_fa_deposit_into_proxy_succeeds() {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
         let mut tx = Transaction::default();
@@ -345,12 +341,12 @@ mod test {
         let fa_deposit1 = mock_fa_deposit(Some(proxy.clone()));
         let ticket_hash = fa_deposit1.ticket_hash.clone();
 
-        let _ = super::execute(&mut host, &mut tx, fa_deposit1);
+        let _ = super::execute(&mut host, &mut tx, fa_deposit1).await;
 
         let fa_deposit2 = mock_fa_deposit(Some(proxy.clone()));
 
         let Receipt { result: inner, .. } =
-            super::execute(&mut host, &mut tx, fa_deposit2);
+            super::execute(&mut host, &mut tx, fa_deposit2).await;
 
         match inner {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
@@ -374,8 +370,8 @@ mod test {
         }
     }
 
-    #[test]
-    fn execute_fa_deposit_fails_when_proxy_contract_fails() {
+    #[tokio::test]
+    async fn execute_fa_deposit_fails_when_proxy_contract_fails() {
         let mut host = MockHost::default();
         host.set_debug_handler(empty());
         let mut tx = Transaction::default();
@@ -396,7 +392,7 @@ mod test {
         let ticket_hash = fa_deposit.ticket_hash.clone();
 
         let Receipt { result: inner, .. } =
-            super::execute(&mut host, &mut tx, fa_deposit);
+            super::execute(&mut host, &mut tx, fa_deposit).await;
 
         match inner {
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
