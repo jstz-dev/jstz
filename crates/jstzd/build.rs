@@ -6,9 +6,12 @@ use std::{
     path::{Path, PathBuf},
 };
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup::storage::path::OwnedPath;
+use tezos_smart_rollup_host::path::OwnedPath;
 use tezos_smart_rollup_installer::{
     installer, preimages, KERNEL_BOOT_PATH, PREPARE_KERNEL_PATH,
+};
+use tezos_smart_rollup_installer_config::binary::owned::{
+    OwnedBytes, OwnedConfigInstruction, OwnedConfigProgram,
 };
 
 include!("build_config.rs");
@@ -106,7 +109,8 @@ fn make_kernel_installer(kernel_file: &Path, preimages_dir: &Path) -> Result<Str
             kernel_file.display()
         ));
     }
-    let root_hash = preimages::content_to_preimages(kernel_file, preimages_dir)?;
+    let contents = fs::read(kernel_file)?;
+    let root_hash = preimages::content_to_preimages(contents.as_slice(), preimages_dir)?;
     let installer_program = OwnedConfigProgram(vec![
         // 1. Prepare kernel installer
         OwnedConfigInstruction::reveal_instr(
