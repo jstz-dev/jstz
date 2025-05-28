@@ -187,7 +187,8 @@ async fn create_config_file_and_client_dir() -> Result<(PathBuf, PathBuf)> {
     let config_file_path = NamedTempFile::new()
         .context("Failed to create a file as the config file")?
         .into_temp_path()
-        .to_path_buf();
+        .keep()
+        .context("Failed to keep the config file path")?;
     fs::File::create(&config_file_path)
         .await
         .context("Failed to create config file")?
