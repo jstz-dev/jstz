@@ -1,4 +1,5 @@
 pub mod db;
+mod host;
 pub mod queue;
 pub mod worker;
 
