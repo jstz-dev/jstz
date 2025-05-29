@@ -1,6 +1,7 @@
 pub mod db;
 mod host;
 pub mod queue;
+pub mod runtime;
 pub mod worker;
 
 #[cfg(test)]
