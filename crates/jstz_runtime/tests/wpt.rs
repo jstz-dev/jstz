@@ -14,7 +14,6 @@ use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReportTest, WptServe,
     WptSubtest, WptSubtestStatus, WptTestStatus,
 };
-use parking_lot::FairMutex as Mutex;
 use regex::Regex;
 use serde::Deserialize;
 use std::{
@@ -23,7 +22,6 @@ use std::{
     future::IntoFuture,
     path::{Path, PathBuf},
     str::FromStr,
-    sync::Arc,
 };
 use tezos_smart_rollup_mock::MockHost;
 use tokio::io::AsyncWriteExt;
@@ -245,7 +243,7 @@ deno_core::extension!(
     esm = [dir "tests", "test_harness_api.js"],
 );
 
-fn init_runtime(host: &mut impl HostRuntime, tx: Transaction) -> JstzRuntime {
+fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntime {
     let address =
         SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton").unwrap();
 
@@ -255,12 +253,7 @@ fn init_runtime(host: &mut impl HostRuntime, tx: Transaction) -> JstzRuntime {
         .push(test_harness_api::init_ops_and_esm());
 
     let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
-        protocol: Some(ProtocolContext::new(
-            host,
-            #[allow(clippy::arc_with_non_send_sync)]
-            Arc::new(Mutex::new(tx)),
-            address,
-        )),
+        protocol: Some(ProtocolContext::new(host, tx, address)),
         extensions: vec![test_harness_api::init_ops_and_esm()],
         ..Default::default()
     });
@@ -273,7 +266,7 @@ fn init_runtime(host: &mut impl HostRuntime, tx: Transaction) -> JstzRuntime {
 }
 
 pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
-    let tx = Transaction::default();
+    let mut tx = Transaction::default();
     tx.begin();
     let mut host = MockHost::default();
     host.set_debug_handler(std::io::empty());
@@ -291,7 +284,7 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
         }
     }
 
-    let mut rt = init_runtime(&mut host, tx);
+    let mut rt = init_runtime(&mut host, &mut tx);
 
     // Somehow each `execute_script` call has some strange side effect such that the global
     // test suite object is completed prematurely before all test cases are registered.
