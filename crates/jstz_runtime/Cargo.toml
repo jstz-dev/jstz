@@ -20,6 +20,7 @@ jstz_crypto = { path = "../jstz_crypto" }
 serde.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup.workspace = true
+tezos-smart-rollup-host.workspace = true
 utoipa.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

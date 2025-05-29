@@ -7,7 +7,7 @@ use jstz_core::{
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::Deserialize;
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup::storage::path::{OwnedPath, RefPath};
+use tezos_smart_rollup_host::path::{OwnedPath, RefPath};
 
 use crate::{
     error::Result,

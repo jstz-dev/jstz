@@ -14,7 +14,8 @@ use tezos_smart_rollup::{
 };
 
 use tezos_data_encoding::{enc::BinWriter, encoding::HasEncoding, nom::NomReader};
-use tezos_smart_rollup::{host::Runtime, storage::path::RefPath};
+use tezos_smart_rollup::host::Runtime;
+use tezos_smart_rollup_host::path::RefPath;
 
 use super::Storage;
 

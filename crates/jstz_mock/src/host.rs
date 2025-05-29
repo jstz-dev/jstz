@@ -6,13 +6,10 @@ use crate::message::MockInternalMessage;
 use derive_more::{Deref, DerefMut};
 use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup::{
-    michelson::{
-        ticket::FA2_1Ticket, MichelsonContract, MichelsonOption, MichelsonOr,
-        MichelsonPair,
-    },
-    storage::path::RefPath,
+use tezos_smart_rollup::michelson::{
+    ticket::FA2_1Ticket, MichelsonContract, MichelsonOption, MichelsonOr, MichelsonPair,
 };
+use tezos_smart_rollup_host::path::RefPath;
 use tezos_smart_rollup_mock::{MockHost, TransferMetadata};
 
 pub const NATIVE_TICKETER: &str = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5";

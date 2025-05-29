@@ -1,10 +1,7 @@
 use derive_more::{Display, Error, From};
 use jstz_core::kv::{Entry, Transaction};
-use tezos_smart_rollup::{
-    host::Runtime,
-    michelson::ticket::TicketHash,
-    storage::path::{self, OwnedPath, RefPath},
-};
+use tezos_smart_rollup::{host::Runtime, michelson::ticket::TicketHash};
+use tezos_smart_rollup_host::path::{self, OwnedPath, RefPath};
 
 use super::account::{Addressable, Amount};
 

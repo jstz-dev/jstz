@@ -763,9 +763,9 @@ mod test {
             MichelsonPair,
         },
         outbox::{OutboxMessageFull, OutboxMessageTransaction},
-        storage::path::OwnedPath,
         types::{Contract, Entrypoint},
     };
+    use tezos_smart_rollup_host::path::OwnedPath;
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::kv::{
