@@ -20,6 +20,22 @@ use deno_web::TimersPermission;
 use deno_webidl;
 use tezos_smart_rollup::prelude::Runtime;
 
+use std::ffi::CString;
+use std::sync::Once;
+
+/// Call this **before** you create any `JsRuntime`.
+pub fn init_v8_code_range() {
+    static INIT: Once = Once::new();
+    INIT.call_once(|| {
+        // 1. Build a NUL-terminated C-string
+        const FLAG: &str = "--v8-code-range-size=256";
+        // 2. Tell V8 about it
+        unsafe {
+            v8::V8::set_flags_from_string(FLAG);
+        }
+    });
+}
+
 /// Returns the default object of the specified JavaScript namespace (Object).
 ///
 /// Returns `null` if default export is not defined
@@ -91,13 +107,14 @@ impl JstzRuntime {
 
     /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`]
     pub fn new(options: JstzRuntimeOptions) -> Self {
+        //init_v8_code_range();
         let mut extensions = init_extenions();
         extensions.extend(options.extensions);
 
         let v8_single_threaded = v8::Platform::new_single_threaded(true).make_shared();
-        let create_params = v8::CreateParams::default()
-            .heap_limits(300_000_000, 300_000_000)
-            .heap_limits_from_system_memory(300_000_000, 300_000_000);
+        let create_params = v8::CreateParams::default();
+        //.heap_limits(300_000_000, 300_000_000)
+        //.heap_limits_from_system_memory(300_000_000, 300_000_000);
         let mut runtime = JsRuntime::new(RuntimeOptions {
             extensions,
             module_loader: Some(options.module_loader),

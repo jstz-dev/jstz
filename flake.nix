@@ -189,7 +189,7 @@
           riscvV8 = with pkgs; let
             tarball = fetchurl {
               url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/130.0.7/librusty_v8.tar.gz";
-              sha256 = "sha256-vZ8BEOZVJnLi9HiTi+ttCDqonU3jMMmNesv1TUxA3n4=";
+              sha256 = "sha256-FORkogiYgyKZNibvQ7OH9lrSTwsx4Ed7rWgzPMIcP+w=";
             };
           in
             runCommand "fetch-riscv-v8" {} ''
@@ -261,6 +261,7 @@
               buildAndTestSubdir = "src/riscv/sandbox";
               useFetchCargoVendor = true;
               cargoHash = "sha256-/fw3Ef4X5MX9AOTBALPKTvZVE8dBcjogL7YSQq9SPP0=";
+              buildFeatures = ["log"];
               # opt-in to the unstable `edition2024` feature
               # postPatch = ''
               #  sed -i '1s;^;cargo-features = ["edition2024"]\n;' ${buildAndTestSubdir}/Cargo.toml
