@@ -273,7 +273,7 @@ fn init_runtime(host: &mut impl HostRuntime, tx: Transaction) -> JstzRuntime {
 }
 
 pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
-    let mut tx = Transaction::default();
+    let tx = Transaction::default();
     tx.begin();
     let mut host = MockHost::default();
     host.set_debug_handler(std::io::empty());

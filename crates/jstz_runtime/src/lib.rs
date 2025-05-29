@@ -84,7 +84,7 @@ mod test_utils {
         ) => {
             #[allow(unused)]
             let mut init_host = tezos_smart_rollup_mock::MockHost::default();
-            let mut init_tx = jstz_core::kv::Transaction::default();
+            let init_tx = jstz_core::kv::Transaction::default();
             init_tx.begin();
             let init_tx = std::sync::Arc::new(parking_lot::FairMutex::new(init_tx));
             #[allow(unused)]

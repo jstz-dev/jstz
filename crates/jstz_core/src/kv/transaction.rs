@@ -1,8 +1,13 @@
 use std::{
+    cell::RefCell,
     collections::{btree_map, BTreeMap, BTreeSet},
     marker::PhantomData,
     mem,
+    rc::{Rc, Weak},
+    sync::Arc,
 };
+
+use parking_lot::{ArcMutexGuard, Mutex, RawMutex};
 
 use derive_more::{Deref, DerefMut};
 
@@ -56,12 +61,32 @@ pub type Key = OwnedPath;
 struct LookupMap(BTreeMap<Key, Vec<usize>>);
 
 #[derive(Debug, Default)]
-pub struct Transaction {
+pub struct InnerTransaction {
     // A stack of transactional snapshots
     stack: Vec<Snapshot>,
     lookup_map: LookupMap,
     persistent_outbox: PersistentOutboxQueue,
     snapshot_outbox_len: u32,
+}
+
+type GuardInner = ArcMutexGuard<RawMutex, InnerTransaction>;
+type RcGuardInner = Rc<RefCell<GuardInner>>;
+
+/// Thread-safe Transaction that allows reentrant locks at the instance level
+#[derive(Debug, Default)]
+pub struct Transaction {
+    inner: Arc<Mutex<InnerTransaction>>,
+    /// Weak ptr to Transaction guard.
+    guard: RefCell<Weak<RefCell<GuardInner>>>,
+}
+
+impl Clone for Transaction {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+            guard: RefCell::new(Weak::new()),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Deref, DerefMut)]
@@ -84,11 +109,6 @@ impl SnapshotValue {
             .as_any_mut()
             .downcast_mut()
             .ok_or(KvError::DowncastFailed)?)
-    }
-
-    pub fn into_value<V: Value>(self) -> Result<V> {
-        let value = self.0.downcast().map_err(|_| KvError::DowncastFailed)?;
-        *value
     }
 }
 
@@ -168,7 +188,7 @@ impl LookupMap {
     }
 }
 
-impl Transaction {
+impl InnerTransaction {
     fn current_snapshot_idx(&self) -> usize {
         self.stack.len().saturating_sub(1)
     }
@@ -217,18 +237,11 @@ impl Transaction {
         rt: &impl Runtime,
         key: Key,
     ) -> Result<Option<&SnapshotValue>> {
-        if let Some(&snapshot_idx) =
-            self.lookup_map.get(&key).and_then(|history| history.last())
-        {
-            let snapshot = &self.stack[snapshot_idx];
-
-            return Ok(snapshot.lookup(&key));
+        if let Some(&snapshot_idx) = self.lookup_map.get(&key).and_then(|h| h.last()) {
+            return Ok(self.stack[snapshot_idx].lookup(&key));
         }
-
         if let Some(value) = Storage::get::<V>(rt, &key)? {
-            // TODO: This clone is probably not necessary
             self.current_snapshot_insert(key.clone(), SnapshotValue::new(value))?;
-
             self.current_snapshot_lookup(&key)
         } else {
             Ok(None)
@@ -240,18 +253,17 @@ impl Transaction {
         rt: &impl Runtime,
         key: Key,
     ) -> Result<Option<&mut SnapshotValue>> {
-        if let Some(&snapshot_idx) =
-            self.lookup_map.get(&key).and_then(|history| history.last())
-        {
-            let snapshot = &self.stack[snapshot_idx];
-
-            if let Some(value) = snapshot.lookup(&key) {
-                self.current_snapshot_insert(key.clone(), value.clone())?;
-                self.current_snapshot_lookup_mut(&key)
-            } else {
-                Ok(None)
+        if let Some(&snapshot_idx) = self.lookup_map.get(&key).and_then(|h| h.last()) {
+            let snap = &self.stack[snapshot_idx];
+            if snap.lookup(&key).is_some() {
+                self.current_snapshot_insert(
+                    key.clone(),
+                    snap.lookup(&key).unwrap().clone(),
+                )?;
+                return self.current_snapshot_lookup_mut(&key);
             }
-        } else if let Some(value) = Storage::get::<V>(rt, &key)? {
+        }
+        if let Some(value) = Storage::get::<V>(rt, &key)? {
             self.current_snapshot_insert(key.clone(), SnapshotValue::new(value))?;
             self.current_snapshot_lookup_mut(&key)
         } else {
@@ -259,47 +271,136 @@ impl Transaction {
         }
     }
 
-    /// Returns a reference to the value corresponding to the key in the
-    /// key-value store if it exists.
-    pub fn get<V: Value>(&mut self, rt: &impl Runtime, key: Key) -> Result<Option<&V>>
-where {
-        self.lookup::<V>(rt, key)
-            .map(|entry_opt| entry_opt.map(|entry| entry.as_ref()).transpose())?
-    }
-
-    /// Returns a mutable reference to the value corresponding to the key in the
-    /// key-value store if it exists.
-    pub fn get_mut<V: Value>(
-        &mut self,
-        rt: &impl Runtime,
-        key: Key,
-    ) -> Result<Option<&mut V>> {
-        self.lookup_mut::<V>(rt, key)
-            .map(|entry_opt| entry_opt.map(|entry| entry.as_mut()).transpose())?
-    }
-
-    /// Returns `true` if the key-value store contains a key-value pair for the
-    /// specified key.
-    pub fn contains_key(&self, rt: &impl Runtime, key: &Key) -> Result<bool> {
-        if let Some(&context_idx) =
-            self.lookup_map.get(key).and_then(|history| history.last())
-        {
-            let context = &self.stack[context_idx];
-
-            return Ok(context.contains_key(key));
+    fn contains_key(&self, rt: &impl Runtime, key: &Key) -> Result<bool> {
+        if let Some(&idx) = self.lookup_map.get(key).and_then(|h| h.last()) {
+            return Ok(self.stack[idx].contains_key(key));
         }
-
         Storage::contains_key(rt, key)
     }
+}
 
-    /// Insert a key-value pair into the key-value store.
-    pub fn insert<V: Value>(&mut self, key: Key, value: V) -> Result<()> {
-        self.current_snapshot_insert(key, SnapshotValue::new(value))
+impl Transaction {
+    fn acquire_guard(&self) -> Result<RcGuardInner> {
+        if let Some(rc) = self.guard.borrow().upgrade() {
+            return Ok(rc);
+        }
+
+        let guard = self.inner.try_lock_arc().ok_or(KvError::LockPoisoned)?;
+        let rc = Rc::new(RefCell::new(guard));
+        *self.guard.borrow_mut() = Rc::downgrade(&rc);
+        Ok(rc)
     }
 
-    /// Removes a key from the key-value store.
-    pub fn remove(&mut self, key: Key) -> Result<()> {
-        self.current_snapshot_remove(key)
+    /// Begin a transaction.
+    pub fn begin(&self) {
+        let rc = self.acquire_guard().expect("mutex poisoned");
+        rc.borrow_mut().stack.push(Snapshot::default());
+    }
+
+    /// Commit a transaction.
+    pub fn commit(&self, rt: &mut impl Runtime) -> Result<()> {
+        let rc = self.acquire_guard()?;
+        let mut inner = rc.borrow_mut();
+
+        let curr = inner.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
+        let prev_idx = inner.current_snapshot_idx();
+
+        if !inner.stack.is_empty() {
+            for key in curr.remove_edits {
+                inner.lookup_map.rollback(&key)?;
+                inner.lookup_map.update(key.clone(), prev_idx);
+                inner.stack[prev_idx].remove(key);
+            }
+            for (key, val) in curr.insert_edits {
+                inner.lookup_map.rollback(&key)?;
+                inner.lookup_map.update(key.clone(), prev_idx);
+                inner.stack[prev_idx].insert(key, val);
+            }
+            inner.stack[prev_idx].outbox_queue.extend(curr.outbox_queue);
+        } else {
+            for key in &curr.remove_edits {
+                Storage::remove(rt, key)?;
+            }
+            for (key, val) in curr.insert_edits {
+                Storage::insert(rt, &key, val.0.as_ref())?;
+            }
+            flush(rt, &mut inner.persistent_outbox, curr.outbox_queue)?;
+            inner.snapshot_outbox_len = 0;
+            inner.lookup_map.clear();
+        }
+        Ok(())
+    }
+
+    /// Rollback a transaction.
+    pub fn rollback(&self) -> Result<()> {
+        let rc = self.acquire_guard()?;
+        let mut inner = rc.borrow_mut();
+
+        let curr_ctxt = inner.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
+
+        // SAFETY: The set of keys between removal edits and insertion edits are disjoint, meaning no
+        // `lookup_map` entries will be rolledback more than once
+        for key in &curr_ctxt.remove_edits {
+            inner.lookup_map.rollback(key)?;
+        }
+
+        for key in curr_ctxt.insert_edits.keys() {
+            inner.lookup_map.rollback(key)?
+        }
+
+        Ok(())
+    }
+
+    pub fn get<'a, V: Value>(
+        &'a self,
+        rt: &impl Runtime,
+        key: Key,
+    ) -> Result<Option<Guarded<'a, V>>> {
+        let rc = self.acquire_guard()?;
+        let mut inner = rc.borrow_mut();
+
+        match inner.lookup::<V>(rt, key)? {
+            Some(entry) => {
+                let value = entry.as_ref()?;
+                Ok(Some(Guarded::new(rc.clone(), value)))
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub fn get_mut<'a, V: Value>(
+        &'a self,
+        rt: &impl Runtime,
+        key: Key,
+    ) -> Result<Option<GuardedMut<'a, V>>> {
+        let rc = self.acquire_guard()?;
+        let mut inner = rc.borrow_mut();
+
+        match inner.lookup_mut::<V>(rt, key)? {
+            Some(entry) => {
+                let value = entry.as_mut()?;
+                Ok(Some(GuardedMut::new(rc.clone(), value)))
+            }
+            None => Ok(None),
+        }
+    }
+
+    pub fn contains_key(&self, rt: &impl Runtime, key: &Key) -> Result<bool> {
+        let rc = self.acquire_guard()?;
+        let inner = rc.borrow_mut();
+        inner.contains_key(rt, key)
+    }
+
+    pub fn insert<V: Value>(&self, key: Key, value: V) -> Result<()> {
+        let rc = self.acquire_guard()?;
+        let mut inner = rc.borrow_mut();
+        inner.current_snapshot_insert(key, SnapshotValue::new(value))
+    }
+
+    pub fn remove(&self, key: Key) -> Result<()> {
+        let rc = self.acquire_guard()?;
+        let mut inner = rc.borrow_mut();
+        inner.current_snapshot_remove(key)
     }
 
     /// Returns the given key's corresponding entry in the transactional
@@ -313,104 +414,49 @@ where {
         V: Value,
         'a: 'b,
     {
-        // A mutable lookup ensures the key is in the current snapshot
-        self.lookup_mut::<V>(rt, key.clone())?;
+        let rc = self.acquire_guard()?;
+        {
+            let mut inner_tx = rc.borrow_mut();
+            // A mutable lookup ensures the key is in the current snapshot
+            inner_tx.lookup_mut::<V>(rt, key.clone())?;
+        }
 
-        let current_snapshot_idx = self.current_snapshot_idx();
+        let rc_current_snapshot = rc.clone();
+        let mut inner_current_snapshot = rc_current_snapshot.borrow_mut();
+        let current_snapshot_idx = inner_current_snapshot.current_snapshot_idx();
         // self.current_snapshot() inlined to avoid lifetime issue
-        let current_snapshot = self
+        let current_snapshot = inner_current_snapshot
             .stack
             .last_mut()
             .ok_or(KvError::TransactionStackEmpty)?;
 
-        match current_snapshot.insert_edits.entry(key) {
-            btree_map::Entry::Vacant(inner) => Ok(Entry::vacant(
-                inner,
-                &mut self.lookup_map,
-                current_snapshot_idx,
-            )),
-            btree_map::Entry::Occupied(inner) => {
-                Ok(Entry::occupied(inner, &mut current_snapshot.remove_edits))
+        match current_snapshot.insert_edits.entry(key.clone()) {
+            btree_map::Entry::Vacant(_) => {
+                Ok(Entry::vacant(rc.clone(), key.clone(), current_snapshot_idx))
+            }
+            btree_map::Entry::Occupied(_) => {
+                Ok(Entry::occupied(rc.clone(), key, current_snapshot_idx))
             }
         }
     }
 
     pub fn queue_outbox_message(
-        &mut self,
+        &self,
         rt: &mut impl Runtime,
         message: OutboxMessage,
     ) -> Result<()> {
-        if self.persistent_outbox.len(rt)? + self.snapshot_outbox_len + 1
-            > self.persistent_outbox.max(rt)?
+        let rc = self.acquire_guard()?;
+        let mut inner = rc.borrow_mut();
+
+        if inner.persistent_outbox.len(rt)? + inner.snapshot_outbox_len + 1
+            > inner.persistent_outbox.max(rt)?
         {
             Err(OutboxError::OutboxQueueFull)?;
         }
-        let current_outbox_queue = self.current_snapshot()?.outbox_queue_mut();
+
+        let current_outbox_queue = inner.current_snapshot()?.outbox_queue_mut();
         current_outbox_queue.queue_message(message);
-        self.snapshot_outbox_len += 1;
-        Ok(())
-    }
-
-    /// Begin a transaction.
-    pub fn begin(&mut self) {
-        self.stack.push(Snapshot::default())
-    }
-
-    /// Commit a transaction.
-    pub fn commit(&mut self, rt: &mut impl Runtime) -> Result<()> {
-        let curr_ctxt = self.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
-
-        // Following the `.pop`, `prev_idx` is the index of prev_idx (if it exists)
-        let prev_idx = self.current_snapshot_idx();
-
-        if let Some(prev_ctxt) = self.stack.last_mut() {
-            // TODO: These clones are probably uncessary since the entry of btree will always be occupied.
-            for key in curr_ctxt.remove_edits {
-                self.lookup_map.rollback(&key)?;
-                self.lookup_map.update(key.clone(), prev_idx);
-                prev_ctxt.remove(key);
-            }
-
-            for (key, value) in curr_ctxt.insert_edits {
-                self.lookup_map.rollback(&key)?;
-                self.lookup_map.update(key.clone(), prev_idx);
-                prev_ctxt.insert(key, value);
-            }
-
-            prev_ctxt.outbox_queue.extend(curr_ctxt.outbox_queue);
-        } else {
-            for key in &curr_ctxt.remove_edits {
-                Storage::remove(rt, key)?
-            }
-
-            for (key, value) in curr_ctxt.insert_edits {
-                Storage::insert(rt, &key, value.0.as_ref())?
-            }
-
-            flush(rt, &mut self.persistent_outbox, curr_ctxt.outbox_queue)?;
-            self.snapshot_outbox_len = 0;
-
-            // Update lookup map
-            self.lookup_map.clear()
-        }
-
-        Ok(())
-    }
-
-    /// Rollback a transaction.
-    pub fn rollback(&mut self) -> Result<()> {
-        let curr_ctxt = self.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
-
-        // SAFETY: The set of keys between removal edits and insertion edits are disjoint, meaning no
-        // `lookup_map` entries will be rolledback more than once
-        for key in &curr_ctxt.remove_edits {
-            self.lookup_map.rollback(key)?;
-        }
-
-        for key in curr_ctxt.insert_edits.keys() {
-            self.lookup_map.rollback(key)?
-        }
-
+        inner.snapshot_outbox_len += 1;
         Ok(())
     }
 }
@@ -426,38 +472,32 @@ pub enum Entry<'a, V: 'a> {
 }
 
 impl<'a, V> Entry<'a, V> {
-    fn vacant(
-        inner: btree_map::VacantEntry<'a, Key, SnapshotValue>,
-        lookup_map: &'a mut LookupMap,
-        snapshot_idx: usize,
-    ) -> Self {
+    fn vacant(guard: RcGuardInner, key: Key, snapshot_idx: usize) -> Self {
         Entry::Vacant(VacantEntry {
-            inner,
-            lookup_map,
+            guard,
+            key,
             snapshot_idx,
             _marker: PhantomData,
         })
     }
 
-    fn occupied(
-        inner: btree_map::OccupiedEntry<'a, Key, SnapshotValue>,
-        remove_edits: &'a mut BTreeSet<Key>,
-    ) -> Self {
+    fn occupied(guard: RcGuardInner, key: Key, snapshot_idx: usize) -> Self {
         Entry::Occupied(OccupiedEntry {
-            inner,
-            remove_edits,
+            guard,
+            key,
+            snapshot_idx,
             _marker: PhantomData,
         })
     }
 
-    pub fn or_insert_default(self) -> &'a mut V
+    pub fn or_insert_default(self) -> GuardedMut<'a, V>
     where
         V: Value + Default,
     {
         self.or_insert_with(|| V::default())
     }
 
-    pub fn or_insert_with<F>(self, default: F) -> &'a mut V
+    pub fn or_insert_with<F>(self, default: F) -> GuardedMut<'a, V>
     where
         V: Value,
         F: FnOnce() -> V,
@@ -471,96 +511,110 @@ impl<'a, V> Entry<'a, V> {
 
 /// A view into a vacant entry in the transactional snapshot.
 pub struct VacantEntry<'a, V: 'a> {
-    inner: btree_map::VacantEntry<'a, Key, SnapshotValue>,
-    // Reference to lookup map (if we insert into the vacant entry)
-    lookup_map: &'a mut LookupMap,
+    guard: RcGuardInner,
+    key: Key,
     snapshot_idx: usize,
-    _marker: PhantomData<V>,
+    _marker: PhantomData<&'a mut V>,
 }
 
 impl<'a, V: 'a> VacantEntry<'a, V> {
     /// Gets a reference to the key of the entry.
     pub fn key(&self) -> &Key {
-        self.inner.key()
+        &self.key
     }
 
     /// Take ownership of the key.
     pub fn into_key(self) -> Key {
-        self.inner.into_key()
+        self.key
     }
 
     /// Set the value of the entry using the entry's key and return a mutable
     /// reference to the value.
-    pub fn insert(self, value: V) -> &'a mut V
+    pub fn insert(self, value: V) -> GuardedMut<'a, V>
     where
         V: Value,
     {
-        self.lookup_map
+        let mut inner = self.guard.borrow_mut();
+
+        inner
+            .lookup_map
             .update(self.key().clone(), self.snapshot_idx);
-        self.inner
-            .insert(SnapshotValue::new(value))
-            .as_mut()
-            .expect("Invalid type id invariant")
+
+        inner.stack[self.snapshot_idx]
+            .insert(self.key.clone(), SnapshotValue::new(value));
+
+        GuardedMut::new(
+            self.guard.clone(),
+            inner.stack[self.snapshot_idx]
+                .lookup_mut(&self.key)
+                .unwrap()
+                .as_mut::<V>()
+                .unwrap(),
+        )
     }
 }
 
 /// A view into an occupied entry in the transactional snapshot.
 
 pub struct OccupiedEntry<'a, V: 'a> {
-    inner: btree_map::OccupiedEntry<'a, Key, SnapshotValue>,
-    // Reference to the set of keys to be removed from the current snapshot
-    remove_edits: &'a mut BTreeSet<Key>,
-    _marker: PhantomData<V>,
+    guard: RcGuardInner,
+    key: Key,
+    snapshot_idx: usize,
+    _marker: PhantomData<&'a mut V>,
 }
 
 impl<'a, V> OccupiedEntry<'a, V> {
     /// Gets a reference to the key in the entry.
     pub fn key(&self) -> &Key {
-        self.inner.key()
-    }
-
-    /// Takes the key-value pair out of the snapshot, returning ownership
-    /// to the caller.
-    pub fn remove_entry(self) -> (Key, V)
-    where
-        V: Value,
-    {
-        let (key, entry) = self.inner.remove_entry();
-        self.remove_edits.insert(key.clone());
-        (key, entry.into_value().expect("Invalid type id invariant"))
+        &self.key
     }
 
     /// Gets a reference to the value in the entry.
-    pub fn get(&self) -> &V
+    pub fn get(&self) -> Guarded<'a, V>
     where
         V: Value,
     {
-        self.inner
-            .get()
-            .as_ref()
-            .expect("Invalid type id invariant")
+        let inner = self.guard.borrow();
+        Guarded::new(
+            self.guard.clone(),
+            inner.stack[self.snapshot_idx]
+                .lookup(&self.key)
+                .unwrap()
+                .as_ref::<V>()
+                .unwrap(),
+        )
     }
 
     /// Get a mutable reference to the value in the entry.
-    pub fn get_mut(&mut self) -> &mut V
+    pub fn get_mut(&mut self) -> GuardedMut<'a, V>
     where
         V: Value,
     {
-        self.inner
-            .get_mut()
-            .as_mut()
-            .expect("Invalid type id invariant")
+        let mut inner = self.guard.borrow_mut();
+        GuardedMut::new(
+            self.guard.clone(),
+            inner.stack[self.snapshot_idx]
+                .lookup_mut(&self.key)
+                .unwrap() //TODO: Add errors
+                .as_mut::<V>()
+                .unwrap(),
+        )
     }
 
     /// Convert the entry into a mutable reference to its value.
-    pub fn into_mut(self) -> &'a mut V
+    pub fn into_mut(self) -> GuardedMut<'a, V>
     where
         V: Value,
     {
-        self.inner
-            .into_mut()
-            .as_mut()
-            .expect("Invalid type id invariant")
+        let mut inner = self.guard.borrow_mut();
+        GuardedMut::new(
+            self.guard.clone(),
+            inner.stack[self.snapshot_idx]
+                .lookup_mut(&self.key)
+                .unwrap()
+                .as_mut::<V>()
+                .unwrap(),
+        )
     }
 
     /// Sets the value of the entry and returns the entry's old value.
@@ -568,19 +622,94 @@ impl<'a, V> OccupiedEntry<'a, V> {
     where
         V: Value,
     {
-        std::mem::replace(self.get_mut(), value)
+        std::mem::replace(&mut self.get_mut(), value)
     }
+}
 
-    /// Take the value of the entry out of the snapshot, and return it.
-    pub fn remove(self) -> V
+// Guarded<T>/GuardedMut<T> – keeps the mutex guard alive while reference is alive
+
+pub struct Guarded<'a, T: ?Sized + 'a> {
+    value: *const T,
+    pub _guard: RcGuardInner,
+    _marker: PhantomData<&'a ()>,
+}
+
+impl<'a, T: ?Sized + 'a> Guarded<'a, T> {
+    pub fn new<'b>(guard: RcGuardInner, value: &T) -> Guarded<'b, T> {
+        Guarded {
+            value,
+            _guard: guard,
+            _marker: PhantomData,
+        }
+    }
+    pub fn from_mut<'b, U>(parent: &GuardedMut<'a, T>, sub: &'b U) -> Guarded<'b, U> {
+        Guarded {
+            value: sub,
+            _guard: parent._guard.clone(),
+            _marker: PhantomData,
+        }
+    }
+    pub fn from<'b, U>(parent: Guarded<'a, T>, sub: &'b U) -> Guarded<'b, U> {
+        Guarded {
+            value: sub,
+            _guard: parent._guard.clone(),
+            _marker: PhantomData,
+        }
+    }
+    pub fn clone_guard(&self) -> RcGuardInner {
+        self._guard.clone()
+    }
+}
+
+impl<'a, T: ?Sized + 'a> std::ops::Deref for Guarded<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &'a Self::Target {
+        unsafe { &*self.value }
+    }
+}
+
+pub struct GuardedMut<'a, T: ?Sized + 'a> {
+    value: *mut T,
+    pub _guard: RcGuardInner,
+    _marker: PhantomData<&'a ()>,
+}
+
+impl<'a, T: ?Sized + 'a> GuardedMut<'a, T> {
+    pub fn new<'b>(guard: RcGuardInner, value: &mut T) -> GuardedMut<'b, T> {
+        GuardedMut {
+            value,
+            _guard: guard,
+            _marker: PhantomData,
+        }
+    }
+    pub fn guard_sub<'b, U>(
+        parent: &'a GuardedMut<'a, T>,
+        sub: &'b mut U,
+    ) -> GuardedMut<'b, U>
     where
-        V: Value,
+        'b: 'a,
     {
-        self.remove_edits.insert(self.key().clone());
-        self.inner
-            .remove()
-            .into_value()
-            .expect("Invalid type id invariant")
+        GuardedMut {
+            value: sub,
+            _guard: parent._guard.clone(),
+            _marker: PhantomData,
+        }
+    }
+    pub fn clone_guard(&self) -> RcGuardInner {
+        self._guard.clone()
+    }
+}
+
+impl<'a, T: ?Sized + 'a> std::ops::Deref for GuardedMut<'a, T> {
+    type Target = T;
+    fn deref(&self) -> &'a Self::Target {
+        unsafe { &*self.value }
+    }
+}
+
+impl<'a, T: ?Sized + 'a> std::ops::DerefMut for GuardedMut<'a, T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        unsafe { &mut *self.value }
     }
 }
 
@@ -624,7 +753,7 @@ mod test {
         Storage,
     };
 
-    use super::Transaction;
+    use super::{GuardedMut, Transaction};
 
     fn make_withdrawal(account: &PublicKeyHash) -> OutboxMessage {
         let creator =
@@ -665,7 +794,7 @@ mod test {
                 hrt: &impl Runtime,
                 tx: &'a mut Transaction,
                 path: &OwnedPath,
-            ) -> &'a mut Self {
+            ) -> GuardedMut<'a, Self> {
                 tx.entry(hrt, path.clone()).unwrap().or_insert_default()
             }
 
@@ -733,10 +862,9 @@ mod test {
     #[test]
     fn push_outbox_message_succeeds_until_outbox_queue_is_full() {
         let mut host = MockHost::default();
-        let mut tx = Transaction {
-            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
-            ..Transaction::default()
-        };
+        let tx = Transaction::default();
+        tx.acquire_guard().unwrap().borrow_mut().persistent_outbox =
+            PersistentOutboxQueue::try_new(&mut host, 120).unwrap();
 
         for i in 0..120 {
             if i % 10 == 0 {
@@ -747,7 +875,10 @@ mod test {
             tx.queue_outbox_message(&mut host, message).unwrap();
         }
 
-        assert_eq!(120, tx.snapshot_outbox_len);
+        assert_eq!(
+            120,
+            tx.acquire_guard().unwrap().borrow().snapshot_outbox_len
+        );
 
         // Adding an additional message to a full outbox queue without
         // flushing should fail
@@ -772,10 +903,9 @@ mod test {
     #[test]
     fn non_final_commit_appends_outbox_messages_to_previous_snapshot() {
         let mut host = MockHost::default();
-        let mut tx = Transaction {
-            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
-            ..Transaction::default()
-        };
+        let tx = Transaction::default();
+        tx.acquire_guard().unwrap().borrow_mut().persistent_outbox =
+            PersistentOutboxQueue::try_new(&mut host, 120).unwrap();
 
         for i in 0..120 {
             if i % 60 == 0 {
@@ -788,7 +918,10 @@ mod test {
 
         tx.commit(&mut host).unwrap();
 
-        assert_eq!(120, tx.snapshot_outbox_len);
+        assert_eq!(
+            120,
+            tx.acquire_guard().unwrap().borrow().snapshot_outbox_len
+        );
 
         let level = host.run_level(|_| {});
         let outbox = host.outbox_at(level);
@@ -800,10 +933,9 @@ mod test {
     #[ignore]
     fn final_commit_resets_snapshot_queue_len() {
         let mut host = MockHost::default();
-        let mut tx = Transaction {
-            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
-            ..Transaction::default()
-        };
+        let tx = Transaction::default();
+        tx.acquire_guard().unwrap().borrow_mut().persistent_outbox =
+            PersistentOutboxQueue::try_new(&mut host, 120).unwrap();
 
         for i in 0..120 {
             if i % 60 == 0 {
@@ -816,7 +948,10 @@ mod test {
 
         tx.commit(&mut host).unwrap();
         tx.commit(&mut host).unwrap();
-        assert_eq!(0, tx.snapshot_outbox_len);
+        assert_eq!(
+            0,
+            tx.acquire_guard().unwrap().borrow_mut().snapshot_outbox_len
+        );
 
         let level = host.run_level(|_| {});
         let outbox = host.outbox_at(level);
@@ -827,10 +962,10 @@ mod test {
     #[test]
     fn final_commit_flush_outbox_messages_in_enqueue_order() {
         let mut host = MockHost::default();
-        let mut tx = Transaction {
-            persistent_outbox: PersistentOutboxQueue::try_new(&mut host, 120).unwrap(),
-            ..Transaction::default()
-        };
+        let tx = Transaction::default();
+
+        tx.acquire_guard().unwrap().borrow_mut().persistent_outbox =
+            PersistentOutboxQueue::try_new(&mut host, 120).unwrap();
 
         // Enqueue 120 messages, 60 per snapshot
         for i in 0..120 {
@@ -853,7 +988,15 @@ mod test {
         // Maximum number of outbox messages per level is 100.
         // The remaining 20 messages are left in the persistent queue.
         assert_eq!(100, outbox.len());
-        assert_eq!(20, tx.persistent_outbox.len(&mut host).unwrap());
+        assert_eq!(
+            20,
+            tx.acquire_guard()
+                .unwrap()
+                .borrow_mut()
+                .persistent_outbox
+                .len(&mut host)
+                .unwrap()
+        );
 
         for (i, outbox_message) in outbox.iter().enumerate() {
             let (_, message) =
@@ -876,8 +1019,15 @@ mod test {
         let outbox = host.outbox_at(level);
 
         assert_eq!(20, outbox.len());
-        assert_eq!(0, tx.persistent_outbox.len(&mut host).unwrap());
-
+        assert_eq!(
+            0,
+            tx.acquire_guard()
+                .unwrap()
+                .borrow_mut()
+                .persistent_outbox
+                .len(&mut host)
+                .unwrap()
+        );
         for (i, outbox_message) in outbox.iter().enumerate().take(20) {
             let (_, message) =
                 OutboxMessageFull::<OutboxMessage>::nom_read(outbox_message.as_slice())
@@ -906,26 +1056,37 @@ mod test {
         let path = try_from.unwrap();
         tx.insert(path.clone(), 42).unwrap();
 
-        let snapshot_idx = tx.lookup_map.get(&path).unwrap();
-        // The snapshot index should be [1] after the insert
-        assert_eq!(snapshot_idx.len(), 1);
-        assert_eq!(snapshot_idx[0], 1);
+        let guard = tx.acquire_guard().unwrap();
+
+        {
+            let inner = guard.borrow();
+            let snapshot_idx = inner.lookup_map.get(&path).unwrap();
+            // The snapshot index should be [1] after the insert
+            assert_eq!(snapshot_idx.len(), 1);
+            assert_eq!(snapshot_idx[0], 1);
+        }
 
         // Commit the transaction
         tx.commit(hrt).unwrap();
 
         // Check that the snapshot index is removed
-        let snapshot_idx = tx.lookup_map.get(&path).unwrap();
+        {
+            let inner = guard.borrow();
+            let snapshot_idx = inner.lookup_map.get(&path).unwrap();
 
-        // The snapshot index should be [0] after the commit
-        assert_eq!(snapshot_idx.len(), 1);
-        assert_eq!(snapshot_idx[0], 0);
+            // The snapshot index should be [0] after the commit
+            assert_eq!(snapshot_idx.len(), 1);
+            assert_eq!(snapshot_idx[0], 0);
+        }
 
         tx.commit(hrt).unwrap();
 
         // Check that the snapshot index is removed
-        let snapshot_idx = tx.lookup_map.get(&path);
-        assert!(snapshot_idx.is_none());
+        {
+            let inner = guard.borrow();
+            let snapshot_idx = inner.lookup_map.get(&path);
+            assert!(snapshot_idx.is_none());
+        }
     }
 }
 

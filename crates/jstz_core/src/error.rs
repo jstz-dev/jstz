@@ -10,6 +10,7 @@ pub enum KvError {
     DowncastFailed,
     TransactionStackEmpty,
     ExpectedLookupMapEntry,
+    LockPoisoned,
 }
 
 #[derive(Display, Debug, Error, From)]

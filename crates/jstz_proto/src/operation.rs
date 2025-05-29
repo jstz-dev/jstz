@@ -53,7 +53,7 @@ impl Operation {
         rt: &impl HostRuntime,
         tx: &mut Transaction,
     ) -> Result<()> {
-        let next_nonce = Account::nonce(rt, tx, &self.source())?;
+        let mut next_nonce = Account::nonce(rt, tx, &self.source())?;
 
         if self.nonce == *next_nonce {
             next_nonce.increment();
@@ -448,7 +448,7 @@ mod test {
         tx.begin();
 
         for (address, nonce) in nonces {
-            let stored_nonce = Account::nonce(hrt.rt(), &mut tx, address).unwrap();
+            let mut stored_nonce = Account::nonce(hrt.rt(), &mut tx, address).unwrap();
             *stored_nonce = *nonce;
         }
 
