@@ -2,7 +2,6 @@ use std::{
     cell::RefCell,
     collections::{btree_map, BTreeMap, BTreeSet},
     marker::PhantomData,
-    mem,
     rc::{Rc, Weak},
     sync::Arc,
 };
@@ -735,18 +734,12 @@ impl<'a, T: ?Sized + 'a> std::ops::DerefMut for GuardedMut<'a, T> {
 
 #[derive(Debug, Deref, DerefMut)]
 pub struct JsTransaction {
-    inner: &'static mut Transaction,
+    inner: Transaction,
 }
 
 impl JsTransaction {
     pub fn new(tx: &mut Transaction) -> Self {
-        // SAFETY
-        // From the pov of the `JsTransaction` struct, it is permitted to cast
-        // the `tx` reference to `'static` since the lifetime of `JsTransaction`
-        // is always shorter than the lifetime of `tx`
-        let rt: &'static mut Transaction = unsafe { mem::transmute(tx) };
-
-        Self { inner: rt }
+        Self { inner: tx.clone() }
     }
 }
 

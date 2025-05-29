@@ -13,14 +13,12 @@ use jstz_runtime::sys::{
 };
 use jstz_runtime::JstzRuntimeOptions;
 use jstz_runtime::{error::RuntimeError, JstzRuntime, ProtocolContext};
-use parking_lot::FairMutex as Mutex;
 use serde::Serialize;
 use std::borrow::Cow;
 use std::future::Future;
 use std::num::NonZeroU64;
 use std::pin::Pin;
 use std::str::FromStr;
-use std::sync::Arc;
 use std::{cell::RefCell, rc::Rc};
 use url::Url;
 
@@ -157,7 +155,7 @@ fn fetch(
 /// is called thus suitable as the [`crate::operation::RunFunction`] handler
 pub async fn process_and_dispatch_request(
     host: JsHostRuntime<'static>,
-    tx: Arc<Mutex<Transaction>>,
+    mut tx: Transaction,
     from: Address,
     method: ByteString,
     url: Url,
@@ -169,10 +167,10 @@ pub async fn process_and_dispatch_request(
         Ok(SupportedScheme::Jstz) => {
             let mut host = host;
             let mut is_successful = true;
-            tx.lock().begin();
+            tx.begin();
             let result = dispatch_run(
                 &mut host,
-                tx.clone(),
+                &mut tx,
                 from,
                 method,
                 url,
@@ -181,11 +179,7 @@ pub async fn process_and_dispatch_request(
                 &mut is_successful,
             )
             .await;
-            let _ = commit_or_rollback(
-                &mut host,
-                tx.clone(),
-                is_successful && result.is_ok(),
-            );
+            let _ = commit_or_rollback(&mut host, &tx, is_successful && result.is_ok());
             result.into()
         }
         Err(err) => err.into(),
@@ -196,7 +190,7 @@ pub async fn process_and_dispatch_request(
 /// Transaction snapshot creation and commitment should happen outside this function
 async fn dispatch_run(
     host: &mut impl HostRuntime,
-    tx: Arc<Mutex<Transaction>>,
+    tx: &mut Transaction,
     from: Address,
     method: ByteString,
     url: Url,
@@ -205,8 +199,7 @@ async fn dispatch_run(
     is_successful: &mut bool,
 ) -> Result<Response> {
     let to: Address = (&url).try_into()?;
-    let mut headers =
-        process_headers_and_transfer(tx.clone(), host, headers, &from, &to)?;
+    let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
     headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
     match to.kind() {
         AddressKind::User => todo!(),
@@ -214,7 +207,7 @@ async fn dispatch_run(
             let address = to.as_smart_function().unwrap();
             let run_result = load_and_run(
                 host,
-                tx.clone(),
+                tx,
                 address.clone(),
                 method,
                 url.clone(),
@@ -258,7 +251,7 @@ async fn dispatch_run(
 // - Runs the smart function
 async fn load_and_run(
     host: &mut impl HostRuntime,
-    tx: Arc<Mutex<Transaction>>,
+    tx: &mut Transaction,
     address: SmartFunctionHash,
     method: ByteString,
     url: Url,
@@ -268,10 +261,10 @@ async fn load_and_run(
     let mut body = body;
 
     // 0. Prepare Protocol
-    let mut proto = ProtocolContext::new(host, tx.clone(), address.clone());
+    let mut proto = ProtocolContext::new(host, tx, address.clone());
 
     // 1. Load script
-    let script = { load_script(tx.clone(), &mut proto.host, &proto.address)? };
+    let script = { load_script(tx, &mut proto.host, &proto.address)? };
 
     // 2. Prepare runtime
     let path = format!("jstz://{}", address);
@@ -402,7 +395,7 @@ fn clean_and_validate_headers(
 /// - performs transfers if `x-jstz-transfer` is present
 /// - adds `x-jstz-amount` with transferred amount if any
 fn process_headers_and_transfer(
-    tx: Arc<Mutex<Transaction>>,
+    tx: &mut Transaction,
     host: &mut impl HostRuntime,
     headers: Vec<(ByteString, ByteString)>,
     from: &impl Addressable,
@@ -410,7 +403,7 @@ fn process_headers_and_transfer(
 ) -> Result<Vec<(ByteString, ByteString)>> {
     let mut processed_headers = clean_and_validate_headers(headers)?;
     if let Some(amount) = processed_headers.transfer {
-        Account::transfer(host, &mut tx.lock(), from, to, amount.into())
+        Account::transfer(host, tx, from, to, amount.into())
             .map_err(|e| FetchError::JstzError(e.to_string()))?;
         processed_headers.headers.push((
             AMOUNT_HEADER_KEY.clone(),
@@ -421,12 +414,11 @@ fn process_headers_and_transfer(
 }
 
 fn load_script(
-    tx: Arc<Mutex<Transaction>>,
+    tx: &mut Transaction,
     host: &impl HostRuntime,
     address: &SmartFunctionHash,
 ) -> Result<String> {
-    let mut tx = tx.lock();
-    Account::function_code(host, &mut tx, address)
+    Account::function_code(host, tx, address)
         .map(|s| s.to_string())
         .map_err(|err| FetchError::JstzError(err.to_string()))
 }
@@ -463,10 +455,9 @@ async fn convert_js_to_response(
 
 fn commit_or_rollback(
     host: &mut impl HostRuntime,
-    tx: Arc<Mutex<Transaction>>,
+    tx: &Transaction,
     is_success: bool,
 ) -> Result<()> {
-    let tx = tx.lock();
     let result = if is_success {
         tx.commit(host)
     } else {
@@ -643,7 +634,7 @@ impl<'s> ToV8<'s> for Body {
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, sync::Arc};
+    use std::collections::HashMap;
 
     use jstz_core::{
         host::{HostRuntime, JsHostRuntime},
@@ -654,7 +645,6 @@ mod test {
     };
     use jstz_utils::TOKIO;
 
-    use parking_lot::FairMutex as Mutex;
     use serde_json::{json, Value as JsonValue};
     use url::Url;
 
@@ -691,21 +681,16 @@ mod test {
         scripts: [&'a str; N],
     ) -> (
         JsHostRuntime<'static>,
-        Arc<Mutex<Transaction>>,
+        Transaction,
         PublicKeyHash,
         [SmartFunctionHash; N],
     ) {
         let mut host = JsHostRuntime::new(host);
-        let tx = Arc::new(Mutex::new(jstz_core::kv::Transaction::default()));
-        tx.lock().begin();
+        let mut tx = jstz_core::kv::Transaction::default();
+        tx.begin();
         let source_address = jstz_mock::account1();
-        let hashes = deploy_smart_functions(
-            scripts,
-            &mut host,
-            &mut tx.lock(),
-            &source_address,
-            0,
-        );
+        let hashes =
+            deploy_smart_functions(scripts, &mut host, &mut tx, &source_address, 0);
         (host, tx, source_address, hashes)
     }
 
@@ -1029,7 +1014,7 @@ mod test {
 
             // Setup
             let mut host = tezos_smart_rollup_mock::MockHost::default();
-            let (mut host, tx, _, hashes) = setup(&mut host, [run, remote]);
+            let (mut host, mut tx, _, hashes) = setup(&mut host, [run, remote]);
             let run_address = hashes[0].clone();
             let remote_address = hashes[1].clone();
 
@@ -1049,11 +1034,7 @@ mod test {
             // Assert
             // check transaction was commited with unawaited on values
             let kv = jstz_runtime::ext::jstz_kv::kv::Kv::new(remote_address.to_string());
-            let result = kv
-                .get(&mut host, &mut tx.lock(), "value")
-                .unwrap()
-                .0
-                .clone();
+            let result = kv.get(&mut host, &mut tx, "value").unwrap().0.clone();
             assert_eq!(2, serde_json::from_value::<usize>(result).unwrap());
         });
     }
@@ -1208,13 +1189,12 @@ mod test {
 
             // Setup
             let mut host = tezos_smart_rollup_mock::MockHost::default();
-            let (mut host, tx, _, hashes) = setup(&mut host, [run, remote]);
+            let (mut host, mut tx, _, hashes) = setup(&mut host, [run, remote]);
             let run_address = hashes[0].clone();
             let remote_address = hashes[1].clone();
 
             // Adds 10 XTZ
-            let _ =
-                Account::add_balance(&mut host, &mut tx.lock(), &run_address, 10_000_000);
+            let _ = Account::add_balance(&mut host, &mut tx, &run_address, 10_000_000);
 
             // Run
             let response = process_and_dispatch_request(
@@ -1232,11 +1212,11 @@ mod test {
             assert!(response.status == 200);
             assert_eq!(
                 8_000_000,
-                Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
+                Account::balance(&mut host, &mut tx, &run_address).unwrap()
             );
             assert_eq!(
                 2_000_000,
-                Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
+                Account::balance(&mut host, &mut tx, &remote_address).unwrap()
             );
         })
     }
@@ -1252,13 +1232,12 @@ mod test {
 
             // Setup
             let mut host = tezos_smart_rollup_mock::MockHost::default();
-            let (mut host, tx, _, hashes) = setup(&mut host, [run, remote]);
+            let (mut host, mut tx, _, hashes) = setup(&mut host, [run, remote]);
             let run_address = hashes[0].clone();
             let remote_address = hashes[1].clone();
 
             // Adds 10 XTZ
-            let _ =
-                Account::add_balance(&mut host, &mut tx.lock(), &run_address, 10_000_000);
+            let _ = Account::add_balance(&mut host, &mut tx, &run_address, 10_000_000);
 
             // Run
             let _ = process_and_dispatch_request(
@@ -1275,11 +1254,11 @@ mod test {
 
             assert_eq!(
                 10_000_000,
-                Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
+                Account::balance(&mut host, &mut tx, &run_address).unwrap()
             );
             assert_eq!(
                 0,
-                Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
+                Account::balance(&mut host, &mut tx, &remote_address).unwrap()
             );
         })
     }
@@ -1292,13 +1271,12 @@ mod test {
 
             // Setup
             let mut host = tezos_smart_rollup_mock::MockHost::default();
-            let (mut host, tx, _, hashes) = setup(&mut host, [run, remote]);
+            let (mut host, mut tx, _, hashes) = setup(&mut host, [run, remote]);
             let run_address = hashes[0].clone();
             let remote_address = hashes[1].clone();
 
             // Adds 10 XTZ
-            let _ =
-                Account::add_balance(&mut host, &mut tx.lock(), &run_address, 10_000_000);
+            let _ = Account::add_balance(&mut host, &mut tx, &run_address, 10_000_000);
 
             // Run
             let response = process_and_dispatch_request(
@@ -1316,11 +1294,11 @@ mod test {
             assert!(response.status == 200);
             assert_eq!(
                 9_000_000,
-                Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
+                Account::balance(&mut host, &mut tx, &run_address).unwrap()
             );
             assert_eq!(
                 1_000_000,
-                Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
+                Account::balance(&mut host, &mut tx, &remote_address).unwrap()
             );
         })
     }
@@ -1384,17 +1362,12 @@ mod test {
 
             // Setup
             let mut host = tezos_smart_rollup_mock::MockHost::default();
-            let (mut host, tx, _, hashes) = setup(&mut host, [run, remote]);
+            let (mut host, mut tx, _, hashes) = setup(&mut host, [run, remote]);
             let run_address = hashes[0].clone();
             let remote_address = hashes[1].clone();
 
             // Adds 10 XTZ
-            let _ = Account::add_balance(
-                &mut host,
-                &mut tx.lock(),
-                &remote_address,
-                10_000_000,
-            );
+            let _ = Account::add_balance(&mut host, &mut tx, &remote_address, 10_000_000);
 
             // Run
             let response = process_and_dispatch_request(
@@ -1412,11 +1385,11 @@ mod test {
             assert_eq!(400, response.status);
             assert_eq!(
                 0,
-                Account::balance(&mut host, &mut tx.lock(), &run_address).unwrap()
+                Account::balance(&mut host, &mut tx, &run_address).unwrap()
             );
             assert_eq!(
                 10_000_000,
-                Account::balance(&mut host, &mut tx.lock(), &remote_address).unwrap()
+                Account::balance(&mut host, &mut tx, &remote_address).unwrap()
             );
         });
     }
@@ -1454,7 +1427,7 @@ mod test {
 
             // check transaction was commited with unawaited on values
             let kv = jstz_runtime::ext::jstz_kv::kv::Kv::new(remote_address.to_string());
-            let mut tx = tx.lock();
+            let mut tx = tx;
             let result = kv.get(&mut host, &mut tx, "test");
             assert!(result.is_none())
         });
@@ -1491,7 +1464,7 @@ mod test {
 
             // check transaction was commited with unawaited on values
             let kv = jstz_runtime::Kv::new(remote_address.to_string());
-            let mut tx = tx.lock();
+            let mut tx = tx;
             let result = kv.get(&mut host, &mut tx, "test");
             assert!(result.is_none())
         });

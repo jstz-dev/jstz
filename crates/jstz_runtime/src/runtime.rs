@@ -4,9 +4,7 @@ use jstz_core::host::JsHostRuntime;
 use jstz_core::kv::Transaction;
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use parking_lot::FairMutex as Mutex;
 use std::mem::ManuallyDrop;
-use std::sync::Arc;
 use std::{
     ops::{Deref, DerefMut},
     rc::Rc,
@@ -248,7 +246,7 @@ impl DerefMut for JstzRuntime {
 
 pub struct ProtocolContext {
     pub host: JsHostRuntime<'static>,
-    pub tx: Arc<Mutex<Transaction>>,
+    pub tx: Transaction,
     pub kv: Kv,
     pub address: SmartFunctionHash,
 }
@@ -256,14 +254,14 @@ pub struct ProtocolContext {
 impl ProtocolContext {
     pub fn new(
         hrt: &mut impl HostRuntime,
-        tx: Arc<Mutex<Transaction>>,
+        tx: &mut Transaction,
         address: SmartFunctionHash,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
         ProtocolContext {
             host,
-            tx,
-            kv: Kv::new(address.clone().to_base58()),
+            tx: tx.clone(),
+            kv: Kv::new(address.to_base58()),
             address,
         }
     }
