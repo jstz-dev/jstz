@@ -52,20 +52,4 @@ impl BoxedValue {
     pub fn new(value: impl Value) -> Self {
         BoxedValue(Box::new(value))
     }
-
-    pub unsafe fn downcast_unchecked<T: Any>(self) -> Box<T> {
-        let raw: *mut dyn Value = Box::into_raw(self.0);
-        Box::from_raw(raw as *mut T)
-    }
-
-    pub fn downcast<T>(self) -> std::result::Result<Box<T>, Self>
-    where
-        T: Any,
-    {
-        if self.as_any().is::<T>() {
-            Ok(unsafe { self.downcast_unchecked() })
-        } else {
-            Err(self)
-        }
-    }
 }

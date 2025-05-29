@@ -199,7 +199,7 @@
           riscvV8 = with pkgs; let
             tarball = fetchurl {
               url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/130.0.7/librusty_v8.tar.gz";
-              sha256 = "sha256-8cywAe9kofNPxCwdzdkegtlRPwlqqR986m25wvDWbyo=";
+              sha256 = "sha256-FORkogiYgyKZNibvQ7OH9lrSTwsx4Ed7rWgzPMIcP+w=";
             };
           in
             runCommand "fetch-riscv-v8" {} ''
