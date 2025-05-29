@@ -1,18 +1,17 @@
-use jstz_core::BinEncodable;
+use jstz_core::{host::WriteDebug, BinEncodable};
 use jstz_proto::context::account::Address;
 use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
-use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup::inbox::ExternalMessageFrame;
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
 use tezos_smart_rollup::michelson::{
     MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
 };
-use tezos_smart_rollup::{
-    inbox::{InboxMessage, InternalInboxMessage, Transfer},
+pub use tezos_smart_rollup::{
+    inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage, Transfer},
     michelson::MichelsonPair,
     prelude::{debug_msg, Runtime},
-    types::Contract,
+    types::{self, Contract},
 };
 
 use crate::parsing::try_parse_fa_deposit;
@@ -38,8 +37,117 @@ pub type RollupType = MichelsonOr<MichelsonNativeDeposit, MichelsonFaDeposit>;
 const NATIVE_TICKET_ID: u32 = 0_u32;
 const NATIVE_TICKET_CONTENT: MichelsonOption<MichelsonBytes> = MichelsonOption(None);
 
-fn is_valid_native_deposit(
+pub fn read_message(
     rt: &mut impl Runtime,
+    ticketer: &ContractKt1Hash,
+) -> Option<Message> {
+    let input = rt.read_input().ok()??;
+    let _ = rt.mark_for_reboot();
+    let jstz_rollup_address = rt.reveal_metadata().address();
+    parse_inbox_message(rt, input.id, input.as_ref(), ticketer, &jstz_rollup_address)
+}
+
+/// Parse a hex-encoded L1 inbox input message into a jstz operation.
+///
+/// Every L1 inbox message contains at least 3 internal messages:
+/// 1. StartOfLevel - Marks the beginning of a new L1 level
+/// 2. InfoPerLevel - Contains information about the previous L1 block
+/// 3. EndOfLevel - Marks the end of the current L1 level
+///
+/// The function returns None in the following cases:
+/// - If the message is one of the internal messages listed above
+/// - If the message is not targeting the provided `jstz_rollup_address`
+/// - For native deposit transfers, if the ticket doesn't come from the provided `ticketer`
+///
+/// # Arguments
+/// * `logger` - Debug logger for tracing message processing
+/// * `inbox_id` - The message index in the rollup inbox
+/// * `inbox_msg` - The hex-encoded inbox message content
+/// * `ticketer` - The L1 ticketer used by the bridge contract for the native deposit
+/// * `jstz_rollup_address` - The smart rollup address
+pub fn parse_inbox_message_hex(
+    logger: &impl WriteDebug,
+    inbox_id: u32,
+    inbox_msg: &str,
+    ticketer: &ContractKt1Hash,
+    jstz_rollup_address: &SmartRollupHash,
+) -> Option<Message> {
+    let inbox_msg = hex::decode(inbox_msg).ok()?;
+    parse_inbox_message(logger, inbox_id, &inbox_msg, ticketer, jstz_rollup_address)
+}
+
+fn parse_inbox_message(
+    logger: &impl WriteDebug,
+    inbox_id: u32,
+    inbox_msg: &[u8],
+    ticketer: &ContractKt1Hash,
+    jstz_rollup_address: &SmartRollupHash,
+) -> Option<Message> {
+    let (_, message) = InboxMessage::<RollupType>::parse(inbox_msg).ok()?;
+
+    match message {
+        InboxMessage::Internal(InternalInboxMessage::StartOfLevel) => {
+            // Start of level message pushed by the Layer 1 at the
+            // beginning of eavh level.
+            logger.write_debug("Internal message: start of level\n");
+            None
+        }
+        InboxMessage::Internal(InternalInboxMessage::InfoPerLevel(info)) => {
+            // The "Info per level" messages follows the "Start of level"
+            // message and contains information on the previous Layer 1 block.
+            logger.write_debug(&format!(
+                "Internal message: level info \
+                        (block predecessor: {}, predecessor_timestamp: {}\n",
+                info.predecessor, info.predecessor_timestamp
+            ));
+            None
+        }
+        InboxMessage::Internal(InternalInboxMessage::EndOfLevel) => {
+            // The "End of level" message is pushed by the Layer 1
+            // at the end of each level.
+            logger.write_debug("Internal message: end of level\n");
+            None
+        }
+        InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
+            if jstz_rollup_address != transfer.destination.hash() {
+                logger.write_debug(
+                    "Internal message ignored because of different smart rollup address",
+                );
+                return None;
+            };
+            read_transfer(logger, transfer, ticketer, inbox_id)
+        }
+        InboxMessage::External(bytes) => match ExternalMessageFrame::parse(bytes) {
+            Ok(frame) => match frame {
+                ExternalMessageFrame::Targetted { address, contents } => {
+                    if jstz_rollup_address != address.hash() {
+                        logger.write_debug(
+                         "External message ignored because of different smart rollup address",
+                        );
+                        None
+                    } else {
+                        match read_external_message(logger, contents) {
+                            Some(msg) => Some(Message::External(msg)),
+                            None => {
+                                logger.write_debug(
+                                    "Failed to parse the external message\n",
+                                );
+                                None
+                            }
+                        }
+                    }
+                }
+            },
+            Err(_) => {
+                logger.write_debug("Failed to parse the external message frame\n");
+                None
+            }
+        },
+    }
+}
+
+fn is_valid_native_deposit(
+    logger: &impl WriteDebug,
     ticket: &FA2_1Ticket,
     native_ticketer: &ContractKt1Hash,
 ) -> bool {
@@ -48,19 +156,19 @@ fn is_valid_native_deposit(
     match &creator.0 {
         Contract::Originated(kt1) if kt1 == native_ticketer => (),
         _ => {
-            debug_msg!(rt, "Deposit ignored because of different ticketer");
+            logger.write_debug("Deposit ignored because of different ticketer");
             return false;
         }
     };
 
     let native_ticket_id = MichelsonNat::from(NATIVE_TICKET_ID);
     if contents.0 != native_ticket_id {
-        debug_msg!(rt, "Deposit ignored because of different ticket id");
+        logger.write_debug("Deposit ignored because of different ticket id");
         return false;
     }
 
     if contents.1 != NATIVE_TICKET_CONTENT {
-        debug_msg!(rt, "Deposit ignored because of different ticket content");
+        logger.write_debug("Deposit ignored because of different ticket content");
         return false;
     }
 
@@ -68,18 +176,17 @@ fn is_valid_native_deposit(
 }
 
 fn read_transfer(
-    rt: &mut impl Runtime,
+    logger: &impl WriteDebug,
     transfer: Transfer<RollupType>,
     ticketer: &ContractKt1Hash,
     inbox_id: u32,
 ) -> Option<Message> {
-    debug_msg!(rt, "Internal message: transfer\n");
-
+    logger.write_debug("Internal message: transfer\n");
     match transfer.payload {
         MichelsonOr::Left(tez_ticket) => {
             let ticket = tez_ticket.1;
 
-            if is_valid_native_deposit(rt, &ticket, ticketer) {
+            if is_valid_native_deposit(logger, &ticket, ticketer) {
                 let amount = ticket.amount().to_u64()?;
                 let address = tez_ticket.0 .0.to_b58check();
                 let receiver = Address::from_base58(&address).ok()?;
@@ -88,7 +195,7 @@ fn read_transfer(
                     amount,
                     receiver,
                 };
-                debug_msg!(rt, "Deposit: {content:?}\n");
+                logger.write_debug("Deposit: {content:?}\n");
                 Some(Message::Internal(InternalMessage::Deposit(content)))
             } else {
                 None
@@ -105,102 +212,28 @@ fn read_transfer(
     }
 }
 
-fn read_external_message(rt: &mut impl Runtime, bytes: &[u8]) -> Option<ExternalMessage> {
+fn read_external_message(
+    logger: &impl WriteDebug,
+    bytes: &[u8],
+) -> Option<ExternalMessage> {
     let msg = ExternalMessage::decode(bytes).ok()?;
-    debug_msg!(rt, "External message: {msg:?}\n");
+    logger.write_debug("External message: {msg:?}\n");
     Some(msg)
-}
-
-pub fn read_message(
-    rt: &mut impl Runtime,
-    ticketer: &ContractKt1Hash,
-) -> Option<Message> {
-    let input = rt.read_input().ok()??;
-    let _ = rt.mark_for_reboot();
-
-    let (_, message) = InboxMessage::<RollupType>::parse(input.as_ref()).ok()?;
-
-    match message {
-        InboxMessage::Internal(InternalInboxMessage::StartOfLevel) => {
-            // Start of level message pushed by the Layer 1 at the
-            // beginning of eavh level.
-            debug_msg!(rt, "Internal message: start of level\n");
-            None
-        }
-        InboxMessage::Internal(InternalInboxMessage::InfoPerLevel(info)) => {
-            // The "Info per level" messages follows the "Start of level"
-            // message and contains information on the previous Layer 1 block.
-            debug_msg!(
-                rt,
-                "Internal message: level info \
-                        (block predecessor: {}, predecessor_timestamp: {}\n",
-                info.predecessor,
-                info.predecessor_timestamp
-            );
-            None
-        }
-        InboxMessage::Internal(InternalInboxMessage::EndOfLevel) => {
-            // The "End of level" message is pushed by the Layer 1
-            // at the end of each level.
-            debug_msg!(rt, "Internal message: end of level\n");
-            None
-        }
-        InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
-            if transfer.destination.hash().as_ref()
-                != rt.reveal_metadata().raw_rollup_address
-            {
-                debug_msg!(
-                    rt,
-                    "Internal message ignored because of different smart rollup address"
-                );
-                return None;
-            };
-            read_transfer(rt, transfer, ticketer, input.id)
-        }
-        InboxMessage::External(bytes) => match ExternalMessageFrame::parse(bytes) {
-            Ok(frame) => match frame {
-                ExternalMessageFrame::Targetted { address, contents } => {
-                    let metadata = rt.reveal_metadata();
-                    let rollup_address = metadata.address();
-                    if &rollup_address != address.hash() {
-                        debug_msg!(
-                          rt,
-                            "Skipping message: External message targets another rollup. Expected: {}. Found: {}\n",
-                            rollup_address,
-                            address.hash()
-                        );
-                        None
-                    } else {
-                        match read_external_message(rt, contents) {
-                            Some(msg) => Some(Message::External(msg)),
-                            None => {
-                                debug_msg!(rt, "Failed to parse the external message\n");
-                                None
-                            }
-                        }
-                    }
-                }
-            },
-            Err(_) => {
-                debug_msg!(rt, "Failed to parse the external message frame\n");
-                None
-            }
-        },
-    }
 }
 
 #[cfg(test)]
 mod test {
+    use jstz_core::host::WriteDebug;
     use jstz_crypto::hash::Hash;
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_mock::message::native_deposit::MockNativeDeposit;
     use jstz_mock::{host::JstzMockHost, message::fa_deposit::MockFaDeposit};
     use jstz_proto::context::account::{Address, Addressable};
-    use jstz_proto::operation::external;
-    use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
+    use jstz_proto::operation::{external, Content, ExternalOperation};
+    use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait, SmartRollupHash};
     use tezos_smart_rollup::types::SmartRollupAddress;
 
-    use super::{read_message, InternalMessage, Message};
+    use super::{parse_inbox_message_hex, read_message, InternalMessage, Message};
 
     #[test]
     fn read_message_ignored_on_different_smart_rollup_address() {
@@ -307,5 +340,67 @@ mod test {
         } else {
             panic!("Expected deposit message")
         }
+    }
+
+    const JSTZ_ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
+    const TICKETER: &str = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";
+
+    struct MockLogger;
+
+    impl WriteDebug for MockLogger {
+        fn write_debug(&self, _msg: &str) {}
+    }
+
+    #[test]
+    fn parse_external_inbox_message() {
+        let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
+        let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+        let run_function = "0100c3ea4c18195bcfac262dcb29e3d803ae74681739000000004000000000000000b084122920ce655297b86d29e0115ea7b05fe12a22044c8aeaee0fc506915e9a3d955995aec5095840b744deb77470d6d0388042f06f6264e1b1aeec371b100f00000000200000000000000073c58fbff04bb1bc965986ad626d2a233e630ea253d49e1714a0bc9610c1ef450200000000000000010000002c000000000000006a73747a3a2f2f4b543145573235576b5343616b6f686d436a58486363674d61325a5567564759634851372f03000000000000004745540000000000000000007064080000000000";
+
+        let message =
+            parse_inbox_message_hex(&MockLogger, 0, run_function, &ticketer, &jstz)
+                .expect("Failed to parse inbox message");
+
+        let Message::External(signed) = message else {
+            panic!("Expected external message, got internal message");
+        };
+
+        let operation = signed.verify().expect("Failed to verify signed operation");
+        assert!(
+            matches!(operation.content, Content::RunFunction(..)),
+            "Expected RunFunction operation, got {:?}",
+            operation.content
+        );
+    }
+
+    #[test]
+    fn parse_internal_start_of_level_inbox_message() {
+        let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
+        let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+        let start_level = "0001";
+
+        assert!(
+            parse_inbox_message_hex(&MockLogger, 0, start_level, &ticketer, &jstz)
+                .is_none()
+        )
+    }
+
+    #[test]
+    fn parse_internal_transfer_inbox_message() {
+        let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
+        let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+        let deposit = "0000050507070a000000160000c4ecf33f52c7b89168cfef8f350818fee1ad08e807070a000000160146d83d8ef8bce4d8c60a96170739c0269384075a00070707070000030600b0d40354267463f8cf2844e4d8b20a76f0471bcb2137fd0002298c03ed7d454a101eb7022bc95f7e5f41ac78c3ea4c18195bcfac262dcb29e3d803ae74681739";
+
+        let message = parse_inbox_message_hex(&MockLogger, 0, deposit, &ticketer, &jstz)
+            .expect("Failed to parse inbox message");
+
+        let Message::Internal(transfer) = message else {
+            panic!("Expected external message, got internal message");
+        };
+
+        assert!(
+            matches!(transfer, ExternalOperation::Deposit(..)),
+            "Expected Deposit"
+        );
     }
 }
