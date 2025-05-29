@@ -209,7 +209,7 @@ impl DerefMut for JstzRuntime {
 
 pub struct ProtocolContext {
     pub host: JsHostRuntime<'static>,
-    pub tx: &'static mut Transaction,
+    pub tx: Transaction,
     pub kv: Kv,
 }
 
@@ -220,17 +220,9 @@ impl ProtocolContext {
         address: SmartFunctionHash,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
-
-        // Safety: Since we synchronisely execute Operations, the tx will not be dropped before
-        // the runtime, so this is safe
-        // TODO: Replace with Arc<Mutex<Transaction>>
-        // https://linear.app/tezos/issue/JSTZ-375/replace-andmut-transaction-with-arcmutextransaction
-        let tx = unsafe {
-            std::mem::transmute::<&mut Transaction, &'static mut Transaction>(tx)
-        };
         ProtocolContext {
             host,
-            tx,
+            tx: tx.clone(),
             kv: Kv::new(address.to_base58()),
         }
     }
