@@ -1,4 +1,7 @@
-# 💰 Transfer
+---
+title: 💰 Transfer
+sidebar_label: Transfer
+---
 
 This guide explains how to transfer XTZ between accounts using request and response headers. Transfers can be made to both smart functions and user addresses.
 

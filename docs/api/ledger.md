@@ -1,6 +1,9 @@
-# 💰 Ledger
+---
+title: 💰 Ledger
+sidebar_label: Ledger
+---
 
-::: warning
+:::warning
 The Ledger API is deprecated and will be removed in future versions of Jstz
 :::
 

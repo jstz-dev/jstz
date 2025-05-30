@@ -1,4 +1,7 @@
-# 🪣 KV
+---
+title: 🪣 KV
+sidebar_label: KV
+---
 
 As described in [Storing data](/functions/data_storage), Jstz smart functions store data in a persistent key-value database.
 This database is built directly into the Jstz runtime, available using the global `Kv` object.

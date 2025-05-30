@@ -1,4 +1,6 @@
-# Smart functions
+---
+title: Smart functions
+---
 
 Smart functions are the main processing unit of Jstz.
 They behave like [serverless applications](https://en.wikipedia.org/wiki/Serverless_computing), small applications that run only when called and do not have a long-term presence on any server.
