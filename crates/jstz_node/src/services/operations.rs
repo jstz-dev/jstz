@@ -268,11 +268,7 @@ impl Service for OperationsService {
 mod tests {
 
     use std::borrow::BorrowMut;
-    use std::{
-        fs,
-        path::{Path, PathBuf},
-        sync::{Arc, RwLock},
-    };
+    use std::{fs, path::Path};
 
     use axum::{
         body::Body,
@@ -302,15 +298,13 @@ mod tests {
 
     use crate::{
         config::KeyPair,
-        sequencer::queue::OperationQueue,
         services::{
             error::ServiceError,
-            logs::{broadcaster::Broadcaster, db::Db},
             operations::{encode_operation, OperationsService},
             Service,
         },
-        utils::tests::dummy_receipt,
-        AppState, RunMode,
+        utils::tests::{dummy_receipt, mock_app_state},
+        RunMode,
     };
 
     use super::MAX_DIRECT_OPERATION_SIZE;
@@ -376,23 +370,6 @@ mod tests {
             .header("content-type", "application/json")
             .body(Body::from(serde_json::to_string(&dummy_op).unwrap()))
             .unwrap()
-    }
-
-    async fn mock_app_state(
-        rollup_endpoint: &str,
-        db_path: &str,
-        mode: RunMode,
-    ) -> AppState {
-        AppState {
-            rollup_client: OctezRollupClient::new(rollup_endpoint.to_string()),
-            rollup_preimages_dir: PathBuf::new(),
-            broadcaster: Broadcaster::new(),
-            db: Db::init().await.unwrap(),
-            injector: KeyPair::default(),
-            mode,
-            queue: Arc::new(RwLock::new(OperationQueue::new(1))),
-            runtime_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),
-        }
     }
 
     #[tokio::test]

@@ -35,6 +35,11 @@ pub(crate) async fn read_value_from_store(
 
 #[cfg(test)]
 pub(crate) mod tests {
+    use std::{
+        path::PathBuf,
+        sync::{Arc, RwLock},
+    };
+
     use jstz_core::BinEncodable;
     use jstz_crypto::{
         hash::Blake2b,
@@ -48,7 +53,12 @@ pub(crate) mod tests {
     use tempfile::NamedTempFile;
     use tezos_crypto_rs::{base58::ToBase58Check, hash::ContractKt1Hash};
 
-    use crate::{sequencer::db::Db, services::utils::read_value_from_store, RunMode};
+    use crate::{
+        config::KeyPair,
+        sequencer::queue::OperationQueue,
+        services::{logs::broadcaster::Broadcaster, utils::read_value_from_store},
+        AppState, RunMode,
+    };
 
     pub(crate) fn dummy_receipt(smart_function_hash: ContractKt1Hash) -> Receipt {
         Receipt::new(
@@ -59,6 +69,23 @@ pub(crate) mod tests {
                 },
             )),
         )
+    }
+
+    pub(crate) async fn mock_app_state(
+        rollup_endpoint: &str,
+        db_path: &str,
+        mode: RunMode,
+    ) -> AppState {
+        AppState {
+            rollup_client: OctezRollupClient::new(rollup_endpoint.to_string()),
+            rollup_preimages_dir: PathBuf::new(),
+            broadcaster: Broadcaster::new(),
+            db: crate::services::logs::db::Db::init().await.unwrap(),
+            injector: KeyPair::default(),
+            mode,
+            queue: Arc::new(RwLock::new(OperationQueue::new(1))),
+            runtime_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),
+        }
     }
 
     #[tokio::test]
@@ -85,7 +112,7 @@ pub(crate) mod tests {
             ))
             .with_body("null")
             .create();
-        let runtime_db = Db::init(Some("")).unwrap();
+        let runtime_db = crate::sequencer::db::Db::init(Some("")).unwrap();
 
         let bytes = read_value_from_store(
             RunMode::Default,
@@ -127,7 +154,9 @@ pub(crate) mod tests {
         let receipt = dummy_receipt(smart_function_hash.clone());
         let op_hash = "9b15976cc8162fe39458739de340a1a95c59a9bcff73bd3c83402fad6352396e";
         let db_file = NamedTempFile::new().unwrap();
-        let runtime_db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
+        let runtime_db =
+            crate::sequencer::db::Db::init(Some(db_file.path().to_str().unwrap()))
+                .unwrap();
         runtime_db
             .write(
                 &format!("/jstz_receipt/{op_hash}"),
