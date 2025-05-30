@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use api_doc::{modify, ApiDoc};
 use axum::{
     extract::DefaultBodyLimit,
@@ -110,13 +110,19 @@ pub async fn run(
     let runtime_db = sequencer::db::Db::init(Some(db_path))?;
     let _worker = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => Some(worker::spawn(queue.clone())),
+        RunMode::Sequencer => Some(
+            worker::spawn(queue.clone(), runtime_db.clone())
+                .context("failed to launch worker")?,
+        ),
         #[cfg(test)]
         RunMode::Sequencer => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
-            Some(worker::spawn(queue.clone(), move || {
-                std::fs::File::create(p).unwrap();
-            }))
+            Some(
+                worker::spawn(queue.clone(), runtime_db.clone(), move || {
+                    std::fs::File::create(p).unwrap();
+                })
+                .context("failed to launch worker")?,
+            )
         }
         RunMode::Default => None,
     };
