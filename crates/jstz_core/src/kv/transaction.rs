@@ -237,11 +237,18 @@ impl InnerTransaction {
         rt: &impl Runtime,
         key: Key,
     ) -> Result<Option<&SnapshotValue>> {
-        if let Some(&snapshot_idx) = self.lookup_map.get(&key).and_then(|h| h.last()) {
-            return Ok(self.stack[snapshot_idx].lookup(&key));
+        if let Some(&snapshot_idx) =
+            self.lookup_map.get(&key).and_then(|history| history.last())
+        {
+            let snapshot = &self.stack[snapshot_idx];
+
+            return Ok(snapshot.lookup(&key));
         }
+
         if let Some(value) = Storage::get::<V>(rt, &key)? {
+            // TODO: This clone is probably not necessary
             self.current_snapshot_insert(key.clone(), SnapshotValue::new(value))?;
+
             self.current_snapshot_lookup(&key)
         } else {
             Ok(None)
@@ -253,17 +260,18 @@ impl InnerTransaction {
         rt: &impl Runtime,
         key: Key,
     ) -> Result<Option<&mut SnapshotValue>> {
-        if let Some(&snapshot_idx) = self.lookup_map.get(&key).and_then(|h| h.last()) {
-            let snap = &self.stack[snapshot_idx];
-            if snap.lookup(&key).is_some() {
-                self.current_snapshot_insert(
-                    key.clone(),
-                    snap.lookup(&key).unwrap().clone(),
-                )?;
-                return self.current_snapshot_lookup_mut(&key);
+        if let Some(&snapshot_idx) =
+            self.lookup_map.get(&key).and_then(|history| history.last())
+        {
+            let snapshot = &self.stack[snapshot_idx];
+
+            if let Some(value) = snapshot.lookup(&key) {
+                self.current_snapshot_insert(key.clone(), value.clone())?;
+                self.current_snapshot_lookup_mut(&key)
+            } else {
+                Ok(None)
             }
-        }
-        if let Some(value) = Storage::get::<V>(rt, &key)? {
+        } else if let Some(value) = Storage::get::<V>(rt, &key)? {
             self.current_snapshot_insert(key.clone(), SnapshotValue::new(value))?;
             self.current_snapshot_lookup_mut(&key)
         } else {
@@ -271,11 +279,97 @@ impl InnerTransaction {
         }
     }
 
-    fn contains_key(&self, rt: &impl Runtime, key: &Key) -> Result<bool> {
-        if let Some(&idx) = self.lookup_map.get(key).and_then(|h| h.last()) {
-            return Ok(self.stack[idx].contains_key(key));
+    /// Returns `true` if the key-value store contains a key-value pair for the
+    /// specified key.
+    pub fn contains_key(&self, rt: &impl Runtime, key: &Key) -> Result<bool> {
+        if let Some(&context_idx) =
+            self.lookup_map.get(key).and_then(|history| history.last())
+        {
+            let context = &self.stack[context_idx];
+
+            return Ok(context.contains_key(key));
         }
+
         Storage::contains_key(rt, key)
+    }
+
+    fn queue_outbox_message(
+        &mut self,
+        rt: &mut impl Runtime,
+        message: OutboxMessage,
+    ) -> Result<()> {
+        if self.persistent_outbox.len(rt)? + self.snapshot_outbox_len + 1
+            > self.persistent_outbox.max(rt)?
+        {
+            Err(OutboxError::OutboxQueueFull)?;
+        }
+        let current_outbox_queue = self.current_snapshot()?.outbox_queue_mut();
+        current_outbox_queue.queue_message(message);
+        self.snapshot_outbox_len += 1;
+        Ok(())
+    }
+
+    /// Begin a transaction.
+    fn begin(&mut self) {
+        self.stack.push(Snapshot::default())
+    }
+
+    /// Commit a transaction.
+    fn commit(&mut self, rt: &mut impl Runtime) -> Result<()> {
+        let curr_ctxt = self.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
+
+        // Following the `.pop`, `prev_idx` is the index of prev_idx (if it exists)
+        let prev_idx = self.current_snapshot_idx();
+
+        if let Some(prev_ctxt) = self.stack.last_mut() {
+            // TODO: These clones are probably uncessary since the entry of btree will always be occupied.
+            for key in curr_ctxt.remove_edits {
+                self.lookup_map.rollback(&key)?;
+                self.lookup_map.update(key.clone(), prev_idx);
+                prev_ctxt.remove(key);
+            }
+
+            for (key, value) in curr_ctxt.insert_edits {
+                self.lookup_map.rollback(&key)?;
+                self.lookup_map.update(key.clone(), prev_idx);
+                prev_ctxt.insert(key, value);
+            }
+
+            prev_ctxt.outbox_queue.extend(curr_ctxt.outbox_queue);
+        } else {
+            for key in &curr_ctxt.remove_edits {
+                Storage::remove(rt, key)?
+            }
+
+            for (key, value) in curr_ctxt.insert_edits {
+                Storage::insert(rt, &key, value.0.as_ref())?
+            }
+
+            flush(rt, &mut self.persistent_outbox, curr_ctxt.outbox_queue)?;
+            self.snapshot_outbox_len = 0;
+
+            // Update lookup map
+            self.lookup_map.clear()
+        }
+
+        Ok(())
+    }
+
+    /// Rollback a transaction.
+    fn rollback(&mut self) -> Result<()> {
+        let curr_ctxt = self.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
+
+        // SAFETY: The set of keys between removal edits and insertion edits are disjoint, meaning no
+        // `lookup_map` entries will be rolledback more than once
+        for key in &curr_ctxt.remove_edits {
+            self.lookup_map.rollback(key)?;
+        }
+
+        for key in curr_ctxt.insert_edits.keys() {
+            self.lookup_map.rollback(key)?
+        }
+
+        Ok(())
     }
 }
 
@@ -294,7 +388,7 @@ impl Transaction {
     /// Begin a transaction.
     pub fn begin(&self) {
         let rc = self.acquire_guard().expect("mutex poisoned");
-        rc.borrow_mut().stack.push(Snapshot::default());
+        rc.borrow_mut().begin();
     }
 
     /// Commit a transaction.
@@ -302,33 +396,7 @@ impl Transaction {
         let rc = self.acquire_guard()?;
         let mut inner = rc.borrow_mut();
 
-        let curr = inner.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
-        let prev_idx = inner.current_snapshot_idx();
-
-        if !inner.stack.is_empty() {
-            for key in curr.remove_edits {
-                inner.lookup_map.rollback(&key)?;
-                inner.lookup_map.update(key.clone(), prev_idx);
-                inner.stack[prev_idx].remove(key);
-            }
-            for (key, val) in curr.insert_edits {
-                inner.lookup_map.rollback(&key)?;
-                inner.lookup_map.update(key.clone(), prev_idx);
-                inner.stack[prev_idx].insert(key, val);
-            }
-            inner.stack[prev_idx].outbox_queue.extend(curr.outbox_queue);
-        } else {
-            for key in &curr.remove_edits {
-                Storage::remove(rt, key)?;
-            }
-            for (key, val) in curr.insert_edits {
-                Storage::insert(rt, &key, val.0.as_ref())?;
-            }
-            flush(rt, &mut inner.persistent_outbox, curr.outbox_queue)?;
-            inner.snapshot_outbox_len = 0;
-            inner.lookup_map.clear();
-        }
-        Ok(())
+        inner.commit(rt)
     }
 
     /// Rollback a transaction.
@@ -336,19 +404,7 @@ impl Transaction {
         let rc = self.acquire_guard()?;
         let mut inner = rc.borrow_mut();
 
-        let curr_ctxt = inner.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
-
-        // SAFETY: The set of keys between removal edits and insertion edits are disjoint, meaning no
-        // `lookup_map` entries will be rolledback more than once
-        for key in &curr_ctxt.remove_edits {
-            inner.lookup_map.rollback(key)?;
-        }
-
-        for key in curr_ctxt.insert_edits.keys() {
-            inner.lookup_map.rollback(key)?
-        }
-
-        Ok(())
+        inner.rollback()
     }
 
     pub fn get<'a, V: Value>(
@@ -448,16 +504,7 @@ impl Transaction {
         let rc = self.acquire_guard()?;
         let mut inner = rc.borrow_mut();
 
-        if inner.persistent_outbox.len(rt)? + inner.snapshot_outbox_len + 1
-            > inner.persistent_outbox.max(rt)?
-        {
-            Err(OutboxError::OutboxQueueFull)?;
-        }
-
-        let current_outbox_queue = inner.current_snapshot()?.outbox_queue_mut();
-        current_outbox_queue.queue_message(message);
-        inner.snapshot_outbox_len += 1;
-        Ok(())
+        inner.queue_outbox_message(rt, message)
     }
 }
 
@@ -635,24 +682,10 @@ pub struct Guarded<'a, T: ?Sized + 'a> {
 }
 
 impl<'a, T: ?Sized + 'a> Guarded<'a, T> {
-    pub fn new<'b>(guard: RcGuardInner, value: &T) -> Guarded<'b, T> {
+    pub fn new(guard: RcGuardInner, value: &T) -> Guarded<'a, T> {
         Guarded {
             value,
             _guard: guard,
-            _marker: PhantomData,
-        }
-    }
-    pub fn from_mut<'b, U>(parent: &GuardedMut<'a, T>, sub: &'b U) -> Guarded<'b, U> {
-        Guarded {
-            value: sub,
-            _guard: parent._guard.clone(),
-            _marker: PhantomData,
-        }
-    }
-    pub fn from<'b, U>(parent: Guarded<'a, T>, sub: &'b U) -> Guarded<'b, U> {
-        Guarded {
-            value: sub,
-            _guard: parent._guard.clone(),
             _marker: PhantomData,
         }
     }
@@ -679,19 +712,6 @@ impl<'a, T: ?Sized + 'a> GuardedMut<'a, T> {
         GuardedMut {
             value,
             _guard: guard,
-            _marker: PhantomData,
-        }
-    }
-    pub fn guard_sub<'b, U>(
-        parent: &'a GuardedMut<'a, T>,
-        sub: &'b mut U,
-    ) -> GuardedMut<'b, U>
-    where
-        'b: 'a,
-    {
-        GuardedMut {
-            value: sub,
-            _guard: parent._guard.clone(),
             _marker: PhantomData,
         }
     }
