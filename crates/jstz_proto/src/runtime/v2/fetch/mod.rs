@@ -4,10 +4,10 @@ mod error;
 use error::*;
 
 use deno_core::{
-    resolve_import, serde_v8, v8, AsyncResult, BufView, ByteString, JsBuffer, OpState,
-    Resource, ResourceId, StaticModuleLoader, ToJsBuffer,
+    resolve_import, serde_v8, v8, ByteString, JsBuffer, OpState, Resource, ResourceId,
+    StaticModuleLoader, ToJsBuffer,
 };
-use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
+use deno_fetch_base::{FetchHandler, FetchResponse, FetchResponseResource, FetchReturn};
 use jstz_core::host::JsHostRuntime;
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
@@ -312,14 +312,13 @@ async fn fetch_send(
     let request = Rc::try_unwrap(request)
         .ok()
         .expect("multiple op_fetch_send ongoing");
-
     let response = request.future.await;
+    let body = response.body;
+    let body_size = body.len() as u64;
     let response_rid = state
         .borrow_mut()
         .resource_table
-        .add(FetchResponseResource {
-            body: RefCell::new(Some(response.body)),
-        });
+        .add(FetchResponseResource::<Body>::new(body, Some(body_size)));
 
     Ok(deno_fetch_base::FetchResponse {
         status: response.status,
@@ -457,33 +456,13 @@ fn commit_or_rollback(
     result.map_err(|e| FetchError::JstzError(e.to_string()))
 }
 
-// Resources
-
 pub struct FetchRequestResource {
     pub future: Pin<Box<dyn Future<Output = Response>>>,
     pub url: Url,
     pub from: SmartFunctionHash,
 }
 
-pub struct FetchResponseResource {
-    body: RefCell<Option<Body>>,
-}
-
 impl Resource for FetchRequestResource {}
-
-impl Resource for FetchResponseResource {
-    fn read(self: Rc<Self>, _limit: usize) -> AsyncResult<BufView> {
-        Box::pin(async move {
-            if let Some(body) = self.body.borrow_mut().take() {
-                return Ok(match body {
-                    Body::Buffer(body) => BufView::from(body),
-                    Body::Vector(body) => BufView::from(body),
-                });
-            }
-            Ok(BufView::empty())
-        })
-    }
-}
 
 // Errors
 
@@ -505,14 +484,18 @@ impl<'s> ToV8<'s> for Body {
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, rc::Rc};
+
+    use deno_core::{resolve_import, StaticModuleLoader};
+    use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, ProtocolContext};
 
     use jstz_core::{
         host::{HostRuntime, JsHostRuntime},
         kv::Transaction,
     };
     use jstz_crypto::{
-        public_key_hash::PublicKeyHash, smart_function_hash::SmartFunctionHash,
+        hash::Hash, public_key_hash::PublicKeyHash,
+        smart_function_hash::SmartFunctionHash,
     };
     use jstz_utils::TOKIO;
 
@@ -520,8 +503,11 @@ mod test {
     use url::Url;
 
     use super::process_and_dispatch_request;
-    use crate::context::account::{Account, Addressable, Amount};
-    use crate::runtime::ParsedCode;
+    use crate::{context::account::Address, runtime::ParsedCode};
+    use crate::{
+        context::account::{Account, Addressable, Amount},
+        runtime::v2::fetch::ProtoFetchHandler,
+    };
 
     // Deploy a vec of smart functions from the same creator, each
     // with `amount` XTZ. Returns a vec of hashes corresponding to
@@ -1388,4 +1374,99 @@ mod test {
     // TODO: https://github.com/jstz-dev/jstz/pull/982
     #[allow(dead_code)]
     fn request_get_reader_supported() {}
+
+    #[tokio::test]
+    async fn test_fetch_response_body_stream() {
+        let mut host = tezos_smart_rollup_mock::MockHost::default();
+        let address =
+            SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton")
+                .unwrap();
+        let mut tx = jstz_core::kv::Transaction::default();
+        tx.begin();
+        let protocol = Some(ProtocolContext::new(&mut host, &mut tx, address.clone()));
+        let source = Address::User(jstz_mock::account1());
+        let fetched_script = r#"
+            const handler = async (req) => {
+                let reqBody = await req.arrayBuffer();
+                return new Response(reqBody);
+            }
+            export default handler;
+        "#;
+        Account::add_balance(&mut host, &mut tx.clone(), &source, 10000)
+            .expect("add balance");
+        let func_addr = Account::create_smart_function(
+            &mut host,
+            &mut tx,
+            &source,
+            100,
+            ParsedCode(fetched_script.to_string()),
+        )
+        .unwrap();
+        drop(tx);
+
+        let code = format!(
+            r#"
+            const call = async () => {{
+                const body = [1,2,3,4,5,6,7,8,9,10];
+                const expectedBytes = body.length;
+                // 1. test byob mode
+                let request = new Request("jstz://{func_addr}", {{
+                    method: "POST",
+                    body: new Uint8Array(body),
+                }})
+                let response = await fetch(request);
+                const CHUNK_SIZE = 3;          
+                let actualBytes = 0;    
+                let count = 0;       
+                let reader = response.body.getReader({{ mode: "byob" }});   
+                while (true) {{
+                    const buf = new Uint8Array(CHUNK_SIZE);
+                    const {{ value, done }} = await reader.read(buf);    
+                    if (done) break;
+                    actualBytes += value.byteLength;
+                    count += 1;
+                }}
+                if (actualBytes !== expectedBytes) {{
+                    throw new Error("size is incorrect");
+                }}
+                const expectedCount = Math.floor(actualBytes / CHUNK_SIZE) + 1; 
+                if (count !== expectedCount) {{
+                    throw new Error("count is incorrect");
+                }}
+
+                // 2. test default mode
+                request = new Request("jstz://{func_addr}", {{
+                    method: "POST",
+                    body: new Uint8Array(body),
+                }})
+                response = await fetch(request);
+                reader = response.body.getReader();   
+                actualBytes = 0;  
+                // read all the body
+                while (true) {{
+                    const {{ value, done }} = await reader.read();    
+                    if (done) break;
+                    actualBytes += value.byteLength;
+                }}
+                if (actualBytes !== expectedBytes) {{
+                    throw new Error("size is incorrect");
+                }}
+                return response
+            }}
+
+            export default call;
+        "#
+        );
+        let specifier =
+            resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
+        let module_loader = StaticModuleLoader::with(specifier.clone(), code);
+        let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
+            protocol,
+            fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
+            module_loader: Rc::new(module_loader),
+            ..Default::default()
+        });
+        let id = runtime.execute_main_module(&specifier).await.unwrap();
+        let _ = runtime.call_default_handler(id, &[]).await.unwrap();
+    }
 }
