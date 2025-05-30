@@ -1,4 +1,10 @@
-use jstz_core::kv::{Storage, Transaction};
+use std::cell::RefCell;
+
+use inbox::read_message;
+use jstz_core::{
+    host::{Host, HostProvider},
+    kv::{Storage, Transaction},
+};
 use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
 use jstz_proto::{executor, Result};
 use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -8,12 +14,19 @@ use tezos_smart_rollup::{
     storage::path::RefPath,
 };
 
-use crate::inbox::{read_message, Message};
+use crate::inbox::Message;
 pub mod inbox;
 pub mod parsing;
 
 pub const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
 pub const INJECTOR: RefPath = RefPath::assert_from(b"/injector");
+
+thread_local! {
+    static GLOBAL_HOST: RefCell<HostProvider> = {
+        let mut mock = tezos_smart_rollup_mock::MockHost::default();
+        RefCell::new(HostProvider::new(&mut mock))
+    }
+}
 
 fn read_ticketer(rt: &impl Runtime) -> Option<SmartFunctionHash> {
     Storage::get(rt, &TICKETER).ok()?
@@ -24,7 +37,7 @@ fn read_injector(rt: &impl Runtime) -> Option<PublicKey> {
 }
 
 fn handle_message(
-    hrt: &mut impl Runtime,
+    hrt: &mut Host,
     message: Message,
     ticketer: &ContractKt1Hash,
     tx: &mut Transaction,
@@ -55,14 +68,18 @@ fn handle_message(
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
+    let host = &mut GLOBAL_HOST.with_borrow(|global_host| {
+        global_host.replace(rt);
+        global_host.new_host()
+    });
     // TODO: we should organize protocol consts into a struct
     // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
-    let ticketer = read_ticketer(rt).expect("Ticketer not found");
-    let injector = read_injector(rt).expect("Revealer not found");
+    let ticketer = read_ticketer(host).expect("Ticketer not found");
+    let injector = read_injector(host).expect("Revealer not found");
     let mut tx = Transaction::default();
     tx.begin();
-    if let Some(message) = read_message(rt, &ticketer) {
-        handle_message(rt, message, &ticketer, &mut tx, &injector)
+    if let Some(message) = read_message(host, &ticketer) {
+        handle_message(host, message, &ticketer, &mut tx, &injector)
             .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
     }
     if let Err(commit_error) = tx.commit(rt) {
