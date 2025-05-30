@@ -64,7 +64,7 @@ impl TicketTable {
                 Ok(amount)
             }
             Entry::Occupied(mut occupied) => {
-                let balance = occupied.get_mut();
+                let mut balance = occupied.get_mut();
                 let checked_balance = balance
                     .checked_add(amount)
                     .ok_or(crate::error::Error::BalanceOverflow)?;
@@ -88,7 +88,7 @@ impl TicketTable {
         match tx.entry::<Amount>(rt, path)? {
             Entry::Vacant(_) => Err(TicketTableError::AccountNotFound)?,
             Entry::Occupied(mut occupied) => {
-                let balance = occupied.get_mut();
+                let mut balance = occupied.get_mut();
                 if *balance < amount {
                     return Err(TicketTableError::InsufficientFunds)?;
                 }

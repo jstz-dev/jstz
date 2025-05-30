@@ -466,7 +466,7 @@ fn commit_or_rollback(
     tx: Arc<Mutex<Transaction>>,
     is_success: bool,
 ) -> Result<()> {
-    let mut tx = tx.lock();
+    let tx = tx.lock();
     let result = if is_success {
         tx.commit(host)
     } else {

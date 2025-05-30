@@ -7,6 +7,7 @@ use boa_engine::{
     JsError, JsNativeError, JsResult, JsString, JsValue, NativeFunction,
 };
 use boa_gc::{Finalize, Trace};
+use jstz_core::kv::transaction::Guarded;
 use jstz_core::{host::HostRuntime, kv::Transaction, runtime, Result};
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::{Deserialize, Serialize};
@@ -68,7 +69,7 @@ impl Kv {
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         key: &str,
-    ) -> Result<Option<&'a KvValue>> {
+    ) -> Result<Option<Guarded<'a, KvValue>>> {
         tx.get::<KvValue>(hrt, self.key_path(key)?)
     }
 

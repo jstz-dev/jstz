@@ -9,6 +9,7 @@ use jstz_api::http::{
     response::{Response, ResponseBuilder, ResponseClass, ResponseOptions},
 };
 use jstz_core::{native::JsNativeObject, runtime, Runtime};
+use std::ops::Deref;
 
 use crate::{
     context::account::{Account, Address, Addressable},
@@ -168,7 +169,11 @@ pub fn fetch(
                     // 6. Load, init and run the smart function
                     let src_code =
                         runtime::with_js_hrt_and_tx(|hrt, tx| -> Result<ParsedCode> {
-                            Ok(Account::function_code(hrt, tx, &dest_address)?.clone())
+                            Ok(ParsedCode(
+                                Account::function_code(hrt, tx, &dest_address)?
+                                    .deref()
+                                    .to_string(),
+                            ))
                         })?;
 
                     log_request_start(dest_address.clone(), operation_hash.to_string());
