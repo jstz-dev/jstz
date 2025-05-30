@@ -1,13 +1,11 @@
 use derive_more::Display;
-pub use tezos_smart_rollup_host::runtime::{
-    Runtime as HostRuntime, RuntimeError as HostError,
-};
-use tezos_smart_rollup_host::{
-    dal_parameters::RollupDalParameters,
-    input,
-    metadata::RollupMetadata,
-    path::{self, Path},
-    runtime::ValueType,
+
+pub use tezos_smart_rollup::host::{Runtime as HostRuntime, RuntimeError as HostError};
+
+use tezos_smart_rollup::{
+    host::ValueType,
+    storage::path::{self, Path},
+    types::{Message, RollupDalParameters, RollupMetadata},
 };
 
 /// A trait that provides a simple interface for debug logging, independent of the HostRuntime implementation
@@ -40,7 +38,7 @@ mod erased_runtime {
     pub trait Runtime: sealed::runtime::Sealed {
         fn erased_write_output(&mut self, from: &[u8]) -> Result<(), HostError>;
         fn erased_write_debug(&self, msg: &str);
-        fn erased_read_input(&mut self) -> Result<Option<input::Message>, HostError>;
+        fn erased_read_input(&mut self) -> Result<Option<Message>, HostError>;
         fn erased_store_has(
             &self,
             path: erase::Path<'_>,
@@ -147,7 +145,7 @@ mod erased_runtime {
             self.write_debug(msg)
         }
 
-        fn erased_read_input(&mut self) -> Result<Option<input::Message>, HostError> {
+        fn erased_read_input(&mut self) -> Result<Option<Message>, HostError> {
             self.read_input()
         }
 
@@ -304,7 +302,7 @@ mod erased_runtime {
             self.erased_write_debug(msg)
         }
 
-        fn read_input(&mut self) -> Result<Option<input::Message>, HostError> {
+        fn read_input(&mut self) -> Result<Option<Message>, HostError> {
             self.erased_read_input()
         }
 
@@ -469,7 +467,7 @@ impl<'a: 'static> HostRuntime for JsHostRuntime<'a> {
         self.inner.write_debug(msg)
     }
 
-    fn read_input(&mut self) -> Result<Option<input::Message>, HostError> {
+    fn read_input(&mut self) -> Result<Option<Message>, HostError> {
         self.inner.read_input()
     }
 
