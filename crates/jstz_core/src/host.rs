@@ -10,6 +10,17 @@ use tezos_smart_rollup_host::{
     runtime::ValueType,
 };
 
+/// A trait that provides a simple interface for debug logging, independent of the HostRuntime implementation
+pub trait WriteDebug {
+    fn write_debug(&self, msg: &str);
+}
+
+impl<T: HostRuntime> WriteDebug for T {
+    fn write_debug(&self, msg: &str) {
+        T::write_debug(self, msg);
+    }
+}
+
 mod erased_runtime {
     use super::*;
 

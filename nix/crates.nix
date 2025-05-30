@@ -86,7 +86,7 @@
       inherit (craneLib.crateNameFromCargoToml {inherit src;}) version;
       cargoArtifacts = cargoDeps;
       doCheck = false;
-      buildInputs = common.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
+      buildInputs = common.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert pkgs.sqlite];
       preBuildPhases = ["cpJstzKernel"];
       cpJstzKernel = ''
         cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
