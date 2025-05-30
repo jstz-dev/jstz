@@ -82,9 +82,11 @@ pub struct Transaction {
 
 impl Clone for Transaction {
     fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-            guard: RefCell::new(Weak::new()),
+        let guard_weak = self.guard.borrow().clone();
+
+        Transaction {
+            inner: Arc::clone(&self.inner),
+            guard: RefCell::new(guard_weak),
         }
     }
 }
