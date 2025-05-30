@@ -1,4 +1,3 @@
-#![allow(unused)]
 use anyhow::{anyhow, bail, Context};
 use jstz_core::kv::{Storage, Transaction};
 use jstz_crypto::{
@@ -177,9 +176,9 @@ mod tests {
         assert!(matches!(
             v.result,
             ReceiptResult::Success(ReceiptContent::RunFunction(RunFunctionReceipt {
-                body,
+                body: _,
                 status_code: StatusCode::OK,
-                headers
+                headers: _
             }))
         ));
 
