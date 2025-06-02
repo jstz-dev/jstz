@@ -93,7 +93,6 @@ pub async fn run(
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
-    let _queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
 
     let cancellation_token = CancellationToken::new();
     let (broadcaster, db, tail_file_handle) =
@@ -126,7 +125,7 @@ pub async fn run(
         RunMode::Default => None,
     };
 
-    let monitor: Option<Monitor> = match mode {
+    let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer => {
             Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
@@ -158,10 +157,6 @@ pub async fn run(
 
     let listener = TcpListener::bind(format!("{}:{}", addr, port)).await?;
     axum::serve(listener, router).await?;
-
-    if let Some(mut monitor) = monitor {
-        monitor.shut_down().await;
-    }
 
     cancellation_token.cancel();
     tail_file_handle.await.unwrap()?;
