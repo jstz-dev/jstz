@@ -1,11 +1,11 @@
 #![allow(unused)]
+use crate::runtime::v2::oracle::OracleRequest;
 use bincode::{Decode, Encode};
+use derive_more::From;
 use jstz_core::host::HostRuntime;
 use nom::{bytes::complete::tag, InputTake};
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::prelude::debug_msg;
-
-use crate::runtime::v2::oracle::OracleRequest;
 
 /// Jstz Events
 pub trait Event: PartialEq + Serialize {
@@ -13,7 +13,7 @@ pub trait Event: PartialEq + Serialize {
 }
 
 /// Responsible for publishing events to the kernel debug log
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct EventPublisher;
 
 impl EventPublisher {

@@ -1,7 +1,8 @@
 use std::{
     fmt::{self, Display},
-    ops::Deref,
-    ops::DerefMut,
+    marker::PhantomData,
+    ops::Deref as _,
+    ops::DerefMut as _,
     str::FromStr,
 };
 
@@ -15,7 +16,7 @@ use derive_more::From;
 use jstz_core::kv::transaction::{Guarded, GuardedMut};
 use jstz_core::{
     host::HostRuntime,
-    kv::{Entry, Transaction},
+    kv::{Entry, Storage, Transaction},
 };
 use jstz_crypto::hash::Hash;
 use jstz_crypto::public_key_hash::PublicKeyHash;
@@ -226,6 +227,13 @@ impl Account {
         }
     }
 
+    fn amount_mut(&mut self) -> &mut u64 {
+        match self {
+            Account::User(UserAccount { amount, .. }) => amount,
+            Account::SmartFunction(SmartFunctionAccount { amount, .. }) => amount,
+        }
+    }
+
     fn get_mut<'a>(
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
@@ -372,6 +380,37 @@ impl Account {
         Ok(*balance)
     }
 
+    // Prepare to substract `amount` from account in storage and transaction state
+    pub fn prepare_eager_sub_balance<'a, R: HostRuntime>(
+        hrt: &'a mut R,
+        tx: &'a mut Transaction,
+        addr: &impl Addressable,
+        amount: Amount,
+    ) -> Result<PrepareBalanceUpdate<'a, Sub, R>> {
+        let path = Self::path(addr)?;
+        // Check tx first
+        let balance_in_tx = Self::balance_mut(hrt, tx, addr)?;
+        if *balance_in_tx < amount {
+            return Err(Error::InsufficientFunds)?;
+        }
+
+        // Then check storage
+        let mut account =
+            Storage::get::<Account>(hrt, &path)?.ok_or(Error::AccountDoesNotExist)?;
+        let balance_in_storage = account.amount_mut();
+        if *balance_in_storage < amount {
+            return Err(Error::InsufficientFunds);
+        }
+
+        Ok(PrepareBalanceUpdate {
+            amount,
+            path,
+            hrt,
+            tx_entry: balance_in_tx,
+            _marker: PhantomData,
+        })
+    }
+
     pub fn set_balance(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
@@ -403,6 +442,50 @@ impl Account {
         }
 
         Ok(())
+    }
+}
+
+pub trait Op {
+    fn apply(bal: &mut Amount, amount: Amount);
+}
+
+#[allow(unused)]
+pub struct Add;
+impl Op for Add {
+    fn apply(bal: &mut Amount, amount: Amount) {
+        *bal += amount
+    }
+}
+
+pub struct Sub;
+impl Op for Sub {
+    fn apply(bal: &mut Amount, amount: Amount) {
+        *bal -= amount;
+    }
+}
+
+/// A balance update against Storage and Transaction that is
+/// guaranteed to succeed
+pub struct PrepareBalanceUpdate<'a, O: Op, R: HostRuntime> {
+    amount: Amount,
+    path: OwnedPath,
+    hrt: &'a mut R,
+    tx_entry: GuardedMut<'a, Amount>,
+    _marker: PhantomData<O>,
+}
+
+impl<'a, O: Op, R: HostRuntime> PrepareBalanceUpdate<'a, O, R> {
+    pub fn apply(mut self) {
+        // Storage update
+        let mut account = Storage::get::<Account>(self.hrt, &self.path)
+            .unwrap()
+            .unwrap();
+        let balance_in_storage = account.amount_mut();
+        O::apply(balance_in_storage, self.amount);
+        Storage::insert(self.hrt, &self.path, &account).unwrap();
+
+        // Transaction update
+        O::apply(&mut self.tx_entry, self.amount);
     }
 }
 
