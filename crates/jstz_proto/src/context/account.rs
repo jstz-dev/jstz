@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Display},
-    ops::Deref,
-    ops::DerefMut,
+    ops::Deref as _,
+    ops::DerefMut as _,
     str::FromStr,
 };
 
