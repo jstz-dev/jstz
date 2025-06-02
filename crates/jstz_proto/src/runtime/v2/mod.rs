@@ -18,6 +18,7 @@ pub mod fetch;
 pub use jstz_runtime::{Kv, KvValue};
 mod parsed_code;
 pub use parsed_code::ParsedCode;
+pub mod oracle;
 
 pub async fn run_toplevel_fetch(
     hrt: &mut impl HostRuntime,
