@@ -82,11 +82,9 @@ pub struct Transaction {
 
 impl Clone for Transaction {
     fn clone(&self) -> Self {
-        let guard_weak = self.guard.borrow().clone();
-
         Transaction {
             inner: Arc::clone(&self.inner),
-            guard: RefCell::new(guard_weak),
+            guard: RefCell::new(Weak::new()),
         }
     }
 }
@@ -427,7 +425,7 @@ impl Transaction {
     }
 
     pub fn get_mut<'a, V: Value>(
-        &'a self,
+        &'a mut self,
         rt: &impl Runtime,
         key: Key,
     ) -> Result<Option<GuardedMut<'a, V>>> {
@@ -730,7 +728,7 @@ impl<'a, T: ?Sized + 'a> std::ops::Deref for GuardedMut<'a, T> {
 }
 
 impl<'a, T: ?Sized + 'a> std::ops::DerefMut for GuardedMut<'a, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
+    fn deref_mut(&mut self) -> &'a mut Self::Target {
         unsafe { &mut *self.value }
     }
 }
@@ -1172,5 +1170,25 @@ mod tests {
             TestValue(300)
         });
         assert!(!called, "Closure should not be called for occupied entry");
+    }
+
+    #[test]
+    fn test_tx_cloning() {
+        let hrt = &MockHost::default();
+        let tx = Transaction::default();
+        tx.begin();
+
+        let path = OwnedPath::try_from("/test".to_string()).unwrap();
+        tx.insert(path.clone(), TestValue(100)).unwrap();
+
+        let _a = tx.get::<TestValue>(hrt, path.clone()).unwrap().unwrap();
+        let mut tx2 = tx.clone();
+
+        assert!(matches!(
+            tx2.get_mut::<TestValue>(hrt, path.clone()),
+            Err(crate::error::Error::KvError {
+                source: crate::error::KvError::LockPoisoned
+            })
+        ));
     }
 }
