@@ -19,7 +19,7 @@ use super::{
     error::{ServiceError, ServiceResult},
     Service,
 };
-use crate::AppState;
+use crate::{utils::read_value_from_store, AppState};
 
 const ACCOUNTS_TAG: &str = "Accounts";
 
@@ -57,11 +57,16 @@ pub struct AccountsService;
     )
 )]
 async fn get_account(
-    State(AppState { rollup_client, .. }): State<AppState>,
+    State(AppState {
+        mode,
+        rollup_client,
+        runtime_db,
+        ..
+    }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Account>> {
     let key = format!("/jstz_account/{}", address);
-    let value = rollup_client.get_value(&key).await?;
+    let value = read_value_from_store(mode, rollup_client, runtime_db, key).await?;
     let account = match value {
         Some(value) => deserialize_account(value.as_slice())?,
         None => Err(ServiceError::NotFound)?,
@@ -239,5 +244,82 @@ impl Service for AccountsService {
             .routes(routes!(get_kv_subkeys));
 
         OpenApiRouter::new().nest("/accounts", routes)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::borrow::BorrowMut;
+
+    use axum::{body::Body, extract::Request};
+    use jstz_core::BinEncodable;
+    use jstz_proto::context::account::{Account, Nonce, UserAccount};
+    use tempfile::NamedTempFile;
+    use tezos_crypto_rs::base58::ToBase58Check;
+    use tower::ServiceExt;
+
+    use crate::{
+        services::{accounts::AccountsService, Service},
+        utils::tests::mock_app_state,
+        RunMode,
+    };
+
+    #[tokio::test]
+    async fn get_account_sequencer() {
+        let expected = Account::User(UserAccount {
+            amount: 300,
+            nonce: Nonce(1),
+        });
+        let addr = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
+        let db_file = NamedTempFile::new().unwrap();
+        let state =
+            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
+                .await;
+        state
+            .runtime_db
+            .write(
+                &format!("/jstz_account/{addr}"),
+                &expected.encode().unwrap().to_base58check(),
+            )
+            .unwrap();
+
+        let (mut router, _) = AccountsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+        let res = router
+            .borrow_mut()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/accounts/{addr}"))
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let account = serde_json::from_slice::<Account>(&bytes).unwrap();
+        assert!(matches!(
+            account,
+            Account::User(UserAccount {
+                amount: 300,
+                nonce: Nonce(1),
+            })
+        ));
+
+        // non-existent address
+        let res = router
+            .borrow_mut()
+            .oneshot(
+                Request::builder()
+                    .uri("/accounts/bad_addr")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 404);
     }
 }
