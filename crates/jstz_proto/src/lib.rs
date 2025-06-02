@@ -1,6 +1,8 @@
 mod error;
 
 pub mod context;
+#[cfg(feature = "riscv")]
+pub mod event;
 pub mod executor;
 pub mod operation;
 pub mod receipt;
