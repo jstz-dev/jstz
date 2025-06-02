@@ -1,4 +1,4 @@
-use jstz_core::BinEncodable;
+use jstz_core::{host::WriteDebug, BinEncodable};
 use jstz_proto::context::account::Address;
 use jstz_proto::operation::{external::Deposit, ExternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
@@ -13,8 +13,6 @@ pub use tezos_smart_rollup::{
     prelude::{debug_msg, Runtime},
     types::{self, Contract},
 };
-
-pub use jstz_core::host::WriteDebug;
 
 use crate::parsing::try_parse_fa_deposit;
 

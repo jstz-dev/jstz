@@ -1,4 +1,5 @@
 use axum::http::{HeaderMap, Method, StatusCode, Uri};
+use bytes::Bytes;
 use jstz_crypto::{
     public_key::PublicKey,
     signature::Signature,
@@ -18,6 +19,11 @@ use std::process::{Child, Command};
 use tempfile::{NamedTempFile, TempDir};
 use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
 
+use futures_util::stream;
+use std::convert::Infallible;
+use tokio::task::{self, JoinHandle};
+use warp::{hyper::Body, Filter};
+
 struct ChildWrapper(Child);
 
 impl Drop for ChildWrapper {
@@ -28,12 +34,30 @@ impl Drop for ChildWrapper {
     }
 }
 
+fn make_mock_monitor_blocks(
+) -> impl warp::Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("global" / "monitor_blocks").map(|| {
+        let stream = stream::once(async { Ok::<Bytes, Infallible>(Bytes::new()) });
+        warp::reply::Response::new(Body::wrap_stream(stream))
+    })
+}
+
+fn make_mock_rollup_rpc_server(url: String) -> JoinHandle<()> {
+    let filter = make_mock_monitor_blocks();
+    let addr = url.parse::<std::net::SocketAddr>().unwrap();
+    let server = warp::serve(filter).bind(addr);
+    task::spawn(server)
+}
+
+const DEFAULT_ROLLUP_NODE_RPC: &str = "127.0.0.1:8932";
+
 #[tokio::test(flavor = "multi_thread")]
 async fn run_sequencer() {
     let tmp_dir = TempDir::new().unwrap();
     let log_file = NamedTempFile::new().unwrap();
     let port = unused_port();
     let base_uri = format!("http://127.0.0.1:{port}");
+    let _rollup_rpc = make_mock_rollup_rpc_server(DEFAULT_ROLLUP_NODE_RPC.to_string());
 
     let bin_path = assert_cmd::cargo::cargo_bin("jstz-node");
     let _c = ChildWrapper(

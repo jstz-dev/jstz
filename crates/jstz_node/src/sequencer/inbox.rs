@@ -6,6 +6,8 @@ use std::{
 
 use crate::sequencer::queue::OperationQueue;
 use anyhow::Result;
+use async_dropper_simple::AsyncDrop;
+use async_trait::async_trait;
 use bytes::Bytes;
 use futures_util::{Stream, TryStreamExt};
 use serde::Deserialize;
@@ -19,6 +21,7 @@ use tokio_util::{
     sync::CancellationToken,
 };
 
+#[derive(Default)]
 pub struct Monitor {
     inner: Option<JoinHandle<()>>,
     kill_sig: CancellationToken,
@@ -33,15 +36,22 @@ impl Monitor {
     }
 }
 
+#[async_trait]
+impl AsyncDrop for Monitor {
+    async fn async_drop(&mut self) {
+        self.shut_down().await;
+    }
+}
+
 #[derive(Debug, Deserialize)]
 struct MonitorBlocksResponse {
     level: u32,
 }
 
-/// Spawn a future that monitors the L1 blocks, parse inbox messages and push into the queue.
+/// Spawn a future that monitors the L1 blocks, parses inbox messages and pushes them into the queue.
 pub async fn spawn_monitor<
     #[cfg(test)] Fut: Future<Output = ()> + 'static + Send,
-    #[cfg(test)] F: Fn() -> Fut + Send + 'static,
+    #[cfg(test)] F: Fn(u32) -> Fut + Send + 'static,
 >(
     rollup_endpoint: String,
     _queue: Arc<RwLock<OperationQueue>>,
@@ -72,13 +82,14 @@ pub async fn spawn_monitor<
                             //TODO: fetch inbox messages and place into the queue
                             println!("block level: {}\n", block.level);
                             #[cfg(test)]
-                            on_new_block().await;
+                            on_new_block(block.level).await;
                         }
-                        Some(Err(_)) => {
-                            //TODO: handle restart logic in case there's a stream error.
+                        _ => {
+                            //TODO: handle the case when the stream ended/errored
+                            // https://linear.app/tezos/issue/JSTZ-622/handle-retrial-when-stream-connection-is-lost
+                            println!("`monitor_blocks` stream connection lost");
                             break;
                         }
-                        _ => unreachable!()
                     }
                 }
             }
@@ -130,15 +141,18 @@ mod tests {
     {
         warp::path!("global" / "monitor_blocks").map(|| {
             let delay_stream = stream::once(async {
-                sleep(Duration::from_millis(500)).await;
+                sleep(Duration::from_millis(300)).await;
                 Ok::<Bytes, Infallible>(Bytes::new())
             });
-            let data_stream = stream::iter(vec![
-                Ok::<Bytes, Infallible>(Bytes::from("{\"level\": 123}\n")),
-                Ok::<Bytes, Infallible>(Bytes::from("{\"level\": 124}\n")),
-            ]);
-            let full_stream = delay_stream.chain(data_stream);
-            warp::reply::Response::new(Body::wrap_stream(full_stream))
+
+            let data_stream = stream::iter(vec![Ok::<Bytes, Infallible>(Bytes::from(
+                "{\"level\": 123}\n",
+            ))])
+            .chain(delay_stream)
+            .chain(stream::iter(vec![Ok::<Bytes, Infallible>(Bytes::from(
+                "{\"level\": 124}\n",
+            ))]));
+            warp::reply::Response::new(Body::wrap_stream(data_stream))
         })
     }
 
@@ -150,18 +164,19 @@ mod tests {
     }
 
     fn make_on_new_block() -> (
-        Arc<Mutex<i32>>,
-        impl Fn() -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static,
+        Arc<Mutex<u32>>,
+        impl Fn(u32) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static,
     ) {
-        let counter = Arc::new(Mutex::new(0));
+        let counter = Arc::new(Mutex::new(0u32));
         let counter_clone = counter.clone();
-        let on_new_block = move || {
+        let on_new_block = move |num: u32| {
             let counter_clone = counter_clone.clone();
             Box::pin(async move {
                 let mut value = counter_clone.lock().unwrap();
-                *value += 1;
+                *value = num;
             })
-        } as Pin<Box<dyn Future<Output = ()> + Send>>;
+        }
+            as Pin<Box<dyn Future<Output = ()> + Send>>;
         (counter, on_new_block)
     }
 
@@ -192,8 +207,11 @@ mod tests {
         let mut monitor = spawn_monitor(endpoint.clone(), q.clone(), on_new_block)
             .await
             .unwrap();
+        sleep(Duration::from_millis(100)).await;
+        assert_eq!(*counter.lock().unwrap(), 123);
         monitor.shut_down().await;
-        assert_eq!(*counter.lock().unwrap(), 0);
+        sleep(Duration::from_millis(400)).await;
+        assert_eq!(*counter.lock().unwrap(), 123);
     }
 
     #[tokio::test]
@@ -201,9 +219,10 @@ mod tests {
         let (endpoint, _server) = make_mock_server();
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
         let (counter, on_new_block) = make_on_new_block();
-        // give enough time for block to progress
         let _ = spawn_monitor(endpoint, q, on_new_block).await.unwrap();
-        sleep(Duration::from_millis(800)).await;
-        assert_eq!(*counter.lock().unwrap(), 2);
+        sleep(Duration::from_millis(100)).await;
+        assert_eq!(*counter.lock().unwrap(), 123);
+        sleep(Duration::from_millis(400)).await;
+        assert_eq!(*counter.lock().unwrap(), 124);
     }
 }
