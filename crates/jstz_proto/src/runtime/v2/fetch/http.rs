@@ -5,6 +5,7 @@ use deno_core::{ByteString, JsBuffer};
 use deno_fetch_base::BytesStream;
 use futures::stream;
 use http::{HeaderMap, HeaderName, HeaderValue};
+use serde::{Deserialize, Serialize};
 use url::Url;
 
 use crate::context::account::Address;
@@ -58,10 +59,28 @@ impl Into<http::Response<Option<Vec<u8>>>> for Response {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+pub struct Request {
+    pub method: ByteString,
+    pub url: Url,
+    pub headers: Vec<(ByteString, ByteString)>,
+    pub body: Option<Body>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum Body {
     Vector(Vec<u8>),
     Buffer(JsBuffer),
+}
+
+impl PartialEq for Body {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Vector(l0), Self::Vector(r0)) => l0 == r0,
+            (Self::Buffer(l0), Self::Buffer(r0)) => l0.to_vec() == r0.to_vec(),
+            _ => false,
+        }
+    }
 }
 
 impl Body {

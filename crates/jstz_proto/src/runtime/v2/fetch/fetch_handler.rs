@@ -1361,7 +1361,7 @@ mod test {
             .await;
 
             // check transaction was commited with unawaited on values
-            let kv = jstz_runtime::ext::jstz_kv::kv::Kv::new(remote_address.to_string());
+            let kv = crate::runtime::Kv::new(remote_address.to_string());
             let mut tx = tx;
             let result = kv.get(&mut host, &mut tx, "test").unwrap();
             assert!(result.is_none())
@@ -1399,7 +1399,7 @@ mod test {
             .await;
 
             // check transaction was commited with unawaited on values
-            let kv = jstz_runtime::Kv::new(remote_address.to_string());
+            let kv = crate::runtime::Kv::new(remote_address.to_string());
             let mut tx = tx;
             let result = kv.get(&mut host, &mut tx, "test").unwrap();
             assert!(result.is_none())
