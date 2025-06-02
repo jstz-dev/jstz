@@ -9,6 +9,7 @@ use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
 
 use super::error::{ServiceError, ServiceResult};
+use super::utils;
 use super::{AppState, Service};
 use anyhow::anyhow;
 use anyhow::Context;
@@ -213,12 +214,18 @@ async fn insert_operation_queue(
         )
     )]
 async fn receipt(
-    State(AppState { rollup_client, .. }): State<AppState>,
+    State(AppState {
+        rollup_client,
+        mode,
+        runtime_db,
+        ..
+    }): State<AppState>,
     Path(hash): Path<String>,
 ) -> ServiceResult<Json<Receipt>> {
     let key = format!("/jstz_receipt/{}", hash);
 
-    let value = rollup_client.get_value(&key).await?;
+    let value =
+        utils::read_value_from_store(mode, rollup_client, runtime_db, key).await?;
 
     let receipt = match value {
         Some(value) => Receipt::decode(value.as_slice())
@@ -272,17 +279,25 @@ mod tests {
         http::{HeaderMap, Method, Request, Uri},
     };
     use jstz_core::reveal_data::MAX_REVEAL_SIZE;
+    use jstz_core::BinEncodable;
     use jstz_crypto::{
-        hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
+        hash::Hash,
+        public_key::PublicKey,
+        public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
+        smart_function_hash::{Kt1Hash, SmartFunctionHash},
     };
-    use jstz_proto::operation::RunFunction;
-    use jstz_proto::runtime::ParsedCode;
+    use jstz_proto::receipt::{ReceiptContent, ReceiptResult};
     use jstz_proto::{
         context::account::{Amount, Nonce},
-        operation::{Content, DeployFunction, Operation, SignedOperation},
+        operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
+        receipt::{DeployFunctionReceipt, Receipt},
+        runtime::ParsedCode,
     };
     use octez::OctezRollupClient;
+    use tempfile::NamedTempFile;
+    use tezos_crypto_rs::base58::ToBase58Check;
+    use tezos_crypto_rs::hash::ContractKt1Hash;
     use tower::ServiceExt;
 
     use crate::{
@@ -294,6 +309,7 @@ mod tests {
             operations::{encode_operation, OperationsService},
             Service,
         },
+        utils::tests::dummy_receipt,
         AppState, RunMode,
     };
 
@@ -362,7 +378,11 @@ mod tests {
             .unwrap()
     }
 
-    async fn mock_app_state(rollup_endpoint: &str, mode: RunMode) -> AppState {
+    async fn mock_app_state(
+        rollup_endpoint: &str,
+        db_path: &str,
+        mode: RunMode,
+    ) -> AppState {
         AppState {
             rollup_client: OctezRollupClient::new(rollup_endpoint.to_string()),
             rollup_preimages_dir: PathBuf::new(),
@@ -371,6 +391,7 @@ mod tests {
             injector: KeyPair::default(),
             mode,
             queue: Arc::new(RwLock::new(OperationQueue::new(1))),
+            runtime_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),
         }
     }
 
@@ -480,7 +501,13 @@ mod tests {
             .with_body("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK")
             .create();
 
-        let state = mock_app_state(&server.url(), RunMode::Default).await;
+        let db_file = NamedTempFile::new().unwrap();
+        let state = mock_app_state(
+            &server.url(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Default,
+        )
+        .await;
         let queue = state.queue.clone();
         assert_eq!(queue.read().unwrap().len(), 0);
         let (router, _) = OperationsService::router_with_openapi()
@@ -495,7 +522,10 @@ mod tests {
 
     #[tokio::test]
     async fn inject_sequencer() {
-        let state = mock_app_state("", RunMode::Sequencer).await;
+        let db_file = NamedTempFile::new().unwrap();
+        let state =
+            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
+                .await;
         let queue = state.queue.clone();
         assert_eq!(queue.read().unwrap().len(), 0);
         let (mut router, _) = OperationsService::router_with_openapi()
@@ -516,5 +546,92 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), 503);
+    }
+
+    #[tokio::test]
+    async fn get_receipt_sequencer() {
+        let smart_function_hash =
+            ContractKt1Hash::from_base58_check("KT19GXucGUitURBXXeEMMfqqhSQ5byt4P1zX")
+                .unwrap();
+        let receipt = dummy_receipt(smart_function_hash.clone());
+        let op_hash = "9b15976cc8162fe39458739de340a1a95c59a9bcff73bd3c83402fad6352396e";
+        let db_file = NamedTempFile::new().unwrap();
+        let state =
+            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
+                .await;
+        state
+            .runtime_db
+            .write(
+                &format!("/jstz_receipt/{op_hash}"),
+                &receipt.encode().unwrap().to_base58check(),
+            )
+            .unwrap();
+        state
+            .runtime_db
+            .write(
+                "/jstz_receipt/bad_value",
+                &mock_code(10).encode().unwrap().to_base58check(),
+            )
+            .unwrap();
+
+        let (mut router, _) = OperationsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+
+        // good receipt
+        let res = router
+            .borrow_mut()
+            .oneshot(
+                Request::builder()
+                    .uri(format!("/operations/{op_hash}/receipt"))
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let receipt = serde_json::from_slice::<Receipt>(&bytes).unwrap();
+        assert!(matches!(
+            receipt.result,
+            ReceiptResult::Success(ReceiptContent::DeployFunction(
+                DeployFunctionReceipt { address: SmartFunctionHash(Kt1Hash(addr)) }
+            )) if addr == smart_function_hash
+        ));
+
+        // bad receipt
+        let res = router
+            .borrow_mut()
+            .oneshot(
+                Request::builder()
+                    .uri("/operations/bad_value/receipt")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 500);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let error_message = serde_json::from_slice::<serde_json::Value>(&bytes).unwrap();
+        assert_eq!(
+            error_message,
+            serde_json::json!({"error": "Failed to deserialize receipt"})
+        );
+
+        // non-existent receipt
+        let res = router
+            .borrow_mut()
+            .oneshot(
+                Request::builder()
+                    .uri("/operations/bad_hash/receipt")
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 404);
     }
 }
