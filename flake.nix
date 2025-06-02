@@ -252,15 +252,18 @@
           riscvSandbox = with pkgs;
             nightlyPlatform.buildRustPackage {
               name = "riscv-sandbox";
-              src = builtins.fetchGit {
-                url = "https://gitlab.com/tezos/tezos.git";
-                ref = "master";
-                rev = "d57cc210a8db36be72b5c89c9c41acf9f1fca110";
+              src = fetchFromGitHub {
+                owner = "tezos";
+                repo = "riscv-pvm";
+                rev = "9134747d34e5f72321aaa4f2a788d125df9e53af";
+                sha256 = "sha256-2BF/t05EBqzNX7sEJOHpD7ybk4oPu+r2XL/+Dj4YMZQ=";
+                # submodules = true;   # uncomment if the repo ever grows git-submodules
               };
+              patches = [./memory-patch.patch];
               cargoRoot = "src/riscv";
               buildAndTestSubdir = "src/riscv/sandbox";
               useFetchCargoVendor = true;
-              cargoHash = "sha256-/fw3Ef4X5MX9AOTBALPKTvZVE8dBcjogL7YSQq9SPP0=";
+              cargoHash = "sha256-NshnZf0rTWJsfw170H4GyH0h/X4jI5iBIEJEuol8uK4=";
               buildFeatures = ["log"];
               # opt-in to the unstable `edition2024` feature
               # postPatch = ''

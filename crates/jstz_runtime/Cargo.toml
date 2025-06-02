@@ -42,5 +42,5 @@ tokio.workspace = true
 skip-wpt = []
 
 [[bin]]
-name = "jstz_test_kernel9"
+name = "jstz_test_kernel10"
 path = "test_kernel/src/main.rs"

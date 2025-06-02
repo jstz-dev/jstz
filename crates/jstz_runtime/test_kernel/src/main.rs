@@ -17,26 +17,29 @@ use tezos_smart_rollup::{
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
     debug_msg!(rt, "Debug.");
-    info!("{}", "Kernel entrypoint accessed.");
+    //info!("{}", "Kernel entrypoint accessed.");
+    debug_msg!(rt, "Kernel entrypoint accessed.");
 
     // Run a test similar to what's in the test module
     run_runtime_example(rt);
 
     // Don't panic, just log success
-    info!("Runtime test completed successfully.");
+    //info!("Runtime test completed successfully.");
+    debug_msg!(rt, "Runtime test completed successfully.");
 }
 
 fn run_runtime_example(host: &mut impl Runtime) {
-    info!("Running runtime example");
+    //info!("Running runtime example");
+    debug_msg!(host, "Running runtime example");
 
     // Create a simple test setup
-    let mut sink: Box<Vec<u8>> = Box::default();
-    let mut host = tezos_smart_rollup_mock::MockHost::default();
+    //let mut sink: Box<Vec<u8>> = Box::default();
+    //let mut host = tezos_smart_rollup_mock::MockHost::default();
 
     // Set up the debug handler
-    host.set_debug_handler(unsafe {
-        std::mem::transmute::<&mut std::vec::Vec<u8>, &'static mut Vec<u8>>(sink.as_mut())
-    });
+    //host.set_debug_handler(unsafe {
+    //    std::mem::transmute::<&mut std::vec::Vec<u8>, &'static mut Vec<u8>>(sink.as_mut())
+    //});
 
     // Create a smart function hash
     //let address = <jstz_crypto::smart_function_hash::SmartFunctionHash as jstz_crypto::hash::Hash>::from_base58(
@@ -66,17 +69,22 @@ fn run_runtime_example(host: &mut impl Runtime) {
         2 + 2
     "#;
 
+    debug_msg!(host, "Executing code");
     // Execute the code and get the result
     let result = runtime.execute_with_result::<u32>(code).unwrap();
 
     // Log the result
-    info!("Test result: {}", result);
+    //info!("Test result: {}", result);
+    let output1 = format!("Test result: {}", result);
+    debug_msg!(host, "Test result: {}", output1);
 
     // Verify the result
     //assert_eq!(result, "hello47");
 
     // Log the sink output
-    info!("Console output: {}", String::from_utf8_lossy(sink.as_ref()));
+    //let output2 = format!("Console output: {}", String::from_utf8_lossy(sink.as_ref()));
+    //debug_msg!(host, "Console output: {}", output2);
 
-    info!("Runtime example completed successfully");
+    //info!("Runtime example completed successfully");
+    debug_msg!(host, "Runtime example completed successfully");
 }

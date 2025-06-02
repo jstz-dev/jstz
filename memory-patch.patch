@@ -1,0 +1,114 @@
+From 623a250f7674c69e9477de4f36f0c1336ef57407 Mon Sep 17 00:00:00 2001
+From: Alan Marko <alan.marko@trili.tech>
+Date: Thu, 29 May 2025 17:47:24 +0100
+Subject: [PATCH] feat: temporary patch increasing memory limit
+
+---
+ src/riscv/lib/src/machine_state/memory.rs        |  2 ++
+ .../lib/src/machine_state/memory/buddy/proxy.rs  |  5 +++++
+ src/riscv/lib/src/machine_state/memory/config.rs |  2 ++
+ src/riscv/sandbox/src/commands/run.rs            | 16 ++++++++--------
+ 4 files changed, 17 insertions(+), 8 deletions(-)
+
+diff --git a/src/riscv/lib/src/machine_state/memory.rs b/src/riscv/lib/src/machine_state/memory.rs
+index 8471dc34..0e801dc4 100644
+--- a/src/riscv/lib/src/machine_state/memory.rs
++++ b/src/riscv/lib/src/machine_state/memory.rs
+@@ -316,4 +316,6 @@ pub use config::M1M;
+ pub use config::M4G;
+ pub use config::M4K;
+ pub use config::M8K;
++pub use config::M16G;
++pub use config::M32G;
+ pub use config::M64M;
+diff --git a/src/riscv/lib/src/machine_state/memory/buddy/proxy.rs b/src/riscv/lib/src/machine_state/memory/buddy/proxy.rs
+index e871caab..44102b2b 100644
+--- a/src/riscv/lib/src/machine_state/memory/buddy/proxy.rs
++++ b/src/riscv/lib/src/machine_state/memory/buddy/proxy.rs
+@@ -7,6 +7,7 @@
+ use super::BuddyLayout;
+ use super::branch_combinations::BuddyBranch1KiLayout;
+ use super::branch_combinations::BuddyBranch4Layout;
++use super::branch_combinations::BuddyBranch8Layout;
+ use super::branch_combinations::BuddyBranch16Layout;
+ use super::branch_combinations::BuddyBranch256Layout;
+ use super::leaf::BuddyLeafLayout;
+@@ -123,3 +124,7 @@ impl<T> BuddyLayoutMatch<{ 256 * 1024 }> for T {
+ impl<T> BuddyLayoutMatch<{ 1024 * 1024 }> for T {
+     type AssocLayout = BuddyBranch1KiLayout<BuddyLayoutProxy<1024>>;
+ }
++
++impl<T> BuddyLayoutMatch<{ 8 * 1024 * 1024 }> for T {
++    type AssocLayout = BuddyBranch8Layout<BuddyBranch1KiLayout<BuddyLayoutProxy<1024>>>;
++}
+diff --git a/src/riscv/lib/src/machine_state/memory/config.rs b/src/riscv/lib/src/machine_state/memory/config.rs
+index 73516e3c..32199056 100644
+--- a/src/riscv/lib/src/machine_state/memory/config.rs
++++ b/src/riscv/lib/src/machine_state/memory/config.rs
+@@ -116,3 +116,5 @@ gen_memory_layout!(M1M = 1 MiB);
+ gen_memory_layout!(M64M = 64 MiB);
+ gen_memory_layout!(M1G = 1 GiB);
+ gen_memory_layout!(M4G = 4 GiB);
++gen_memory_layout!(M16G = 16 GiB);
++gen_memory_layout!(M32G = 32 GiB);
+diff --git a/src/riscv/sandbox/src/commands/run.rs b/src/riscv/sandbox/src/commands/run.rs
+index 7370e887..d27b7755 100644
+--- a/src/riscv/sandbox/src/commands/run.rs
++++ b/src/riscv/sandbox/src/commands/run.rs
+@@ -11,7 +11,7 @@ use std::ops::Bound;
+ use octez_riscv::machine_state::DefaultCacheLayouts;
+ use octez_riscv::machine_state::block_cache::block;
+ use octez_riscv::machine_state::block_cache::block::Block;
+-use octez_riscv::machine_state::memory::M1G;
++use octez_riscv::machine_state::memory::M32G;
+ use octez_riscv::pvm::PvmHooks;
+ use octez_riscv::state_backend::owned_backend::Owned;
+ use octez_riscv::stepper::StepResult;
+@@ -28,15 +28,15 @@ use crate::cli::RunOptions;
+ cfg_if::cfg_if! {
+     if #[cfg(feature = "disable-jit")] {
+         /// Inner execution strategy for blocks.
+-        type BlockImplInner = block::Interpreted<M1G, Owned>;
++        type BlockImplInner = block::Interpreted<M32G, Owned>;
+     } else if #[cfg(feature = "inline-jit")] {
+         /// Inner execution strategy for blocks.
+-        type BlockImplInner = block::Jitted<octez_riscv::jit::JIT<M1G, Owned>, M1G, Owned>;
++        type BlockImplInner = block::Jitted<octez_riscv::jit::JIT<M32G, Owned>, M32G, Owned>;
+     } else {
+         /// Inner execution strategy for blocks.
+         type BlockImplInner = block::Jitted<
+-            octez_riscv::machine_state::block_cache::block::OutlineCompiler<M1G, Owned>,
+-            M1G,
++            octez_riscv::machine_state::block_cache::block::OutlineCompiler<M32G, Owned>,
++            M32G,
+             Owned,
+         >;
+     }
+@@ -76,13 +76,13 @@ pub fn run(opts: RunOptions) -> Result<(), Box<dyn Error>> {
+     Ok(())
+ }
+ 
+-pub(crate) fn make_pvm_stepper<B: Block<M1G, Owned>>(
++pub(crate) fn make_pvm_stepper<B: Block<M32G, Owned>>(
+     program: &[u8],
+     initrd: Option<&[u8]>,
+     common: &CommonOptions,
+     block_builder: B::BlockBuilder,
+ ) -> Result<
+-    PvmStepper<'static, M1G, DefaultCacheLayouts, Owned, B>,
++    PvmStepper<'static, M32G, DefaultCacheLayouts, Owned, B>,
+     std::boxed::Box<dyn std::error::Error>,
+ > {
+     let mut inbox = InboxBuilder::new();
+@@ -102,7 +102,7 @@ pub(crate) fn make_pvm_stepper<B: Block<M1G, Owned>>(
+         let _written = console.write(&[c]).unwrap();
+     });
+ 
+-    let stepper = PvmStepper::<'_, M1G, DefaultCacheLayouts, Owned, B>::new(
++    let stepper = PvmStepper::<'_, M32G, DefaultCacheLayouts, Owned, B>::new(
+         program,
+         initrd,
+         inbox.build(),
+-- 
+2.39.5 (Apple Git-154)
+

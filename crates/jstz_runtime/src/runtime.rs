@@ -297,8 +297,7 @@ fn init_extenions() -> Vec<Extension> {
         //jstz_console,
         deno_url,
         //jstz_kv,
-        deno_web::<JstzPermissions>(Default::default(), None),
-        jstz_main
+        deno_web::<JstzPermissions>(Default::default(), None) //jstz_main
     )
 }
 /*
