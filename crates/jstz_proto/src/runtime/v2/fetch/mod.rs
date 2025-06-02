@@ -1,7 +1,7 @@
-mod http;
+pub mod http;
 use http::*;
 mod error;
-use error::*;
+pub use error::*;
 
 use deno_core::{
     resolve_import, serde_v8, v8, ByteString, JsBuffer, OpState, Resource, ResourceId,
