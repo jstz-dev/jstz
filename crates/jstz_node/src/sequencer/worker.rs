@@ -1,3 +1,4 @@
+use crate::sequencer::runtime::{init_host, process_message};
 use std::{
     sync::{
         mpsc::{channel, Sender, TryRecvError},
@@ -7,9 +8,10 @@ use std::{
     time::Duration,
 };
 
+use anyhow::Context;
 use log::warn;
 
-use super::queue::OperationQueue;
+use super::{db::Db, queue::OperationQueue};
 
 pub struct Worker {
     thread_kill_sig: Sender<()>,
@@ -27,10 +29,12 @@ impl Drop for Worker {
 
 pub fn spawn(
     queue: Arc<RwLock<OperationQueue>>,
+    db: Db,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
-) -> Worker {
+) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
-    Worker {
+    let mut rt = init_host(db).context("failed to init host")?;
+    Ok(Worker {
         thread_kill_sig,
         inner: Some(spawn_thread(move || loop {
             let v = {
@@ -44,9 +48,13 @@ pub fn spawn(
             };
 
             match v {
-                Some(_m) => {}
+                Some(op) => {
+                    if let Err(e) = process_message(&mut rt, op) {
+                        warn!("error processing message: {e:?}");
+                    }
+                }
                 None => thread::sleep(Duration::from_millis(100)),
-            }
+            };
 
             match rx.try_recv() {
                 Ok(_) | Err(TryRecvError::Disconnected) => {
@@ -57,7 +65,7 @@ pub fn spawn(
                 Err(TryRecvError::Empty) => {}
             }
         })),
-    }
+    })
 }
 
 #[cfg(test)]
@@ -68,14 +76,16 @@ mod tests {
         time::Duration,
     };
 
-    use crate::sequencer::{queue::OperationQueue, tests::dummy_op};
+    use tempfile::NamedTempFile;
+
+    use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
 
     #[test]
     fn worker_drop() {
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
         let v = Arc::new(Mutex::new(0));
         let cp = v.clone();
-        let worker = super::spawn(q, move || {
+        let worker = super::spawn(q, Db::init(Some("")).unwrap(), move || {
             *cp.lock().unwrap() += 1;
         });
 
@@ -88,19 +98,24 @@ mod tests {
 
     #[test]
     fn worker_consume_queue() {
-        let mut q = OperationQueue::new(10);
+        let db_file = NamedTempFile::new().unwrap();
+        let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
+        let mut q = OperationQueue::new(1);
         let op = dummy_op();
-        for _ in 0..10 {
-            q.insert(op.clone()).unwrap();
-        }
-        assert_eq!(q.len(), 10);
+        let receipt_key = format!("/jstz_receipt/{}", op.hash());
+        q.insert(op.clone()).unwrap();
+        assert_eq!(q.len(), 1);
+        assert!(!db.key_exists(&receipt_key).unwrap());
 
         let wrapper = Arc::new(RwLock::new(q));
-        let _worker = super::spawn(wrapper.clone(), move || {});
+        let cp = db.clone();
+        let _worker = super::spawn(wrapper.clone(), cp, move || {});
 
         // to ensure that the worker has enough time to consume the queue
-        thread::sleep(Duration::from_millis(800));
+        thread::sleep(Duration::from_millis(1000));
 
         assert_eq!(wrapper.read().unwrap().len(), 0);
+        // worker should process the message and the embedded runtime should produce a receipt
+        assert!(db.key_exists(&receipt_key).unwrap());
     }
 }
