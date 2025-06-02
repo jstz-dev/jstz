@@ -15,6 +15,7 @@ pub enum Error {
     CryptoError {
         source: jstz_crypto::Error,
     },
+    AccountDoesNotExist,
     BalanceOverflow,
     InsufficientFunds,
     InvalidNonce,
@@ -135,6 +136,9 @@ impl From<Error> for JsError {
             Error::InvalidScheme => {
                 JsNativeError::eval().with_message("InvalidScheme").into()
             }
+            Error::AccountDoesNotExist => JsNativeError::eval()
+                .with_message("AccountDoesNotExist")
+                .into(),
             #[cfg(feature = "v2_runtime")]
             Error::V2Error(_) => {
                 unimplemented!("V2 runtime errors are not supported in boa")
