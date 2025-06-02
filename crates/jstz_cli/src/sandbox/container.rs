@@ -238,6 +238,7 @@ fn new_create_container_config(
             port_bindings: create_port_bindings(ports.as_ref()),
             auto_remove: Some(true),
             network_mode: Some("bridge".to_string()),
+            init: Some(true),
             ..Default::default()
         }),
         attach_stdin: Some(true),
@@ -440,6 +441,7 @@ mod tests {
                     )])),
                     network_mode: Some("bridge".to_owned()),
                     auto_remove: Some(true),
+                    init: Some(true),
                     ..Default::default()
                 }),
                 attach_stdin: Some(true),
