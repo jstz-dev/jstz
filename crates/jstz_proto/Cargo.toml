@@ -21,11 +21,13 @@ either.workspace = true
 erased-serde.workspace = true
 http-serde.workspace = true
 http.workspace = true
+nom.workspace = true
 jstz_api = { path = "../jstz_api" }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 serde.workspace = true
 serde_json.workspace = true
+serde_bytes.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
@@ -44,10 +46,10 @@ thiserror.workspace = true
 url.workspace = true
 
 [dev-dependencies]
+bincode.workspace = true
 jstz_mock = { path = "../jstz_mock" }
 jstz_utils = { path = "../jstz_utils" }
 tezos-smart-rollup-mock.workspace = true
-bincode.workspace = true
 tokio.workspace = true
 
 [features]
