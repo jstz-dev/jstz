@@ -18,6 +18,7 @@ boa_gc.workspace = true
 derive_more.workspace = true
 either.workspace = true
 erased-serde.workspace = true
+futures.workspace = true
 http-serde.workspace = true
 http.workspace = true
 nom.workspace = true
@@ -31,7 +32,6 @@ tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
 utoipa.workspace = true
-futures.workspace = true
 
 # Required by v2 runtime
 deno_core = { workspace = true, optional = true }
