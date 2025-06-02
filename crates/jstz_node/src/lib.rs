@@ -1,14 +1,12 @@
 use anyhow::{Context, Result};
 use api_doc::{modify, ApiDoc};
-use axum::{
-    extract::DefaultBodyLimit,
-    http::{self},
-    routing::get,
-};
+use axum::{extract::DefaultBodyLimit, http, routing::get};
 use config::{JstzNodeConfig, KeyPair};
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use octez::OctezRollupClient;
-use sequencer::{queue::OperationQueue, worker};
+#[cfg(not(test))]
+use sequencer::inbox;
+use sequencer::{inbox::Monitor, queue::OperationQueue, worker};
 use serde::{Deserialize, Serialize};
 use services::{
     accounts::AccountsService,
@@ -95,6 +93,7 @@ pub async fn run(
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
+    let _queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
 
     let cancellation_token = CancellationToken::new();
     let (broadcaster, db, tail_file_handle) =
@@ -127,6 +126,16 @@ pub async fn run(
         RunMode::Default => None,
     };
 
+    let monitor: Option<Monitor> = match mode {
+        #[cfg(not(test))]
+        RunMode::Sequencer => {
+            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
+        }
+        #[cfg(test)]
+        RunMode::Sequencer => None,
+        RunMode::Default => None,
+    };
+
     let state = AppState {
         rollup_client,
         rollup_preimages_dir,
@@ -149,6 +158,10 @@ pub async fn run(
 
     let listener = TcpListener::bind(format!("{}:{}", addr, port)).await?;
     axum::serve(listener, router).await?;
+
+    if let Some(mut monitor) = monitor {
+        monitor.shut_down().await;
+    }
 
     cancellation_token.cancel();
     tail_file_handle.await.unwrap()?;

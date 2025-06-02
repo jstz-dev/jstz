@@ -1,5 +1,6 @@
 pub mod db;
 mod host;
+pub mod inbox;
 pub mod queue;
 pub mod runtime;
 pub mod worker;
