@@ -20,6 +20,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, RwLock},
 };
+use tempfile::NamedTempFile;
 use tokio::net::TcpListener;
 use tower_http::cors::{Any, CorsLayer};
 
@@ -43,6 +44,7 @@ pub struct AppState {
     pub injector: KeyPair,
     pub mode: RunMode,
     pub queue: Arc<RwLock<OperationQueue>>,
+    pub runtime_db: sequencer::db::Db,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum)]
@@ -100,6 +102,12 @@ pub async fn run(
 
     let queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
 
+    // will make db_path configurable later
+    let db_file = NamedTempFile::new()?;
+    let db_path = db_file.path().to_str().ok_or(anyhow::anyhow!(
+        "failed to convert temp db file path to str"
+    ))?;
+    let runtime_db = sequencer::db::Db::init(Some(db_path))?;
     let _worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer => Some(worker::spawn(queue.clone())),
@@ -121,6 +129,7 @@ pub async fn run(
         injector,
         mode,
         queue,
+        runtime_db,
     };
 
     let cors = CorsLayer::new()

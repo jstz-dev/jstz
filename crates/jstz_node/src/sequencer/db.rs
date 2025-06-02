@@ -1,4 +1,3 @@
-#![allow(unused)]
 use std::{fs, path::PathBuf};
 
 use anyhow::Result;
