@@ -109,16 +109,25 @@ pub async fn run(
     let _worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer => Some(
-            worker::spawn(queue.clone(), runtime_db.clone())
-                .context("failed to launch worker")?,
+            worker::spawn(
+                queue.clone(),
+                runtime_db.clone(),
+                rollup_preimages_dir.clone(),
+            )
+            .context("failed to launch worker")?,
         ),
         #[cfg(test)]
         RunMode::Sequencer => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
             Some(
-                worker::spawn(queue.clone(), runtime_db.clone(), move || {
-                    std::fs::File::create(p).unwrap();
-                })
+                worker::spawn(
+                    queue.clone(),
+                    runtime_db.clone(),
+                    rollup_preimages_dir.clone(),
+                    move || {
+                        std::fs::File::create(p).unwrap();
+                    },
+                )
                 .context("failed to launch worker")?,
             )
         }
