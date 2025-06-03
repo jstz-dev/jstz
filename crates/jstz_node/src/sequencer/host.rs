@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, path::PathBuf};
 
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
@@ -16,12 +16,12 @@ use super::db::{exec_delete, exec_delete_glob, exec_read, exec_write, Db};
 
 pub struct Host {
     db: Db,
+    preimage_dir: PathBuf,
 }
 
 impl Host {
-    #[allow(unused)]
-    pub fn new(db: Db) -> Self {
-        Host { db }
+    pub fn new(db: Db, preimage_dir: PathBuf) -> Self {
+        Host { db, preimage_dir }
     }
 
     fn connection(
@@ -232,11 +232,21 @@ impl Runtime for Host {
 
     fn reveal_preimage(
         &self,
-        _hash: &[u8; 33],
-        _destination: &mut [u8],
+        hash: &[u8; 33],
+        destination: &mut [u8],
     ) -> Result<usize, RuntimeError> {
-        // TODO: JSTZ-592 for large payload
-        todo!("reveal_preimage")
+        let hash_str = hex::encode(hash);
+        let log_title = format!("reveal_preimage({hash_str})");
+        trace!("{log_title}");
+
+        let path = self.preimage_dir.join(hash_str);
+        let bytes = std::fs::read(path).map_err(|e| log_error(&log_title, e))?;
+        let size = usize::min(destination.len(), bytes.len());
+        {
+            let (left, _) = destination.split_at_mut(size);
+            left.copy_from_slice(&bytes[..size]);
+        }
+        Ok(size)
     }
 
     fn reveal_dal_page(
@@ -305,11 +315,11 @@ impl Runtime for Host {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
+    use std::{cell::RefCell, io::Write};
 
     use jstz_core::host::HostRuntime;
     use log::{Metadata, Record};
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, TempDir};
     use tezos_smart_rollup::host::ValueType;
     use tezos_smart_rollup::storage::path::RefPath;
 
@@ -357,8 +367,11 @@ mod tests {
         // temp db is only for that specific connection, so we need a temp file here as the
         // db file for the connection pool.
         let db_file = NamedTempFile::new().unwrap();
-        let mut host =
-            Host::new(Db::init(Some(db_file.path().to_str().unwrap())).unwrap());
+        let preimage_dir = TempDir::new().unwrap();
+        let mut host = Host::new(
+            Db::init(Some(db_file.path().to_str().unwrap())).unwrap(),
+            preimage_dir.path().to_path_buf(),
+        );
 
         let path = RefPath::assert_from(b"/foo");
         let subkey_path = RefPath::assert_from(b"/foo/s");
@@ -446,5 +459,21 @@ mod tests {
         let metadata = host.reveal_metadata();
         assert_eq!(metadata.raw_rollup_address, [0; 20]);
         assert_eq!(metadata.origination_level, 0);
+
+        // reveal_preimage
+        let preimage_hash = [3; 33];
+        let hash_str = hex::encode(preimage_hash);
+        std::fs::File::create(preimage_dir.path().join(hash_str.clone()))
+            .unwrap()
+            .write_all(b"abcdefghij")
+            .unwrap();
+
+        let mut buf = [0u8; 8];
+        assert_eq!(host.reveal_preimage(&preimage_hash, &mut buf).unwrap(), 8);
+        assert_eq!(&buf, b"abcdefgh");
+
+        let mut buf = [0u8; 15];
+        assert_eq!(host.reveal_preimage(&preimage_hash, &mut buf).unwrap(), 10);
+        assert_eq!(&buf, b"abcdefghij\0\0\0\0\0");
     }
 }
