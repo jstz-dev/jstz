@@ -19,7 +19,7 @@ use super::{
     error::{ServiceError, ServiceResult},
     Service,
 };
-use crate::{utils::read_value_from_store, AppState};
+use crate::{sequencer::db::Db, utils::read_value_from_store, AppState, RunMode};
 
 const ACCOUNTS_TAG: &str = "Accounts";
 
@@ -74,12 +74,30 @@ async fn get_account(
     Ok(Json(account))
 }
 
-pub async fn get_account_nonce(
+// FIXME: This will be cleaned up in JSTZ-592.
+pub(crate) async fn get_account_nonce(
     rollup_client: &OctezRollupClient,
     address: &str,
 ) -> ServiceResult<Option<Nonce>> {
     let key = construct_accounts_key(address);
     let value = rollup_client.get_value(&key).await?;
+    match value {
+        Some(value) => match deserialize_account(value.as_slice())? {
+            Account::User(UserAccount { nonce, .. }) => Ok(Some(nonce)),
+            Account::SmartFunction(SmartFunctionAccount { nonce, .. }) => Ok(Some(nonce)),
+        },
+        None => Ok(None),
+    }
+}
+
+async fn get_account_nonce_from_store(
+    mode: RunMode,
+    rollup_client: OctezRollupClient,
+    runtime_db: Db,
+    address: &str,
+) -> ServiceResult<Option<Nonce>> {
+    let key = construct_accounts_key(address);
+    let value = read_value_from_store(mode, rollup_client, runtime_db, key).await?;
     match value {
         Some(value) => match deserialize_account(value.as_slice())? {
             Account::User(UserAccount { nonce, .. }) => Ok(Some(nonce)),
@@ -101,10 +119,16 @@ pub async fn get_account_nonce(
     )
 )]
 async fn get_nonce(
-    State(AppState { rollup_client, .. }): State<AppState>,
+    State(AppState {
+        mode,
+        rollup_client,
+        runtime_db,
+        ..
+    }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
-    let account_nonce = get_account_nonce(&rollup_client, &address).await?;
+    let account_nonce =
+        get_account_nonce_from_store(mode, rollup_client, runtime_db, &address).await?;
     match account_nonce {
         Some(nonce) => Ok(Json(nonce)),
         None => Err(ServiceError::NotFound)?,
@@ -249,11 +273,16 @@ impl Service for AccountsService {
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::BorrowMut;
+    use std::{borrow::BorrowMut, convert::Infallible};
 
-    use axum::{body::Body, extract::Request};
+    use axum::{body::Body, extract::Request, response::Response, Router};
     use jstz_core::BinEncodable;
-    use jstz_proto::context::account::{Account, Nonce, UserAccount};
+    use jstz_proto::{
+        context::account::{Account, Nonce, SmartFunctionAccount, UserAccount},
+        runtime::ParsedCode,
+    };
+    use mockito::Matcher;
+    use octez::OctezRollupClient;
     use tempfile::NamedTempFile;
     use tezos_crypto_rs::base58::ToBase58Check;
     use tower::ServiceExt;
@@ -263,6 +292,21 @@ mod tests {
         utils::tests::mock_app_state,
         RunMode,
     };
+
+    async fn send_simple_get_request<S: Into<String>>(
+        router: &mut Router,
+        uri: S,
+    ) -> Result<Response, Infallible> {
+        router
+            .oneshot(
+                Request::builder()
+                    .uri(uri.into())
+                    .method("GET")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+    }
 
     #[tokio::test]
     async fn get_account_sequencer() {
@@ -286,17 +330,10 @@ mod tests {
         let (mut router, _) = AccountsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();
-        let res = router
-            .borrow_mut()
-            .oneshot(
-                Request::builder()
-                    .uri(format!("/accounts/{addr}"))
-                    .method("GET")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
-            .await
-            .unwrap();
+        let res =
+            send_simple_get_request(router.borrow_mut(), format!("/accounts/{addr}"))
+                .await
+                .unwrap();
         assert_eq!(res.status(), 200);
         let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
         let account = serde_json::from_slice::<Account>(&bytes).unwrap();
@@ -309,17 +346,127 @@ mod tests {
         ));
 
         // non-existent address
-        let res = router
-            .borrow_mut()
-            .oneshot(
-                Request::builder()
-                    .uri("/accounts/bad_addr")
-                    .method("GET")
-                    .body(Body::empty())
-                    .unwrap(),
-            )
+        let res = send_simple_get_request(router.borrow_mut(), "/accounts/bad_addr")
             .await
             .unwrap();
+        assert_eq!(res.status(), 404);
+    }
+
+    #[tokio::test]
+    async fn get_account_nonce_from_store() {
+        let user_account = Account::User(UserAccount {
+            amount: 0,
+            nonce: Nonce(42),
+        });
+        let user_account_hash = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
+        let smart_function_account = Account::SmartFunction(SmartFunctionAccount {
+            amount: 0,
+            nonce: Nonce(50),
+            function_code: ParsedCode::default(),
+        });
+        let smart_function_hash = "KT19GXucGUitURBXXeEMMfqqhSQ5byt4P1zX";
+        let mut server = mockito::Server::new_async().await;
+        let mock_value_endpoint_user = server
+            .mock("GET", "/global/block/head/durable/wasm_2_0_0/value")
+            .match_query(Matcher::UrlEncoded(
+                "key".to_string(),
+                format!("/jstz_account/{user_account_hash}"),
+            ))
+            .with_body(format!(
+                "\"{}\"",
+                hex::encode(user_account.encode().unwrap())
+            ))
+            .create();
+        let mock_value_endpoint_smart_function = server
+            .mock("GET", "/global/block/head/durable/wasm_2_0_0/value")
+            .match_query(Matcher::UrlEncoded(
+                "key".to_string(),
+                format!("/jstz_account/{smart_function_hash}"),
+            ))
+            .with_body(format!(
+                "\"{}\"",
+                hex::encode(smart_function_account.encode().unwrap())
+            ))
+            .create();
+        let mock_value_endpoint_bad = server
+            .mock("GET", "/global/block/head/durable/wasm_2_0_0/value")
+            .match_query(Matcher::UrlEncoded(
+                "key".to_string(),
+                "/jstz_account/bad_hash".to_string(),
+            ))
+            .with_body("null")
+            .create();
+
+        assert!(super::get_account_nonce_from_store(
+            RunMode::Default,
+            OctezRollupClient::new(server.url()),
+            crate::sequencer::db::Db::init(Some("")).unwrap(),
+            user_account_hash,
+        )
+        .await
+        .is_ok_and(|v| matches!(v.unwrap(), Nonce(42))));
+
+        assert!(super::get_account_nonce_from_store(
+            RunMode::Default,
+            OctezRollupClient::new(server.url()),
+            crate::sequencer::db::Db::init(Some("")).unwrap(),
+            smart_function_hash,
+        )
+        .await
+        .is_ok_and(|v| matches!(v.unwrap(), Nonce(50))));
+
+        assert!(super::get_account_nonce_from_store(
+            RunMode::Default,
+            OctezRollupClient::new(server.url()),
+            crate::sequencer::db::Db::init(Some("")).unwrap(),
+            "bad_hash",
+        )
+        .await
+        .is_ok_and(|v| v.is_none()));
+
+        mock_value_endpoint_user.assert();
+        mock_value_endpoint_smart_function.assert();
+        mock_value_endpoint_bad.assert();
+    }
+
+    #[tokio::test]
+    async fn get_nonce_sequencer() {
+        let account = Account::User(UserAccount {
+            amount: 0,
+            nonce: Nonce(42),
+        });
+        let addr = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
+        let db_file = NamedTempFile::new().unwrap();
+        let state =
+            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
+                .await;
+        state
+            .runtime_db
+            .write(
+                &format!("/jstz_account/{addr}"),
+                &account.encode().unwrap().to_base58check(),
+            )
+            .unwrap();
+
+        let (mut router, _) = AccountsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{addr}/nonce"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let nonce = serde_json::from_slice::<Nonce>(&bytes).unwrap();
+        assert!(matches!(nonce, Nonce(42)));
+
+        // non-existent address
+        let res =
+            send_simple_get_request(router.borrow_mut(), "/accounts/bad_addr/nonce")
+                .await
+                .unwrap();
         assert_eq!(res.status(), 404);
     }
 }
