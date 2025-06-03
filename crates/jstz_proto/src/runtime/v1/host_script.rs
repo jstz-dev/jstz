@@ -26,6 +26,20 @@ use super::fetch_handler::response_from_run_receipt;
 pub struct HostScript;
 
 impl HostScript {
+    pub fn route(
+        self_address: &impl Addressable,
+        request: &mut GcRefMut<'_, ErasedObject, Request>,
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        let uri = request.url().clone();
+        let path = uri.path();
+        if path.starts_with("/balances") {
+            return Self::handle_balance(self_address, request, context);
+        }
+
+        Self::run(self_address, request, context)
+    }
+
     pub fn run(
         self_address: &impl Addressable,
         request: &mut GcRefMut<'_, ErasedObject, Request>,
@@ -54,6 +68,58 @@ impl HostScript {
                 }
             }
         })?;
+
+        let js_response = JsNativeObject::new::<ResponseClass>(response, context)?;
+        Ok(js_response.inner().clone())
+    }
+
+    fn handle_balance(
+        self_address: &impl Addressable,
+        request: &mut GcRefMut<'_, ErasedObject, Request>,
+        context: &mut Context,
+    ) -> JsResult<JsValue> {
+        if request.method() != "GET" {
+            return Err(JsError::from_native(
+                JsNativeError::typ().with_message("Method not allowed"),
+            ));
+        }
+
+        let path = request.url().path();
+
+        let address_str = path.strip_prefix("/balances/").ok_or_else(|| {
+            JsError::from_native(JsNativeError::error().with_message("Invalid path"))
+        })?;
+
+        let target_address = if address_str == "self" {
+            self_address.clone().into()
+        } else {
+            match crate::context::account::Address::from_base58(address_str) {
+                Ok(addr) => addr,
+                Err(e) => {
+                    return Err(JsError::from_native(
+                        JsNativeError::error()
+                            .with_message(format!("Invalid address: {}", e)),
+                    ));
+                }
+            }
+        };
+
+        // Get the balance
+        let balance = runtime::with_js_hrt_and_tx(|hrt, tx| -> JsResult<u64> {
+            match Account::balance(hrt, tx, &target_address) {
+                Ok(bal) => Ok(bal),
+                Err(e) => Err(JsError::from_native(
+                    JsNativeError::error()
+                        .with_message(format!("Failed to get balance: {}", e)),
+                )),
+            }
+        })?;
+
+        // Create response with balance
+        let response = jstz_api::http::response::ResponseBuilder::json(
+            &JsValue::from(balance),
+            context,
+        )?;
 
         let js_response = JsNativeObject::new::<ResponseClass>(response, context)?;
         Ok(js_response.inner().clone())
