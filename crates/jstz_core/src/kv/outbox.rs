@@ -14,8 +14,7 @@ use tezos_smart_rollup::{
 };
 
 use tezos_data_encoding::{enc::BinWriter, encoding::HasEncoding, nom::NomReader};
-use tezos_smart_rollup::host::Runtime;
-use tezos_smart_rollup_host::path::RefPath;
+use tezos_smart_rollup_host::{path::RefPath, runtime::Runtime};
 
 use super::Storage;
 
@@ -285,7 +284,7 @@ pub(crate) fn flush(
             Err(crate::Error::HostError {
                 source:
                     tezos_smart_rollup::host::RuntimeError::HostErr(
-                        tezos_smart_rollup::host::HostError::FullOutbox,
+                        tezos_smart_rollup_host::Error::FullOutbox,
                     ),
             }) => {
                 // TODO: https://linear.app/tezos/issue/JSTZ-78
@@ -520,7 +519,7 @@ mod test {
             error,
             crate::Error::HostError {
                 source: tezos_smart_rollup::host::RuntimeError::HostErr(
-                    tezos_smart_rollup::host::HostError::FullOutbox,
+                    tezos_smart_rollup_host::Error::FullOutbox,
                 ),
             }
         ));

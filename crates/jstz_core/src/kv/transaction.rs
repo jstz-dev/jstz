@@ -11,7 +11,7 @@ use parking_lot::{ArcMutexGuard, Mutex, RawMutex};
 
 use derive_more::{Deref, DerefMut};
 
-use tezos_smart_rollup::{host::Runtime, storage::path::OwnedPath};
+use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
 use super::{
     outbox::{

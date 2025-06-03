@@ -22,7 +22,7 @@ pub enum Error {
         source: host::HostError,
     },
     PathError {
-        source: tezos_smart_rollup::storage::path::PathError,
+        source: tezos_smart_rollup_host::path::PathError,
     },
     JsError {
         source: JsError,

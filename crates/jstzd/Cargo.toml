@@ -39,9 +39,9 @@ hex.workspace = true
 tempfile.workspace = true
 tezos_crypto_rs.workspace = true
 tezos-smart-rollup.workspace = true
+tezos-smart-rollup-host.workspace = true
 tezos-smart-rollup-installer.workspace = true
 tezos-smart-rollup-installer-config.workspace = true
-tezos-smart-rollup-host.workspace = true
 jstz_kernel = { path = "../jstz_kernel" }
 jstz_crypto = { path = "../jstz_crypto" }
 
