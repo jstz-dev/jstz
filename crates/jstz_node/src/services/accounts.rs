@@ -188,11 +188,16 @@ async fn get_code(
     )
 )]
 async fn get_balance(
-    State(AppState { rollup_client, .. }): State<AppState>,
+    State(AppState {
+        mode,
+        rollup_client,
+        runtime_db,
+        ..
+    }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<u64>> {
     let key = construct_accounts_key(&address);
-    let value = rollup_client.get_value(&key).await?;
+    let value = read_value_from_store(mode, rollup_client, runtime_db, key).await?;
     let account_balance = match value {
         Some(value) => match deserialize_account(value.as_slice())? {
             Account::User(UserAccount { amount, .. }) => amount,
@@ -539,6 +544,74 @@ mod tests {
         // non-existent address
         let res =
             send_simple_get_request(router.borrow_mut(), "/accounts/bad_address/code")
+                .await
+                .unwrap();
+        assert_eq!(res.status(), 404);
+    }
+
+    #[tokio::test]
+    async fn get_balance_sequencer() {
+        let user_account = Account::User(UserAccount {
+            amount: 999,
+            nonce: Nonce(42),
+        });
+        let user_account_hash = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
+        let smart_function_account = Account::SmartFunction(SmartFunctionAccount {
+            amount: 888,
+            nonce: Nonce(50),
+            function_code: ParsedCode::default(),
+        });
+        let smart_function_hash = "KT19GXucGUitURBXXeEMMfqqhSQ5byt4P1zX";
+        let db_file = NamedTempFile::new().unwrap();
+        let state =
+            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
+                .await;
+        state
+            .runtime_db
+            .write(
+                &format!("/jstz_account/{smart_function_hash}"),
+                &smart_function_account.encode().unwrap().to_base58check(),
+            )
+            .unwrap();
+        state
+            .runtime_db
+            .write(
+                &format!("/jstz_account/{user_account_hash}"),
+                &user_account.encode().unwrap().to_base58check(),
+            )
+            .unwrap();
+
+        let (mut router, _) = AccountsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+
+        // user account
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{user_account_hash}/balance"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let balance = serde_json::from_slice::<u64>(&bytes).unwrap();
+        assert_eq!(balance, 999);
+
+        // smart function account
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{smart_function_hash}/balance"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let balance = serde_json::from_slice::<u64>(&bytes).unwrap();
+        assert_eq!(balance, 888);
+
+        // non-existent address
+        let res =
+            send_simple_get_request(router.borrow_mut(), "/accounts/bad_addr/nonce")
                 .await
                 .unwrap();
         assert_eq!(res.status(), 404);
