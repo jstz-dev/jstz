@@ -19,7 +19,7 @@ use super::{
     error::{ServiceError, ServiceResult},
     Service,
 };
-use crate::{sequencer::db::Db, utils::read_value_from_store, AppState, RunMode};
+use crate::{utils::StoreWrapper, AppState, RunMode};
 
 const ACCOUNTS_TAG: &str = "Accounts";
 
@@ -66,7 +66,8 @@ async fn get_account(
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Account>> {
     let key = format!("/jstz_account/{}", address);
-    let value = read_value_from_store(mode, rollup_client, runtime_db, key).await?;
+    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let value = store.get_value(key).await?;
     let account = match value {
         Some(value) => deserialize_account(value.as_slice())?,
         None => Err(ServiceError::NotFound)?,
@@ -90,14 +91,12 @@ pub(crate) async fn get_account_nonce(
     }
 }
 
-async fn get_account_nonce_from_store(
-    mode: RunMode,
-    rollup_client: OctezRollupClient,
-    runtime_db: Db,
+pub(crate) async fn get_account_nonce_from_store(
+    store: StoreWrapper,
     address: &str,
 ) -> ServiceResult<Option<Nonce>> {
     let key = construct_accounts_key(address);
-    let value = read_value_from_store(mode, rollup_client, runtime_db, key).await?;
+    let value = store.get_value(key).await?;
     match value {
         Some(value) => match deserialize_account(value.as_slice())? {
             Account::User(UserAccount { nonce, .. }) => Ok(Some(nonce)),
@@ -127,8 +126,8 @@ async fn get_nonce(
     }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
-    let account_nonce =
-        get_account_nonce_from_store(mode, rollup_client, runtime_db, &address).await?;
+    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let account_nonce = get_account_nonce_from_store(store, &address).await?;
     match account_nonce {
         Some(nonce) => Ok(Json(nonce)),
         None => Err(ServiceError::NotFound)?,
@@ -157,7 +156,8 @@ async fn get_code(
     Path(address): Path<String>,
 ) -> ServiceResult<Json<ParsedCode>> {
     let key = construct_accounts_key(&address);
-    let value = read_value_from_store(mode, rollup_client, runtime_db, key).await?;
+    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let value = store.get_value(key).await?;
     let account_code = match value {
         Some(value) => {
             if let Account::SmartFunction(SmartFunctionAccount {
@@ -197,7 +197,8 @@ async fn get_balance(
     Path(address): Path<String>,
 ) -> ServiceResult<Json<u64>> {
     let key = construct_accounts_key(&address);
-    let value = read_value_from_store(mode, rollup_client, runtime_db, key).await?;
+    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let value = store.get_value(key).await?;
     let account_balance = match value {
         Some(value) => match deserialize_account(value.as_slice())? {
             Account::User(UserAccount { amount, .. }) => amount,
@@ -234,7 +235,8 @@ async fn get_kv_value(
     Query(KvQuery { key }): Query<KvQuery>,
 ) -> ServiceResult<Json<KvValue>> {
     let key = construct_storage_key(&address, &key);
-    let value = read_value_from_store(mode, rollup_client, runtime_db, key).await?;
+    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let value = store.get_value(key).await?;
     let kv_value = match value {
         Some(value) => KvValue::decode(value.as_slice())
             .map_err(|_| anyhow!("Failed to deserialize kv value"))?,
@@ -425,32 +427,36 @@ mod tests {
             .with_body("null")
             .create();
 
-        assert!(super::get_account_nonce_from_store(
+        let store = super::StoreWrapper::new(
             RunMode::Default,
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
-            user_account_hash,
-        )
-        .await
-        .is_ok_and(|v| matches!(v.unwrap(), Nonce(42))));
+        );
+        assert!(
+            super::get_account_nonce_from_store(store, user_account_hash)
+                .await
+                .is_ok_and(|v| matches!(v.unwrap(), Nonce(42)))
+        );
 
-        assert!(super::get_account_nonce_from_store(
+        let store = super::StoreWrapper::new(
             RunMode::Default,
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
-            smart_function_hash,
-        )
-        .await
-        .is_ok_and(|v| matches!(v.unwrap(), Nonce(50))));
+        );
+        assert!(
+            super::get_account_nonce_from_store(store, smart_function_hash)
+                .await
+                .is_ok_and(|v| matches!(v.unwrap(), Nonce(50)))
+        );
 
-        assert!(super::get_account_nonce_from_store(
+        let store = super::StoreWrapper::new(
             RunMode::Default,
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
-            "bad_hash",
-        )
-        .await
-        .is_ok_and(|v| v.is_none()));
+        );
+        assert!(super::get_account_nonce_from_store(store, "bad_hash")
+            .await
+            .is_ok_and(|v| v.is_none()));
 
         mock_value_endpoint_user.assert();
         mock_value_endpoint_smart_function.assert();

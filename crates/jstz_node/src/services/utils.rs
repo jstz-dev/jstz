@@ -10,27 +10,36 @@ pub async fn get_mode(
     serde_json::to_string(&mode).unwrap().into_response()
 }
 
-pub(crate) async fn read_value_from_store(
-    mode: RunMode,
-    rollup_client: OctezRollupClient,
-    runtime_db: Db,
-    key: String,
-) -> anyhow::Result<Option<Vec<u8>>> {
-    Ok(match mode {
-        RunMode::Default => rollup_client.get_value(&key).await?,
-        RunMode::Sequencer => {
-            match tokio::task::spawn_blocking(move || runtime_db.read_key(&key))
-                .await
-                .context("failed to wait for db read task")??
-            {
-                Some(v) => Some(
-                    v.from_base58check()
-                        .context("failed to decode value string")?,
-                ),
-                None => None,
-            }
+pub enum StoreWrapper {
+    Rollup(OctezRollupClient),
+    Db(Db),
+}
+
+impl StoreWrapper {
+    pub fn new(mode: RunMode, rollup_client: OctezRollupClient, runtime_db: Db) -> Self {
+        match mode {
+            RunMode::Default => Self::Rollup(rollup_client),
+            RunMode::Sequencer => Self::Db(runtime_db),
         }
-    })
+    }
+
+    pub async fn get_value(self, key: String) -> anyhow::Result<Option<Vec<u8>>> {
+        Ok(match self {
+            Self::Rollup(rollup_client) => rollup_client.get_value(&key).await?,
+            Self::Db(db) => {
+                match tokio::task::spawn_blocking(move || db.read_key(&key))
+                    .await
+                    .context("failed to wait for db read task")??
+                {
+                    Some(v) => Some(
+                        v.from_base58check()
+                            .context("failed to decode value string")?,
+                    ),
+                    None => None,
+                }
+            }
+        })
+    }
 }
 
 #[cfg(test)]
@@ -56,7 +65,7 @@ pub(crate) mod tests {
     use crate::{
         config::KeyPair,
         sequencer::queue::OperationQueue,
-        services::{logs::broadcaster::Broadcaster, utils::read_value_from_store},
+        services::{logs::broadcaster::Broadcaster, utils::StoreWrapper},
         AppState, RunMode,
     };
 
@@ -88,8 +97,24 @@ pub(crate) mod tests {
         }
     }
 
+    #[test]
+    fn store_wrapper_new() {
+        let store = StoreWrapper::new(
+            RunMode::Default,
+            OctezRollupClient::new(String::new()),
+            crate::sequencer::db::Db::init(Some("")).unwrap(),
+        );
+        matches!(store, StoreWrapper::Rollup(_));
+        let store = StoreWrapper::new(
+            RunMode::Sequencer,
+            OctezRollupClient::new(String::new()),
+            crate::sequencer::db::Db::init(Some("")).unwrap(),
+        );
+        matches!(store, StoreWrapper::Db(_));
+    }
+
     #[tokio::test]
-    async fn read_value_from_store_default() {
+    async fn store_wrapper_rollup() {
         let smart_function_hash =
             ContractKt1Hash::from_base58_check("KT19GXucGUitURBXXeEMMfqqhSQ5byt4P1zX")
                 .unwrap();
@@ -112,17 +137,13 @@ pub(crate) mod tests {
             ))
             .with_body("null")
             .create();
-        let runtime_db = crate::sequencer::db::Db::init(Some("")).unwrap();
 
-        let bytes = read_value_from_store(
-            RunMode::Default,
-            OctezRollupClient::new(server.url()),
-            runtime_db.clone(),
-            format!("/jstz_receipt/{op_hash}"),
-        )
-        .await
-        .expect("should get result from rollup")
-        .expect("result should not be none");
+        let store = StoreWrapper::Rollup(OctezRollupClient::new(server.url()));
+        let bytes = store
+            .get_value(format!("/jstz_receipt/{op_hash}"))
+            .await
+            .expect("should get result from rollup")
+            .expect("result should not be none");
         let receipt = Receipt::decode(&bytes).unwrap();
         assert!(matches!(
             receipt.result,
@@ -132,22 +153,19 @@ pub(crate) mod tests {
         ));
 
         // non-existent path
-        assert!(read_value_from_store(
-            RunMode::Default,
-            OctezRollupClient::new(server.url()),
-            runtime_db.clone(),
-            "/jstz_receipt/bad_hash".to_string(),
-        )
-        .await
-        .expect("should get result from rollup")
-        .is_none());
+        let store = StoreWrapper::Rollup(OctezRollupClient::new(server.url()));
+        assert!(store
+            .get_value("/jstz_receipt/bad_hash".to_string(),)
+            .await
+            .expect("should get result from rollup")
+            .is_none());
 
         mock_value_endpoint_ok.assert();
         mock_value_endpoint_bad.assert();
     }
 
     #[tokio::test]
-    async fn read_value_from_store_sequencer() {
+    async fn store_wrapper_db() {
         let smart_function_hash =
             ContractKt1Hash::from_base58_check("KT19GXucGUitURBXXeEMMfqqhSQ5byt4P1zX")
                 .unwrap();
@@ -168,15 +186,12 @@ pub(crate) mod tests {
             .unwrap();
 
         // good value
-        let bytes = read_value_from_store(
-            RunMode::Sequencer,
-            OctezRollupClient::new(String::new()),
-            runtime_db.clone(),
-            format!("/jstz_receipt/{op_hash}"),
-        )
-        .await
-        .expect("should get result from store")
-        .expect("result should not be none");
+        let store = StoreWrapper::Db(runtime_db.clone());
+        let bytes = store
+            .get_value(format!("/jstz_receipt/{op_hash}"))
+            .await
+            .expect("should get result from store")
+            .expect("result should not be none");
         let receipt = Receipt::decode(&bytes).unwrap();
         assert!(matches!(
             receipt.result,
@@ -186,26 +201,18 @@ pub(crate) mod tests {
         ));
 
         // bad value
-        let error_message = read_value_from_store(
-            RunMode::Sequencer,
-            OctezRollupClient::new(String::new()),
-            runtime_db.clone(),
-            "/jstz_receipt/bad_value".to_string(),
-        )
-        .await
-        .unwrap_err()
-        .to_string();
+        let error_message = StoreWrapper::Db(runtime_db.clone())
+            .get_value("/jstz_receipt/bad_value".to_string())
+            .await
+            .unwrap_err()
+            .to_string();
         assert_eq!(error_message, "failed to decode value string");
 
         // non-existent path
-        assert!(read_value_from_store(
-            RunMode::Sequencer,
-            OctezRollupClient::new(String::new()),
-            runtime_db.clone(),
-            "/jstz_receipt/bad_hash".to_string(),
-        )
-        .await
-        .expect("should get result from store")
-        .is_none());
+        assert!(StoreWrapper::Db(runtime_db.clone())
+            .get_value("/jstz_receipt/bad_hash".to_string())
+            .await
+            .expect("should get result from store")
+            .is_none());
     }
 }
