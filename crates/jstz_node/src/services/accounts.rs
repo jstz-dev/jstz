@@ -224,12 +224,17 @@ async fn get_balance(
     )
 )]
 async fn get_kv_value(
-    State(AppState { rollup_client, .. }): State<AppState>,
+    State(AppState {
+        mode,
+        rollup_client,
+        runtime_db,
+        ..
+    }): State<AppState>,
     Path(address): Path<String>,
     Query(KvQuery { key }): Query<KvQuery>,
 ) -> ServiceResult<Json<KvValue>> {
     let key = construct_storage_key(&address, &key);
-    let value = rollup_client.get_value(&key).await?;
+    let value = read_value_from_store(mode, rollup_client, runtime_db, key).await?;
     let kv_value = match value {
         Some(value) => KvValue::decode(value.as_slice())
             .map_err(|_| anyhow!("Failed to deserialize kv value"))?,
@@ -289,7 +294,7 @@ mod tests {
     use jstz_core::BinEncodable;
     use jstz_proto::{
         context::account::{Account, Nonce, SmartFunctionAccount, UserAccount},
-        runtime::ParsedCode,
+        runtime::{KvValue, ParsedCode},
     };
     use mockito::Matcher;
     use octez::OctezRollupClient;
@@ -614,6 +619,116 @@ mod tests {
             send_simple_get_request(router.borrow_mut(), "/accounts/bad_addr/nonce")
                 .await
                 .unwrap();
+        assert_eq!(res.status(), 404);
+    }
+
+    #[tokio::test]
+    async fn get_kv_value_sequencer() {
+        let address = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
+        let db_file = NamedTempFile::new().unwrap();
+        let state =
+            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
+                .await;
+        state
+            .runtime_db
+            .write(
+                &format!("/jstz_kv/{address}/foo"),
+                &KvValue(serde_json::json!("foo!"))
+                    .encode()
+                    .unwrap()
+                    .to_base58check(),
+            )
+            .unwrap();
+        state
+            .runtime_db
+            .write(
+                &format!("/jstz_kv/{address}/foo/bar"),
+                &KvValue(serde_json::json!({"bar": "bar!"}))
+                    .encode()
+                    .unwrap()
+                    .to_base58check(),
+            )
+            .unwrap();
+        state
+            .runtime_db
+            .write(
+                &format!("/jstz_kv/{address}/bad_value"),
+                &[6, 0, 0, 0, 0, 0, 0, 0, 34].to_base58check(),
+            )
+            .unwrap();
+        state
+            .runtime_db
+            .write(
+                &format!("/jstz_kv/{address}"),
+                &KvValue(serde_json::json!("root!"))
+                    .encode()
+                    .unwrap()
+                    .to_base58check(),
+            )
+            .unwrap();
+
+        let (mut router, _) = AccountsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+
+        // root level
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let value = serde_json::from_slice::<KvValue>(&bytes).unwrap();
+        assert_eq!(value.0, serde_json::json!("root!"));
+
+        // base level key
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv?key=foo"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let value = serde_json::from_slice::<KvValue>(&bytes).unwrap();
+        assert_eq!(value.0, serde_json::json!("foo!"));
+
+        // nested key
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv?key=foo/bar"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let value = serde_json::from_slice::<KvValue>(&bytes).unwrap();
+        assert_eq!(value.0, serde_json::json!({"bar": "bar!"}));
+
+        // bad non-json value
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv?key=bad_value"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 500);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let error_message = serde_json::from_slice::<serde_json::Value>(&bytes).unwrap();
+        assert_eq!(
+            error_message,
+            serde_json::json!({"error": "Failed to deserialize kv value"})
+        );
+
+        // non-existent key
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv?key=nonexistent_key"),
+        )
+        .await
+        .unwrap();
         assert_eq!(res.status(), 404);
     }
 }
