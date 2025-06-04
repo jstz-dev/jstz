@@ -9,7 +9,7 @@ use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
 
 use super::error::{ServiceError, ServiceResult};
-use super::utils;
+use super::utils::StoreWrapper;
 use super::{AppState, Service};
 use anyhow::anyhow;
 use anyhow::Context;
@@ -224,8 +224,8 @@ async fn receipt(
 ) -> ServiceResult<Json<Receipt>> {
     let key = format!("/jstz_receipt/{}", hash);
 
-    let value =
-        utils::read_value_from_store(mode, rollup_client, runtime_db, key).await?;
+    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let value = store.get_value(key).await?;
 
     let receipt = match value {
         Some(value) => Receipt::decode(value.as_slice())
