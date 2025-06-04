@@ -30,11 +30,11 @@ hex.workspace = true
 jstz_api = { path = "../jstz_api" }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
-jstz_kernel = { path = "../jstz_kernel" }
 jstz_proto = { path = "../jstz_proto" }
 jstz_utils = { path = "../jstz_utils" }
 log.workspace = true
 mockito.workspace = true
+num-traits.workspace = true
 octez = { path = "../octez" }
 parking_lot.workspace = true
 r2d2 = { version = "0.8" }
@@ -62,6 +62,7 @@ utoipa-scalar.workspace = true
 assert_cmd.workspace = true
 pretty_assertions.workspace = true
 warp.workspace = true
+jstz_mock = { path = "../jstz_mock" }
 
 [[bin]]
 name = "jstz-node"
