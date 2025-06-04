@@ -21,7 +21,7 @@ Follow these steps to use it:
 
 6. Fill in the address of the deployed counter smart contract.
 
-7. Fill in the information for your Jstz account, which you can find locally at `~/.jstz/config.json`.
+7. Fill in the information for your Jstz account, which you can find locally at `~/.config/jstz/config.json`.
 
 8. Click the **Get**, **Increment**, and **Decrement** buttons and wait for the response from the smart function to appear below the buttons.
 

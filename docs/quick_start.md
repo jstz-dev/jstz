@@ -171,7 +171,7 @@ Follow these instructions to deploy the sample smart function to a local sandbox
     jstz sandbox --container start
     ```
 
-    If you see an error that says that the configuration file is improperly configured, delete the `~/.jstz/` folder and try to start the sandbox again.
+    If you see an error that says that the configuration file is improperly configured, delete the `~/.config/jstz/` folder and try to start the sandbox again.
 
     ::: tip
 

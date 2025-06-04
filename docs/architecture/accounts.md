@@ -8,7 +8,7 @@ Jstz works with two kinds of accounts:
 
 ## Working with user accounts
 
-User accounts are stored in the local file `~/.jstz/config.json`, including the alias, address, public key, and secret key for each account.
+User accounts are stored in the local file `~/.config/jstz/config.json`, including the alias, address, public key, and secret key for each account.
 
 ::: warning
 

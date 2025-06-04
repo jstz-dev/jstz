@@ -44,7 +44,7 @@ async function main() {
     timeout: 6000,
   });
   const config = JSON.parse(
-    readFileSync(untildify("~/.jstz/config.json"), "utf-8"),
+    readFileSync(untildify("~/.config/jstz/config.json"), "utf-8"),
   );
 
   if (!config.current_alias) {
