@@ -21,7 +21,7 @@ This guide will instruct through how to use the command line interface for `jstz
 
 # Config
 
-<!-- In order to run `jstz` cli, you need to create a setup file in `~/.jstz/config.json` that looks as follows: -->
+<!-- In order to run `jstz` cli, you need to create a setup file in `~/.config/jstz/config.json` that looks as follows: -->
 
 ::: danger
 ⚠️ Under construction ⚠️
