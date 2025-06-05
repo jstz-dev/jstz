@@ -73,32 +73,76 @@ impl Db {
     }
 
     /// Counts subkeys given a prefix. The prefix itself is included. If the prefix does not exist,
+    /// i.e. it itself does not possess any value AND there is no other key with the prefix,
     /// `None` is returned.
     pub fn count_subkeys(&self, prefix: &str) -> Result<Option<u64>> {
-        // Using glob to find everything that matches `/{prefix}/*`.
-        // Since `jstz_key` is indexed and we only need the count,
-        // performance should be acceptable.
         let client = self.connection()?;
-        let mut glob_prefix = prefix.to_string();
-        if !glob_prefix.ends_with("/") {
-            glob_prefix += "/";
-        }
-        glob_prefix += "*";
 
+        // This is basically `get_subkeys` wrapped by `COUNT` in order to skip unnecessary
+        // return values.
         let mut stmt = client.prepare(
             r#"
-            SELECT 
-                CASE 
-                    WHEN a.val IS NULL THEN NULL 
-                    ELSE a.val + b.val 
-                END AS result
-            FROM 
-                (SELECT 1 AS val FROM jstz_kv WHERE jstz_key = ?1) a,
-                (SELECT COUNT(*) AS val FROM jstz_kv WHERE jstz_key GLOB ?2) b"#,
+            SELECT COUNT(*)
+            FROM (
+                SELECT SUBSTR(jstz_key, LENGTH(?2))
+                FROM jstz_kv
+                WHERE jstz_key = ?1
+                OR jstz_key GLOB ?2
+                AND NOT jstz_key GLOB ?3
+                UNION
+                SELECT DISTINCT SUBSTR(SUBSTR(jstz_key, LENGTH(?2)), 0, INSTR(SUBSTR(jstz_key, LENGTH(?2)), '/')) AS child
+                FROM jstz_kv
+                WHERE jstz_key GLOB ?3
+            )"#,
         )?;
-        Ok(stmt
-            .query_row(params![prefix.to_string(), glob_prefix], |row| row.get(0))
-            .optional()?)
+        let res = stmt.query_row(
+            params![prefix, format!("{prefix}/*"), format!("{prefix}/*/*"),],
+            |row| row.get(0),
+        )?;
+        Ok(if res == 0 { None } else { Some(res) })
+    }
+
+    /// Reads subkeys given a prefix. The prefix itself is included as an empty string. If the
+    /// prefix does not exist, i.e. it itself does not possess any value AND there is no other
+    /// key with the prefix, `None` is returned.
+    pub fn get_subkeys(&self, prefix: &str) -> Result<Option<Vec<String>>> {
+        // Using glob to find the subtree, i.e. everything that matches `/{prefix}/*`.
+        // Since `jstz_key` is indexed, performance should be acceptable.
+        let client = self.connection()?;
+
+        // Union of two parts:
+        // 1. Select the prefix itself and its immediate subkeys. `SUBSTR` removes the prefix since
+        // we only want the subkeys themselves.
+        // 2. Select everything else that matches the prefix and keep the immediate subkeys.
+        // The nested SUBSTR part:
+        // - SUBSTR(jstz_key, LENGTH(?2)): input string -- selected key with prefix removed
+        // - 0: find a substring of the input string starting from character index 0
+        // - INSTR(SUBSTR(jstz_key, LENGTH(?2)), '/'): returns the index where the first slash is in
+        //   the input string. This is essentially the length of the immediate subkey.
+        // The nested SUBSTR therefore means "returning a substring of the input (selected key with
+        // prefix removed) from the beginning to the first occurrence of the slash character".
+        let mut stmt = client.prepare(
+            r#"
+            SELECT SUBSTR(jstz_key, LENGTH(?2))
+            FROM jstz_kv
+            WHERE jstz_key = ?1
+                OR jstz_key GLOB ?2
+                AND NOT jstz_key GLOB ?3
+            UNION
+            SELECT DISTINCT SUBSTR(SUBSTR(jstz_key, LENGTH(?2)), 0, INSTR(SUBSTR(jstz_key, LENGTH(?2)), '/')) AS tmp
+            FROM jstz_kv
+            WHERE jstz_key GLOB ?3"#,
+        )?;
+        let mut rows = stmt.query(params![
+            prefix,
+            format!("{prefix}/*"),
+            format!("{prefix}/*/*"),
+        ])?;
+        let mut keys = vec![];
+        while let Some(r) = rows.next()? {
+            keys.push(r.get(0)?);
+        }
+        Ok(if keys.is_empty() { None } else { Some(keys) })
     }
 
     pub fn read_key(&self, key: &str) -> Result<Option<String>> {
@@ -227,12 +271,12 @@ mod tests {
         assert_eq!(db.count_subkeys("foo/bar").unwrap(), Some(1));
 
         insert(&conn, "foo/bar/baz", "bar");
-        assert_eq!(db.count_subkeys("foo").unwrap(), Some(3));
+        assert_eq!(db.count_subkeys("foo").unwrap(), Some(2));
         assert_eq!(db.count_subkeys("foo/bar").unwrap(), Some(2));
         assert_eq!(db.count_subkeys("foo/bar/baz").unwrap(), Some(1));
 
         insert(&conn, "foo/bar/qux", "bar");
-        assert_eq!(db.count_subkeys("foo").unwrap(), Some(4));
+        assert_eq!(db.count_subkeys("foo").unwrap(), Some(2));
         assert_eq!(db.count_subkeys("foo/bar").unwrap(), Some(3));
         assert_eq!(db.count_subkeys("foo/bar/qux").unwrap(), Some(1));
     }
@@ -307,5 +351,42 @@ mod tests {
         assert_eq!(super::exec_delete(&conn, path).unwrap(), 1);
         assert!(read_row(&conn, path).is_none());
         assert_eq!(super::exec_delete(&conn, path).unwrap(), 0);
+    }
+
+    #[test]
+    fn get_subkeys() {
+        let db_file = NamedTempFile::new().unwrap();
+        let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
+        let conn = db.connection().unwrap();
+
+        for key in [
+            "foo",
+            "foo/aa",
+            "foo/bb",
+            "foo/cc",
+            "foo/cc/dd",
+            "bar",
+            "baz/aa",
+        ] {
+            insert(&conn, key, "1");
+        }
+
+        let mut keys = db.get_subkeys("foo").unwrap().unwrap();
+        keys.sort();
+        assert_eq!(keys, ["", "aa", "bb", "cc"]);
+
+        let mut keys = db.get_subkeys("foo/cc").unwrap().unwrap();
+        keys.sort();
+        assert_eq!(keys, ["", "dd"]);
+
+        let mut keys = db.get_subkeys("bar").unwrap().unwrap();
+        keys.sort();
+        assert_eq!(keys, [""]);
+
+        let mut keys = db.get_subkeys("baz").unwrap().unwrap();
+        keys.sort();
+        assert_eq!(keys, ["aa"]);
+
+        assert!(db.get_subkeys("nonsense").unwrap().is_none());
     }
 }
