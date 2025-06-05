@@ -380,9 +380,6 @@ mod tests {
         // store_has
         assert!(host.store_has(&path).unwrap().is_none());
 
-        // store_count_subkeys when prefix does not exist
-        assert!(host.store_count_subkeys(&path).is_err());
-
         // store_write
         let expected: [u8; 3] = [1, 2, 3];
         host.store_write(&path, &expected, 0).unwrap();
@@ -399,6 +396,33 @@ mod tests {
         assert_eq!(host.store_count_subkeys(&path).unwrap(), 1);
         host.store_write_all(&subkey_path, &[1, 2, 3]).unwrap();
         assert_eq!(host.store_count_subkeys(&path).unwrap(), 2);
+        for key in ["/a", "/a/b", "/a/c", "/a/d", "/a/d/e", "/b", "/c/d/e"] {
+            host.store_write_all(&RefPath::assert_from(key.as_bytes()), &[0])
+                .unwrap();
+        }
+        assert_eq!(
+            host.store_count_subkeys(&RefPath::assert_from(b"/a"))
+                .unwrap(),
+            4
+        );
+        assert_eq!(
+            host.store_count_subkeys(&RefPath::assert_from(b"/a/d"))
+                .unwrap(),
+            2
+        );
+        assert_eq!(
+            host.store_count_subkeys(&RefPath::assert_from(b"/b"))
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            host.store_count_subkeys(&RefPath::assert_from(b"/c"))
+                .unwrap(),
+            1
+        );
+        assert!(host
+            .store_count_subkeys(&RefPath::assert_from(b"/d"))
+            .is_err());
 
         // store_read
         let v = host.store_read(&path, 2, 100000).unwrap();
