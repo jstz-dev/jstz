@@ -5,7 +5,6 @@ const sidebars = {
     {
       type: "category",
       collapsed: false,
-      collapsible: false,
       label: "Getting Started",
       items: ["installation", "quick_start", "cli", "sandbox", "transfer"],
     },
@@ -13,7 +12,6 @@ const sidebars = {
     {
       type: "category",
       collapsed: false,
-      collapsible: false,
       label: "Architecture",
       items: [
         "architecture/overview",
@@ -25,7 +23,6 @@ const sidebars = {
     {
       type: "category",
       collapsed: false,
-      collapsible: false,
       label: "Smart functions",
       items: [
         "functions/overview",
@@ -41,8 +38,7 @@ const sidebars = {
 
     {
       type: "category",
-      collapsed: false,
-      collapsible: false,
+      collapsed: true,
       label: "API Reference",
       items: [
         "api/index",

@@ -18,7 +18,7 @@ manifest-src 'self';
 script-src ${scriptSrc};
 style-src https://cdn.jsdelivr.net https://fonts.googleapis.com 'self' 'unsafe-inline';
 font-src https://cdn.jsdelivr.net https://fonts.gstatic.com 'self';
-img-src 'self' https://*.googletagmanager.com https://*.google-analytics.com;
+img-src 'self' https://*.googletagmanager.com https://*.google-analytics.com data: 'unsafe-eval';
 media-src 'self';
 form-action 'self';
 connect-src 'self' https://*.algolia.net https://*.algolianet.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com;`;
@@ -109,11 +109,6 @@ module.exports = async function createConfigAsync() {
               position: "right",
             },
           ],
-        },
-        docs: {
-          sidebar: {
-            autoCollapseCategories: true,
-          },
         },
         prism: {
           theme: themes.github,
