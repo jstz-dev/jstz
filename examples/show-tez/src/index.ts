@@ -24,7 +24,7 @@ function buildRequest(
         }),
       ),
     ),
-    gas_limit: 55000,
+    gasLimit: 55000,
     headers: {},
     method: "GET",
     uri: `jstz://${contractAddress}`,
@@ -77,14 +77,14 @@ async function main() {
         // If the user sends "show," print their messages from the contract's key-value store
         const length: number = Number.parseInt(
           // Get the total number of messages sent by the user account
-          await jstzClient.accounts
+          (await jstzClient.accounts
             .getKv(contractAddress, {
               key: `messages/${address}/length`,
             })
             .catch(() => {
               console.log("No messages yet.");
               return "0";
-            }),
+            })) as string,
         );
         // Print each message
         for (let index = 0; index < length; index++) {
@@ -105,13 +105,13 @@ async function main() {
           content: runFunction,
           nonce,
           source: address,
+          publicKey: publicKey,
         };
         // Sign the operation
         const signature = signer.sign_operation(operation, secretKey);
         // Send the operation
         const response = jstzClient.operations.injectAndPoll({
           inner: operation,
-          public_key: publicKey,
           signature: signature,
         });
         waitingForReceipt = true;
