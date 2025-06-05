@@ -1,7 +1,7 @@
 {
   "dependencies": {
-    "jstz_sdk": "0.1.0-alpha.0",
-    "@jstz-dev/jstz-client": "0.1.1-alpha.0",
+    "jstz_sdk": "0.1.1-alpha.1",
+    "@jstz-dev/jstz-client": "0.1.1-alpha.1",
     "untildify": "^5.0.0"
   },
   "devDependencies": {

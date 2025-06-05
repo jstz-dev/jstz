@@ -438,9 +438,9 @@ if (input.toLocaleLowerCase() === "show") {
   // If the user sends "show," print their messages from the contract's key-value store
   const length: number = Number.parseInt(
     // Get the total number of messages sent by the user account
-    await jstzClient.accounts.getKv(contractAddress, {
+    (await jstzClient.accounts.getKv(contractAddress, {
       key: `messages/${address}/length`,
-    }),
+    })) as string,
   );
   // Print each message
   for (let index = 0; index < length; index++) {
