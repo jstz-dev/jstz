@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use axum::{
     extract::{Path, Query, State},
     Json,
@@ -259,12 +259,25 @@ async fn get_kv_value(
     )
 )]
 async fn get_kv_subkeys(
-    State(AppState { rollup_client, .. }): State<AppState>,
+    State(AppState {
+        mode,
+        rollup_client,
+        runtime_db,
+        ..
+    }): State<AppState>,
     Path(address): Path<String>,
     Query(KvQuery { key }): Query<KvQuery>,
 ) -> ServiceResult<Json<Vec<String>>> {
     let key = construct_storage_key(&address, &key);
-    let value = rollup_client.get_subkeys(&key).await?;
+    let value = match mode {
+        RunMode::Default => rollup_client.get_subkeys(&key).await?,
+        RunMode::Sequencer => {
+            tokio::task::spawn_blocking(move || runtime_db.get_subkeys(&key))
+                .await
+                .context("failed to wait for db read task")?
+                .context("failed to read subkeys from db")?
+        }
+    };
     let subkeys = match value {
         Some(value) => value,
         None => Err(ServiceError::NotFound)?,
@@ -730,5 +743,125 @@ mod tests {
         .await
         .unwrap();
         assert_eq!(res.status(), 404);
+    }
+
+    #[tokio::test]
+    async fn get_kv_subkeys_sequencer() {
+        let address = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
+        let db_file = NamedTempFile::new().unwrap();
+        let state =
+            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
+                .await;
+        for key in ["a", "a/b1", "a/b1/c", "a/b2", "a/b3", "b", "c/d"] {
+            state
+                .runtime_db
+                .write(
+                    &format!("/jstz_kv/{address}/{key}"),
+                    &KvValue(serde_json::json!("!"))
+                        .encode()
+                        .unwrap()
+                        .to_base58check(),
+                )
+                .unwrap();
+        }
+
+        let (mut router, _) = AccountsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+
+        // root level
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv/subkeys"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let mut keys = serde_json::from_slice::<Vec<String>>(&bytes).unwrap();
+        keys.sort();
+        assert_eq!(keys, ["a", "b", "c"]);
+
+        // a
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv/subkeys?key=a"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let mut keys = serde_json::from_slice::<Vec<String>>(&bytes).unwrap();
+        keys.sort();
+        assert_eq!(keys, ["", "b1", "b2", "b3"]);
+
+        // a/b1
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv/subkeys?key=a/b1"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let mut keys = serde_json::from_slice::<Vec<String>>(&bytes).unwrap();
+        keys.sort();
+        assert_eq!(keys, ["", "c"]);
+
+        // b
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv/subkeys?key=b"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let keys = serde_json::from_slice::<Vec<String>>(&bytes).unwrap();
+        assert_eq!(keys, [""]);
+
+        // c
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv/subkeys?key=c"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let keys = serde_json::from_slice::<Vec<String>>(&bytes).unwrap();
+        assert_eq!(keys, ["d"]);
+    }
+
+    #[tokio::test]
+    async fn get_kv_subkeys_default() {
+        let address = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
+        let mut server = mockito::Server::new_async().await;
+        let mock_subkey_endpoint_ok = server
+            .mock("GET", "/global/block/head/durable/wasm_2_0_0/subkeys")
+            .match_query(Matcher::UrlEncoded(
+                "key".to_string(),
+                format!("/jstz_kv/{address}/foo"),
+            ))
+            .with_body(serde_json::json!(["a", "b"]).to_string())
+            .create();
+        // The current implementation actually never returns None, so it's not covered here
+        let state = mock_app_state(&server.url(), "", RunMode::Default).await;
+        let (mut router, _) = AccountsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+
+        let res = send_simple_get_request(
+            router.borrow_mut(),
+            format!("/accounts/{address}/kv/subkeys?key=foo"),
+        )
+        .await
+        .unwrap();
+        assert_eq!(res.status(), 200);
+        let bytes = axum::body::to_bytes(res.into_body(), 1000).await.unwrap();
+        let keys = serde_json::from_slice::<Vec<String>>(&bytes).unwrap();
+        assert_eq!(keys, ["a", "b"]);
+
+        mock_subkey_endpoint_ok.assert();
     }
 }
