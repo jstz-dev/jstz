@@ -189,12 +189,13 @@ async fn create_config_file_and_client_dir() -> Result<(PathBuf, PathBuf)> {
         .into_temp_path()
         .keep()
         .context("Failed to keep the config file path")?;
-    fs::File::create(&config_file_path)
+    let mut f = fs::File::create(&config_file_path)
         .await
-        .context("Failed to create config file")?
-        .write_all(content.as_bytes())
+        .context("Failed to create config file")?;
+    f.write_all(content.as_bytes())
         .await
         .context("Failed to write config file")?;
+    f.flush().await.context("Failed to flush config file")?;
     Ok((tmp_dir_path, config_file_path))
 }
 
