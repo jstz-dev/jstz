@@ -1,0 +1,76 @@
+use std::borrow::Cow;
+
+use deno_error::JsErrorClass as _;
+use jstz_runtime::error::RuntimeError;
+use serde::Serialize;
+
+use super::http::*;
+
+pub type Result<T> = std::result::Result<T, FetchError>;
+
+#[derive(Debug, thiserror::Error, deno_error::JsError)]
+pub enum FetchError {
+    #[class(type)]
+    #[error("Invalid Header type")]
+    InvalidHeaderType,
+    #[class(type)]
+    #[error("Unsupport scheme '{0}'")]
+    UnsupportedScheme(String),
+    #[class(uri)]
+    #[error(transparent)]
+    ParseError(#[from] url::ParseError),
+    #[class(type)]
+    #[error("Invalid Response type")]
+    InvalidResponseType,
+    #[class("RuntimeError")]
+    #[error(transparent)]
+    RuntimeError(#[from] RuntimeError),
+    #[class(not_supported)]
+    #[error("{0}")]
+    NotSupported(&'static str),
+    // TODO: Boa's JsClass errors are not Send safe. Once we remove boa, we
+    // should be able to use crate::Error type directly
+    #[class("RuntimeError")]
+    #[error("{0}")]
+    JstzError(String),
+}
+
+#[derive(Serialize)]
+pub struct FetchErrorJsClass {
+    class: Cow<'static, str>,
+    message: Option<Cow<'static, str>>,
+}
+
+impl From<FetchError> for FetchErrorJsClass {
+    fn from(value: FetchError) -> Self {
+        Self {
+            class: value.get_class(),
+            message: Some(value.get_message()),
+        }
+    }
+}
+
+impl From<FetchError> for Response {
+    fn from(err: FetchError) -> Self {
+        let error_body: FetchErrorJsClass = err.into();
+        let error = serde_json::to_vec(&error_body)
+            .map(Body::Vector)
+            .ok()
+            .unwrap_or(Body::zero_capacity());
+        Response {
+            status: 500,
+            status_text: "InternalServerError".to_string(),
+            headers: Vec::with_capacity(0),
+            body: error,
+        }
+    }
+}
+
+impl From<Result<Response>> for Response {
+    fn from(result: Result<Response>) -> Self {
+        match result {
+            Ok(response) => response,
+            Err(err) => err.into(),
+        }
+    }
+}

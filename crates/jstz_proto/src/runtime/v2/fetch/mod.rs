@@ -1,8 +1,12 @@
+mod http;
+use http::*;
+mod error;
+use error::*;
+
 use deno_core::{
     resolve_import, serde_v8, v8, AsyncResult, BufView, ByteString, JsBuffer, OpState,
     Resource, ResourceId, StaticModuleLoader, ToJsBuffer,
 };
-use deno_error::JsErrorClass;
 use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
 use jstz_core::host::JsHostRuntime;
 use jstz_core::{host::HostRuntime, kv::Transaction};
@@ -11,10 +15,8 @@ use jstz_runtime::sys::{
     FromV8, Headers as JsHeaders, Request as JsRequest, RequestInit as JsRequestInit,
     Response as JsResponse, ToV8,
 };
-use jstz_runtime::JstzRuntimeOptions;
-use jstz_runtime::{error::RuntimeError, JstzRuntime, ProtocolContext};
-use serde::Serialize;
-use std::borrow::Cow;
+use jstz_runtime::JstzRuntime;
+use jstz_runtime::{JstzRuntimeOptions, ProtocolContext};
 use std::future::Future;
 use std::num::NonZeroU64;
 use std::pin::Pin;
@@ -99,17 +101,6 @@ impl FetchHandler for ProtoFetchHandler {
         Err(FetchError::NotSupported(
             "custom_client op is not supported",
         ))
-    }
-}
-
-type Result<T> = std::result::Result<T, FetchError>;
-
-impl From<Result<Response>> for Response {
-    fn from(result: Result<Response>) -> Self {
-        match result {
-            Ok(response) => response,
-            Err(err) => err.into(),
-        }
     }
 }
 
@@ -466,68 +457,6 @@ fn commit_or_rollback(
     result.map_err(|e| FetchError::JstzError(e.to_string()))
 }
 
-// HTTP structures
-
-/// Response returned from a fetch or Smart Function run
-#[derive(Debug)]
-pub struct Response {
-    status: u16,
-    status_text: String,
-    headers: Vec<(ByteString, ByteString)>,
-    body: Body,
-}
-
-#[derive(Debug)]
-pub enum Body {
-    Vector(Vec<u8>),
-    Buffer(JsBuffer),
-}
-
-impl Body {
-    #[allow(unused)]
-    pub fn to_vec(self) -> Vec<u8> {
-        self.into()
-    }
-
-    pub fn zero_capacity() -> Self {
-        Self::Vector(Vec::with_capacity(0))
-    }
-}
-
-impl From<Body> for Vec<u8> {
-    fn from(body: Body) -> Self {
-        match body {
-            Body::Vector(items) => items,
-            Body::Buffer(js_buffer) => js_buffer.to_vec(),
-        }
-    }
-}
-
-pub enum SupportedScheme {
-    Jstz,
-}
-
-impl TryFrom<&Url> for SupportedScheme {
-    type Error = FetchError;
-
-    fn try_from(value: &Url) -> Result<Self> {
-        match value.scheme() {
-            "jstz" => Ok(Self::Jstz),
-            scheme => Err(FetchError::UnsupportedScheme(scheme.to_string())),
-        }
-    }
-}
-
-impl TryFrom<&Url> for Address {
-    type Error = FetchError;
-
-    fn try_from(url: &Url) -> Result<Self> {
-        let raw_address = url.host().ok_or(url::ParseError::EmptyHost)?;
-        Address::from_base58(raw_address.to_string().as_str())
-            .map_err(|err| FetchError::JstzError(err.to_string()))
-    }
-}
-
 // Resources
 
 pub struct FetchRequestResource {
@@ -557,64 +486,6 @@ impl Resource for FetchResponseResource {
 }
 
 // Errors
-
-#[derive(Debug, thiserror::Error, deno_error::JsError)]
-pub enum FetchError {
-    #[class(type)]
-    #[error("Invalid Header type")]
-    InvalidHeaderType,
-    #[class(type)]
-    #[error("Unsupport scheme '{0}'")]
-    UnsupportedScheme(String),
-    #[class(uri)]
-    #[error(transparent)]
-    ParseError(#[from] url::ParseError),
-    #[class(type)]
-    #[error("Invalid Response type")]
-    InvalidResponseType,
-    #[class("RuntimeError")]
-    #[error(transparent)]
-    RuntimeError(#[from] RuntimeError),
-    #[class(not_supported)]
-    #[error("{0}")]
-    NotSupported(&'static str),
-    // TODO: Boa's JsClass errors are not Send safe. Once we remove boa, we
-    // should be able to use crate::Error type directly
-    #[class("RuntimeError")]
-    #[error("{0}")]
-    JstzError(String),
-}
-
-#[derive(Serialize)]
-pub struct FetchErrorJsClass {
-    class: Cow<'static, str>,
-    message: Option<Cow<'static, str>>,
-}
-
-impl From<FetchError> for FetchErrorJsClass {
-    fn from(value: FetchError) -> Self {
-        Self {
-            class: value.get_class(),
-            message: Some(value.get_message()),
-        }
-    }
-}
-
-impl From<FetchError> for Response {
-    fn from(err: FetchError) -> Self {
-        let error_body: FetchErrorJsClass = err.into();
-        let error = serde_json::to_vec(&error_body)
-            .map(Body::Vector)
-            .ok()
-            .unwrap_or(Body::zero_capacity());
-        Response {
-            status: 500,
-            status_text: "InternalServerError".to_string(),
-            headers: Vec::with_capacity(0),
-            body: error,
-        }
-    }
-}
 
 impl<'s> ToV8<'s> for Body {
     fn to_v8(
