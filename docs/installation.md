@@ -5,6 +5,11 @@ sidebar_label: Installation
 
 ## Download and Install
 
+Jstz has several [components](/architecture/overview#components), but the primary tool that you need to develop on Jstz is the [Jstz CLI](/cli), which is available as the package [`@jstz-dev/cli`](https://www.npmjs.com/package/@jstz-dev/cli).
+It allows you to start the Jstz sandbox, deploy smart functions to it, and interact with them.
+
+Follow these instructions to install the Jstz CLI:
+
 :::danger
 ⚠️ `jstz` is only available on Unix-based systems. ⚠️
 :::
