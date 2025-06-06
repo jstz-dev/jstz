@@ -1,5 +1,5 @@
 ---
-title: 🔍 URLSearchParams
+title: URLSearchParams
 sidebar_label: URLSearchParams
 ---
 

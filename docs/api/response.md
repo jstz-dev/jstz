@@ -1,5 +1,5 @@
 ---
-title: 🆗 Response
+title: Response
 sidebar_label: Response
 ---
 

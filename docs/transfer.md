@@ -1,5 +1,5 @@
 ---
-title: 💰 Transfer
+title: Transfer
 sidebar_label: Transfer
 ---
 

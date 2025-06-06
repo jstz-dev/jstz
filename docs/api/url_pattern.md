@@ -1,5 +1,5 @@
 ---
-title: 🧩 URLPattern
+title: URLPattern
 sidebar_label: URLPattern
 ---
 

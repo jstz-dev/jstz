@@ -1,5 +1,5 @@
 ---
-title: 💡 SmartFunction
+title: SmartFunction
 sidebar_label: SmartFunction
 ---
 

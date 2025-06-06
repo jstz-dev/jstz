@@ -1,5 +1,5 @@
 ---
-title: 🔣 Encoding
+title: Encoding
 sidebar_label: Encoding
 ---
 
