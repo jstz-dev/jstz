@@ -15,6 +15,8 @@ use jstz_runtime::sys::ToV8;
 
 use deno_core::{serde_v8, v8, ToJsBuffer};
 
+use crate::executor::smart_function::JSTZ_HOST;
+
 /// Response returned from a fetch or Smart Function run
 #[derive(Debug)]
 pub struct Response {
@@ -96,6 +98,24 @@ impl From<Body> for BytesStream {
     }
 }
 
+impl From<String> for Body {
+    fn from(s: String) -> Self {
+        Body::Vector(s.as_bytes().to_vec())
+    }
+}
+
+impl From<&str> for Body {
+    fn from(s: &str) -> Self {
+        Body::Vector(s.as_bytes().to_vec())
+    }
+}
+
+impl From<&[u8]> for Body {
+    fn from(bytes: &[u8]) -> Self {
+        Body::Vector(bytes.to_vec())
+    }
+}
+
 impl From<Body> for Vec<u8> {
     fn from(body: Body) -> Self {
         match body {
@@ -152,6 +172,26 @@ impl TryFrom<&Url> for Address {
         let raw_address = url.host().ok_or(url::ParseError::EmptyHost)?;
         Address::from_base58(raw_address.to_string().as_str())
             .map_err(|err| FetchError::JstzError(err.to_string()))
+    }
+}
+
+pub enum HostName {
+    Address(Address),
+    JstzHost,
+}
+
+impl TryFrom<&Url> for HostName {
+    type Error = FetchError;
+
+    fn try_from(url: &Url) -> Result<Self> {
+        let to = Address::try_from(url);
+        match to {
+            Ok(to) => Ok(Self::Address(to)),
+            Err(e) => match url.domain() {
+                Some(JSTZ_HOST) => Ok(Self::JstzHost),
+                _ => Err(e),
+            },
+        }
     }
 }
 

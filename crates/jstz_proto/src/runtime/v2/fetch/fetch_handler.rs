@@ -22,6 +22,8 @@ use crate::context::account::{Account, Address, AddressKind, Addressable};
 use crate::runtime::v2::fetch::resources::FetchRequestResource;
 use deno_fetch_base::FetchResponseResource;
 
+use super::host_script::HostScript;
+use super::http::HostName;
 use super::http::{Body, Response, SupportedScheme};
 use std::num::NonZeroU64;
 use std::str::FromStr;
@@ -213,55 +215,63 @@ async fn dispatch_run(
     data: Option<Body>,
     is_successful: &mut bool,
 ) -> Result<Response> {
-    let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
-    headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
-    match to.kind() {
-        AddressKind::User => Ok(Response {
-            status: 200,
-            status_text: "OK".into(),
-            headers,
-            body: Body::Vector(Vec::with_capacity(0)),
-        }),
-        AddressKind::SmartFunction => {
-            let address = to.as_smart_function().unwrap();
-            let run_result = load_and_run(
-                host,
-                tx,
-                address.clone(),
-                method,
-                url.clone(),
-                headers,
-                data,
-            )
-            .await;
-            if let Ok(response) = run_result {
-                if response.status < 200 || response.status >= 300 {
-                    // Anything not a success should rollback
-                    *is_successful = false;
-                    clean_and_validate_headers(response.headers).map(
-                        |ProcessedHeaders { headers, .. }| Response {
-                            headers,
-                            ..response
-                        },
-                    )
-                } else {
-                    let to: Address = (&url).try_into()?;
-                    let headers = process_headers_and_transfer(
-                        tx,
+    let to = (&url).try_into();
+    match to {
+        Ok(HostName::Address(to)) => {
+            let mut headers =
+                process_headers_and_transfer(tx, host, headers, &from, &to)?;
+            headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
+            match to.kind() {
+                AddressKind::User => Ok(Response {
+                    status: 200,
+                    status_text: "OK".into(),
+                    headers,
+                    body: Body::Vector(Vec::with_capacity(0)),
+                }),
+                AddressKind::SmartFunction => {
+                    let address = to.as_smart_function().unwrap();
+                    let run_result = HostScript::load_and_run(
                         host,
-                        response.headers,
-                        &to,
-                        &from,
-                    )?;
-                    Ok(Response {
+                        tx,
+                        address.clone(),
+                        method,
+                        url.clone(),
                         headers,
-                        ..response
-                    })
+                        data,
+                    )
+                    .await;
+                    if let Ok(response) = run_result {
+                        if response.status < 200 || response.status >= 300 {
+                            // Anything not a success should rollback
+                            *is_successful = false;
+                            clean_and_validate_headers(response.headers).map(
+                                |ProcessedHeaders { headers, .. }| Response {
+                                    headers,
+                                    ..response
+                                },
+                            )
+                        } else {
+                            let to: Address = (&url).try_into()?;
+                            let headers = process_headers_and_transfer(
+                                tx,
+                                host,
+                                response.headers,
+                                &to,
+                                &from,
+                            )?;
+                            Ok(Response {
+                                headers,
+                                ..response
+                            })
+                        }
+                    } else {
+                        run_result
+                    }
                 }
-            } else {
-                run_result
             }
         }
+        Ok(HostName::JstzHost) => HostScript::route(host, tx, from, method, url).await,
+        Err(e) => Err(e),
     }
 }
 
