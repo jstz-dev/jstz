@@ -1,5 +1,5 @@
 mod http;
-use http::*;
+pub(crate) use http::*;
 mod error;
 use error::*;
 
@@ -145,9 +145,24 @@ fn fetch(
 /// the expected response type.This function is agnostic of the context in which it
 /// is called thus suitable as the [`crate::operation::RunFunction`] handler
 pub async fn process_and_dispatch_request(
-    host: JsHostRuntime<'static>,
+    mut host: JsHostRuntime<'static>,
     mut tx: Transaction,
     from: Address,
+    method: ByteString,
+    url: Url,
+    headers: Vec<(ByteString, ByteString)>,
+    data: Option<Body>,
+) -> Response {
+    process_and_dispatch_request_borrowed(
+        &mut host, &mut tx, &from, method, url, headers, data,
+    )
+    .await
+}
+
+pub async fn process_and_dispatch_request_borrowed(
+    host: &mut impl HostRuntime,
+    tx: &mut Transaction,
+    from: &impl Addressable,
     method: ByteString,
     url: Url,
     headers: Vec<(ByteString, ByteString)>,
@@ -156,12 +171,11 @@ pub async fn process_and_dispatch_request(
     let scheme = SupportedScheme::try_from(&url);
     match scheme {
         Ok(SupportedScheme::Jstz) => {
-            let mut host = host;
             let mut is_successful = true;
             tx.begin();
             let result = dispatch_run(
-                &mut host,
-                &mut tx,
+                host,
+                tx,
                 from,
                 method,
                 url,
@@ -170,7 +184,7 @@ pub async fn process_and_dispatch_request(
                 &mut is_successful,
             )
             .await;
-            let _ = commit_or_rollback(&mut host, &tx, is_successful && result.is_ok());
+            let _ = commit_or_rollback(host, tx, is_successful && result.is_ok());
             result.into()
         }
         Err(err) => err.into(),
@@ -182,7 +196,7 @@ pub async fn process_and_dispatch_request(
 async fn dispatch_run(
     host: &mut impl HostRuntime,
     tx: &mut Transaction,
-    from: Address,
+    from: &impl Addressable,
     method: ByteString,
     url: Url,
     headers: Vec<(ByteString, ByteString)>,
@@ -190,7 +204,7 @@ async fn dispatch_run(
     is_successful: &mut bool,
 ) -> Result<Response> {
     let to: Address = (&url).try_into()?;
-    let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
+    let mut headers = process_headers_and_transfer(tx, host, headers, from, &to)?;
     headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
     match to.kind() {
         AddressKind::User => todo!(),
@@ -223,7 +237,7 @@ async fn dispatch_run(
                         host,
                         response.headers,
                         &to,
-                        &from,
+                        from,
                     )?;
                     Ok(Response {
                         headers,
@@ -291,11 +305,17 @@ async fn load_and_run(
 
     // 4. Run
     let args = [request];
-    let id = runtime.execute_main_module(&specifier).await?;
-    let result = runtime.call_default_handler(id, &args).await?;
-    let response = convert_js_to_response(&mut runtime, result)
-        .await
-        .map_err(|_| FetchError::InvalidResponseType)?;
+    let response = {
+        jstz_core::runtime::enter_js_host_context(host, tx, || {
+            jstz_core::future::block_on(async move {
+                let id = runtime.execute_main_module(&specifier).await?;
+                let result = runtime.call_default_handler(id, &args).await?;
+                convert_js_to_response(&mut runtime, result)
+                    .await
+                    .map_err(|_| FetchError::InvalidResponseType)
+            })
+        })
+    }?;
     Ok(response)
 }
 
