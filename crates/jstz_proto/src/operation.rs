@@ -4,7 +4,7 @@ use crate::{
     Error, Result,
 };
 use bincode::{Decode, Encode};
-use derive_more::Display;
+use derive_more::{Deref, Display};
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
@@ -207,10 +207,11 @@ impl Content {
 }
 
 #[derive(
-    Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
+    Debug, Deref, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
 )]
 pub struct SignedOperation {
     signature: Signature,
+    #[deref]
     inner: Operation,
 }
 
@@ -223,12 +224,11 @@ impl SignedOperation {
         self.inner.hash()
     }
 
-    pub fn verify(self) -> Result<Operation> {
+    pub fn verify(&self) -> Result<()> {
         let hash = self.inner.hash();
-        self.signature
-            .verify(&self.inner.public_key, hash.as_ref())?;
-
-        Ok(self.inner)
+        Ok(self
+            .signature
+            .verify(&self.inner.public_key, hash.as_ref())?)
     }
 
     pub fn verify_ref(&self) -> Result<&Operation> {
@@ -237,6 +237,12 @@ impl SignedOperation {
             .verify(&self.inner.public_key, hash.as_ref())?;
 
         Ok(&self.inner)
+    }
+}
+
+impl From<SignedOperation> for Operation {
+    fn from(value: SignedOperation) -> Self {
+        value.inner
     }
 }
 
