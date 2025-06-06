@@ -30,14 +30,12 @@ fn execute_operation_inner(
             Ok((op_hash, receipt::ReceiptContent::DeployFunction(result)))
         }
         operation::Content::RunFunction(run) => {
+            let f = smart_function::run::execute(hrt, tx, &source, run, op_hash.clone());
             // Temporarily block on
-            let result = futures::executor::block_on(smart_function::run::execute(
-                hrt,
-                tx,
-                &source,
-                run,
-                op_hash.clone(),
-            ))?;
+            #[cfg(feature = "v2_runtime")]
+            let result = jstz_utils::TOKIO.block_on(f)?;
+            #[cfg(not(feature = "v2_runtime"))]
+            let result = futures::executor::block_on(f)?;
             Ok((op_hash, receipt::ReceiptContent::RunFunction(result)))
         }
         operation::Content::RevealLargePayload(reveal) => {
