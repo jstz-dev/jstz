@@ -41,9 +41,9 @@ type HexEncodedOperationHash = String;
 
 // Given a large operation, encode it into preimages and store them in the rollup's preimages directory
 async fn prepare_rlp_operation(
-    rollup_client: &OctezRollupClient,
-    signer: KeyPair,
     operation: &SignedOperation,
+    signer: KeyPair,
+    store: StoreWrapper,
     rollup_preimages_dir: &path::Path,
 ) -> ServiceResult<SignedOperation> {
     let reveal_type = operation
@@ -74,7 +74,7 @@ async fn prepare_rlp_operation(
         .collect::<Result<Vec<()>, _>>()
         .map_err(|e| anyhow!("failed to save preimages: {e}"))?;
 
-    let nonce = get_account_nonce(rollup_client, &public_key.hash())
+    let nonce = get_account_nonce(store, &public_key.hash())
         .await?
         .unwrap_or_default();
     let rlp_operation = Operation {
@@ -94,26 +94,26 @@ async fn prepare_rlp_operation(
 
 // Encode an operation. if the operation is too large, encode it into a reveal large payload operation
 async fn encode_operation(
-    operation: &SignedOperation,
-    rollup_client: &OctezRollupClient,
+    operation: SignedOperation,
     injector: KeyPair,
+    store: StoreWrapper,
     rollup_preimages_dir: &path::Path,
-) -> ServiceResult<Vec<u8>> {
+) -> ServiceResult<(SignedOperation, Vec<u8>)> {
     let encoded_op = operation
         .encode()
         .map_err(|e| anyhow!("Failed to serialize operation: {e}"))?;
 
-    let contents = match encoded_op.len() {
-        size if size <= MAX_DIRECT_OPERATION_SIZE => encoded_op,
-        size if size <= MAX_REVEAL_SIZE => prepare_rlp_operation(
-            rollup_client,
-            injector,
-            operation,
-            rollup_preimages_dir,
-        )
-        .await?
-        .encode()
-        .map_err(|_| anyhow!("Failed to encode rlp operation"))?,
+    let (op, contents) = match encoded_op.len() {
+        size if size <= MAX_DIRECT_OPERATION_SIZE => (operation, encoded_op),
+        size if size <= MAX_REVEAL_SIZE => {
+            let op =
+                prepare_rlp_operation(&operation, injector, store, rollup_preimages_dir)
+                    .await?;
+            let encoded_op = op
+                .encode()
+                .map_err(|e| anyhow!("Failed to encode rlp operation: {e}"))?;
+            (op, encoded_op)
+        }
         size => Err(anyhow!(
             "Operation size exceeds maximum allowed size ({} bytes > {} MB)",
             size,
@@ -121,7 +121,7 @@ async fn encode_operation(
         ))?,
     };
 
-    Ok(contents)
+    Ok((op, contents))
 }
 
 /// Inject an operation into Jstz
@@ -142,19 +142,17 @@ async fn inject(
         injector,
         mode,
         queue,
+        runtime_db,
         ..
     }): State<AppState>,
     Json(operation): Json<SignedOperation>,
 ) -> ServiceResult<()> {
+    let store = StoreWrapper::new(mode.clone(), rollup_client.clone(), runtime_db);
+    let (operation, encoded_operation) =
+        encode_operation(operation, injector, store, &rollup_preimages_dir).await?;
     match mode {
         RunMode::Default => {
-            inject_rollup_message(
-                &rollup_client,
-                &rollup_preimages_dir,
-                injector,
-                operation,
-            )
-            .await?;
+            inject_rollup_message(encoded_operation, &rollup_client).await?;
         }
         RunMode::Sequencer => {
             insert_operation_queue(&queue, operation).await?;
@@ -164,15 +162,9 @@ async fn inject(
 }
 
 async fn inject_rollup_message(
+    contents: Vec<u8>,
     rollup_client: &OctezRollupClient,
-    rollup_preimages_dir: &path::Path,
-    injector: KeyPair,
-    operation: SignedOperation,
 ) -> ServiceResult<()> {
-    let contents =
-        encode_operation(&operation, rollup_client, injector, rollup_preimages_dir)
-            .await?;
-
     let address = rollup_client.get_rollup_address().await?;
     let message_frame = ExternalMessageFrame::Targetted { address, contents };
     let mut binary_contents = Vec::new();
@@ -268,6 +260,7 @@ impl Service for OperationsService {
 mod tests {
 
     use std::borrow::BorrowMut;
+    use std::path::PathBuf;
     use std::{fs, path::Path};
 
     use axum::{
@@ -283,6 +276,7 @@ mod tests {
         secret_key::SecretKey,
         smart_function_hash::{Kt1Hash, SmartFunctionHash},
     };
+    use jstz_proto::operation::{RevealLargePayload, RevealType};
     use jstz_proto::receipt::{ReceiptContent, ReceiptResult};
     use jstz_proto::{
         context::account::{Amount, Nonce},
@@ -291,11 +285,12 @@ mod tests {
         runtime::ParsedCode,
     };
     use octez::OctezRollupClient;
-    use tempfile::NamedTempFile;
+    use tempfile::{NamedTempFile, TempDir};
     use tezos_crypto_rs::base58::ToBase58Check;
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tower::ServiceExt;
 
+    use crate::services::utils::StoreWrapper;
     use crate::{
         config::KeyPair,
         services::{
@@ -355,20 +350,12 @@ mod tests {
         size
     }
 
-    fn inject_operation_request() -> Request<Body> {
-        let dummy_op = make_signed_op(Content::RunFunction(RunFunction {
-            uri: Uri::from_static("http://http://"),
-            method: Method::HEAD,
-            headers: HeaderMap::new(),
-            body: None,
-            gas_limit: 0,
-        }));
-
+    fn inject_operation_request(op: SignedOperation) -> Request<Body> {
         Request::builder()
             .uri("/operations")
             .method("POST")
             .header("content-type", "application/json")
-            .body(Body::from(serde_json::to_string(&dummy_op).unwrap()))
+            .body(Body::from(serde_json::to_string(&op).unwrap()))
             .unwrap()
     }
 
@@ -383,8 +370,8 @@ mod tests {
         }));
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
-        let result =
-            encode_operation(&operation, &client, key_pair, temp_dir.path()).await;
+        let store = StoreWrapper::Rollup(client);
+        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
         assert!(result.is_ok());
     }
 
@@ -411,8 +398,8 @@ mod tests {
             function_code: code,
         }));
         let key_pair = KeyPair(pk, sk);
-        let result =
-            encode_operation(&operation, &client, key_pair, temp_dir.path()).await;
+        let store = StoreWrapper::Rollup(client);
+        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
         assert!(result.is_ok());
         let dir_size = get_dir_size(temp_dir.path());
         assert!(
@@ -432,8 +419,8 @@ mod tests {
         }));
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
-        let result =
-            encode_operation(&operation, &client, key_pair, temp_dir.path()).await;
+        let store = StoreWrapper::Rollup(client);
+        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
         assert!(result.is_err());
     }
 
@@ -458,9 +445,9 @@ mod tests {
             function_code: code,
         }));
         let key_pair = KeyPair(pk, sk);
+        let store = StoreWrapper::Rollup(client);
         let result =
-            encode_operation(&operation, &client, key_pair, Path::new("invalid path"))
-                .await;
+            encode_operation(operation, key_pair, store, Path::new("invalid path")).await;
         assert!(result.is_err_and(|e| {
             matches!(
                 e,
@@ -481,6 +468,7 @@ mod tests {
         let db_file = NamedTempFile::new().unwrap();
         let state = mock_app_state(
             &server.url(),
+            PathBuf::default(),
             db_file.path().to_str().unwrap(),
             RunMode::Default,
         )
@@ -490,7 +478,18 @@ mod tests {
         let (router, _) = OperationsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();
-        let res = router.oneshot(inject_operation_request()).await.unwrap();
+        let res = router
+            .oneshot(inject_operation_request(make_signed_op(
+                Content::RunFunction(RunFunction {
+                    uri: Uri::from_static("http://http://"),
+                    method: Method::HEAD,
+                    headers: HeaderMap::new(),
+                    body: None,
+                    gas_limit: 0,
+                }),
+            )))
+            .await
+            .unwrap();
         assert_eq!(res.status(), 200);
         assert_eq!(queue.read().unwrap().len(), 0);
         mock_injection.assert();
@@ -500,17 +499,28 @@ mod tests {
     #[tokio::test]
     async fn inject_sequencer() {
         let db_file = NamedTempFile::new().unwrap();
-        let state =
-            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
-                .await;
+        let state = mock_app_state(
+            "",
+            PathBuf::default(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Sequencer,
+        )
+        .await;
         let queue = state.queue.clone();
         assert_eq!(queue.read().unwrap().len(), 0);
         let (mut router, _) = OperationsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();
+        let dummy_op = make_signed_op(Content::RunFunction(RunFunction {
+            uri: Uri::from_static("http://http://"),
+            method: Method::HEAD,
+            headers: HeaderMap::new(),
+            body: None,
+            gas_limit: 0,
+        }));
         let res = router
             .borrow_mut()
-            .oneshot(inject_operation_request())
+            .oneshot(inject_operation_request(dummy_op.clone()))
             .await
             .unwrap();
         assert_eq!(res.status(), 200);
@@ -519,10 +529,49 @@ mod tests {
         // sending the operation again should fail because the queue is full
         let res = router
             .borrow_mut()
-            .oneshot(inject_operation_request())
+            .oneshot(inject_operation_request(dummy_op))
             .await
             .unwrap();
         assert_eq!(res.status(), 503);
+    }
+
+    #[tokio::test]
+    async fn inject_large_operation_sequencer() {
+        let db_file = NamedTempFile::new().unwrap();
+        let preimage_dir = TempDir::new().unwrap();
+        let state = mock_app_state(
+            "",
+            preimage_dir.path().to_path_buf(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Sequencer,
+        )
+        .await;
+        let queue = state.queue.clone();
+        assert_eq!(queue.read().unwrap().len(), 0);
+        let (mut router, _) = OperationsService::router_with_openapi()
+            .with_state(state)
+            .split_for_parts();
+        let dummy_op = make_signed_op(Content::DeployFunction(DeployFunction {
+            function_code: ParsedCode("a".repeat(4000)),
+            account_credit: 0,
+        }));
+        let res = router
+            .borrow_mut()
+            .oneshot(inject_operation_request(dummy_op.clone()))
+            .await
+            .unwrap();
+        assert_eq!(res.status(), 200);
+        assert_eq!(queue.read().unwrap().len(), 1);
+        let injected_op = queue.write().unwrap().pop().unwrap();
+        let inner = injected_op.verify_ref().unwrap();
+        matches!(
+            &inner.content,
+            Content::RevealLargePayload(RevealLargePayload {
+                root_hash: _,
+                reveal_type: RevealType::DeployFunction,
+                original_op_hash
+            }) if original_op_hash == &dummy_op.hash()
+        );
     }
 
     #[tokio::test]
@@ -533,9 +582,13 @@ mod tests {
         let receipt = dummy_receipt(smart_function_hash.clone());
         let op_hash = "9b15976cc8162fe39458739de340a1a95c59a9bcff73bd3c83402fad6352396e";
         let db_file = NamedTempFile::new().unwrap();
-        let state =
-            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
-                .await;
+        let state = mock_app_state(
+            "",
+            PathBuf::default(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Sequencer,
+        )
+        .await;
         state
             .runtime_db
             .write(
