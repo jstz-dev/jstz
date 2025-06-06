@@ -927,4 +927,153 @@ mod test {
     // TODO: https://github.com/jstz-dev/jstz/pull/982
     #[allow(dead_code)]
     fn request_get_reader_supported() {}
+
+    #[test]
+    fn handle_balance_endpoint() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
+                const response = await fetch(`jstz://jstz/balances/self`);
+                return response;
+            }"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, tx, _source_address, hashes) = setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(200, response.status);
+            assert_eq!("OK", response.status_text);
+            assert_eq!("0", String::from_utf8(response.body.to_vec()).unwrap());
+        });
+    }
+
+    #[test]
+    fn handle_balance_endpoint_specific_address() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
+                const response = await fetch(`jstz://jstz/balances/${req.headers.get("referrer")}`);
+                return response;
+            }"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, _source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+
+            // Add some balance to the account
+            let _ = Account::add_balance(&mut host, &mut tx, &run_address, 5_000_000);
+
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(200, response.status);
+            assert_eq!("OK", response.status_text);
+            assert_eq!("5000000", String::from_utf8(response.body.to_vec()).unwrap());
+        });
+    }
+
+    #[test]
+    fn handle_balance_endpoint_invalid_address() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
+                const response = await fetch(`jstz://jstz/balances/invalid_address`);
+                return response;
+            }"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, tx, _source_address, hashes) = setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(400, response.status);
+            assert_eq!("Bad Request", response.status_text);
+            assert!(String::from_utf8(response.body.to_vec())
+                .unwrap()
+                .contains("InvalidAddress"));
+        });
+    }
+
+    #[test]
+    fn handle_balance_endpoint_invalid_method() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
+                const response = await fetch(`jstz://jstz/balances/self`, { method: 'POST' });
+                return response;
+            }"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, tx, _source_address, hashes) = setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(405, response.status);
+            assert_eq!("Method Not Allowed", response.status_text);
+            assert_eq!(
+                "Only GET method is allowed",
+                String::from_utf8(response.body.to_vec()).unwrap()
+            );
+        });
+    }
 }

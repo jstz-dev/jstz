@@ -13,12 +13,30 @@ use jstz_runtime::{JstzRuntimeOptions, ProtocolContext};
 use std::rc::Rc;
 use url::Url;
 
-use crate::context::account::Account;
+use crate::context::account::{Account, Address};
 use crate::runtime::v2::fetch::fetch_handler::ProtoFetchHandler;
 
 pub struct HostScript;
 
 impl HostScript {
+    pub async fn route(
+        host: &mut impl HostRuntime,
+        tx: &mut Transaction,
+        from: Address,
+        method: ByteString,
+        url: Url,
+        headers: Vec<(ByteString, ByteString)>,
+        body: Option<Body>,
+    ) -> Result<Response> {
+        let path = url.path();
+        if path.starts_with("/balances") {
+            return Self::handle_balance(host, tx, from, method, url, headers, body)
+                .await;
+        }
+
+        todo!()
+    }
+
     // - Loads the smart function script at `address`
     // - Bootstraps a new runtime with new context and module loader
     // - Runs the smart function
@@ -124,8 +142,59 @@ impl HostScript {
         Ok(response)
     }
 
-    #[allow(dead_code)]
-    pub async fn handle_balance() {
-        todo!()
+    pub async fn handle_balance(
+        host: &mut impl HostRuntime,
+        tx: &mut Transaction,
+        self_address: Address,
+        method: ByteString,
+        url: Url,
+        _headers: Vec<(ByteString, ByteString)>,
+        _body: Option<Body>,
+    ) -> Result<Response> {
+        if method != "GET".into() {
+            return Ok(Response {
+                status: 405,
+                status_text: "Method Not Allowed".to_string(),
+                headers: vec![],
+                body: Body::Vector("Only GET method is allowed".as_bytes().to_vec()),
+            });
+        }
+
+        let path = url.path();
+        let address_str = path
+            .strip_prefix("/balances/")
+            .ok_or_else(|| FetchError::JstzError("Invalid path format".to_string()))?;
+
+        match Self::get_balance(host, tx, address_str, &self_address) {
+            Ok(balance) => Ok(Response {
+                status: 200,
+                status_text: "OK".to_string(),
+                headers: vec![],
+                body: Body::Vector(balance.to_string().as_bytes().to_vec()),
+            }),
+            Err(e) => Ok(Response {
+                status: 400,
+                status_text: "Bad Request".to_string(),
+                headers: vec![],
+                body: Body::Vector(e.to_string().as_bytes().to_vec()),
+            }),
+        }
+    }
+
+    fn get_balance(
+        host: &mut impl HostRuntime,
+        tx: &mut Transaction,
+        address_str: &str,
+        self_address: &Address,
+    ) -> Result<u64> {
+        let target_address = if address_str == "self" {
+            self_address.clone().into()
+        } else {
+            crate::context::account::Address::from_base58(address_str)
+                .map_err(|e| FetchError::JstzError(e.to_string()))?
+        };
+
+        Account::balance(host, tx, &target_address)
+            .map_err(|e| FetchError::JstzError(e.to_string()))
     }
 }
