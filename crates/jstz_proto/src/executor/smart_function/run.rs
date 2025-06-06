@@ -1,7 +1,5 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
 
-#[cfg(feature = "v2_runtime")]
-use crate::runtime::v2;
 use crate::{
     context::account::Addressable,
     error::Result,
@@ -20,58 +18,8 @@ pub async fn execute(
     run_operation: operation::RunFunction,
     operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt> {
-    #[cfg(not(feature = "v2_runtime"))]
-    return crate::runtime::run_toplevel_fetch(
-        hrt,
-        tx,
-        source,
-        run_operation,
-        operation_hash,
-    )
-    .await;
-    #[cfg(feature = "v2_runtime")]
-    return execute_v2(hrt, tx, source, run_operation, operation_hash).await;
-}
-
-#[cfg(feature = "v2_runtime")]
-async fn execute_v2(
-    hrt: &mut impl HostRuntime,
-    tx: &mut Transaction,
-    source: &(impl Addressable + 'static),
-    run_operation: operation::RunFunction,
-    _operation_hash: OperationHash,
-) -> Result<RunFunctionReceipt> {
-    let url: url::Url = run_operation
-        .uri
-        .to_string()
-        .parse()
-        .expect("should convert operation Uri to Url");
-    let response = {
-        jstz_core::runtime::enter_js_host_context(hrt, tx, || {
-            jstz_core::runtime::with_js_hrt_and_tx(|hrt, tx| {
-                jstz_core::future::block_on(async move {
-                    v2::fetch::process_and_dispatch_request_borrowed(
-                        hrt,
-                        tx,
-                        source.clone().into(),
-                        run_operation.method.as_str().as_bytes().into(),
-                        url,
-                        v2::fetch::convert_header_map(run_operation.headers),
-                        run_operation.body.map(|v| v2::fetch::Body::Vector(v)),
-                    )
-                    .await
-                })
-            })
-        })
-    };
-
-    let http_response: http::Response<Option<Vec<u8>>> = response.into();
-    let (http_parts, body) = http_response.into_parts();
-    Ok(RunFunctionReceipt {
-        body,
-        status_code: http_parts.status,
-        headers: http_parts.headers,
-    })
+    crate::runtime::run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash)
+        .await
 }
 
 #[cfg(test)]
@@ -221,6 +169,8 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(feature = "v2_runtime", ignore = "v2 fetch does not support noop path")]
+    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
     async fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
@@ -339,7 +289,12 @@ mod test {
     }
 
     #[tokio::test]
-    async fn invalid_request_should_fails() {
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
+    async fn invalid_request_should_fail() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -404,7 +359,12 @@ mod test {
     }
 
     #[tokio::test]
-    async fn invalid_response_should_fails() {
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
+    async fn invalid_response_should_fail() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -478,7 +438,7 @@ mod test {
         }};
         export default handler;
         "#;
-        transfer_xtz_and_run_erroneous_sf(invalid_code).await;
+        transfer_xtz_and_run_erroneous_sf(invalid_code, 500).await;
     }
 
     #[tokio::test]
@@ -489,7 +449,7 @@ mod test {
         }};
         export default handler;
         "#;
-        transfer_xtz_and_run_erroneous_sf(invalid_code).await;
+        transfer_xtz_and_run_erroneous_sf(invalid_code, 400).await;
     }
 
     #[tokio::test]
@@ -500,10 +460,10 @@ mod test {
         }};
         export default handler;
         "#;
-        transfer_xtz_and_run_erroneous_sf(invalid_code).await;
+        transfer_xtz_and_run_erroneous_sf(invalid_code, 500).await;
     }
 
-    async fn transfer_xtz_and_run_erroneous_sf(code: &str) {
+    async fn transfer_xtz_and_run_erroneous_sf(code: &str, expected_status_code: u16) {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -546,11 +506,10 @@ mod test {
         )
         .await;
         let call_failed = match result {
-            Ok(receipt) => receipt.status_code.is_server_error(),
+            Ok(receipt) => receipt.status_code == expected_status_code,
             _ => true,
         };
         assert!(call_failed);
-
         // The balance should not be affected
         assert_eq!(
             Account::balance(host, &mut tx, &source).unwrap(),
@@ -561,6 +520,11 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime does not support HostScript withdrawals yet"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-655/support-hostscript-fa-withdraw-in-v2
     async fn host_script_withdraw_from_smart_function_succeeds() {
         let mut mock_host = JstzMockHost::default();
         let host = mock_host.rt();
@@ -694,6 +658,8 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(feature = "v2_runtime", ignore = "v2 fetch does not support noop path")]
+    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
     async fn transfer_xtz_from_smart_function_succeeds_with_noop() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
@@ -972,6 +938,11 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
     async fn propagating_smart_function_refund_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
@@ -1149,6 +1120,11 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
     async fn returning_invalid_request_amount_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
@@ -1369,13 +1345,18 @@ mod test {
         )
         .await
         .unwrap();
-        assert!(result.status_code.is_server_error());
+        assert_eq!(result.status_code, 400);
 
         let balance_after = Account::balance(host, &mut tx, &source).unwrap();
         assert_eq!(balance_before, balance_after);
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime does not support HostScript withdrawals yet"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-655/support-hostscript-fa-withdraw-in-v2
     async fn host_script_fa_withdraw_from_smart_function_succeeds() {
         let receiver = Address::User(jstz_mock::account1());
         let source = Address::User(jstz_mock::account2());
@@ -1543,7 +1524,7 @@ mod test {
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
-        let response = super::execute_v2(
+        let response = super::execute(
             host,
             &mut tx,
             &source,

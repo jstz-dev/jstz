@@ -21,8 +21,8 @@ all: build test check
 build: build-cli-kernel build-jstzd-kernel
 	@cargo build $(PROFILE_OPT)
 
-build-riscv: build-cli-kernel build-jstzd-kernel
-	@cargo build $(PROFILE_OPT) --features riscv
+build-v2: build-cli-kernel build-jstzd-kernel
+	@cargo build $(PROFILE_OPT) --features riscv,v2_runtime
 
 .PHONY: build-bridge
 build-bridge:
@@ -74,6 +74,9 @@ riscv-runtime:
 .PHONY: test
 test: test-unit test-int
 
+.PHONY: test-v2
+test-v2: test-unit-v2 test-int-v2
+
 .PHONY: test-unit
 test-unit:
 # --lib only runs unit tests in library crates
@@ -85,7 +88,19 @@ test-int:
 # --test only runs a specified integration test (a test in /tests).
 #        the glob pattern is used to match all integration tests
 # --exclude excludes the jstz_api wpt test
-	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features skip-wpt,skip-rollup-tests
+	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features riscv,skip-wpt,skip-rollup-tests
+
+test-unit-v2:
+# --lib only runs unit tests in library crates
+# --bins only runs unit tests in binary crates
+	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench" --features riscv,v2_runtime,skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
+
+.PHONY: test-int
+test-int-v2:
+# --test only runs a specified integration test (a test in /tests).
+#        the glob pattern is used to match all integration tests
+# --exclude excludes the jstz_api wpt test
+	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features riscv,v2_runtime,skip-wpt,skip-rollup-tests
 
 .PHONY: cov
 cov:

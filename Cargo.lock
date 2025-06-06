@@ -2971,6 +2971,7 @@ dependencies = [
  "jstz_crypto",
  "jstz_mock",
  "jstz_proto",
+ "jstz_utils",
  "num-traits",
  "serde",
  "tezos-smart-rollup",

@@ -111,7 +111,7 @@ mod test {
         init_test_setup,
         sys::js::convert::{FromV8, ToV8},
     };
-    use jstz_utils::TOKIO;
+    use jstz_utils::test_util::TOKIO;
 
     #[test]
     fn test_new() {

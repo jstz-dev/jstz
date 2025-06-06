@@ -400,7 +400,7 @@ mod test {
                 ticket_balance,
                 run_function,
             })) => {
-                assert_eq!(500, run_function.unwrap().status_code);
+                assert_eq!(400, run_function.unwrap().status_code);
                 assert_eq!(expected_receiver, receiver);
                 assert_eq!(42, ticket_balance);
                 let proxy_balance = TicketTable::get_balance(

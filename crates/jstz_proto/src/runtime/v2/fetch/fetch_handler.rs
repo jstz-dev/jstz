@@ -204,7 +204,12 @@ async fn dispatch_run(
     let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
     headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
     match to.kind() {
-        AddressKind::User => todo!(),
+        AddressKind::User => Ok(Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers,
+            body: Body::Vector(Vec::with_capacity(0)),
+        }),
         AddressKind::SmartFunction => {
             let address = to.as_smart_function().unwrap();
             let run_result = load_and_run(
@@ -483,7 +488,7 @@ mod test {
         hash::Hash, public_key_hash::PublicKeyHash,
         smart_function_hash::SmartFunctionHash,
     };
-    use jstz_utils::TOKIO;
+    use jstz_utils::test_util::TOKIO;
 
     use serde_json::{json, Value as JsonValue};
     use url::Url;
