@@ -13,7 +13,7 @@ pub const JSTZ_NODE_DEFAULT_PK: &str =
 pub const JSTZ_NODE_DEFAULT_SK: &str =
     "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
 
-#[derive(Debug, Clone, Serialize, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct KeyPair(pub PublicKey, pub SecretKey);
 
 impl Default for KeyPair {
@@ -35,6 +35,7 @@ pub struct JstzNodeConfig {
     pub rollup_preimages_dir: PathBuf,
     /// The path to the rollup kernel log file.
     pub kernel_log_file: PathBuf,
+    #[serde(skip)]
     /// The injector of the operation. Currently, it's used for signing `RevealLargePayload` operation.
     pub injector: KeyPair,
     /// The mode in which the rollup node will run.
@@ -99,14 +100,7 @@ mod tests {
         assert_eq!(json["rollup_endpoint"], "http://localhost:8933");
         assert_eq!(json["rollup_preimages_dir"], "/tmp/preimages");
         assert_eq!(json["kernel_log_file"], "/tmp/kernel.log");
-        assert_eq!(
-            json["injector"][0],
-            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav"
-        );
-        assert_eq!(
-            json["injector"][1],
-            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh"
-        );
+        assert_eq!(json["injector"], serde_json::Value::Null);
     }
 
     #[test]
