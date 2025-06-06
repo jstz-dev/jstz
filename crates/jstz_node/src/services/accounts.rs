@@ -10,7 +10,6 @@ use jstz_proto::{
     },
     runtime::{KvValue, ParsedCode},
 };
-use octez::OctezRollupClient;
 use serde::Deserialize;
 use utoipa::IntoParams;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -75,23 +74,7 @@ async fn get_account(
     Ok(Json(account))
 }
 
-// FIXME: This will be cleaned up in JSTZ-592.
 pub(crate) async fn get_account_nonce(
-    rollup_client: &OctezRollupClient,
-    address: &str,
-) -> ServiceResult<Option<Nonce>> {
-    let key = construct_accounts_key(address);
-    let value = rollup_client.get_value(&key).await?;
-    match value {
-        Some(value) => match deserialize_account(value.as_slice())? {
-            Account::User(UserAccount { nonce, .. }) => Ok(Some(nonce)),
-            Account::SmartFunction(SmartFunctionAccount { nonce, .. }) => Ok(Some(nonce)),
-        },
-        None => Ok(None),
-    }
-}
-
-pub(crate) async fn get_account_nonce_from_store(
     store: StoreWrapper,
     address: &str,
 ) -> ServiceResult<Option<Nonce>> {
@@ -127,7 +110,7 @@ async fn get_nonce(
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
     let store = StoreWrapper::new(mode, rollup_client, runtime_db);
-    let account_nonce = get_account_nonce_from_store(store, &address).await?;
+    let account_nonce = get_account_nonce(store, &address).await?;
     match account_nonce {
         Some(nonce) => Ok(Json(nonce)),
         None => Err(ServiceError::NotFound)?,
@@ -303,7 +286,7 @@ impl Service for AccountsService {
 
 #[cfg(test)]
 mod tests {
-    use std::{borrow::BorrowMut, convert::Infallible};
+    use std::{borrow::BorrowMut, convert::Infallible, path::PathBuf};
 
     use axum::{body::Body, extract::Request, response::Response, Router};
     use jstz_core::BinEncodable;
@@ -346,9 +329,13 @@ mod tests {
         });
         let addr = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
         let db_file = NamedTempFile::new().unwrap();
-        let state =
-            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
-                .await;
+        let state = mock_app_state(
+            "",
+            PathBuf::default(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Sequencer,
+        )
+        .await;
         state
             .runtime_db
             .write(
@@ -383,7 +370,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn get_account_nonce_from_store() {
+    async fn get_account_nonce() {
         let user_account = Account::User(UserAccount {
             amount: 0,
             nonce: Nonce(42),
@@ -432,29 +419,25 @@ mod tests {
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
-        assert!(
-            super::get_account_nonce_from_store(store, user_account_hash)
-                .await
-                .is_ok_and(|v| matches!(v.unwrap(), Nonce(42)))
-        );
+        assert!(super::get_account_nonce(store, user_account_hash)
+            .await
+            .is_ok_and(|v| matches!(v.unwrap(), Nonce(42))));
 
         let store = super::StoreWrapper::new(
             RunMode::Default,
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
-        assert!(
-            super::get_account_nonce_from_store(store, smart_function_hash)
-                .await
-                .is_ok_and(|v| matches!(v.unwrap(), Nonce(50)))
-        );
+        assert!(super::get_account_nonce(store, smart_function_hash)
+            .await
+            .is_ok_and(|v| matches!(v.unwrap(), Nonce(50))));
 
         let store = super::StoreWrapper::new(
             RunMode::Default,
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
-        assert!(super::get_account_nonce_from_store(store, "bad_hash")
+        assert!(super::get_account_nonce(store, "bad_hash")
             .await
             .is_ok_and(|v| v.is_none()));
 
@@ -471,9 +454,13 @@ mod tests {
         });
         let addr = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
         let db_file = NamedTempFile::new().unwrap();
-        let state =
-            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
-                .await;
+        let state = mock_app_state(
+            "",
+            PathBuf::default(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Sequencer,
+        )
+        .await;
         state
             .runtime_db
             .write(
@@ -518,9 +505,13 @@ mod tests {
         });
         let smart_function_hash = "KT19GXucGUitURBXXeEMMfqqhSQ5byt4P1zX";
         let db_file = NamedTempFile::new().unwrap();
-        let state =
-            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
-                .await;
+        let state = mock_app_state(
+            "",
+            PathBuf::default(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Sequencer,
+        )
+        .await;
         state
             .runtime_db
             .write(
@@ -587,9 +578,13 @@ mod tests {
         });
         let smart_function_hash = "KT19GXucGUitURBXXeEMMfqqhSQ5byt4P1zX";
         let db_file = NamedTempFile::new().unwrap();
-        let state =
-            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
-                .await;
+        let state = mock_app_state(
+            "",
+            PathBuf::default(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Sequencer,
+        )
+        .await;
         state
             .runtime_db
             .write(
@@ -645,9 +640,13 @@ mod tests {
     async fn get_kv_value_sequencer() {
         let address = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
         let db_file = NamedTempFile::new().unwrap();
-        let state =
-            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
-                .await;
+        let state = mock_app_state(
+            "",
+            PathBuf::new(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Sequencer,
+        )
+        .await;
         state
             .runtime_db
             .write(
@@ -755,9 +754,13 @@ mod tests {
     async fn get_kv_subkeys_sequencer() {
         let address = "tz1TGu6TN5GSez2ndXXeDX6LgUDvLzPLqgYV";
         let db_file = NamedTempFile::new().unwrap();
-        let state =
-            mock_app_state("", db_file.path().to_str().unwrap(), RunMode::Sequencer)
-                .await;
+        let state = mock_app_state(
+            "",
+            PathBuf::new(),
+            db_file.path().to_str().unwrap(),
+            RunMode::Sequencer,
+        )
+        .await;
         for key in ["a", "a/b1", "a/b1/c", "a/b2", "a/b3", "b", "c/d"] {
             state
                 .runtime_db
@@ -852,7 +855,8 @@ mod tests {
             .with_body(serde_json::json!(["a", "b"]).to_string())
             .create();
         // The current implementation actually never returns None, so it's not covered here
-        let state = mock_app_state(&server.url(), "", RunMode::Default).await;
+        let state =
+            mock_app_state(&server.url(), PathBuf::new(), "", RunMode::Default).await;
         let (mut router, _) = AccountsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();

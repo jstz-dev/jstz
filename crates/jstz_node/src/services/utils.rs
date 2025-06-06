@@ -82,12 +82,13 @@ pub(crate) mod tests {
 
     pub(crate) async fn mock_app_state(
         rollup_endpoint: &str,
+        rollup_preimages_dir: PathBuf,
         db_path: &str,
         mode: RunMode,
     ) -> AppState {
         AppState {
             rollup_client: OctezRollupClient::new(rollup_endpoint.to_string()),
-            rollup_preimages_dir: PathBuf::new(),
+            rollup_preimages_dir,
             broadcaster: Broadcaster::new(),
             db: crate::services::logs::db::Db::init().await.unwrap(),
             injector: KeyPair::default(),
