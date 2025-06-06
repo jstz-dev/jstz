@@ -1,5 +1,5 @@
 ---
-title: 🪣 KV
+title: KV
 sidebar_label: KV
 ---
 

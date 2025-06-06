@@ -1,5 +1,5 @@
 ---
-title: 🔡 TextDecoder
+title: TextDecoder
 sidebar_label: TextDecoder
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: 📦 Installing Jstz
+title: Installing Jstz
 sidebar_label: Installation
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: 🚀 Quick start
+title: Quick start
 sidebar_label: Quick start
 ---
 

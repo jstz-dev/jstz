@@ -1,9 +1,9 @@
 ---
-title: 👨‍⚖️ jstz
+title: jstz
 displayed_sidebar: documentationSidebar
 ---
 
-# 👨‍⚖️ Jstz
+# Jstz
 
 Jstz (pronounced "justice") is a JavaScript server runtime for Tezos [Smart Rollups](https://docs.tezos.com/architecture/smart-rollups) with a great developer experience.
 With Jstz, you can deploy JavaScript applications known as _smart functions_ that can act as the backend for web applications, including handling logic, storing data, and accepting and distributing payments.

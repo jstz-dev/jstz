@@ -1,5 +1,5 @@
 ---
-title: 🔗 URL
+title: URL
 sidebar_label: URL
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: 💸 Asset bridge
+title: Asset bridge
 sidebar_label: Asset bridge
 ---
 

@@ -1,5 +1,5 @@
 ---
-title: 🔣 TextEncoder
+title: TextEncoder
 sidebar_label: TextEncoder
 ---
 

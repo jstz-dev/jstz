@@ -1,5 +1,5 @@
 ---
-title: 💰 Ledger
+title: Ledger
 sidebar_label: Ledger
 ---
 

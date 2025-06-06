@@ -1,5 +1,5 @@
 ---
-title: 🙏 Request
+title: Request
 sidebar_label: Request
 ---
 
