@@ -26,7 +26,12 @@ pub struct Response {
 
 impl Into<http::Response<Option<Vec<u8>>>> for Response {
     fn into(self) -> http::Response<Option<Vec<u8>>> {
-        let mut builder = http::Response::builder().status(self.status);
+        // According to JavaScript documentation, `Response.error()` returns a response with status code 0
+        // and is mainly used for client side network errors. In regular JS, the fetch promise would be rejected.
+        // Within Jstz, the smart function can only return this if it explicitly called `Response.error()`, which
+        // means the intent is closer to a 400 Bad Request.
+        let status = if self.status == 0 { 400 } else { self.status };
+        let mut builder = http::Response::builder().status(status);
 
         let headers =
             HeaderMap::from_iter(self.headers.into_iter().map(|(key, value)| {
@@ -37,7 +42,6 @@ impl Into<http::Response<Option<Vec<u8>>>> for Response {
                         .expect("Expected valid http header value from a valid response"),
                 )
             }));
-
         *builder.headers_mut().unwrap() = headers;
 
         let body = if self.body.is_empty() {

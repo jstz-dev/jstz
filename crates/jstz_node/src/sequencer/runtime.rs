@@ -61,11 +61,15 @@ fn read_injector(rt: &impl Runtime) -> Option<PublicKey> {
 pub fn process_message(rt: &mut impl Runtime, op: Message) -> anyhow::Result<()> {
     let ticketer = read_ticketer(rt).ok_or(anyhow!("Ticketer not found"))?;
     let injector = read_injector(rt).ok_or(anyhow!("Revealer not found"))?;
+    let tokio = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
     let mut tx = Transaction::default();
     tx.begin();
     let receipt = match op {
-        Message::External(op) => jstz_utils::TOKIO
-            .block_on(execute_operation(rt, &mut tx, op, &ticketer, &injector)),
+        Message::External(op) => {
+            tokio.block_on(execute_operation(rt, &mut tx, op, &ticketer, &injector))
+        }
         Message::Internal(op) => match op {
             InternalOperation::Deposit(op) => deposit::execute(rt, &mut tx, op),
             _ => {

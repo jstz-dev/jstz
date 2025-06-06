@@ -304,7 +304,7 @@ mod test {
 
     use crate::{error::RuntimeError, init_test_setup};
 
-    use jstz_utils::TOKIO;
+    use jstz_utils::test_util::TOKIO;
 
     #[test]
     fn test_init_jstz_runtime() {

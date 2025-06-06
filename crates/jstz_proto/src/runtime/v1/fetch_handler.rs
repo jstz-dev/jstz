@@ -118,7 +118,7 @@ fn handle_transfer_or_rollback_and_return_response(
         runtime::with_js_tx(|tx| tx.rollback())?;
         Ok(Some(
             JsNativeObject::new::<ResponseClass>(
-                ResponseBuilder::error(context)?,
+                ResponseBuilder::internal_server_error(context)?,
                 context,
             )?
             .into(),
