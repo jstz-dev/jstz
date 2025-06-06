@@ -11,6 +11,10 @@ use crate::context::account::Address;
 
 use super::error::*;
 
+use jstz_runtime::sys::ToV8;
+
+use deno_core::{serde_v8, v8, ToJsBuffer};
+
 /// Response returned from a fetch or Smart Function run
 #[derive(Debug)]
 pub struct Response {
@@ -102,6 +106,22 @@ impl From<Body> for Bytes {
         match body {
             Body::Vector(items) => Bytes::from(items),
             Body::Buffer(js_buffer) => Bytes::from(js_buffer.to_vec()),
+        }
+    }
+}
+
+impl<'s> ToV8<'s> for Body {
+    fn to_v8(
+        self,
+        scope: &mut v8::HandleScope<'s>,
+    ) -> jstz_runtime::error::Result<v8::Local<'s, v8::Value>> {
+        match self {
+            Body::Vector(items) => {
+                let to_buffer = ToJsBuffer::from(items);
+                let value = serde_v8::to_v8(scope, to_buffer)?;
+                Ok(value)
+            }
+            Body::Buffer(js_buffer) => js_buffer.to_v8(scope),
         }
     }
 }
