@@ -20,7 +20,7 @@ pub struct Response {
     pub body: Body,
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Request {
     #[serde(with = "serde_bytestring")]
     pub method: ByteString,
@@ -30,7 +30,7 @@ pub struct Request {
     pub body: Option<Body>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Body {
     Vector(Vec<u8>),
     Buffer(JsBuffer),
