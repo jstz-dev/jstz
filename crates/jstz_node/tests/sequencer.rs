@@ -5,6 +5,7 @@ use jstz_crypto::{
     signature::Signature,
     smart_function_hash::{Kt1Hash, SmartFunctionHash},
 };
+use jstz_node::sequencer::inbox::api::BlockResponse;
 use jstz_proto::{
     context::account::Nonce,
     operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
@@ -32,21 +33,6 @@ impl Drop for ChildWrapper {
             println!("Could not kill child process: {}", e)
         }
     }
-}
-
-fn make_mock_monitor_blocks(
-) -> impl warp::Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("global" / "monitor_blocks").map(|| {
-        let stream = stream::once(async { Ok::<Bytes, Infallible>(Bytes::new()) });
-        warp::reply::Response::new(Body::wrap_stream(stream))
-    })
-}
-
-fn make_mock_rollup_rpc_server(url: String) -> JoinHandle<()> {
-    let filter = make_mock_monitor_blocks();
-    let addr = url.parse::<std::net::SocketAddr>().unwrap();
-    let server = warp::serve(filter).bind(addr);
-    task::spawn(server)
 }
 
 const DEFAULT_ROLLUP_NODE_RPC: &str = "127.0.0.1:8932";
@@ -82,6 +68,7 @@ async fn run_sequencer() {
     check_mode(&client, &base_uri).await;
     deploy_function(&client, &base_uri).await;
     call_function(&client, &base_uri).await;
+    check_inbox_op(&client, &base_uri).await;
 }
 
 async fn check_mode(client: &Client, base_uri: &str) {
@@ -151,6 +138,10 @@ async fn submit_operation(
         200
     );
 
+    poll_receipt(client, base_uri, &hash).await
+}
+
+async fn poll_receipt(client: &Client, base_uri: &str, hash: &str) -> Receipt {
     jstz_utils::poll(10, 500, || async {
         match client
             .get(format!("{base_uri}/operations/{hash}/receipt"))
@@ -204,4 +195,51 @@ async fn call_function(client: &Client, base_uri: &str) {
             headers: _
         })) if &String::from_utf8(body.clone().unwrap()).unwrap() == "this is a big function"
     ));
+}
+
+async fn check_inbox_op(client: &Client, base_uri: &str) {
+    let (op_hash, _) = mock_deploy_op();
+    let receipt = poll_receipt(client, base_uri, op_hash).await;
+    assert!(matches!(
+        receipt.result,
+        ReceiptResult::Success(ReceiptContent::DeployFunction(
+            DeployFunctionReceipt { address: SmartFunctionHash(Kt1Hash(addr)) }
+        )) if addr.to_base58_check() == "KT1QRH4mZ8kgMe1HhB8FR6jadJ6zQXDfAVCE"
+    ));
+}
+
+// Mocking the rollup node rpc
+
+fn make_mock_rollup_rpc_server(url: String) -> JoinHandle<()> {
+    let filter = make_mock_monitor_blocks_filter().or(make_mock_global_block_filter());
+    let addr = url.parse::<std::net::SocketAddr>().unwrap();
+    let server = warp::serve(filter).bind(addr);
+    task::spawn(server)
+}
+
+pub(crate) fn make_mock_monitor_blocks_filter(
+) -> impl warp::Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("global" / "monitor_blocks").map(|| {
+        let data_stream = stream::iter(vec![Ok::<Bytes, Infallible>(Bytes::from(
+            "{\"level\": 123}\n",
+        ))]);
+        warp::reply::Response::new(Body::wrap_stream(data_stream))
+    })
+}
+
+pub(crate) fn make_mock_global_block_filter(
+) -> impl warp::Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    warp::path!("global" / "block" / u32).map( |_| {
+        let (_,op) = mock_deploy_op();
+        let response = BlockResponse {
+            messages: vec!["0001", "0003000000006846e8232cf8fedfbc17521b6002d572d8a8146e0b51bedefb4f2fb985a2388d9478f2ab", op, "0002"].into_iter().map(String::from).collect(),
+        };
+        warp::reply::json(&response)
+    })
+}
+
+fn mock_deploy_op() -> (&'static str, &'static str) {
+    let op = "0100c3ea4c18195bcfac262dcb29e3d803ae746817390000000040000000000000002c33da9518a6fce4c22a7ba352580d9097cacc9123df767adb40871cef49cbc7efebffcb4a1021b514dca58450ac9c50e221deaeb0ed2034dd36f1ae2de11f0f00000000200000000000000073c58fbff04bb1bc965986ad626d2a233e630ea253d49e1714a0bc9610c1ef450000000000000000000000000901000000000000636f6e7374204b4559203d2022636f756e746572223b0a0a636f6e73742068616e646c6572203d202829203d3e207b0a20206c657420636f756e746572203d204b762e676574284b4559293b0a2020636f6e736f6c652e6c6f672860436f756e7465723a20247b636f756e7465727d60293b0a202069662028636f756e746572203d3d3d206e756c6c29207b0a20202020636f756e746572203d20303b0a20207d20656c7365207b0a20202020636f756e7465722b2b3b0a20207d0a20204b762e736574284b45592c20636f756e746572293b0a202072657475726e206e657720526573706f6e736528293b0a7d3b0a0a6578706f72742064656661756c742068616e646c65723b0a0000000000000000";
+    let op_hash = "eea5a17541e509914c7ebe48dd862ba5b96b878522a01132fc881080278a6b83";
+    (op_hash, op)
 }

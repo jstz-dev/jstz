@@ -31,7 +31,7 @@ use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 pub mod config;
-mod sequencer;
+pub mod sequencer;
 
 #[derive(Clone)]
 pub struct AppState {

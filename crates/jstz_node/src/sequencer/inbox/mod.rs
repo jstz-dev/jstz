@@ -1,19 +1,26 @@
+#![allow(unused_variables)]
+#![allow(unreachable_code)]
 use std::sync::{Arc, RwLock};
 
-#[cfg(not(test))]
 use std::time::Duration;
 
 use crate::sequencer::queue::OperationQueue;
+use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use anyhow::Result;
+use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
+use jstz_core::host::WriteDebug;
+use log::{debug, error};
+use parsing::{parse_inbox_message_hex, Message};
 #[cfg(test)]
 use std::future::Future;
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tokio::{select, task::JoinHandle};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
-mod api;
+pub mod api;
 mod parsing;
 
 #[derive(Default)]
@@ -38,13 +45,20 @@ impl AsyncDrop for Monitor {
     }
 }
 
+struct Logger;
+impl WriteDebug for Logger {
+    fn write_debug(&self, msg: &str) {
+        debug!("{msg}");
+    }
+}
+
 /// Spawn a future that monitors the L1 blocks, parses inbox messages and pushes them into the queue.
 pub async fn spawn_monitor<
     #[cfg(test)] Fut: Future<Output = ()> + 'static + Send,
     #[cfg(test)] F: Fn(u32) -> Fut + Send + 'static,
 >(
     rollup_endpoint: String,
-    _queue: Arc<RwLock<OperationQueue>>,
+    queue: Arc<RwLock<OperationQueue>>,
     #[cfg(test)] on_new_block: F,
 ) -> Result<Monitor> {
     // temp fix for jstzd to run locally.
@@ -55,6 +69,8 @@ pub async fn spawn_monitor<
     let kill_sig_clone = kill_sig.clone();
     let mut block_stream = api::monitor_blocks(&rollup_endpoint).await?;
     let handle = tokio::spawn(async move {
+        let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
+        let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
         loop {
             select! {
                 _ = kill_sig_clone.cancelled() => {
@@ -63,15 +79,18 @@ pub async fn spawn_monitor<
                 result = block_stream.next() => {
                     match result {
                         Some(Ok(block)) => {
-                            //TODO: fetch inbox messages and place into the queue
-                            println!("block level: {}\n", block.level);
                             #[cfg(test)]
-                            on_new_block(block.level).await;
+                            {
+                                on_new_block(block.level).await;
+                                continue;
+                            }
+                            let block_content = retry_fetch_block(&rollup_endpoint, block.level).await;
+                            process_inbox_messages(block_content, queue.clone(), &ticketer, &jstz).await;
                         }
                         _ => {
                             //TODO: handle the case when the stream ended/errored
                             // https://linear.app/tezos/issue/JSTZ-622/handle-retrial-when-stream-connection-is-lost
-                            println!("`monitor_blocks` stream connection lost");
+                            error!("`monitor_blocks` stream connection lost");
                             break;
                         }
                     }
@@ -84,6 +103,73 @@ pub async fn spawn_monitor<
         inner: Some(handle),
         kill_sig,
     })
+}
+
+/// Process the inbox messages of the given block and push them into the queue.
+async fn process_inbox_messages(
+    block_content: BlockResponse,
+    queue: Arc<RwLock<OperationQueue>>,
+    ticketer: &ContractKt1Hash,
+    jstz: &SmartRollupHash,
+) {
+    let mut ops = parse_inbox_messages(block_content, ticketer, jstz);
+    while let Some(op) = ops.pop() {
+        match op {
+            Message::External(op) => loop {
+                let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
+                if success {
+                    break;
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+            },
+            Message::Internal(_) => {
+                // TODO: handle internal messages (deposits)
+                // https://linear.app/tezos/issue/JSTZ-637/handle-deposit-operation
+                panic!("Internal messages not supported yet");
+            }
+        }
+    }
+}
+
+/// parse the inbox messages into jstz operations of the given block
+fn parse_inbox_messages(
+    block: BlockResponse,
+    ticketer: &ContractKt1Hash,
+    jstz: &SmartRollupHash,
+) -> Vec<Message> {
+    block
+        .messages
+        .iter()
+        .enumerate()
+        .filter_map(|(inbox_id, inbox_msg)| {
+            parse_inbox_message_hex(&Logger, inbox_id as u32, inbox_msg, ticketer, jstz)
+        })
+        .collect()
+}
+
+// Retry fetching the block indefinitely because:
+// 1. We cannot progress without successfully fetching the block data
+// 2. The block data must eventually become available (it's part of the chain)
+// 3. Temporary network issues or API unavailability should not stop the sequencer
+// 4. The exponential backoff ensures we don't overwhelm the API
+async fn retry_fetch_block(rollup_endpoint: &str, block_level: u32) -> BlockResponse {
+    let mut attempts = 0;
+    let mut backoff = Duration::from_millis(200);
+    const MAX_BACKOFF: Duration = Duration::from_secs(5);
+    loop {
+        match api::fetch_block(rollup_endpoint, block_level).await {
+            Ok(block) => return block,
+            Err(e) => {
+                attempts += 1;
+                error!(
+                    "Retry {}: Failed to fetch block {}: {:?}",
+                    attempts, block_level, e
+                );
+                tokio::time::sleep(backoff).await;
+                backoff = std::cmp::min(backoff * 2, MAX_BACKOFF);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
