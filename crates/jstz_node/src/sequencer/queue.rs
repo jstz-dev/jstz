@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 
-use jstz_proto::operation::SignedOperation;
+use crate::sequencer::inbox::parsing::Message;
 
 pub struct OperationQueue {
     capacity: usize,
-    queue: VecDeque<SignedOperation>,
+    queue: VecDeque<Message>,
 }
 
 impl OperationQueue {
@@ -15,7 +15,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn insert(&mut self, op: SignedOperation) -> anyhow::Result<()> {
+    pub fn insert(&mut self, op: Message) -> anyhow::Result<()> {
         if self.is_full() {
             anyhow::bail!("queue is full")
         } else {
@@ -24,7 +24,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn insert_ref(&mut self, op: &SignedOperation) -> anyhow::Result<()> {
+    pub fn insert_ref(&mut self, op: &Message) -> anyhow::Result<()> {
         if self.is_full() {
             anyhow::bail!("queue is full")
         } else {
@@ -33,7 +33,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn pop(&mut self) -> Option<SignedOperation> {
+    pub fn pop(&mut self) -> Option<Message> {
         self.queue.pop_front()
     }
 
