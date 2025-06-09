@@ -6,7 +6,14 @@ const sidebars = {
       type: "category",
       collapsed: false,
       label: "Getting Started",
-      items: ["installation", "quick_start", "cli", "sandbox", "transfer"],
+      items: [
+        "installation",
+        "quick_start",
+        "cli",
+        "sandbox",
+        "transfer",
+        "examples",
+      ],
     },
 
     {
