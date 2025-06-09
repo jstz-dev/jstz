@@ -44,13 +44,9 @@ The Jstz client SDK, [`@jstz-dev/jstz-client`](https://www.npmjs.com/package/@js
 The [Jstz dev wallet](https://github.com/jstz-dev/dev-wallet) is a web browser extension that works as a wallet, signing transactions with an account's private key.
 You can use this extension as a wallet to sign transactions on web applications for the purposes of development, but it is not yet a secure wallet to use in production applications.
 
-### `jstzd` daemon
+### Sandbox
 
-The `jstzd` daemon runs services that are necessary to run the Jstz sandbox, including:
+The Jstz sandbox is a local environment that you can use to develop and test smart functions.
 
-- The layer 1 bootstrap accounts that you can use to fund accounts in Jstz
-- The [bridge](/architecture/bridge) that you can use to move tez from those accounts to your Jstz accounts
-- A local version of the Jstz runtime
-
-You can use the Jstz CLI to run the sandbox or use the `jstzd` daemon directly.
+It includes a simulated Tezos layer 1 environment and a Jstz environment that you can deploy smart functions to.
 For more information, see [Sandbox](/sandbox).
