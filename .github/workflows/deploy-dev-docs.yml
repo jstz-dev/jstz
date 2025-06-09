@@ -60,10 +60,14 @@ jobs:
           # This token should have write access to the target repo content and github pages over there
           token: ${{ secrets.DEV_DOC_REPO_TOKEN }}
           path: dest_repo
-      - name: setup git config
+      - name: push to destination repo
         run: |
           cd $GITHUB_WORKSPACE/dest_repo/ && find . -mindepth 1 -maxdepth 1 ! -name '.git' -type d -exec rm -rf {} +
           mv $GITHUB_WORKSPACE/docs/* $GITHUB_WORKSPACE/dest_repo/
+          if [[ ! `git status --porcelain` ]]; then
+            echo "No change in docs"
+            exit 0
+          fi
           git config user.name "GitHub Actions Bot"
           git config user.email "<>"
           git add .
