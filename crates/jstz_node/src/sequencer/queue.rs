@@ -24,6 +24,15 @@ impl OperationQueue {
         }
     }
 
+    pub fn insert_ref(&mut self, op: &SignedOperation) -> anyhow::Result<()> {
+        if self.is_full() {
+            anyhow::bail!("queue is full")
+        } else {
+            self.queue.push_back(op.clone());
+            Ok(())
+        }
+    }
+
     pub fn pop(&mut self) -> Option<SignedOperation> {
         self.queue.pop_front()
     }
@@ -33,6 +42,7 @@ impl OperationQueue {
     }
 
     #[cfg(test)]
+    #[allow(clippy::len_without_is_empty)]
     pub fn len(&self) -> usize {
         self.queue.len()
     }
@@ -57,6 +67,16 @@ mod tests {
         assert!(q.insert(dummy_op()).is_ok());
         assert_eq!(
             q.insert(dummy_op()).unwrap_err().to_string(),
+            "queue is full"
+        );
+    }
+
+    #[test]
+    fn insert_ref() {
+        let mut q = OperationQueue::new(1);
+        assert!(q.insert_ref(&dummy_op()).is_ok());
+        assert_eq!(
+            q.insert_ref(&dummy_op()).unwrap_err().to_string(),
             "queue is full"
         );
     }
