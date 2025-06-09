@@ -239,6 +239,8 @@ It is not yet secure enough to use in production applications.
    git clone https://github.com/jstz-dev/dev-wallet.git
    ```
 
+1. Install Node.JS version 22 or later.
+
 1. Go into the repository, install the dependencies, and build the wallet:
 
    ```bash
