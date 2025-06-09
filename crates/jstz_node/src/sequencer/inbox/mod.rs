@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use std::time::Duration;
 
@@ -16,6 +16,7 @@ use parsing::{parse_inbox_message_hex, Message};
 #[cfg(test)]
 use std::future::Future;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
+use tokio::sync::RwLock;
 use tokio::{select, task::JoinHandle};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
@@ -115,13 +116,16 @@ async fn process_inbox_messages(
     let mut ops = parse_inbox_messages(block_content, ticketer, jstz);
     while let Some(op) = ops.pop() {
         match op {
-            Message::External(op) => loop {
-                let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
-                if success {
-                    break;
+            Message::External(op) => {
+                loop {
+                    let success = queue.write().await.insert_ref(&op).is_ok();
+                    if success {
+                        break;
+                    }
+                    tokio::time::sleep(Duration::from_millis(100)).await;
                 }
                 tokio::time::sleep(Duration::from_millis(100)).await;
-            },
+            }
             Message::Internal(_) => {
                 // TODO: handle internal messages (deposits)
                 // https://linear.app/tezos/issue/JSTZ-637/handle-deposit-operation
@@ -180,7 +184,7 @@ mod tests {
     use std::{
         future::Future,
         pin::Pin,
-        sync::{Arc, Mutex, RwLock},
+        sync::{Arc, Mutex},
     };
     use tokio::task;
     use tokio::time::sleep;

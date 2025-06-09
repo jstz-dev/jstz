@@ -44,10 +44,7 @@ impl StoreWrapper {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::{
-        path::PathBuf,
-        sync::{Arc, RwLock},
-    };
+    use std::{path::PathBuf, sync::Arc};
 
     use jstz_core::BinEncodable;
     use jstz_crypto::{
@@ -61,6 +58,7 @@ pub(crate) mod tests {
     use octez::OctezRollupClient;
     use tempfile::NamedTempFile;
     use tezos_crypto_rs::{base58::ToBase58Check, hash::ContractKt1Hash};
+    use tokio::sync::RwLock;
 
     use crate::{
         config::KeyPair,

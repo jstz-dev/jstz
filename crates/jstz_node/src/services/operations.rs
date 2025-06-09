@@ -1,7 +1,6 @@
 use std::fs;
 use std::path;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 use crate::config::KeyPair;
 use crate::sequencer::queue::OperationQueue;
@@ -26,6 +25,7 @@ use octez::OctezRollupClient;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
 
+use tokio::sync::RwLock;
 use tokio::task::JoinSet;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -181,11 +181,7 @@ async fn insert_operation_queue(
 ) -> ServiceResult<()> {
     queue
         .write()
-        .map_err(|e| {
-            ServiceError::FromAnyhow(anyhow::anyhow!(
-                "failed to insert operation to the queue: {e}"
-            ))
-        })?
+        .await
         .insert(operation)
         .map_err(|e| ServiceError::ServiceUnavailable(Some(e)))?;
     Ok(())
@@ -474,7 +470,7 @@ mod tests {
         )
         .await;
         let queue = state.queue.clone();
-        assert_eq!(queue.read().unwrap().len(), 0);
+        assert_eq!(queue.read().await.len(), 0);
         let (router, _) = OperationsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();
@@ -491,7 +487,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), 200);
-        assert_eq!(queue.read().unwrap().len(), 0);
+        assert_eq!(queue.read().await.len(), 0);
         mock_injection.assert();
         mock_rollup_addr.assert();
     }
@@ -507,7 +503,7 @@ mod tests {
         )
         .await;
         let queue = state.queue.clone();
-        assert_eq!(queue.read().unwrap().len(), 0);
+        assert_eq!(queue.read().await.len(), 0);
         let (mut router, _) = OperationsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();
@@ -524,7 +520,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), 200);
-        assert_eq!(queue.read().unwrap().len(), 1);
+        assert_eq!(queue.read().await.len(), 1);
 
         // sending the operation again should fail because the queue is full
         let res = router
@@ -547,7 +543,7 @@ mod tests {
         )
         .await;
         let queue = state.queue.clone();
-        assert_eq!(queue.read().unwrap().len(), 0);
+        assert_eq!(queue.read().await.len(), 0);
         let (mut router, _) = OperationsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();
@@ -561,8 +557,8 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), 200);
-        assert_eq!(queue.read().unwrap().len(), 1);
-        let injected_op = queue.write().unwrap().pop().unwrap();
+        assert_eq!(queue.read().await.len(), 1);
+        let injected_op = queue.write().await.pop().unwrap();
         let inner = injected_op.verify_ref().unwrap();
         matches!(
             &inner.content,

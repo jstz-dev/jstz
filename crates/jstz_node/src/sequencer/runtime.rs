@@ -53,7 +53,10 @@ fn read_injector(rt: &impl Runtime) -> Option<PublicKey> {
     Storage::get(rt, &INJECTOR_PATH).ok()?
 }
 
-pub fn process_message(rt: &mut impl Runtime, op: SignedOperation) -> anyhow::Result<()> {
+pub async fn process_message(
+    rt: &mut impl Runtime,
+    op: SignedOperation,
+) -> anyhow::Result<()> {
     let ticketer = read_ticketer(rt).ok_or(anyhow!("Ticketer not found"))?;
     let injector = read_injector(rt).ok_or(anyhow!("Revealer not found"))?;
     let mut tx = Transaction::default();
@@ -139,8 +142,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn process_message() {
+    #[tokio::test]
+    async fn process_message() {
         // Using a slightly complicated scenario here to check if transaction works properly.
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
@@ -172,7 +175,7 @@ mod tests {
         .unwrap();
 
         // Deploy smart function
-        super::process_message(&mut h, deploy_op).unwrap();
+        super::process_message(&mut h, deploy_op).await.unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/843a8438af97d97e134ae10bdcf10b5a6bcbf8c7d4912e65bacf1be26a5a73c3")).unwrap()).unwrap();
         assert!(matches!(
             v.result,
@@ -182,7 +185,7 @@ mod tests {
         ));
 
         // Call smart function
-        super::process_message(&mut h, call_op).unwrap();
+        super::process_message(&mut h, call_op).await.unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/9b15976cc8162fe39458739de340a1a95c59a9bcff73bd3c83402fad6352396e")).unwrap()).unwrap();
         assert!(matches!(
             v.result,
@@ -205,8 +208,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn process_message_large_payload() {
+    #[tokio::test]
+    async fn process_message_large_payload() {
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
         let preimage_dir = TempDir::new().unwrap();
@@ -219,7 +222,7 @@ mod tests {
 
         let deploy_op = dummy_op("edsigtpNrm3AoevvFfdboe5kijt5KpQWgXeaTqDNhAYD5dta8JWXHFW6afyEeCj6QsrxXg8WdRQhxaG9TDzaQx1mnC6vyMDSJ3B", super::INJECTOR_PK,0, Content::RevealLargePayload(RevealLargePayload { root_hash: PreimageHash([0, 63, 239, 31, 253, 161, 70, 12, 58, 91, 115, 140, 145, 182, 11, 3, 108, 26, 138, 103, 65, 187, 95, 21, 194, 61, 120, 71, 168, 9, 180, 68, 117]), reveal_type: jstz_proto::operation::RevealType::DeployFunction, original_op_hash: Blake2b::try_parse("aa8216661480132414f3ddd4bccc61fffd1db9961b259efb4d4d6597d3f7f6aa".to_string()).unwrap() }));
 
-        super::process_message(&mut h, deploy_op).unwrap();
+        super::process_message(&mut h, deploy_op).await.unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/aa8216661480132414f3ddd4bccc61fffd1db9961b259efb4d4d6597d3f7f6aa")).unwrap()).unwrap();
         assert!(matches!(
             v.result,
@@ -230,7 +233,7 @@ mod tests {
 
         let user_public_key = "edpkuXD2CqRpWoTT8p4exrMPQYR2NqsYH3jTMeJMijHdgQqkMkzvnz";
         let call_op = dummy_op("edsigtnvb4e2nPcfadUt7VbdMgFZByP1SUAmEWVfaLAerBGazZuVqCWZ4wjNJRxZhbjnzUfdMihXuH62APQv169xQvQvkEYQKQX", user_public_key, 1, Content::RunFunction(RunFunction { uri: Uri::from_static("jstz://KT1CkPcKaAKLX1eibkkTLub84nf1uXT7FYjG/"), method: Method::GET, headers: HeaderMap::new(), body: None, gas_limit: 550000 }));
-        super::process_message(&mut h, call_op).unwrap();
+        super::process_message(&mut h, call_op).await.unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/e6f9a74841205885f6dd1d639afcb39de14a2350d01519edf792631e39403b75")).unwrap()).unwrap();
         assert!(matches!(
             v.result,

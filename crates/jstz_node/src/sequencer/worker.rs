@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
     sync::{
         mpsc::{channel, Sender, TryRecvError},
-        Arc, RwLock,
+        Arc,
     },
     thread::{self, spawn as spawn_thread, JoinHandle},
     time::Duration,
@@ -11,6 +11,7 @@ use std::{
 
 use anyhow::Context;
 use log::warn;
+use tokio::sync::RwLock;
 
 use super::{db::Db, queue::OperationQueue};
 
@@ -35,37 +36,35 @@ pub fn spawn(
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
-    let mut rt = init_host(db, preimage_dir).context("failed to init host")?;
+    let mut host_rt = init_host(db, preimage_dir).context("failed to init host")?;
+    let tokio_rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .context("failed to build tokio runtime")?;
     Ok(Worker {
         thread_kill_sig,
-        inner: Some(spawn_thread(move || loop {
-            let v = {
-                match queue.write() {
-                    Ok(mut q) => q.pop(),
-                    Err(e) => {
-                        warn!("worker failed to read from queue: {e:?}");
-                        None
+        // TODO: can use tokio::spawn_blocking to run fully on tokio runtime
+        inner: Some(spawn_thread(move || {
+            tokio_rt.block_on(async {
+                loop {
+                    match queue.write().await.pop() {
+                        Some(op) => {
+                            if let Err(e) = process_message(&mut host_rt, op).await {
+                                warn!("error processing message: {e:?}");
+                            }
+                        }
+                        None => thread::sleep(Duration::from_millis(100)),
+                    };
+
+                    match rx.try_recv() {
+                        Ok(_) | Err(TryRecvError::Disconnected) => {
+                            #[cfg(test)]
+                            on_exit();
+                            break;
+                        }
+                        Err(TryRecvError::Empty) => {}
                     }
                 }
-            };
-
-            match v {
-                Some(op) => {
-                    if let Err(e) = process_message(&mut rt, op) {
-                        warn!("error processing message: {e:?}");
-                    }
-                }
-                None => thread::sleep(Duration::from_millis(100)),
-            };
-
-            match rx.try_recv() {
-                Ok(_) | Err(TryRecvError::Disconnected) => {
-                    #[cfg(test)]
-                    on_exit();
-                    break;
-                }
-                Err(TryRecvError::Empty) => {}
-            }
+            });
         })),
     })
 }
@@ -74,12 +73,13 @@ pub fn spawn(
 mod tests {
     use std::{
         path::PathBuf,
-        sync::{Arc, Mutex, RwLock},
+        sync::{Arc, Mutex},
         thread,
         time::Duration,
     };
 
     use tempfile::NamedTempFile;
+    use tokio::sync::RwLock;
 
     use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
 
@@ -100,8 +100,8 @@ mod tests {
         assert_eq!(*v.lock().unwrap(), 1);
     }
 
-    #[test]
-    fn worker_consume_queue() {
+    #[tokio::test]
+    async fn worker_consume_queue() {
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
         let mut q = OperationQueue::new(1);
@@ -118,7 +118,7 @@ mod tests {
         // to ensure that the worker has enough time to consume the queue
         thread::sleep(Duration::from_millis(1000));
 
-        assert_eq!(wrapper.read().unwrap().len(), 0);
+        assert_eq!(wrapper.read().await.len(), 0);
         // worker should process the message and the embedded runtime should produce a receipt
         assert!(db.key_exists(&receipt_key).unwrap());
     }
