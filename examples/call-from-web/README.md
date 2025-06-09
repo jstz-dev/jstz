@@ -4,6 +4,7 @@ This is a [Vite](https://vite.dev/) application that shows how you can call a Js
 It calls the [counter](https://github.com/jstz-dev/jstz/blob/main/examples/counter/README.md) smart function example.
 
 **IMPORTANT: This application does not secure private keys and therefore should not be used in production.**
+**For an example that uses the Jstz development wallet to secure private keys and sign transactions, see https://github.com/jstz-dev/dev-wallet.**
 
 Follow these steps to use it:
 
