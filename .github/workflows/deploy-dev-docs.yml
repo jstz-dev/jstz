@@ -62,7 +62,7 @@ jobs:
           path: dest_repo
       - name: push to destination repo
         run: |
-          cd $GITHUB_WORKSPACE/dest_repo/ && find . -mindepth 1 -maxdepth 1 ! -name '.git' -type d -exec rm -rf {} +
+          cd $GITHUB_WORKSPACE/dest_repo/ && find . -mindepth 1 -maxdepth 1 ! -name '.git' -type d -exec rm -rf {} + && find . -mindepth 1 -maxdepth 1 ! -name '.git' -type f -exec rm {} +
           mv $GITHUB_WORKSPACE/docs/* $GITHUB_WORKSPACE/dest_repo/
           if [[ ! `git status --porcelain` ]]; then
             echo "No change in docs"
