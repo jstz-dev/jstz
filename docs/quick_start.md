@@ -215,8 +215,8 @@ You can also send a request and view the log messages generated from that reques
 
 ## 4. Installing the Jstz development wallet
 
-Instead of using passwords, blockchain systems use account management tools called wallets to encrypt ("sign") transactions on behalf of a user's account.
-To use Jstz from a web browser, you must build and install the Jstz development wallet to sign transactions.
+To use Jstz in a web application, you need a browser-based wallet to sign transactions cryptographically on behalf of your account.
+Jstz currently has a browser-based wallet for development purposes.
 
 :::note
 
