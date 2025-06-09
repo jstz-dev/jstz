@@ -15,6 +15,7 @@ exclude = [ "src/runtime/v2/tests" ]
 bincode.workspace = true
 boa_engine.workspace = true
 boa_gc.workspace = true
+bytes.workspace = true
 derive_more.workspace = true
 either.workspace = true
 erased-serde.workspace = true

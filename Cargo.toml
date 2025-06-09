@@ -125,7 +125,7 @@ wasm-bindgen = "0.2.92"
 
 [workspace.dependencies.deno_fetch_base]
 git = "https://github.com/jstz-dev/deno"
-branch = "ryan/patch-deno-fetch"
+branch = "leo/extend-fetch-base"
 features = ["sandbox"]
 default-features = false
 

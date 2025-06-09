@@ -1347,11 +1347,14 @@ dependencies = [
 [[package]]
 name = "deno_fetch_base"
 version = "0.202.0"
-source = "git+https://github.com/jstz-dev/deno?branch=ryan/patch-deno-fetch#82a3e5739e2b37e7e2fe1eb4150e30b56a94cdfa"
+source = "git+https://github.com/jstz-dev/deno?branch=leo/extend-fetch-base#8d1d5522ee06190fcc68bd7e5ba65534520edac5"
 dependencies = [
  "bytes",
  "deno_core",
  "deno_error",
+ "http 1.1.0",
+ "http-body-util",
+ "hyper 1.6.0",
  "serde",
 ]
 
@@ -2962,6 +2965,7 @@ version = "0.1.1-alpha.1"
 dependencies = [
  "bincode 2.0.0-rc.3",
  "boa_engine",
+ "futures",
  "hex",
  "http 1.1.0",
  "http-serde",
@@ -3049,6 +3053,7 @@ dependencies = [
  "bincode 2.0.0-rc.3",
  "boa_engine",
  "boa_gc",
+ "bytes",
  "deno_core",
  "deno_error",
  "deno_fetch_base",
