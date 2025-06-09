@@ -4,6 +4,7 @@ use bytes::Bytes;
 use deno_core::{ByteString, JsBuffer};
 use deno_fetch_base::BytesStream;
 use futures::stream;
+use http::{HeaderMap, HeaderName, HeaderValue};
 use url::Url;
 
 use crate::context::account::Address;
@@ -17,6 +18,34 @@ pub struct Response {
     pub status_text: String,
     pub headers: Vec<(ByteString, ByteString)>,
     pub body: Body,
+}
+
+impl Into<http::Response<Option<Vec<u8>>>> for Response {
+    fn into(self) -> http::Response<Option<Vec<u8>>> {
+        let mut builder = http::Response::builder().status(self.status);
+
+        let headers =
+            HeaderMap::from_iter(self.headers.into_iter().map(|(key, value)| {
+                (
+                    HeaderName::from_bytes(&key)
+                        .expect("Expected valid http header key from a valid response"),
+                    HeaderValue::from_bytes(&value)
+                        .expect("Expected valid http header value from a valid response"),
+                )
+            }));
+
+        *builder.headers_mut().unwrap() = headers;
+
+        let body = if self.body.is_empty() {
+            None
+        } else {
+            Some(self.body.to_vec())
+        };
+
+        builder
+            .body(body)
+            .expect("Expected valid http response from a valid response")
+    }
 }
 
 #[derive(Debug)]
@@ -105,6 +134,7 @@ impl TryFrom<&Url> for Address {
 #[cfg(test)]
 mod test {
     use futures::StreamExt;
+    use http::{HeaderMap, HeaderName, HeaderValue};
 
     use super::*;
 
@@ -129,5 +159,58 @@ mod test {
         let stream: BytesStream = empty_response_body.into();
         let mut stream = stream;
         assert!(stream.next().await.is_none());
+    }
+
+    #[test]
+    fn response_to_http_response() {
+        let response = super::Response {
+            status: 403,
+            status_text: "something".to_string(),
+            headers: vec![
+                ("k1".as_bytes().into(), "v1".as_bytes().into()),
+                ("k2".as_bytes().into(), "v3".as_bytes().into()),
+                ("k2".as_bytes().into(), "v2".as_bytes().into()),
+                ("k1".as_bytes().into(), "v4".as_bytes().into()),
+            ],
+            body: super::Body::Vector(vec![1, 2, 3]),
+        };
+        let http_response: http::Response<Option<Vec<u8>>> = response.into();
+        let (parts, body) = http_response.into_parts();
+        assert_eq!(body, Some(vec![1, 2, 3]));
+        assert_eq!(parts.status, http::StatusCode::FORBIDDEN);
+        let mut expected_headers = HeaderMap::new();
+        // Ordering doesn't matter; HeaderMap handles it during comparison.
+        // The key is that our implementation also allows duplicated keys.
+        expected_headers.append(
+            HeaderName::from_static("k1"),
+            HeaderValue::from_static("v1"),
+        );
+        expected_headers.append(
+            HeaderName::from_static("k2"),
+            HeaderValue::from_static("v3"),
+        );
+        expected_headers.append(
+            HeaderName::from_static("k2"),
+            HeaderValue::from_static("v2"),
+        );
+        expected_headers.append(
+            HeaderName::from_static("k1"),
+            HeaderValue::from_static("v4"),
+        );
+        assert_eq!(parts.headers.len(), 4);
+        assert_eq!(parts.headers, expected_headers);
+    }
+
+    #[test]
+    fn response_to_http_response_empty_body() {
+        let response = super::Response {
+            status: 401,
+            status_text: "something".to_string(),
+            headers: vec![],
+            body: super::Body::Vector(vec![]),
+        };
+        let http_response: http::Response<Option<Vec<u8>>> = response.into();
+        let body = http_response.into_body();
+        assert_eq!(body, None);
     }
 }
