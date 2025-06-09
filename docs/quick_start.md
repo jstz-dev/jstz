@@ -296,5 +296,6 @@ Follow these steps to run a sample web application that uses your smart function
 
 This web application demonstrates how Jstz can provide secure authentication and backends for web applications.
 From here, you can customize the smart function and application to accept more complex requests, store more data, and manage payments in tez, the currency of Jstz and the Tezos blockchain.
+You can also try writing your own smart functions and web applications or experiment with the [Examples](/examples).
 
 And that's it! You are now equipped to battle the evil forces of centralization. Go forth and do Jstz 👊!
