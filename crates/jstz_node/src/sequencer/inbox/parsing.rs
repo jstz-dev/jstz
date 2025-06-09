@@ -27,7 +27,7 @@ pub use tezos_smart_rollup::{
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = InternalOperation;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),

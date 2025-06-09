@@ -15,10 +15,12 @@ pub mod tests {
     };
     use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
 
-    pub fn dummy_op() -> SignedOperation {
-        SignedOperation::new(
+    use crate::sequencer::inbox::parsing::Message;
+
+    pub fn dummy_op() -> Message {
+        let inner = SignedOperation::new(
         Signature::Ed25519(Ed25519Signature::from_base58_check("edsigtbD6jADoivxf1iho6mDYPGiVvXw4Hnurn6VzDLG1boyMmmHEAykSrUJjJpvEsHHjQNvLWfm9PdyMBfJ8CX7jSEkh3yrB6m").unwrap().into()),
-        Operation {
+         Operation {
             public_key: PublicKey::Ed25519(
                 PublicKeyEd25519::from_base58_check(
                     "edpkuUXUFt2E51TkMjRarDEVWXGB4kLKoTryMDyMhNyxFCRTsPDd1K",
@@ -35,6 +37,8 @@ pub mod tests {
                 gas_limit: 0,
             }),
         },
-    )
+    );
+
+        Message::External(inner)
     }
 }

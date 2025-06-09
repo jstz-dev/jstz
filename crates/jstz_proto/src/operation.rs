@@ -251,7 +251,7 @@ pub mod internal {
 
     use super::*;
 
-    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
     pub struct Deposit {
         // Inbox message id is unique to each message and
         // suitable as a nonce
@@ -262,7 +262,7 @@ pub mod internal {
         pub receiver: Address,
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct FaDeposit {
         // Inbox message id is unique to each message and
         // suitable as a nonce
@@ -298,7 +298,7 @@ pub mod internal {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InternalOperation {
     Deposit(internal::Deposit),
     FaDeposit(internal::FaDeposit),

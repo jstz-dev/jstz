@@ -79,9 +79,9 @@ mod tests {
         time::Duration,
     };
 
-    use tempfile::NamedTempFile;
-
+    use crate::sequencer::inbox::test_utils::hash_of;
     use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
+    use tempfile::NamedTempFile;
 
     #[test]
     fn worker_drop() {
@@ -106,7 +106,7 @@ mod tests {
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
         let mut q = OperationQueue::new(1);
         let op = dummy_op();
-        let receipt_key = format!("/jstz_receipt/{}", op.hash());
+        let receipt_key = format!("/jstz_receipt/{}", hash_of(&op));
         q.insert(op.clone()).unwrap();
         assert_eq!(q.len(), 1);
         assert!(!db.key_exists(&receipt_key).unwrap());

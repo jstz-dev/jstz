@@ -11,6 +11,7 @@ use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use jstz_core::host::WriteDebug;
+use jstz_proto::operation::InternalOperation;
 use log::{debug, error};
 use parsing::{parse_inbox_message_hex, Message};
 #[cfg(test)]
@@ -21,7 +22,7 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 pub mod api;
-mod parsing;
+pub mod parsing;
 
 #[derive(Default)]
 pub struct Monitor {
@@ -114,18 +115,17 @@ async fn process_inbox_messages(
 ) {
     let mut ops = parse_inbox_messages(block_content, ticketer, jstz);
     while let Some(op) = ops.pop() {
-        match op {
-            Message::External(op) => loop {
-                let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
-                if success {
-                    break;
-                }
-                tokio::time::sleep(Duration::from_millis(100)).await;
-            },
-            Message::Internal(_) => {
-                // TODO: handle internal messages (deposits)
-                // https://linear.app/tezos/issue/JSTZ-637/handle-deposit-operation
+        if matches!(op, Message::Internal(InternalOperation::FaDeposit { .. })) {
+            // TODO: handle fa deposit
+            // https://linear.app/tezos/issue/JSTZ-640/fa-deposit
+            continue;
+        }
+        loop {
+            let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
+            if success {
+                break;
             }
+            tokio::time::sleep(Duration::from_millis(100)).await;
         }
     }
 }
@@ -174,7 +174,7 @@ async fn retry_fetch_block(rollup_endpoint: &str, block_level: u32) -> BlockResp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sequencer::inbox::test_utils::make_mock_monitor_blocks_filter;
+    use crate::sequencer::inbox::test_utils::{hash_of, make_mock_monitor_blocks_filter};
     use std::time::Duration;
     use std::{
         future::Future,
@@ -281,26 +281,37 @@ mod tests {
         assert_eq!(q.read().unwrap().len(), 1);
 
         let op = q.write().unwrap().pop().unwrap();
-        assert_eq!(op.hash().to_string(), op_hash);
+
+        assert_eq!(hash_of(&op), op_hash);
         assert_eq!(q.read().unwrap().len(), 0);
 
         // the waiting operation should be added to the queue now that the previous one is processed
         tokio::time::sleep(Duration::from_millis(100)).await;
         assert_eq!(q.read().unwrap().len(), 1);
-        assert_eq!(op.hash().to_string(), op_hash);
+        let op = q.write().unwrap().pop().unwrap();
+        assert_eq!(hash_of(&op), op_hash);
 
         handle.abort();
     }
 }
 
 #[cfg(test)]
-mod test_utils {
+pub(crate) mod test_utils {
     use super::{api::BlockResponse, *};
     use bytes::Bytes;
     use futures_util::stream;
     use std::{convert::Infallible, time::Duration};
     use tokio::time::sleep;
     use warp::{hyper::Body, Filter};
+
+    pub(crate) fn hash_of(op: &Message) -> String {
+        match op {
+            Message::External(op) => op.hash().to_string(),
+            Message::Internal(op) => {
+                panic!("no hash for internal operation");
+            }
+        }
+    }
 
     /// mock the /global/monitor_blocks endpoint
     pub(crate) fn make_mock_monitor_blocks_filter(
