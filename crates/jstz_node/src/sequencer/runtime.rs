@@ -13,17 +13,20 @@ use tezos_smart_rollup::{
 
 use super::db::Db;
 
-const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
-const INJECTOR: RefPath = RefPath::assert_from(b"/injector");
+const TICKETER_PATH: RefPath = RefPath::assert_from(b"/ticketer");
+const INJECTOR_PATH: RefPath = RefPath::assert_from(b"/injector");
 const INJECTOR_PK: &str = "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
+
+pub const TICKETER: &str = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";
+pub const JSTZ_ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 
 pub fn init_host(db: Db, preimage_dir: PathBuf) -> anyhow::Result<impl Runtime> {
     let mut host = crate::sequencer::host::Host::new(db, preimage_dir);
-    let ticketer = SmartFunctionHash::from_base58("KT1HbQepzV1nVGg8QVznG7z4RcHseD5kwqBn")
+    let ticketer = SmartFunctionHash::from_base58(TICKETER)
         .context("failed to parse ticketer address")?;
 
     host.store_write_all(
-        &TICKETER,
+        &TICKETER_PATH,
         &bincode::encode_to_vec(&ticketer, bincode::config::legacy())
             .context("failed to encode ticketer")?,
     )
@@ -33,7 +36,7 @@ pub fn init_host(db: Db, preimage_dir: PathBuf) -> anyhow::Result<impl Runtime> 
         .context("failed to parse injector public key")?;
 
     host.store_write_all(
-        &INJECTOR,
+        &INJECTOR_PATH,
         &bincode::encode_to_vec(&injector, bincode::config::legacy())
             .context("failed to encode injector")?,
     )
@@ -43,11 +46,11 @@ pub fn init_host(db: Db, preimage_dir: PathBuf) -> anyhow::Result<impl Runtime> 
 }
 
 fn read_ticketer(rt: &impl Runtime) -> Option<SmartFunctionHash> {
-    Storage::get(rt, &TICKETER).ok()?
+    Storage::get(rt, &TICKETER_PATH).ok()?
 }
 
 fn read_injector(rt: &impl Runtime) -> Option<PublicKey> {
-    Storage::get(rt, &INJECTOR).ok()?
+    Storage::get(rt, &INJECTOR_PATH).ok()?
 }
 
 pub fn process_message(rt: &mut impl Runtime, op: SignedOperation) -> anyhow::Result<()> {
@@ -70,6 +73,7 @@ pub fn process_message(rt: &mut impl Runtime, op: SignedOperation) -> anyhow::Re
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::{io::Write, path::PathBuf};
 
     use axum::http::{HeaderMap, Method, StatusCode, Uri};
@@ -127,8 +131,7 @@ mod tests {
         let rt = super::init_host(db, PathBuf::new()).unwrap();
         assert_eq!(
             super::read_ticketer(&rt).unwrap(),
-            SmartFunctionHash::from_base58("KT1HbQepzV1nVGg8QVznG7z4RcHseD5kwqBn")
-                .unwrap()
+            SmartFunctionHash::from_base58(TICKETER).unwrap()
         );
         assert_eq!(
             super::read_injector(&rt).expect("Revealer not found"),
