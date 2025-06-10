@@ -1,19 +1,12 @@
 use std::{
     cell::RefCell,
     collections::VecDeque,
-    future::poll_fn,
+    future::{poll_fn, Future},
     num::NonZeroU32,
     ops::{Deref, DerefMut},
     rc::Rc,
     task::Poll,
 };
-
-use boa_engine::{
-    builtins::promise::PromiseState, context::HostHooks, job::NativeJob,
-    object::builtins::JsPromise, parser::source::ReadChar, Context, JsError,
-    JsNativeError, JsResult, JsValue, Source,
-};
-use getrandom::{register_custom_getrandom, Error as RandomError};
 
 use crate::{
     future,
@@ -21,6 +14,12 @@ use crate::{
     kv::{JsTransaction, Transaction},
     realm::{Module, Realm},
 };
+use boa_engine::{
+    builtins::promise::PromiseState, context::HostHooks, job::NativeJob,
+    object::builtins::JsPromise, parser::source::ReadChar, Context, JsError,
+    JsNativeError, JsResult, JsValue, Source,
+};
+use getrandom::{register_custom_getrandom, Error as RandomError};
 
 // This is the unix timestamp for date 31-07-2023 10:50:26 -- the date of the first commit
 const UTC_NOW: i64 = 1690797026;
@@ -129,6 +128,32 @@ where
     JS_TRANSACTION.with(|js_tx| *js_tx.borrow_mut() = Some(JsTransaction::new(tx)));
 
     let result = f();
+
+    JS_HOST_RUNTIME.with(|hrt| {
+        *hrt.borrow_mut() = None;
+    });
+
+    JS_TRANSACTION.with(|tx| {
+        *tx.borrow_mut() = None;
+    });
+
+    result
+}
+
+/// Enters a new host context, running the future `f` with the new context
+pub async fn async_enter_js_host_context<F, R>(
+    hrt: &mut impl HostRuntime,
+    tx: &mut Transaction,
+    fut: F,
+) -> R
+where
+    F: Future<Output = R>,
+{
+    JS_HOST_RUNTIME.with(|js_hrt| *js_hrt.borrow_mut() = Some(JsHostRuntime::new(hrt)));
+
+    JS_TRANSACTION.with(|js_tx| *js_tx.borrow_mut() = Some(JsTransaction::new(tx)));
+
+    let result = fut.await;
 
     JS_HOST_RUNTIME.with(|hrt| {
         *hrt.borrow_mut() = None;
@@ -286,5 +311,14 @@ impl Runtime {
     /// Waits for the given value to resolve while polling the event loop
     pub async fn resolve_value(&mut self, value: &JsValue) -> JsResult<JsValue> {
         poll_fn(|_| self.poll_value(value)).await
+    }
+
+    pub fn blocking_resolve_value(&mut self, value: &JsValue) -> JsResult<JsValue> {
+        loop {
+            match self.poll_value(value) {
+                Poll::Ready(value) => break value,
+                Poll::Pending => (),
+            }
+        }
     }
 }

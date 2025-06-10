@@ -195,7 +195,7 @@ fn read_transfer(
                     amount,
                     receiver,
                 };
-                logger.write_debug("Deposit: {content:?}\n");
+                logger.write_debug(format!("Deposit: {content:?}\n").as_str());
                 Some(Message::Internal(InternalMessage::Deposit(content)))
             } else {
                 None

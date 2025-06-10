@@ -34,10 +34,8 @@ pub async fn run_toplevel_fetch(
     let result = {
         let rt = &mut rt;
         runtime::enter_js_host_context(hrt, tx, || {
-            jstz_core::future::block_on(async move {
-                let result = fetch(source_address, operation_hash, &request, rt)?;
-                rt.resolve_value(&result).await
-            })
+            let result = fetch(source_address, operation_hash, &request, rt)?;
+            rt.blocking_resolve_value(&result)
         })
     }
     .map_err(|err| {
