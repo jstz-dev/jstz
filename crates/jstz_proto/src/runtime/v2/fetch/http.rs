@@ -131,6 +131,29 @@ impl TryFrom<&Url> for Address {
     }
 }
 
+/// Converts http::HeaderMap instances to the format accepted by the v2 runtime.
+#[allow(unused)]
+pub fn convert_header_map(headers: HeaderMap) -> Vec<(ByteString, ByteString)> {
+    let mut res = Vec::new();
+    let mut curr_key = None;
+    // According to the documentation, for each yielded item that has `None` provided for the
+    // HeaderName, the associated header name is the same as that of the previously yielded item.
+    // The first yielded item will have HeaderName set.
+    // Therefore the assert should never fail.
+    for (key, value) in headers.into_iter() {
+        if key.is_some() {
+            curr_key = key;
+        }
+        match curr_key {
+            Some(ref k) => {
+                res.push((k.as_str().as_bytes().into(), value.as_bytes().into()));
+            }
+            None => panic!("current header key should not be none"),
+        }
+    }
+    res
+}
+
 #[cfg(test)]
 mod test {
     use futures::StreamExt;
@@ -212,5 +235,26 @@ mod test {
         let http_response: http::Response<Option<Vec<u8>>> = response.into();
         let body = http_response.into_body();
         assert_eq!(body, None);
+    }
+
+    #[test]
+    fn convert_header_map() {
+        let mut m = HeaderMap::new();
+        m.append("k1", HeaderValue::from_str("v1").unwrap());
+        m.append("k2", HeaderValue::from_str("v2").unwrap());
+        m.append("k2", HeaderValue::from_str("v3").unwrap());
+        m.append("k3", HeaderValue::from_str("v4").unwrap());
+        m.append("k2", HeaderValue::from_str("v5").unwrap());
+
+        let res = super::convert_header_map(m);
+        let expected = [
+            ("k1", "v1"),
+            ("k2", "v2"),
+            ("k2", "v3"),
+            ("k2", "v5"),
+            ("k3", "v4"),
+        ]
+        .map(|(k, v)| (k.as_bytes().into(), v.as_bytes().into()));
+        assert_eq!(expected, *res);
     }
 }
