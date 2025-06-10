@@ -1,12 +1,10 @@
 use derive_more::Display;
+use tezos_smart_rollup_host::path::{self, Path};
 pub use tezos_smart_rollup_host::runtime::{
     Runtime as HostRuntime, RuntimeError as HostError,
 };
 use tezos_smart_rollup_host::{
-    dal_parameters::RollupDalParameters,
-    input,
-    metadata::RollupMetadata,
-    path::{self, Path},
+    dal_parameters::RollupDalParameters, input, metadata::RollupMetadata,
     runtime::ValueType,
 };
 

@@ -28,6 +28,7 @@ serde_json.workspace = true
 tezos-smart-rollup.workspace = true
 tezos-smart-rollup-installer-config.workspace = true
 tezos-smart-rollup-installer.workspace = true
+tezos-smart-rollup-host.workspace = true
 tezos_crypto_rs.workspace = true
 
 [[bin]]

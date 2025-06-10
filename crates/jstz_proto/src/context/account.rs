@@ -20,7 +20,7 @@ use jstz_crypto::hash::Hash;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::{Deserialize, Serialize};
-use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
+use tezos_smart_rollup_host::path::{self, OwnedPath, RefPath};
 use utoipa::ToSchema;
 
 pub type Amount = u64;
