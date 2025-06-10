@@ -76,7 +76,9 @@ If you see the following output, the sandbox is running:
   +---------------------------------------------------+---------------------+
 ```
 
-When the sandbox starts, it shows the bootstrap accounts and their balances on Tezos layer 1, which you can use to fund smart functions and user accounts in Jstz.
+When the sandbox starts, it shows the bootstrap accounts, which are on the sandbox's simulation of Tezos layer 1, not on Jstz.
+At this point, no Jstz accounts have any tez.
+To fund Jstz smart functions and user accounts, you can bridge tez from these bootstrap accounts.
 For example, this command bridges 1,000 tez from a layer 1 bootstrap account to a Jstz account with the address `tz1N8BsvfrSjGdomFi5V9RwwYLasgD8s4pxF`:
 
 ```sh

@@ -1,9 +1,7 @@
 #![allow(dead_code)]
 use anyhow::Result;
 use futures_util::{Stream, StreamExt, TryStreamExt};
-use serde::Deserialize;
-#[cfg(test)]
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::io;
 use std::time::Duration;
 use tokio_util::codec::{FramedRead, LinesCodec};
@@ -11,8 +9,7 @@ use tokio_util::io::StreamReader;
 
 /// Response structure for block data containing inbox messages.
 /// Each message in the inbox is represented as a hex-encoded string.
-#[derive(Debug, Deserialize)]
-#[cfg_attr(test, derive(Serialize))]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct BlockResponse {
     pub messages: Vec<String>,
 }
