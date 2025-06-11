@@ -13,13 +13,14 @@ use jstz_proto::request_logger::{
     RequestEvent, REQUEST_END_PREFIX, REQUEST_START_PREFIX,
 };
 use jstz_proto::runtime::{LogRecord, LOG_PREFIX};
+use jstz_utils::tailed_file::TailedFile;
 use serde::Deserialize;
 use tokio::task::JoinHandle;
 use tokio_util::sync::CancellationToken;
 use utoipa::IntoParams;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
-use crate::{tailed_file::TailedFile, AppState, Service};
+use crate::{AppState, Service};
 
 pub mod broadcaster;
 
