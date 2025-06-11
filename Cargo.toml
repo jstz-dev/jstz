@@ -115,7 +115,7 @@ tokio-stream = "0.1.14"
 tokio-util = "0.7.10"
 tower = "0.5.2"
 tower-http = { version = "0.6.1", features = ["cors"] }
-url = "2.4.1"
+url = { version = "2.4.1", features = ["serde"] }
 urlpattern = "0.2.0"
 utoipa = { version = "5.1.3", features = ["axum_extras", "url"] }
 utoipa-axum = "0.1.1"

@@ -64,9 +64,8 @@ pub fn process_message(rt: &mut impl Runtime, op: Message) -> anyhow::Result<()>
     let mut tx = Transaction::default();
     tx.begin();
     let receipt = match op {
-        Message::External(op) => futures::executor::block_on(execute_operation(
-            rt, &mut tx, op, &ticketer, &injector,
-        )),
+        Message::External(op) => jstz_utils::TOKIO
+            .block_on(execute_operation(rt, &mut tx, op, &ticketer, &injector)),
         Message::Internal(op) => match op {
             InternalOperation::Deposit(op) => deposit::execute(rt, &mut tx, op),
             _ => {
