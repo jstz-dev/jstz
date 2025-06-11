@@ -1,0 +1,24 @@
+[package]
+name = "jstz_oracle_node"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description.workspace = true
+
+[dependencies]
+anyhow.workspace = true
+futures.workspace = true
+futures-core.workspace = true
+tokio.workspace = true
+regex.workspace = true
+serde.workspace = true
+bytes.workspace = true
+tempfile.workspace = true
+rand.workspace = true
+futures-util.workspace = true
+jstz_utils = { path = "../jstz_utils" }
