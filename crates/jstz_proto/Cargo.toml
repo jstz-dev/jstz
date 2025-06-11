@@ -37,6 +37,7 @@ deno_core = { workspace = true, optional = true }
 deno_error = { workspace = true, optional = true }
 deno_fetch_base = { workspace = true, optional = true }
 jstz_runtime = { path = "../jstz_runtime", optional = true }
+jstz_utils = { path = "../jstz_utils", optional = true }
 tokio = { workspace = true, optional = true }
 parking_lot.workspace = true
 thiserror.workspace = true
@@ -51,4 +52,5 @@ tokio.workspace = true
 
 [features]
 riscv = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_base", "dep:deno_error", "dep:tokio"]
+v2_runtime = ["riscv", "dep:jstz_utils"]
 

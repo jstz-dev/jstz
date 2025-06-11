@@ -1,5 +1,5 @@
 mod http;
-use http::*;
+pub(crate) use http::*;
 mod error;
 use error::*;
 
@@ -145,8 +145,23 @@ fn fetch(
 /// the expected response type.This function is agnostic of the context in which it
 /// is called thus suitable as the [`crate::operation::RunFunction`] handler
 pub async fn process_and_dispatch_request(
-    host: JsHostRuntime<'static>,
+    mut host: JsHostRuntime<'static>,
     mut tx: Transaction,
+    from: Address,
+    method: ByteString,
+    url: Url,
+    headers: Vec<(ByteString, ByteString)>,
+    data: Option<Body>,
+) -> Response {
+    process_and_dispatch_request_borrowed(
+        &mut host, &mut tx, from, method, url, headers, data,
+    )
+    .await
+}
+
+pub async fn process_and_dispatch_request_borrowed(
+    host: &mut impl HostRuntime,
+    tx: &mut Transaction,
     from: Address,
     method: ByteString,
     url: Url,
@@ -156,12 +171,11 @@ pub async fn process_and_dispatch_request(
     let scheme = SupportedScheme::try_from(&url);
     match scheme {
         Ok(SupportedScheme::Jstz) => {
-            let mut host = host;
             let mut is_successful = true;
             tx.begin();
             let result = dispatch_run(
-                &mut host,
-                &mut tx,
+                host,
+                tx,
                 from,
                 method,
                 url,
@@ -170,7 +184,7 @@ pub async fn process_and_dispatch_request(
                 &mut is_successful,
             )
             .await;
-            let _ = commit_or_rollback(&mut host, &tx, is_successful && result.is_ok());
+            let _ = commit_or_rollback(host, tx, is_successful && result.is_ok());
             result.into()
         }
         Err(err) => err.into(),

@@ -1,11 +1,12 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
 
+#[cfg(feature = "v2_runtime")]
+use crate::runtime::v2;
 use crate::{
     context::account::Addressable,
     error::Result,
     operation::{self, OperationHash},
     receipt::RunFunctionReceipt,
-    runtime,
 };
 
 pub const NOOP_PATH: &str = "/-/noop";
@@ -19,7 +20,58 @@ pub async fn execute(
     run_operation: operation::RunFunction,
     operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt> {
-    runtime::run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash).await
+    #[cfg(not(feature = "v2_runtime"))]
+    return crate::runtime::run_toplevel_fetch(
+        hrt,
+        tx,
+        source,
+        run_operation,
+        operation_hash,
+    )
+    .await;
+    #[cfg(feature = "v2_runtime")]
+    return execute_v2(hrt, tx, source, run_operation, operation_hash).await;
+}
+
+#[cfg(feature = "v2_runtime")]
+async fn execute_v2(
+    hrt: &mut impl HostRuntime,
+    tx: &mut Transaction,
+    source: &(impl Addressable + 'static),
+    run_operation: operation::RunFunction,
+    _operation_hash: OperationHash,
+) -> Result<RunFunctionReceipt> {
+    let url: url::Url = run_operation
+        .uri
+        .to_string()
+        .parse()
+        .expect("should convert operation Uri to Url");
+    let response = {
+        jstz_core::runtime::enter_js_host_context(hrt, tx, || {
+            jstz_core::runtime::with_js_hrt_and_tx(|hrt, tx| {
+                jstz_core::future::block_on(async move {
+                    v2::fetch::process_and_dispatch_request_borrowed(
+                        hrt,
+                        tx,
+                        source.clone().into(),
+                        run_operation.method.as_str().as_bytes().into(),
+                        url,
+                        v2::fetch::convert_header_map(run_operation.headers),
+                        run_operation.body.map(|v| v2::fetch::Body::Vector(v)),
+                    )
+                    .await
+                })
+            })
+        })
+    };
+
+    let http_response: http::Response<Option<Vec<u8>>> = response.into();
+    let (http_parts, body) = http_response.into_parts();
+    Ok(RunFunctionReceipt {
+        body,
+        status_code: http_parts.status,
+        headers: http_parts.headers,
+    })
 }
 
 #[cfg(test)]
@@ -1448,5 +1500,62 @@ mod test {
             "EvalError: TicketTableError: InsufficientFunds",
             error.to_string()
         );
+    }
+
+    #[cfg(feature = "v2_runtime")]
+    #[tokio::test]
+    async fn execute_v2_runtime() {
+        let source = Address::User(jstz_mock::account1());
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+
+        // This smart function uses FormData, which is not supported in v1 runtime but in v2 runtime.
+        let code = format!(
+            r#"
+        const handler = async (request) => {{
+            const f = new FormData();
+            f.append("a", "b");
+            f.append("c", "d");
+            let output = "";
+            for (const [k, v] of f) {{
+                output += `${{k}}-${{v}};`;
+            }}
+            return new Response(output);
+        }};
+        export default handler;
+        "#
+        );
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        tx.begin();
+        let smart_function =
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+        tx.commit(host).unwrap();
+
+        // call smart function; should get an ok response.
+        tx.begin();
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        let response = super::execute_v2(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            fake_op_hash.clone(),
+        )
+        .await
+        .expect("run function expected");
+        tx.commit(host).unwrap();
+
+        let text = String::from_utf8(response.body.unwrap()).unwrap();
+        assert_eq!(text, "a-b;c-d;");
+        assert_eq!(response.status_code, http::StatusCode::OK);
     }
 }
