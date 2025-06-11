@@ -1,3 +1,4 @@
+use std::sync::LazyLock;
 pub mod tailed_file;
 
 pub async fn poll<'a, F, T>(
