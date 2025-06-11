@@ -150,29 +150,14 @@ pub async fn process_and_dispatch_request(
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
 ) -> Response {
-    process_and_dispatch_request_borrowed(
-        &mut host, &mut tx, from, method, url, headers, data,
-    )
-    .await
-}
-
-pub async fn process_and_dispatch_request_borrowed(
-    host: &mut impl HostRuntime,
-    tx: &mut Transaction,
-    from: Address,
-    method: ByteString,
-    url: Url,
-    headers: Vec<(ByteString, ByteString)>,
-    data: Option<Body>,
-) -> Response {
     let scheme = SupportedScheme::try_from(&url);
     match scheme {
         Ok(SupportedScheme::Jstz) => {
             let mut is_successful = true;
             tx.begin();
             let result = dispatch_run(
-                host,
-                tx,
+                &mut host,
+                &mut tx,
                 from,
                 method,
                 url,
@@ -181,7 +166,7 @@ pub async fn process_and_dispatch_request_borrowed(
                 &mut is_successful,
             )
             .await;
-            let _ = commit_or_rollback(host, tx, is_successful && result.is_ok());
+            let _ = commit_or_rollback(&mut host, &tx, is_successful && result.is_ok());
             result.into()
         }
         Err(err) => err.into(),
