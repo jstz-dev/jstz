@@ -168,7 +168,13 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
         KeyPair::default(),
+        #[cfg(feature = "sequencer")]
+        jstz_node::RunMode::Sequencer,
+        #[cfg(not(feature = "sequencer"))]
         jstz_node::RunMode::Default,
+        #[cfg(feature = "sequencer")]
+        1024,
+        #[cfg(not(feature = "sequencer"))]
         0,
     );
 
