@@ -3049,6 +3049,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "jstz_oracle_node"
+version = "0.1.1-alpha.1"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "jstz_utils",
+ "rand 0.8.5",
+ "regex",
+ "serde",
+ "tempfile",
+ "tokio",
+]
+
+[[package]]
 name = "jstz_proto"
 version = "0.1.1-alpha.1"
 dependencies = [
