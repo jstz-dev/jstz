@@ -23,3 +23,12 @@ rand.workspace = true
 futures-util.workspace = true
 tokio-util.workspace = true
 jstz_utils = { path = "../jstz_utils" }
+once_cell.workspace = true
+jstz_proto = { path = "../jstz_proto", optional = true}
+jstz_crypto = { path = "../jstz_crypto" }
+bincode.workspace = true
+serde_json.workspace = true
+url.workspace = true
+
+[features]
+v2_runtime = ["dep:jstz_proto"]
