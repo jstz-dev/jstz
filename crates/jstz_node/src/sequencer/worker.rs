@@ -1,6 +1,6 @@
 use crate::sequencer::runtime::{init_host, process_message};
 use std::{
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{
         mpsc::{channel, Sender, TryRecvError},
         Arc, RwLock,
@@ -32,14 +32,14 @@ pub fn spawn(
     queue: Arc<RwLock<OperationQueue>>,
     db: Db,
     preimage_dir: PathBuf,
-    debug_log_path: Option<PathBuf>,
+    debug_log_path: Option<&Path>,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
     let mut rt = init_host(db, preimage_dir).context("failed to init host")?;
     if let Some(p) = debug_log_path {
         rt = rt
-            .with_debug_log_file(&p)
+            .with_debug_log_file(p)
             .context("failed to set host debug log file")?;
     }
 
@@ -154,7 +154,7 @@ mod tests {
             wrapper.clone(),
             cp,
             PathBuf::new(),
-            Some(log_file.path().to_path_buf()),
+            Some(log_file.path()),
             move || {},
         );
 

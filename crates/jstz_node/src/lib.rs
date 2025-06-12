@@ -97,10 +97,6 @@ pub async fn run(
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
 
-    let cancellation_token = CancellationToken::new();
-    let (broadcaster, db, tail_file_handle) =
-        LogsService::init(&kernel_log_path, &cancellation_token).await?;
-
     let queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
 
     // will make db_path configurable later
@@ -116,7 +112,7 @@ pub async fn run(
                 queue.clone(),
                 runtime_db.clone(),
                 rollup_preimages_dir.clone(),
-                Some(debug_log_path),
+                Some(&debug_log_path),
             )
             .context("failed to launch worker")?,
         ),
@@ -128,7 +124,7 @@ pub async fn run(
                     queue.clone(),
                     runtime_db.clone(),
                     rollup_preimages_dir.clone(),
-                    Some(debug_log_path),
+                    Some(&debug_log_path),
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
@@ -139,15 +135,17 @@ pub async fn run(
         RunMode::Default => None,
     };
 
-    let _monitor: Option<Monitor> = match mode {
-        #[cfg(not(test))]
-        RunMode::Sequencer => {
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
-        }
-        #[cfg(test)]
-        RunMode::Sequencer => None,
-        RunMode::Default => None,
-    };
+    let cancellation_token = CancellationToken::new();
+    // LogsService expects the log file to exist at instantiation, so this needs to be called after
+    // debug log file is created.
+    let (broadcaster, db, tail_file_handle) = LogsService::init(
+        match mode {
+            RunMode::Default => &kernel_log_path,
+            RunMode::Sequencer => &debug_log_path,
+        },
+        &cancellation_token,
+    )
+    .await?;
 
     let state = AppState {
         rollup_client,
