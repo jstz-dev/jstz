@@ -9,7 +9,13 @@ use super::UserAddress;
 
 pub type RequestId = u64;
 
+<<<<<<< HEAD
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Encode, Decode)]
+=======
+type UserAddress = PublicKeyHash;
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+>>>>>>> 7d898ca5 (feat(oracle): relay implemented)
 pub struct OracleRequest {
     /// Request Id
     pub id: RequestId,
