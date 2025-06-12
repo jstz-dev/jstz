@@ -9,7 +9,7 @@ pub type RequestId = u64;
 
 type UserAddress = PublicKeyHash;
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct OracleRequest {
     /// Request Id
     pub id: RequestId,
