@@ -61,6 +61,7 @@ pub struct RunOptions {
     pub injector: KeyPair,
     pub mode: RunMode,
     pub capacity: usize,
+    pub debug_log_path: PathBuf,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -76,6 +77,7 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         injector: config.injector,
         mode: config.mode,
         capacity: config.capacity,
+        debug_log_path: config.debug_log_file,
     })
     .await
 }
@@ -90,6 +92,7 @@ pub async fn run(
         injector,
         mode,
         capacity,
+        debug_log_path,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
@@ -113,6 +116,7 @@ pub async fn run(
                 queue.clone(),
                 runtime_db.clone(),
                 rollup_preimages_dir.clone(),
+                Some(debug_log_path),
             )
             .context("failed to launch worker")?,
         ),
@@ -124,6 +128,7 @@ pub async fn run(
                     queue.clone(),
                     runtime_db.clone(),
                     rollup_preimages_dir.clone(),
+                    Some(debug_log_path),
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
@@ -217,16 +222,18 @@ mod test {
     async fn test_run() {
         async fn check_mode(mode: RunMode, expected: &str) {
             let port = unused_port();
-            let log_file = NamedTempFile::new().unwrap();
+            let kernel_log_file = NamedTempFile::new().unwrap();
+            let debug_log_file = NamedTempFile::new().unwrap();
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
                 port,
                 rollup_endpoint: "0.0.0.0:5678".to_string(),
                 rollup_preimages_dir: TempDir::new().unwrap().into_path(),
-                kernel_log_path: log_file.path().to_path_buf(),
+                kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: KeyPair::default(),
                 mode: mode.clone(),
                 capacity: 0,
+                debug_log_path: debug_log_file.path().to_path_buf(),
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -260,16 +267,18 @@ mod test {
             mode: RunMode,
         ) {
             let port = unused_port();
-            let log_file = NamedTempFile::new().unwrap();
+            let kernel_log_file = NamedTempFile::new().unwrap();
+            let debug_log_file = NamedTempFile::new().unwrap();
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
                 port,
                 rollup_endpoint,
                 rollup_preimages_dir,
-                kernel_log_path: log_file.path().to_path_buf(),
+                kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: KeyPair::default(),
                 mode,
                 capacity: 0,
+                debug_log_path: debug_log_file.path().to_path_buf(),
             }));
 
             sleep(Duration::from_secs(1)).await;
