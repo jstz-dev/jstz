@@ -4,7 +4,7 @@ use crate::{
     Error, Result,
 };
 use bincode::{Decode, Encode};
-use derive_more::{Deref, Display};
+use derive_more::{Deref, Display, From};
 use http::{HeaderMap, Method, Uri};
 use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
@@ -180,7 +180,7 @@ pub struct RevealLargePayload {
 }
 
 #[derive(
-    Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
+    Debug, From, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
 )]
 #[serde(tag = "_type")]
 pub enum Content {

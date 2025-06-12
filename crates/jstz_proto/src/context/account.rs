@@ -11,6 +11,7 @@ use crate::{
 };
 use bincode::{Decode, Encode};
 use boa_gc::{empty_trace, Finalize, Trace};
+use derive_more::From;
 use jstz_core::kv::transaction::{Guarded, GuardedMut};
 use jstz_core::{
     host::HostRuntime,
@@ -32,6 +33,7 @@ pub type Amount = u64;
     Debug,
     PartialEq,
     Eq,
+    From,
     Serialize,
     Deserialize,
     ToSchema,
