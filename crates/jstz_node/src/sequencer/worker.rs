@@ -32,6 +32,7 @@ pub fn spawn(
     queue: Arc<RwLock<OperationQueue>>,
     db: Db,
     preimage_dir: PathBuf,
+    _debug_log_path: Option<PathBuf>,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
@@ -111,10 +112,15 @@ mod tests {
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
         let v = Arc::new(Mutex::new(0));
         let cp = v.clone();
-        let worker =
-            super::spawn(q, Db::init(Some("")).unwrap(), PathBuf::new(), move || {
+        let worker = super::spawn(
+            q,
+            Db::init(Some("")).unwrap(),
+            PathBuf::new(),
+            None,
+            move || {
                 *cp.lock().unwrap() += 1;
-            });
+            },
+        );
 
         drop(worker);
 
@@ -127,6 +133,7 @@ mod tests {
     fn worker_consume_queue() {
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
+        let log_file = NamedTempFile::new().unwrap();
         let mut q = OperationQueue::new(1);
         let op = dummy_op();
         let receipt_key = format!("/jstz_receipt/{}", hash_of(&op));
@@ -136,7 +143,13 @@ mod tests {
 
         let wrapper = Arc::new(RwLock::new(q));
         let cp = db.clone();
-        let _worker = super::spawn(wrapper.clone(), cp, PathBuf::new(), move || {});
+        let _worker = super::spawn(
+            wrapper.clone(),
+            cp,
+            PathBuf::new(),
+            Some(log_file.path().to_path_buf()),
+            move || {},
+        );
 
         // to ensure that the worker has enough time to consume the queue
         thread::sleep(Duration::from_millis(1000));

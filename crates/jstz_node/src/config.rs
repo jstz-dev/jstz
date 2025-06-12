@@ -42,12 +42,16 @@ pub struct JstzNodeConfig {
     pub mode: RunMode,
     /// Capacity of the operation queue.
     pub capacity: usize,
+    /// The path to the sequencer runtime debug log file.
+    pub debug_log_file: PathBuf,
 }
 
 impl JstzNodeConfig {
     /// Create a new JstzNodeConfig.
     ///
     /// If `injector` is not provided, bootstrap1 account will be used as the injector.
+    // FIXME: JSTZ-648 turn this into a builder
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         endpoint: &Endpoint,
         rollup_endpoint: &Endpoint,
@@ -56,6 +60,7 @@ impl JstzNodeConfig {
         injector: KeyPair,
         mode: RunMode,
         capacity: usize,
+        debug_log_file: &Path,
     ) -> Self {
         Self {
             endpoint: endpoint.clone(),
@@ -65,6 +70,7 @@ impl JstzNodeConfig {
             injector,
             mode,
             capacity,
+            debug_log_file: debug_log_file.to_path_buf(),
         }
     }
 }
@@ -92,6 +98,7 @@ mod tests {
             ),
             RunMode::Default,
             0,
+            Path::new("/tmp/debug.log"),
         );
 
         let json = serde_json::to_value(&config).unwrap();
@@ -101,6 +108,7 @@ mod tests {
         assert_eq!(json["rollup_preimages_dir"], "/tmp/preimages");
         assert_eq!(json["kernel_log_file"], "/tmp/kernel.log");
         assert_eq!(json["injector"], serde_json::Value::Null);
+        assert_eq!(json["debug_log_file"], "/tmp/debug.log");
     }
 
     #[test]
@@ -113,6 +121,7 @@ mod tests {
             KeyPair::default(),
             RunMode::Default,
             0,
+            Path::new("/tmp/debug.log"),
         );
 
         assert_eq!(config.injector, KeyPair::default());
