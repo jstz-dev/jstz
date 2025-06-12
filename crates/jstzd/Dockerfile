@@ -1,26 +1,28 @@
-ARG OCTEZ_TAG=octez-v22.0
-FROM tezos/tezos:${OCTEZ_TAG} AS octez
-USER root
-RUN mkdir /octez-bin && mv /usr/local/bin/octez-client /usr/local/bin/octez-node /usr/local/bin/octez-smart-rollup-node /usr/local/bin/octez-baker-* /octez-bin
+ARG OCTEZ_VERSION=22.0
+FROM rust:1.82.0-slim-bookworm AS builder
+RUN apt update && apt install -y curl pkg-config libssl-dev libsqlite3-dev
 
-FROM rust:1.82.0-alpine AS builder
-RUN apk --no-cache add musl-dev libcrypto3 openssl-dev clang make
-ENV OPENSSL_DIR=/usr
 WORKDIR /
 ADD . .
 ARG KERNEL_PATH
 COPY $KERNEL_PATH crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 # release build is required for rust-embed to pack the resource files into the executable
-RUN KERNEL_DEST_DIR=/jstzd_kernel_files RUSTFLAGS='-C target-feature=-crt-static' cargo build --bin jstzd --release --features build-image
+RUN KERNEL_DEST_DIR=/jstzd_kernel_files cargo build --bin jstzd --release --features build-image --features v2_runtime --features sequencer
 
-FROM alpine AS jstzd
-# libcrypto3, openssl, and musl are needed for jstz-rollup binary
-# hidapi, gmp, and libev are needed for octez-client binary
-# libffi, libgmpxx are needed for octez-smart-rollup-node binary
-# sqlite-dev is needed for octez-node binary
-RUN apk --no-cache add binutils bash libcrypto3 openssl musl hidapi gmp libev libffi libgmpxx sqlite-dev
-COPY --from=octez /octez-bin /usr/local/bin
-COPY --from=octez /usr/share/zcash-params /root/.zcash-params
+FROM debian:bookworm-20250520-slim AS jstzd
+ARG OCTEZ_VERSION
+# It's possible to download static executables from github according to architecture, but that seems
+# a bit too messy and error prone.
+# The `echo $'\n\n\n\n'` command below is due to the octez packages prompting for options during
+# installation and `echo` makes sure that installation does not hang there.
+RUN apt update && apt install -y curl gpg && \
+    curl -s "https://packages.nomadic-labs.com/debian/octez.asc" | gpg --dearmor -o /etc/apt/keyrings/octez.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/octez.gpg] https://packages.nomadic-labs.com/debian bookworm main" | tee /etc/apt/sources.list.d/octez.list && \
+    apt-get update && echo $'\n\n\n\n' | apt -y install octez-node=${OCTEZ_VERSION} \
+        octez-client=${OCTEZ_VERSION} octez-baker=${OCTEZ_VERSION} \
+        octez-smart-rollup-node=${OCTEZ_VERSION} && \
+        cd /usr/bin && rm octez-admin-client octez-dal-node octez-accuser-* octez-signer octez-codec
+
 # Copy the jstzd binary & dependencies
 COPY --from=builder /target/release/jstzd /usr/bin/jstzd
 COPY --from=builder /jstzd_kernel_files /usr/share/jstzd
