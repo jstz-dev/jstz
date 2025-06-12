@@ -1,3 +1,5 @@
+#[cfg(feature = "blueprint")]
+use crate::sequencer::db::BlueprintDb;
 use crate::sequencer::runtime::{init_host, process_message};
 use std::{
     path::PathBuf,
@@ -32,6 +34,7 @@ pub fn spawn(
     queue: Arc<RwLock<OperationQueue>>,
     db: Db,
     preimage_dir: PathBuf,
+    #[cfg(feature = "blueprint")] blueprint_db: BlueprintDb,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
@@ -51,6 +54,9 @@ pub fn spawn(
 
             match v {
                 Some(op) => {
+                    if let Err(e) = blueprint_db.write(&op) {
+                        warn!("error writing blueprint: {e:?}");
+                    };
                     if let Err(e) = process_message(&mut rt, op) {
                         warn!("error processing message: {e:?}");
                     }
@@ -70,6 +76,7 @@ pub fn spawn(
     })
 }
 
+#[cfg(not(feature = "blueprint"))]
 #[cfg(test)]
 mod tests {
     use std::{

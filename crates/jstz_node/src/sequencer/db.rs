@@ -1,5 +1,6 @@
 use std::{fs, path::PathBuf};
 
+use crate::sequencer::inbox::parsing::Message;
 use anyhow::Result;
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
@@ -198,6 +199,75 @@ pub fn exec_delete_glob(conn: &Connection, path: &str) -> Result<()> {
         params![prefix],
     )?;
     Ok(())
+}
+
+#[derive(Clone)]
+pub struct BlueprintDb {
+    pool: SqliteConnectionPool,
+}
+impl BlueprintDb {
+    pub fn init(path: Option<&str>) -> Result<Self> {
+        let manager = match path {
+            Some(p) => {
+                let db_path = PathBuf::from(p);
+                if let Some(parent) = db_path.parent() {
+                    if !parent.exists() {
+                        fs::create_dir_all(parent)?;
+                    }
+                }
+                SqliteConnectionManager::file(db_path)
+            }
+            None => SqliteConnectionManager::memory(),
+        };
+
+        let pool = SqliteConnectionPool::new(manager)?;
+        Self::create_table(pool.clone())?;
+
+        Ok(Self { pool })
+    }
+
+    pub fn connection(&self) -> Result<PooledConnection<SqliteConnectionManager>> {
+        Ok(self.pool.get()?)
+    }
+
+    fn create_table(pool: Pool<SqliteConnectionManager>) -> Result<()> {
+        let conn = pool.get()?;
+        conn.execute(
+            r#"CREATE TABLE jstz_operation (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    data TEXT
+);"#,
+            [],
+        )?;
+        Ok(())
+    }
+
+    pub fn write(&self, msg: &Message) -> Result<()> {
+        let conn = self.connection()?;
+        conn.execute(
+            "INSERT OR REPLACE INTO jstz_operation (data) VALUES (json(?1))",
+            params![serde_json::to_string(msg)?],
+        )?;
+        Ok(())
+    }
+
+    pub fn read(&self, idx: u64) -> Result<Option<Message>> {
+        let conn = self.connection()?;
+        let result = conn
+            // There should be at most one record returned given that jstz_key is the primary key,
+            // so it's fine to use `query_row`
+            .query_row(
+                "SELECT data FROM jstz_operation WHERE id = ?",
+                [idx],
+                |row| row.get::<_, String>(0),
+            )
+            .optional()?;
+
+        Ok(match result {
+            Some(v) => serde_json::from_str(&v)?,
+            None => None,
+        })
+    }
 }
 
 #[cfg(test)]

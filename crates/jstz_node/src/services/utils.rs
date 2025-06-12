@@ -95,6 +95,8 @@ pub(crate) mod tests {
             mode,
             queue: Arc::new(RwLock::new(OperationQueue::new(1))),
             runtime_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),
+            #[cfg(feature = "blueprint")]
+            blueprint_db: crate::sequencer::db::BlueprintDb::init(None).unwrap(),
         }
     }
 

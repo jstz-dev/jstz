@@ -12,6 +12,7 @@ use jstz_proto::operation::{
 };
 use jstz_proto::{context::account::Address, Result};
 use num_traits::ToPrimitive;
+use serde::{Deserialize, Serialize};
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
 use tezos_smart_rollup::michelson::{
@@ -27,7 +28,7 @@ pub use tezos_smart_rollup::{
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = InternalOperation;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),

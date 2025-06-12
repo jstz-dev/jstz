@@ -7,7 +7,7 @@ ADD . .
 ARG KERNEL_PATH
 COPY $KERNEL_PATH crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 # release build is required for rust-embed to pack the resource files into the executable
-RUN KERNEL_DEST_DIR=/jstzd_kernel_files cargo build --bin jstzd --release --features build-image --features v2_runtime --features sequencer
+RUN KERNEL_DEST_DIR=/jstzd_kernel_files cargo build --bin jstzd --release --features build-image --features v2_runtime --features sequencer --features blueprint
 
 FROM debian:bookworm-20250520-slim AS jstzd
 ARG OCTEZ_VERSION

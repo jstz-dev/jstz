@@ -247,6 +247,11 @@ impl From<SignedOperation> for Operation {
 }
 
 pub mod internal {
+    use serde::{
+        de::{Error, Visitor},
+        ser::SerializeMap,
+    };
+    use tezos_crypto_rs::base58::ToBase58Check;
     use tezos_smart_rollup::michelson::ticket::TicketHash;
 
     use super::*;
@@ -296,9 +301,115 @@ pub mod internal {
             Blake2b::from(seed.as_slice())
         }
     }
+
+    impl Serialize for FaDeposit {
+        fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+        where
+            S: serde::Serializer,
+        {
+            let mut s = serializer.serialize_map(None)?;
+            s.serialize_entry("inbox_id", &self.inbox_id)?;
+            s.serialize_entry("amount", &self.amount)?;
+            s.serialize_entry("receiver", &self.receiver.as_bytes().to_base58check())?;
+            if let Some(v) = &self.proxy_smart_function {
+                s.serialize_entry(
+                    "proxy_smart_function",
+                    &v.as_bytes().to_base58check(),
+                )?;
+            }
+            s.serialize_entry("ticket_hash", &self.ticket_hash.to_string())?;
+            s.end()
+        }
+    }
+
+    struct FaDepositVisitor;
+
+    impl<'de> Visitor<'de> for FaDepositVisitor {
+        type Value = FaDeposit;
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a map representing a FA deposit object")
+        }
+
+        fn visit_map<A>(self, mut map: A) -> std::result::Result<Self::Value, A::Error>
+        where
+            A: serde::de::MapAccess<'de>,
+        {
+            let mut body = serde_json::json!({});
+            while let Some((k, v)) = map.next_entry::<String, _>()? {
+                if k == "inbox_id"
+                    || k == "amount"
+                    || k == "ticket_hash"
+                    || k == "receiver"
+                    || k == "proxy_smart_function"
+                {
+                    body[k] = v;
+                } else {
+                    return Err(A::Error::custom(format!("unknown key: {:?}", k)));
+                }
+            }
+            let proxy_smart_function =
+                match body.get("proxy_smart_function") {
+                    Some(v) => Some(
+                        Address::from_base58(v.as_str().ok_or(A::Error::custom(
+                            "proxy_smart_function is not string",
+                        ))?)
+                        .map_err(|e| {
+                            A::Error::custom(format!(
+                                "cannot parse proxy_smart_function as address: {e:?}"
+                            ))
+                        })?,
+                    ),
+                    None => None,
+                };
+            Ok(FaDeposit {
+                inbox_id: body
+                    .get("inbox_id")
+                    .ok_or(A::Error::custom("inbox_id is missing"))?
+                    .as_u64()
+                    .ok_or(A::Error::custom("inbox_id is not u64"))?
+                    as u32,
+                amount: body
+                    .get("amount")
+                    .ok_or(A::Error::custom("amount is missing"))?
+                    .as_u64()
+                    .ok_or(A::Error::custom("amount is not u64"))?,
+                receiver: Address::from_base58(
+                    body.get("receiver")
+                        .ok_or(A::Error::custom("receiver is missing"))?
+                        .as_str()
+                        .ok_or(A::Error::custom("receiver is not string"))?,
+                )
+                .map_err(|e| {
+                    A::Error::custom(format!("cannot parse receiver as address: {e:?}"))
+                })?,
+                proxy_smart_function,
+                ticket_hash: TicketHash::try_from(
+                    body.get("ticket_hash")
+                        .ok_or(A::Error::custom("ticket_hash is missing"))?
+                        .as_str()
+                        .ok_or(A::Error::custom("ticket_hash is not string"))?
+                        .to_string(),
+                )
+                .map_err(|e| {
+                    A::Error::custom(format!("cannot parse ticket_hash: {e:?}"))
+                })?,
+            })
+        }
+    }
+
+    impl<'de> Deserialize<'de> for FaDeposit {
+        fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+        where
+            D: serde::Deserializer<'de>,
+        {
+            deserializer
+                .deserialize_map(FaDepositVisitor)
+                .map_err(|e| D::Error::custom(e.to_string()))
+        }
+    }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub enum InternalOperation {
     Deposit(internal::Deposit),
     FaDeposit(internal::FaDeposit),
