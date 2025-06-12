@@ -1,6 +1,6 @@
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
 
 use std::time::Duration;
 
@@ -16,6 +16,7 @@ use parsing::{parse_inbox_message_hex, Message};
 #[cfg(test)]
 use std::future::Future;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
+use tokio::sync::RwLock;
 use tokio::{select, task::JoinHandle};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
@@ -115,7 +116,7 @@ async fn process_inbox_messages(
     let mut ops = parse_inbox_messages(block_content, ticketer, jstz);
     while let Some(op) = ops.pop() {
         loop {
-            let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
+            let success = queue.write().await.insert_ref(&op).is_ok();
             if success {
                 break;
             }
@@ -173,8 +174,9 @@ mod tests {
     use std::{
         future::Future,
         pin::Pin,
-        sync::{Arc, Mutex, RwLock},
+        sync::{Arc, Mutex},
     };
+    use tokio::sync::RwLock;
     use tokio::task;
     use tokio::time::sleep;
 
@@ -272,17 +274,17 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(10)).await;
         // only one message should be in the queue to respect the limit
-        assert_eq!(q.read().unwrap().len(), 1);
+        assert_eq!(q.read().await.len(), 1);
 
-        let op = q.write().unwrap().pop().unwrap();
+        let op = q.write().await.pop().unwrap();
 
         assert_eq!(hash_of(&op), op_hash);
-        assert_eq!(q.read().unwrap().len(), 0);
+        assert_eq!(q.read().await.len(), 0);
 
         // the waiting operation should be added to the queue now that the previous one is processed
         tokio::time::sleep(Duration::from_millis(100)).await;
-        assert_eq!(q.read().unwrap().len(), 1);
-        let op = q.write().unwrap().pop().unwrap();
+        assert_eq!(q.read().await.len(), 1);
+        let op = q.write().await.pop().unwrap();
         assert_eq!(hash_of(&op), op_hash);
 
         handle.abort();

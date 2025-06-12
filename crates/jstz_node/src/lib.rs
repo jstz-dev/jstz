@@ -14,12 +14,9 @@ use services::{
     operations::OperationsService,
     utils,
 };
-use std::{
-    path::PathBuf,
-    sync::{Arc, RwLock},
-};
+use std::{path::PathBuf, sync::Arc};
 use tempfile::NamedTempFile;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, sync::RwLock};
 use tower_http::cors::{Any, CorsLayer};
 
 mod api_doc;

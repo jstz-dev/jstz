@@ -1,13 +1,12 @@
-use std::fs;
-use std::path;
-use std::sync::Arc;
-use std::sync::RwLock;
-
 use crate::config::KeyPair;
 use crate::sequencer::inbox::parsing::Message;
 use crate::sequencer::queue::OperationQueue;
 use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
+use std::fs;
+use std::path;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 
 use super::error::{ServiceError, ServiceResult};
 use super::utils::StoreWrapper;
@@ -182,11 +181,7 @@ async fn insert_operation_queue(
 ) -> ServiceResult<()> {
     queue
         .write()
-        .map_err(|e| {
-            ServiceError::FromAnyhow(anyhow::anyhow!(
-                "failed to insert operation to the queue: {e}"
-            ))
-        })?
+        .await
         .insert(Message::External(operation))
         .map_err(|e| ServiceError::ServiceUnavailable(Some(e)))?;
     Ok(())
@@ -476,7 +471,7 @@ mod tests {
         )
         .await;
         let queue = state.queue.clone();
-        assert_eq!(queue.read().unwrap().len(), 0);
+        assert_eq!(queue.read().await.len(), 0);
         let (router, _) = OperationsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();
@@ -493,7 +488,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), 200);
-        assert_eq!(queue.read().unwrap().len(), 0);
+        assert_eq!(queue.read().await.len(), 0);
         mock_injection.assert();
         mock_rollup_addr.assert();
     }
@@ -509,7 +504,7 @@ mod tests {
         )
         .await;
         let queue = state.queue.clone();
-        assert_eq!(queue.read().unwrap().len(), 0);
+        assert_eq!(queue.read().await.len(), 0);
         let (mut router, _) = OperationsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();
@@ -526,7 +521,7 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), 200);
-        assert_eq!(queue.read().unwrap().len(), 1);
+        assert_eq!(queue.read().await.len(), 1);
 
         // sending the operation again should fail because the queue is full
         let res = router
@@ -549,7 +544,7 @@ mod tests {
         )
         .await;
         let queue = state.queue.clone();
-        assert_eq!(queue.read().unwrap().len(), 0);
+        assert_eq!(queue.read().await.len(), 0);
         let (mut router, _) = OperationsService::router_with_openapi()
             .with_state(state)
             .split_for_parts();
@@ -563,8 +558,8 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(res.status(), 200);
-        assert_eq!(queue.read().unwrap().len(), 1);
-        let injected_op = match queue.write().unwrap().pop().unwrap() {
+        assert_eq!(queue.read().await.len(), 1);
+        let injected_op = match queue.write().await.pop().unwrap() {
             Message::External(op) => op,
             Message::Internal(_) => panic!("invalid message type"),
         };
