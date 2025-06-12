@@ -1362,40 +1362,23 @@ mod test {
     });
     }
 
-    // Fetch API compliance
-    // TODO: https://github.com/jstz-dev/jstz/pull/982
-    #[allow(dead_code)]
-    fn request_get_reader_supported() {}
-
     #[tokio::test]
-
     async fn test_fetch_response_body_stream() {
         let mut host = tezos_smart_rollup_mock::MockHost::default();
-
         let address =
             SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton")
                 .unwrap();
 
         let mut tx = jstz_core::kv::Transaction::default();
-
         tx.begin();
-
         let protocol = Some(ProtocolContext::new(&mut host, &mut tx, address.clone()));
-
         let source = Address::User(jstz_mock::account1());
-
         let fetched_script = r#"
-
             const handler = async (req) => {
-
                 let reqBody = await req.arrayBuffer();
-
                 return new Response(reqBody);
-
             }
-
             export default handler;
-
         "#;
 
         Account::add_balance(&mut host, &mut tx.clone(), &source, 10000)
@@ -1416,103 +1399,52 @@ mod test {
             r#"
 
             const call = async () => {{
-
                 const body = [1,2,3,4,5,6,7,8,9,10];
-
                 const expectedBytes = body.length;
-
                 // 1. test byob mode
-
                 let request = new Request("jstz://{func_addr}", {{
-
                     method: "POST",
-
                     body: new Uint8Array(body),
-
                 }})
-
                 let response = await fetch(request);
-
-                const CHUNK_SIZE = 3;          
-
-                let actualBytes = 0;    
-
-                let count = 0;       
-
-                let reader = response.body.getReader({{ mode: "byob" }});   
-
+                const CHUNK_SIZE = 3;
+                let actualBytes = 0;
+                let count = 0;
+                let reader = response.body.getReader({{ mode: "byob" }});
                 while (true) {{
-
                     const buf = new Uint8Array(CHUNK_SIZE);
-
-                    const {{ value, done }} = await reader.read(buf);    
-
+                    const {{ value, done }} = await reader.read(buf);
                     if (done) break;
-
                     actualBytes += value.byteLength;
-
                     count += 1;
-
                 }}
-
                 if (actualBytes !== expectedBytes) {{
-
                     throw new Error("size is incorrect");
-
                 }}
-
-                const expectedCount = Math.floor(actualBytes / CHUNK_SIZE) + 1; 
-
+                const expectedCount = Math.floor(actualBytes / CHUNK_SIZE) + 1;
                 if (count !== expectedCount) {{
-
                     throw new Error("count is incorrect");
-
                 }}
-
-
-
                 // 2. test default mode
-
                 request = new Request("jstz://{func_addr}", {{
-
                     method: "POST",
-
                     body: new Uint8Array(body),
-
                 }})
-
                 response = await fetch(request);
-
-                reader = response.body.getReader();   
-
-                actualBytes = 0;  
-
+                reader = response.body.getReader();
+                actualBytes = 0;
                 // read all the body
-
                 while (true) {{
-
-                    const {{ value, done }} = await reader.read();    
-
+                    const {{ value, done }} = await reader.read();
                     if (done) break;
-
                     actualBytes += value.byteLength;
-
                 }}
-
                 if (actualBytes !== expectedBytes) {{
-
                     throw new Error("size is incorrect");
-
                 }}
-
                 return response
-
             }}
-
-
-
             export default call;
-
         "#
         );
 
@@ -1520,19 +1452,13 @@ mod test {
             resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
 
         let module_loader = StaticModuleLoader::with(specifier.clone(), code);
-
         let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
             protocol,
-
             fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
-
             module_loader: Rc::new(module_loader),
-
             ..Default::default()
         });
-
         let id = runtime.execute_main_module(&specifier).await.unwrap();
-
         let _ = runtime.call_default_handler(id, &[]).await.unwrap();
     }
 }
