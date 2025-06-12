@@ -11,7 +11,6 @@ use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use jstz_core::host::WriteDebug;
-use jstz_proto::operation::InternalOperation;
 use log::{debug, error};
 use parsing::{parse_inbox_message_hex, Message};
 #[cfg(test)]
@@ -115,11 +114,6 @@ async fn process_inbox_messages(
 ) {
     let mut ops = parse_inbox_messages(block_content, ticketer, jstz);
     while let Some(op) = ops.pop() {
-        if matches!(op, Message::Internal(InternalOperation::FaDeposit { .. })) {
-            // TODO: handle fa deposit
-            // https://linear.app/tezos/issue/JSTZ-640/fa-deposit
-            continue;
-        }
         loop {
             let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
             if success {

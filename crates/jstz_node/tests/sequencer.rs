@@ -9,6 +9,7 @@ use jstz_crypto::{
 use jstz_node::sequencer::inbox::api::BlockResponse;
 use jstz_proto::{
     context::account::{Address, Nonce},
+    executor::fa_deposit::FaDepositReceipt,
     operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
     receipt::{
         DeployFunctionReceipt, DepositReceipt, Receipt, ReceiptContent, ReceiptResult,
@@ -74,7 +75,7 @@ async fn run_sequencer() {
 }
 
 async fn check_mode(client: &Client, base_uri: &str) {
-    let res = jstz_utils::poll(10, 500, || async {
+    let res = jstz_utils::poll(15, 500, || async {
         client.get(format!("{base_uri}/mode")).send().await.ok()
     })
     .await
@@ -199,7 +200,7 @@ async fn call_function(client: &Client, base_uri: &str) {
     ));
 }
 
-// Check if the `DeployFunction` and `Deposit` operations inside the inbox returned by the mock server
+// Check if the `DeployFunction`, `Deposit`, `FaDeposit` operations inside the inbox returned by the mock server
 // is processed by the runtime.
 async fn check_inbox_op(client: &Client, base_uri: &str) {
     let (deploy_op_hash, _) = mock_deploy_op();
@@ -220,11 +221,21 @@ async fn check_inbox_op(client: &Client, base_uri: &str) {
             updated_balance,
         })) if addr.to_base58_check() == "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9" && updated_balance == 30000
     ));
-
     let balance =
         fetch_account_balance(client, base_uri, "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9")
             .await;
     assert_eq!(balance, 30000);
+
+    let (deposit_fa_op_hash, _) = mock_deposit_fa_op();
+    let receipt = poll_receipt(client, base_uri, deposit_fa_op_hash).await;
+    assert!(matches!(
+        receipt.result,
+        ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
+            receiver: Address::User(PublicKeyHash::Tz1(addr)),
+            ticket_balance,
+            ..
+        })) if addr.to_base58_check() == "tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN" && ticket_balance == 1000
+    ));
 }
 
 async fn fetch_account_balance(client: &Client, base_uri: &str, address: &str) -> u64 {
@@ -262,8 +273,9 @@ pub(crate) fn make_mock_global_block_filter(
     warp::path!("global" / "block" / u32).map( |_| {
         let (_,deploy_op) = mock_deploy_op();
         let (_,deposit_op) = mock_deposit_op();
+        let (_,deposit_fa_op) = mock_deposit_fa_op();
         let response = BlockResponse {
-            messages: vec!["0001", "0003000000006846e8232cf8fedfbc17521b6002d572d8a8146e0b51bedefb4f2fb985a2388d9478f2ab", deploy_op, deposit_op, "0002"].into_iter().map(String::from).collect(),
+            messages: vec!["0001", "0003000000006846e8232cf8fedfbc17521b6002d572d8a8146e0b51bedefb4f2fb985a2388d9478f2ab", deploy_op, deposit_op, deposit_fa_op,"0002"].into_iter().map(String::from).collect(),
         };
         warp::reply::json(&response)
     })
@@ -279,5 +291,12 @@ fn mock_deploy_op() -> (&'static str, &'static str) {
 fn mock_deposit_op() -> (&'static str, &'static str) {
     let op = "0000050507070a000000160000c4ecf33f52c7b89168cfef8f350818fee1ad08e807070a000000160146d83d8ef8bce4d8c60a96170739c0269384075a00070707070000030600b0d40354267463f8cf2844e4d8b20a76f0471bcb2137fd0002298c03ed7d454a101eb7022bc95f7e5f41ac78c3ea4c18195bcfac262dcb29e3d803ae74681739";
     let op_hash = "d236fca2b92ca42da90327820d7fe73c8ad22ea13cd8d761adc6e98822195c77";
+    (op_hash, op)
+}
+
+/// mock fa deposit op to transfer 1000 FA token to `tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN`
+fn mock_deposit_fa_op() -> (&'static str, &'static str) {
+    let op = "0000050807070a000000160000e7670f32038107a59a2b9cfefae36ea21f5aa63c070705090a0000001601238f371da359b757db57238e9f27f3c48234defa0007070a0000001601207905b1a5abdace0a6b5bff0d71a467d5b85cf500070707070001030600a80f9424c685d3f69801ff6e3f2cfb74b250f00988e100e7670f32038107a59a2b9cfefae36ea21f5aa63cc3ea4c18195bcfac262dcb29e3d803ae74681739";
+    let op_hash = "34461635d31fd734cee1f20839218ffef78785d536b348b04204510012a8cbd2";
     (op_hash, op)
 }

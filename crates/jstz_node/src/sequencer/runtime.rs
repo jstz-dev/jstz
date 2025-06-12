@@ -5,10 +5,7 @@ use jstz_core::kv::{Storage, Transaction};
 use jstz_crypto::{
     hash::Hash, public_key::PublicKey, smart_function_hash::SmartFunctionHash,
 };
-use jstz_proto::{
-    executor::{deposit, execute_operation},
-    operation::InternalOperation,
-};
+use jstz_proto::executor::{execute_internal_operation, execute_operation};
 use tezos_smart_rollup::{
     prelude::{debug_msg, Runtime},
     storage::path::RefPath,
@@ -71,14 +68,9 @@ pub fn process_message(
         Message::External(op) => {
             tokio.block_on(execute_operation(rt, &mut tx, op, &ticketer, &injector))
         }
-        Message::Internal(op) => match op {
-            InternalOperation::Deposit(op) => deposit::execute(rt, &mut tx, op),
-            _ => {
-                // TODO: handle fa deposit
-                // https://linear.app/tezos/issue/JSTZ-640/fa-deposit
-                bail!("FA deposit not supported");
-            }
-        },
+        Message::Internal(op) => {
+            tokio.block_on(execute_internal_operation(rt, &mut tx, op))
+        }
     };
     receipt
         .write(rt, &mut tx)
@@ -108,8 +100,10 @@ mod tests {
     };
     use jstz_proto::{
         context::account::{Account, Address, Nonce, UserAccount},
+        executor::fa_deposit::FaDepositReceipt,
         operation::{
-            internal::Deposit, Content, DeployFunction, Operation, RevealLargePayload,
+            internal::{Deposit, FaDeposit},
+            Content, DeployFunction, InternalOperation, Operation, RevealLargePayload,
             RunFunction, SignedOperation,
         },
         receipt::{
@@ -121,7 +115,10 @@ mod tests {
     use jstz_utils::test_util::TOKIO_MULTI_THREAD;
     use tempfile::{NamedTempFile, TempDir};
     use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
-    use tezos_smart_rollup::storage::path::{OwnedPath, RefPath};
+    use tezos_smart_rollup::{
+        michelson::ticket::TicketHash,
+        storage::path::{OwnedPath, RefPath},
+    };
 
     use crate::sequencer::db::Db;
 
@@ -145,15 +142,6 @@ mod tests {
                 content,
             },
         )
-    }
-
-    fn dummy_int_op(amount: u64, receiver: Address) -> Message {
-        let inner = InternalOperation::Deposit(Deposit {
-            inbox_id: 1,
-            amount,
-            receiver,
-        });
-        Message::Internal(inner)
     }
 
     #[test]
@@ -249,7 +237,11 @@ mod tests {
         let receiver =
             Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
 
-        let deposit_op = dummy_int_op(10, receiver);
+        let deposit_op = Message::Internal(InternalOperation::Deposit(Deposit {
+            inbox_id: 1,
+            amount: 10,
+            receiver,
+        }));
 
         let dst_account_path =
             RefPath::assert_from(b"/jstz_account/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx");
@@ -289,6 +281,41 @@ mod tests {
                 amount: 10,
                 nonce: Nonce(0),
             })
+        ));
+    }
+
+    #[test]
+    fn process_message_fa_deposit() {
+        // Using a slightly complicated scenario here to check if transaction works properly.
+        let db_file = NamedTempFile::new().unwrap();
+        let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
+        let mut h = super::init_host(db, PathBuf::new()).unwrap();
+
+        let receiver =
+            Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
+
+        let fa_deposit_op = Message::Internal(InternalOperation::FaDeposit(FaDeposit {
+            inbox_id: 1,
+            amount: 10,
+            receiver,
+            proxy_smart_function: None,
+            ticket_hash: TicketHash::try_from(
+                "0000000000000000000000000000000000000000000000000000000000000000"
+                    .to_string(),
+            )
+            .unwrap(),
+        }));
+
+        // Execute the deposit
+        super::process_message(&TOKIO_MULTI_THREAD, &mut h, fa_deposit_op).unwrap();
+        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/270c07945707b0a86fdbd6930e7bb3cae8978a3bcfb6659e8062ef39ec58c32a")).unwrap()).unwrap();
+        assert!(matches!(
+            v.result,
+            ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
+                receiver : Address::User(addr),
+                ticket_balance,
+                ..
+            })) if ticket_balance == 10 && addr.to_base58() == "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx"
         ));
     }
 
