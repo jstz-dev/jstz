@@ -55,22 +55,16 @@ fn read_injector(rt: &impl Runtime) -> Option<PublicKey> {
     Storage::get(rt, &INJECTOR_PATH).ok()?
 }
 
-pub fn process_message(
-    tokio: &tokio::runtime::Runtime,
-    rt: &mut impl Runtime,
-    op: Message,
-) -> anyhow::Result<()> {
+pub async fn process_message(rt: &mut impl Runtime, op: Message) -> anyhow::Result<()> {
     let ticketer = read_ticketer(rt).ok_or(anyhow!("Ticketer not found"))?;
     let injector = read_injector(rt).ok_or(anyhow!("Revealer not found"))?;
     let mut tx = Transaction::default();
     tx.begin();
     let receipt = match op {
         Message::External(op) => {
-            tokio.block_on(execute_operation(rt, &mut tx, op, &ticketer, &injector))
+            execute_operation(rt, &mut tx, op, &ticketer, &injector).await
         }
-        Message::Internal(op) => {
-            tokio.block_on(execute_internal_operation(rt, &mut tx, op))
-        }
+        Message::Internal(op) => execute_internal_operation(rt, &mut tx, op).await,
     };
     receipt
         .write(rt, &mut tx)
@@ -115,7 +109,6 @@ mod tests {
         },
         runtime::ParsedCode,
     };
-    use jstz_utils::test_util::TOKIO_MULTI_THREAD;
     use tempfile::{NamedTempFile, TempDir};
     use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
     use tezos_smart_rollup::{
@@ -162,8 +155,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn process_message() {
+    #[tokio::test]
+    async fn process_message() {
         // Using a slightly complicated scenario here to check if transaction works properly.
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
@@ -199,7 +192,8 @@ mod tests {
         .unwrap();
 
         // Deploy smart function
-        super::process_message(&TOKIO_MULTI_THREAD, &mut h, Message::External(deploy_op))
+        super::process_message(&mut h, Message::External(deploy_op))
+            .await
             .unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/843a8438af97d97e134ae10bdcf10b5a6bcbf8c7d4912e65bacf1be26a5a73c3")).unwrap()).unwrap();
         assert!(matches!(
@@ -210,7 +204,8 @@ mod tests {
         ));
 
         // Call smart function
-        super::process_message(&TOKIO_MULTI_THREAD, &mut h, Message::External(call_op))
+        super::process_message(&mut h, Message::External(call_op))
+            .await
             .unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/9b15976cc8162fe39458739de340a1a95c59a9bcff73bd3c83402fad6352396e")).unwrap()).unwrap();
         assert!(matches!(
@@ -244,8 +239,8 @@ mod tests {
         );
     }
 
-    #[test]
-    fn process_message_deposit() {
+    #[tokio::test]
+    async fn process_message_deposit() {
         // Using a slightly complicated scenario here to check if transaction works properly.
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
@@ -279,7 +274,7 @@ mod tests {
         .unwrap();
 
         // Execute the deposit
-        super::process_message(&TOKIO_MULTI_THREAD, &mut h, deposit_op).unwrap();
+        super::process_message(&mut h, deposit_op).await.unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/270c07945707b0a86fdbd6930e7bb3cae8978a3bcfb6659e8062ef39ec58c32a")).unwrap()).unwrap();
         assert!(matches!(
             v.result,
@@ -301,8 +296,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn process_message_fa_deposit() {
+    #[tokio::test]
+    async fn process_message_fa_deposit() {
         // Using a slightly complicated scenario here to check if transaction works properly.
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
@@ -324,7 +319,7 @@ mod tests {
         }));
 
         // Execute the deposit
-        super::process_message(&TOKIO_MULTI_THREAD, &mut h, fa_deposit_op).unwrap();
+        super::process_message(&mut h, fa_deposit_op).await.unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/270c07945707b0a86fdbd6930e7bb3cae8978a3bcfb6659e8062ef39ec58c32a")).unwrap()).unwrap();
         assert!(matches!(
             v.result,
@@ -336,8 +331,8 @@ mod tests {
         ));
     }
 
-    #[test]
-    fn process_message_large_payload() {
+    #[tokio::test]
+    async fn process_message_large_payload() {
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
         let preimage_dir = TempDir::new().unwrap();
@@ -393,12 +388,9 @@ mod tests {
 
         let mut h = super::init_host(db, path).unwrap();
 
-        super::process_message(
-            &TOKIO_MULTI_THREAD,
-            &mut h,
-            Message::External(signed_large_payload),
-        )
-        .unwrap();
+        super::process_message(&mut h, Message::External(signed_large_payload))
+            .await
+            .unwrap();
         let v = Receipt::decode(
             &h.store_read_all(
                 &OwnedPath::try_from(format!("/jstz_receipt/{}", deploy_op_hash))
@@ -437,7 +429,8 @@ mod tests {
 
         let op_hash = signed.hash();
 
-        super::process_message(&TOKIO_MULTI_THREAD, &mut h, Message::External(signed))
+        super::process_message(&mut h, Message::External(signed))
+            .await
             .unwrap();
         let v = Receipt::decode(
             &h.store_read_all(
