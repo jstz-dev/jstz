@@ -32,11 +32,17 @@ pub fn spawn(
     queue: Arc<RwLock<OperationQueue>>,
     db: Db,
     preimage_dir: PathBuf,
-    _debug_log_path: Option<PathBuf>,
+    debug_log_path: Option<PathBuf>,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
     let mut rt = init_host(db, preimage_dir).context("failed to init host")?;
+    if let Some(p) = debug_log_path {
+        rt = rt
+            .with_debug_log_file(&p)
+            .context("failed to set host debug log file")?;
+    }
+
     Ok(Worker {
         thread_kill_sig,
         inner: {
@@ -97,6 +103,7 @@ pub fn spawn(
 #[cfg(test)]
 mod tests {
     use std::{
+        io::Read,
         path::PathBuf,
         sync::{Arc, Mutex, RwLock},
         thread,
@@ -133,7 +140,7 @@ mod tests {
     fn worker_consume_queue() {
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
-        let log_file = NamedTempFile::new().unwrap();
+        let mut log_file = NamedTempFile::new().unwrap();
         let mut q = OperationQueue::new(1);
         let op = dummy_op();
         let receipt_key = format!("/jstz_receipt/{}", hash_of(&op));
@@ -157,5 +164,11 @@ mod tests {
         assert_eq!(wrapper.read().unwrap().len(), 0);
         // worker should process the message and the embedded runtime should produce a receipt
         assert!(db.key_exists(&receipt_key).unwrap());
+        // check logs
+        let mut buf = String::new();
+        log_file.read_to_string(&mut buf).unwrap();
+        assert!(
+            buf.contains("Smart function deployed: KT19xhZJaQkEiVo6w3uRZor6VY5Z9KXZkQ1N")
+        );
     }
 }
