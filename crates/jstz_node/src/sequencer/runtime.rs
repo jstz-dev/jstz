@@ -58,12 +58,13 @@ fn read_injector(rt: &impl Runtime) -> Option<PublicKey> {
     Storage::get(rt, &INJECTOR_PATH).ok()?
 }
 
-pub fn process_message(rt: &mut impl Runtime, op: Message) -> anyhow::Result<()> {
+pub fn process_message(
+    tokio: &tokio::runtime::Runtime,
+    rt: &mut impl Runtime,
+    op: Message,
+) -> anyhow::Result<()> {
     let ticketer = read_ticketer(rt).ok_or(anyhow!("Ticketer not found"))?;
     let injector = read_injector(rt).ok_or(anyhow!("Revealer not found"))?;
-    let tokio = tokio::runtime::Builder::new_current_thread()
-        .build()
-        .unwrap();
     let mut tx = Transaction::default();
     tx.begin();
     let receipt = match op {
@@ -97,10 +98,11 @@ mod tests {
     use std::{io::Write, path::PathBuf};
 
     use axum::http::{HeaderMap, Method, StatusCode, Uri};
-    use jstz_core::{host::HostRuntime, reveal_data::PreimageHash, BinEncodable};
+    use jstz_core::{host::HostRuntime, reveal_data::RevealData, BinEncodable};
     use jstz_crypto::{
-        hash::{Blake2b, Hash},
+        hash::Hash,
         public_key::PublicKey,
+        secret_key::SecretKey,
         signature::Signature,
         smart_function_hash::{Kt1Hash, SmartFunctionHash},
     };
@@ -116,9 +118,10 @@ mod tests {
         },
         runtime::ParsedCode,
     };
+    use jstz_utils::test_util::TOKIO_MULTI_THREAD;
     use tempfile::{NamedTempFile, TempDir};
     use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
-    use tezos_smart_rollup::storage::path::RefPath;
+    use tezos_smart_rollup::storage::path::{OwnedPath, RefPath};
 
     use crate::sequencer::db::Db;
 
@@ -201,7 +204,8 @@ mod tests {
         .unwrap();
 
         // Deploy smart function
-        super::process_message(&mut h, Message::External(deploy_op)).unwrap();
+        super::process_message(&TOKIO_MULTI_THREAD, &mut h, Message::External(deploy_op))
+            .unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/843a8438af97d97e134ae10bdcf10b5a6bcbf8c7d4912e65bacf1be26a5a73c3")).unwrap()).unwrap();
         assert!(matches!(
             v.result,
@@ -211,7 +215,8 @@ mod tests {
         ));
 
         // Call smart function
-        super::process_message(&mut h, Message::External(call_op)).unwrap();
+        super::process_message(&TOKIO_MULTI_THREAD, &mut h, Message::External(call_op))
+            .unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/9b15976cc8162fe39458739de340a1a95c59a9bcff73bd3c83402fad6352396e")).unwrap()).unwrap();
         assert!(matches!(
             v.result,
@@ -265,7 +270,7 @@ mod tests {
         .unwrap();
 
         // Execute the deposit
-        super::process_message(&mut h, deposit_op).unwrap();
+        super::process_message(&TOKIO_MULTI_THREAD, &mut h, deposit_op).unwrap();
         let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/270c07945707b0a86fdbd6930e7bb3cae8978a3bcfb6659e8062ef39ec58c32a")).unwrap()).unwrap();
         assert!(matches!(
             v.result,
@@ -294,26 +299,109 @@ mod tests {
         let preimage_dir = TempDir::new().unwrap();
         let path = preimage_dir.path().to_path_buf();
 
-        // This is a smart function that has a lot of useless a's in its source and simply returns
-        // a text response "this is a big function". Just large enough to fit in one preimage file.
-        std::fs::File::create(path.join("003fef1ffda1460c3a5b738c91b60b036c1a8a6741bb5f15c23d7847a809b44475")).unwrap().write_all(&hex::decode(format!("0000000fe00000000040000000000000008ee52d6db7fdd691405e7ac0ad1a8c2b5d071244f3c0e01bd5fdd88302ee6f8d267a883d2c18f5e2aa29c1851463348b8c140adceabc719933ee84f724388e0600000000200000000000000073c4126614137d8c738a14a5602c5d798b24b21c179a0c70c51ee53ec1a82e450000000000000000000000004c0f000000000000636f6e73742068616e646c6572203d206173796e63202829203d3e207b20636f6e73742073203d2022{}223b2072657475726e206e657720526573706f6e73652822746869732069732061206269672066756e6374696f6e22293b207d3b206578706f72742064656661756c742068616e646c65723b0000000000000000", "61".repeat(3799))).unwrap()).unwrap();
+        let injector_sk = SecretKey::from_base58(
+            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+        )
+        .unwrap();
+
+        // Deploy large smart function
+        let deploy_fn = Operation {
+            public_key: PublicKey::from_base58(INJECTOR_PK).unwrap(),
+            nonce: 1.into(),
+            content: DeployFunction {
+                // # Safety: Ok in test
+                function_code:
+                    ParsedCode::try_from(format!(
+                        "const handler = (request) => {{ let x = '{}'; return new Response('this is a big function'); }}; export default handler;",
+                        "a".repeat(5000))).unwrap()
+                ,
+                account_credit: 0,
+            }
+            .into(),
+        };
+        let deploy_op_hash = hex::encode(deploy_fn.hash());
+        let signature = injector_sk.sign(deploy_fn.hash()).unwrap();
+        let signed_deploy_fn = SignedOperation::new(signature, deploy_fn);
+
+        let preimage_hash =
+            // 5345 bytes, 3 pages
+            RevealData::encode_and_prepare_preimages(&signed_deploy_fn, |hash, data| {
+                std::fs::File::create(path.join(hash.to_string()))
+                    .unwrap()
+                    .write_all(&data)
+                    .unwrap();
+            })
+            .unwrap();
+
+        let large_payload = Operation {
+            public_key: PublicKey::from_base58(INJECTOR_PK).unwrap(),
+            nonce: 0.into(),
+            content: RevealLargePayload {
+                root_hash: preimage_hash,
+                reveal_type: jstz_proto::operation::RevealType::DeployFunction,
+                original_op_hash: signed_deploy_fn.hash(),
+            }
+            .into(),
+        };
+
+        let signature = injector_sk.sign(large_payload.hash()).unwrap();
+        let signed_large_payload = SignedOperation::new(signature, large_payload);
+
         let mut h = super::init_host(db, path).unwrap();
 
-        let deploy_op = dummy_op("edsigtpNrm3AoevvFfdboe5kijt5KpQWgXeaTqDNhAYD5dta8JWXHFW6afyEeCj6QsrxXg8WdRQhxaG9TDzaQx1mnC6vyMDSJ3B", super::INJECTOR_PK,0, Content::RevealLargePayload(RevealLargePayload { root_hash: PreimageHash([0, 63, 239, 31, 253, 161, 70, 12, 58, 91, 115, 140, 145, 182, 11, 3, 108, 26, 138, 103, 65, 187, 95, 21, 194, 61, 120, 71, 168, 9, 180, 68, 117]), reveal_type: jstz_proto::operation::RevealType::DeployFunction, original_op_hash: Blake2b::try_parse("aa8216661480132414f3ddd4bccc61fffd1db9961b259efb4d4d6597d3f7f6aa".to_string()).unwrap() }));
-
-        super::process_message(&mut h, Message::External(deploy_op)).unwrap();
-        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/aa8216661480132414f3ddd4bccc61fffd1db9961b259efb4d4d6597d3f7f6aa")).unwrap()).unwrap();
+        super::process_message(
+            &TOKIO_MULTI_THREAD,
+            &mut h,
+            Message::External(signed_large_payload),
+        )
+        .unwrap();
+        let v = Receipt::decode(
+            &h.store_read_all(
+                &OwnedPath::try_from(format!("/jstz_receipt/{}", deploy_op_hash))
+                    .unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
         assert!(matches!(
             v.result,
             ReceiptResult::Success(ReceiptContent::DeployFunction(
                 DeployFunctionReceipt { address: SmartFunctionHash(Kt1Hash(addr)) }
-            )) if addr.to_base58_check() == "KT1CkPcKaAKLX1eibkkTLub84nf1uXT7FYjG"
+            )) if addr.to_base58_check() == "KT1FTckranMJ2on3TDufWqJumzSyRUd1tQf2"
         ));
 
-        let user_public_key = "edpkuXD2CqRpWoTT8p4exrMPQYR2NqsYH3jTMeJMijHdgQqkMkzvnz";
-        let call_op = dummy_op("edsigtnvb4e2nPcfadUt7VbdMgFZByP1SUAmEWVfaLAerBGazZuVqCWZ4wjNJRxZhbjnzUfdMihXuH62APQv169xQvQvkEYQKQX", user_public_key, 1, Content::RunFunction(RunFunction { uri: Uri::from_static("jstz://KT1CkPcKaAKLX1eibkkTLub84nf1uXT7FYjG/"), method: Method::GET, headers: HeaderMap::new(), body: None, gas_limit: 550000 }));
-        super::process_message(&mut h, Message::External(call_op)).unwrap();
-        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/e6f9a74841205885f6dd1d639afcb39de14a2350d01519edf792631e39403b75")).unwrap()).unwrap();
+        let run_op = Operation {
+            public_key: PublicKey::from_base58(
+                "edpkuERbaNDzoXLskejBgBtySZxFN84t4iBKoSHYKRfzbK74HoP1zX",
+            )
+            .unwrap(),
+            nonce: 0.into(),
+            content: Content::RunFunction(RunFunction {
+                uri: Uri::from_static("jstz://KT1FTckranMJ2on3TDufWqJumzSyRUd1tQf2/"),
+                method: Method::GET,
+                headers: HeaderMap::new(),
+                body: None,
+                gas_limit: 550000,
+            }),
+        };
+        let sk = SecretKey::from_base58(
+            "edsk4aBPdyDUC4V7RJ5dFTKDTpzMP2sGbAfXSRMPYGdFmXorj9RAYp",
+        )
+        .unwrap();
+        let signature = sk.sign(run_op.hash()).unwrap();
+        let signed = SignedOperation::new(signature, run_op);
+
+        let op_hash = signed.hash();
+
+        super::process_message(&TOKIO_MULTI_THREAD, &mut h, Message::External(signed))
+            .unwrap();
+        let v = Receipt::decode(
+            &h.store_read_all(
+                &OwnedPath::try_from(format!("/jstz_receipt/{}", op_hash)).unwrap(),
+            )
+            .unwrap(),
+        )
+        .unwrap();
         assert!(matches!(
             v.result,
             ReceiptResult::Success(ReceiptContent::RunFunction(RunFunctionReceipt {
