@@ -11,6 +11,7 @@ use bincode::{de::Decoder, enc::Encoder, Decode, Encode};
 use jstz_core::host::HostRuntime;
 use jstz_core::kv::transaction::Guarded;
 use jstz_core::kv::Transaction;
+use jstz_core::Result;
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 use utoipa::ToSchema;
@@ -25,7 +26,7 @@ const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
 // TODO: Figure out a more effective way of serializing values using json
 /// A value stored in the Key-Value store. Always valid JSON.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
-#[schema(value_type = String, format = "json")]
+#[schema(value_type = Value)]
 pub struct KvValue(pub serde_json::Value);
 
 impl Decode for KvValue {
@@ -55,14 +56,13 @@ impl Kv {
         Self { prefix }
     }
 
-    fn key_path(&self, key: &str) -> Option<OwnedPath> {
-        let key_path = OwnedPath::try_from(format!("/{}/{}", self.prefix, key)).ok()?;
-
-        path::concat(&KV_PATH, &key_path).ok()
+    fn key_path(&self, key: &str) -> Result<OwnedPath> {
+        let key_path = OwnedPath::try_from(format!("/{}/{}", self.prefix, key))?;
+        Ok(path::concat(&KV_PATH, &key_path)?)
     }
 
-    pub fn set(&self, tx: &mut Transaction, key: &str, value: KvValue) -> Option<()> {
-        tx.insert(self.key_path(key)?, value).ok()
+    pub fn set(&self, tx: &mut Transaction, key: &str, value: KvValue) -> Result<()> {
+        tx.insert(self.key_path(key)?, value)
     }
 
     pub fn get<'a>(
@@ -70,12 +70,12 @@ impl Kv {
         hrt: &impl HostRuntime,
         tx: &'a mut Transaction,
         key: &str,
-    ) -> Option<Guarded<'a, KvValue>> {
-        tx.get::<KvValue>(hrt, self.key_path(key)?).ok()?
+    ) -> Result<Option<Guarded<'a, KvValue>>> {
+        tx.get::<KvValue>(hrt, self.key_path(key)?)
     }
 
-    pub fn delete(&self, tx: &mut Transaction, key: &str) -> Option<()> {
-        tx.remove(self.key_path(key)?).ok()
+    pub fn delete(&self, tx: &mut Transaction, key: &str) -> Result<()> {
+        tx.remove(self.key_path(key)?)
     }
 
     pub fn has(
@@ -83,11 +83,10 @@ impl Kv {
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
         key: &str,
-    ) -> Option<bool> {
-        tx.contains_key(hrt, &self.key_path(key)?).ok()
+    ) -> Result<bool> {
+        tx.contains_key(hrt, &self.key_path(key)?)
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
