@@ -10,7 +10,7 @@ use crate::{
     operation::{OperationHash, RunFunction},
     receipt::RunFunctionReceipt,
 };
-
+pub use jstz_runtime::ext::{LogLevel, LogRecord};
 pub mod fetch;
 
 pub async fn run_toplevel_fetch(
