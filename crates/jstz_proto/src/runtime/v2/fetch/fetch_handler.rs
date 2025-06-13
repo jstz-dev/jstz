@@ -288,7 +288,7 @@ async fn load_and_run(
     let mut body = body;
 
     // 0. Prepare Protocol
-    let mut proto = ProtocolContext::new(host, tx, address.clone());
+    let mut proto = ProtocolContext::new(host, tx, address.clone(), String::new());
 
     // 1. Load script
     let script = { load_script(tx, &mut proto.host, &proto.address)? };
@@ -1424,7 +1424,12 @@ mod test {
 
         tx.begin();
 
-        let protocol = Some(ProtocolContext::new(&mut host, &mut tx, address.clone()));
+        let protocol = Some(ProtocolContext::new(
+            &mut host,
+            &mut tx,
+            address.clone(),
+            String::new(),
+        ));
 
         let source = Address::User(jstz_mock::account1());
 
