@@ -13,7 +13,7 @@ use tezos_smart_rollup::{
 
 use crate::sequencer::inbox::parsing::Message;
 
-use super::db::Db;
+use super::{db::Db, host::Host};
 
 const TICKETER_PATH: RefPath = RefPath::assert_from(b"/ticketer");
 const INJECTOR_PATH: RefPath = RefPath::assert_from(b"/injector");
@@ -22,8 +22,8 @@ const INJECTOR_PK: &str = "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9ya
 pub const TICKETER: &str = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";
 pub const JSTZ_ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 
-pub fn init_host(db: Db, preimage_dir: PathBuf) -> anyhow::Result<impl Runtime> {
-    let mut host = crate::sequencer::host::Host::new(db, preimage_dir);
+pub fn init_host(db: Db, preimage_dir: PathBuf) -> anyhow::Result<Host> {
+    let mut host = Host::new(db, preimage_dir);
     let ticketer = SmartFunctionHash::from_base58(TICKETER)
         .context("failed to parse ticketer address")?;
 
@@ -87,7 +87,10 @@ pub fn process_message(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::{io::Write, path::PathBuf};
+    use std::{
+        io::{Read, Write},
+        path::PathBuf,
+    };
 
     use axum::http::{HeaderMap, Method, StatusCode, Uri};
     use jstz_core::{host::HostRuntime, reveal_data::RevealData, BinEncodable};
@@ -164,7 +167,11 @@ mod tests {
         // Using a slightly complicated scenario here to check if transaction works properly.
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
-        let mut h = super::init_host(db, PathBuf::new()).unwrap();
+        let debug_log_file = NamedTempFile::new().unwrap();
+        let mut h = super::init_host(db, PathBuf::new())
+            .unwrap()
+            .with_debug_log_file(debug_log_file.path())
+            .unwrap();
 
         // This smart function has about 8k characters. The runtime is okay with it and simply
         // stores it in the data store, though this would not work with a rollup.
@@ -225,6 +232,16 @@ mod tests {
                 nonce: Nonce(0),
             })
         ));
+
+        // Check debug log file
+        let mut buf = String::new();
+        std::fs::File::open(debug_log_file.path())
+            .unwrap()
+            .read_to_string(&mut buf)
+            .unwrap();
+        assert!(
+            buf.contains("Smart function deployed: KT1CDAkLMEHKNs2VbVZeSdxYx3wWN5auGARR")
+        );
     }
 
     #[test]

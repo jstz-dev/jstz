@@ -1,9 +1,15 @@
-use std::{fmt::Debug, path::PathBuf};
+use std::{
+    cell::RefCell,
+    fmt::Debug,
+    fs::{File, OpenOptions},
+    io::Write,
+    path::PathBuf,
+};
 
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 
-use log::{debug, trace};
+use log::{debug, error, trace};
 use tezos_crypto_rs::base58::{FromBase58Check, ToBase58Check};
 use tezos_smart_rollup::{
     core_unsafe::MAX_FILE_CHUNK_SIZE,
@@ -17,11 +23,30 @@ use super::db::{exec_delete, exec_delete_glob, exec_read, exec_write, Db};
 pub struct Host {
     db: Db,
     preimage_dir: PathBuf,
+    log_file: Option<RefCell<File>>,
 }
 
 impl Host {
     pub fn new(db: Db, preimage_dir: PathBuf) -> Self {
-        Host { db, preimage_dir }
+        Host {
+            db,
+            preimage_dir,
+            log_file: None,
+        }
+    }
+
+    pub fn with_debug_log_file(
+        mut self,
+        log_path: &std::path::Path,
+    ) -> anyhow::Result<Self> {
+        let prefix = log_path.parent().unwrap();
+        std::fs::create_dir_all(prefix).unwrap();
+        let log_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(log_path)?;
+        self.log_file.replace(RefCell::new(log_file));
+        Ok(self)
     }
 
     fn connection(
@@ -46,7 +71,19 @@ impl Runtime for Host {
     }
 
     fn write_debug(&self, msg: &str) {
-        println!("{msg}")
+        match &self.log_file {
+            Some(c) => match c.try_borrow_mut() {
+                Ok(mut f) => {
+                    if let Err(e) = f.write_all(msg.as_bytes()) {
+                        error!("failed to write debug log: {e}");
+                    };
+                    #[cfg(test)]
+                    f.flush().unwrap();
+                }
+                Err(e) => error!("failed to borrow debug log file: {e}"),
+            },
+            None => debug!("{msg}"),
+        }
     }
 
     fn read_input(&mut self) -> Result<Option<Message>, RuntimeError> {
@@ -315,7 +352,10 @@ impl Runtime for Host {
 
 #[cfg(test)]
 mod tests {
-    use std::{cell::RefCell, io::Write};
+    use std::{
+        cell::RefCell,
+        io::{Read, Seek, Write},
+    };
 
     use jstz_core::host::HostRuntime;
     use log::{Metadata, Record};
@@ -325,38 +365,84 @@ mod tests {
 
     use crate::sequencer::{db::Db, host::Host};
 
+    thread_local! {
+        static LOG_RECORDS: RefCell<Vec<String>> = const {RefCell::new(Vec::new())};
+    }
+
+    struct TestLogger;
+    impl log::Log for TestLogger {
+        fn enabled(&self, _metadata: &Metadata<'_>) -> bool {
+            true
+        }
+
+        fn log(&self, record: &Record<'_>) {
+            LOG_RECORDS.with_borrow_mut(|logs| {
+                logs.push(format!("{}: {}", record.level(), record.args()));
+            });
+        }
+
+        fn flush(&self) {}
+    }
+
+    #[test]
+    fn host_write_debug() {
+        static LOGGER: TestLogger = TestLogger {};
+        let _ = log::set_logger(&LOGGER)
+            .map(|()| log::set_max_level(log::LevelFilter::Debug));
+        // clear logs first
+        let _ = LOG_RECORDS.take();
+
+        let preimage_dir = TempDir::new().unwrap();
+        let log_file = NamedTempFile::new().unwrap();
+        let log_file_path = log_file.path();
+        let mut host = Host::new(
+            Db::init(Some("")).unwrap(),
+            preimage_dir.path().to_path_buf(),
+        );
+
+        // no log file -- message should show up in the logger
+        host.write_debug("message");
+        assert_eq!(LOG_RECORDS.take(), vec!["DEBUG: message".to_string()]);
+
+        // now with log file
+        host = host.with_debug_log_file(log_file_path).unwrap();
+
+        host.write_debug("foo");
+        assert_eq!(LOG_RECORDS.take(), Vec::<String>::new());
+        let mut buf = String::new();
+        let mut f = std::fs::File::open(log_file_path).unwrap();
+        f.read_to_string(&mut buf).unwrap();
+        assert_eq!(buf, "foo");
+
+        // borrow the file to fail write_debug
+        let _r = host.log_file.as_ref().unwrap().borrow_mut();
+        host.write_debug("bar");
+        assert_eq!(
+            LOG_RECORDS.take(),
+            vec!["ERROR: failed to borrow debug log file: already borrowed".to_string()]
+        );
+        f.rewind().unwrap();
+        buf.clear();
+        f.read_to_string(&mut buf).unwrap();
+        // `bar` should not show up in the log file
+        assert_eq!(buf, "foo");
+    }
+
     #[test]
     fn log_error() {
-        thread_local! {
-            static LOG_RECORDS: RefCell<Vec<String>> = const {RefCell::new(Vec::new())};
-        }
-
-        struct TestLogger;
-        impl log::Log for TestLogger {
-            fn enabled(&self, _metadata: &Metadata<'_>) -> bool {
-                true
-            }
-
-            fn log(&self, record: &Record<'_>) {
-                LOG_RECORDS.with_borrow_mut(|logs| {
-                    logs.push(record.args().to_string());
-                });
-            }
-
-            fn flush(&self) {}
-        }
-
         static LOGGER: TestLogger = TestLogger {};
-        log::set_logger(&LOGGER)
-            .map(|()| log::set_max_level(log::LevelFilter::Debug))
-            .unwrap();
+        let _ = log::set_logger(&LOGGER)
+            .map(|()| log::set_max_level(log::LevelFilter::Debug));
+        // clear logs first
+        let _ = LOG_RECORDS.take();
+
         assert_eq!(
             super::log_error("foo", Some("error details")).to_string(),
             "GenericInvalidAccess"
         );
         assert_eq!(
             LOG_RECORDS.take(),
-            vec!["error foo: Some(\"error details\")".to_string()]
+            vec!["DEBUG: error foo: Some(\"error details\")".to_string()]
         );
     }
 
