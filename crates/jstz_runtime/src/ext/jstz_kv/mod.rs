@@ -13,7 +13,7 @@ pub(crate) mod extension {
         fn get(op_state: &mut OpState, #[string] key: &str) -> Option<serde_json::Value> {
             let ProtocolContext { host, tx, kv, .. } =
                 op_state.borrow_mut::<ProtocolContext>();
-            kv.get(host, tx, key).map(|v| v.0.clone())
+            kv.get(host, tx, key).ok()?.map(|v| v.0.clone())
         }
 
         #[static_method]
@@ -24,7 +24,7 @@ pub(crate) mod extension {
         ) -> bool {
             let ProtocolContext { tx, kv, .. } =
                 &mut op_state.borrow_mut::<ProtocolContext>();
-            kv.set(tx, key, KvValue(value)).is_some()
+            kv.set(tx, key, KvValue(value)).ok().is_some()
         }
 
         #[fast]
@@ -32,7 +32,7 @@ pub(crate) mod extension {
         fn delete(op_state: &mut OpState, #[string] key: &str) -> bool {
             let ProtocolContext { tx, kv, .. } =
                 &mut op_state.borrow_mut::<ProtocolContext>();
-            kv.delete(tx, key).is_some()
+            kv.delete(tx, key).ok().is_some()
         }
 
         #[fast]
@@ -40,7 +40,7 @@ pub(crate) mod extension {
         fn contains(op_state: &mut OpState, #[string] key: &str) -> bool {
             let ProtocolContext { tx, kv, host, .. } =
                 &mut op_state.borrow_mut::<ProtocolContext>();
-            kv.has(host, tx, key).is_some_and(|t| t)
+            kv.has(host, tx, key).ok().is_some_and(|t| t)
         }
     }
 

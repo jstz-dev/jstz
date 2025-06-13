@@ -12,6 +12,7 @@ use crate::{
 };
 
 pub mod fetch;
+pub use jstz_runtime::{Kv, KvValue};
 
 pub async fn run_toplevel_fetch(
     hrt: &mut impl HostRuntime,
