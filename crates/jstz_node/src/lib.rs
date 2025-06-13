@@ -16,7 +16,7 @@ use services::{
 };
 use std::{
     path::PathBuf,
-    sync::{Arc, RwLock},
+    sync::{atomic::AtomicU64, Arc, RwLock},
 };
 use tempfile::NamedTempFile;
 use tokio::net::TcpListener;
@@ -43,6 +43,7 @@ pub struct AppState {
     pub mode: RunMode,
     pub queue: Arc<RwLock<OperationQueue>>,
     pub runtime_db: sequencer::db::Db,
+    pub worker_heartbeat: Arc<AtomicU64>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum)]
@@ -109,7 +110,7 @@ pub async fn run(
         "failed to convert temp db file path to str"
     ))?;
     let runtime_db = sequencer::db::Db::init(Some(db_path))?;
-    let _worker = match mode {
+    let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer => Some(
             worker::spawn(
@@ -158,6 +159,7 @@ pub async fn run(
         mode,
         queue,
         runtime_db,
+        worker_heartbeat: worker.as_ref().map(|w| w.heartbeat()).unwrap_or_default(),
     };
 
     let cors = CorsLayer::new()
@@ -184,6 +186,7 @@ fn router() -> OpenApiRouter<AppState> {
         .merge(LogsService::router_with_openapi())
         .route("/mode", get(utils::get_mode))
         .route("/health", get(http::StatusCode::OK))
+        .route("/worker/health", get(utils::worker_health))
         .layer(DefaultBodyLimit::max(MAX_REVEAL_SIZE))
 }
 
