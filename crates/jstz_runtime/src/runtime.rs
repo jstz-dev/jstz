@@ -249,6 +249,7 @@ pub struct ProtocolContext {
     pub tx: Transaction,
     pub kv: Kv,
     pub address: SmartFunctionHash,
+    pub request_id: String,
 }
 
 impl ProtocolContext {
@@ -256,6 +257,7 @@ impl ProtocolContext {
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         address: SmartFunctionHash,
+        request_id: String,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
         ProtocolContext {
@@ -263,6 +265,7 @@ impl ProtocolContext {
             tx: tx.clone(),
             kv: Kv::new(address.to_base58()),
             address,
+            request_id,
         }
     }
 }
@@ -307,6 +310,10 @@ mod test {
     use jstz_utils::test_util::TOKIO;
 
     #[test]
+    #[cfg_attr(
+        feature = "kernel",
+        ignore = "logging format is different when kernel feature is enabled"
+    )]
     fn test_init_jstz_runtime() {
         init_test_setup! {
             runtime = runtime;
