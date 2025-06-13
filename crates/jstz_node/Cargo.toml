@@ -31,7 +31,7 @@ hex.workspace = true
 jstz_api = { path = "../jstz_api" }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
-jstz_proto = { path = "../jstz_proto" }
+jstz_proto = { path = "../jstz_proto", features = ["kernel"] }
 jstz_utils = { path = "../jstz_utils" }
 log.workspace = true
 mockito.workspace = true
