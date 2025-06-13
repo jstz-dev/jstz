@@ -19,9 +19,9 @@ pub async fn run_toplevel_fetch(
     tx: &mut Transaction,
     source_address: &(impl Addressable + 'static),
     run_operation: RunFunction,
-    _operation_hash: OperationHash,
+    operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt, crate::Error> {
-    Ok(run(hrt, tx, source_address, run_operation, _operation_hash).await?)
+    Ok(run(hrt, tx, source_address, run_operation, operation_hash).await?)
 }
 
 async fn run(
@@ -29,7 +29,7 @@ async fn run(
     tx: &mut Transaction,
     source_address: &(impl Addressable + 'static),
     run_operation: RunFunction,
-    _operation_hash: OperationHash,
+    operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt, Error> {
     let url =
         Url::parse(run_operation.uri.to_string().as_str()).map_err(FetchError::from)?;
@@ -37,6 +37,7 @@ async fn run(
     let response: http::Response<Option<Vec<u8>>> = process_and_dispatch_request(
         JsHostRuntime::new(hrt),
         tx.clone(),
+        Some(operation_hash),
         source_address.clone().into(),
         run_operation.method.to_string().into(),
         url,
