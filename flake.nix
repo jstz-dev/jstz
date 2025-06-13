@@ -348,7 +348,6 @@
                 # Runtime dependencies
                 sqlite # for jstz-node
                 octez # for jstzd
-                python39 # for running web-platform tests
 
                 riscv64MuslPkgs.pkgsStatic.stdenv.cc
                 riscvSandbox
