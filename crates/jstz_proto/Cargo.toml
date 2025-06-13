@@ -53,4 +53,5 @@ tokio.workspace = true
 [features]
 riscv = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_base", "dep:deno_error", "dep:tokio"]
 v2_runtime = ["riscv", "dep:jstz_utils"]
+kernel = ["jstz_runtime?/kernel"]
 
