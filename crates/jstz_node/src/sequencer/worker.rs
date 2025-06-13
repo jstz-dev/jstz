@@ -3,7 +3,7 @@ use std::{
     path::PathBuf,
     sync::{
         mpsc::{channel, Sender, TryRecvError},
-        Arc, RwLock,
+        Arc,
     },
     thread::{self, spawn as spawn_thread, JoinHandle},
     time::Duration,
@@ -11,6 +11,7 @@ use std::{
 
 use anyhow::Context;
 use log::warn;
+use tokio::sync::RwLock;
 
 use super::{db::Db, queue::OperationQueue};
 
@@ -50,17 +51,7 @@ pub fn spawn(
         inner: Some(spawn_thread(move || {
             tokio_rt.block_on(async {
                 loop {
-                    let v = {
-                        match queue.write() {
-                            Ok(mut q) => q.pop(),
-                            Err(e) => {
-                                warn!("worker failed to read from queue: {e:?}");
-                                None
-                            }
-                        }
-                    };
-
-                    match v {
+                    match queue.write().await.pop() {
                         Some(op) => {
                             if let Err(e) = process_message(&mut host_rt, op).await {
                                 warn!("error processing message: {e:?}");
@@ -88,7 +79,7 @@ mod tests {
     use std::{
         io::Read,
         path::PathBuf,
-        sync::{Arc, Mutex, RwLock},
+        sync::{Arc, Mutex},
         thread,
         time::Duration,
     };
@@ -96,6 +87,7 @@ mod tests {
     use crate::sequencer::inbox::test_utils::hash_of;
     use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
     use tempfile::NamedTempFile;
+    use tokio::sync::RwLock;
 
     #[test]
     fn worker_drop() {
@@ -119,8 +111,8 @@ mod tests {
         assert_eq!(*v.lock().unwrap(), 1);
     }
 
-    #[test]
-    fn worker_consume_queue() {
+    #[tokio::test]
+    async fn worker_consume_queue() {
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
         let mut log_file = NamedTempFile::new().unwrap();
@@ -144,7 +136,7 @@ mod tests {
         // to ensure that the worker has enough time to consume the queue
         thread::sleep(Duration::from_millis(1000));
 
-        assert_eq!(wrapper.read().unwrap().len(), 0);
+        assert_eq!(wrapper.read().await.len(), 0);
         // worker should process the message and the embedded runtime should produce a receipt
         assert!(db.key_exists(&receipt_key).unwrap());
         // check logs

@@ -44,10 +44,8 @@ impl StoreWrapper {
 
 #[cfg(test)]
 pub(crate) mod tests {
-    use std::{
-        path::PathBuf,
-        sync::{Arc, RwLock},
-    };
+    use std::{path::PathBuf, sync::Arc};
+    use tokio::sync::RwLock;
 
     use jstz_core::BinEncodable;
     use jstz_crypto::{
