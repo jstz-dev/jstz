@@ -51,8 +51,9 @@ impl Display for ParsedCode {
 }
 
 impl TryFrom<String> for ParsedCode {
-    type Error = JsError;
-    fn try_from(code: String) -> JsResult<Self> {
+    type Error = crate::Error;
+
+    fn try_from(code: String) -> crate::Result<Self> {
         let src = Source::from_bytes(code.as_bytes());
         let mut context = Context::default();
         Module::parse(src, None, &mut context)?;

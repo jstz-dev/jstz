@@ -1,19 +1,30 @@
 pub mod kv;
 pub(crate) mod extension {
     use super::kv::KvValue;
-    use deno_core::*;
-
-    use crate::runtime::ProtocolContext;
+    use crate::{ext::NotSupported, runtime::ProtocolContext};
+    use deno_core::{extension, op2, OpState};
+    use thiserror;
     struct Kv;
 
+    const NOT_SUPPORTED_ERROR: NotSupported = NotSupported { name: "Kv" };
     #[op2]
     impl Kv {
         #[static_method]
         #[serde]
-        fn get(op_state: &mut OpState, #[string] key: &str) -> Option<serde_json::Value> {
-            let ProtocolContext { host, tx, kv, .. } =
-                op_state.borrow_mut::<ProtocolContext>();
-            kv.get(host, tx, key).ok()?.map(|v| v.0.clone())
+        fn get(
+            op_state: &mut OpState,
+            #[string] key: &str,
+        ) -> Result<Option<serde_json::Value>> {
+            let maybe_proto = op_state.try_borrow_mut::<ProtocolContext>();
+            match maybe_proto {
+                Some(ProtocolContext { host, tx, kv, .. }) => {
+                    let maybe_value = kv
+                        .get(host, tx, key)
+                        .map_err(|e| KvError::JstzCoreError(e.to_string()))?;
+                    Ok(maybe_value.map(|v| v.0.clone()))
+                }
+                None => Err(NOT_SUPPORTED_ERROR)?,
+            }
         }
 
         #[static_method]
@@ -21,28 +32,53 @@ pub(crate) mod extension {
             op_state: &mut OpState,
             #[string] key: &str,
             #[serde] value: serde_json::Value,
-        ) -> bool {
-            let ProtocolContext { tx, kv, .. } =
-                &mut op_state.borrow_mut::<ProtocolContext>();
-            kv.set(tx, key, KvValue(value)).ok().is_some()
+        ) -> Result<()> {
+            let maybe_proto = op_state.try_borrow_mut::<ProtocolContext>();
+            match maybe_proto {
+                Some(ProtocolContext { tx, kv, .. }) => kv
+                    .set(tx, key, KvValue(value))
+                    .map_err(|e| KvError::JstzCoreError(e.to_string())),
+                None => Err(NOT_SUPPORTED_ERROR)?,
+            }
         }
 
         #[fast]
         #[static_method]
-        fn delete(op_state: &mut OpState, #[string] key: &str) -> bool {
-            let ProtocolContext { tx, kv, .. } =
-                &mut op_state.borrow_mut::<ProtocolContext>();
-            kv.delete(tx, key).ok().is_some()
+        fn delete(op_state: &mut OpState, #[string] key: &str) -> Result<()> {
+            let maybe_proto = op_state.try_borrow_mut::<ProtocolContext>();
+            match maybe_proto {
+                Some(ProtocolContext { tx, kv, .. }) => kv
+                    .delete(tx, key)
+                    .map_err(|e| KvError::JstzCoreError(e.to_string())),
+                None => Err(NOT_SUPPORTED_ERROR)?,
+            }
         }
 
         #[fast]
         #[static_method]
-        fn contains(op_state: &mut OpState, #[string] key: &str) -> bool {
-            let ProtocolContext { tx, kv, host, .. } =
-                &mut op_state.borrow_mut::<ProtocolContext>();
-            kv.has(host, tx, key).ok().is_some_and(|t| t)
+        fn contains(op_state: &mut OpState, #[string] key: &str) -> Result<bool> {
+            let maybe_proto = op_state.try_borrow_mut::<ProtocolContext>();
+            match maybe_proto {
+                Some(ProtocolContext { tx, kv, host, .. }) => kv
+                    .has(host, tx, key)
+                    .map_err(|e| KvError::JstzCoreError(e.to_string())),
+                None => Err(NOT_SUPPORTED_ERROR)?,
+            }
         }
     }
+
+    #[derive(Debug, thiserror::Error, deno_error::JsError)]
+    pub enum KvError {
+        #[class(generic)]
+        #[error("{0}")]
+        JstzCoreError(String),
+
+        #[class(inherit)]
+        #[error(transparent)]
+        UnsupportedError(#[from] NotSupported),
+    }
+
+    type Result<T> = std::result::Result<T, KvError>;
 
     extension!(
         jstz_kv,
@@ -53,7 +89,9 @@ pub(crate) mod extension {
 
     #[cfg(test)]
     mod test {
-        use crate::init_test_setup;
+        use deno_error::JsErrorClass;
+
+        use crate::{init_test_setup, JstzRuntime, JstzRuntimeOptions};
 
         #[test]
         fn kv() {
@@ -76,6 +114,38 @@ pub(crate) mod extension {
             assert_eq!(failed, None);
             assert!(has_value);
             assert!(!has_value_after_delete);
+        }
+
+        #[test]
+        fn kv_not_supported() {
+            let mut runtime = JstzRuntime::new(JstzRuntimeOptions::default());
+            let code = r#"Kv.set("hello", "world")"#;
+            let err = runtime.execute(code).unwrap_err();
+            assert_eq!(
+                "Error: Uncaught undefined",
+                format!("{}: {}", err.get_class(), err.get_message())
+            );
+
+            let code = r#"Kv.get("hello")"#;
+            let err = runtime.execute(code).unwrap_err();
+            assert_eq!(
+                "Error: Uncaught undefined",
+                format!("{}: {}", err.get_class(), err.get_message())
+            );
+
+            let code = r#"Kv.contains("hello")"#;
+            let err = runtime.execute(code).unwrap_err();
+            assert_eq!(
+                "Error: Uncaught undefined",
+                format!("{}: {}", err.get_class(), err.get_message())
+            );
+
+            let code = r#"Kv.delete("hello")"#;
+            let err = runtime.execute(code).unwrap_err();
+            assert_eq!(
+                "Error: Uncaught undefined",
+                format!("{}: {}", err.get_class(), err.get_message())
+            );
         }
     }
 }
