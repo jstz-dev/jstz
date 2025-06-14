@@ -2923,6 +2923,7 @@ dependencies = [
  "boa_engine",
  "boa_gc",
  "chrono",
+ "clap 4.5.20",
  "derive_more",
  "erased-serde",
  "expect-test",
@@ -2933,6 +2934,7 @@ dependencies = [
  "parking_lot",
  "serde",
  "serde-big-array",
+ "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-mock",
@@ -2940,6 +2942,7 @@ dependencies = [
  "tezos_data_encoding 0.6.0",
  "thiserror 1.0.67",
  "tokio",
+ "utoipa",
 ]
 
 [[package]]

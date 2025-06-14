@@ -12,6 +12,7 @@ pub mod error;
 mod jstz;
 mod kv;
 mod logs;
+#[cfg(not(feature = "v2_runtime"))]
 mod repl;
 mod run;
 mod sandbox;
