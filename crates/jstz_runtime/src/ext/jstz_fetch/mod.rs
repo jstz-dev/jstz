@@ -51,18 +51,30 @@ impl FetchHandler for NotSupportedFetch {
 
 #[cfg(test)]
 mod test {
+    use std::rc::Rc;
+
+    use deno_core::StaticModuleLoader;
     use deno_error::JsErrorClass;
+    use jstz_utils::test_util::TOKIO;
 
     use crate::{init_test_setup, JstzRuntime, JstzRuntimeOptions};
 
     #[test]
     fn fetch_not_supported() {
-        let mut runtime = JstzRuntime::new(JstzRuntimeOptions::default());
-        let code = r#"await fetch("https://example.com").then(res => res.text())"#;
-        let err = runtime.execute(code).unwrap_err();
-        assert_eq!(
-            "Error: Uncaught undefined",
-            format!("{}: {}", err.get_class(), err.get_message())
-        );
+        TOKIO.block_on(async {
+            let code = r#"export default async () => await fetch("https://example.com").then(res => res.text())"#;
+            let specifier = deno_core::resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
+            let loader = StaticModuleLoader::with(specifier.clone(), code);
+            let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
+                module_loader: Rc::new(loader),
+                ..Default::default()
+            });
+            let id = runtime.execute_main_module(&specifier).await.unwrap();
+            let err = runtime.call_default_handler(id, &[]).await.unwrap_err();
+            assert_eq!(
+                "Error: Uncaught (in promise) undefined",
+                format!("{}: {}", err.get_class(), err.get_message())
+            );
+        });
     }
 }

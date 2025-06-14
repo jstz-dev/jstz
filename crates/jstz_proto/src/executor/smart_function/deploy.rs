@@ -73,7 +73,7 @@ mod test {
         tx.begin();
 
         let deployment = DeployFunction {
-            function_code: "".to_string().try_into().unwrap(),
+            function_code: "export default () => {}".to_string().try_into().unwrap(),
             account_credit: 0,
         };
         let result = smart_function::deploy::execute(hrt, &mut tx, &source, deployment);

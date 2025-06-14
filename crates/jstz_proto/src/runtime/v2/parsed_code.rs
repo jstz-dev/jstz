@@ -13,6 +13,7 @@ use utoipa::ToSchema;
     Clone,
     Debug,
     Default,
+    Deref,
     Display,
     Encode,
     Eq,
@@ -21,6 +22,10 @@ use utoipa::ToSchema;
     PartialEq,
     Serialize,
     ToSchema,
+)]
+#[schema(
+    format = "javascript",
+    example = "export default (request) => new Response('Hello world!')"
 )]
 pub struct ParsedCode(pub String);
 

@@ -133,7 +133,7 @@ pub(crate) mod extension {
                 format!("{}: {}", err.get_class(), err.get_message())
             );
 
-            let code = r#"Kv.has("hello")"#;
+            let code = r#"Kv.contains("hello")"#;
             let err = runtime.execute(code).unwrap_err();
             assert_eq!(
                 "Error: Uncaught undefined",
