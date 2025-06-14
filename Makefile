@@ -22,7 +22,7 @@ build: build-cli-kernel build-jstzd-kernel
 	@cargo build $(PROFILE_OPT)
 
 build-v2: build-cli-kernel build-jstzd-kernel
-	@cargo build $(PROFILE_OPT) --features riscv,v2_runtime
+	@cargo build $(PROFILE_OPT) --features v2_runtime
 
 .PHONY: build-bridge
 build-bridge:
@@ -81,26 +81,26 @@ test-v2: test-unit-v2 test-int-v2
 test-unit:
 # --lib only runs unit tests in library crates
 # --bins only runs unit tests in binary crates
-	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench" --features riscv,skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
+	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench" --features skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
 
 .PHONY: test-int
 test-int:
 # --test only runs a specified integration test (a test in /tests).
 #        the glob pattern is used to match all integration tests
 # --exclude excludes the jstz_api wpt test
-	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features riscv,skip-wpt,skip-rollup-tests
+	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features skip-wpt,skip-rollup-tests
 
 test-unit-v2:
 # --lib only runs unit tests in library crates
 # --bins only runs unit tests in binary crates
-	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench" --features riscv,v2_runtime,skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
+	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench" --features v2_runtime,skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
 
 .PHONY: test-int
 test-int-v2:
 # --test only runs a specified integration test (a test in /tests).
 #        the glob pattern is used to match all integration tests
 # --exclude excludes the jstz_api wpt test
-	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features riscv,v2_runtime,skip-wpt,skip-rollup-tests
+	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features v2_runtime,skip-wpt,skip-rollup-tests
 
 .PHONY: cov
 cov:
