@@ -1,5 +1,5 @@
 pub mod v1;
-pub use v1::{LogRecord, ParsedCode, ProtocolData, LOG_PREFIX};
+pub use v1::{LogRecord, ParsedCode, LOG_PREFIX};
 
 #[cfg(feature = "riscv")]
 pub mod v2;
