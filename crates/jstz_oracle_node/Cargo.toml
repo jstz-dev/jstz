@@ -22,13 +22,20 @@ tempfile.workspace = true
 rand.workspace = true
 futures-util.workspace = true
 tokio-util.workspace = true
-jstz_utils = { path = "../jstz_utils" }
 once_cell.workspace = true
-jstz_proto = { path = "../jstz_proto", optional = true}
-jstz_crypto = { path = "../jstz_crypto" }
+http.workspace = true
+hyper.workspace = true
+reqwest.workspace = true
+log.workspace = true
 bincode.workspace = true
-serde_json.workspace = true
+serde_bytes.workspace = true
 url.workspace = true
+jstz_utils = { path = "../jstz_utils" }
+jstz_proto = { path = "../jstz_proto"}
+jstz_crypto = { path = "../jstz_crypto" }
+jstz_node = { path = "../jstz_node" }
+jstz_client = { path = "../jstz_client" }
+serde_json.workspace = true
 
 [features]
-v2_runtime = ["dep:jstz_proto"]
+v2_runtime = []

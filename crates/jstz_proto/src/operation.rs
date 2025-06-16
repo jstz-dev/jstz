@@ -7,6 +7,9 @@ use bincode::{Decode, Encode};
 use derive_more::{Deref, Display, From};
 use http::{HeaderMap, Method, Uri};
 
+#[cfg(feature = "v2_runtime")]
+use crate::runtime::v2::oracle::request::RequestId;
+
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
@@ -103,6 +106,13 @@ impl Operation {
                 )
                 .as_bytes(),
             ),
+            #[cfg(feature = "v2_runtime")]
+            Content::OracleResponse(OracleResponse {
+                request_id,
+                response,
+            }) => Blake2b::from(
+                format!("{}{}{}{:?}", public_key, nonce, request_id, response).as_bytes(),
+            ),
         }
     }
 }
@@ -179,6 +189,17 @@ pub struct RevealLargePayload {
     pub original_op_hash: OperationHash,
 }
 
+#[cfg(feature = "v2_runtime")]
+#[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
+// #[schema(description = "An operation sending a response to an oracle request")]
+#[serde(rename_all = "camelCase")]
+pub struct OracleResponse {
+    //#[schema(value_type = String)]
+    pub request_id: RequestId,
+    //#[schema(value_type = String)]
+    pub response: Vec<u8>,
+}
+
 #[derive(
     Debug, From, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
 )]
@@ -190,6 +211,9 @@ pub enum Content {
     RunFunction(#[bincode(with_serde)] RunFunction),
     #[schema(title = "RevealLargePayload")]
     RevealLargePayload(#[bincode(with_serde)] RevealLargePayload),
+    #[cfg(feature = "v2_runtime")]
+    #[schema(title = "OracleResponse")]
+    OracleResponse(#[bincode(with_serde)] OracleResponse),
 }
 
 impl Content {

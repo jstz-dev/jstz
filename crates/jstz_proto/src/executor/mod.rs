@@ -60,6 +60,10 @@ async fn execute_operation_inner(
             }
             Err(Error::RevealTypeMismatch)
         }
+        #[cfg(feature = "v2_runtime")]
+        operation::Content::OracleResponse(_oracle_response) => {
+            todo!()
+        }
     }
 }
 

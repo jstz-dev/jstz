@@ -2876,6 +2876,7 @@ dependencies = [
  "in-container",
  "indicatif",
  "jstz_api",
+ "jstz_client",
  "jstz_core",
  "jstz_crypto",
  "jstz_kernel",
@@ -2912,6 +2913,19 @@ dependencies = [
  "tokio",
  "tokio-util",
  "url",
+]
+
+[[package]]
+name = "jstz_client"
+version = "0.1.1-alpha.1"
+dependencies = [
+ "anyhow",
+ "jstz_crypto",
+ "jstz_proto",
+ "log",
+ "reqwest",
+ "reqwest-eventsource",
+ "tokio",
 ]
 
 [[package]]
@@ -3057,13 +3071,20 @@ dependencies = [
  "futures",
  "futures-core",
  "futures-util",
+ "http 1.1.0",
+ "hyper 1.6.0",
+ "jstz_client",
  "jstz_crypto",
+ "jstz_node",
  "jstz_proto",
  "jstz_utils",
+ "log",
  "once_cell",
  "rand 0.8.5",
  "regex",
+ "reqwest",
  "serde",
+ "serde_bytes",
  "serde_json",
  "tempfile",
  "tokio",
