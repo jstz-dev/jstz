@@ -6,17 +6,19 @@ use deno_core::{
 };
 use deno_error::JsErrorBox;
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, deno_error::JsError)]
+#[error(transparent)]
 pub enum RuntimeError {
-    #[error(transparent)]
+    #[class(inherit)]
     DenoCore(#[from] CoreError),
-    #[error(transparent)]
+    #[class(inherit)]
     SerdeV8(#[from] serde_v8::Error),
-    #[error(transparent)]
+    #[class(inherit)]
     WebSysError(#[from] WebSysError),
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, deno_error::JsError)]
+#[class("WebSysError")]
 pub enum WebSysError {
     #[error("Class `{0}` not found in `globalThis`")]
     ClassMissing(String),

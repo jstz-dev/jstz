@@ -13,6 +13,8 @@ use crate::{
 
 pub mod fetch;
 pub use jstz_runtime::{Kv, KvValue};
+mod parsed_code;
+pub use parsed_code::ParsedCode;
 
 pub async fn run_toplevel_fetch(
     hrt: &mut impl HostRuntime,
@@ -57,4 +59,6 @@ async fn run(
 pub enum Error {
     #[error(transparent)]
     FetchError(#[from] fetch::FetchError),
+    #[error(transparent)]
+    ParsedCodeError(#[from] parsed_code::ParseError),
 }

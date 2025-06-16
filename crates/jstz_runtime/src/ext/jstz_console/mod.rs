@@ -1,4 +1,4 @@
-use crate::runtime::ProtocolContext;
+use crate::{ext::NotSupported, runtime::ProtocolContext};
 use deno_core::*;
 use tezos_smart_rollup::prelude::debug_msg;
 
@@ -8,9 +8,19 @@ use tezos_smart_rollup::prelude::debug_msg;
 //  2    warn
 //  3    error
 #[op2(fast)]
-pub fn op_debug_msg(op_state: &mut OpState, #[string] msg: &str, level: u32) {
-    let proto = op_state.borrow_mut::<ProtocolContext>();
-    debug_msg!(proto.host, "{} {}", level_to_symbol(level), msg);
+pub fn op_debug_msg(
+    op_state: &mut OpState,
+    #[string] msg: &str,
+    level: u32,
+) -> Result<(), NotSupported> {
+    let proto = op_state.try_borrow_mut::<ProtocolContext>();
+    match proto {
+        Some(proto) => {
+            debug_msg!(proto.host, "{} {}", level_to_symbol(level), msg);
+            Ok(())
+        }
+        None => Err(NotSupported { name: "console" }),
+    }
 }
 
 fn level_to_symbol(level: u32) -> &'static str {
@@ -33,7 +43,9 @@ extension!(
 #[cfg(test)]
 mod test {
 
-    use crate::init_test_setup;
+    use deno_error::JsErrorClass;
+
+    use crate::{init_test_setup, JstzRuntime, JstzRuntimeOptions};
 
     #[test]
     fn console_log() {
@@ -105,6 +117,17 @@ mod test {
         assert_eq!(
             sink.to_string(),
             "[INFO] 123\n[INFO] false\n[INFO] { message: \"abc\" }\n"
+        );
+    }
+
+    #[test]
+    fn console_not_supported() {
+        let mut runtime = JstzRuntime::new(JstzRuntimeOptions::default());
+        let code = r#"console.info("hello")"#;
+        let err = runtime.execute(code).unwrap_err();
+        assert_eq!(
+            "Error: Uncaught undefined",
+            format!("{}: {}", err.get_class(), err.get_message())
         );
     }
 }

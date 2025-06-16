@@ -20,10 +20,7 @@ use crate::{
     context::account::{Account, Amount},
     executor::smart_function,
     operation::{DeployFunction, OperationHash},
-    runtime::{
-        v1::{fetch_handler, ParsedCode},
-        ProtocolData,
-    },
+    runtime::{v1::fetch_handler, ParsedCode, ProtocolData},
     Result,
 };
 

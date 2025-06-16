@@ -15,7 +15,7 @@ JSTZD_KERNEL_PATH := crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 CLI_KERNEL_PATH := crates/jstz_cli/jstz_kernel.wasm
 
 .PHONY: all
-all: build test check
+all: build test build-v2 test-v2 check
 
 .PHONY: build
 build: build-cli-kernel build-jstzd-kernel
