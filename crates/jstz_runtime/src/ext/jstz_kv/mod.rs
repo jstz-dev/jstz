@@ -101,7 +101,7 @@ pub(crate) mod extension {
             let code = r#"
                 Kv.set("hello", "world")
                 let value = Kv.get("hello");
-                let failed = Kv.get("not found");
+                let failed = Kv.get("not/found");
                 let containsValue = Kv.contains("hello");
                 Kv.delete("hello");
                 let containsAfterDelete = Kv.contains("hello");
