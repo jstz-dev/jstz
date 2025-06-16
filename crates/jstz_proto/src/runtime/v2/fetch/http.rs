@@ -59,7 +59,7 @@ impl Into<http::Response<Option<Vec<u8>>>> for Response {
     }
 }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Request {
     #[serde(with = "serde_bytestring")]
     pub method: ByteString,
@@ -69,7 +69,7 @@ pub struct Request {
     pub body: Option<Body>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Body {
     Vector(Vec<u8>),
     Buffer(JsBuffer),
@@ -347,7 +347,7 @@ mod test {
                 serde_json::to_vec(&json!({ "message": "hello"})).unwrap(),
             )),
         };
-        let json = serde_json::to_value(request).unwrap();
+        let json = serde_json::to_value(request.clone()).unwrap();
         assert_eq!(
             json!({
                 "method":[80,79,83,84],
@@ -359,6 +359,11 @@ mod test {
             }),
             json
         );
+
+        let json = json.to_string();
+
+        let de: Request = serde_json::from_str(json.as_str()).unwrap();
+        assert_eq!(request, de);
     }
 
     #[tokio::test]

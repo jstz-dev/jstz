@@ -1,7 +1,7 @@
 mod error;
 
 pub mod context;
-#[cfg(feature = "riscv")]
+#[cfg(feature = "v2_runtime")]
 pub mod event;
 pub mod executor;
 pub mod operation;
