@@ -146,6 +146,7 @@ impl Task for Jstzd {
         let baker = OctezBaker::spawn(config.baker_config.clone()).await?;
         Self::wait_for_block_level(&config.octez_node_config.rpc_endpoint, 3).await?;
         let rollup = OctezRollup::spawn(config.octez_rollup_config.clone()).await?;
+        Self::wait_for_rollup(&rollup).await?;
         let jstz_node = JstzNode::spawn(config.jstz_node_config.clone()).await?;
         Ok(Self {
             octez_node: octez_node.into_shared(),
@@ -262,6 +263,19 @@ impl Jstzd {
         .await;
         if !ready {
             bail!("baker is not ready after retries");
+        }
+        Ok(())
+    }
+
+    async fn wait_for_rollup(rollup: &OctezRollup) -> Result<()> {
+        let ready = retry(20, 1000, || async {
+            Ok(rollup.health_check().await.unwrap_or(false))
+        })
+        .await;
+        if !ready {
+            return Err(anyhow::anyhow!(
+                "rollup node is still not ready after retries"
+            ));
         }
         Ok(())
     }
