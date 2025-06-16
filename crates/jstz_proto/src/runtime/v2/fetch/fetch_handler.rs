@@ -1,3 +1,5 @@
+use crate::operation::OperationHash;
+use crate::request_logger::{log_request_end_with_host, log_request_start_with_host};
 use crate::runtime::v2::fetch::error::{FetchError, Result};
 
 use deno_core::{
@@ -114,6 +116,7 @@ fn fetch(
     let fut = process_and_dispatch_request(
         host,
         protocol.tx.clone(),
+        None,
         protocol.address.clone().into(),
         method,
         url.clone(),
@@ -141,24 +144,11 @@ fn fetch(
 /// Callers should not process the response further other than converting it into
 /// the expected response type.This function is agnostic of the context in which it
 /// is called thus suitable as the [`crate::operation::RunFunction`] handler
+#[allow(clippy::too_many_arguments)]
 pub async fn process_and_dispatch_request(
     mut host: JsHostRuntime<'static>,
     mut tx: Transaction,
-    from: Address,
-    method: ByteString,
-    url: Url,
-    headers: Vec<(ByteString, ByteString)>,
-    data: Option<Body>,
-) -> Response {
-    process_and_dispatch_request_borrowed(
-        &mut host, &mut tx, from, method, url, headers, data,
-    )
-    .await
-}
-
-pub async fn process_and_dispatch_request_borrowed(
-    host: &mut impl HostRuntime,
-    tx: &mut Transaction,
+    operation_hash: Option<OperationHash>,
     from: Address,
     method: ByteString,
     url: Url,
@@ -170,19 +160,41 @@ pub async fn process_and_dispatch_request_borrowed(
         Ok(SupportedScheme::Jstz) => {
             let mut is_successful = true;
             tx.begin();
-            let result = dispatch_run(
-                host,
-                tx,
-                from,
-                method,
-                url,
-                headers,
-                data,
-                &mut is_successful,
-            )
-            .await;
-            let _ = commit_or_rollback(host, tx, is_successful && result.is_ok());
-            result.into()
+            match (&url).try_into() {
+                Ok(to) => {
+                    log_request(
+                        &mut host,
+                        &to,
+                        operation_hash.as_ref(),
+                        LogEvent::RequestStart,
+                    );
+                    let result = dispatch_run(
+                        &mut host,
+                        &mut tx,
+                        from,
+                        to.clone(),
+                        method,
+                        url,
+                        headers,
+                        data,
+                        &mut is_successful,
+                    )
+                    .await;
+                    let _ = commit_or_rollback(
+                        &mut host,
+                        &mut tx,
+                        is_successful && result.is_ok(),
+                    );
+                    log_request(
+                        &mut host,
+                        &to,
+                        operation_hash.as_ref(),
+                        LogEvent::RequestEnd,
+                    );
+                    result.into()
+                }
+                Err(e) => e.into(),
+            }
         }
         Err(err) => err.into(),
     }
@@ -194,13 +206,13 @@ async fn dispatch_run(
     host: &mut impl HostRuntime,
     tx: &mut Transaction,
     from: Address,
+    to: Address,
     method: ByteString,
     url: Url,
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
     is_successful: &mut bool,
 ) -> Result<Response> {
-    let to: Address = (&url).try_into()?;
     let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
     headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
     match to.kind() {
@@ -472,6 +484,35 @@ fn commit_or_rollback(
     result.map_err(|e| FetchError::JstzError(e.to_string()))
 }
 
+enum LogEvent {
+    RequestStart,
+    RequestEnd,
+}
+
+fn log_request(
+    host: &mut JsHostRuntime<'static>,
+    address: &Address,
+    op_hash: Option<&OperationHash>,
+    event_type: LogEvent,
+) {
+    if let Address::SmartFunction(smart_function_addr) = &address {
+        if let Some(op) = op_hash {
+            match event_type {
+                LogEvent::RequestStart => log_request_start_with_host(
+                    host,
+                    smart_function_addr.clone(),
+                    op.to_string(),
+                ),
+                LogEvent::RequestEnd => log_request_end_with_host(
+                    host,
+                    smart_function_addr.clone(),
+                    op.to_string(),
+                ),
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
     use std::collections::HashMap;
@@ -485,7 +526,8 @@ mod test {
         kv::Transaction,
     };
     use jstz_crypto::{
-        hash::Hash, public_key_hash::PublicKeyHash,
+        hash::{Blake2b, Hash},
+        public_key_hash::PublicKeyHash,
         smart_function_hash::SmartFunctionHash,
     };
     use jstz_utils::test_util::TOKIO;
@@ -493,9 +535,12 @@ mod test {
     use serde_json::{json, Value as JsonValue};
     use url::Url;
 
-    use crate::context::account::{Account, Address, Addressable, Amount};
     use crate::runtime::v2::fetch::fetch_handler::process_and_dispatch_request;
     use crate::runtime::ParsedCode;
+    use crate::{
+        context::account::{Account, Address, Addressable, Amount},
+        tests::DebugLogSink,
+    };
 
     use super::ProtoFetchHandler;
 
@@ -567,6 +612,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                None,
                 source_address.into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -601,6 +647,7 @@ mod test {
         let response = process_and_dispatch_request(
             host,
             tx,
+            None,
             source_address.into(),
             "GET".into(),
             Url::parse(format!("jstz://{}/{}", run_address, run_address).as_str())
@@ -637,6 +684,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                None,
                 source_address.into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
@@ -674,6 +722,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                None,
                 source_address.into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -709,6 +758,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                None,
                 source_address.into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -748,6 +798,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                None,
                 source_address.into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -781,6 +832,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx,
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
@@ -819,6 +871,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx,
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -871,6 +924,7 @@ mod test {
             let _ = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -915,6 +969,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -975,6 +1030,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1018,6 +1074,7 @@ mod test {
         let response = process_and_dispatch_request(
             JsHostRuntime::new(&mut host),
             tx.clone(),
+            None,
             jstz_mock::account1().into(),
             "GET".into(),
             Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1054,6 +1111,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1097,6 +1155,7 @@ mod test {
             let _ = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1136,6 +1195,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1181,6 +1241,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1227,6 +1288,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1270,6 +1332,7 @@ mod test {
             let _ = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1307,6 +1370,7 @@ mod test {
             let _ = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                None,
                 jstz_mock::account1().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1348,6 +1412,7 @@ mod test {
         let response = process_and_dispatch_request(
             JsHostRuntime::new(&mut host),
             tx.clone(),
+            None,
             jstz_mock::account1().into(),
             "GET".into(),
             Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
@@ -1465,5 +1530,116 @@ mod test {
         });
         let id = runtime.execute_main_module(&specifier).await.unwrap();
         let _ = runtime.call_default_handler(id, &[]).await.unwrap();
+    }
+
+    #[test]
+    fn log_request() {
+        let mut host = tezos_smart_rollup_mock::MockHost::default();
+        let sink = DebugLogSink::new();
+        let buf = sink.content();
+        host.set_debug_handler(sink);
+        let mut rt = JsHostRuntime::new(&mut host);
+        let address = Address::SmartFunction(jstz_mock::sf_account1());
+        let op_hash = Blake2b::from(b"op_hash".as_ref());
+
+        super::log_request(
+            &mut rt,
+            &address,
+            Some(&op_hash),
+            super::LogEvent::RequestStart,
+        );
+        let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
+        assert_eq!(
+            log,
+            r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+"#
+        );
+        buf.lock().unwrap().clear();
+
+        super::log_request(
+            &mut rt,
+            &address,
+            Some(&op_hash),
+            super::LogEvent::RequestEnd,
+        );
+        let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
+        assert_eq!(
+            log,
+            r#"[JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+"#
+        );
+        buf.lock().unwrap().clear();
+
+        // should not log when operation hash is missing
+        super::log_request(&mut rt, &address, None, super::LogEvent::RequestEnd);
+        let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
+        assert_eq!(log, "");
+
+        // should not log with user address
+        let address = Address::User(jstz_mock::account1());
+        super::log_request(
+            &mut rt,
+            &address,
+            Some(&op_hash),
+            super::LogEvent::RequestEnd,
+        );
+        let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
+        assert_eq!(log, "");
+    }
+
+    #[tokio::test]
+    async fn log_request_start_and_end() {
+        let from = Address::User(jstz_mock::account1());
+        let mut host = tezos_smart_rollup_mock::MockHost::default();
+        let sink = DebugLogSink::new();
+        let buf = sink.content();
+        host.set_debug_handler(sink);
+        let mut tx = Transaction::default();
+
+        // This smart function uses FormData, which is not supported in v1 runtime but in v2 runtime.
+        let code = format!(
+            r#"
+        const handler = async (request) => {{
+            const f = new FormData();
+            f.append("a", "b");
+            f.append("c", "d");
+            let output = "";
+            for (const [k, v] of f) {{
+                output += `${{k}}-${{v}};`;
+            }}
+            return new Response(output);
+        }};
+        export default handler;
+        "#
+        );
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        tx.begin();
+        let func_addr =
+            Account::create_smart_function(&mut host, &mut tx, &from, 0, parsed_code)
+                .unwrap();
+        tx.commit(&mut host).unwrap();
+        tx.begin();
+        let response = super::process_and_dispatch_request(
+            JsHostRuntime::new(&mut host),
+            tx,
+            Some(Blake2b::from(b"op_hash".as_ref())),
+            from,
+            "GET".into(),
+            Url::parse(&format!("jstz://{}/", func_addr.to_base58_check())).unwrap(),
+            vec![],
+            None,
+        )
+        .await;
+
+        let text = String::from_utf8(response.body.to_vec()).unwrap();
+        assert_eq!(text, "a-b;c-d;");
+        assert_eq!(response.status, 200);
+        let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
+        assert_eq!(
+            log,
+            r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1D5U6oBmtvYmjBtjzR5yPbrzxw8fa2kCn9","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+[JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1D5U6oBmtvYmjBtjzR5yPbrzxw8fa2kCn9","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+"#
+        );
     }
 }
