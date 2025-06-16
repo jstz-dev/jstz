@@ -1,3 +1,9 @@
+/// A stream that “tails” a file and yields only the lines that match the supplied regular expression.
+///
+/// * Opens the file in *follow* mode, emits only lines that are appended afterwards.
+/// * Reads until the end of the file, then waits a bit and tries again.
+///
+/// Dropping `FilteredLogStream` calls `cancel()` and closes the file.
 use std::{
     path::PathBuf,
     pin::Pin,
@@ -10,9 +16,11 @@ use tokio::sync::mpsc;
 
 use jstz_utils::tailed_file::TailedFile;
 use std::time::Duration;
+use tokio_util::sync::CancellationToken;
 
 pub struct FilteredLogStream {
     rx: mpsc::Receiver<Result<String>>,
+    cancel: CancellationToken,
 }
 
 impl FilteredLogStream {
@@ -21,29 +29,41 @@ impl FilteredLogStream {
 
         let (tx, rx) = mpsc::channel(1024);
 
+        let cancel = CancellationToken::new();
+        let token = cancel.clone();
+
         tokio::spawn(async move {
             let mut lines = file.lines();
             loop {
-                match lines.next_line().await {
-                    Ok(Some(line)) => {
-                        if pattern.is_match(&line.to_string())
-                            && tx.send(Ok(line)).await.is_err()
-                        {
+                tokio::select! {
+                    _ = token.cancelled() => break,
+                    line = lines.next_line() => match line {
+                        Ok(Some(line)) => { // A new line matching `pattern` was appended.
+                            if pattern.is_match(&line.to_string())
+                                && tx.send(Ok(line)).await.is_err()
+                            {
+                                break;
+                            }
+                        }
+                        Ok(None) => { // EOF – wait a bit and try again
+                            tokio::time::sleep(Duration::from_millis(50)).await;
+                        }
+                        Err(e) => { // An unrecoverable I/O error occurred while reading the file.
+                            let _ = tx.send(Err(e.into())).await;
                             break;
                         }
-                    }
-                    Ok(None) => {
-                        tokio::time::sleep(Duration::from_millis(50)).await;
-                    }
-                    Err(e) => {
-                        let _ = tx.send(Err(e.into())).await;
-                        break;
                     }
                 }
             }
         });
 
-        Ok(Self { rx })
+        Ok(Self { rx, cancel })
+    }
+}
+
+impl Drop for FilteredLogStream {
+    fn drop(&mut self) {
+        self.cancel.cancel();
     }
 }
 
@@ -162,6 +182,28 @@ mod tests {
         );
 
         writer.await??;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn cancels_on_drop() -> anyhow::Result<()> {
+        use futures_util::FutureExt;
+
+        let tmp = tempfile::NamedTempFile::new()?;
+        let path = tmp.path().to_path_buf();
+
+        let stream =
+            FilteredLogStream::new(Regex::new(PATTERN).unwrap(), path.clone()).await?;
+        let token = stream.cancel.clone();
+
+        drop(stream);
+
+        tokio::time::timeout(Duration::from_secs(1), token.cancelled().fuse())
+            .await
+            .expect(
+                "background task did not terminate after FilteredLogStream was dropped",
+            );
+
         Ok(())
     }
 }
