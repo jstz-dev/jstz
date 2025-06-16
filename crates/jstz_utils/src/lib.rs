@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-=======
-use std::sync::LazyLock;
 pub mod tailed_file;
 
->>>>>>> 81a3c8e4 (feat(oracle): filetered log stream)
 pub async fn poll<'a, F, T>(
     max_attempts: u16,
     interval_ms: u64,
