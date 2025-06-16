@@ -1,0 +1,9 @@
+.container {
+  display: inline-flex;
+  line-height: normal;
+  gap: 10px;
+}
+
+.container:first-child {
+  height: 36px;
+}
