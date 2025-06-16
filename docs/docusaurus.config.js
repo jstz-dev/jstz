@@ -3,6 +3,14 @@
 
 import { themes } from "prism-react-renderer";
 
+const BIEL_PROJECT = "w30c27l8fg";
+const BIEL_WARNING =
+  'AI-generated answers may contain errors. Verify the information before use. For more information, see <a href="https://docs.tezos.com/overview/chatbot">Using the chatbot</a>.';
+const BIEL_SEARCH_HEADER_TITLE =
+  "Search or use AI to learn about Jstz and Tezos";
+const BIEL_SEARCH_BOX_TEXT = "Search all docs/Ask AI";
+const ALGOLIA_SEARCH_BOX_TEXT = "Search Jstz docs";
+
 // script-src causes development builds to fail
 // But unsafe-eval should NOT be in production builds
 // Also, put GTM first because sometimes the ';' in the escaped single quotes causes the browser to think it's the end
@@ -21,7 +29,7 @@ font-src https://cdn.jsdelivr.net https://fonts.gstatic.com 'self';
 img-src 'self' https://*.googletagmanager.com https://*.google-analytics.com data: 'unsafe-eval';
 media-src 'self';
 form-action 'self';
-connect-src 'self' https://*.algolia.net https://*.algolianet.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com;`;
+connect-src 'self' https://*.algolia.net https://*.algolianet.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com wss://app.biel.ai https://app.biel.ai;`;
 
 /** @type {import('@docusaurus/types').Config} */
 module.exports = async function createConfigAsync() {
@@ -42,6 +50,14 @@ module.exports = async function createConfigAsync() {
     },
     future: {
       v4: true,
+    },
+
+    customFields: {
+      BIEL_PROJECT,
+      BIEL_WARNING,
+      BIEL_SEARCH_HEADER_TITLE,
+      BIEL_SEARCH_BOX_TEXT,
+      ALGOLIA_SEARCH_BOX_TEXT,
     },
 
     headTags: [
@@ -98,6 +114,22 @@ module.exports = async function createConfigAsync() {
           min: 640, // min resized image's size. if original is lower, use that size.
           steps: 2, // the max number of images generated between min and max (inclusive)
           disableInDev: false,
+        },
+      ],
+      [
+        "docusaurus-biel",
+        {
+          project: BIEL_PROJECT,
+          headerTitle: "Jstz/Tezos documentation chatbot (beta)",
+          buttonPosition: "center-right",
+          version: "latest",
+          suggestedQuestions: [
+            "Write a simple smart function for me.",
+            "How do I deploy a smart function?",
+            "What can I do and not do with smart functions?",
+          ],
+          welcomeMessage: "Hi! How can I help you learn about Jstz and Tezos?",
+          footerText: BIEL_WARNING,
         },
       ],
     ],
