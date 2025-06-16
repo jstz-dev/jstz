@@ -2,14 +2,15 @@ use crate::error::Result;
 use crate::ext::jstz_fetch;
 use crate::ext::jstz_fetch::NotSupportedFetch;
 use deno_core::v8::new_single_threaded_default_platform;
-use deno_core::v8::OwnedIsolate;
 use deno_core::*;
+use derive_more::{Deref, DerefMut};
 use jstz_core::host::HostRuntime;
 use jstz_core::host::JsHostRuntime;
 use jstz_core::kv::Transaction;
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use pin_project::pin_project;
+use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 use std::{
     future::Future,
@@ -161,9 +162,8 @@ impl JstzRuntime {
     /// Executes traditional, non-ECMAScript-module JavaScript code, ignoring
     /// its result
     pub fn execute(&mut self, code: &str) -> Result<()> {
-        unsafe { self.v8_isolate().enter() }
-        self.execute_script("jstz://run", code.to_string())?;
-        unsafe { self.v8_isolate().exit() }
+        let mut this = Entered::new(self);
+        this.execute_script("jstz://run", code.to_string())?;
         Ok(())
     }
 
@@ -173,14 +173,13 @@ impl JstzRuntime {
         &mut self,
         code: &str,
     ) -> Result<T> {
-        unsafe { self.v8_isolate().enter() }
-        let value = self.execute_script("jstz://run", code.to_string()).unwrap();
+        let mut this = Entered::new(self);
+        let value = this.execute_script("jstz://run", code.to_string())?;
         let result = {
-            let scope = &mut self.handle_scope();
+            let scope = &mut this.handle_scope();
             let local = v8::Local::new(scope, value);
             serde_v8::from_v8::<T>(scope, local)?
         };
-        unsafe { self.v8_isolate().exit() }
         Ok(result)
     }
 
@@ -230,9 +229,8 @@ impl JstzRuntime {
         id: ModuleId,
         args: &[v8::Global<v8::Value>],
     ) -> Result<v8::Global<v8::Value>> {
-        let isolate_ptr = self.v8_isolate() as *mut _;
-        let fut = IsolatedFuture::new(isolate_ptr, || {
-            self.call_default_handler_inner(id, args)
+        let fut = AsyncEntered::new(self, |runtime| {
+            runtime.call_default_handler_inner(id, args)
         });
         fut.await
     }
@@ -259,36 +257,57 @@ impl JstzRuntime {
     }
 }
 
+/// RAII guard for entering and existing an Isolate.
+#[derive(Deref, DerefMut)]
+struct Entered<'a> {
+    runtime: &'a mut JstzRuntime,
+}
+
+impl<'a> Entered<'a> {
+    pub fn new(runtime: &'a mut JstzRuntime) -> Self {
+        unsafe { runtime.v8_isolate().enter() };
+        Entered { runtime }
+    }
+}
+
+impl<'a> Drop for Entered<'a> {
+    fn drop(&mut self) {
+        unsafe { self.runtime.v8_isolate().exit() };
+    }
+}
+
 #[pin_project]
-pub struct IsolatedFuture<B, F>
+pub struct AsyncEntered<'a, B, F>
 where
-    B: FnOnce() -> F,
+    B: FnOnce(&'a mut JstzRuntime) -> F,
     F: Future,
 {
     #[pin]
     future: Option<F>,
     builder: Option<B>,
-    isolate_ptr: *mut OwnedIsolate,
+    runtime_ptr: *mut JstzRuntime,
+    marker: PhantomData<&'a ()>,
 }
 
-impl<B, F> IsolatedFuture<B, F>
+impl<'a, B, F> AsyncEntered<'a, B, F>
 where
-    B: FnOnce() -> F,
+    B: FnOnce(&'a mut JstzRuntime) -> F,
     F: Future,
 {
-    pub fn new(isolate_ptr: *mut OwnedIsolate, builder: B) -> Self {
+    pub fn new(runtime: &'a mut JstzRuntime, builder: B) -> Self {
         // # Safety: Ok
-        IsolatedFuture {
+        AsyncEntered {
             builder: Some(builder),
             future: None,
-            isolate_ptr,
+            runtime_ptr: runtime as *mut _,
+            marker: PhantomData,
         }
     }
 }
 
-impl<B, F> Future for IsolatedFuture<B, F>
+impl<'a, B, F> Future for AsyncEntered<'a, B, F>
 where
-    B: FnOnce() -> F,
+    B: FnOnce(&'a mut JstzRuntime) -> F,
     F: Future,
 {
     type Output = F::Output;
@@ -296,7 +315,7 @@ where
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut this = self.project();
         unsafe {
-            this.isolate_ptr.as_mut().unwrap().enter();
+            (**this.runtime_ptr).v8_isolate().enter();
         };
         let res = {
             if this.future.is_none() {
@@ -304,14 +323,15 @@ where
                     .builder
                     .take()
                     .expect("builder must be present on first poll");
-                this.future.set(Some(builder()));
+                this.future
+                    .set(Some(builder(unsafe { &mut **this.runtime_ptr })));
             }
 
             let fut = this.future.as_mut().as_pin_mut().unwrap();
             fut.poll(cx)
         };
         unsafe {
-            this.isolate_ptr.as_mut().unwrap().exit();
+            (**this.runtime_ptr).v8_isolate().exit();
         };
         res
     }
