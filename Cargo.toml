@@ -3,6 +3,7 @@ resolver = "2"
 members = [
   "crates/jstz_api",
   "crates/jstz_cli",
+  "crates/jstz_client",
   "crates/jstz_core",
   "crates/jstz_crypto",
   "crates/jstz_runtime",
@@ -75,6 +76,7 @@ futures_core = "0.2.3"
 futures-util = "0.3.30"
 getrandom = { version = "0.2.12", features = ["custom"] }
 hex = "0.4.3"
+hyper = "1.6.0"
 http = "1.0.0"
 http-serde = "2.0.0"
 in-container = "^1"

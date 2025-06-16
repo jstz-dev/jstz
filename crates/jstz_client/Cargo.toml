@@ -1,0 +1,20 @@
+[package]
+name = "jstz_client"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description = "HTTP client for jstz operations"
+
+[dependencies]
+anyhow.workspace = true
+jstz_crypto = { path = "../jstz_crypto" }
+jstz_proto = { path = "../jstz_proto" }
+log.workspace = true
+reqwest.workspace = true
+reqwest-eventsource.workspace = true
+tokio.workspace = true 
