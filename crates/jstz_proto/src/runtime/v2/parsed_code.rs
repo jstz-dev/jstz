@@ -118,8 +118,8 @@ impl ParsedCode {
 #[derive(Deref, DerefMut)]
 struct ImportDetected(bool);
 
-/// Instantiotion normally involves resolving module dependencies but since. However,
-/// Jstz only supports bundled modules so we error if module resolution is requested
+/// Instantiation normally involves resolving module dependencies but since Jstz
+/// only supports bundled modules, we error if module resolution is requested
 fn instantiate_module<'s>(
     scope: &mut v8::HandleScope<'s>,
     module: &v8::Local<v8::Module>,
@@ -137,7 +137,7 @@ fn instantiate_module<'s>(
     if result.is_none() {
         let has_imports = import_detected.borrow();
         if has_imports.0 {
-            return Err(ParseError::ImportsNotSupport);
+            return Err(ParseError::ImportsNotSupported);
         } else {
             return Err(ParseError::InstantiationFailed);
         }
@@ -255,7 +255,7 @@ pub enum ParseError {
 
     #[class(not_supported)]
     #[error("Import specifiers are not supported")]
-    ImportsNotSupport,
+    ImportsNotSupported,
 
     #[class(generic)]
     #[error("Failed to instantiate module")]
@@ -377,7 +377,7 @@ mod test {
         "#;
         let error = ParsedCode::parse(code.to_string()).unwrap_err();
         println!("{:?}", error);
-        assert!(matches!(error, ParseError::ImportsNotSupport));
+        assert!(matches!(error, ParseError::ImportsNotSupported));
         assert_eq!(error.get_class(), "NotSupported");
         assert_eq!(error.get_message(), "Import specifiers are not supported");
     }
