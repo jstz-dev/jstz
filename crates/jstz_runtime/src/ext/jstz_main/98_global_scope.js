@@ -8,8 +8,9 @@ import * as jstzKv from "ext:jstz_kv/kv.js";
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
+import { NotSupported } from "ext:jstz_main/01_errors.js";
 import * as event from "ext:deno_web/02_event.js";
-import * as timers from "ext:deno_web/02_timers.js";
+// import * as timers from "ext:deno_web/02_timers.js";
 import * as abortSignal from "ext:deno_web/03_abort_signal.js";
 import * as globalInterfaces from "ext:deno_web/04_global_interfaces.js";
 import * as base64 from "ext:deno_web/05_base64.js";
@@ -33,6 +34,34 @@ GlobalMath.random = () => {
   return 0.42;
 };
 
+let NativeDate = Date;
+
+const NOW = 1530380397121;
+
+function JstzDate(...args) {
+  if (this instanceof JstzDate) {
+    if (args.length === 0) {
+      // Constructor with no args ie. new Date()
+      return new NativeDate(NOW);
+    } else {
+      return new NativeDate(...args);
+    }
+  } else {
+    // Static constructor call ie. Date()
+    return new NativeDate(NOW).toString();
+  }
+}
+
+// Manually set static methods to reduce leaking inherited class. This ensures
+// that `now()` and `constructor()` of NativeDate are not exposed
+JstzDate.now = () => NOW;
+JstzDate.parse = (...args) => NativeDate.parse(...args);
+JstzDate.UTC = (...args) => NativeDate.UTC(...args);
+
+// Forwards instance methods
+JstzDate.prototype = NativeDate.prototype;
+JstzDate.prototype.contructor = JstzDate;
+
 // https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope
 const workerGlobalScope = {
   AbortController: core.propNonEnumerable(abortSignal.AbortController),
@@ -45,6 +74,7 @@ const workerGlobalScope = {
   CompressionStream: core.propNonEnumerable(compression.CompressionStream),
   CountQueuingStrategy: core.propNonEnumerable(streams.CountQueuingStrategy),
   CustomEvent: core.propNonEnumerable(event.CustomEvent),
+  Date: core.propNonEnumerable(JstzDate),
   DecompressionStream: core.propNonEnumerable(compression.DecompressionStream),
   DedicatedWorkerGlobalScope:
     globalInterfaces.dedicatedWorkerGlobalScopeConstructorDescriptor,
@@ -57,7 +87,8 @@ const workerGlobalScope = {
   FormData: core.propNonEnumerable(formData.FormData),
   Headers: core.propNonEnumerable(headers.Headers),
   ImageData: core.propNonEnumerable(imageData.ImageData),
-  Math: GlobalMath,
+  Math: core.propNonEnumerable(GlobalMath),
+  NotSupported: core.propNonEnumerable(NotSupported),
   MessageChannel: core.propNonEnumerable(messagePort.MessageChannel),
   MessageEvent: core.propNonEnumerable(event.MessageEvent),
   MessagePort: core.propNonEnumerable(messagePort.MessagePort),
@@ -106,15 +137,27 @@ const workerGlobalScope = {
   WorkerLocation: location.workerLocationConstructorDescriptor,
   atob: core.propWritable(base64.atob),
   btoa: core.propWritable(base64.btoa),
-  clearInterval: core.propWritable(timers.clearInterval),
-  clearTimeout: core.propWritable(timers.clearTimeout),
+  // clearInterval: core.propWritable(timers.clearInterval),
+  clearInterval: core.propWritable((..._args) => {
+    throw new NotSupported("'clearInterval()' is not supported");
+  }),
+  // clearTimeout: core.propWritable(timers.clearTimeout),
+  clearTimeout: core.propWritable((..._args) => {
+    throw new NotSupported("'clearTimeout()' is not supported");
+  }),
   console: core.propNonEnumerable(jstzConsole),
   fetch: core.propWritable(fetch.fetch),
   location: location.workerLocationDescriptor,
   performance: core.propWritable(performance.performance),
   reportError: core.propWritable(event.reportError),
-  setInterval: core.propWritable(timers.setInterval),
-  setTimeout: core.propWritable(timers.setTimeout),
+  // setInterval: core.propWritable(timers.setInterval),
+  setInterval: core.propWritable((..._args) => {
+    throw new NotSupported("'setInterval()' is not supported");
+  }),
+  // setTimeout: core.propWritable(timers.setTimeout)
+  setTimeout: core.propWritable((..._args) => {
+    throw new NotSupported("'setTimeout()' is not supported");
+  }),
   structuredClone: core.propWritable(messagePort.structuredClone),
   [webidl.brand]: core.propNonEnumerable(webidl.brand),
   Kv: {
