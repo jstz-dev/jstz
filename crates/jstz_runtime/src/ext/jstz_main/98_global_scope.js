@@ -1,4 +1,4 @@
-import { core } from "ext:core/mod.js";
+import { core, primordials } from "ext:core/mod.js";
 
 import * as webidl from "ext:deno_webidl/00_webidl.js";
 import jstzConsole from "ext:jstz_console/console.js";
@@ -28,6 +28,11 @@ import * as request from "ext:deno_fetch/23_request.js";
 import * as response from "ext:deno_fetch/23_response.js";
 import * as fetch from "ext:deno_fetch/26_fetch.js";
 
+let GlobalMath = Math;
+GlobalMath.random = () => {
+  return 0.42;
+};
+
 // https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope
 const workerGlobalScope = {
   AbortController: core.propNonEnumerable(abortSignal.AbortController),
@@ -52,6 +57,7 @@ const workerGlobalScope = {
   FormData: core.propNonEnumerable(formData.FormData),
   Headers: core.propNonEnumerable(headers.Headers),
   ImageData: core.propNonEnumerable(imageData.ImageData),
+  Math: GlobalMath,
   MessageChannel: core.propNonEnumerable(messagePort.MessageChannel),
   MessageEvent: core.propNonEnumerable(event.MessageEvent),
   MessagePort: core.propNonEnumerable(messagePort.MessagePort),
