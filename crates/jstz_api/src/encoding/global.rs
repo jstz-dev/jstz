@@ -19,6 +19,8 @@ impl Global {
         let encoded = DEFAULT_ENGINE.decode(str).map_err(on_err)?;
         let encoded_str = core::str::from_utf8(encoded.as_slice()).map_err(on_err)?;
 
+        let _whatever = 5;
+
         Ok(encoded_str.into())
     }
     fn btoa(data: &JsString) -> JsResult<JsString> {
