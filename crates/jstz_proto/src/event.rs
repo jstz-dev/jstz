@@ -7,12 +7,9 @@ use tezos_smart_rollup::prelude::debug_msg;
 
 use crate::runtime::v2::oracle::OracleRequest;
 
-pub const JSTZ_PREFIX: &str = "[JSTZ]";
-
 /// Jstz Events
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
-pub enum Event {
-    OracleRequest(OracleRequest),
+pub trait Event: PartialEq + Serialize {
+    fn tag() -> &'static str;
 }
 
 /// Responsible for publishing events to the kernel debug log
@@ -22,23 +19,25 @@ pub struct EventPublisher;
 impl EventPublisher {
     /// Jstz events are published as single line in the kernel debug log with the
     /// schema "[JSTZ]<json payload>
-    pub(crate) fn publish_event<R>(&mut self, rt: &R, event: &Event) -> Result<()>
+    pub(crate) fn publish_event<R, E: Event>(&mut self, rt: &R, event: &E) -> Result<()>
     where
         R: HostRuntime,
     {
         let json = serde_json::to_string(event).map_err(EncodeError::from)?;
-        debug_msg!(rt, "{JSTZ_PREFIX}{json}");
+        let prefix = E::tag();
+        debug_msg!(rt, "[{prefix}]{json}");
         Ok(())
     }
 }
 
-pub fn decode_line(input: &str) -> Result<Event> {
-    let str = parse_line(input)?;
+pub fn decode_line<'de, E: Event + Deserialize<'de>>(input: &'de str) -> Result<E> {
+    let str = parse_line::<E>(input)?;
     Ok(serde_json::from_str(str).map_err(DecodeError::from)?)
 }
 
-fn parse_line(input: &str) -> std::result::Result<&str, DecodeError> {
-    let (input, _) = tag::<&str, &str, NomError>(JSTZ_PREFIX)(input)?;
+fn parse_line<E: Event>(input: &str) -> std::result::Result<&str, DecodeError> {
+    let prefix = format!("[{}]", E::tag());
+    let (input, _) = tag::<&str, &str, NomError>(&prefix)(input)?;
     Ok(input)
 }
 
@@ -115,9 +114,9 @@ mod test {
     use url::Url;
 
     use crate::{
-        event::{decode_line, Event, EventPublisher},
+        event::{decode_line, DecodeError, Event, EventError, EventPublisher, NomError},
         runtime::v2::{
-            fetch::{Body, Request},
+            fetch::http::{Body, Request},
             oracle::OracleRequest,
         },
     };
@@ -149,7 +148,7 @@ mod test {
                 &mut sink.0,
             )
         });
-        let event = Event::OracleRequest(OracleRequest {
+        let event = OracleRequest {
             id: 1,
             caller: PublicKeyHash::from_base58("tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb")
                 .unwrap(),
@@ -163,11 +162,31 @@ mod test {
                     serde_json::to_vec(&json!({ "message": "hello"})).unwrap(),
                 )),
             },
-        });
+        };
         let mut publisher = EventPublisher::default();
         publisher.publish_event(&mut host, &event);
         let head_line = sink.lines().first().unwrap().clone();
+        assert_eq!(
+            head_line,
+            r#"[ORACLE]{"id":1,"caller":"tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb","gas_limit":100,"timeout":21,"request":{"method":[80,79,83,84],"url":"http://example.com/foo","headers":[],"body":{"Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}}"#
+        );
         let decoded = decode_line(&head_line).unwrap();
         assert_eq!(event, decoded)
+    }
+
+    #[test]
+    fn fails_decode_on_invalid_line() {
+        let decoded = decode_line::<OracleRequest>("invalid line").unwrap_err();
+        assert_eq!(
+            decoded.to_string(),
+            "Error while decoding event: Parsing Error: NomError(\"Nom decode failed: kind 'Tag' on input 'invalid line'\")"
+        );
+
+        let decoded =
+            decode_line::<OracleRequest>(r#"[ORACLE]{"message": "boom"}"#).unwrap_err();
+        assert_eq!(
+            decoded.to_string(),
+            "Error while decoding event: missing field `id` at line 1 column 19"
+        )
     }
 }

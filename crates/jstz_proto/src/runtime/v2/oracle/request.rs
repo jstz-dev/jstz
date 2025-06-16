@@ -1,6 +1,7 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use serde::{Deserialize, Serialize};
 
+use crate::event::Event;
 use crate::runtime::v2::fetch::http::Request;
 use crate::{BlockLevel, Gas};
 
@@ -21,4 +22,12 @@ pub struct OracleRequest {
     pub timeout: BlockLevel,
     /// Request paylaod
     pub request: Request,
+}
+
+const ORACLE_PREFIX: &str = "ORACLE";
+
+impl Event for OracleRequest {
+    fn tag() -> &'static str {
+        ORACLE_PREFIX
+    }
 }
