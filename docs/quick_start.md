@@ -5,6 +5,8 @@ sidebar_label: Quick start
 
 import Image from '@theme/IdealImage';
 
+Hello!
+
 This guide will instruct you in writing, deploying, and using your first Jstz _smart function_.
 
 ## Prerequisites
