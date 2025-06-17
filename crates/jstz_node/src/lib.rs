@@ -283,7 +283,7 @@ mod test {
             sleep(Duration::from_secs(1)).await;
             h.abort();
             // wait for the worker in run to be dropped
-            sleep(Duration::from_secs(1)).await;
+            sleep(Duration::from_secs(2)).await;
         }
         let preimages_dir = TempDir::new().unwrap().into_path();
 
