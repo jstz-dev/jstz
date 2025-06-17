@@ -1,20 +1,11 @@
 use crate::runtime::v2::fetch::error::{FetchError, Result};
 use crate::runtime::v2::fetch::http::*;
-
-use deno_core::{resolve_import, v8, ByteString, StaticModuleLoader};
+use deno_core::ByteString;
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_runtime::sys::{
-    FromV8, Headers as JsHeaders, Request as JsRequest, RequestInit as JsRequestInit,
-    Response as JsResponse, ToV8,
-};
-use jstz_runtime::JstzRuntime;
-use jstz_runtime::{JstzRuntimeOptions, ProtocolContext};
-use std::rc::Rc;
+
 use url::Url;
 
 use crate::context::account::{Account, Address};
-use crate::runtime::v2::fetch::fetch_handler::ProtoFetchHandler;
 
 pub struct HostScript;
 
