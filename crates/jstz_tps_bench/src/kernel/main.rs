@@ -6,7 +6,6 @@ use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_crypto::{hash::Hash, public_key::PublicKey};
 use tezos_smart_rollup::prelude::Runtime;
 use tezos_smart_rollup::{entrypoint, storage::path::RefPath};
-use tezos_smart_rollup_core::smart_rollup_core::SmartRollupCore;
 
 #[entrypoint::main]
 #[cfg_attr(
@@ -46,7 +45,7 @@ pub fn entry(host: &mut impl Runtime) {
     }
 
     // Delegate to Jstz kernel
-    jstz_kernel::entry(host);
+    futures::executor::block_on(jstz_kernel::run(host));
 }
 
 #[cfg(not(feature = "static-inbox"))]

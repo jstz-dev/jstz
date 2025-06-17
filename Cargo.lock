@@ -3175,6 +3175,7 @@ dependencies = [
  "bip39",
  "boa_gc",
  "clap 4.5.20",
+ "futures",
  "hex",
  "http 1.1.0",
  "jstz_crypto",

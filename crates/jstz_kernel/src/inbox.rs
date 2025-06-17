@@ -7,11 +7,11 @@ use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
 use tezos_smart_rollup::michelson::{
     MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
 };
-pub use tezos_smart_rollup::{
+use tezos_smart_rollup::{
     inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage, Transfer},
     michelson::MichelsonPair,
-    prelude::{debug_msg, Runtime},
-    types::{self, Contract},
+    prelude::Runtime,
+    types::Contract,
 };
 
 use crate::parsing::try_parse_fa_deposit;
