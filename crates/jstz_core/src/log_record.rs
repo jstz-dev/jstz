@@ -38,7 +38,7 @@ pub enum LogLevel {
     ERROR = 1,
     WARN = 2,
     INFO = 3,
-    LOG = 4,
+    DEBUG = 4,
 }
 
 impl Display for LogLevel {
@@ -47,7 +47,7 @@ impl Display for LogLevel {
             LogLevel::ERROR => write!(f, "ERROR"),
             LogLevel::WARN => write!(f, "WARN"),
             LogLevel::INFO => write!(f, "INFO"),
-            LogLevel::LOG => write!(f, "LOG"),
+            LogLevel::DEBUG => write!(f, "DEBUG"),
         }
     }
 }
@@ -60,7 +60,7 @@ impl TryFrom<&str> for LogLevel {
             "ERROR" => Ok(LogLevel::ERROR),
             "WARN" => Ok(LogLevel::WARN),
             "INFO" => Ok(LogLevel::INFO),
-            "LOG" => Ok(LogLevel::LOG),
+            "DEBUG" => Ok(LogLevel::DEBUG),
             _ => Err(format!("Invalid LogLevel: {}", value)),
         }
     }
@@ -88,7 +88,7 @@ mod tests {
         assert_eq!(LogLevel::ERROR.to_string(), "ERROR");
         assert_eq!(LogLevel::WARN.to_string(), "WARN");
         assert_eq!(LogLevel::INFO.to_string(), "INFO");
-        assert_eq!(LogLevel::LOG.to_string(), "LOG");
+        assert_eq!(LogLevel::DEBUG.to_string(), "DEBUG");
     }
 
     #[test]
@@ -96,7 +96,7 @@ mod tests {
         assert_eq!(LogLevel::try_from("ERROR").unwrap(), LogLevel::ERROR);
         assert_eq!(LogLevel::try_from("WARN").unwrap(), LogLevel::WARN);
         assert_eq!(LogLevel::try_from("INFO").unwrap(), LogLevel::INFO);
-        assert_eq!(LogLevel::try_from("LOG").unwrap(), LogLevel::LOG);
+        assert_eq!(LogLevel::try_from("DEBUG").unwrap(), LogLevel::DEBUG);
         assert!(LogLevel::try_from("INVALID").is_err());
     }
 
@@ -105,25 +105,25 @@ mod tests {
         let record = LogRecord {
             address: dummy_hash(),
             request_id: "req-123".to_string(),
-            level: LogLevel::LOG,
+            level: LogLevel::INFO,
             text: "Hello, world!".to_string(),
         };
         let s = record.to_string();
 
         let parsed: LogRecord = serde_json::from_str(&s).unwrap();
         assert_eq!(parsed.request_id, "req-123");
-        assert_eq!(parsed.level, LogLevel::LOG);
+        assert_eq!(parsed.level, LogLevel::INFO);
         assert_eq!(parsed.text, "Hello, world!");
 
         let opt = LogRecord::try_from_string(&s);
         assert!(opt.is_some());
         let rec2 = opt.unwrap();
         assert_eq!(rec2.request_id, "req-123");
-        assert_eq!(rec2.level, LogLevel::LOG);
+        assert_eq!(rec2.level, LogLevel::INFO);
         assert_eq!(rec2.text, "Hello, world!");
 
         let json = serde_json::to_string(&record).unwrap();
-        assert_eq!(json, "{\"address\":\"KT18mgybN9E97hF9HG9cDfSz6ofT7w9WTzMH\",\"requestId\":\"req-123\",\"level\":\"LOG\",\"text\":\"Hello, world!\"}");
+        assert_eq!(json, "{\"address\":\"KT18mgybN9E97hF9HG9cDfSz6ofT7w9WTzMH\",\"requestId\":\"req-123\",\"level\":\"INFO\",\"text\":\"Hello, world!\"}");
         let de: LogRecord = serde_json::from_str(&json).unwrap();
         assert_eq!(record, de);
     }

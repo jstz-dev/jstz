@@ -5,7 +5,7 @@ use reqwest_eventsource::{Event, EventSource};
 
 use crate::{config::NetworkName, error::Result, utils::AddressOrAlias, Config};
 
-pub const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::LOG;
+pub const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::INFO;
 
 pub async fn exec(
     address_or_alias: AddressOrAlias,

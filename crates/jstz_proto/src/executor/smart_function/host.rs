@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "v2_runtime", allow(unused))]
 use crate::{context::account::Addressable, operation::RunFunction};
 
 use jstz_core::{

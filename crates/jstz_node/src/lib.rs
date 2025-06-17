@@ -235,11 +235,10 @@ mod test {
         let current_spec = std::fs::read_to_string(filename).unwrap();
         let current_spec = current_spec.trim();
         let generated_spec = crate::openapi_json_raw().unwrap();
-        assert_eq!(
-        current_spec,
-        generated_spec,
-        "API doc regression detected. Run the 'spec' command to update:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
-    );
+        assert!(
+            current_spec == generated_spec,
+            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
+        );
     }
 
     #[tokio::test]
