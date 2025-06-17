@@ -113,6 +113,7 @@ pub enum Command {
         command: sandbox::Command,
     },
     /// ⚡️ Start a REPL session with jstz's JavaScript runtime {n}
+    #[cfg(not(feature = "v2_runtime"))]
     Repl {
         /// Sets the address of the REPL environment.
         #[arg(value_name = "ADDRESS|ALIAS", short, long)]
@@ -198,6 +199,7 @@ pub async fn exec(command: Command) -> Result<()> {
             )
             .await
         }
+        #[cfg(not(feature = "v2_runtime"))]
         Command::Repl { account } => repl::exec(account).await,
         Command::Logs(logs) => logs::exec(logs).await,
         Command::Login { alias } => account::login(alias).await,

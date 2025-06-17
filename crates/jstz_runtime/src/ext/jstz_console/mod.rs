@@ -29,7 +29,7 @@ mod kernel {
 
 // Level Description
 //  0    debug
-//  1    log, info
+//  1    log, info, dir, dirxml
 //  2    warn
 //  3    error
 #[op2(fast)]
