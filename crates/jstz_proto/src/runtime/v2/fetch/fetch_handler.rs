@@ -165,7 +165,7 @@ pub async fn process_and_dispatch_request(
             let result = dispatch_run(
                 &mut host,
                 &mut tx,
-                operation_hash.clone(),
+                operation_hash,
                 from,
                 method,
                 url,
@@ -202,6 +202,7 @@ async fn dispatch_run(
             let response = handle_address(
                 host,
                 tx,
+                operation_hash.as_ref(),
                 to.clone(),
                 method,
                 url,
@@ -222,6 +223,7 @@ async fn dispatch_run(
 async fn handle_address(
     host: &mut JsHostRuntime<'static>,
     tx: &mut Transaction,
+    operation_hash: Option<&OperationHash>,
     to: Address,
     method: ByteString,
     url: Url,
@@ -244,6 +246,7 @@ async fn handle_address(
             let run_result = load_and_run(
                 host,
                 tx,
+                operation_hash,
                 address.clone(),
                 method,
                 url.clone(),
@@ -289,6 +292,7 @@ async fn handle_address(
 async fn load_and_run(
     host: &mut impl HostRuntime,
     tx: &mut Transaction,
+    operation_hash: Option<&OperationHash>,
     address: SmartFunctionHash,
     method: ByteString,
     url: Url,
@@ -298,7 +302,12 @@ async fn load_and_run(
     let mut body = body;
 
     // 0. Prepare Protocol
-    let mut proto = ProtocolContext::new(host, tx, address.clone(), String::new());
+    let mut proto = ProtocolContext::new(
+        host,
+        tx,
+        address.clone(),
+        operation_hash.map(|v| v.to_string()).unwrap_or_default(),
+    );
 
     // 1. Load script
     let script = { load_script(tx, &mut proto.host, &proto.address)? };
@@ -1612,7 +1621,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn log_request_start_and_end() {
+    async fn log_request_execution() {
         let from = Address::User(jstz_mock::account1());
         let mut host = tezos_smart_rollup_mock::MockHost::default();
         let sink = DebugLogSink::new();
@@ -1631,6 +1640,7 @@ mod test {
             for (const [k, v] of f) {{
                 output += `${{k}}-${{v}};`;
             }}
+            console.warn(output);
             return new Response(output);
         }};
         export default handler;
@@ -1659,12 +1669,17 @@ mod test {
         assert_eq!(text, "a-b;c-d;");
         assert_eq!(response.status, 200);
         let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
-        assert_eq!(
-            log,
-            r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1D5U6oBmtvYmjBtjzR5yPbrzxw8fa2kCn9","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
-[JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1D5U6oBmtvYmjBtjzR5yPbrzxw8fa2kCn9","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
-"#
-        );
+        #[cfg(feature = "kernel")]
+        let expected = r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+[JSTZ:SMART_FUNCTION:LOG] {"address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","requestId":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5","level":"WARN","text":"a-b;c-d;\n"}
+[JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+"#;
+        #[cfg(not(feature = "kernel"))]
+        let expected = r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+[WARN] a-b;c-d;
+[JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+"#;
+        assert_eq!(log, expected);
     }
 
     // Host script behaviour
