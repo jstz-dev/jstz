@@ -199,63 +199,88 @@ async fn dispatch_run(
     match to {
         Ok(HostName::Address(to)) => {
             log_request(host, &to, operation_hash.as_ref(), LogEvent::RequestStart);
-            let mut headers =
-                process_headers_and_transfer(tx, host, headers, &from, &to)?;
-            headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
-            let response = match to.kind() {
-                AddressKind::User => Ok(Response {
-                    status: 200,
-                    status_text: "OK".into(),
-                    headers,
-                    body: Body::Vector(Vec::with_capacity(0)),
-                }),
-                AddressKind::SmartFunction => {
-                    let address = to.as_smart_function().unwrap();
-                    let run_result = load_and_run(
-                        host,
-                        tx,
-                        address.clone(),
-                        method,
-                        url.clone(),
-                        headers,
-                        data,
-                    )
-                    .await;
-                    if let Ok(response) = run_result {
-                        if response.status < 200 || response.status >= 300 {
-                            // Anything not a success should rollback
-                            *is_successful = false;
-                            clean_and_validate_headers(response.headers).map(
-                                |ProcessedHeaders { headers, .. }| Response {
-                                    headers,
-                                    ..response
-                                },
-                            )
-                        } else {
-                            let to: Address = (&url).try_into()?;
-                            let headers = process_headers_and_transfer(
-                                tx,
-                                host,
-                                response.headers,
-                                &to,
-                                &from,
-                            )?;
-                            Ok(Response {
-                                headers,
-                                ..response
-                            })
-                        }
-                    } else {
-                        run_result
-                    }
-                }
-            };
+            let response = handle_address(
+                host,
+                tx,
+                to.clone(),
+                method,
+                url,
+                headers,
+                data,
+                is_successful,
+                from,
+            )
+            .await;
             log_request(host, &to, operation_hash.as_ref(), LogEvent::RequestEnd);
             response
         }
         Ok(HostName::JstzHost) => HostScript::route(host, tx, from, method, url).await,
         Err(e) => Err(e),
     }
+}
+
+async fn handle_address(
+    host: &mut JsHostRuntime<'static>,
+    tx: &mut Transaction,
+    to: Address,
+    method: ByteString,
+    url: Url,
+    headers: Vec<(ByteString, ByteString)>,
+    data: Option<Body>,
+    is_successful: &mut bool,
+    from: Address,
+) -> Result<Response> {
+    let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
+    headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
+    let response = match to.kind() {
+        AddressKind::User => Ok(Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers,
+            body: Body::Vector(Vec::with_capacity(0)),
+        }),
+        AddressKind::SmartFunction => {
+            let address = to.as_smart_function().unwrap();
+            let run_result = load_and_run(
+                host,
+                tx,
+                address.clone(),
+                method,
+                url.clone(),
+                headers,
+                data,
+            )
+            .await;
+            if let Ok(response) = run_result {
+                if response.status < 200 || response.status >= 300 {
+                    // Anything not a success should rollback
+                    *is_successful = false;
+                    clean_and_validate_headers(response.headers).map(
+                        |ProcessedHeaders { headers, .. }| Response {
+                            headers,
+                            ..response
+                        },
+                    )
+                } else {
+                    let to: Address = (&url).try_into()?;
+                    let headers = process_headers_and_transfer(
+                        tx,
+                        host,
+                        response.headers,
+                        &to,
+                        &from,
+                    )?;
+                    Ok(Response {
+                        headers,
+                        ..response
+                    })
+                }
+            } else {
+                run_result
+            }
+        }
+    };
+    response
 }
 
 // - Loads the smart function script at `address`
@@ -1673,8 +1698,8 @@ mod test {
             )
             .await;
 
-            //assert_eq!(200, response.status);
-            //assert_eq!("OK", response.status_text);
+            assert_eq!(200, response.status);
+            assert_eq!("OK", response.status_text);
             assert_eq!("0", String::from_utf8(response.body.to_vec()).unwrap());
         });
     }
