@@ -9,7 +9,7 @@ This guide will instruct you in writing, deploying, and using your first Jstz _s
 
 ## Prerequisites
 
-- Install Node.JS, `npm`, and Docker.
+- Install Node.JS version 22 or later, `npm`, and Docker.
 - Install Jstz as described in [Installation](installation.md).
 
   To verify your installation, run this command to check the version of Jstz:
@@ -225,21 +225,17 @@ It is not yet secure enough to use in production applications.
 
 :::
 
-1. Install the Chrome web browser.
+:::note
 
-   :::note
+The Jstz dev wallet supports only the Chrome web browser.
 
-   The Jstz dev wallet supports only the Chrome web browser.
-
-   :::
+:::
 
 1. Download the source code for the dev wallet:
 
    ```bash
    git clone https://github.com/jstz-dev/dev-wallet.git
    ```
-
-1. Install Node.JS version 22 or later.
 
 1. Go into the repository, install the dependencies, and build the wallet:
 
