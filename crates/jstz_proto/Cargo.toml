@@ -22,7 +22,7 @@ erased-serde.workspace = true
 http-serde.workspace = true
 http.workspace = true
 nom.workspace = true
-jstz_api = { path = "../jstz_api" }
+jstz_api = { path = "../jstz_api", optional = true }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 serde.workspace = true
@@ -39,7 +39,6 @@ deno_core = { workspace = true, optional = true }
 deno_error = { workspace = true, optional = true }
 deno_fetch_base = { workspace = true, optional = true }
 jstz_runtime = { path = "../jstz_runtime", optional = true }
-jstz_utils = { path = "../jstz_utils", optional = true }
 tokio = { workspace = true, optional = true }
 parking_lot.workspace = true
 thiserror.workspace = true
@@ -53,6 +52,7 @@ tezos-smart-rollup-mock.workspace = true
 tokio.workspace = true
 
 [features]
-v2_runtime = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_base", "dep:deno_error", "dep:tokio", "dep:jstz_utils"]
+default = ["dep:jstz_api"]
+v2_runtime = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_base", "dep:deno_error", "dep:tokio"]
 kernel = ["jstz_runtime?/kernel"]
 

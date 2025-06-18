@@ -1,12 +1,12 @@
 use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
-    Error, Result,
+    Error, HttpBody, Result,
 };
 use bincode::{Decode, Encode};
 use derive_more::{Deref, Display, From};
 use http::{HeaderMap, Method, Uri};
-use jstz_api::http::body::HttpBody;
+
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,

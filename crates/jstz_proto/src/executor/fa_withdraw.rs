@@ -1,6 +1,5 @@
 use bincode::{Decode, Encode};
 use derive_more::{Display, Error, From};
-use jstz_api::http::body::HttpBody;
 use jstz_core::{
     host::HostRuntime,
     kv::{outbox::OutboxMessage, Transaction},
@@ -22,7 +21,7 @@ use crate::{
         account::{Address, Addressable, Amount},
         ticket_table::TicketTable,
     },
-    Error, Result,
+    Error, HttpBody, Result,
 };
 
 const WITHDRAW_ENTRYPOINT: &str = "withdraw";
