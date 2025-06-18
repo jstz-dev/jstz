@@ -110,7 +110,7 @@ module.exports = async function createConfigAsync() {
         // image: 'img/docusaurus-social-card.jpg',
         navbar: {
           style: "primary",
-          title: "👨‍⚖️ Jstz docs",
+          title: "Jstz docs",
           // logo: {
           //   alt: 'Developer docs for Jstz',
           //   src: 'img/logo-tezos.svg',
