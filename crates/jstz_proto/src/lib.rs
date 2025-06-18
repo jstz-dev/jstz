@@ -15,6 +15,7 @@ pub mod runtime;
 /// https://linear.app/tezos/issue/JSTZ-617/
 pub type BlockLevel = u64;
 pub type Gas = u64;
+pub type HttpBody = Option<Vec<u8>>;
 
 #[cfg(test)]
 mod tests {
