@@ -17,6 +17,7 @@ deno_console.workspace = true
 derive_more = { workspace = true, features = ["deref", "deref_mut", "from"] }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
+rayon = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup.workspace = true
@@ -47,3 +48,4 @@ tezos-smart-rollup-mock.workspace = true
 [features]
 skip-wpt = []
 kernel = []
+native = ["dep:rayon"]

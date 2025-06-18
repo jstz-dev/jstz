@@ -2,6 +2,8 @@ use crate::error::Result;
 use crate::ext::jstz_fetch;
 use crate::ext::jstz_fetch::NotSupportedFetch;
 use deno_core::v8::new_single_threaded_default_platform;
+#[cfg(feature = "native")]
+use deno_core::v8::IsolateHandle;
 use deno_core::*;
 use derive_more::{Deref, DerefMut};
 use jstz_core::host::HostRuntime;
@@ -12,6 +14,12 @@ use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use pin_project::pin_project;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
+#[cfg(feature = "native")]
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+
 use std::{
     future::Future,
     ops::{Deref, DerefMut},
@@ -27,6 +35,10 @@ use deno_console;
 use deno_url;
 use deno_web::TimersPermission;
 use deno_webidl;
+
+#[cfg(feature = "native")]
+static RUNTIME_THREADPOOL: std::sync::LazyLock<rayon::ThreadPool> =
+    std::sync::LazyLock::new(|| rayon::ThreadPoolBuilder::new().build().unwrap());
 
 /// Returns the default object of the specified JavaScript namespace (Object).
 ///
@@ -248,14 +260,40 @@ impl JstzRuntime {
             let default_fn = v8::Local::<v8::Function>::try_from(default_value)?;
             v8::Global::new(scope, default_fn)
         };
+
+        // Set up a timer in a different thread to kill executions that take too long.
+        // This is only for the native execution environment.
+        #[cfg(feature = "native")]
+        let flag = {
+            let isolate = self.v8_isolate().thread_safe_handle();
+            set_execution_timeout(isolate)
+        };
+
         // Note: [`call_with_args`] wraps the scope with TryCatch for us and converts
         // any exception into an error
         // FIXME(ryan): If user code throws an uncaught exception, the original
         // exception is lost and replaced with Uncaught undefined
         let fut = self.call_with_args(&default_fn, args);
         let result = self.with_event_loop_future(fut, Default::default()).await;
+
+        #[cfg(feature = "native")]
+        flag.store(true, Ordering::SeqCst);
+
         Ok(result?)
     }
+}
+
+#[cfg(feature = "native")]
+fn set_execution_timeout(isolate: IsolateHandle) -> Arc<AtomicBool> {
+    let flag = Arc::new(AtomicBool::default());
+    let cp = flag.clone();
+    RUNTIME_THREADPOOL.spawn(move || {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        if !cp.load(Ordering::SeqCst) {
+            isolate.terminate_execution();
+        }
+    });
+    flag
 }
 
 /// RAII guard for entering and existing an Isolate.
@@ -554,7 +592,10 @@ export default handler;
     }
 
     #[test]
-    #[ignore = "Will run forever"]
+    #[cfg_attr(
+        not(feature = "native"),
+        ignore = "Timeout is available only in native execution"
+    )]
     fn test_infinite_loop() {
         TOKIO.block_on(async {
             let code = r#"
@@ -572,7 +613,8 @@ export default handler;
                 specifier = (specifier, code);
             };
             let id = rt.execute_main_module(&specifier).await.unwrap();
-            let _ = rt.call_default_handler(id, &[]).await;
+            let error = rt.call_default_handler(id, &[]).await.unwrap_err();
+            assert_eq!(error.to_string(), "Uncaught Error: execution terminated");
         })
     }
 }

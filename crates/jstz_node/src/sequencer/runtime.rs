@@ -460,4 +460,63 @@ mod tests {
                 headers: _
             })) if String::from_utf8(body.clone().unwrap()).unwrap() == "this is a big function"));
     }
+
+    #[cfg(feature = "v2_runtime")]
+    #[tokio::test(flavor = "multi_thread")]
+    async fn process_message_timeout() {
+        let db_file = NamedTempFile::new().unwrap();
+        let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
+        let keys = KeyPair(
+            PublicKey::from_base58(
+                "edpkv8EUUH68jmo3f7Um5PezmfGrRF24gnfLpH3sVNwJnV5bVCxL2n",
+            )
+            .unwrap(),
+            SecretKey::from_base58(
+                "edsk4QLrcijEffxV31gGdN2HU7UpyJjA8drFoNcmnB28n89YjPNRFm",
+            )
+            .unwrap(),
+        );
+        let mut h = super::init_host(db, PathBuf::new(), &keys).unwrap();
+
+        let public_key = "edpkuXD2CqRpWoTT8p4exrMPQYR2NqsYH3jTMeJMijHdgQqkMkzvnz";
+        // This smart function with an infinite loop should trigger the timeout error
+        let deploy_op = dummy_op("edsigu6y98kRXvdrpbcDYiL79zPTEYqQo6NxVHZ7pJ7M6vwxEhupBi1AKr6ub9Jn7MNhXJaJ2zTurLa7zCGu6bvBDitS1uRoLaK", public_key, 0, Content::DeployFunction(DeployFunction {function_code: ParsedCode("const handler = async () => { for(;;) {} }; export default handler;\n".to_string()), account_credit: 0}));
+
+        let call_op = dummy_op("edsigtxmyEkgJMpmypEHYZXBx5x9yUph3L4Byn6Tqbai2GFCuvPYCEHdNRH9ZFbjjohX2WcPaUTgNddnHUVrtJTfGvTPrb3N34u", public_key, 1, Content::RunFunction(RunFunction { uri: Uri::from_static("jstz://KT1BamYRJkBfbDzUQvKnMaP1qask3DmHJPAE/"), method: Method::GET, headers: HeaderMap::new(), body: None, gas_limit: 550000 }));
+
+        // Deploy smart function
+        super::process_message(&mut h, Message::External(deploy_op))
+            .await
+            .unwrap();
+        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/3421bd45f3a487f30c3d82b765768b339427af0c2ed267ec5bd68f29ade2c5fb")).unwrap()).unwrap();
+        assert!(matches!(
+            v.result,
+            ReceiptResult::Success(ReceiptContent::DeployFunction(
+                DeployFunctionReceipt { address: SmartFunctionHash(Kt1Hash(addr)) }
+            )) if addr.to_base58_check() == "KT1BamYRJkBfbDzUQvKnMaP1qask3DmHJPAE"
+        ));
+
+        // Call smart function
+        super::process_message(&mut h, Message::External(call_op))
+            .await
+            .unwrap();
+        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/cf620637bd618a067074e78f7a13e30de8fe7539cfa0a36755a9aeb07a919c4d")).unwrap()).unwrap();
+
+        let ReceiptResult::Success(ReceiptContent::RunFunction(RunFunctionReceipt {
+            body,
+            status_code: StatusCode::INTERNAL_SERVER_ERROR,
+            headers: _,
+        })) = v.result
+        else {
+            panic!(
+                "Returned receipt does not match the expected value. Got {:?}",
+                v.result
+            );
+        };
+
+        assert_eq!(
+            String::from_utf8(body.unwrap_or_default()).unwrap(),
+            r#"{"class":"RuntimeError","message":"Uncaught Error: execution terminated"}"#
+        )
+    }
 }

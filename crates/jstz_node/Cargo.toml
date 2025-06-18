@@ -73,4 +73,4 @@ path = "src/main.rs"
 
 [features]
 persistent-logging = []
-v2_runtime = ["jstz_proto/v2_runtime", "dep:jstz_oracle_node"]
+v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/native", "dep:jstz_oracle_node"]
