@@ -1,30 +1,17 @@
 use crate::{ext::NotSupported, runtime::ProtocolContext};
 use deno_core::*;
+use jstz_core::log_record::LogLevel;
 use tezos_smart_rollup::prelude::debug_msg;
 
 #[cfg(feature = "kernel")]
-mod kernel {
-    use serde::{Serialize, Serializer};
-
-    pub(crate) const LOG_PREFIX: &str = "[JSTZ:SMART_FUNCTION:LOG]";
-
-    // Struct just for type validation for content to be logged. Having refs here to avoid cloning.
-    #[derive(Serialize)]
-    #[serde(rename_all = "camelCase")]
-    pub(crate) struct RefLogRecord<'a> {
-        pub address: &'a jstz_crypto::smart_function_hash::SmartFunctionHash,
-        pub request_id: &'a str,
-        #[serde(serialize_with = "serialise_level")]
-        pub level: u32,
-        pub text: &'a str,
-    }
-
-    fn serialise_level<S>(level: &u32, ser: S) -> std::result::Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        str::serialize(&super::level_to_symbol(*level), ser)
-    }
+// Struct just for type validation for content to be logged. Having refs here to avoid cloning.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct RefLogRecord<'a> {
+    pub address: &'a jstz_crypto::smart_function_hash::SmartFunctionHash,
+    pub request_id: &'a str,
+    pub level: LogLevel,
+    pub text: &'a str,
 }
 
 // Level Description
@@ -42,18 +29,23 @@ pub fn op_debug_msg(
     match proto {
         Some(proto) => {
             #[cfg(not(feature = "kernel"))]
-            debug_msg!(proto.host, "[{}] {}", level_to_symbol(level), msg);
+            debug_msg!(proto.host, "[{}] {}", code_to_log_level(level), msg);
 
             #[cfg(feature = "kernel")]
             {
-                let body = serde_json::to_string(&kernel::RefLogRecord {
+                let body = serde_json::to_string(&RefLogRecord {
                     address: &proto.address,
                     request_id: &proto.request_id,
-                    level,
+                    level: code_to_log_level(level),
                     text: msg,
                 })
                 .unwrap_or_default();
-                debug_msg!(proto.host, "{} {}\n", kernel::LOG_PREFIX, body);
+                debug_msg!(
+                    proto.host,
+                    "{}{}\n",
+                    jstz_core::log_record::LOG_PREFIX,
+                    body
+                );
             }
             Ok(())
         }
@@ -61,12 +53,13 @@ pub fn op_debug_msg(
     }
 }
 
-fn level_to_symbol(level: u32) -> &'static str {
-    match level {
-        0 => "DEBUG",
-        1 => "INFO",
-        2 => "WARN",
-        _ => "ERROR",
+fn code_to_log_level(code: u32) -> LogLevel {
+    // Note that this ordering is different from the LogLevel enum values.
+    match code {
+        0 => LogLevel::DEBUG,
+        1 => LogLevel::INFO,
+        2 => LogLevel::WARN,
+        _ => LogLevel::ERROR,
     }
 }
 
@@ -80,10 +73,20 @@ extension!(
 
 #[cfg(test)]
 mod tests {
+    use jstz_core::log_record::LogLevel;
 
     use deno_error::JsErrorClass;
 
     use crate::{init_test_setup, JstzRuntime, JstzRuntimeOptions};
+
+    #[test]
+    fn code_to_log_level() {
+        assert_eq!(super::code_to_log_level(0), LogLevel::DEBUG);
+        assert_eq!(super::code_to_log_level(1), LogLevel::INFO);
+        assert_eq!(super::code_to_log_level(2), LogLevel::WARN);
+        assert_eq!(super::code_to_log_level(3), LogLevel::ERROR);
+        assert_eq!(super::code_to_log_level(4), LogLevel::ERROR);
+    }
 
     #[test]
     fn console_log() {
