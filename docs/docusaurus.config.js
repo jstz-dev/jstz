@@ -28,8 +28,7 @@ module.exports = async function createConfigAsync() {
   return {
     title: "Jstz documentation",
     tagline: "A JavaScript runtime powered by Tezos smart optimistic rollups",
-    favicon:
-      "data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👨‍⚖️</text></svg>",
+    favicon: "/img/favicon.svg",
     url: process.env.DOC_URL || "https://jstz-dev.github.io/",
     baseUrl: process.env.DOC_BASE_URL || "/jstz/",
     organizationName: "jstz-dev",
