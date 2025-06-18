@@ -175,10 +175,10 @@ $ jstz run --trace "jstz://${counter}/"
 You should be able to see an output of the counter smart function looking like this:
 
 ```
-[🪵] Counter: null
-[🪵] Counter: 0
-[🪵] Counter: 1
-[🪵] Counter: 2
+[LOG] Counter: null
+[LOG] Counter: 0
+[LOG] Counter: 1
+[LOG] Counter: 2
 ```
 
 ### Transfer
@@ -231,7 +231,7 @@ jstz repl [OPTIONS]
 $ jstz repl
 $ >> const foo = () => {console.log("hey")};
 $ >> foo()
-$ [🪵] hey
+$ [LOG] hey
 $ >> exit
 ```
 
@@ -269,10 +269,10 @@ $ jstz logs trace my_function
 In a new terminal, run the counter function and you will see the following output:
 
 ```bash
-[🪵]: log
-[🪵]: debug
-[🟢]: info
-[🟠]: warn
-[🔴]: error
-[🔴]: Assertion failed
+[LOG]: log
+[LOG]: debug
+[INFO]: info
+[WARN]: warn
+[ERROR]: error
+[ERROR]: Assertion failed
 ```
