@@ -273,7 +273,7 @@ Follow these steps to run a sample web application that uses your smart function
    pnpm dev
    ```
 
-1. Open the application in Chrome at `http://localhost:3000`.
+1. Open the application in Chrome at `http://localhost:3201`.
 
 1. Paste the address of your smart function into the web application.
 
