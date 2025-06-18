@@ -36,7 +36,7 @@ https://tt-tezos.typeform.com/jstz-early-test
 
 ## Getting started
 
-The first step to working with Jstz is to run through the [Quick start](/quick_start), which covers:
+The first step to working with Jstz is to run through the [Quick start](https://jstz-dev.github.io/jstz/quick_start), which covers:
 
 - Installing Jstz
 - Deploying a simple smart function
