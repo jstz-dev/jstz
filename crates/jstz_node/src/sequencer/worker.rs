@@ -2,11 +2,12 @@ use crate::sequencer::runtime::{init_host, process_message};
 use std::{
     path::PathBuf,
     sync::{
+        atomic::AtomicU64,
         mpsc::{channel, Sender, TryRecvError},
         Arc, RwLock,
     },
     thread::{spawn as spawn_thread, JoinHandle},
-    time::Duration,
+    time::{Duration, SystemTime},
 };
 
 use anyhow::Context;
@@ -17,6 +18,13 @@ use super::{db::Db, queue::OperationQueue};
 pub struct Worker {
     thread_kill_sig: Sender<()>,
     inner: Option<JoinHandle<()>>,
+    heartbeat: Arc<AtomicU64>,
+}
+
+impl Worker {
+    pub fn heartbeat(&self) -> Arc<AtomicU64> {
+        self.heartbeat.clone()
+    }
 }
 
 impl Drop for Worker {
@@ -46,11 +54,15 @@ pub fn spawn(
         .enable_time()
         .build()
         .context("failed to build tokio runtime")?;
+    let heartbeat = Arc::new(AtomicU64::default());
     Ok(Worker {
         thread_kill_sig,
+        heartbeat: heartbeat.clone(),
         inner: Some(spawn_thread(move || {
             tokio_rt.block_on(async {
                 loop {
+                    write_heartbeat(&heartbeat);
+
                     let v = {
                         match queue.write() {
                             Ok(mut q) => q.pop(),
@@ -84,6 +96,15 @@ pub fn spawn(
     })
 }
 
+fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
+    let current_sec = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    // safety: this worker should be the only writer
+    heartbeat.store(current_sec, std::sync::atomic::Ordering::Relaxed);
+}
+
 #[cfg(test)]
 mod tests {
     use std::{
@@ -111,13 +132,24 @@ mod tests {
             move || {
                 *cp.lock().unwrap() += 1;
             },
-        );
+        )
+        .unwrap();
+
+        let h = worker.heartbeat();
+        let t1 = h.load(std::sync::atomic::Ordering::Relaxed);
+        thread::sleep(Duration::from_millis(1100));
+        // heartbeat should increment by at least 1
+        let t2 = h.load(std::sync::atomic::Ordering::Relaxed);
+        assert!(t2 > t1);
 
         drop(worker);
 
         // to ensure that the worker has enough time to pick up the signal
-        thread::sleep(Duration::from_millis(800));
+        thread::sleep(Duration::from_millis(2000));
         assert_eq!(*v.lock().unwrap(), 1);
+        // heartbeat should not keep increasing
+        let t3 = h.load(std::sync::atomic::Ordering::Relaxed);
+        assert!(t3 - t2 <= 1);
     }
 
     #[test]

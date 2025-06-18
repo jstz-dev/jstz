@@ -69,9 +69,11 @@ async fn run_sequencer() {
     let client = Client::new();
 
     check_mode(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
     deploy_function(&client, &base_uri).await;
     call_function(&client, &base_uri).await;
     check_inbox_op(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
 }
 
 async fn check_mode(client: &Client, base_uri: &str) {
@@ -299,4 +301,13 @@ fn mock_deposit_fa_op() -> (&'static str, &'static str) {
     let op = "0000050807070a000000160000e7670f32038107a59a2b9cfefae36ea21f5aa63c070705090a0000001601238f371da359b757db57238e9f27f3c48234defa0007070a0000001601207905b1a5abdace0a6b5bff0d71a467d5b85cf500070707070001030600a80f9424c685d3f69801ff6e3f2cfb74b250f00988e100e7670f32038107a59a2b9cfefae36ea21f5aa63cc3ea4c18195bcfac262dcb29e3d803ae74681739";
     let op_hash = "34461635d31fd734cee1f20839218ffef78785d536b348b04204510012a8cbd2";
     (op_hash, op)
+}
+
+async fn check_worker_health(client: &Client, base_uri: &str) {
+    let res = client
+        .get(format!("{base_uri}/worker/health"))
+        .send()
+        .await
+        .unwrap();
+    assert!(res.status().is_success());
 }
