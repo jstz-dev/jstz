@@ -22,6 +22,7 @@ pub mod test_util {
     pub static TOKIO: std::sync::LazyLock<tokio::runtime::Runtime> =
         std::sync::LazyLock::new(|| {
             tokio::runtime::Builder::new_current_thread()
+                .enable_io()
                 .build()
                 .unwrap()
         });

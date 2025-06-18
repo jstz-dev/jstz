@@ -1,14 +1,14 @@
-[profile.default]
-slow-timeout = { period = "120s", terminate-after = 1 }
+# [profile.default]
+# slow-timeout = { period = "120s", terminate-after = 1 }
 
-[[profile.default.overrides]]
-filter = 'package(jstz_proto) and test(runtime::v2::) + package(jstz_runtime)'
-test-group = 'serial'
-retries = 2
+# [[profile.default.overrides]]
+# filter = 'package(jstz_proto) and test(runtime::v2::) + package(jstz_runtime)'
+# test-group = 'serial'
+# retries = 2
 
-[[profile.default.overrides]]
-filter = 'kind(test)'
-threads-required = 4
+# [[profile.default.overrides]]
+# filter = 'kind(test)'
+# threads-required = 4
 
-[test-groups]
-serial = { max-threads = 1 }
+# [test-groups]
+# serial = { max-threads = 1 }

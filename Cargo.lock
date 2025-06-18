@@ -3121,6 +3121,7 @@ dependencies = [
  "jstz_crypto",
  "jstz_utils",
  "jstz_wpt",
+ "libc",
  "parking_lot",
  "pin-project",
  "regex",
@@ -3131,6 +3132,7 @@ dependencies = [
  "tezos-smart-rollup-mock",
  "thiserror 1.0.67",
  "tokio",
+ "tokio-util",
  "url",
  "utoipa",
 ]
@@ -3250,9 +3252,9 @@ checksum = "884e2677b40cc8c339eaefcb701c32ef1fd2493d71118dc0ca4b6a736c93bd67"
 
 [[package]]
 name = "libc"
-version = "0.2.171"
+version = "0.2.174"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c19937216e9d3aa9956d9bb8dfc0b0c8beb6058fc4f7a4dc4d850edf86a237d6"
+checksum = "1171693293099992e19cddea4e8b849964e9846f4acee11b3948bcc337be8776"
 
 [[package]]
 name = "libloading"
@@ -6019,9 +6021,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-util"
-version = "0.7.12"
+version = "0.7.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61e7c3654c13bcd040d4a03abee2c75b1d14a37b423cf5a813ceae1cc903ec6a"
+checksum = "66a539a9ad6d5d281510d5bd368c973d636c02dbf8a67300bfb6b950696ad7df"
 dependencies = [
  "bytes",
  "futures-core",

@@ -17,10 +17,14 @@ deno_console.workspace = true
 derive_more = { workspace = true, features = ["deref", "deref_mut", "from"] }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
+libc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup.workspace = true
 tezos-smart-rollup-host.workspace = true
+parking_lot.workspace = true
+pin-project.workspace = true
+tokio-util.workspace = true
 utoipa.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
@@ -29,8 +33,6 @@ deno_web.workspace = true
 deno_url.workspace = true
 deno_error.workspace = true
 deno_fetch_base.workspace = true
-parking_lot.workspace = true
-pin-project.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true

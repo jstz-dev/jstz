@@ -14,6 +14,8 @@ pub enum RuntimeError {
     SerdeV8(#[from] serde_v8::Error),
     #[error(transparent)]
     WebSysError(#[from] WebSysError),
+    #[error("My out of memory error")]
+    OOM,
 }
 
 #[derive(Debug, thiserror::Error)]

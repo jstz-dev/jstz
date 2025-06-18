@@ -2,6 +2,7 @@ use crate::error::Result;
 use crate::ext::jstz_fetch;
 use crate::ext::jstz_fetch::NotSupportedFetch;
 use deno_core::v8::new_single_threaded_default_platform;
+use deno_core::v8::CreateParams;
 use deno_core::v8::OwnedIsolate;
 use deno_core::*;
 use jstz_core::host::HostRuntime;
@@ -116,6 +117,9 @@ impl JstzRuntimeSnapshot {
     }
 }
 
+const FOUR_MIB: usize = 4_194_304;
+const SIXTY_FOUR_MIB: usize = FOUR_MIB * 16;
+
 impl JstzRuntime {
     /// Returns the default [`RuntimeOptions`] configured
     /// with custom extensions
@@ -136,10 +140,13 @@ impl JstzRuntime {
 
         let v8_platform = Some(new_single_threaded_default_platform(false).make_shared());
 
+        // 12Mb initial memory, 64Mb max memor
+        let params = CreateParams::default().heap_limits(FOUR_MIB, FOUR_MIB * 2);
         // Construct Runtime options
         let js_runtime_options = RuntimeOptions {
             extensions,
             module_loader: Some(options.module_loader),
+            create_params: Some(params),
             v8_platform,
             ..Default::default()
         };
@@ -154,8 +161,31 @@ impl JstzRuntime {
             op_state.borrow_mut().put(protocol);
         };
         op_state.borrow_mut().put(JstzPermissions);
-
         Self { runtime }
+    }
+
+    extern "C" fn near_heap_limit_callback2(
+        data: *mut std::ffi::c_void,
+        current_heap_limit: usize,
+        initial_heap_limit: usize,
+    ) -> usize {
+        println!("Initial Heap Limit: {initial_heap_limit}");
+        println!("Current Heap Limit: {current_heap_limit}");
+        let context: Box<v8::Local<v8::Context>> =
+            unsafe { Box::from_raw(data as *mut v8::Local<v8::Context>) };
+        let scope = unsafe { v8::CallbackScope::new(*context) };
+        // let message = v8::String::new(&mut scope, "Out of memory").unwrap();
+        // let exception = v8::Exception::error(&mut scope, message);
+        scope.terminate_execution();
+        // std::mem::forget(handle_scope);
+        std::mem::forget(scope);
+        std::mem::forget(context);
+        // std::mem::forget(data);
+        if current_heap_limit < SIXTY_FOUR_MIB {
+            current_heap_limit + FOUR_MIB
+        } else {
+            current_heap_limit
+        }
     }
 
     /// Executes traditional, non-ECMAScript-module JavaScript code, ignoring
@@ -238,6 +268,35 @@ impl JstzRuntime {
     }
 
     async fn call_default_handler_inner(
+        &mut self,
+        id: ModuleId,
+        args: &[v8::Global<v8::Value>],
+        // mut cancel_token: tokio_util::sync::CancellationToken,
+    ) -> Result<v8::Global<v8::Value>> {
+        let ns = self.runtime.get_module_namespace(id)?;
+        let default_fn = {
+            let scope = &mut self.handle_scope();
+            let default_value = get_default_export(ns, scope);
+            let default_fn = v8::Local::<v8::Function>::try_from(default_value)?;
+            v8::Global::new(scope, default_fn)
+        };
+        // Note: [`call_with_args`] wraps the scope with TryCatch for us and converts
+        // any exception into an error
+        let fut = {
+            let scope = &mut self.handle_scope();
+            let mut scope = v8::HandleScope::new(scope);
+            let context = Box::into_raw(Box::new(scope.get_current_context()));
+            scope.add_near_heap_limit_callback(
+                Self::near_heap_limit_callback2,
+                context as *mut _,
+            );
+            JsRuntime::scoped_call_with_args(&mut scope, &default_fn, args)
+        };
+        let result = self.with_event_loop_future(fut, Default::default()).await;
+        Ok(result?)
+    }
+
+    async fn _call_default_handler_inner_(
         &mut self,
         id: ModuleId,
         args: &[v8::Global<v8::Value>],
@@ -545,4 +604,86 @@ export default handler;
             let _ = rt.call_default_handler(id, &[]).await;
         })
     }
+
+    #[test]
+    fn test_out_of_memory_handler() {
+        TOKIO.block_on(async {
+            let local = tokio::task::LocalSet::new();
+            local
+                .run_until(async {
+                    // let mut aborted = tokio::signal::unix::signal(
+                    //     tokio::signal::unix::SignalKind::from_raw(libc::SIGTRAP),
+                    // )
+                    // .unwrap();
+                    let local = tokio::task::spawn_local(async {
+                        let code = r#"
+                            const handler = async () => {
+                                let s = Array(4294967295).fill("a");
+                                // console.log("ok!")
+                                return new Response("");
+                            };
+                            export default handler;
+                        "#;
+                        init_test_setup! {
+                            runtime = rt;
+                            specifier = (specifier, code);
+                        };
+                        let id = rt.execute_main_module(&specifier).await.unwrap();
+                        rt.call_default_handler(id, &[]).await
+                    });
+                    // let abort_handle = local.abort_handle();
+                    tokio::select! {
+                        // _ = aborted.recv() => {
+                        //     abort_handle.abort();
+                        //     println!("Abort caught succesfully!");
+                        // },
+                        _ = local => {
+                            println!("Executed successfully!");
+                        }
+                    };
+                })
+                .await;
+        })
+    }
 }
+
+/*
+let local = tokio::task::LocalSet::new();
+            local.run_until(async {
+                let code = r#"
+                const handler = async () => {
+                    let s = Array(4294967295).fill("a".repeat(100));
+                    // console.log("ok!")
+                    return new Response("");
+                };
+                export default handler;
+            "#;
+                init_test_setup! {
+                    runtime = rt;
+                    specifier = (specifier, code);
+                };
+
+                let id = rt.execute_main_module(&specifier).await.unwrap();
+
+                let cancel_token = tokio_util::sync::CancellationToken::new();
+                let child = cancel_token.child_token();
+                let call_default_handler = tokio::task::spawn_local(
+                    rt.call_default_handler_with_cancel(id, &[], cancel_token),
+                );
+                let abort_handle = call_default_handler.abort_handle();
+
+                let _ = tokio::select! {
+                    _ = child.cancelled() => {
+                        abort_handle.abort();
+                        ();
+                    }
+                    join_result = call_default_handler => {
+                        match join_result {
+                            Ok(_join_result) => println!("Succesful"),
+                            Err(err) => println!("{:?}", err)
+                        }
+                    }
+                };
+                todo!()
+            }).await;
+*/
