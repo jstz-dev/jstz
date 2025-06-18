@@ -201,10 +201,10 @@ jstz run --trace "jstz://${counter}/"
 If you deploy the `counter` smart function and call it as in the previous examples, you should see its output in the console, as in this example:
 
 ```
-[🪵] Counter: null
-[🪵] Counter: 0
-[🪵] Counter: 1
-[🪵] Counter: 2
+[LOG] Counter: null
+[LOG] Counter: 0
+[LOG] Counter: 1
+[LOG] Counter: 2
 ```
 
 ### Transfer
@@ -273,10 +273,10 @@ jstz logs trace my_function
 In a new terminal, run the counter function and you will see the following output:
 
 ```bash
-[🪵]: log
-[🪵]: debug
-[🟢]: info
-[🟠]: warn
-[🔴]: error
-[🔴]: Assertion failed
+[LOG]: log
+[LOG]: debug
+[INFO]: info
+[WARN]: warn
+[ERROR]: error
+[ERROR]: Assertion failed
 ```
