@@ -4,9 +4,9 @@ pub mod context;
 #[cfg(feature = "v2_runtime")]
 pub mod event;
 pub mod executor;
+pub mod logger;
 pub mod operation;
 pub mod receipt;
-pub mod request_logger;
 pub use error::{Error, Result};
 
 pub mod runtime;
