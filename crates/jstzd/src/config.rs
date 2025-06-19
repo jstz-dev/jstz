@@ -28,6 +28,7 @@ use tokio::io::AsyncReadExt;
 
 const DEFAULT_JSTZD_SERVER_PORT: u16 = 54321;
 const DEFAULT_JSTZ_NODE_ENDPOINT: &str = "0.0.0.0:8933";
+const DEFAULT_OCTEZ_ROLLUP_ENDPOINT: &str = "0.0.0.0:18751";
 pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
@@ -151,6 +152,11 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
     if !rollup_builder.has_boot_sector_file() {
         rollup_builder = rollup_builder
             .set_boot_sector_file(jstz_rollup_path::kernel_installer_path());
+    }
+    if !rollup_builder.has_rpc_endpoint() {
+        rollup_builder = rollup_builder.set_rpc_endpoint(
+            &Endpoint::try_from(Uri::from_static(DEFAULT_OCTEZ_ROLLUP_ENDPOINT)).unwrap(),
+        );
     }
 
     let octez_rollup_config = rollup_builder
