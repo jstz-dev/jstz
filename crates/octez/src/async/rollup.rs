@@ -188,6 +188,10 @@ impl OctezRollupConfigBuilder {
         self.boot_sector_file.is_some()
     }
 
+    pub fn has_rpc_endpoint(&self) -> bool {
+        self.rpc_endpoint.is_some()
+    }
+
     pub fn build(self) -> Result<OctezRollupConfig> {
         Ok(OctezRollupConfig {
             binary_path: self
