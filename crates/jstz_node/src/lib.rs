@@ -65,6 +65,7 @@ impl AppState {
 #[serde(rename_all = "lowercase")]
 pub enum RunMode {
     Sequencer,
+    #[serde(alias = "default")]
     Default,
 }
 
