@@ -1,4 +1,7 @@
-use fetch::{convert_header_map, process_and_dispatch_request, Body, FetchError};
+use fetch::{
+    error::FetchError, fetch_handler::process_and_dispatch_request,
+    http::convert_header_map, http::Body,
+};
 use jstz_core::{
     host::{HostRuntime, JsHostRuntime},
     kv::Transaction,
@@ -12,9 +15,11 @@ use crate::{
 };
 
 pub mod fetch;
+pub use jstz_core::log_record::{LogRecord, LOG_PREFIX};
 pub use jstz_runtime::{Kv, KvValue};
 mod parsed_code;
 pub use parsed_code::ParsedCode;
+pub mod oracle;
 
 pub async fn run_toplevel_fetch(
     hrt: &mut impl HostRuntime,
@@ -58,7 +63,7 @@ async fn run(
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error(transparent)]
-    FetchError(#[from] fetch::FetchError),
+    FetchError(#[from] FetchError),
     #[error(transparent)]
     ParsedCodeError(#[from] parsed_code::ParseError),
 }

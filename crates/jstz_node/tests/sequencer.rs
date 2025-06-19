@@ -19,9 +19,13 @@ use jstz_proto::{
 };
 use octez::unused_port;
 use reqwest::Client;
-use std::process::{Child, Command};
+use std::{
+    process::{Child, Command},
+    time::Duration,
+};
 use tempfile::{NamedTempFile, TempDir};
 use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
+use tokio_stream::StreamExt;
 
 use futures_util::stream;
 use std::convert::Infallible;
@@ -69,9 +73,11 @@ async fn run_sequencer() {
     let client = Client::new();
 
     check_mode(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
     deploy_function(&client, &base_uri).await;
     call_function(&client, &base_uri).await;
     check_inbox_op(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
 }
 
 async fn check_mode(client: &Client, base_uri: &str) {
@@ -261,10 +267,16 @@ fn make_mock_rollup_rpc_server(url: String) -> JoinHandle<()> {
 pub(crate) fn make_mock_monitor_blocks_filter(
 ) -> impl warp::Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     warp::path!("global" / "monitor_blocks").map(|| {
+        let delay_stream = stream::once(async {
+            // TODO: remove this once db issue is fixed
+            // https://github.com/jstz-dev/jstz/actions/runs/15685845390/job/44188722352
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            Ok::<Bytes, Infallible>(Bytes::new())
+        });
         let data_stream = stream::iter(vec![Ok::<Bytes, Infallible>(Bytes::from(
             "{\"level\": 123}\n",
         ))]);
-        warp::reply::Response::new(Body::wrap_stream(data_stream))
+        warp::reply::Response::new(Body::wrap_stream(delay_stream.chain(data_stream)))
     })
 }
 
@@ -299,4 +311,13 @@ fn mock_deposit_fa_op() -> (&'static str, &'static str) {
     let op = "0000050807070a000000160000e7670f32038107a59a2b9cfefae36ea21f5aa63c070705090a0000001601238f371da359b757db57238e9f27f3c48234defa0007070a0000001601207905b1a5abdace0a6b5bff0d71a467d5b85cf500070707070001030600a80f9424c685d3f69801ff6e3f2cfb74b250f00988e100e7670f32038107a59a2b9cfefae36ea21f5aa63cc3ea4c18195bcfac262dcb29e3d803ae74681739";
     let op_hash = "34461635d31fd734cee1f20839218ffef78785d536b348b04204510012a8cbd2";
     (op_hash, op)
+}
+
+async fn check_worker_health(client: &Client, base_uri: &str) {
+    let res = client
+        .get(format!("{base_uri}/worker/health"))
+        .send()
+        .await
+        .unwrap();
+    assert!(res.status().is_success());
 }

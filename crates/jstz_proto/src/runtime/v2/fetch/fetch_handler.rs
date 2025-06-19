@@ -22,6 +22,8 @@ use crate::context::account::{Account, Address, AddressKind, Addressable};
 use crate::runtime::v2::fetch::resources::FetchRequestResource;
 use deno_fetch_base::FetchResponseResource;
 
+use super::host_script::HostScript;
+use super::http::HostName;
 use super::http::{Body, Response, SupportedScheme};
 use std::num::NonZeroU64;
 use std::str::FromStr;
@@ -160,41 +162,21 @@ pub async fn process_and_dispatch_request(
         Ok(SupportedScheme::Jstz) => {
             let mut is_successful = true;
             tx.begin();
-            match (&url).try_into() {
-                Ok(to) => {
-                    log_request(
-                        &mut host,
-                        &to,
-                        operation_hash.as_ref(),
-                        LogEvent::RequestStart,
-                    );
-                    let result = dispatch_run(
-                        &mut host,
-                        &mut tx,
-                        from,
-                        to.clone(),
-                        method,
-                        url,
-                        headers,
-                        data,
-                        &mut is_successful,
-                    )
-                    .await;
-                    let _ = commit_or_rollback(
-                        &mut host,
-                        &mut tx,
-                        is_successful && result.is_ok(),
-                    );
-                    log_request(
-                        &mut host,
-                        &to,
-                        operation_hash.as_ref(),
-                        LogEvent::RequestEnd,
-                    );
-                    result.into()
-                }
-                Err(e) => e.into(),
-            }
+            let result = dispatch_run(
+                &mut host,
+                &mut tx,
+                operation_hash,
+                from,
+                method,
+                url,
+                headers,
+                data,
+                &mut is_successful,
+            )
+            .await;
+            let _ =
+                commit_or_rollback(&mut host, &mut tx, is_successful && result.is_ok());
+            result.into()
         }
         Err(err) => err.into(),
     }
@@ -203,19 +185,56 @@ pub async fn process_and_dispatch_request(
 /// # Safety
 /// Transaction snapshot creation and commitment should happen outside this function
 async fn dispatch_run(
-    host: &mut impl HostRuntime,
+    host: &mut JsHostRuntime<'static>,
     tx: &mut Transaction,
+    operation_hash: Option<OperationHash>,
     from: Address,
-    to: Address,
     method: ByteString,
     url: Url,
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
     is_successful: &mut bool,
 ) -> Result<Response> {
+    let to = (&url).try_into();
+    match to {
+        Ok(HostName::Address(to)) => {
+            log_request(host, &to, operation_hash.as_ref(), LogEvent::RequestStart);
+            let response = handle_address(
+                host,
+                tx,
+                operation_hash.as_ref(),
+                to.clone(),
+                method,
+                url,
+                headers,
+                data,
+                is_successful,
+                from,
+            )
+            .await;
+            log_request(host, &to, operation_hash.as_ref(), LogEvent::RequestEnd);
+            response
+        }
+        Ok(HostName::JstzHost) => HostScript::route(host, tx, from, method, url).await,
+        Err(e) => Err(e),
+    }
+}
+
+async fn handle_address(
+    host: &mut JsHostRuntime<'static>,
+    tx: &mut Transaction,
+    operation_hash: Option<&OperationHash>,
+    to: Address,
+    method: ByteString,
+    url: Url,
+    headers: Vec<(ByteString, ByteString)>,
+    data: Option<Body>,
+    is_successful: &mut bool,
+    from: Address,
+) -> Result<Response> {
     let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
     headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
-    match to.kind() {
+    let response = match to.kind() {
         AddressKind::User => Ok(Response {
             status: 200,
             status_text: "OK".into(),
@@ -227,6 +246,7 @@ async fn dispatch_run(
             let run_result = load_and_run(
                 host,
                 tx,
+                operation_hash,
                 address.clone(),
                 method,
                 url.clone(),
@@ -262,7 +282,8 @@ async fn dispatch_run(
                 run_result
             }
         }
-    }
+    };
+    response
 }
 
 // - Loads the smart function script at `address`
@@ -271,6 +292,7 @@ async fn dispatch_run(
 async fn load_and_run(
     host: &mut impl HostRuntime,
     tx: &mut Transaction,
+    operation_hash: Option<&OperationHash>,
     address: SmartFunctionHash,
     method: ByteString,
     url: Url,
@@ -280,7 +302,12 @@ async fn load_and_run(
     let mut body = body;
 
     // 0. Prepare Protocol
-    let mut proto = ProtocolContext::new(host, tx, address.clone());
+    let mut proto = ProtocolContext::new(
+        host,
+        tx,
+        address.clone(),
+        operation_hash.map(|v| v.to_string()).unwrap_or_default(),
+    );
 
     // 1. Load script
     let script = { load_script(tx, &mut proto.host, &proto.address)? };
@@ -1343,7 +1370,7 @@ mod test {
             .await;
 
             // check transaction was commited with unawaited on values
-            let kv = jstz_runtime::ext::jstz_kv::kv::Kv::new(remote_address.to_string());
+            let kv = crate::runtime::Kv::new(remote_address.to_string());
             let mut tx = tx;
             let result = kv.get(&mut host, &mut tx, "test").unwrap();
             assert!(result.is_none())
@@ -1381,7 +1408,7 @@ mod test {
             .await;
 
             // check transaction was commited with unawaited on values
-            let kv = jstz_runtime::Kv::new(remote_address.to_string());
+            let kv = crate::runtime::Kv::new(remote_address.to_string());
             let mut tx = tx;
             let result = kv.get(&mut host, &mut tx, "test").unwrap();
             assert!(result.is_none())
@@ -1441,7 +1468,13 @@ mod test {
 
         let mut tx = jstz_core::kv::Transaction::default();
         tx.begin();
-        let protocol = Some(ProtocolContext::new(&mut host, &mut tx, address.clone()));
+        let protocol = Some(ProtocolContext::new(
+            &mut host,
+            &mut tx,
+            address.clone(),
+            String::new(),
+        ));
+
         let source = Address::User(jstz_mock::account1());
         let fetched_script = r#"
             const handler = async (req) => {
@@ -1588,7 +1621,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn log_request_start_and_end() {
+    async fn log_request_execution() {
         let from = Address::User(jstz_mock::account1());
         let mut host = tezos_smart_rollup_mock::MockHost::default();
         let sink = DebugLogSink::new();
@@ -1607,6 +1640,7 @@ mod test {
             for (const [k, v] of f) {{
                 output += `${{k}}-${{v}};`;
             }}
+            console.warn(output);
             return new Response(output);
         }};
         export default handler;
@@ -1635,11 +1669,209 @@ mod test {
         assert_eq!(text, "a-b;c-d;");
         assert_eq!(response.status, 200);
         let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
-        assert_eq!(
-            log,
-            r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1D5U6oBmtvYmjBtjzR5yPbrzxw8fa2kCn9","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
-[JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1D5U6oBmtvYmjBtjzR5yPbrzxw8fa2kCn9","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
-"#
-        );
+        #[cfg(feature = "kernel")]
+        let expected = r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+[JSTZ:SMART_FUNCTION:LOG] {"address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","requestId":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5","level":"WARN","text":"a-b;c-d;\n"}
+[JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+"#;
+        #[cfg(not(feature = "kernel"))]
+        let expected = r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+[WARN] a-b;c-d;
+[JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+"#;
+        assert_eq!(log, expected);
+    }
+
+    // Host script behaviour
+    #[test]
+    fn handle_balance_endpoint() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
+                const response = await fetch(`jstz://jstz/balances/self`);
+                return response;
+            }"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, tx, _source_address, hashes) = setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                None,
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(200, response.status);
+            assert_eq!("OK", response.status_text);
+            assert_eq!("0", String::from_utf8(response.body.to_vec()).unwrap());
+        });
+    }
+
+    #[test]
+    fn handle_balance_endpoint_specific_address() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
+                const response = await fetch(`jstz://jstz/balances/${req.headers.get("referrer")}`);
+                return response;
+            }"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, mut tx, _source_address, hashes) =
+                setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+
+            // Add some balance to the account
+            let _ = Account::add_balance(&mut host, &mut tx, &run_address, 5_000_000);
+
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                None,
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(200, response.status);
+            assert_eq!("OK", response.status_text);
+            assert_eq!("5000000", String::from_utf8(response.body.to_vec()).unwrap());
+        });
+    }
+
+    #[test]
+    fn handle_balance_endpoint_invalid_address() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
+                const response = await fetch(`jstz://jstz/balances/invalid_address`);
+                return response;
+            }"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, tx, _source_address, hashes) = setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                None,
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(400, response.status);
+            assert_eq!("Bad Request", response.status_text);
+            assert!(String::from_utf8(response.body.to_vec())
+                .unwrap()
+                .contains("InvalidAddress"));
+        });
+    }
+
+    #[test]
+    fn handle_balance_endpoint_invalid_method() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
+                const response = await fetch(`jstz://jstz/balances/self`, { method: 'POST' });
+                return response;
+            }"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, tx, _source_address, hashes) = setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                None,
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(405, response.status);
+            assert_eq!("Method Not Allowed", response.status_text);
+            assert_eq!(
+                "Only GET method is allowed",
+                String::from_utf8(response.body.to_vec()).unwrap()
+            );
+        });
+    }
+
+    #[test]
+    fn unsupported_host_endpoint_returns_404() {
+        TOKIO.block_on(async {
+            // Code
+            let run = SIMPLE_REMOTE_CALLER;
+            let remote = r#"export default async (req) => {
+                const response = await fetch(`jstz://jstz/unsupported/path`);
+                return response;
+            }"#;
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, tx, _source_address, hashes) = setup(&mut host, [run, remote]);
+            let run_address = hashes[0].clone();
+            let remote_address = hashes[1].clone();
+
+            // Run
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                None,
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}/{}", run_address, remote_address).as_str())
+                    .unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(404, response.status);
+            assert_eq!("Not Found", response.status_text);
+            assert_eq!(
+                "Not Found",
+                String::from_utf8(response.body.into()).unwrap()
+            );
+        });
     }
 }

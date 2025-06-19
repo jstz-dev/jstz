@@ -1,5 +1,5 @@
 use clap::Subcommand;
-use jstz_api::js_log::LogLevel;
+use jstz_core::log_record::LogLevel;
 
 use crate::{config::NetworkName, utils::AddressOrAlias, Result};
 
