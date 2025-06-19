@@ -5,7 +5,6 @@ use std::{
 };
 
 /// A simple blocking scheduler for Rust futures
-
 struct Signal;
 
 impl Wake for Signal {
