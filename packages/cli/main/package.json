@@ -3,6 +3,7 @@
   "version": "0.1.1-alpha.3",
   "dependencies": {},
   "scripts": {
+    "format": "prettier . --write",
     "postinstall": "node install.js"
   },
   "bin": {
