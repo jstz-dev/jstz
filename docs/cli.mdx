@@ -44,6 +44,8 @@ Remember, the `-h` or `--help` flag can always be used after any command or subc
 ### Sandbox
 
 The sandbox commands are responsible for managing the Jstz sandbox environment.
+
+In most cases, start the sandbox in a Docker container by including the `--container` flag.
 For more information, see [sandbox](/sandbox).
 
 #### Commands
@@ -64,16 +66,18 @@ jstz sandbox stop
 
 #### Options
 
+- `--container`: Run the sandbox in a Docker container.
+  Requires Docker.
 - `--detach (-d)`: Detach the process to run in the background.
 
 #### Examples
 
 ```bash
-jstz sandbox start -d
+jstz sandbox --container start -d
 
-jstz sandbox restart -d
+jstz sandbox --container restart -d
 
-jstz sandbox stop
+jstz sandbox --container stop
 ```
 
 ### Bridge
@@ -127,7 +131,7 @@ jstz deploy [OPTIONS] [CODE|PATH]
 
 - `--balance (-b) <BALANCE>`: The initial balance for the function.
 
-- `--name <NAME>`: Name (or alias) of the function.
+- `--name <NAME>`: Local name or alias of the function.
 
 - `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
 
