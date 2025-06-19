@@ -56,6 +56,8 @@ How many points can you earn?
 A simple starter web application is a to-do list app that lets users add to-do items, see their current task list, and mark tasks as completed.
 Try this with Jstz by storing tasks and their status in the key-value store and letting users access only their own tasks.
 
+<img src="/jstz/img/Todolist.png" alt="A list of tasks and checkboxes next to them" style={{width: 200}} />
+
 For bonus points, add features:
 
 - Have the user fund an account and make the smart function pay the user a tez for each complete task (1 point)
@@ -66,6 +68,8 @@ For bonus points, add features:
 
 Jstz can provide a transparent backend for games, which allows players to trust that the game will play fair.
 To demonstrate a simple game backend, write a tic-tac-toe game that stores the state of the game board and allows two players to take turns making their moves.
+
+<img src="/jstz/img/TicTacToe.png" alt="A wireframe of a simple tic-tac-toe application" style={{width: 200}} />
 
 **Backend**: A Jstz smart function that stores the state of the 3x3 game board, the addresses of the players, and whose turn it is.
 When a player makes a move, check if they have won the game, and if so, reset the board and update a status message with the name or address of the winning player.
@@ -83,6 +87,8 @@ For bonus points, expand the simple tic-tac-toe application in one or more of th
 
 Write a simple social media application that allows users to post messages and follow other users.
 
+<img src="/jstz/img/SocialMedia.png" alt="A few posts and a text box to add a new post to a social media stream" style={{width: 300}} />
+
 For bonus points, add features:
 
 - Provide the ability to mint a post as an NFT (5 points)
@@ -98,6 +104,8 @@ It should show separate feeds for followed users and for all users so users can 
 Some of the best games don’t require a complex user interface, like the classic text-adventure games Zork and The Hitchhiker’s Guide to the Galaxy.
 You can write a flowchart of the adventure, find data for one of these games online to use, or have an LLM generate one for you.
 
+<img src="/jstz/img/TextAdventure.png" alt="A simple interface for the text game Zork" style={{width: 400}} />
+
 **Backend**: The backend must keep track of where the user is in the adventure and information about their inventory and status.
 It should support multiple users who can be at any different place in the adventure at any time.
 
@@ -112,6 +120,8 @@ For bonus points, add features:
 
 Jstz can handle secure payments with the tez cryptocurrency.
 Create an auction site that lets users offer virtual items for sale and bid on them.
+
+<img src="/jstz/img/AuctionSite.png" alt="Three items with their current bid and a button to bid higher" style={{width: 400}} />
 
 **Backend**: The backend smart function must store information about the items on auction (including the seller’s address, the description of the item, and the minimum bid) and the pending bids.
 
