@@ -1,5 +1,5 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
+use tezos_smart_rollup_host::path::{self, OwnedPath, RefPath};
 
 use crate::{receipt::Receipt, Result};
 

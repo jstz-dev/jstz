@@ -10,7 +10,7 @@ use derive_more::{Deref, DerefMut};
 use fs_extra::dir::CopyOptions;
 use octez::{OctezClient, OctezRollupNode};
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
-use tezos_smart_rollup::storage::path::{OwnedPath, RefPath};
+use tezos_smart_rollup_host::path::{OwnedPath, RefPath};
 use tezos_smart_rollup_installer::{
     installer, preimages, KERNEL_BOOT_PATH, PREPARE_KERNEL_PATH,
 };
@@ -28,7 +28,10 @@ pub fn make_installer(
     preimages_dir: &Path,
     exchanger: &Exchanger,
 ) -> Result<Vec<u8>> {
-    let root_hash = preimages::content_to_preimages(kernel_file, preimages_dir)?;
+    let kernel_contents = fs::read(kernel_file)?;
+
+    let root_hash =
+        preimages::content_to_preimages(kernel_contents.as_slice(), preimages_dir)?;
 
     let installer_program = OwnedConfigProgram(vec![
         // 1. Prepare kernel installer

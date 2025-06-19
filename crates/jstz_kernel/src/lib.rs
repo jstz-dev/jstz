@@ -2,11 +2,8 @@ use jstz_core::kv::{Storage, Transaction};
 use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
 use jstz_proto::{executor, Result};
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup::{
-    entrypoint,
-    prelude::{debug_msg, Runtime},
-    storage::path::RefPath,
-};
+use tezos_smart_rollup::prelude::{debug_msg, entrypoint, Runtime};
+use tezos_smart_rollup_host::path::RefPath;
 
 use crate::inbox::{read_message, Message};
 pub mod inbox;
@@ -55,6 +52,10 @@ async fn handle_message(
 
 // kernel entry
 #[entrypoint::main]
+pub fn kernel_entry(rt: &mut impl Runtime) {
+    entry(rt)
+}
+
 pub fn entry(rt: &mut impl Runtime) {
     futures::executor::block_on(run(rt))
 }

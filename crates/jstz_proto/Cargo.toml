@@ -31,6 +31,7 @@ serde_bytes.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
+tezos-smart-rollup-host.workspace = true
 utoipa.workspace = true
 futures.workspace = true
 

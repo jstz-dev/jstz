@@ -13,7 +13,7 @@ use jstz_core::kv::transaction::Guarded;
 use jstz_core::kv::Transaction;
 use jstz_core::Result;
 use serde::{Deserialize, Serialize};
-use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
+use tezos_smart_rollup_host::path::{self, OwnedPath, RefPath};
 use utoipa::ToSchema;
 
 #[derive(Debug)]
