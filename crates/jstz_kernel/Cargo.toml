@@ -15,12 +15,8 @@ crate-type = ["cdylib", "lib"]
 
 [dependencies]
 bincode.workspace = true
-boa_engine.workspace = true
 hex.workspace = true
 futures.workspace = true
-http-serde.workspace = true
-http.workspace = true
-jstz_api = { path = "../jstz_api" }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
@@ -33,3 +29,6 @@ tezos_data_encoding = "0.6.0"
 [dev-dependencies]
 jstz_mock = { path = "../jstz_mock" }
 jstz_utils = { path = "../jstz_utils" }
+
+[features]
+v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
