@@ -139,6 +139,17 @@ jstz deploy [OPTIONS] [CODE|PATH]
 
 - `--config <PATH>`: Overrides the path to the config file.
 
+:::note
+
+The `--name` argument sets a local alias for the smart function in the specified network.
+This alias is stored in the local configuration file and therefore it is known only to the CLI and not to any other system on the network.
+All other clients, including web applications, must use the address of the function instead of this alias.
+
+Also, aliases are tied to a specific network.
+If you deploy a function with a specific alias to one network and then deploy another function with the same alias to a different network, the second alias overwrites the first alias.
+
+:::
+
 #### Example
 
 ```bash
