@@ -62,6 +62,12 @@
   --ifm-color-primary-lightest: #3cad6e;
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+
+  --biel-bot-footer-link: #0d61ff;
+  --biel-search-button-bg-color: transparent;
+  --biel-search-button-border-color: #fff;
+  --biel-search-button-text-color: #fff;
+  --biel-search-button-text-font-size: 14px;
 }
 
 /* For readability concerns, you should choose a lighter palette in dark mode. */
