@@ -2982,7 +2982,6 @@ name = "jstz_kernel"
 version = "0.1.1-alpha.1"
 dependencies = [
  "bincode 2.0.0-rc.3",
- "futures",
  "hex",
  "jstz_core",
  "jstz_crypto",
@@ -2994,6 +2993,7 @@ dependencies = [
  "tezos-smart-rollup",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
+ "tokio",
 ]
 
 [[package]]
