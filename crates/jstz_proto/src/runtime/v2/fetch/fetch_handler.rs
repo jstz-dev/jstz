@@ -1,6 +1,7 @@
 use crate::operation::OperationHash;
 use crate::request_logger::{log_request_end_with_host, log_request_start_with_host};
 use crate::runtime::v2::fetch::error::{FetchError, Result};
+use crate::runtime::v2::ledger;
 
 use deno_core::{
     resolve_import, v8, ByteString, JsBuffer, OpState, ResourceId, StaticModuleLoader,
@@ -324,6 +325,7 @@ async fn load_and_run(
         module_loader: Rc::new(module_loader),
         fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
         protocol: Some(proto),
+        extensions: vec![ledger::jstz_ledger::init_ops_and_esm()],
         ..Default::default()
     });
 
@@ -549,13 +551,9 @@ mod test {
 
     use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, ProtocolContext};
 
-    use jstz_core::{
-        host::{HostRuntime, JsHostRuntime},
-        kv::Transaction,
-    };
+    use jstz_core::{host::JsHostRuntime, kv::Transaction};
     use jstz_crypto::{
         hash::{Blake2b, Hash},
-        public_key_hash::PublicKeyHash,
         smart_function_hash::SmartFunctionHash,
     };
     use jstz_utils::test_util::TOKIO;
@@ -563,58 +561,16 @@ mod test {
     use serde_json::{json, Value as JsonValue};
     use url::Url;
 
+    use super::ProtoFetchHandler;
     use crate::runtime::v2::fetch::fetch_handler::process_and_dispatch_request;
+    use crate::runtime::v2::test_utils::*;
     use crate::runtime::ParsedCode;
     use crate::{
-        context::account::{Account, Address, Addressable, Amount},
+        context::account::{Account, Address},
         tests::DebugLogSink,
     };
 
-    use super::ProtoFetchHandler;
-
     use std::rc::Rc;
-
-    // Deploy a vec of smart functions from the same creator, each
-    // with `amount` XTZ. Returns a vec of hashes corresponding to
-    // each sf deployed
-    fn deploy_smart_functions<const N: usize>(
-        scripts: [&str; N],
-        hrt: &impl HostRuntime,
-        tx: &mut Transaction,
-        creator: &impl Addressable,
-        amount: Amount,
-    ) -> [SmartFunctionHash; N] {
-        let mut hashes = vec![];
-        for i in 0..N {
-            // Safety
-            // Script is valid
-            let hash = Account::create_smart_function(hrt, tx, creator, amount, unsafe {
-                ParsedCode::new_unchecked(scripts[i].to_string())
-            })
-            .unwrap();
-            hashes.push(hash);
-        }
-
-        hashes.try_into().unwrap()
-    }
-
-    fn setup<'a, const N: usize>(
-        host: &mut tezos_smart_rollup_mock::MockHost,
-        scripts: [&'a str; N],
-    ) -> (
-        JsHostRuntime<'static>,
-        Transaction,
-        PublicKeyHash,
-        [SmartFunctionHash; N],
-    ) {
-        let mut host = JsHostRuntime::new(host);
-        let mut tx = jstz_core::kv::Transaction::default();
-        tx.begin();
-        let source_address = jstz_mock::account1();
-        let hashes =
-            deploy_smart_functions(scripts, &mut host, &mut tx, &source_address, 0);
-        (host, tx, source_address, hashes)
-    }
 
     // Script simply fetches the smart function given in the path param
     // eg. jstz://<host address>/<remote address> will call fetch("jstz://<remote address>")
