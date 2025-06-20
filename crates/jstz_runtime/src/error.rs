@@ -45,7 +45,11 @@ impl From<v8::DataError> for RuntimeError {
 
 impl From<JsError> for RuntimeError {
     fn from(js_error: JsError) -> Self {
-        Self::DenoCore(js_error.into())
+        let js_error_box = JsErrorBox::new(
+            js_error.name.unwrap_or("Error".to_string()),
+            js_error.exception_message,
+        );
+        Self::DenoCore(js_error_box.into())
     }
 }
 
