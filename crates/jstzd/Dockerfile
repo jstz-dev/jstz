@@ -1,13 +1,15 @@
 ARG OCTEZ_VERSION=22.0
+ARG FEATURES="build-image,v2_runtime,sequencer"
 FROM rust:1.82.0-slim-bookworm AS builder
 RUN apt update && apt install -y curl pkg-config libssl-dev libsqlite3-dev
 
 WORKDIR /
 ADD . .
 ARG KERNEL_PATH
+ARG FEATURES
 COPY $KERNEL_PATH crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 # release build is required for rust-embed to pack the resource files into the executable
-RUN KERNEL_DEST_DIR=/jstzd_kernel_files cargo build --bin jstzd --release --features build-image --features v2_runtime --features sequencer
+RUN KERNEL_DEST_DIR=/jstzd_kernel_files cargo build --bin jstzd --release --features "$FEATURES"
 
 FROM debian:bookworm-20250520-slim AS jstzd
 ARG OCTEZ_VERSION
