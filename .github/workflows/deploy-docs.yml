@@ -52,27 +52,19 @@ jobs:
         with:
           node-version: 18
           cache: npm
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
       - name: Install dependencies
         run: npm ci
       - name: Build
         run: |
           npm run docs:build
           touch docs/build/.nojekyll
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          path: docs/build
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    needs: build
-    runs-on: ubuntu-latest
-    name: Deploy
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          aws-access-key-id: ${{ secrets.AWS_S3_PRODUCTION_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_S3_PRODUCTION_SECRET }}
+          aws-region: eu-west-1
+      - name: Upload to AWS
+        run: aws s3 sync ./docs/build ${{ secrets.AWS_S3_PRODUCTION_PATH }} --delete
+      - name: Invalidate AWS cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_DISTRIBUTION_PRODUCTION }} --paths '/*'
