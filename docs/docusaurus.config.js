@@ -40,6 +40,9 @@ module.exports = async function createConfigAsync() {
       defaultLocale: "en",
       locales: ["en"],
     },
+    future: {
+      v4: true,
+    },
 
     headTags: [
       {
