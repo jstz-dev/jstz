@@ -71,6 +71,7 @@ module.exports = async function createConfigAsync() {
               "sandbox.md",
               "transfer.md",
               "examples.md",
+              "alpha-tester.md",
             ],
             sidebarPath: require.resolve("./sidebars.js"),
             routeBasePath: "/", // Serve the docs at the site's root
