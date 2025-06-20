@@ -50,7 +50,6 @@ use crate::error::{KvError, Result};
 /// ```
 ///
 /// NOTE: Current implementation does NOT support concurrent transactions
-
 /// A key is a path in durable storage
 pub type Key = OwnedPath;
 
@@ -601,7 +600,6 @@ impl<'a, V: 'a> VacantEntry<'a, V> {
 }
 
 /// A view into an occupied entry in the transactional snapshot.
-
 pub struct OccupiedEntry<'a, V: 'a> {
     guard: RcGuardInner,
     key: Key,

@@ -84,7 +84,7 @@ impl FromStr for SmartFunctionHash {
     }
 }
 
-impl<'a> Hash<'a> for SmartFunctionHash {
+impl Hash<'_> for SmartFunctionHash {
     fn to_base58(&self) -> String {
         match self {
             SmartFunctionHash(inner) => inner.to_b58check(),

@@ -181,10 +181,10 @@ mod tests {
         (op_hash, op)
     }
 
-    fn make_on_new_block() -> (
-        Arc<Mutex<u32>>,
-        impl Fn(u32) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static,
-    ) {
+    type OnNewBlockCallback =
+        Box<dyn Fn(u32) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static>;
+
+    fn make_on_new_block() -> (Arc<Mutex<u32>>, OnNewBlockCallback) {
         let counter = Arc::new(Mutex::new(0u32));
         let counter_clone = counter.clone();
         let on_new_block = move |num: u32| {
@@ -195,7 +195,7 @@ mod tests {
             })
         }
             as Pin<Box<dyn Future<Output = ()> + Send>>;
-        (counter, on_new_block)
+        (counter, Box::new(on_new_block))
     }
 
     #[tokio::test]

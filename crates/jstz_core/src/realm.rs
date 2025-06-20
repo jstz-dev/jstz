@@ -67,7 +67,7 @@ pub struct ContextHandle<'s> {
     context: &'s mut Context,
 }
 
-impl<'s> Deref for ContextHandle<'s> {
+impl Deref for ContextHandle<'_> {
     type Target = Context;
 
     fn deref(&self) -> &Self::Target {
@@ -75,13 +75,13 @@ impl<'s> Deref for ContextHandle<'s> {
     }
 }
 
-impl<'s> DerefMut for ContextHandle<'s> {
+impl DerefMut for ContextHandle<'_> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.context
     }
 }
 
-impl<'s> Drop for ContextHandle<'s> {
+impl Drop for ContextHandle<'_> {
     fn drop(&mut self) {
         self.context.enter_realm(self.outer.clone());
     }

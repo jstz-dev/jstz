@@ -270,7 +270,7 @@ impl<'a> Entered<'a> {
     }
 }
 
-impl<'a> Drop for Entered<'a> {
+impl Drop for Entered<'_> {
     fn drop(&mut self) {
         unsafe { self.runtime.v8_isolate().exit() };
     }

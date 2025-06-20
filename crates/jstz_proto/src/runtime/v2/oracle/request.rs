@@ -1,15 +1,15 @@
-use jstz_crypto::public_key_hash::PublicKeyHash;
+use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 use crate::event::Event;
 use crate::runtime::v2::fetch::http::Request;
 use crate::{BlockLevel, Gas};
 
+use super::UserAddress;
+
 pub type RequestId = u64;
 
-type UserAddress = PublicKeyHash;
-
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Encode, Decode)]
 pub struct OracleRequest {
     /// Request Id
     pub id: RequestId,
@@ -21,6 +21,7 @@ pub struct OracleRequest {
     /// Request TTL, denoted in [`BlockLevel`]
     pub timeout: BlockLevel,
     /// Request paylaod
+    #[bincode(with_serde)]
     pub request: Request,
 }
 

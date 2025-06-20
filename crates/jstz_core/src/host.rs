@@ -127,7 +127,7 @@ mod erased_runtime {
         pub struct Path<'a>(pub(crate) &'a dyn path::Path);
     }
 
-    unsafe impl<'a> path::Path for erase::Path<'a> {
+    unsafe impl path::Path for erase::Path<'_> {
         fn as_bytes(&self) -> &[u8] {
             self.0.as_bytes()
         }

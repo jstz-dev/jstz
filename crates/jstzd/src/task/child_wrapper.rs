@@ -33,7 +33,7 @@ impl ChildWrapper {
     pub async fn is_running(&mut self) -> bool {
         self.inner
             .as_mut()
-            .map_or(false, |child| matches!(child.try_wait(), Ok(None)))
+            .is_some_and(|child| matches!(child.try_wait(), Ok(None)))
     }
 }
 

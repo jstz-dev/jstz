@@ -68,7 +68,7 @@ pub struct ScopedIterable<'a, 's, T: FromV8<'s>> {
     iterable: &'a Iterable<'s, T>,
 }
 
-impl<'a, 's, T: FromV8<'s>> Iterator for ScopedIterable<'a, 's, T> {
+impl<'s, T: FromV8<'s>> Iterator for ScopedIterable<'_, 's, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
