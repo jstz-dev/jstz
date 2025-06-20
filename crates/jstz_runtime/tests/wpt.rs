@@ -256,7 +256,8 @@ fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntim
         protocol: Some(ProtocolContext::new(host, tx, address, String::new())),
         extensions: vec![test_harness_api::init_ops_and_esm()],
         ..Default::default()
-    });
+    })
+    .unwrap();
 
     let op_state = runtime.op_state();
     // Insert a blank report to be filled in by test cases

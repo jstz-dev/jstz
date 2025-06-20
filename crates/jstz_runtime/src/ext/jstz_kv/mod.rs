@@ -118,7 +118,7 @@ pub(crate) mod extension {
 
         #[test]
         fn kv_not_supported() {
-            let mut runtime = JstzRuntime::new(JstzRuntimeOptions::default());
+            let mut runtime = JstzRuntime::new(JstzRuntimeOptions::default()).unwrap();
             let code = r#"Kv.set("hello", "world")"#;
             let err = runtime.execute(code).unwrap_err();
             assert_eq!(

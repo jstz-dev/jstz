@@ -49,6 +49,7 @@ pub enum Error {
     InvalidInjector,
     #[cfg(feature = "v2_runtime")]
     V2Error(crate::runtime::v2::Error),
+    TimeoutSetupFailed,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -139,6 +140,9 @@ impl From<Error> for JsError {
             Error::V2Error(_) => {
                 unimplemented!("V2 runtime errors are not supported in boa")
             }
+            Error::TimeoutSetupFailed => JsNativeError::eval()
+                .with_message("TimeoutSetupFailed")
+                .into(),
         }
     }
 }
