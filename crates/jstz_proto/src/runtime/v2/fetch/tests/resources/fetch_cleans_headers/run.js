@@ -4,7 +4,7 @@ export default async (req) => {
   let newRequest = new Request(`jstz://${address}`, {
     headers: {
       "X-JSTZ-AMOUNT": 3000000, // 3 XTZ
-      REFERRER: "tz1eLbDXYceRsPZoPmaJXZgQ6pzgnTQvZtpo",
+      REFERER: "tz1eLbDXYceRsPZoPmaJXZgQ6pzgnTQvZtpo",
       "X-JSTZ-TRANSFER": 1000000,
       "X-JSTZ-NON-EXISTENT": "test",
     },
