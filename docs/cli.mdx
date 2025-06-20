@@ -141,12 +141,14 @@ jstz deploy [OPTIONS] [CODE|PATH]
 
 :::note
 
-The `--name` argument sets a local alias for the smart function in the specified network.
+The `--name` argument sets a local alias for the smart function's address.
 This alias is stored in the local configuration file and therefore it is known only to the CLI and not to any other system on the network.
-All other clients, including web applications, must use the address of the function instead of this alias.
+All other clients, including web applications, must use the full address of the function instead of this alias.
 
-Also, aliases are tied to a specific network.
-If you deploy a function with a specific alias to one network and then deploy another function with the same alias to a different network, the second alias overwrites the first alias.
+The Jstz CLI ties each alias to an address without regard to the network that the smart function is deployed to.
+Therefore, be careful with aliases when you are using more than one network.
+If two smart functions (or two copies of the same smart function) are deployed to different networks with the same address, the alias refers to both of them.
+Using the alias can lead to unexpected outcomes if you're not careful about which network you're calling.
 
 :::
 
