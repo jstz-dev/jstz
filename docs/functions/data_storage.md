@@ -72,7 +72,7 @@ type myData = {
 };
 
 const storedData: myData | null = await jstzClient.accounts
-  .getKv(contractAddress, {
+  .getKv(functionAddress, {
     key: "myKey",
   })
   .catch(() => {
