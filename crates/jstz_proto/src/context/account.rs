@@ -235,6 +235,14 @@ impl Account {
         Ok(account_entry.or_insert_with(|| Self::default_account(addr)))
     }
 
+    pub fn exists(
+        hrt: &impl HostRuntime,
+        tx: &Transaction,
+        addr: &impl Addressable,
+    ) -> Result<bool> {
+        Ok(tx.contains_key(hrt, &Self::path(addr)?)?)
+    }
+
     fn try_insert(
         self,
         hrt: &impl HostRuntime,

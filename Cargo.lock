@@ -2981,8 +2981,12 @@ dependencies = [
 name = "jstz_kernel"
 version = "0.1.1-alpha.1"
 dependencies = [
+ "anyhow",
  "bincode 2.0.0-rc.3",
+ "derive_more",
+ "futures",
  "hex",
+ "http 1.1.0",
  "jstz_core",
  "jstz_crypto",
  "jstz_mock",
@@ -2990,6 +2994,7 @@ dependencies = [
  "jstz_utils",
  "num-traits",
  "serde",
+ "serde_json",
  "tezos-smart-rollup",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
@@ -3006,6 +3011,7 @@ dependencies = [
  "tezos-smart-rollup",
  "tezos-smart-rollup-mock",
  "tezos_crypto_rs 0.6.0",
+ "tezos_data_encoding 0.6.0",
 ]
 
 [[package]]
