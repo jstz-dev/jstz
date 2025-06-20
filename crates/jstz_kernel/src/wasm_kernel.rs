@@ -1,25 +1,14 @@
+use crate::handle_message;
+use crate::inbox::read_message;
 use jstz_core::kv::Transaction;
-use jstz_crypto::public_key::PublicKey;
-use jstz_proto::{executor, Result};
-use std::sync::LazyLock;
-use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
-use crate::inbox::{read_message, Message};
-
-static SCHEDULER: LazyLock<tokio::runtime::Runtime> = LazyLock::new(|| {
-    tokio::runtime::Builder::new_current_thread()
-        .build()
-        .unwrap()
-});
-
 pub fn run(rt: &mut impl Runtime) {
-    SCHEDULER.block_on(async {
-        // TODO: we should organize protocol consts into a struct
-        // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
-
-        let ticketer = crate::read_ticketer(rt).expect("Ticketer not found");
-        let injector = crate::read_injector(rt).expect("Revealer not found");
+    futures::executor::block_on(async {
+        // TODO(https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct)
+        // we should organize protocol consts into a struct
+        let ticketer = crate::read_ticketer(rt);
+        let injector = crate::read_injector(rt);
         let mut tx = Transaction::default();
         tx.begin();
         let _ = rt.mark_for_reboot();
@@ -32,36 +21,6 @@ pub fn run(rt: &mut impl Runtime) {
             debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");
         }
     })
-}
-
-async fn handle_message(
-    hrt: &mut impl Runtime,
-    message: Message,
-    ticketer: &ContractKt1Hash,
-    tx: &mut Transaction,
-    injector: &PublicKey,
-) -> Result<()> {
-    match message {
-        Message::Internal(internal_operation) => {
-            let receipt =
-                executor::execute_internal_operation(hrt, tx, internal_operation).await;
-            receipt.write(hrt, tx)?
-        }
-        Message::External(signed_operation) => {
-            debug_msg!(hrt, "External operation: {signed_operation:?}\n");
-            let receipt = executor::execute_operation(
-                hrt,
-                tx,
-                signed_operation,
-                ticketer,
-                injector,
-            )
-            .await;
-            debug_msg!(hrt, "Receipt: {receipt:?}\n");
-            receipt.write(hrt, tx)?
-        }
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -92,7 +51,7 @@ mod test {
     #[test]
     fn read_ticketer_succeeds() {
         let mut host = JstzMockHost::default();
-        let ticketer = read_ticketer(host.rt()).unwrap();
+        let ticketer = read_ticketer(host.rt());
         let expected_tickter = host.get_ticketer();
         assert_eq!(ticketer, expected_tickter)
     }

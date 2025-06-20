@@ -21,9 +21,9 @@ serde.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup.workspace = true
 tezos-smart-rollup-host.workspace = true
+tokio.workspace = true
 utoipa.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
 deno_webidl.workspace = true
 deno_web.workspace = true
 deno_url.workspace = true
@@ -31,6 +31,7 @@ deno_error.workspace = true
 deno_fetch_base.workspace = true
 parking_lot.workspace = true
 pin-project.workspace = true
+
 
 [dev-dependencies]
 anyhow.workspace = true

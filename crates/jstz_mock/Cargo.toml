@@ -12,3 +12,4 @@ jstz_crypto = { path = "../jstz_crypto" }
 tezos-smart-rollup-mock.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
+tezos_data_encoding.workspace = true

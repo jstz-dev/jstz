@@ -21,6 +21,22 @@ pub struct MockNativeDeposit {
     pub smart_rollup: Option<SmartRollupAddress>,
 }
 
+impl MockNativeDeposit {
+    pub fn new(
+        amount: u32,
+        source: Option<PublicKeyHash>,
+        receiver: Option<Contract>,
+    ) -> Self {
+        let default = MockNativeDeposit::default();
+        Self {
+            receiver: receiver.unwrap_or(default.receiver),
+            source: source.unwrap_or(default.source),
+            ticket_amount: amount,
+            ..default
+        }
+    }
+}
+
 impl Default for MockNativeDeposit {
     fn default() -> Self {
         Self {
