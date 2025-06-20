@@ -13,7 +13,6 @@ use crate::{
     operation::{OperationHash, RunFunction},
     receipt::RunFunctionReceipt,
 };
-
 pub mod fetch;
 pub use jstz_core::log_record::{LogRecord, LOG_PREFIX};
 pub use jstz_runtime::{Kv, KvValue};
