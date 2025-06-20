@@ -3172,6 +3172,7 @@ dependencies = [
  "tezos-smart-rollup-mock",
  "thiserror 1.0.67",
  "tokio",
+ "tokio-util",
  "url",
  "utoipa",
 ]

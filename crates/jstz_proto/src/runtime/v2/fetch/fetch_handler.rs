@@ -6,6 +6,7 @@ use deno_core::{
     resolve_import, v8, ByteString, JsBuffer, OpState, ResourceId, StaticModuleLoader,
 };
 use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
+use jstz_runtime::runtime::ExecutionTimeout;
 use std::{cell::RefCell, rc::Rc};
 
 use jstz_core::host::JsHostRuntime;
@@ -113,11 +114,13 @@ fn fetch(
     body: Option<Body>,
 ) -> Result<FetchReturn> {
     let url = Url::try_from(url.as_str())?;
+    let timeout = { state.borrow::<ExecutionTimeout>().clone() };
     let protocol = state.borrow_mut::<ProtocolContext>();
     let host = JsHostRuntime::new(&mut protocol.host);
     let fut = process_and_dispatch_request(
         host,
         protocol.tx.clone(),
+        timeout,
         None,
         protocol.address.clone().into(),
         method,
@@ -150,6 +153,7 @@ fn fetch(
 pub async fn process_and_dispatch_request(
     mut host: JsHostRuntime<'static>,
     mut tx: Transaction,
+    timeout: ExecutionTimeout,
     operation_hash: Option<OperationHash>,
     from: Address,
     method: ByteString,
@@ -165,6 +169,7 @@ pub async fn process_and_dispatch_request(
             let result = dispatch_run(
                 &mut host,
                 &mut tx,
+                timeout,
                 operation_hash,
                 from,
                 method,
@@ -187,6 +192,7 @@ pub async fn process_and_dispatch_request(
 async fn dispatch_run(
     host: &mut JsHostRuntime<'static>,
     tx: &mut Transaction,
+    timeout: ExecutionTimeout,
     operation_hash: Option<OperationHash>,
     from: Address,
     method: ByteString,
@@ -202,6 +208,7 @@ async fn dispatch_run(
             let response = handle_address(
                 host,
                 tx,
+                timeout,
                 operation_hash.as_ref(),
                 to.clone(),
                 method,
@@ -223,6 +230,7 @@ async fn dispatch_run(
 async fn handle_address(
     host: &mut JsHostRuntime<'static>,
     tx: &mut Transaction,
+    timeout: ExecutionTimeout,
     operation_hash: Option<&OperationHash>,
     to: Address,
     method: ByteString,
@@ -246,6 +254,7 @@ async fn handle_address(
             let run_result = load_and_run(
                 host,
                 tx,
+                timeout,
                 operation_hash,
                 address.clone(),
                 method,
@@ -292,6 +301,7 @@ async fn handle_address(
 async fn load_and_run(
     host: &mut impl HostRuntime,
     tx: &mut Transaction,
+    timeout: ExecutionTimeout,
     operation_hash: Option<&OperationHash>,
     address: SmartFunctionHash,
     method: ByteString,
@@ -324,8 +334,10 @@ async fn load_and_run(
         module_loader: Rc::new(module_loader),
         fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
         protocol: Some(proto),
+        timeout: Some(timeout),
         ..Default::default()
-    });
+    })
+    .map_err(|_| FetchError::DeadlineExceeded)?;
 
     // 3. Prepare request
     let request = {
@@ -546,7 +558,9 @@ mod test {
 
     use deno_core::{resolve_import, StaticModuleLoader};
 
-    use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, ProtocolContext};
+    use jstz_runtime::{
+        runtime::ExecutionTimeout, JstzRuntime, JstzRuntimeOptions, ProtocolContext,
+    };
 
     use jstz_core::{
         host::{HostRuntime, JsHostRuntime},
@@ -615,6 +629,10 @@ mod test {
         (host, tx, source_address, hashes)
     }
 
+    fn dummy_timeout() -> ExecutionTimeout {
+        ExecutionTimeout::new(0, 1).0
+    }
+
     // Script simply fetches the smart function given in the path param
     // eg. jstz://<host address>/<remote address> will call fetch("jstz://<remote address>")
     const SIMPLE_REMOTE_CALLER: &str = "export default async (req) => await fetch(`jstz://${new URL(req.url).pathname.substring(1)}`)";
@@ -639,6 +657,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                dummy_timeout(),
                 None,
                 source_address.into(),
                 "GET".into(),
@@ -674,6 +693,7 @@ mod test {
         let response = process_and_dispatch_request(
             host,
             tx,
+            dummy_timeout(),
             None,
             source_address.into(),
             "GET".into(),
@@ -711,6 +731,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                dummy_timeout(),
                 None,
                 source_address.into(),
                 "GET".into(),
@@ -749,6 +770,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                dummy_timeout(),
                 None,
                 source_address.into(),
                 "GET".into(),
@@ -785,6 +807,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                dummy_timeout(),
                 None,
                 source_address.into(),
                 "GET".into(),
@@ -825,6 +848,7 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                dummy_timeout(),
                 None,
                 source_address.into(),
                 "GET".into(),
@@ -859,6 +883,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx,
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -898,6 +923,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx,
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -951,6 +977,7 @@ mod test {
             let _ = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -996,6 +1023,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1057,6 +1085,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1101,6 +1130,7 @@ mod test {
         let response = process_and_dispatch_request(
             JsHostRuntime::new(&mut host),
             tx.clone(),
+            dummy_timeout(),
             None,
             jstz_mock::account1().into(),
             "GET".into(),
@@ -1138,6 +1168,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1182,6 +1213,7 @@ mod test {
             let _ = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1222,6 +1254,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1268,6 +1301,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1315,6 +1349,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1359,6 +1394,7 @@ mod test {
             let _ = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1397,6 +1433,7 @@ mod test {
             let _ = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1439,6 +1476,7 @@ mod test {
         let response = process_and_dispatch_request(
             JsHostRuntime::new(&mut host),
             tx.clone(),
+            dummy_timeout(),
             None,
             jstz_mock::account1().into(),
             "GET".into(),
@@ -1560,7 +1598,8 @@ mod test {
             fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
             module_loader: Rc::new(module_loader),
             ..Default::default()
-        });
+        })
+        .unwrap();
         let id = runtime.execute_main_module(&specifier).await.unwrap();
         let _ = runtime.call_default_handler(id, &[]).await.unwrap();
     }
@@ -1656,6 +1695,7 @@ mod test {
         let response = super::process_and_dispatch_request(
             JsHostRuntime::new(&mut host),
             tx,
+            dummy_timeout(),
             Some(Blake2b::from(b"op_hash".as_ref())),
             from,
             "GET".into(),
@@ -1703,6 +1743,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1743,6 +1784,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1779,6 +1821,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1817,6 +1860,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),
@@ -1856,6 +1900,7 @@ mod test {
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                dummy_timeout(),
                 None,
                 jstz_mock::account1().into(),
                 "GET".into(),

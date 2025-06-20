@@ -33,6 +33,9 @@ pub enum FetchError {
     #[class("RuntimeError")]
     #[error("{0}")]
     JstzError(String),
+    #[class("RuntimeError")]
+    #[error("Execution deadline exceeded")]
+    DeadlineExceeded,
 }
 
 #[derive(Serialize)]

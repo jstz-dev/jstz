@@ -15,6 +15,9 @@ pub enum RuntimeError {
     SerdeV8(#[from] serde_v8::Error),
     #[class(inherit)]
     WebSysError(#[from] WebSysError),
+    #[class(generic)]
+    #[error("Execution deadline exceeded")]
+    DeadlineExceeded,
 }
 
 #[derive(Debug, thiserror::Error, deno_error::JsError)]

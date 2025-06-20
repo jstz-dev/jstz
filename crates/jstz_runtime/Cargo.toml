@@ -25,6 +25,7 @@ tezos-smart-rollup-host.workspace = true
 utoipa.workspace = true
 thiserror.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
 deno_webidl.workspace = true
 deno_web.workspace = true
 deno_url.workspace = true
