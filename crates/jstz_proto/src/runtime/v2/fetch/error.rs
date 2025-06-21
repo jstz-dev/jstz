@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use deno_error::JsErrorClass as _;
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_runtime::error::RuntimeError;
 use serde::Serialize;
 
@@ -33,6 +34,9 @@ pub enum FetchError {
     #[class("RuntimeError")]
     #[error("{0}")]
     JstzError(String),
+    #[class(syntax)]
+    #[error("Smart function '{address}' has no code")]
+    EmptyCode { address: SmartFunctionHash },
 }
 
 #[derive(Serialize)]
