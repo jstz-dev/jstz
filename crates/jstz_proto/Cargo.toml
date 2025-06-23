@@ -55,4 +55,4 @@ tokio.workspace = true
 default = ["dep:jstz_api"]
 v2_runtime = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_base", "dep:deno_error", "dep:tokio"]
 kernel = ["jstz_runtime?/kernel"]
-
+native = ["jstz_runtime?/native"]

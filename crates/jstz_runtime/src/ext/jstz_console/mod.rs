@@ -199,7 +199,7 @@ mod tests {
 
     #[test]
     fn console_not_supported() {
-        let mut runtime = JstzRuntime::new(JstzRuntimeOptions::default());
+        let mut runtime = JstzRuntime::new(JstzRuntimeOptions::default()).unwrap();
         let code = r#"console.info("hello")"#;
         let err = runtime.execute(code).unwrap_err();
         assert_eq!(

@@ -68,7 +68,7 @@ mod test {
             let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
                 module_loader: Rc::new(loader),
                 ..Default::default()
-            });
+            }).unwrap();
             let id = runtime.execute_main_module(&specifier).await.unwrap();
             let err = runtime.call_default_handler(id, &[]).await.unwrap_err();
             assert_eq!(

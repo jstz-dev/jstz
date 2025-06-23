@@ -110,7 +110,7 @@ mod test_utils {
                 )?
                 ..Default::default()
 
-            });
+            }).unwrap();
 
             $(let mut $host = init_host;)?
             $(let mut $tx = init_tx;)?
