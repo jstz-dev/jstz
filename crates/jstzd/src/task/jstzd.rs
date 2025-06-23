@@ -1,4 +1,4 @@
-use crate::config::BOOTSTRAP_ACCOUNTS;
+use crate::config::builtin_bootstrap_accounts;
 
 use super::{
     child_wrapper::Shared,
@@ -136,7 +136,7 @@ impl Task for Jstzd {
             HashMap::from_iter(
                 // cannot use config.protocol_params().bootstrap_accounts() here because
                 // we need secret keys
-                BOOTSTRAP_ACCOUNTS
+                builtin_bootstrap_accounts()?
                     .into_iter()
                     .map(|(alias, _, sk)| (alias, sk)),
             ),
@@ -213,15 +213,18 @@ impl Jstzd {
         }
     }
 
-    async fn import_accounts(
+    async fn import_accounts<V>(
         octez_client: &OctezClient,
-        accounts: HashMap<&str, &str>,
-    ) -> Result<()> {
-        for (alias, sk) in accounts.iter() {
+        accounts: HashMap<V, V>,
+    ) -> Result<()>
+    where
+        V: AsRef<str>,
+    {
+        for (alias, sk) in accounts.into_iter() {
             octez_client
-                .import_secret_key(alias, sk)
+                .import_secret_key(alias.as_ref(), sk.as_ref())
                 .await
-                .context(format!("Failed to import account '{alias}'"))?;
+                .context(format!("Failed to import account '{}'", alias.as_ref()))?;
         }
         Ok(())
     }
@@ -443,7 +446,8 @@ impl JstzdServer {
             print_bootstrap_accounts(
                 &mut stdout(),
                 jstzd_config.protocol_params().bootstrap_accounts(),
-            );
+            )
+            .context("failed to print bootstrap accounts")?;
         }
 
         Ok(jstzd)
@@ -496,10 +500,11 @@ fn abandon_progress_bar(progress_bar: Option<&ProgressBar>) {
 fn print_bootstrap_accounts<'a>(
     writer: &mut impl Write,
     accounts: impl IntoIterator<Item = &'a BootstrapAccount>,
-) {
-    let alias_address_mapping: HashMap<String, &str> = HashMap::from_iter(
-        BOOTSTRAP_ACCOUNTS
-            .map(|(alias, pk, _)| (PublicKey::from_base58(pk).unwrap().hash(), alias)),
+) -> Result<()> {
+    let alias_address_mapping: HashMap<String, String> = HashMap::from_iter(
+        builtin_bootstrap_accounts()?
+            .into_iter()
+            .map(|(alias, pk, _)| (PublicKey::from_base58(&pk).unwrap().hash(), alias)),
     );
 
     let mut table = Table::new();
@@ -529,7 +534,7 @@ fn print_bootstrap_accounts<'a>(
         format
     });
 
-    let _ = writeln!(writer, "{}", table);
+    Ok(writeln!(writer, "{}", table)?)
 }
 
 async fn health_check(state: &ServerState) -> bool {
@@ -741,7 +746,8 @@ mod tests {
                 )
                 .unwrap(),
             ],
-        );
+        )
+        .unwrap();
         let s = String::from_utf8(buf).unwrap();
         assert_eq!(
             s,
