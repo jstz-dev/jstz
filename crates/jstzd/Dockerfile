@@ -1,5 +1,5 @@
 ARG OCTEZ_VERSION=22.0
-ARG FEATURES="build-image,v2_runtime,sequencer"
+ARG FEATURES="build-image,v2_runtime"
 FROM rust:1.82.0-slim-bookworm AS builder
 RUN apt update && apt install -y curl pkg-config libssl-dev libsqlite3-dev
 
