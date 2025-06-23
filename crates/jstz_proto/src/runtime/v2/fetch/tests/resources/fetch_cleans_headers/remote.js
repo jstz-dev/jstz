@@ -1,6 +1,6 @@
 /** @param {Request} req */
 export default async (req) => {
-  if (req.headers.get("referer") !== "KT1MB74JfevE3nvkGWz4vXH34xsrXyvTAMtg") {
+  if (req.headers.get("referer") !== "KT1W1x5E3uZ1Z3BfpNXtZ3xG7XBNyy3uMFvS") {
     throw new Error("Unexpected referer " + req.headers.get("referer"));
   }
   if (req.headers.get("x-jstz-amount") !== "1000000") {
