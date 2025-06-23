@@ -18,9 +18,13 @@ use crate::{
 /// Addtionally, LocalSet supports support `!Send` futures which is currently required
 /// by [`JsHostRuntime`]
 pub fn run(rt: &mut impl Runtime) {
-    let tokio_runtime = tokio::runtime::Builder::new_current_thread()
-        .build()
-        .unwrap();
+    let tokio_runtime = match tokio::runtime::Builder::new_current_thread().build() {
+        Ok(runtime) => runtime,
+        Err(e) => {
+            debug_msg!(rt, "Failed to build Tokio runtime: {:?}", e);
+            return;
+        }
+    };
     let local_set = tokio::task::LocalSet::new();
     local_set.block_on(&tokio_runtime, run_event_loop(rt))
 }

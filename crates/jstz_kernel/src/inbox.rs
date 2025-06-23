@@ -135,8 +135,6 @@ pub fn parse_inbox_message(
             Ok(frame) => match frame {
                 ExternalMessageFrame::Targetted { address, contents } => {
                     let message = if jstz_rollup_address != address.hash() {
-                        println!("JSTZ_ADDRESS: {}", jstz_rollup_address);
-                        println!("ROLLUP ADDRESS: {}", address.hash());
                         logger.write_debug(
                             "External message ignored because of different smart rollup address",
                         );
@@ -234,7 +232,7 @@ fn read_external_message(
     bytes: &[u8],
 ) -> Option<ExternalMessage> {
     let msg = ExternalMessage::decode(bytes).ok()?;
-    logger.write_debug(format!("External message: {msg:?}\n").as_str());
+    logger.write_debug(&format!("External message: {msg:?}\n"));
     Some(msg)
 }
 

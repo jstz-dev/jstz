@@ -21,7 +21,7 @@ serde.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup.workspace = true
 tezos-smart-rollup-host.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["sync", "rt"] }
 utoipa.workspace = true
 thiserror.workspace = true
 deno_webidl.workspace = true
