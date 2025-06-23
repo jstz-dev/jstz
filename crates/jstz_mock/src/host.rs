@@ -110,7 +110,7 @@ impl Default for JstzMockHost {
             .expect("Could not insert ticketer");
         let injector: PublicKey = PublicKey::from_base58(INJECTOR).unwrap();
         Storage::insert(&mut mock_host, &INJECTOR_PATH, &injector)
-            .expect("Could not insert ticketer");
+            .expect("Could not insert injector");
         mock_host.set_debug_handler(empty());
         Self(mock_host)
     }

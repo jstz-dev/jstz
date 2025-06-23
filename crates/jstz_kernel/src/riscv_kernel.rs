@@ -15,7 +15,7 @@ use crate::{
 /// in input order. Unfortunately, tokio doesn't give granular control to enforce priority
 /// queuing
 ///
-/// Addtionally, LocalSet supports support `!Send` futures which is currently required
+/// Additionally, LocalSet supports support `!Send` futures which is currently required
 /// by [`JsHostRuntime`]
 pub fn run(rt: &mut impl Runtime) {
     let tokio_runtime = match tokio::runtime::Builder::new_current_thread().build() {

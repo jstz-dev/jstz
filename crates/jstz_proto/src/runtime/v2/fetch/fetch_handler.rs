@@ -256,7 +256,7 @@ async fn handle_address(
             {
                 return Ok(Response {
                     status: 404,
-                    status_text: "Not found".to_string(),
+                    status_text: "Not Found".to_string(),
                     headers,
                     body: "Account does not exist".into(),
                 });

@@ -14,7 +14,7 @@ pub mod inbox;
 pub mod parsing;
 
 #[cfg(feature = "riscv_kernel")]
-mod riscv_kernel;
+pub mod riscv_kernel;
 
 #[cfg(not(feature = "riscv_kernel"))]
 mod wasm_kernel;
