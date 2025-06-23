@@ -140,7 +140,7 @@ pub fn fetch(
         return Err(error::Error::InvalidScheme.into());
     }
     match request_deref.url().domain() {
-        Some(JSTZ_HOST) => HostScript::run(source_address, &mut request_deref, context),
+        Some(JSTZ_HOST) => HostScript::route(source_address, &mut request_deref, context),
         Some(dest_address) => {
             let dest_address = Address::from_base58(dest_address).map_err(|_| {
                 JsError::from_native(JsNativeError::error().with_message("Invalid host"))
@@ -304,11 +304,19 @@ pub fn response_from_run_receipt(
 
 #[cfg(test)]
 mod test {
+    use crate::{
+        context::account::{Account, Address},
+        executor::smart_function,
+        operation::{OperationHash, RunFunction},
+        runtime::ParsedCode,
+    };
+    use http::{HeaderMap, Method};
     use jstz_api::http::request::{Request, RequestClass};
     use jstz_core::{kv::Transaction, native::JsNativeObject, runtime, Runtime};
+    use jstz_mock::{account1, account2, host::JstzMockHost};
     use tezos_smart_rollup_mock::MockHost;
 
-    use crate::{operation::OperationHash, runtime::v1::api::WebApi};
+    use crate::runtime::v1::api::WebApi;
 
     #[test]
     fn call_smart_function_with_invalid_scheme_fails() {
@@ -339,5 +347,88 @@ mod test {
             super::fetch(&self_address, operation_hash, &request, context).unwrap_err()
         });
         assert_eq!("EvalError: InvalidScheme", js_error.to_string())
+    }
+
+    #[test]
+    fn host_script_balance_endpoint_returns_correct_balance() {
+        let source = Address::User(account1());
+        let test_account = Address::User(account2());
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+        let expected_balance_self = 47;
+        let expected_balance_test_account = 147;
+
+        // Set up initial balance
+        tx.begin();
+        Account::add_balance(host, &mut tx, &test_account, expected_balance_test_account)
+            .unwrap();
+        Account::add_balance(host, &mut tx, &source, expected_balance_self).unwrap();
+        tx.commit(host).unwrap();
+
+        // Deploy a smart function that checks balances
+        let code = format!(
+            r#"
+            const handler = async () => {{
+                // Check balance of specific address
+                const response1 = await fetch(new Request("jstz://jstz/balances/{test_account}"));
+                const balance1 = await response1.json();
+                if (balance1 !== {expected_balance_test_account}) {{
+                    throw new Error(`Expected balance {expected_balance_test_account}, got ${{balance1}}`);
+                }}
+
+                // Check self balance
+                const response2 = await fetch(new Request("jstz://jstz/balances/self"));
+                const balance2 = await response2.json();
+                if (balance2 !== {expected_balance_self}) {{
+                    throw new Error(`Expected self balance {expected_balance_self}, got ${{balance2}}`);
+                }}
+
+                // Check balance of source address
+                const response3 = await fetch(new Request("jstz://jstz/balances/{source}"));
+                const balance3 = await response3.json();
+                if (balance3 !== 0) {{
+                    throw new Error(`Expected balance 0, got ${{balance3}}`);
+                }}
+
+                // Check invalid address
+                try {{
+                    const response4 = await fetch(new Request("jstz://jstz/balances/invalid_address"));
+                    const balance4 = await response4.json();
+                    throw new Error("Expected error since the address is invalid, but got response");
+                }} catch (error) {{
+                    if (!error.message.includes("Invalid address")) {{
+                        throw new Error(`Expected "Invalid address" error, got: ${{error.message}}`);
+                    }}
+                }}
+
+                return new Response("OK");
+            }};
+            export default handler;
+            "#
+        );
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        tx.begin();
+        let smart_function = smart_function::deploy(
+            host,
+            &mut tx,
+            &source,
+            parsed_code,
+            expected_balance_self,
+        )
+        .unwrap();
+
+        // Call the smart function
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash = OperationHash::from(b"balanceop".as_ref());
+        smart_function::run::execute(host, &mut tx, &source, run_function, fake_op_hash)
+            .expect("run function expected");
+        tx.commit(host).unwrap();
     }
 }
