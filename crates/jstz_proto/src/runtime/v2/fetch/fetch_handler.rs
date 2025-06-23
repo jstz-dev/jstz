@@ -1,4 +1,6 @@
-use crate::logger::{log_request_end_with_host, log_request_start_with_host};
+use crate::logger::{
+    log_request_end_with_host, log_request_start_with_host, log_response_status_code,
+};
 use crate::operation::OperationHash;
 use crate::runtime::v2::fetch::error::{FetchError, Result};
 use crate::runtime::v2::ledger;
@@ -159,17 +161,17 @@ pub async fn process_and_dispatch_request(
     data: Option<Body>,
 ) -> Response {
     let scheme = SupportedScheme::try_from(&url);
-    match scheme {
+    let response = match scheme {
         Ok(SupportedScheme::Jstz) => {
             let mut is_successful = true;
             tx.begin();
             let result = dispatch_run(
                 &mut host,
                 &mut tx,
-                operation_hash,
+                operation_hash.as_ref(),
                 from,
                 method,
-                url,
+                &url,
                 headers,
                 data,
                 &mut is_successful,
@@ -180,7 +182,13 @@ pub async fn process_and_dispatch_request(
             result.into()
         }
         Err(err) => err.into(),
-    }
+    };
+    log_event(
+        &mut host,
+        operation_hash.as_ref(),
+        LogEvent::Response((&url, &response)),
+    );
+    response
 }
 
 /// # Safety
@@ -188,22 +196,22 @@ pub async fn process_and_dispatch_request(
 async fn dispatch_run(
     host: &mut JsHostRuntime<'static>,
     tx: &mut Transaction,
-    operation_hash: Option<OperationHash>,
+    operation_hash: Option<&OperationHash>,
     from: Address,
     method: ByteString,
-    url: Url,
+    url: &Url,
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
     is_successful: &mut bool,
 ) -> Result<Response> {
-    let to = (&url).try_into();
+    let to = url.try_into();
     match to {
         Ok(HostName::Address(to)) => {
-            log_request(host, &to, operation_hash.as_ref(), LogEvent::RequestStart);
+            log_event(host, operation_hash, LogEvent::RequestStart(&to));
             let response = handle_address(
                 host,
                 tx,
-                operation_hash.as_ref(),
+                operation_hash,
                 to.clone(),
                 method,
                 url,
@@ -213,7 +221,7 @@ async fn dispatch_run(
                 from,
             )
             .await;
-            log_request(host, &to, operation_hash.as_ref(), LogEvent::RequestEnd);
+            log_event(host, operation_hash, LogEvent::RequestEnd(&to));
             response
         }
         Ok(HostName::JstzHost) => HostScript::route(host, tx, from, method, url).await,
@@ -227,7 +235,7 @@ async fn handle_address(
     operation_hash: Option<&OperationHash>,
     to: Address,
     method: ByteString,
-    url: Url,
+    url: &Url,
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
     is_successful: &mut bool,
@@ -250,7 +258,7 @@ async fn handle_address(
                 operation_hash,
                 address.clone(),
                 method,
-                url.clone(),
+                url,
                 headers,
                 data,
             )
@@ -266,7 +274,7 @@ async fn handle_address(
                         },
                     )
                 } else {
-                    let to: Address = (&url).try_into()?;
+                    let to: Address = url.try_into()?;
                     let headers = process_headers_and_transfer(
                         tx,
                         host,
@@ -296,7 +304,7 @@ async fn load_and_run(
     operation_hash: Option<&OperationHash>,
     address: SmartFunctionHash,
     method: ByteString,
-    url: Url,
+    url: &Url,
     headers: Vec<(ByteString, ByteString)>,
     body: Option<Body>,
 ) -> Result<Response> {
@@ -514,30 +522,39 @@ fn commit_or_rollback(
     result.map_err(|e| FetchError::JstzError(e.to_string()))
 }
 
-enum LogEvent {
-    RequestStart,
-    RequestEnd,
+enum LogEvent<'a> {
+    RequestStart(&'a Address),
+    RequestEnd(&'a Address),
+    Response((&'a Url, &'a Response)),
 }
 
-fn log_request(
+fn log_event(
     host: &mut JsHostRuntime<'static>,
-    address: &Address,
     op_hash: Option<&OperationHash>,
-    event_type: LogEvent,
+    event: LogEvent,
 ) {
-    if let Address::SmartFunction(smart_function_addr) = &address {
-        if let Some(op) = op_hash {
-            match event_type {
-                LogEvent::RequestStart => log_request_start_with_host(
-                    host,
-                    smart_function_addr.clone(),
-                    op.to_string(),
-                ),
-                LogEvent::RequestEnd => log_request_end_with_host(
-                    host,
-                    smart_function_addr.clone(),
-                    op.to_string(),
-                ),
+    if let Some(op) = op_hash {
+        match event {
+            LogEvent::RequestStart(address) => {
+                if let Address::SmartFunction(smart_function_addr) = &address {
+                    log_request_start_with_host(
+                        host,
+                        smart_function_addr.clone(),
+                        op.to_string(),
+                    )
+                }
+            }
+            LogEvent::RequestEnd(address) => {
+                if let Address::SmartFunction(smart_function_addr) = &address {
+                    log_request_end_with_host(
+                        host,
+                        smart_function_addr.clone(),
+                        op.to_string(),
+                    )
+                }
+            }
+            LogEvent::Response((url, res)) => {
+                log_response_status_code(host, &url, op.to_string(), res.status)
             }
         }
     }
@@ -545,7 +562,7 @@ fn log_request(
 
 #[cfg(test)]
 mod test {
-    use std::collections::HashMap;
+    use std::{collections::HashMap, str::FromStr};
 
     use deno_core::{resolve_import, StaticModuleLoader};
 
@@ -1522,7 +1539,7 @@ mod test {
     }
 
     #[test]
-    fn log_request() {
+    fn log_event() {
         let mut host = tezos_smart_rollup_mock::MockHost::default();
         let sink = DebugLogSink::new();
         let buf = sink.content();
@@ -1531,11 +1548,10 @@ mod test {
         let address = Address::SmartFunction(jstz_mock::sf_account1());
         let op_hash = Blake2b::from(b"op_hash".as_ref());
 
-        super::log_request(
+        super::log_event(
             &mut rt,
-            &address,
             Some(&op_hash),
-            super::LogEvent::RequestStart,
+            super::LogEvent::RequestStart(&address),
         );
         let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
         assert_eq!(
@@ -1545,11 +1561,10 @@ mod test {
         );
         buf.lock().unwrap().clear();
 
-        super::log_request(
+        super::log_event(
             &mut rt,
-            &address,
             Some(&op_hash),
-            super::LogEvent::RequestEnd,
+            super::LogEvent::RequestEnd(&address),
         );
         let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
         assert_eq!(
@@ -1559,18 +1574,38 @@ mod test {
         );
         buf.lock().unwrap().clear();
 
+        super::log_event(
+            &mut rt,
+            Some(&op_hash),
+            super::LogEvent::Response((
+                &Url::from_str("foo://bar").unwrap(),
+                &super::super::http::Response {
+                    status: 403,
+                    status_text: String::default(),
+                    headers: vec![],
+                    body: crate::runtime::v2::fetch::http::Body::Vector(vec![]),
+                },
+            )),
+        );
+        let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
+        assert_eq!(
+            log,
+            r#"[JSTZ:RESPONSE] {"url":"foo://bar","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5","status_code":403}
+"#
+        );
+        buf.lock().unwrap().clear();
+
         // should not log when operation hash is missing
-        super::log_request(&mut rt, &address, None, super::LogEvent::RequestEnd);
+        super::log_event(&mut rt, None, super::LogEvent::RequestEnd(&address));
         let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
         assert_eq!(log, "");
 
-        // should not log with user address
+        // RequestEnd should not log with user address
         let address = Address::User(jstz_mock::account1());
-        super::log_request(
+        super::log_event(
             &mut rt,
-            &address,
             Some(&op_hash),
-            super::LogEvent::RequestEnd,
+            super::LogEvent::RequestEnd(&address),
         );
         let log = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
         assert_eq!(log, "");
@@ -1629,11 +1664,13 @@ mod test {
         let expected = r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
 [JSTZ:SMART_FUNCTION:LOG] {"address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","requestId":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5","level":"WARN","text":"a-b;c-d;\n"}
 [JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+[JSTZ:RESPONSE] {"url":"jstz://KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m/","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5","status_code":200}
 "#;
         #[cfg(not(feature = "kernel"))]
         let expected = r#"[JSTZ:SMART_FUNCTION:REQUEST_START] {"type":"Start","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
 [WARN] a-b;c-d;
 [JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
+[JSTZ:RESPONSE] {"url":"jstz://KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m/","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5","status_code":200}
 "#;
         assert_eq!(log, expected);
     }

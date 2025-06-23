@@ -10,7 +10,6 @@ use url::Url;
 
 pub const REQUEST_START_PREFIX: &str = "[JSTZ:SMART_FUNCTION:REQUEST_START] ";
 pub const REQUEST_END_PREFIX: &str = "[JSTZ:SMART_FUNCTION:REQUEST_END] ";
-#[allow(unused)]
 const RESPONSE_PREFIX: &str = "[JSTZ:RESPONSE]";
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -41,7 +40,6 @@ impl RequestEvent {
     }
 }
 
-#[allow(unused)]
 #[derive(Serialize, Debug)]
 struct ResponseEvent<'a> {
     url: &'a Url,
@@ -95,7 +93,6 @@ pub fn log_request_end_with_host(
     hrt.write_debug(&(REQUEST_END_PREFIX.to_string() + &request_log + "\n"));
 }
 
-#[allow(unused)]
 pub fn log_response_status_code(
     hrt: &mut JsHostRuntime<'static>,
     url: &Url,

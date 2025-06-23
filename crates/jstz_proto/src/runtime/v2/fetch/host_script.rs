@@ -15,7 +15,7 @@ impl HostScript {
         tx: &mut Transaction,
         from: Address,
         method: ByteString,
-        url: Url,
+        url: &Url,
     ) -> Result<Response> {
         let path = url.path();
         if path.starts_with("/balances") {
@@ -36,7 +36,7 @@ impl HostScript {
         tx: &mut Transaction,
         self_address: Address,
         method: ByteString,
-        url: Url,
+        url: &Url,
     ) -> Result<Response> {
         if method != "GET".into() {
             return Ok(Response {
