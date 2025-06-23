@@ -77,7 +77,8 @@ impl ParsedCode {
             // Explicitly switch off protocol
             protocol: None,
             ..Default::default()
-        });
+        })
+        .map_err(|e| ParseError::Other(e))?;
         let scope = &mut runtime.handle_scope();
 
         let script_origin = script_origin(scope, "code".to_string()).unwrap();

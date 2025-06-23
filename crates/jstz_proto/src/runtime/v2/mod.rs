@@ -6,6 +6,7 @@ use jstz_core::{
     host::{HostRuntime, JsHostRuntime},
     kv::Transaction,
 };
+use jstz_runtime::runtime::ExecutionTimeout;
 use url::Url;
 
 use crate::{
@@ -28,12 +29,44 @@ pub async fn run_toplevel_fetch(
     run_operation: RunFunction,
     operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt, crate::Error> {
-    Ok(run(hrt, tx, source_address, run_operation, operation_hash).await?)
+    #[allow(unused)]
+    let (timeout, clock) = ExecutionTimeout::new(500, 8);
+    #[cfg(not(feature = "native"))]
+    return Ok(run(
+        hrt,
+        tx,
+        timeout,
+        source_address,
+        run_operation,
+        operation_hash,
+    )
+    .await?);
+
+    #[cfg(feature = "native")]
+    return {
+        let (setup_ok, cancellation_token) = clock.start();
+        if let Ok(true) = setup_ok.await {
+            let r = run(
+                hrt,
+                tx,
+                timeout,
+                source_address,
+                run_operation,
+                operation_hash,
+            )
+            .await?;
+            cancellation_token.cancel();
+            Ok(r)
+        } else {
+            Err(crate::Error::TimeoutSetupFailed)
+        }
+    };
 }
 
 async fn run(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
+    timeout: ExecutionTimeout,
     source_address: &(impl Addressable + 'static),
     run_operation: RunFunction,
     operation_hash: OperationHash,
@@ -44,6 +77,7 @@ async fn run(
     let response: http::Response<Option<Vec<u8>>> = process_and_dispatch_request(
         JsHostRuntime::new(hrt),
         tx.clone(),
+        timeout,
         Some(operation_hash),
         source_address.clone().into(),
         run_operation.method.to_string().into(),
@@ -124,5 +158,65 @@ pub mod test_utils {
         let hashes =
             deploy_smart_functions(scripts, &mut host, &mut tx, &source_address, 0);
         (host, tx, source_address, hashes)
+    }
+
+    #[cfg(feature = "native")]
+    #[tokio::test]
+    async fn timeout() {
+        use http::{HeaderMap, Method, StatusCode, Uri};
+        use jstz_core::kv::Transaction;
+        use jstz_crypto::hash::Blake2b;
+
+        use crate::{
+            context::account::{Account, Address},
+            operation::RunFunction,
+            runtime::ParsedCode,
+        };
+
+        let from = Address::User(jstz_mock::account1());
+        let mut host = tezos_smart_rollup_mock::MockHost::default();
+        let mut tx = Transaction::default();
+
+        let parsed_code = ParsedCode("export default () => { for (;;) {} };".to_string());
+        tx.begin();
+        let f0_addr =
+            Account::create_smart_function(&mut host, &mut tx, &from, 0, parsed_code)
+                .unwrap();
+        let parsed_code = ParsedCode(format!(
+            "export default async () => await fetch(\"jstz://{f0_addr}/\");"
+        ));
+        let f1_addr =
+            Account::create_smart_function(&mut host, &mut tx, &from, 0, parsed_code)
+                .unwrap();
+        let parsed_code = ParsedCode(format!(
+            "export default async () => await fetch(\"jstz://{f1_addr}/\");"
+        ));
+        let func_addr =
+            Account::create_smart_function(&mut host, &mut tx, &from, 0, parsed_code)
+                .unwrap();
+        tx.commit(&mut host).unwrap();
+
+        tx.begin();
+        let receipt = super::run_toplevel_fetch(
+            &mut host,
+            &mut tx,
+            &from,
+            RunFunction {
+                uri: Uri::try_from(&format!("jstz://{}/", func_addr.to_base58_check()))
+                    .unwrap(),
+                method: Method::GET,
+                headers: HeaderMap::new(),
+                body: None,
+                gas_limit: 10000,
+            },
+            Blake2b::from(b"op_hash".as_ref()),
+        )
+        .await
+        .unwrap();
+        assert_eq!(receipt.status_code, StatusCode::INTERNAL_SERVER_ERROR);
+        assert_eq!(
+            String::from_utf8(receipt.body.unwrap()).unwrap(),
+            r#"{"class":"RuntimeError","message":"Uncaught Error: execution terminated"}"#
+        );
     }
 }

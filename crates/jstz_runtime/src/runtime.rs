@@ -1,4 +1,5 @@
 use crate::error::Result;
+use crate::error::RuntimeError;
 use crate::ext::jstz_fetch;
 use crate::ext::jstz_fetch::NotSupportedFetch;
 use deno_core::v8::new_single_threaded_default_platform;
@@ -12,6 +13,14 @@ use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use pin_project::pin_project;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
+#[cfg(feature = "native")]
+use tokio::sync::{
+    mpsc::{channel, Receiver, Sender},
+    oneshot,
+};
+#[cfg(feature = "native")]
+use tokio_util::sync::CancellationToken;
+
 use std::{
     future::Future,
     ops::{Deref, DerefMut},
@@ -28,6 +37,11 @@ use deno_console;
 use deno_url;
 use deno_web::TimersPermission;
 use deno_webidl;
+
+#[cfg(not(test))]
+#[cfg(feature = "native")]
+static RUNTIME_THREADPOOL: std::sync::LazyLock<rayon::ThreadPool> =
+    std::sync::LazyLock::new(|| rayon::ThreadPoolBuilder::new().build().unwrap());
 
 /// Returns the default object of the specified JavaScript namespace (Object).
 ///
@@ -90,6 +104,8 @@ pub struct JstzRuntimeOptions {
     pub module_loader: Rc<dyn ModuleLoader>,
     /// Fetch extension
     pub fetch: Extension,
+    /// Shared execution timeout set at the top level.
+    pub timeout: Option<ExecutionTimeout>,
 }
 
 impl Default for JstzRuntimeOptions {
@@ -99,6 +115,7 @@ impl Default for JstzRuntimeOptions {
             extensions: Default::default(),
             module_loader: Rc::new(NoopModuleLoader),
             fetch: jstz_fetch::jstz_fetch::init_ops_and_esm::<NotSupportedFetch>(()),
+            timeout: None,
         }
     }
 }
@@ -129,7 +146,7 @@ impl JstzRuntime {
     }
 
     /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`]
-    pub fn new(options: JstzRuntimeOptions) -> Self {
+    pub fn new(options: JstzRuntimeOptions) -> Result<Self> {
         // Register extensions
         let mut extensions = init_extenions();
         extensions.push(options.fetch);
@@ -156,7 +173,18 @@ impl JstzRuntime {
         };
         op_state.borrow_mut().put(JstzPermissions);
 
-        Self { runtime }
+        let mut rt = Self { runtime };
+
+        if let Some(t) = options.timeout {
+            t.register(&mut rt)
+                // If there is a timer set up but the runtime cannot register itself,
+                // it most likely means that the time is up. Whatever the reason is,
+                // this fails the runtime setup to ensure that no new runtime is set up
+                // beyond what is permitted by the timer.
+                .map_err(|_| RuntimeError::DeadlineExceeded)?;
+            op_state.borrow_mut().put(t);
+        }
+        Ok(rt)
     }
 
     /// Executes traditional, non-ECMAScript-module JavaScript code, ignoring
@@ -377,6 +405,108 @@ impl ProtocolContext {
     }
 }
 
+#[cfg(feature = "native")]
+pub struct Clock {
+    timeout_ms: u64,
+    isolate_rx: Receiver<IsolateHandle>,
+}
+
+#[cfg(not(feature = "native"))]
+pub struct Clock {}
+
+impl Clock {
+    #[cfg(feature = "native")]
+    pub fn start(mut self) -> (oneshot::Receiver<bool>, CancellationToken) {
+        let token = CancellationToken::new();
+        let cp = token.clone();
+        let (sig_tx, sig_rx) = oneshot::channel();
+        let inner = move || match tokio::runtime::Runtime::new() {
+            Ok(rt) => rt.block_on(async {
+                let _ = sig_tx.send(true);
+                let mut isolates = vec![];
+                let result = tokio::time::timeout(
+                    tokio::time::Duration::from_millis(self.timeout_ms),
+                    async {
+                        loop {
+                            tokio::select! {
+                                Some(r) = self.isolate_rx.recv() => {
+                                    isolates.push(r);
+                                },
+                                _ = cp.cancelled() => return
+                            };
+                        }
+                    },
+                )
+                .await;
+                self.isolate_rx.close();
+                if result.is_err() {
+                    while let Some(v) = isolates.pop() {
+                        v.terminate_execution();
+                    }
+                    while let Some(v) = self.isolate_rx.recv().await {
+                        v.terminate_execution();
+                    }
+                }
+            }),
+            Err(_) => {
+                // should somehow log the error
+                let _ = sig_tx.send(false);
+            }
+        };
+
+        #[cfg(not(test))]
+        RUNTIME_THREADPOOL.spawn(inner);
+        #[cfg(test)]
+        std::thread::spawn(inner);
+        (sig_rx, token)
+    }
+}
+
+#[cfg(feature = "native")]
+#[derive(Clone)]
+pub struct ExecutionTimeout {
+    isolate_tx: Sender<IsolateHandle>,
+}
+
+#[cfg(not(feature = "native"))]
+#[derive(Clone)]
+pub struct ExecutionTimeout {}
+
+#[cfg(feature = "native")]
+impl ExecutionTimeout {
+    pub fn new(timeout_ms: u64, capacity: usize) -> (Self, Clock) {
+        let (tx, rx) = channel(capacity);
+        (
+            Self { isolate_tx: tx },
+            Clock {
+                timeout_ms,
+                isolate_rx: rx,
+            },
+        )
+    }
+
+    pub fn register(&self, runtime: &mut JstzRuntime) -> anyhow::Result<()> {
+        match self.isolate_tx.try_reserve() {
+            Ok(p) => {
+                p.send(runtime.v8_isolate().thread_safe_handle());
+                Ok(())
+            }
+            Err(e) => anyhow::bail!("failed to register timeout: {e}"),
+        }
+    }
+}
+
+#[cfg(not(feature = "native"))]
+impl ExecutionTimeout {
+    pub fn new(_timeout_ms: u64, _capacity: usize) -> (Self, Clock) {
+        (Self {}, Clock {})
+    }
+
+    pub fn register(&self, _runtime: &mut JstzRuntime) -> anyhow::Result<()> {
+        Ok(())
+    }
+}
+
 #[macro_export]
 macro_rules! init_ops_and_esm_extensions  {
     ($($ext:ident $(::<$($generics:ty),*> )? $(($($args:expr),*))?),*) => {
@@ -573,5 +703,39 @@ export default handler;
             let id = rt.execute_main_module(&specifier).await.unwrap();
             let _ = rt.call_default_handler(id, &[]).await;
         })
+    }
+
+    #[cfg(feature = "native")]
+    #[tokio::test]
+    async fn timeout_works() {
+        let (timeout, clock) = ExecutionTimeout::new(1000, 1);
+        let code = "export default () => { for (;;) {} };";
+        init_test_setup! {
+            runtime = rt;
+            specifier = (specifier, code);
+        };
+        timeout.register(&mut rt).unwrap();
+        let (ok, _) = clock.start();
+        assert!(ok.await.unwrap());
+        let id = rt.execute_main_module(&specifier).await.unwrap();
+        let error = rt.call_default_handler(id, &[]).await.unwrap_err();
+        assert_eq!(error.to_string(), "Uncaught Error: execution terminated");
+    }
+
+    #[cfg(feature = "native")]
+    #[test]
+    fn timeout_registration_fails() {
+        let code = "";
+        init_test_setup! {
+            runtime = rt;
+            specifier = (specifier, code);
+        };
+        let (timeout, mut clock) = ExecutionTimeout::new(1000, 1);
+        assert_eq!(clock.timeout_ms, 1000);
+        clock.isolate_rx.close();
+        assert_eq!(
+            timeout.register(&mut rt).unwrap_err().to_string(),
+            "failed to register timeout: channel closed"
+        );
     }
 }
