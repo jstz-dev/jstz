@@ -18,7 +18,7 @@ bincode.workspace = true
 derive_more = { workspace = true, features = ["from"] }
 hex.workspace = true
 futures.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, optional = true }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
@@ -38,4 +38,4 @@ tokio.workspace = true
 
 [features]
 v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
-riscv_kernel = ["v2_runtime"]
+riscv_kernel = ["v2_runtime", "dep:tokio"]
