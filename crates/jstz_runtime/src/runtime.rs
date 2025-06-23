@@ -78,7 +78,7 @@ impl Drop for JstzRuntime {
 }
 pub struct JstzRuntimeOptions {
     /// Protocol context accessible by protocol defined APIs
-    pub protocol: Option<ProtocolContext>,
+    pub protocol: Option<RuntimeContext>,
     /// Additional extensions to be registered on initialization.
     pub extensions: Vec<Extension>,
     /// Implementation of the `ModuleLoader` which will be
@@ -347,7 +347,7 @@ impl DerefMut for JstzRuntime {
     }
 }
 
-pub struct ProtocolContext {
+pub struct RuntimeContext {
     pub host: JsHostRuntime<'static>,
     pub tx: Transaction,
     pub kv: Kv,
@@ -355,7 +355,7 @@ pub struct ProtocolContext {
     pub request_id: String,
 }
 
-impl ProtocolContext {
+impl RuntimeContext {
     pub fn new(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
@@ -363,7 +363,7 @@ impl ProtocolContext {
         request_id: String,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
-        ProtocolContext {
+        RuntimeContext {
             host,
             tx: tx.clone(),
             kv: Kv::new(address.to_base58()),

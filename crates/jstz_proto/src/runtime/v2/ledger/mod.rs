@@ -1,21 +1,21 @@
 use deno_core::{extension, op2, OpState};
 
 use jstz_crypto::hash::Hash;
-use jstz_runtime::ProtocolContext;
+use jstz_runtime::RuntimeContext;
 
 use crate::context::account::{Account, Address};
 
 #[op2]
 #[string]
 fn op_self_address(state: &mut OpState) -> String {
-    let proto = state.borrow_mut::<ProtocolContext>();
+    let proto = state.borrow_mut::<RuntimeContext>();
     proto.address.to_base58()
 }
 
 #[op2(fast)]
 #[number]
 fn op_balance(state: &mut OpState, #[string] address: String) -> Result<u64> {
-    let ProtocolContext { host, tx, .. } = state.borrow_mut::<ProtocolContext>();
+    let RuntimeContext { host, tx, .. } = state.borrow_mut::<RuntimeContext>();
     let address = Address::from_base58(&address)?;
     Ok(Account::balance(host, tx, &address)?)
 }
@@ -26,9 +26,9 @@ fn op_transfer(
     #[string] dest_address: String,
     #[number] amount: u64,
 ) -> Result<()> {
-    let ProtocolContext {
+    let RuntimeContext {
         host, tx, address, ..
-    } = state.borrow_mut::<ProtocolContext>();
+    } = state.borrow_mut::<RuntimeContext>();
     let dest = Address::from_base58(&dest_address)?;
     Ok(Account::transfer(host, tx, address, &dest, amount)?)
 }
