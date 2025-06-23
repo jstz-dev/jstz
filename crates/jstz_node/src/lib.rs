@@ -61,12 +61,18 @@ impl AppState {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum)]
+#[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum RunMode {
     Sequencer,
     #[serde(alias = "default")]
     Default,
+}
+
+impl Default for RunMode {
+    fn default() -> Self {
+        Self::Default
+    }
 }
 
 pub struct RunOptions {
@@ -247,6 +253,11 @@ mod test {
             current_spec == generated_spec,
             "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
         );
+    }
+
+    #[test]
+    fn default_runmode() {
+        assert_eq!(RunMode::default(), RunMode::Default);
     }
 
     #[tokio::test]
