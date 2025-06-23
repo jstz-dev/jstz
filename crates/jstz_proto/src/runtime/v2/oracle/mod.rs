@@ -1,4 +1,4 @@
-mod request;
+pub mod request;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 pub use request::*;
 
