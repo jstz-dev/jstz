@@ -35,44 +35,16 @@ pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
 ];
-pub const BOOTSTRAP_ACCOUNTS: [(&str, &str, &str); 6] = [
-    (
-        "bootstrap0",
-        "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
-        "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6",
-    ),
-    (
-        "bootstrap1",
-        "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-        "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
-    ),
-    (
-        "bootstrap2",
-        "edpktzNbDAUjUk697W7gYg2CRuBQjyPxbEg8dLccYYwKSKvkPvjtV9",
-        "unencrypted:edsk39qAm1fiMjgmPkw1EgQYkMzkJezLNewd7PLNHTkr6w9XA2zdfo",
-    ),
-    (
-        "bootstrap3",
-        "edpkuTXkJDGcFd5nh6VvMz8phXxU3Bi7h6hqgywNFi1vZTfQNnS1RV",
-        "unencrypted:edsk4ArLQgBTLWG5FJmnGnT689VKoqhXwmDPBuGx3z4cvwU9MmrPZZ",
-    ),
-    (
-        "bootstrap4",
-        "edpkuFrRoDSEbJYgxRtLx2ps82UdaYc1WwfS9sE11yhauZt5DgCHbU",
-        "unencrypted:edsk2uqQB9AY4FvioK2YMdfmyMrer5R8mGFyuaLLFfSRo8EoyNdht3",
-    ),
-    (
-        "bootstrap5",
-        "edpkv8EUUH68jmo3f7Um5PezmfGrRF24gnfLpH3sVNwJnV5bVCxL2n",
-        "unencrypted:edsk4QLrcijEffxV31gGdN2HU7UpyJjA8drFoNcmnB28n89YjPNRFm",
-    ),
-];
 pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
 const BOOTSTRAP_ACCOUNT_BALANCE: u64 = 100_000_000_000;
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
 pub struct BootstrapContractFile;
+
+#[derive(Embed)]
+#[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_account/"]
+pub struct BootstrapAccountFile;
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/jstz_rollup"]
@@ -114,6 +86,15 @@ async fn parse_config(path: &str) -> Result<Config> {
         .await
         .context("failed to read config file")?;
     Ok(serde_json::from_str::<Config>(&s)?)
+}
+
+pub(crate) fn builtin_bootstrap_accounts() -> Result<Vec<(String, String, String)>> {
+    serde_json::from_slice(
+        &BootstrapAccountFile::get("accounts.json")
+            .ok_or(anyhow::anyhow!("bootstrap account file not found"))?
+            .data,
+    )
+    .context("error loading built-in bootstrap accounts")
 }
 
 pub(crate) async fn build_config_from_path(
@@ -285,8 +266,9 @@ async fn build_protocol_params(
         .iter()
         .map(|v| (*v).to_owned())
         .collect::<Vec<BootstrapAccount>>();
-    for account in BOOTSTRAP_ACCOUNTS
-        .map(|(_, pk, _)| BootstrapAccount::new(pk, BOOTSTRAP_ACCOUNT_BALANCE).unwrap())
+    for account in builtin_bootstrap_accounts()?
+        .into_iter()
+        .map(|(_, pk, _)| BootstrapAccount::new(&pk, BOOTSTRAP_ACCOUNT_BALANCE).unwrap())
     {
         accounts.push(account);
     }
@@ -333,8 +315,6 @@ mod tests {
     use tempfile::{tempdir, NamedTempFile};
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tokio::io::AsyncReadExt;
-
-    const ACCOUNT_PUBLIC_KEY: &str = super::BOOTSTRAP_ACCOUNTS[0].1;
 
     async fn read_param_file(path: &PathBuf) -> serde_json::Value {
         let mut buf = String::new();
@@ -651,7 +631,7 @@ mod tests {
         let protocol_params = ProtocolParameterBuilder::new()
             .set_protocol(Protocol::Rio)
             .set_bootstrap_accounts([BootstrapAccount::new(
-                ACCOUNT_PUBLIC_KEY,
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
                 40_000_000_000,
             )
             .unwrap()])
@@ -807,10 +787,11 @@ mod tests {
             .map(|acc| serde_json::from_value::<BootstrapAccount>(acc.clone()).unwrap())
             .collect::<Vec<_>>();
 
-        for (_, pk, _) in super::BOOTSTRAP_ACCOUNTS {
+        for (_, pk, _) in super::builtin_bootstrap_accounts().unwrap() {
             assert!(
                 bootstrap_accounts.contains(
-                    &BootstrapAccount::new(pk, super::BOOTSTRAP_ACCOUNT_BALANCE).unwrap()
+                    &BootstrapAccount::new(&pk, super::BOOTSTRAP_ACCOUNT_BALANCE)
+                        .unwrap()
                 ),
                 "account {pk} not found in bootstrap accounts"
             );
@@ -868,7 +849,7 @@ mod tests {
     async fn build_protocol_params() {
         let mut builder = ProtocolParameterBuilder::new();
         builder.set_bootstrap_accounts([BootstrapAccount::new(
-            ACCOUNT_PUBLIC_KEY,
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
             40_000_000_000,
         )
         .unwrap()]);
@@ -898,7 +879,7 @@ mod tests {
         let mut builder = ProtocolParameterBuilder::new();
         builder
             .set_bootstrap_accounts([BootstrapAccount::new(
-                ACCOUNT_PUBLIC_KEY,
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
                 40_000_000_000,
             )
             .unwrap()])
