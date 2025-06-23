@@ -1,10 +1,9 @@
 #![allow(dead_code)]
 use crate::sequencer::db::Db;
+use jstz_proto::BlockLevel;
 use log::error;
 
 use thiserror::Error;
-
-pub type BlockLevel = u32;
 
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -19,7 +18,7 @@ pub trait CheckpointStore {
     fn set_checkpoint(&self, level: BlockLevel) -> Result<()>;
 }
 
-/// Tracks the checkpoint level, which is the last block level that has been pushed into the queue.
+/// Tracks the checkpoint block level, the latest inbox messages known to have been processed
 #[derive(Clone)]
 pub struct InboxCheckpoint {
     db: Db,
@@ -31,15 +30,15 @@ impl InboxCheckpoint {
     }
 }
 
-const LAST_LEVEL: &str = "/inbox/last_level";
+const CHECKPOINT_KEY: &str = "/checkpoint";
 impl CheckpointStore for InboxCheckpoint {
     fn get_checkpoint(&self) -> Result<Option<BlockLevel>> {
-        let value = self.db.read_key(LAST_LEVEL)?;
+        let value = self.db.read_key(CHECKPOINT_KEY)?;
         Ok(value.map(|v| v.parse::<BlockLevel>().unwrap()))
     }
 
     fn set_checkpoint(&self, level: BlockLevel) -> Result<()> {
-        self.db.write(LAST_LEVEL, &level.to_string())?;
+        self.db.write(CHECKPOINT_KEY, &level.to_string())?;
         Ok(())
     }
 }
