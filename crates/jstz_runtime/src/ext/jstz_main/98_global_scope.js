@@ -1,4 +1,4 @@
-import { core, primordials } from "ext:core/mod.js";
+import { core } from "ext:core/mod.js";
 
 import * as webidl from "ext:deno_webidl/00_webidl.js";
 import jstzConsole from "ext:jstz_console/console.js";
