@@ -1,4 +1,4 @@
-use crate::{ext::NotSupported, runtime::ProtocolContext};
+use crate::{ext::NotSupported, runtime::RuntimeContext};
 use deno_core::*;
 use jstz_core::log_record::LogLevel;
 use tezos_smart_rollup::prelude::debug_msg;
@@ -25,7 +25,7 @@ pub fn op_debug_msg(
     #[string] msg: &str,
     level: u32,
 ) -> Result<(), NotSupported> {
-    let proto = op_state.try_borrow_mut::<ProtocolContext>();
+    let proto = op_state.try_borrow_mut::<RuntimeContext>();
     match proto {
         Some(proto) => {
             #[cfg(not(feature = "kernel"))]

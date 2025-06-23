@@ -18,7 +18,7 @@ use jstz_runtime::sys::{
     FromV8, Headers as JsHeaders, Request as JsRequest, RequestInit as JsRequestInit,
     Response as JsResponse, ToV8,
 };
-use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, ProtocolContext};
+use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 use url::Url;
 
 use crate::context::account::{Account, Address, AddressKind, Addressable};
@@ -116,7 +116,7 @@ fn fetch(
     body: Option<Body>,
 ) -> Result<FetchReturn> {
     let url = Url::try_from(url.as_str())?;
-    let protocol = state.borrow_mut::<ProtocolContext>();
+    let protocol = state.borrow_mut::<RuntimeContext>();
     let host = JsHostRuntime::new(&mut protocol.host);
     let fut = process_and_dispatch_request(
         host,
@@ -180,6 +180,9 @@ pub async fn process_and_dispatch_request(
             let _ =
                 commit_or_rollback(&mut host, &mut tx, is_successful && result.is_ok());
             result.into()
+        }
+        Ok(SupportedScheme::Http) => {
+            todo!()
         }
         Err(err) => err.into(),
     };
@@ -321,7 +324,7 @@ async fn load_and_run(
     let mut body = body;
 
     // 0. Prepare Protocol
-    let mut proto = ProtocolContext::new(
+    let mut proto = RuntimeContext::new(
         host,
         tx,
         address.clone(),
@@ -580,7 +583,7 @@ mod test {
 
     use deno_core::{resolve_import, StaticModuleLoader};
 
-    use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, ProtocolContext};
+    use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 
     use jstz_core::{host::JsHostRuntime, kv::Transaction};
     use jstz_crypto::{
@@ -1455,7 +1458,7 @@ mod test {
 
         let mut tx = jstz_core::kv::Transaction::default();
         tx.begin();
-        let protocol = Some(ProtocolContext::new(
+        let protocol = Some(RuntimeContext::new(
             &mut host,
             &mut tx,
             address.clone(),
