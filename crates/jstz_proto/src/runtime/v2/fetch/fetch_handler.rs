@@ -1,5 +1,5 @@
+use crate::logger::{log_request_end_with_host, log_request_start_with_host};
 use crate::operation::OperationHash;
-use crate::request_logger::{log_request_end_with_host, log_request_start_with_host};
 use crate::runtime::v2::fetch::error::{FetchError, Result};
 use crate::runtime::v2::ledger;
 
