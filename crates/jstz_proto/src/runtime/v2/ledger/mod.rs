@@ -149,8 +149,8 @@ mod test {
         TOKIO_MULTI_THREAD.block_on(async {
             // Code
             let run = r#"export default async (request) => {
-                let referrer = request.headers.get("referrer");
-                Ledger.transfer(referrer, 500 * 1000000);
+                let referer = request.headers.get("referer");
+                Ledger.transfer(referer, 500 * 1000000);
                 return new Response()
             }"#;
 
