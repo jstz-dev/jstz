@@ -1,6 +1,7 @@
+use crate::logger::{log_request_end_with_host, log_request_start_with_host};
 use crate::operation::OperationHash;
-use crate::request_logger::{log_request_end_with_host, log_request_start_with_host};
 use crate::runtime::v2::fetch::error::{FetchError, Result};
+use crate::runtime::v2::ledger;
 
 use deno_core::{
     resolve_import, v8, ByteString, JsBuffer, OpState, ResourceId, StaticModuleLoader,
@@ -52,7 +53,7 @@ use std::str::FromStr;
 ///     - `fetch` should target a `jstz` schemed URL with host referencing a valid Smart Function address (callee)
 ///     -  The callee smart function should export a default hander that accepts a Request and returns a Response
 /// *  Header hygiene in Request/Response
-///     - The "referrer" header key will be set to/replaced with the caller's address
+///     - The "referer" header key will be set to/replaced with the caller's address
 ///     - "x-jstz-*" header keys will be removed if present except valid header "x-jstz-transfer"
 /// *. Header transfer
 ///     - If the "x-jstz-transfer: <amount>" header key is present, the protocol will attempt to transfer <amount> from caller to callee.
@@ -233,7 +234,7 @@ async fn handle_address(
     from: Address,
 ) -> Result<Response> {
     let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
-    headers.push((REFERRER_HEADER_KEY.clone(), from.to_base58().into()));
+    headers.push((REFERER_HEADER_KEY.clone(), from.to_base58().into()));
     let response = match to.kind() {
         AddressKind::User => Ok(Response {
             status: 200,
@@ -324,6 +325,7 @@ async fn load_and_run(
         module_loader: Rc::new(module_loader),
         fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
         protocol: Some(proto),
+        extensions: vec![ledger::jstz_ledger::init_ops_and_esm()],
         ..Default::default()
     });
 
@@ -459,7 +461,7 @@ fn clean_and_validate_headers(
             }
         }
         // Remove keys that shouldn' be there and might cause confusion
-        else if !(key_slice.eq_ignore_ascii_case(REFERRER_HEADER_KEY.as_slice())
+        else if !(key_slice.eq_ignore_ascii_case(REFERER_HEADER_KEY.as_slice())
             || key_slice.starts_with(EXTENSION_PREFIX_HEADER_KEY.as_slice()))
         {
             processed.headers.push((key, value));
@@ -468,8 +470,9 @@ fn clean_and_validate_headers(
     Ok(processed)
 }
 
-static REFERRER_HEADER_KEY: std::sync::LazyLock<ByteString> =
-    std::sync::LazyLock::new(|| ByteString::from("referrer"));
+// "Referer" is mispelt in the HTTP spec
+static REFERER_HEADER_KEY: std::sync::LazyLock<ByteString> =
+    std::sync::LazyLock::new(|| ByteString::from("referer"));
 static AMOUNT_HEADER_KEY: std::sync::LazyLock<ByteString> =
     std::sync::LazyLock::new(|| ByteString::from("x-jstz-amount"));
 static TRANSFER_HEADER_KEY: std::sync::LazyLock<ByteString> =
@@ -548,13 +551,9 @@ mod test {
 
     use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, ProtocolContext};
 
-    use jstz_core::{
-        host::{HostRuntime, JsHostRuntime},
-        kv::Transaction,
-    };
+    use jstz_core::{host::JsHostRuntime, kv::Transaction};
     use jstz_crypto::{
         hash::{Blake2b, Hash},
-        public_key_hash::PublicKeyHash,
         smart_function_hash::SmartFunctionHash,
     };
     use jstz_utils::test_util::TOKIO;
@@ -562,58 +561,16 @@ mod test {
     use serde_json::{json, Value as JsonValue};
     use url::Url;
 
+    use super::ProtoFetchHandler;
     use crate::runtime::v2::fetch::fetch_handler::process_and_dispatch_request;
+    use crate::runtime::v2::test_utils::*;
     use crate::runtime::ParsedCode;
     use crate::{
-        context::account::{Account, Address, Addressable, Amount},
+        context::account::{Account, Address},
         tests::DebugLogSink,
     };
 
-    use super::ProtoFetchHandler;
-
     use std::rc::Rc;
-
-    // Deploy a vec of smart functions from the same creator, each
-    // with `amount` XTZ. Returns a vec of hashes corresponding to
-    // each sf deployed
-    fn deploy_smart_functions<const N: usize>(
-        scripts: [&str; N],
-        hrt: &impl HostRuntime,
-        tx: &mut Transaction,
-        creator: &impl Addressable,
-        amount: Amount,
-    ) -> [SmartFunctionHash; N] {
-        let mut hashes = vec![];
-        for i in 0..N {
-            // Safety
-            // Script is valid
-            let hash = Account::create_smart_function(hrt, tx, creator, amount, unsafe {
-                ParsedCode::new_unchecked(scripts[i].to_string())
-            })
-            .unwrap();
-            hashes.push(hash);
-        }
-
-        hashes.try_into().unwrap()
-    }
-
-    fn setup<'a, const N: usize>(
-        host: &mut tezos_smart_rollup_mock::MockHost,
-        scripts: [&'a str; N],
-    ) -> (
-        JsHostRuntime<'static>,
-        Transaction,
-        PublicKeyHash,
-        [SmartFunctionHash; N],
-    ) {
-        let mut host = JsHostRuntime::new(host);
-        let mut tx = jstz_core::kv::Transaction::default();
-        tx.begin();
-        let source_address = jstz_mock::account1();
-        let hashes =
-            deploy_smart_functions(scripts, &mut host, &mut tx, &source_address, 0);
-        (host, tx, source_address, hashes)
-    }
 
     // Script simply fetches the smart function given in the path param
     // eg. jstz://<host address>/<remote address> will call fetch("jstz://<remote address>")
@@ -1013,7 +970,7 @@ mod test {
                 json!({
                     "accept":"*/*",
                     "accept-language":"*",
-                    "referrer":"KT1WEAA8whopt6FqPodVErxnQysYSkTan4wS"
+                    "referer":"KT1WEAA8whopt6FqPodVErxnQysYSkTan4wS"
                 }),
                 request_headers
             );
@@ -1038,7 +995,7 @@ mod test {
     }
 
     #[test]
-    fn request_header_has_referrer() {
+    fn request_header_has_referer() {
         TOKIO.block_on(async {
             // Code
             let run = SIMPLE_REMOTE_CALLER;
@@ -1070,12 +1027,12 @@ mod test {
             let request_headers =
                 serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
                     .unwrap();
-            assert!(request_headers["referrer"] == run_address.to_string());
+            assert!(request_headers["referer"] == run_address.to_string());
         })
     }
 
     #[test]
-    fn fetch_replaces_referrer_in_request_header() {
+    fn fetch_replaces_referer_in_request_header() {
         TOKIO.block_on(async {
 
         // Code
@@ -1083,13 +1040,13 @@ mod test {
             let address = new URL(req.url).pathname.substring(1);
             let request = new Request(`jstz://${address}`, {
                 headers: {
-                    Referrer: req.headers.get("referrer") // Tries to forward referrer
+                    Referer: req.headers.get("referer") // Tries to forward referer
                 }
             });
             return await fetch(request)
         }"#;
         let remote =
-            r#"export default async (req) => new Response(req.headers.get("referrer"))"#;
+            r#"export default async (req) => new Response(req.headers.get("referer"))"#;
 
         // Setup
         let mut host = tezos_smart_rollup_mock::MockHost::default();
@@ -1231,8 +1188,7 @@ mod test {
                 None,
             )
             .await;
-
-            assert!(response.status == 200);
+            assert_eq!(response.status, 200);
             assert_eq!(
                 9_000_000,
                 Account::balance(&mut host, &mut tx, &run_address).unwrap()
@@ -1725,7 +1681,7 @@ mod test {
             // Code
             let run = SIMPLE_REMOTE_CALLER;
             let remote = r#"export default async (req) => {
-                const response = await fetch(`jstz://jstz/balances/${req.headers.get("referrer")}`);
+                const response = await fetch(`jstz://jstz/balances/${req.headers.get("referer")}`);
                 return response;
             }"#;
 

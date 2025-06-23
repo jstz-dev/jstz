@@ -35,41 +35,15 @@ jobs:
         run: npm ci
       - name: Build
         run: |
-          DOC_URL=https://jstz-dev.github.io DOC_BASE_URL=/dev-docs/ npm run docs:build
+          DOC_URL=https://next-jstz-tezos-com.tzstaging.com/ npm run docs:build
           touch docs/build/.nojekyll
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          path: docs/build
-          name: built-docs
-          retention-days: 1
-  push:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download generated template
-        uses: actions/download-artifact@v4
-        with:
-          name: built-docs
-          path: docs
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          repository: jstz-dev/dev-docs
-          ref: main
-          # This token should have write access to the target repo content and github pages over there
-          token: ${{ secrets.DEV_DOC_REPO_TOKEN }}
-          path: dest_repo
-      - name: push to destination repo
-        run: |
-          cd $GITHUB_WORKSPACE/dest_repo/ && find . -mindepth 1 -maxdepth 1 ! -name '.git' -type d -exec rm -rf {} + && find . -mindepth 1 -maxdepth 1 ! -name '.git' -type f -exec rm {} +
-          mv $GITHUB_WORKSPACE/docs/* $GITHUB_WORKSPACE/dest_repo/
-          if [[ ! `git status --porcelain` ]]; then
-            echo "No change in docs"
-            exit 0
-          fi
-          git config user.name "GitHub Actions Bot"
-          git config user.email "<>"
-          git add .
-          git commit -m "Docs built from ${{ github.sha }}"
-          git push origin main
+          aws-access-key-id: ${{ secrets.AWS_S3_DEV_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_S3_DEV_SECRET }}
+          aws-region: eu-west-1
+      - name: Upload to AWS
+        run: aws s3 sync ./docs/build ${{ secrets.AWS_S3_DEV_PATH }} --delete
+      - name: Invalidate AWS cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_DISTRIBUTION_DEV }} --paths '/*'

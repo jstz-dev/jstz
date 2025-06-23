@@ -32,6 +32,8 @@ fn default_config() {
     Command::new("kill")
         .args(["-s", "TERM", &child.id().to_string()])
         .spawn()
+        .unwrap()
+        .wait()
         .unwrap();
     assert!(child.wait().is_ok());
 }
@@ -106,6 +108,8 @@ fn terminate_with_sigint() {
     Command::new("kill")
         .args(["-s", "INT", &child.id().to_string()])
         .spawn()
+        .unwrap()
+        .wait()
         .unwrap();
     assert!(child.wait().is_ok());
 }

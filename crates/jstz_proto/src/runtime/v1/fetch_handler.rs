@@ -15,9 +15,9 @@ use crate::{
     context::account::{Account, Address, Addressable},
     error::{self, Result},
     executor::smart_function::{JSTZ_HOST, NOOP_PATH},
+    logger::{log_request_end, log_request_start},
     operation::{OperationHash, RunFunction},
     receipt::RunFunctionReceipt,
-    request_logger::{log_request_end, log_request_start},
     Error,
 };
 

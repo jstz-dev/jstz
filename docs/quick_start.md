@@ -9,7 +9,7 @@ This guide will instruct you in writing, deploying, and using your first Jstz _s
 
 ## Prerequisites
 
-- Install Node.JS, `npm`, and Docker.
+- Install Node.JS version 22 or later, `npm`, and Docker.
 - Install Jstz as described in [Installation](installation.md).
 
   To verify your installation, run this command to check the version of Jstz:
@@ -225,21 +225,17 @@ It is not yet secure enough to use in production applications.
 
 :::
 
-1. Install the Chrome web browser.
+:::note
 
-   :::note
+The Jstz dev wallet supports only the Chrome web browser.
 
-   The Jstz dev wallet supports only the Chrome web browser.
-
-   :::
+:::
 
 1. Download the source code for the dev wallet:
 
    ```bash
    git clone https://github.com/jstz-dev/dev-wallet.git
    ```
-
-1. Install Node.JS version 22 or later.
 
 1. Go into the repository, install the dependencies, and build the wallet:
 
@@ -255,7 +251,7 @@ It is not yet secure enough to use in production applications.
 
    The Jstz dev wallet appears in the list of extensions in the browser.
 
-1. Create an account in the dev wallet by clicking the extension icon and then clicking **Generate new wallet**.
+1. Create an account in the dev wallet by clicking the extension icon and then clicking **Generate account**.
 
 Now when you click the extension, it shows your account.
 This account is managed by the extension and is not linked to the account that you used to call the smart function on the command line.
@@ -277,7 +273,9 @@ Follow these steps to run a sample web application that uses your smart function
    pnpm dev
    ```
 
-1. Open the application in Chrome at `http://localhost:3000`.
+   The response includes the URL that the application is running at, such as `http://localhost:3201`.
+
+1. Open the application in the Chrome web browser.
 
 1. Paste the address of your smart function into the web application.
 
