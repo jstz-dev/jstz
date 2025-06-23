@@ -8,8 +8,10 @@ use crate::request::{request_event_from_log_line, OracleRequest, ORACLE_LINE_REG
 
 use anyhow::Result;
 
+/// A relay that forwards oracle requests from a log file to a channel.
 pub struct Relay {
     tx: broadcast::Sender<OracleRequest>,
+    subscriber_count: std::sync::atomic::AtomicUsize,
 }
 
 impl Relay {
@@ -48,11 +50,20 @@ impl Relay {
             }
         });
 
-        Ok(Self { tx })
+        Ok(Self {
+            tx,
+            subscriber_count: std::sync::atomic::AtomicUsize::new(0),
+        })
     }
 
-    pub fn subscribe(&self) -> broadcast::Receiver<OracleRequest> {
-        self.tx.subscribe()
+    pub fn subscribe(&self) -> Result<broadcast::Receiver<OracleRequest>> {
+        let current_count = self
+            .subscriber_count
+            .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        if current_count > 0 {
+            return Err(anyhow::anyhow!("Relay already has a subscriber"));
+        }
+        Ok(self.tx.subscribe())
     }
 }
 
@@ -98,7 +109,7 @@ mod tests {
         let path = tmp.path().to_path_buf();
 
         let relay = Relay::spawn(path.clone()).await?;
-        let mut rx = relay.subscribe();
+        let mut rx = relay.subscribe()?;
 
         let id = 42;
         tokio::spawn(append_async(path, make_line(id), 25));
@@ -115,7 +126,7 @@ mod tests {
         let path = tmp.path().to_path_buf();
 
         let relay = Relay::spawn(path.clone()).await?;
-        let mut rx = relay.subscribe();
+        let mut rx = relay.subscribe()?;
 
         let valid_id = 7;
         let path_clone = path.clone();
@@ -137,7 +148,7 @@ mod tests {
 
         let path = tmp.path().to_path_buf();
         let relay = Relay::spawn(path.clone()).await?;
-        let mut rx = relay.subscribe();
+        let mut rx = relay.subscribe()?;
 
         let late_id = 2;
         tokio::spawn(append_async(path, make_line(late_id), 20));
@@ -149,19 +160,20 @@ mod tests {
 
     #[tokio::test]
     async fn broadcasts_to_multiple_subscribers() -> Result<()> {
-        // This is just a test, in practice we'll have just a single subscriber.
         let tmp = NamedTempFile::new()?;
         let path = tmp.path().to_path_buf();
 
         let relay = Relay::spawn(path.clone()).await?;
-        let mut rx1 = relay.subscribe();
-        let mut rx2 = relay.subscribe();
+        let mut rx1 = relay.subscribe()?;
+
+        // Second subscription should fail
+        let rx2_result = relay.subscribe();
+        assert!(rx2_result.is_err());
 
         tokio::spawn(append_async(path, make_line(99), 10));
 
-        let (ev1, ev2) = tokio::try_join!(next_event(&mut rx1), next_event(&mut rx2))?;
+        let ev1 = next_event(&mut rx1).await?;
         assert_eq!(ev1.id, 99);
-        assert_eq!(ev2.id, 99);
         Ok(())
     }
 }
