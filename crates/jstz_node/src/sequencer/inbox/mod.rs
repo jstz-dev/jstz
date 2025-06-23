@@ -22,6 +22,7 @@ use tokio_util::sync::CancellationToken;
 
 pub mod api;
 pub mod parsing;
+mod store;
 
 #[derive(Default)]
 pub struct Monitor {
