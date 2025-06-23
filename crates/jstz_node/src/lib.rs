@@ -42,7 +42,7 @@ pub struct AppState {
     pub injector: KeyPair,
     pub mode: RunMode,
     pub queue: Arc<RwLock<OperationQueue>>,
-    pub runtime_db: sequencer::db::Db,
+    pub sequencer_db: sequencer::db::Db,
     worker_heartbeat: Arc<AtomicU64>,
 }
 
@@ -132,13 +132,13 @@ pub async fn run(
     let db_path = db_file.path().to_str().ok_or(anyhow::anyhow!(
         "failed to convert temp db file path to str"
     ))?;
-    let runtime_db = sequencer::db::Db::init(Some(db_path))?;
+    let sequencer_db = sequencer::db::Db::init(Some(db_path))?;
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer => Some(
             worker::spawn(
                 queue.clone(),
-                runtime_db.clone(),
+                sequencer_db.clone(),
                 &injector,
                 rollup_preimages_dir.clone(),
                 Some(&debug_log_path),
@@ -151,7 +151,7 @@ pub async fn run(
             Some(
                 worker::spawn(
                     queue.clone(),
-                    runtime_db.clone(),
+                    sequencer_db.clone(),
                     &injector,
                     rollup_preimages_dir.clone(),
                     Some(&debug_log_path),
@@ -167,9 +167,10 @@ pub async fn run(
 
     let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => {
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
-        }
+        RunMode::Sequencer => Some(
+            inbox::spawn_monitor(rollup_endpoint, queue.clone(), sequencer_db.clone())
+                .await?,
+        ),
         #[cfg(test)]
         RunMode::Sequencer => None,
         RunMode::Default => None,
@@ -213,7 +214,7 @@ pub async fn run(
         injector,
         mode,
         queue,
-        runtime_db,
+        sequencer_db,
         worker_heartbeat: worker.as_ref().map(|w| w.heartbeat()).unwrap_or_default(),
     };
 

@@ -104,7 +104,7 @@ pub(crate) mod tests {
             injector: KeyPair::default(),
             mode,
             queue: Arc::new(RwLock::new(OperationQueue::new(1))),
-            runtime_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),
+            sequencer_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),
             worker_heartbeat: Arc::default(),
         }
     }
