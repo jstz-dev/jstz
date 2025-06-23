@@ -1,4 +1,3 @@
-use boa_engine::JsError;
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use jstz_proto::{
     operation::{Content, DeployFunction, Operation, SignedOperation},
@@ -68,9 +67,7 @@ pub async fn exec(
 
     debug!("Code: {}", code);
 
-    let code: ParsedCode = code
-        .try_into()
-        .map_err(|err: JsError| user_error!("{err}"))?;
+    let code = ParsedCode::try_from(code).map_err(|err| user_error!("{err}"))?;
 
     let op = Operation {
         public_key: user.public_key.clone(),

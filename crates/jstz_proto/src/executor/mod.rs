@@ -174,7 +174,7 @@ mod tests {
 
     fn deploy_function_content() -> Content {
         let raw_code =
-            r#"export default handler = () => new Response("hello world!");"#.to_string();
+            r#"export default () => new Response("hello world!");"#.to_string();
         let function_code = ParsedCode::try_from(raw_code).unwrap();
         let account_credit = 0;
         Content::DeployFunction(DeployFunction {

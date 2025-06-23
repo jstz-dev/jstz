@@ -85,7 +85,7 @@ impl FromStr for PublicKeyHash {
         PublicKeyHash::from_base58(s)
     }
 }
-impl<'a> Hash<'a> for PublicKeyHash {
+impl Hash<'_> for PublicKeyHash {
     fn to_base58(&self) -> String {
         match self {
             PublicKeyHash::Tz1(inner) => inner.to_b58check(),

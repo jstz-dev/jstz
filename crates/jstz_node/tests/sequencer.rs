@@ -22,10 +22,14 @@ use reqwest::Client;
 use std::process::{Child, Command};
 use tempfile::{NamedTempFile, TempDir};
 use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
+use tokio_stream::StreamExt;
 
 use futures_util::stream;
 use std::convert::Infallible;
-use tokio::task::{self, JoinHandle};
+use tokio::{
+    task::{self, JoinHandle},
+    time::{sleep, Duration},
+};
 use warp::{hyper::Body, Filter};
 
 struct ChildWrapper(Child);
@@ -69,9 +73,11 @@ async fn run_sequencer() {
     let client = Client::new();
 
     check_mode(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
     deploy_function(&client, &base_uri).await;
-    call_function(&client, &base_uri).await;
+    call_function_and_stream_logs(&base_uri).await;
     check_inbox_op(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
 }
 
 async fn check_mode(client: &Client, base_uri: &str) {
@@ -145,34 +151,30 @@ async fn submit_operation(
 }
 
 async fn poll_receipt(client: &Client, base_uri: &str, hash: &str) -> Receipt {
+    let uri = format!("{base_uri}/operations/{hash}/receipt");
     jstz_utils::poll(10, 500, || async {
-        match client
-            .get(format!("{base_uri}/operations/{hash}/receipt"))
-            .send()
-            .await
-            .ok()
-        {
+        match client.get(&uri).send().await.ok() {
             Some(r) if r.status() != 404 => Some(r),
             _ => None,
         }
     })
     .await
-    .expect("should get response")
+    .unwrap_or_else(|| panic!("should get response from {uri}"))
     .json::<Receipt>()
     .await
-    .expect("should get receipt")
+    .unwrap_or_else(|e| panic!("should get receipt from {uri} but got error {e:?}"))
 }
 
 async fn deploy_function(client: &Client, base_uri: &str) {
-    let deploy_op = raw_operation(0, Content::DeployFunction(DeployFunction {function_code: ParsedCode::try_from(format!("const handler = async () => {{ const s = \"{}\"; return new Response(\"this is a big function\"); }}; export default handler;\n", "a".repeat(8000))).unwrap(), account_credit: 0}));
+    let deploy_op = raw_operation(0, Content::DeployFunction(DeployFunction {function_code: ParsedCode::try_from(format!("const handler = async () => {{ const s = \"{}\"; console.log(\"debug message here\"); return new Response(\"this is a big function\"); }}; export default handler;\n", "a".repeat(8000))).unwrap(), account_credit: 0}));
 
-    let receipt = submit_operation(client, base_uri, deploy_op, "bcab63dea88398b20ac20616d0fdcbd2d3042fd88f762a01a49f17ef082a511c", "edsigu5pnMWyk1EZm2bDpJivHEKC5XVX14RZdC9it5UCZMEUhKbC67LKTnMSxn39d1Sv2Vx6DK71LzpZ3MVDAGpNhPxvUxgNfe3").await;
+    let receipt = submit_operation(client, base_uri, deploy_op, "1d67b9aec56ec1ee843feaf87486d11f9c80404c707862f053b91d842972faa4", "edsigu2E4TvDw4dDCF2hzjjEvDF5tMpP1hM3UPof2DfPCoESvXRkNcDKNYrymcoKVG9gqxbobFnoJhf7JWqmzfYe4Upa1wHRff1").await;
 
     assert!(matches!(
         receipt.result,
         ReceiptResult::Success(ReceiptContent::DeployFunction(
             DeployFunctionReceipt { address: SmartFunctionHash(Kt1Hash(addr)) }
-        )) if addr.to_base58_check() == "KT19TpJrE2ErutMMYqttsxmJQRNBHJpmYNsT"
+        )) if addr.to_base58_check() == "KT1CTTMXwcpLV3FtPupxfwZ6bTSLAPaoB6sd"
     ));
 }
 
@@ -180,7 +182,7 @@ async fn call_function(client: &Client, base_uri: &str) {
     let call_op = raw_operation(
         1,
         Content::RunFunction(RunFunction {
-            uri: Uri::from_static("jstz://KT19TpJrE2ErutMMYqttsxmJQRNBHJpmYNsT/"),
+            uri: Uri::from_static("jstz://KT1CTTMXwcpLV3FtPupxfwZ6bTSLAPaoB6sd/"),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -188,7 +190,7 @@ async fn call_function(client: &Client, base_uri: &str) {
         }),
     );
 
-    let receipt = submit_operation(client, base_uri, call_op, "617a081f5886482776c7d5c41f5f866a105974392162371af4f40a4524051d1c", "edsigte57eB4EtBsobBReepyvQHDYYvD1eLuR8ufvChyshUgLZYYed6ouTpVM4D8SKBB8hELPFoCN75V2tiXENJRpYUBibpZXnG").await;
+    let receipt = submit_operation(client, base_uri, call_op, "2b0ac1f923e4e83226611e3befe81f664729475f2b6e546f1c7d6e2a69b6cd12", "edsigtx7PoXqmF2vuxfXkEwTwEm7xCYT516pXqRjZZSfmvZyjNtpGfVu6Jwq41k9ZZarv9JcFK5y2tugpm8rKo17VAgB49GnTRQ").await;
 
     assert!(matches!(
         receipt.result,
@@ -261,10 +263,16 @@ fn make_mock_rollup_rpc_server(url: String) -> JoinHandle<()> {
 pub(crate) fn make_mock_monitor_blocks_filter(
 ) -> impl warp::Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     warp::path!("global" / "monitor_blocks").map(|| {
+        let delay_stream = stream::once(async {
+            // TODO: remove this once db issue is fixed
+            // https://github.com/jstz-dev/jstz/actions/runs/15685845390/job/44188722352
+            tokio::time::sleep(Duration::from_secs(2)).await;
+            Ok::<Bytes, Infallible>(Bytes::new())
+        });
         let data_stream = stream::iter(vec![Ok::<Bytes, Infallible>(Bytes::from(
             "{\"level\": 123}\n",
         ))]);
-        warp::reply::Response::new(Body::wrap_stream(data_stream))
+        warp::reply::Response::new(Body::wrap_stream(delay_stream.chain(data_stream)))
     })
 }
 
@@ -299,4 +307,46 @@ fn mock_deposit_fa_op() -> (&'static str, &'static str) {
     let op = "0000050807070a000000160000e7670f32038107a59a2b9cfefae36ea21f5aa63c070705090a0000001601238f371da359b757db57238e9f27f3c48234defa0007070a0000001601207905b1a5abdace0a6b5bff0d71a467d5b85cf500070707070001030600a80f9424c685d3f69801ff6e3f2cfb74b250f00988e100e7670f32038107a59a2b9cfefae36ea21f5aa63cc3ea4c18195bcfac262dcb29e3d803ae74681739";
     let op_hash = "34461635d31fd734cee1f20839218ffef78785d536b348b04204510012a8cbd2";
     (op_hash, op)
+}
+
+async fn check_worker_health(client: &Client, base_uri: &str) {
+    let res = client
+        .get(format!("{base_uri}/worker/health"))
+        .send()
+        .await
+        .unwrap();
+    assert!(res.status().is_success());
+}
+
+async fn call_function_and_stream_logs(base_uri: &str) {
+    let uri = base_uri.to_string();
+    let h = tokio::spawn(async move {
+        sleep(Duration::from_secs(2)).await;
+        let client = Client::new();
+        call_function(&client, &uri).await;
+    });
+
+    let res = reqwest::get(format!(
+        "{base_uri}/logs/KT1CTTMXwcpLV3FtPupxfwZ6bTSLAPaoB6sd/stream"
+    ))
+    .await
+    .unwrap();
+
+    let mut found_message = false;
+    let mut body = res.bytes_stream();
+    for _ in 0..20 {
+        if let Some(Ok(b)) = body.next().await {
+            let s = String::from_utf8(b.to_vec()).unwrap().replace("data: ", "");
+            if let Ok(serde_json::Value::Object(m)) = serde_json::from_str(&s) {
+                if m["text"].as_str().is_some_and(|v| v.contains("debug message here")) && m["requestId"] == serde_json::json!("2b0ac1f923e4e83226611e3befe81f664729475f2b6e546f1c7d6e2a69b6cd12") {
+                    found_message = true;
+                    break;
+                }
+            }
+        }
+    }
+    if let Err(e) = h.await {
+        panic!("call_function panicked: {}", e);
+    }
+    assert!(found_message, "did not find message in log stream");
 }

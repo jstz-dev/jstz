@@ -2,11 +2,10 @@ use crate::{
     context::account::Address,
     executor::{fa_deposit::FaDepositReceipt, fa_withdraw::FaWithdrawReceipt},
     operation::OperationHash,
-    Result,
+    HttpBody, Result,
 };
 use bincode::{Decode, Encode};
 use http::{HeaderMap, StatusCode};
-use jstz_api::http::body::HttpBody;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;

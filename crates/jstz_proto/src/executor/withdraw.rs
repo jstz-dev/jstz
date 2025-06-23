@@ -1,3 +1,4 @@
+#![cfg_attr(feature = "v2_runtime", allow(unused))]
 use jstz_core::{
     host::HostRuntime,
     kv::{outbox::OutboxMessage, Transaction},

@@ -6,7 +6,7 @@ mod script;
 
 pub use api::{Kv, KvValue, ProtocolApi, ProtocolData, WebApi};
 use fetch_handler::{fetch, runtime_and_request_from_run_operation};
-pub use js_logger::{LogRecord, LOG_PREFIX};
+pub use js_logger::{LogLevel, LogRecord, LOG_PREFIX};
 pub use script::ParsedCode;
 
 use jstz_api::http::response::Response;

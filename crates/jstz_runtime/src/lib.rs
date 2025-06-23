@@ -81,6 +81,7 @@ mod test_utils {
             $(sink = $sink:ident;)?
             $(address = $addr:ident;)?
             $(fetch = $fetch_ext:expr;)?
+            $(request_id = $request_id:tt;)?
         ) => {
             #[allow(unused)]
             let mut init_host = tezos_smart_rollup_mock::MockHost::default();
@@ -96,7 +97,10 @@ mod test_utils {
                 let module_loader = deno_core::StaticModuleLoader::with($specifier.clone(), $code);
             )?
             #[allow(unused)]
-            let protocol  = Some($crate::ProtocolContext::new(&mut init_host, &mut init_tx, init_addr.clone()));
+            let request_id = String::new();
+            $(let request_id = $request_id.to_string();)?
+            #[allow(unused)]
+            let protocol  = Some($crate::ProtocolContext::new(&mut init_host, &mut init_tx, init_addr.clone(), request_id));
             #[allow(unused)]
             let mut $runtime = $crate::JstzRuntime::new($crate::JstzRuntimeOptions {
                 protocol,

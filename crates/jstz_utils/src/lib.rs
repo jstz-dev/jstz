@@ -1,3 +1,5 @@
+pub mod tailed_file;
+
 pub async fn poll<'a, F, T>(
     max_attempts: u16,
     interval_ms: u64,

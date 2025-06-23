@@ -16,7 +16,8 @@ use services::{
 };
 use std::{
     path::PathBuf,
-    sync::{Arc, RwLock},
+    sync::{atomic::AtomicU64, Arc, RwLock},
+    time::SystemTime,
 };
 use tempfile::NamedTempFile;
 use tokio::net::TcpListener;
@@ -24,7 +25,6 @@ use tower_http::cors::{Any, CorsLayer};
 
 mod api_doc;
 mod services;
-mod tailed_file;
 use services::Service;
 use tokio_util::sync::CancellationToken;
 use utoipa::OpenApi;
@@ -43,6 +43,22 @@ pub struct AppState {
     pub mode: RunMode,
     pub queue: Arc<RwLock<OperationQueue>>,
     pub runtime_db: sequencer::db::Db,
+    worker_heartbeat: Arc<AtomicU64>,
+}
+
+impl AppState {
+    pub fn is_worker_healthy(&self) -> bool {
+        let current_sec = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+        // safety: there is only one writer -- the worker itself.
+        let diff = current_sec
+            - self
+                .worker_heartbeat
+                .load(std::sync::atomic::Ordering::Relaxed);
+        diff <= 30
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum)]
@@ -96,11 +112,6 @@ pub async fn run(
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
-
-    let cancellation_token = CancellationToken::new();
-    let (broadcaster, db, tail_file_handle) =
-        LogsService::init(&kernel_log_path, &cancellation_token).await?;
-
     let queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
 
     // will make db_path configurable later
@@ -109,14 +120,14 @@ pub async fn run(
         "failed to convert temp db file path to str"
     ))?;
     let runtime_db = sequencer::db::Db::init(Some(db_path))?;
-    let _worker = match mode {
+    let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer => Some(
             worker::spawn(
                 queue.clone(),
                 runtime_db.clone(),
                 rollup_preimages_dir.clone(),
-                Some(debug_log_path),
+                Some(&debug_log_path),
             )
             .context("failed to launch worker")?,
         ),
@@ -128,7 +139,7 @@ pub async fn run(
                     queue.clone(),
                     runtime_db.clone(),
                     rollup_preimages_dir.clone(),
-                    Some(debug_log_path),
+                    Some(&debug_log_path),
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
@@ -149,6 +160,18 @@ pub async fn run(
         RunMode::Default => None,
     };
 
+    let cancellation_token = CancellationToken::new();
+    // LogsService expects the log file to exist at instantiation, so this needs to be called after
+    // debug log file is created.
+    let (broadcaster, db, tail_file_handle) = LogsService::init(
+        match mode {
+            RunMode::Default => &kernel_log_path,
+            RunMode::Sequencer => &debug_log_path,
+        },
+        &cancellation_token,
+    )
+    .await?;
+
     let state = AppState {
         rollup_client,
         rollup_preimages_dir,
@@ -158,6 +181,7 @@ pub async fn run(
         mode,
         queue,
         runtime_db,
+        worker_heartbeat: worker.as_ref().map(|w| w.heartbeat()).unwrap_or_default(),
     };
 
     let cors = CorsLayer::new()
@@ -184,6 +208,7 @@ fn router() -> OpenApiRouter<AppState> {
         .merge(LogsService::router_with_openapi())
         .route("/mode", get(utils::get_mode))
         .route("/health", get(http::StatusCode::OK))
+        .route("/worker/health", get(utils::worker_health))
         .layer(DefaultBodyLimit::max(MAX_REVEAL_SIZE))
 }
 
@@ -195,14 +220,20 @@ pub fn openapi_json_raw() -> anyhow::Result<String> {
 
 #[cfg(test)]
 mod test {
-    use std::path::PathBuf;
+    use std::{
+        path::PathBuf,
+        sync::{atomic::AtomicU64, Arc},
+        time::SystemTime,
+    };
 
     use octez::unused_port;
     use pretty_assertions::assert_eq;
     use tempfile::{NamedTempFile, TempDir};
     use tokio::time::{sleep, Duration};
 
-    use crate::{run, KeyPair, RunMode, RunOptions};
+    use crate::{
+        run, services::utils::tests::mock_app_state, KeyPair, RunMode, RunOptions,
+    };
 
     #[test]
     fn api_doc_regression() {
@@ -211,11 +242,10 @@ mod test {
         let current_spec = std::fs::read_to_string(filename).unwrap();
         let current_spec = current_spec.trim();
         let generated_spec = crate::openapi_json_raw().unwrap();
-        assert_eq!(
-        current_spec,
-        generated_spec,
-        "API doc regression detected. Run the 'spec' command to update:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
-    );
+        assert!(
+            current_spec == generated_spec,
+            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
+        );
     }
 
     #[tokio::test]
@@ -284,7 +314,7 @@ mod test {
             sleep(Duration::from_secs(1)).await;
             h.abort();
             // wait for the worker in run to be dropped
-            sleep(Duration::from_secs(1)).await;
+            sleep(Duration::from_secs(2)).await;
         }
         let preimages_dir = TempDir::new().unwrap().into_path();
 
@@ -305,5 +335,25 @@ mod test {
         )
         .await;
         assert!(!preimages_dir.join("default-test-file.txt").exists());
+    }
+
+    #[tokio::test]
+    async fn worker_heartbeat() {
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        let mut state =
+            mock_app_state("", PathBuf::default(), "", RunMode::Default).await;
+        state.worker_heartbeat = Arc::new(AtomicU64::new(now - 60));
+        // heartbeat is too old
+        assert!(!state.is_worker_healthy());
+
+        let mut state =
+            mock_app_state("", PathBuf::default(), "", RunMode::Default).await;
+        state.worker_heartbeat = Arc::new(AtomicU64::new(now - 5));
+        // heartbeat is recent enough
+        assert!(state.is_worker_healthy());
     }
 }

@@ -28,9 +28,9 @@ module.exports = async function createConfigAsync() {
   return {
     title: "Jstz documentation",
     tagline: "A JavaScript runtime powered by Tezos smart optimistic rollups",
-    // favicon: '/img/favicon.svg',
-    url: process.env.DOC_URL || "https://jstz-dev.github.io/",
-    baseUrl: process.env.DOC_BASE_URL || "/jstz/",
+    favicon: "/img/favicon.svg",
+    url: process.env.DOC_URL || "https://jstz.tezos.com/",
+    baseUrl: process.env.DOC_BASE_URL || "/",
     organizationName: "jstz-dev",
     projectName: "jstz",
     onBrokenLinks: "throw",
@@ -111,7 +111,7 @@ module.exports = async function createConfigAsync() {
         // image: 'img/docusaurus-social-card.jpg',
         navbar: {
           style: "primary",
-          title: "👨‍⚖️ Jstz docs",
+          title: "Jstz docs",
           // logo: {
           //   alt: 'Developer docs for Jstz',
           //   src: 'img/logo-tezos.svg',

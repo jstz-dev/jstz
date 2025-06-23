@@ -1,22 +1,30 @@
 use crate::sequencer::runtime::{init_host, process_message};
 use std::{
-    path::PathBuf,
+    path::{Path, PathBuf},
     sync::{
+        atomic::AtomicU64,
         mpsc::{channel, Sender, TryRecvError},
         Arc, RwLock,
     },
-    thread::{self, spawn as spawn_thread, JoinHandle},
-    time::Duration,
+    thread::{spawn as spawn_thread, JoinHandle},
+    time::{Duration, SystemTime},
 };
 
-use anyhow::{anyhow, bail, Context};
+use anyhow::Context;
 use log::warn;
 
 use super::{db::Db, queue::OperationQueue};
 
 pub struct Worker {
     thread_kill_sig: Sender<()>,
-    inner: Option<JoinHandle<Result<(), std::io::Error>>>,
+    inner: Option<JoinHandle<()>>,
+    heartbeat: Arc<AtomicU64>,
+}
+
+impl Worker {
+    pub fn heartbeat(&self) -> Arc<AtomicU64> {
+        self.heartbeat.clone()
+    }
 }
 
 impl Drop for Worker {
@@ -32,72 +40,69 @@ pub fn spawn(
     queue: Arc<RwLock<OperationQueue>>,
     db: Db,
     preimage_dir: PathBuf,
-    debug_log_path: Option<PathBuf>,
+    debug_log_path: Option<&Path>,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
-    let mut rt = init_host(db, preimage_dir).context("failed to init host")?;
+    let mut host_rt = init_host(db, preimage_dir).context("failed to init host")?;
     if let Some(p) = debug_log_path {
-        rt = rt
-            .with_debug_log_file(&p)
+        host_rt = host_rt
+            .with_debug_log_file(p)
             .context("failed to set host debug log file")?;
     }
-
+    let tokio_rt = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .build()
+        .context("failed to build tokio runtime")?;
+    let heartbeat = Arc::new(AtomicU64::default());
     Ok(Worker {
         thread_kill_sig,
-        inner: {
-            let thread =
-                spawn_thread(move || match tokio::runtime::Builder::new_current_thread()
-                    .build()
-                {
-                    Ok(tokio) => loop {
-                        let v = {
-                            match queue.write() {
-                                Ok(mut q) => q.pop(),
-                                Err(e) => {
-                                    warn!("worker failed to read from queue: {e:?}");
-                                    None
-                                }
-                            }
-                        };
+        heartbeat: heartbeat.clone(),
+        inner: Some(spawn_thread(move || {
+            tokio_rt.block_on(async {
+                loop {
+                    write_heartbeat(&heartbeat);
 
-                        match v {
-                            Some(op) => {
-                                if let Err(e) = process_message(&tokio, &mut rt, op) {
-                                    warn!("error processing message: {e:?}");
-                                }
+                    let v = {
+                        match queue.write() {
+                            Ok(mut q) => q.pop(),
+                            Err(e) => {
+                                warn!("worker failed to read from queue: {e:?}");
+                                None
                             }
-                            None => thread::sleep(Duration::from_millis(100)),
-                        };
-
-                        match rx.try_recv() {
-                            Ok(_) | Err(TryRecvError::Disconnected) => {
-                                #[cfg(test)]
-                                on_exit();
-                                break Ok(());
-                            }
-                            Err(TryRecvError::Empty) => {}
                         }
-                    },
-                    Err(e) => Err(e),
-                });
+                    };
 
-            if thread.is_finished() {
-                // Thread could not start
-                let result = thread
-                    .join()
-                    .map_err(|_| anyhow!("Thread could not start"))?;
+                    match v {
+                        Some(op) => {
+                            if let Err(e) = process_message(&mut host_rt, op).await {
+                                warn!("error processing message: {e:?}");
+                            }
+                        }
+                        None => tokio::time::sleep(Duration::from_millis(100)).await,
+                    };
 
-                // Tokio failed
-                result?;
-
-                // Thread ended early
-                bail!("Thread ended early")
-            } else {
-                Some(thread)
-            }
-        },
+                    match rx.try_recv() {
+                        Ok(_) | Err(TryRecvError::Disconnected) => {
+                            #[cfg(test)]
+                            on_exit();
+                            break;
+                        }
+                        Err(TryRecvError::Empty) => {}
+                    }
+                }
+            })
+        })),
     })
+}
+
+fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
+    let current_sec = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    // safety: this worker should be the only writer
+    heartbeat.store(current_sec, std::sync::atomic::Ordering::Relaxed);
 }
 
 #[cfg(test)]
@@ -127,13 +132,24 @@ mod tests {
             move || {
                 *cp.lock().unwrap() += 1;
             },
-        );
+        )
+        .unwrap();
+
+        let h = worker.heartbeat();
+        let t1 = h.load(std::sync::atomic::Ordering::Relaxed);
+        thread::sleep(Duration::from_millis(1100));
+        // heartbeat should increment by at least 1
+        let t2 = h.load(std::sync::atomic::Ordering::Relaxed);
+        assert!(t2 > t1);
 
         drop(worker);
 
         // to ensure that the worker has enough time to pick up the signal
-        thread::sleep(Duration::from_millis(800));
+        thread::sleep(Duration::from_millis(2000));
         assert_eq!(*v.lock().unwrap(), 1);
+        // heartbeat should not keep increasing
+        let t3 = h.load(std::sync::atomic::Ordering::Relaxed);
+        assert!(t3 - t2 <= 1);
     }
 
     #[test]
@@ -154,7 +170,7 @@ mod tests {
             wrapper.clone(),
             cp,
             PathBuf::new(),
-            Some(log_file.path().to_path_buf()),
+            Some(log_file.path()),
             move || {},
         );
 

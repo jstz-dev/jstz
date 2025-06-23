@@ -5,6 +5,7 @@ use deno_core::{ByteString, JsBuffer};
 use deno_fetch_base::BytesStream;
 use futures::stream;
 use http::{HeaderMap, HeaderName, HeaderValue};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use url::Url;
 
 use crate::context::account::Address;
@@ -15,7 +16,9 @@ use jstz_runtime::sys::ToV8;
 
 use deno_core::{serde_v8, v8, ToJsBuffer};
 
-/// Response returned from a fetch or Smart Function run
+use crate::executor::smart_function::JSTZ_HOST;
+
+/// Response returned from fetch or [`crate::operation::RunFunction`]
 #[derive(Debug)]
 pub struct Response {
     pub status: u16,
@@ -56,10 +59,30 @@ impl Into<http::Response<Option<Vec<u8>>>> for Response {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct Request {
+    #[serde(with = "serde_bytestring")]
+    pub method: ByteString,
+    pub url: Url,
+    #[serde(with = "serde_vec_tuple_bytestring")]
+    pub headers: Vec<(ByteString, ByteString)>,
+    pub body: Option<Body>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Body {
     Vector(Vec<u8>),
     Buffer(JsBuffer),
+}
+
+impl PartialEq for Body {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::Vector(l0), Self::Vector(r0)) => l0 == r0,
+            (Self::Buffer(l0), Self::Buffer(r0)) => l0.to_vec() == r0.to_vec(),
+            _ => false,
+        }
+    }
 }
 
 impl Body {
@@ -93,6 +116,24 @@ impl From<Body> for BytesStream {
             return Box::pin(stream::empty());
         }
         Box::pin(stream::once(future::ready(Ok(body.into()))))
+    }
+}
+
+impl From<String> for Body {
+    fn from(s: String) -> Self {
+        Body::Vector(s.as_bytes().to_vec())
+    }
+}
+
+impl From<&str> for Body {
+    fn from(s: &str) -> Self {
+        Body::Vector(s.as_bytes().to_vec())
+    }
+}
+
+impl From<&[u8]> for Body {
+    fn from(bytes: &[u8]) -> Self {
+        Body::Vector(bytes.to_vec())
     }
 }
 
@@ -155,6 +196,26 @@ impl TryFrom<&Url> for Address {
     }
 }
 
+pub enum HostName {
+    Address(Address),
+    JstzHost,
+}
+
+impl TryFrom<&Url> for HostName {
+    type Error = FetchError;
+
+    fn try_from(url: &Url) -> Result<Self> {
+        let to = Address::try_from(url);
+        match to {
+            Ok(to) => Ok(Self::Address(to)),
+            Err(e) => match url.domain() {
+                Some(JSTZ_HOST) => Ok(Self::JstzHost),
+                _ => Err(e),
+            },
+        }
+    }
+}
+
 /// Converts http::HeaderMap instances to the format accepted by the v2 runtime.
 #[allow(unused)]
 pub fn convert_header_map(headers: HeaderMap) -> Vec<(ByteString, ByteString)> {
@@ -178,12 +239,132 @@ pub fn convert_header_map(headers: HeaderMap) -> Vec<(ByteString, ByteString)> {
     res
 }
 
-#[cfg(test)]
-mod test {
-    use futures::StreamExt;
-    use http::{HeaderMap, HeaderName, HeaderValue};
+pub mod serde_bytestring {
+    use serde_bytes::{ByteBuf, Bytes};
 
     use super::*;
+
+    pub fn serialize<S>(
+        bytes: &ByteString,
+        serializer: S,
+    ) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        Bytes::new(bytes).serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(
+        deserializer: D,
+    ) -> std::result::Result<ByteString, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let buf = ByteBuf::deserialize(deserializer)?;
+        Ok(ByteString::from(buf.as_slice()))
+    }
+}
+
+pub mod serde_vec_tuple_bytestring {
+    use super::*;
+    use serde::de::{SeqAccess, Visitor};
+    use serde::ser::SerializeSeq;
+    use serde::{Deserializer, Serializer};
+    use serde_bytes::{ByteBuf, Bytes};
+    use std::fmt;
+
+    pub fn serialize<S>(
+        vec: &Vec<(ByteString, ByteString)>,
+        serializer: S,
+    ) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut seq = serializer.serialize_seq(Some(vec.len()))?;
+        for (k, v) in vec {
+            seq.serialize_element(&(Bytes::new(k), Bytes::new(v)))?;
+        }
+        seq.end()
+    }
+
+    pub fn deserialize<'de, D>(
+        deserializer: D,
+    ) -> std::result::Result<Vec<(ByteString, ByteString)>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct TupleBytesVisitor;
+
+        impl<'de> Visitor<'de> for TupleBytesVisitor {
+            type Value = Vec<(ByteString, ByteString)>;
+
+            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+                formatter.write_str("a sequence of byte tuples")
+            }
+
+            fn visit_seq<A>(
+                self,
+                mut seq: A,
+            ) -> std::result::Result<Self::Value, A::Error>
+            where
+                A: SeqAccess<'de>,
+            {
+                let mut values = Vec::new();
+                while let Some((k, v)) = seq.next_element::<(ByteBuf, ByteBuf)>()? {
+                    values.push((
+                        ByteString::from(k.as_slice()),
+                        ByteString::from(v.as_slice()),
+                    ));
+                }
+                Ok(values)
+            }
+        }
+
+        deserializer.deserialize_seq(TupleBytesVisitor)
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::str::FromStr as _;
+
+    use bytes::Bytes;
+    use deno_fetch_base::BytesStream;
+    use futures::StreamExt;
+    use http::{HeaderMap, HeaderName, HeaderValue};
+    use serde_json::json;
+    use url::Url;
+
+    use super::{Body, Request};
+
+    #[test]
+    fn request_json_roundtrip() {
+        let request = Request {
+            method: "POST".into(),
+            url: Url::from_str("http://example.com/foo").unwrap(),
+            headers: vec![],
+            body: Some(Body::Vector(
+                serde_json::to_vec(&json!({ "message": "hello"})).unwrap(),
+            )),
+        };
+        let json = serde_json::to_value(request.clone()).unwrap();
+        assert_eq!(
+            json!({
+                "method":[80,79,83,84],
+                "url":"http://example.com/foo",
+                "headers":[],
+                "body":{
+                    "Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]
+                }
+            }),
+            json
+        );
+
+        let json = json.to_string();
+
+        let de: Request = serde_json::from_str(json.as_str()).unwrap();
+        assert_eq!(request, de);
+    }
 
     #[tokio::test]
     async fn test_response_body() {

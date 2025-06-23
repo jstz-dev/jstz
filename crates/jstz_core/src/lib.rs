@@ -5,6 +5,7 @@ pub mod host;
 pub mod iterators;
 pub mod js_fn;
 pub mod kv;
+pub mod log_record;
 pub mod native;
 pub mod realm;
 pub mod reveal_data;
