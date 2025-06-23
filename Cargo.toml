@@ -9,6 +9,7 @@ members = [
   "crates/jstz_kernel",
   "crates/jstz_mock",
   "crates/jstz_node",
+  "crates/jstz_oracle_node",
   "crates/jstz_proto",
   "crates/jstz_rollup",
   "crates/jstz_sdk",
@@ -70,6 +71,7 @@ figment = { version = "0.10.12", features = ["json", "env"] }
 form_urlencoded = "1.2.0"
 fs_extra = "1.2"
 futures = "0.3"
+futures_core = "0.2.3"
 futures-util = "0.3.30"
 getrandom = { version = "0.2.12", features = ["custom"] }
 hex = "0.4.3"
@@ -95,12 +97,14 @@ rexpect = "0.6.0"
 rust_decimal = "1.37.1"
 rust-embed = { version = "8.5.0", features = ["interpolate-folder-path", "include-exclude"] }
 rustyline = "14.0.0"
+pin-project = "1.1.10"
 serde = { version = "1.0.196", features = ["derive", "rc"] }
 serde-big-array = "0.5.1"
 serde-wasm-bindgen = "0.6.5"
 serde_json = "1.0.107"
 serde_with = { version = "3.6.1", features = ["macros"] }
 serde_yaml = "0.9"
+serde_bytes = "0.11.17"
 sha2 = "0.10"
 signal-hook = "0.3.17"
 simplelog = "0.11"
@@ -115,13 +119,14 @@ tokio-stream = "0.1.14"
 tokio-util = "0.7.10"
 tower = "0.5.2"
 tower-http = { version = "0.6.1", features = ["cors"] }
-url = "2.4.1"
+url = { version = "2.4.1", features = ["serde"] }
 urlpattern = "0.2.0"
 utoipa = { version = "5.1.3", features = ["axum_extras", "url"] }
 utoipa-axum = "0.1.1"
 utoipa-scalar = { version = "0.2.0", features = ["axum"] }
 warp = "0.3.7"
 wasm-bindgen = "0.2.92"
+futures-core = "0.3.31"
 
 [workspace.dependencies.deno_fetch_base]
 git = "https://github.com/jstz-dev/deno"

@@ -14,7 +14,7 @@ pub enum LogLevel {
     ERROR = 1,
     WARN = 2,
     INFO = 3,
-    LOG = 4,
+    DEBUG = 4,
 }
 
 impl Display for LogLevel {
@@ -23,7 +23,7 @@ impl Display for LogLevel {
             LogLevel::ERROR => write!(f, "ERROR"),
             LogLevel::WARN => write!(f, "WARN"),
             LogLevel::INFO => write!(f, "INFO"),
-            LogLevel::LOG => write!(f, "LOG"),
+            LogLevel::DEBUG => write!(f, "DEBUG"),
         }
     }
 }
@@ -36,7 +36,7 @@ impl TryFrom<&str> for LogLevel {
             "ERROR" => Ok(LogLevel::ERROR),
             "WARN" => Ok(LogLevel::WARN),
             "INFO" => Ok(LogLevel::INFO),
-            "LOG" => Ok(LogLevel::LOG),
+            "DEBUG" => Ok(LogLevel::DEBUG),
             _ => Err(format!("Invalid LogLevel: {}", value)),
         }
     }

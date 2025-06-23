@@ -27,7 +27,7 @@ pub use tezos_smart_rollup::{
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = InternalOperation;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),
@@ -270,7 +270,7 @@ mod test {
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_proto::context::account::{Address, Addressable};
     use jstz_proto::operation::internal::FaDeposit;
-    use jstz_proto::operation::{Content, InternalOperation};
+    use jstz_proto::operation::{Content, InternalOperation, Operation};
     use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
     use tezos_smart_rollup::michelson::ticket::{FA2_1Ticket, Ticket};
     use tezos_smart_rollup::michelson::{
@@ -305,7 +305,8 @@ mod test {
             panic!("Expected external message, got internal message");
         };
 
-        let operation = signed.verify().expect("Failed to verify signed operation");
+        signed.verify().expect("Failed to verify signed operation");
+        let operation: Operation = signed.into();
         assert!(
             matches!(operation.content, Content::RunFunction(..)),
             "Expected RunFunction operation, got {:?}",

@@ -2923,6 +2923,7 @@ dependencies = [
  "boa_engine",
  "boa_gc",
  "chrono",
+ "clap 4.5.20",
  "derive_more",
  "erased-serde",
  "expect-test",
@@ -2933,6 +2934,7 @@ dependencies = [
  "parking_lot",
  "serde",
  "serde-big-array",
+ "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-mock",
@@ -2940,6 +2942,7 @@ dependencies = [
  "tezos_data_encoding 0.6.0",
  "thiserror 1.0.67",
  "tokio",
+ "utoipa",
 ]
 
 [[package]]
@@ -2964,16 +2967,13 @@ name = "jstz_kernel"
 version = "0.1.1-alpha.1"
 dependencies = [
  "bincode 2.0.0-rc.3",
- "boa_engine",
  "futures",
  "hex",
- "http 1.1.0",
- "http-serde",
- "jstz_api",
  "jstz_core",
  "jstz_crypto",
  "jstz_mock",
  "jstz_proto",
+ "jstz_utils",
  "num-traits",
  "serde",
  "tezos-smart-rollup",
@@ -3009,6 +3009,7 @@ dependencies = [
  "derive_more",
  "dirs 3.0.2",
  "env_logger",
+ "futures",
  "futures-util",
  "hex",
  "jstz_api",
@@ -3047,6 +3048,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "jstz_oracle_node"
+version = "0.1.1-alpha.1"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "jstz_utils",
+ "rand 0.8.5",
+ "regex",
+ "serde",
+ "tempfile",
+ "tokio",
+ "tokio-util",
+]
+
+[[package]]
 name = "jstz_proto"
 version = "0.1.1-alpha.1"
 dependencies = [
@@ -3069,8 +3088,10 @@ dependencies = [
  "jstz_mock",
  "jstz_runtime",
  "jstz_utils",
+ "nom",
  "parking_lot",
  "serde",
+ "serde_bytes",
  "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-mock",
@@ -3123,6 +3144,7 @@ dependencies = [
  "jstz_utils",
  "jstz_wpt",
  "parking_lot",
+ "pin-project",
  "regex",
  "serde",
  "serde_json",
@@ -3937,18 +3959,18 @@ dependencies = [
 
 [[package]]
 name = "pin-project"
-version = "1.1.7"
+version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "be57f64e946e500c8ee36ef6331845d40a93055567ec57e8fae13efd33759b95"
+checksum = "677f1add503faace112b9f1373e43e9e054bfdd22ff1a63c1bc485eaec6a6a8a"
 dependencies = [
  "pin-project-internal",
 ]
 
 [[package]]
 name = "pin-project-internal"
-version = "1.1.7"
+version = "1.1.10"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c0f5fad0874fc7abcd4d750e76917eaebbecaa2c20bde22e1dbeeba8beb758c"
+checksum = "6e918e4ff8c4549eb882f14b3a4bc8c8bc93de829416eacf579f1207a8fbf861"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4927,6 +4949,15 @@ dependencies = [
  "js-sys",
  "serde",
  "wasm-bindgen",
+]
+
+[[package]]
+name = "serde_bytes"
+version = "0.11.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8437fd221bde2d4ca316d61b90e337e9e702b3820b87d63caa9ba6c02bd06d96"
+dependencies = [
+ "serde",
 ]
 
 [[package]]

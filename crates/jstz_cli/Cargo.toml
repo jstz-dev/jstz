@@ -81,6 +81,7 @@ rexpect.workspace = true
 
 [features]
 skip-rollup-tests = []
+v2_runtime = ["jstz_proto/v2_runtime"]
 
 [[bin]]
 name = "jstz"

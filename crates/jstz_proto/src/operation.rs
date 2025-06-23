@@ -1,12 +1,12 @@
 use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
-    Error, Result,
+    Error, HttpBody, Result,
 };
 use bincode::{Decode, Encode};
-use derive_more::Display;
+use derive_more::{Deref, Display, From};
 use http::{HeaderMap, Method, Uri};
-use jstz_api::http::body::HttpBody;
+
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
@@ -180,7 +180,7 @@ pub struct RevealLargePayload {
 }
 
 #[derive(
-    Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
+    Debug, From, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
 )]
 #[serde(tag = "_type")]
 pub enum Content {
@@ -207,10 +207,11 @@ impl Content {
 }
 
 #[derive(
-    Debug, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
+    Debug, Deref, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
 )]
 pub struct SignedOperation {
     signature: Signature,
+    #[deref]
     inner: Operation,
 }
 
@@ -223,12 +224,11 @@ impl SignedOperation {
         self.inner.hash()
     }
 
-    pub fn verify(self) -> Result<Operation> {
+    pub fn verify(&self) -> Result<()> {
         let hash = self.inner.hash();
-        self.signature
-            .verify(&self.inner.public_key, hash.as_ref())?;
-
-        Ok(self.inner)
+        Ok(self
+            .signature
+            .verify(&self.inner.public_key, hash.as_ref())?)
     }
 
     pub fn verify_ref(&self) -> Result<&Operation> {
@@ -240,12 +240,18 @@ impl SignedOperation {
     }
 }
 
+impl From<SignedOperation> for Operation {
+    fn from(value: SignedOperation) -> Self {
+        value.inner
+    }
+}
+
 pub mod internal {
     use tezos_smart_rollup::michelson::ticket::TicketHash;
 
     use super::*;
 
-    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
     pub struct Deposit {
         // Inbox message id is unique to each message and
         // suitable as a nonce
@@ -256,7 +262,7 @@ pub mod internal {
         pub receiver: Address,
     }
 
-    #[derive(Debug, PartialEq, Eq)]
+    #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct FaDeposit {
         // Inbox message id is unique to each message and
         // suitable as a nonce
@@ -292,7 +298,7 @@ pub mod internal {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum InternalOperation {
     Deposit(internal::Deposit),
     FaDeposit(internal::FaDeposit),
@@ -375,7 +381,7 @@ mod test {
 
     fn deploy_function_content() -> Content {
         let raw_code =
-            r#"export default handler = () => new Response("hello world!");"#.to_string();
+            r#"export default () => new Response("hello world!");"#.to_string();
         let function_code = ParsedCode::try_from(raw_code).unwrap();
         let account_credit = 100000;
         Content::DeployFunction(DeployFunction {
@@ -425,7 +431,7 @@ mod test {
             json!({
                 "_type":"DeployFunction",
                 "accountCredit":100000,
-                "functionCode":"export default handler = () => new Response(\"hello world!\");"
+                "functionCode":"export default () => new Response(\"hello world!\");"
             })
         );
         let decoded = serde_json::from_value::<Content>(json).unwrap();

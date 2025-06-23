@@ -44,7 +44,8 @@ async fn handle_message(
                 signed_operation,
                 ticketer,
                 injector,
-            );
+            )
+            .await;
             debug_msg!(hrt, "Receipt: {receipt:?}\n");
             receipt.write(hrt, tx)?
         }
@@ -55,28 +56,30 @@ async fn handle_message(
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
-    futures::executor::block_on(async {
-        // TODO: we should organize protocol consts into a struct
-        // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
-        let ticketer = read_ticketer(rt).expect("Ticketer not found");
-        let injector = read_injector(rt).expect("Revealer not found");
-        let mut tx = Transaction::default();
-        tx.begin();
-        if let Some(message) = read_message(rt, &ticketer) {
-            handle_message(rt, message, &ticketer, &mut tx, &injector)
-                .await
-                .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
-        }
-        if let Err(commit_error) = tx.commit(rt) {
-            debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");
-        }
-    })
+    futures::executor::block_on(run(rt))
+}
+
+pub async fn run(rt: &mut impl Runtime) {
+    // TODO: we should organize protocol consts into a struct
+    // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
+    let ticketer = read_ticketer(rt).expect("Ticketer not found");
+    let injector = read_injector(rt).expect("Revealer not found");
+    let mut tx = Transaction::default();
+    tx.begin();
+    if let Some(message) = read_message(rt, &ticketer) {
+        handle_message(rt, message, &ticketer, &mut tx, &injector)
+            .await
+            .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
+    }
+    if let Err(commit_error) = tx.commit(rt) {
+        debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");
+    }
 }
 
 #[cfg(test)]
 mod test {
 
-    use jstz_core::kv::Transaction;
+    use jstz_core::{host::HostRuntime, kv::Transaction};
     use jstz_crypto::hash::Hash;
     use jstz_mock::{
         host::{JstzMockHost, MOCK_SOURCE},
@@ -90,9 +93,14 @@ mod test {
         executor::smart_function,
         runtime::ParsedCode,
     };
+    use jstz_utils::test_util::TOKIO_MULTI_THREAD;
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
 
-    use crate::{entry, parsing::try_parse_contract, read_ticketer};
+    use crate::{parsing::try_parse_contract, read_ticketer, run};
+
+    fn wrapped_run(rt: &mut impl HostRuntime) {
+        TOKIO_MULTI_THREAD.block_on(run(rt));
+    }
 
     #[test]
     fn read_ticketer_succeeds() {
@@ -107,7 +115,7 @@ mod test {
         let mut host = JstzMockHost::default();
         let deposit = MockNativeDeposit::default();
         host.add_internal_message(&deposit);
-        host.rt().run_level(entry);
+        host.rt().run_level(wrapped_run);
         let tx = &mut Transaction::default();
         tx.begin();
         match deposit.receiver {
@@ -150,7 +158,7 @@ mod test {
         };
 
         host.add_internal_message(&deposit);
-        host.rt().run_level(entry);
+        host.rt().run_level(wrapped_run);
         let ticket_hash = deposit.ticket_hash();
         match deposit.proxy_contract {
             Some(proxy) => {
@@ -179,7 +187,7 @@ mod test {
         let deposit = MockFaDeposit::default();
 
         host.add_internal_message(&deposit);
-        host.rt().run_level(entry);
+        host.rt().run_level(wrapped_run);
         let ticket_hash = deposit.ticket_hash();
         match deposit.proxy_contract {
             Some(proxy) => {

@@ -7,34 +7,35 @@ pub mod worker;
 
 #[cfg(test)]
 pub mod tests {
-    use axum::http::{HeaderMap, Method, Uri};
     use jstz_crypto::{public_key::PublicKey, signature::Signature};
     use jstz_proto::{
         context::account::Nonce,
-        operation::{Content, Operation, RunFunction, SignedOperation},
+        operation::{Content, DeployFunction, Operation, SignedOperation},
+        runtime::ParsedCode,
     };
     use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
 
-    pub fn dummy_op() -> SignedOperation {
-        SignedOperation::new(
-        Signature::Ed25519(Ed25519Signature::from_base58_check("edsigtbD6jADoivxf1iho6mDYPGiVvXw4Hnurn6VzDLG1boyMmmHEAykSrUJjJpvEsHHjQNvLWfm9PdyMBfJ8CX7jSEkh3yrB6m").unwrap().into()),
-        Operation {
+    use crate::sequencer::inbox::parsing::Message;
+
+    pub fn dummy_op() -> Message {
+        let inner = SignedOperation::new(
+        Signature::Ed25519(Ed25519Signature::from_base58_check("edsigtkikkYx71PqeJigBom8sAf8ajRqynraWUFxej5XcbVFSzga6gHYz7whJTFJhZZRywQfXKUjSQeXHPikHJt114hUTEXJzED").unwrap().into()),
+         Operation {
             public_key: PublicKey::Ed25519(
                 PublicKeyEd25519::from_base58_check(
-                    "edpkuUXUFt2E51TkMjRarDEVWXGB4kLKoTryMDyMhNyxFCRTsPDd1K",
+                    "edpkuXD2CqRpWoTT8p4exrMPQYR2NqsYH3jTMeJMijHdgQqkMkzvnz",
                 )
                 .unwrap()
                 .into(),
             ),
             nonce: Nonce(0),
-            content: Content::RunFunction(RunFunction {
-                uri: Uri::from_static("http://http://"),
-                method: Method::HEAD,
-                headers: HeaderMap::new(),
-                body: None,
-                gas_limit: 0,
+            content: Content::DeployFunction(DeployFunction {
+                account_credit: 0,
+                function_code: ParsedCode("1\n".to_string())
             }),
         },
-    )
+    );
+
+        Message::External(inner)
     }
 }

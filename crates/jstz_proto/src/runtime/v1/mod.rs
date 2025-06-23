@@ -6,7 +6,7 @@ mod script;
 
 pub use api::{Kv, KvValue, ProtocolApi, ProtocolData, WebApi};
 use fetch_handler::{fetch, runtime_and_request_from_run_operation};
-pub use js_logger::{LogRecord, LOG_PREFIX};
+pub use js_logger::{LogLevel, LogRecord, LOG_PREFIX};
 pub use script::ParsedCode;
 
 use jstz_api::http::response::Response;
@@ -34,10 +34,8 @@ pub async fn run_toplevel_fetch(
     let result = {
         let rt = &mut rt;
         runtime::enter_js_host_context(hrt, tx, || {
-            jstz_core::future::block_on(async move {
-                let result = fetch(source_address, operation_hash, &request, rt)?;
-                rt.resolve_value(&result).await
-            })
+            let result = fetch(source_address, operation_hash, &request, rt)?;
+            rt.blocking_resolve_value(&result)
         })
     }
     .map_err(|err| {

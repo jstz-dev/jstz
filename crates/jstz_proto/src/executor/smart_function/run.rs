@@ -5,7 +5,6 @@ use crate::{
     error::Result,
     operation::{self, OperationHash},
     receipt::RunFunctionReceipt,
-    runtime,
 };
 
 pub const NOOP_PATH: &str = "/-/noop";
@@ -19,7 +18,8 @@ pub async fn execute(
     run_operation: operation::RunFunction,
     operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt> {
-    runtime::run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash).await
+    crate::runtime::run_toplevel_fetch(hrt, tx, source, run_operation, operation_hash)
+        .await
 }
 
 #[cfg(test)]
@@ -169,6 +169,8 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(feature = "v2_runtime", ignore = "v2 fetch does not support noop path")]
+    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
     async fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
@@ -287,7 +289,12 @@ mod test {
     }
 
     #[tokio::test]
-    async fn invalid_request_should_fails() {
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
+    async fn invalid_request_should_fail() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -352,7 +359,12 @@ mod test {
     }
 
     #[tokio::test]
-    async fn invalid_response_should_fails() {
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
+    async fn invalid_response_should_fail() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -426,7 +438,7 @@ mod test {
         }};
         export default handler;
         "#;
-        transfer_xtz_and_run_erroneous_sf(invalid_code).await;
+        transfer_xtz_and_run_erroneous_sf(invalid_code, 500).await;
     }
 
     #[tokio::test]
@@ -437,7 +449,7 @@ mod test {
         }};
         export default handler;
         "#;
-        transfer_xtz_and_run_erroneous_sf(invalid_code).await;
+        transfer_xtz_and_run_erroneous_sf(invalid_code, 400).await;
     }
 
     #[tokio::test]
@@ -448,10 +460,10 @@ mod test {
         }};
         export default handler;
         "#;
-        transfer_xtz_and_run_erroneous_sf(invalid_code).await;
+        transfer_xtz_and_run_erroneous_sf(invalid_code, 500).await;
     }
 
-    async fn transfer_xtz_and_run_erroneous_sf(code: &str) {
+    async fn transfer_xtz_and_run_erroneous_sf(code: &str, expected_status_code: u16) {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
         let mut jstz_mock_host = JstzMockHost::default();
@@ -494,11 +506,10 @@ mod test {
         )
         .await;
         let call_failed = match result {
-            Ok(receipt) => receipt.status_code.is_server_error(),
+            Ok(receipt) => receipt.status_code == expected_status_code,
             _ => true,
         };
         assert!(call_failed);
-
         // The balance should not be affected
         assert_eq!(
             Account::balance(host, &mut tx, &source).unwrap(),
@@ -509,6 +520,11 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime does not support HostScript withdrawals yet"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-655/support-hostscript-fa-withdraw-in-v2
     async fn host_script_withdraw_from_smart_function_succeeds() {
         let mut mock_host = JstzMockHost::default();
         let host = mock_host.rt();
@@ -642,6 +658,8 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(feature = "v2_runtime", ignore = "v2 fetch does not support noop path")]
+    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
     async fn transfer_xtz_from_smart_function_succeeds_with_noop() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
@@ -920,6 +938,11 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
     async fn propagating_smart_function_refund_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
@@ -1097,6 +1120,11 @@ mod test {
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
     async fn returning_invalid_request_amount_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
@@ -1317,13 +1345,18 @@ mod test {
         )
         .await
         .unwrap();
-        assert!(result.status_code.is_server_error());
+        assert_eq!(result.status_code, 400);
 
         let balance_after = Account::balance(host, &mut tx, &source).unwrap();
         assert_eq!(balance_before, balance_after);
     }
 
     #[tokio::test]
+    #[cfg_attr(
+        feature = "v2_runtime",
+        ignore = "v2 runtime does not support HostScript withdrawals yet"
+    )]
+    // TODO: https://linear.app/tezos/issue/JSTZ-655/support-hostscript-fa-withdraw-in-v2
     async fn host_script_fa_withdraw_from_smart_function_succeeds() {
         let receiver = Address::User(jstz_mock::account1());
         let source = Address::User(jstz_mock::account2());
@@ -1448,5 +1481,62 @@ mod test {
             "EvalError: TicketTableError: InsufficientFunds",
             error.to_string()
         );
+    }
+
+    #[cfg(feature = "v2_runtime")]
+    #[tokio::test]
+    async fn execute_v2_runtime() {
+        let source = Address::User(jstz_mock::account1());
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+
+        // This smart function uses FormData, which is not supported in v1 runtime but in v2 runtime.
+        let code = format!(
+            r#"
+        const handler = async (request) => {{
+            const f = new FormData();
+            f.append("a", "b");
+            f.append("c", "d");
+            let output = "";
+            for (const [k, v] of f) {{
+                output += `${{k}}-${{v}};`;
+            }}
+            return new Response(output);
+        }};
+        export default handler;
+        "#
+        );
+        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        tx.begin();
+        let smart_function =
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+        tx.commit(host).unwrap();
+
+        // call smart function; should get an ok response.
+        tx.begin();
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: None,
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        let response = super::execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            fake_op_hash.clone(),
+        )
+        .await
+        .expect("run function expected");
+        tx.commit(host).unwrap();
+
+        let text = String::from_utf8(response.body.unwrap()).unwrap();
+        assert_eq!(text, "a-b;c-d;");
+        assert_eq!(response.status_code, http::StatusCode::OK);
     }
 }

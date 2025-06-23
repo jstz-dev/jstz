@@ -1,5 +1,6 @@
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
 use rust_embed::Embed;
+use tempfile::NamedTempFile;
 
 use crate::task::jstzd::JstzdConfig;
 use crate::{
@@ -162,14 +163,26 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
 
     let jstz_node_rpc_endpoint =
         Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
+    let jstz_node_debug_file_path = NamedTempFile::new()
+        .context("failed to create jstz node debug file path")?
+        .into_temp_path()
+        .keep()
+        .context("failed to keep jstz node debug file path")?;
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
         KeyPair::default(),
+        #[cfg(feature = "sequencer")]
+        jstz_node::RunMode::Sequencer,
+        #[cfg(not(feature = "sequencer"))]
         jstz_node::RunMode::Default,
+        #[cfg(feature = "sequencer")]
+        1024,
+        #[cfg(not(feature = "sequencer"))]
         0,
+        &jstz_node_debug_file_path,
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);

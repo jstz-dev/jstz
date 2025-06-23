@@ -195,7 +195,7 @@ fn read_transfer(
                     amount,
                     receiver,
                 };
-                logger.write_debug("Deposit: {content:?}\n");
+                logger.write_debug(format!("Deposit: {content:?}\n").as_str());
                 Some(Message::Internal(InternalMessage::Deposit(content)))
             } else {
                 None
@@ -231,7 +231,7 @@ mod test {
     };
     use jstz_proto::{
         context::account::{Address, Addressable},
-        operation::{internal, Content, InternalOperation},
+        operation::{internal, Content, InternalOperation, Operation},
     };
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait, SmartRollupHash};
     use tezos_smart_rollup::types::SmartRollupAddress;
@@ -368,7 +368,8 @@ mod test {
             panic!("Expected external message, got internal message");
         };
 
-        let operation = signed.verify().expect("Failed to verify signed operation");
+        signed.verify().expect("Failed to verify signed operation");
+        let operation: Operation = signed.into();
         assert!(
             matches!(operation.content, Content::RunFunction(..)),
             "Expected RunFunction operation, got {:?}",
