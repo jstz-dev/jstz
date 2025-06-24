@@ -57,6 +57,10 @@ struct Args {
 
     #[arg(long)]
     debug_log_path: Option<PathBuf>,
+
+    /// Oracle key pair for DataProvider (format: "public_key:secret_key")
+    #[arg(long)]
+    oracle_key: Option<String>,
 }
 
 #[tokio::main]
@@ -68,6 +72,24 @@ async fn main() -> anyhow::Result<()> {
                 "http://{}:{}",
                 args.rollup_node_rpc_addr, args.rollup_node_rpc_port
             ));
+
+            // Parse oracle key if provided
+            #[cfg(feature = "v2_runtime")]
+            let oracle_key_pair = if let Some(oracle_key) = args.oracle_key {
+                let parts: Vec<&str> = oracle_key.split(':').collect();
+                if parts.len() != 2 {
+                    anyhow::bail!("Oracle key must be in format 'public_key:secret_key'");
+                }
+                let public_key =
+                    jstz_crypto::public_key::PublicKey::from_base58(parts[0])
+                        .context("Invalid oracle public key")?;
+                let secret_key =
+                    jstz_crypto::secret_key::SecretKey::from_base58(parts[1])
+                        .context("Invalid oracle secret key")?;
+                Some((public_key, secret_key))
+            } else {
+                None
+            };
 
             jstz_node::run(RunOptions {
                 addr: args.addr,
@@ -88,6 +110,8 @@ async fn main() -> anyhow::Result<()> {
                         .context("failed to convert temporary debug log file to path")?
                         .to_path_buf(),
                 ),
+                #[cfg(feature = "v2_runtime")]
+                oracle_key_pair,
             })
             .await
         }
