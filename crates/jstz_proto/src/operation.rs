@@ -1,12 +1,12 @@
 use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
-    Error, Result,
+    Error, HttpBody, Result,
 };
 use bincode::{Decode, Encode};
-use derive_more::{Deref, Display};
+use derive_more::{Deref, Display, From};
 use http::{HeaderMap, Method, Uri};
-use jstz_api::http::body::HttpBody;
+
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
@@ -180,7 +180,7 @@ pub struct RevealLargePayload {
 }
 
 #[derive(
-    Debug, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
+    Debug, From, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
 )]
 #[serde(tag = "_type")]
 pub enum Content {
@@ -492,7 +492,7 @@ mod test {
 
     fn deploy_function_content() -> Content {
         let raw_code =
-            r#"export default handler = () => new Response("hello world!");"#.to_string();
+            r#"export default () => new Response("hello world!");"#.to_string();
         let function_code = ParsedCode::try_from(raw_code).unwrap();
         let account_credit = 100000;
         Content::DeployFunction(DeployFunction {
@@ -542,7 +542,7 @@ mod test {
             json!({
                 "_type":"DeployFunction",
                 "accountCredit":100000,
-                "functionCode":"export default handler = () => new Response(\"hello world!\");"
+                "functionCode":"export default () => new Response(\"hello world!\");"
             })
         );
         let decoded = serde_json::from_value::<Content>(json).unwrap();

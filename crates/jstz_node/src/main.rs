@@ -1,8 +1,10 @@
 use std::path::PathBuf;
 
+use anyhow::Context;
 use clap::Parser;
 use env_logger::Env;
 use jstz_node::{config::KeyPair, RunMode, RunOptions};
+use tempfile::NamedTempFile;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
@@ -52,6 +54,9 @@ struct Args {
 
     #[arg(long, default_value_t = DEFAULT_QUEUE_CAPACITY)]
     capacity: usize,
+
+    #[arg(long)]
+    debug_log_path: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -75,6 +80,14 @@ async fn main() -> anyhow::Result<()> {
                 injector: KeyPair::default(),
                 mode: args.mode,
                 capacity: args.capacity,
+                debug_log_path: args.debug_log_path.unwrap_or(
+                    NamedTempFile::new()
+                        .context("failed to create temporary debug log file")?
+                        .into_temp_path()
+                        .keep()
+                        .context("failed to convert temporary debug log file to path")?
+                        .to_path_buf(),
+                ),
             })
             .await
         }

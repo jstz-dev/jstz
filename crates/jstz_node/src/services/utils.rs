@@ -1,6 +1,6 @@
 use crate::{sequencer::db::Db, services::AppState, RunMode};
 use anyhow::Context;
-use axum::{extract::State, response::IntoResponse};
+use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use octez::OctezRollupClient;
 use tezos_crypto_rs::base58::FromBase58Check;
 
@@ -8,6 +8,13 @@ pub async fn get_mode(
     State(AppState { mode, .. }): State<AppState>,
 ) -> impl IntoResponse {
     serde_json::to_string(&mode).unwrap().into_response()
+}
+
+pub async fn worker_health(State(state): State<AppState>) -> impl IntoResponse {
+    match state.is_worker_healthy() {
+        true => StatusCode::OK,
+        false => StatusCode::SERVICE_UNAVAILABLE,
+    }
 }
 
 pub enum StoreWrapper {
@@ -46,9 +53,11 @@ impl StoreWrapper {
 pub(crate) mod tests {
     use std::{
         path::PathBuf,
-        sync::{Arc, RwLock},
+        sync::{atomic::AtomicU64, Arc, RwLock},
+        time::SystemTime,
     };
 
+    use axum::{body::Body, http::Request};
     use jstz_core::BinEncodable;
     use jstz_crypto::{
         hash::Blake2b,
@@ -61,6 +70,7 @@ pub(crate) mod tests {
     use octez::OctezRollupClient;
     use tempfile::NamedTempFile;
     use tezos_crypto_rs::{base58::ToBase58Check, hash::ContractKt1Hash};
+    use tower::util::ServiceExt;
 
     use crate::{
         config::KeyPair,
@@ -97,6 +107,7 @@ pub(crate) mod tests {
             runtime_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),
             #[cfg(feature = "blueprint")]
             blueprint_db: crate::sequencer::db::BlueprintDb::init(None).unwrap(),
+            worker_heartbeat: Arc::default(),
         }
     }
 
@@ -217,5 +228,41 @@ pub(crate) mod tests {
             .await
             .expect("should get result from store")
             .is_none());
+    }
+
+    #[tokio::test]
+    async fn worker_health() {
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        let mut state =
+            mock_app_state("", PathBuf::default(), "", RunMode::Default).await;
+        state.worker_heartbeat = Arc::new(AtomicU64::new(now - 60));
+        let router = axum::Router::new()
+            .route("/worker/health", axum::routing::get(super::worker_health))
+            .with_state(state);
+
+        let res = router
+            .oneshot(Request::get("/worker/health").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        // heartbeat is too old
+        assert_eq!(res.status(), 503);
+
+        let mut state =
+            mock_app_state("", PathBuf::default(), "", RunMode::Default).await;
+        state.worker_heartbeat = Arc::new(AtomicU64::new(now - 5));
+        let router = axum::Router::new()
+            .route("/worker/health", axum::routing::get(super::worker_health))
+            .with_state(state);
+
+        let res = router
+            .oneshot(Request::get("/worker/health").body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        // heartbeat is recent enough
+        assert_eq!(res.status(), 200);
     }
 }

@@ -1,19 +1,24 @@
+use crate::error::Result;
+use crate::ext::jstz_fetch;
+use crate::ext::jstz_fetch::NotSupportedFetch;
 use deno_core::v8::new_single_threaded_default_platform;
+use deno_core::*;
+use derive_more::{Deref, DerefMut};
 use jstz_core::host::HostRuntime;
 use jstz_core::host::JsHostRuntime;
 use jstz_core::kv::Transaction;
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use pin_project::pin_project;
+use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
 use std::{
+    future::Future,
     ops::{Deref, DerefMut},
+    pin::Pin,
     rc::Rc,
+    task::{Context, Poll},
 };
-
-use crate::error::Result;
-use crate::ext::jstz_fetch;
-use crate::ext::jstz_fetch::NotSupportedFetch;
-use deno_core::*;
 
 use serde::Deserialize;
 use tokio;
@@ -57,12 +62,15 @@ impl Drop for JstzRuntime {
         // of the original isolate.
         //
         // Locking isolates is redundant in a single threaded environment since only one isolate can ever
-        // be scheduled at a time. Crucially, the main thread is always allowed to progress any of the isolates. To
-        // suport this behaviour, we do two things
+        // be scheduled at a time. However, an isolate can only progress correctly if it is the currently
+        // entered one. Crucially, the main thread is always allowed to progress any of the isolates. To
+        // support this behaviour, we do:
         // 1. Since V8 automatically enters the isolate upon creation, we explicitly exit
         //    it. See [`JstzRuntime::new`]
         // 2. Before dropping the runtime, we re-enter it to ensure we satisfy the JsRuntime's
         //    Drop precondition
+        // 3. Ensure that the curent isolate is entered/exited on execution of code through explicit
+        //    re-entrance for sync code or wrapping in `IsolatedFuture` for async code
         unsafe {
             self.runtime.v8_isolate().enter();
             ManuallyDrop::drop(&mut self.runtime);
@@ -154,7 +162,8 @@ impl JstzRuntime {
     /// Executes traditional, non-ECMAScript-module JavaScript code, ignoring
     /// its result
     pub fn execute(&mut self, code: &str) -> Result<()> {
-        self.execute_script("jstz://run", code.to_string())?;
+        let mut this = Entered::new(self);
+        this.execute_script("jstz://run", code.to_string())?;
         Ok(())
     }
 
@@ -164,10 +173,14 @@ impl JstzRuntime {
         &mut self,
         code: &str,
     ) -> Result<T> {
-        let value = self.execute_script("jstz://run", code.to_string()).unwrap();
-        let scope = &mut self.handle_scope();
-        let local = v8::Local::new(scope, value);
-        Ok(serde_v8::from_v8::<T>(scope, local)?)
+        let mut this = Entered::new(self);
+        let value = this.execute_script("jstz://run", code.to_string())?;
+        let result = {
+            let scope = &mut this.handle_scope();
+            let local = v8::Local::new(scope, value);
+            serde_v8::from_v8::<T>(scope, local)?
+        };
+        Ok(result)
     }
 
     /// Loads and instantiated specified JavaScript module as the "main" module.
@@ -210,7 +223,19 @@ impl JstzRuntime {
     /// Returns the result of calling the default handler in the specified JavaScript module.
     ///
     /// This function panics if the module has not been loaded.
+    // TODO: Should we operate on Pin<&mut Self> instead?
     pub async fn call_default_handler(
+        &mut self,
+        id: ModuleId,
+        args: &[v8::Global<v8::Value>],
+    ) -> Result<v8::Global<v8::Value>> {
+        let fut = AsyncEntered::new(self, |runtime| {
+            runtime.call_default_handler_inner(id, args)
+        });
+        fut.await
+    }
+
+    async fn call_default_handler_inner(
         &mut self,
         id: ModuleId,
         args: &[v8::Global<v8::Value>],
@@ -224,9 +249,91 @@ impl JstzRuntime {
         };
         // Note: [`call_with_args`] wraps the scope with TryCatch for us and converts
         // any exception into an error
+        // FIXME(ryan): If user code throws an uncaught exception, the original
+        // exception is lost and replaced with Uncaught undefined
         let fut = self.call_with_args(&default_fn, args);
         let result = self.with_event_loop_future(fut, Default::default()).await;
         Ok(result?)
+    }
+}
+
+/// RAII guard for entering and existing an Isolate.
+#[derive(Deref, DerefMut)]
+struct Entered<'a> {
+    runtime: &'a mut JstzRuntime,
+}
+
+impl<'a> Entered<'a> {
+    pub fn new(runtime: &'a mut JstzRuntime) -> Self {
+        unsafe { runtime.v8_isolate().enter() };
+        Entered { runtime }
+    }
+}
+
+impl Drop for Entered<'_> {
+    fn drop(&mut self) {
+        unsafe { self.runtime.v8_isolate().exit() };
+    }
+}
+
+#[pin_project]
+pub struct AsyncEntered<'a, B, F>
+where
+    B: FnOnce(&'a mut JstzRuntime) -> F,
+    F: Future,
+{
+    #[pin]
+    future: Option<F>,
+    builder: Option<B>,
+    runtime_ptr: *mut JstzRuntime,
+    marker: PhantomData<&'a ()>,
+}
+
+impl<'a, B, F> AsyncEntered<'a, B, F>
+where
+    B: FnOnce(&'a mut JstzRuntime) -> F,
+    F: Future,
+{
+    pub fn new(runtime: &'a mut JstzRuntime, builder: B) -> Self {
+        // # Safety: Ok
+        AsyncEntered {
+            builder: Some(builder),
+            future: None,
+            runtime_ptr: runtime as *mut _,
+            marker: PhantomData,
+        }
+    }
+}
+
+impl<'a, B, F> Future for AsyncEntered<'a, B, F>
+where
+    B: FnOnce(&'a mut JstzRuntime) -> F,
+    F: Future,
+{
+    type Output = F::Output;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let mut this = self.project();
+        unsafe {
+            (**this.runtime_ptr).v8_isolate().enter();
+        };
+        let res = {
+            if this.future.is_none() {
+                let builder = this
+                    .builder
+                    .take()
+                    .expect("builder must be present on first poll");
+                this.future
+                    .set(Some(builder(unsafe { &mut **this.runtime_ptr })));
+            }
+
+            let fut = this.future.as_mut().as_pin_mut().unwrap();
+            fut.poll(cx)
+        };
+        unsafe {
+            (**this.runtime_ptr).v8_isolate().exit();
+        };
+        res
     }
 }
 
@@ -249,6 +356,7 @@ pub struct ProtocolContext {
     pub tx: Transaction,
     pub kv: Kv,
     pub address: SmartFunctionHash,
+    pub request_id: String,
 }
 
 impl ProtocolContext {
@@ -256,6 +364,7 @@ impl ProtocolContext {
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
         address: SmartFunctionHash,
+        request_id: String,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
         ProtocolContext {
@@ -263,6 +372,7 @@ impl ProtocolContext {
             tx: tx.clone(),
             kv: Kv::new(address.to_base58()),
             address,
+            request_id,
         }
     }
 }
@@ -304,9 +414,13 @@ mod test {
 
     use crate::{error::RuntimeError, init_test_setup};
 
-    use jstz_utils::TOKIO;
+    use jstz_utils::test_util::TOKIO;
 
     #[test]
+    #[cfg_attr(
+        feature = "kernel",
+        ignore = "logging format is different when kernel feature is enabled"
+    )]
     fn test_init_jstz_runtime() {
         init_test_setup! {
             runtime = runtime;
@@ -435,6 +549,29 @@ export default handler;
             let scope = &mut rt.handle_scope();
             let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
             assert_eq!(result_i64, 62);
+        })
+    }
+
+    #[test]
+    #[ignore = "Will run forever"]
+    fn test_infinite_loop() {
+        TOKIO.block_on(async {
+            let code = r#"
+    function handler() {
+    let i = 0;
+        while (true) {
+            console.log(i);
+            i++;
+        }
+    }
+    export default handler;
+            "#;
+            init_test_setup! {
+                runtime = rt;
+                specifier = (specifier, code);
+            };
+            let id = rt.execute_main_module(&specifier).await.unwrap();
+            let _ = rt.call_default_handler(id, &[]).await;
         })
     }
 }

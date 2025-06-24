@@ -11,7 +11,6 @@ use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use jstz_core::host::WriteDebug;
-use jstz_proto::operation::InternalOperation;
 use log::{debug, error};
 use parsing::{parse_inbox_message_hex, Message};
 #[cfg(test)]
@@ -54,6 +53,7 @@ impl WriteDebug for Logger {
 }
 
 /// Spawn a future that monitors the L1 blocks, parses inbox messages and pushes them into the queue.
+/// precondition: the rollup node is healthy.
 pub async fn spawn_monitor<
     #[cfg(test)] Fut: Future<Output = ()> + 'static + Send,
     #[cfg(test)] F: Fn(u32) -> Fut + Send + 'static,
@@ -62,10 +62,6 @@ pub async fn spawn_monitor<
     queue: Arc<RwLock<OperationQueue>>,
     #[cfg(test)] on_new_block: F,
 ) -> Result<Monitor> {
-    // temp fix for jstzd to run locally.
-    // TODO: add logic to wait until rollup node is `healthy` in jstzd
-    #[cfg(not(test))]
-    tokio::time::sleep(Duration::from_secs(3)).await;
     let kill_sig = CancellationToken::new();
     let kill_sig_clone = kill_sig.clone();
     let mut block_stream = api::monitor_blocks(&rollup_endpoint).await?;
@@ -115,11 +111,6 @@ async fn process_inbox_messages(
 ) {
     let mut ops = parse_inbox_messages(block_content, ticketer, jstz);
     while let Some(op) = ops.pop() {
-        if matches!(op, Message::Internal(InternalOperation::FaDeposit { .. })) {
-            // TODO: handle fa deposit
-            // https://linear.app/tezos/issue/JSTZ-640/fa-deposit
-            continue;
-        }
         loop {
             let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
             if success {
@@ -190,10 +181,10 @@ mod tests {
         (op_hash, op)
     }
 
-    fn make_on_new_block() -> (
-        Arc<Mutex<u32>>,
-        impl Fn(u32) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static,
-    ) {
+    type OnNewBlockCallback =
+        Box<dyn Fn(u32) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static>;
+
+    fn make_on_new_block() -> (Arc<Mutex<u32>>, OnNewBlockCallback) {
         let counter = Arc::new(Mutex::new(0u32));
         let counter_clone = counter.clone();
         let on_new_block = move |num: u32| {
@@ -204,7 +195,7 @@ mod tests {
             })
         }
             as Pin<Box<dyn Future<Output = ()> + Send>>;
-        (counter, on_new_block)
+        (counter, Box::new(on_new_block))
     }
 
     #[tokio::test]

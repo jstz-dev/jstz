@@ -189,7 +189,7 @@ impl Console {
     fn debug(&self, data: &[JsValue], context: &mut Context) -> JsResult<()> {
         log(
             LogData {
-                level: LogLevel::LOG,
+                level: LogLevel::DEBUG,
                 text: formatter(data, context)?,
                 groups_len: self.groups.len(),
             },
@@ -277,7 +277,7 @@ impl Console {
     fn log(&self, data: &[JsValue], context: &mut Context) -> JsResult<()> {
         log(
             LogData {
-                level: LogLevel::LOG,
+                level: LogLevel::INFO,
                 text: formatter(data, context)?,
                 groups_len: self.groups.len(),
             },
@@ -300,7 +300,7 @@ impl Console {
         let group_label = formatter(data, context)?;
         log(
             LogData {
-                level: LogLevel::LOG,
+                level: LogLevel::DEBUG,
                 text: format!("group: {group_label}"),
                 groups_len: self.groups.len(),
             },

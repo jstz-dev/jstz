@@ -15,9 +15,9 @@ use crate::{
     context::account::{Account, Address, Addressable},
     error::{self, Result},
     executor::smart_function::{JSTZ_HOST, NOOP_PATH},
+    logger::{log_request_end, log_request_start},
     operation::{OperationHash, RunFunction},
     receipt::RunFunctionReceipt,
-    request_logger::{log_request_end, log_request_start},
     Error,
 };
 
@@ -118,7 +118,7 @@ fn handle_transfer_or_rollback_and_return_response(
         runtime::with_js_tx(|tx| tx.rollback())?;
         Ok(Some(
             JsNativeObject::new::<ResponseClass>(
-                ResponseBuilder::error(context)?,
+                ResponseBuilder::internal_server_error(context)?,
                 context,
             )?
             .into(),

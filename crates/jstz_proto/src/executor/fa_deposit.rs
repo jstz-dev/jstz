@@ -1,7 +1,6 @@
 use bincode::{Decode, Encode};
 use derive_more::{Display, Error, From};
 use http::{header::CONTENT_TYPE, HeaderMap, Method, Uri};
-use jstz_api::http::body::HttpBody;
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
 use serde::{Deserialize, Serialize};
@@ -13,7 +12,7 @@ use crate::{
     executor::smart_function,
     operation::{internal::FaDeposit, RunFunction},
     receipt::Receipt,
-    Result,
+    HttpBody, Result,
 };
 
 const FA_DEPOSIT_GAS_LIMIT: usize = usize::MAX;
@@ -400,7 +399,7 @@ mod test {
                 ticket_balance,
                 run_function,
             })) => {
-                assert_eq!(500, run_function.unwrap().status_code);
+                assert_eq!(400, run_function.unwrap().status_code);
                 assert_eq!(expected_receiver, receiver);
                 assert_eq!(42, ticket_balance);
                 let proxy_balance = TicketTable::get_balance(

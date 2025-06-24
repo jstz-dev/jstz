@@ -268,6 +268,21 @@ impl ResponseBuilder {
         //
         // FIXME: jstz only supports status, body and headers here.
         // FIXME: http::Response won't support 0 as a status code
+        let status = 400;
+        let body = Body::null();
+        let headers = Headers::new();
+
+        Ok(Response {
+            response: InnerResponse::builder()
+                .status(status)
+                .body(body)
+                .expect("fixed inputs should never fail"),
+            headers: JsNativeObject::new::<HeadersClass>(headers, context)?,
+            url: None,
+        })
+    }
+
+    pub fn internal_server_error(context: &mut Context) -> JsResult<Response> {
         let status = 500;
         let body = Body::null();
         let headers = Headers::new();

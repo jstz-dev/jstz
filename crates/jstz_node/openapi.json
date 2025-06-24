@@ -754,7 +754,7 @@
           "ERROR",
           "WARN",
           "INFO",
-          "LOG"
+          "DEBUG"
         ]
       },
       "LogRecord": {

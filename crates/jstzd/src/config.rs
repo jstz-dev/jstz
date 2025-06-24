@@ -1,5 +1,9 @@
+use std::path::PathBuf;
+
+use jstz_node::RunMode;
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
 use rust_embed::Embed;
+use tempfile::NamedTempFile;
 
 use crate::task::jstzd::JstzdConfig;
 use crate::{
@@ -75,6 +79,16 @@ pub struct BootstrapContractFile;
 #[include = "*.json"]
 struct BootstrapRollupFile;
 
+// A subset of JstzNodeConfig that is exposed to users.
+#[derive(Deserialize, Default, PartialEq, Debug)]
+struct UserJstzNodeConfig {
+    #[serde(default)]
+    mode: RunMode,
+    #[serde(default)]
+    capacity: usize,
+    debug_log_file: Option<PathBuf>,
+}
+
 #[derive(Deserialize, Default)]
 pub struct Config {
     server_port: Option<u16>,
@@ -85,6 +99,8 @@ pub struct Config {
     octez_client: Option<OctezClientConfigBuilder>,
     #[serde(default)]
     octez_rollup: Option<OctezRollupConfigBuilder>,
+    #[serde(default)]
+    jstz_node: UserJstzNodeConfig,
     #[serde(default)]
     protocol: ProtocolParameterBuilder,
 }
@@ -168,14 +184,15 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
         KeyPair::default(),
-        #[cfg(feature = "sequencer")]
-        jstz_node::RunMode::Sequencer,
-        #[cfg(not(feature = "sequencer"))]
-        jstz_node::RunMode::Default,
-        #[cfg(feature = "sequencer")]
-        1024,
-        #[cfg(not(feature = "sequencer"))]
-        0,
+        config.jstz_node.mode,
+        config.jstz_node.capacity,
+        &config.jstz_node.debug_log_file.unwrap_or(
+            NamedTempFile::new()
+                .context("failed to create jstz node debug file path")?
+                .into_temp_path()
+                .keep()
+                .context("failed to keep jstz node debug file path")?,
+        ),
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
@@ -295,8 +312,11 @@ async fn build_protocol_params(
 mod tests {
     use std::{io::Read, io::Write, path::PathBuf, str::FromStr};
 
+    use crate::config::UserJstzNodeConfig;
+
     use super::{jstz_rollup_path, Config, JSTZ_ROLLUP_ADDRESS};
     use http::Uri;
+    use jstz_node::RunMode;
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::OctezClientConfigBuilder,
@@ -378,6 +398,18 @@ mod tests {
     }
 
     #[test]
+    fn user_jstz_node_config() {
+        assert_eq!(
+            UserJstzNodeConfig::default(),
+            UserJstzNodeConfig {
+                mode: RunMode::Default,
+                capacity: 0,
+                debug_log_file: None
+            }
+        )
+    }
+
+    #[test]
     fn deserialize_config_default() {
         let config = serde_json::from_value::<Config>(serde_json::json!({})).unwrap();
         assert_eq!(config.octez_baker, OctezBakerConfigBuilder::default());
@@ -385,6 +417,7 @@ mod tests {
         assert_eq!(config.octez_node, OctezNodeConfigBuilder::default());
         assert_eq!(config.protocol, ProtocolParameterBuilder::default());
         assert!(config.server_port.is_none());
+        assert_eq!(config.jstz_node, UserJstzNodeConfig::default());
     }
 
     #[test]
@@ -510,6 +543,40 @@ mod tests {
             serde_json::from_value::<Config>(serde_json::json!({"server_port":5678}))
                 .unwrap();
         assert_eq!(config.server_port, Some(5678));
+    }
+
+    #[test]
+    fn deserialize_config_jstz_node() {
+        let config = serde_json::from_value::<Config>(serde_json::json!({
+            "jstz_node": {
+                "mode": "sequencer",
+                "capacity": 42,
+                "debug_log_file": "/tmp/log"
+            }
+        }))
+        .unwrap();
+        assert_eq!(
+            config.jstz_node,
+            UserJstzNodeConfig {
+                mode: RunMode::Sequencer,
+                capacity: 42,
+                debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap())
+            }
+        );
+
+        // default
+        let config = serde_json::from_value::<Config>(serde_json::json!({
+            "jstz_node": {}
+        }))
+        .unwrap();
+        assert_eq!(
+            config.jstz_node,
+            UserJstzNodeConfig {
+                mode: RunMode::Default,
+                capacity: 0,
+                debug_log_file: None
+            }
+        );
     }
 
     #[test]
@@ -650,6 +717,11 @@ mod tests {
             },
             "protocol": {
                 "bootstrap_accounts": [["edpktkhoky4f5kqm2EVwYrMBq5rY9sLYdpFgXixQDWifuBHjhuVuNN", "6000000000"]]
+            },
+            "jstz_node": {
+                "mode": "sequencer",
+                "capacity": 42,
+                "debug_log_file": "/debug/file"
             }
         }))
         .unwrap();
@@ -695,6 +767,12 @@ mod tests {
         assert_eq!(
             config.jstz_node_config().rollup_endpoint,
             config.octez_rollup_config().rpc_endpoint
+        );
+        assert_eq!(config.jstz_node_config().mode, RunMode::Sequencer);
+        assert_eq!(config.jstz_node_config().capacity, 42);
+        assert_eq!(
+            config.jstz_node_config().debug_log_file,
+            PathBuf::from_str("/debug/file").unwrap()
         );
     }
 

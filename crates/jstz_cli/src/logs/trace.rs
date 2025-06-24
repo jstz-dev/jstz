@@ -1,12 +1,11 @@
 use futures_util::{stream::StreamExt, Future};
-use jstz_api::js_log::LogLevel;
-use jstz_proto::runtime::LogRecord;
+use jstz_core::log_record::{LogLevel, LogRecord};
 use log::{debug, error, info};
 use reqwest_eventsource::{Event, EventSource};
 
 use crate::{config::NetworkName, error::Result, utils::AddressOrAlias, Config};
 
-pub const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::LOG;
+pub const DEFAULT_LOG_LEVEL: LogLevel = LogLevel::INFO;
 
 pub async fn exec(
     address_or_alias: AddressOrAlias,

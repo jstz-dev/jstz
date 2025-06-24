@@ -1,6 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use crate::sequencer::inbox::parsing::Message;
+use anyhow::Context;
 use anyhow::Result;
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
@@ -35,21 +36,36 @@ impl Db {
                 SqliteConnectionManager::file(db_path)
             }
             None => SqliteConnectionManager::memory(),
-        };
+        }
+        // Documentation says that a default busy timeout of 5 seconds is set for each connection
+        // so this shouldn't matter. Setting it explicitly here just to be safe.
+        .with_init(|c| c.busy_timeout(std::time::Duration::from_secs(5)));
 
         let pool = SqliteConnectionPool::new(manager)?;
-        Self::create_table(pool.clone())?;
+        Self::setup(pool.clone())?;
 
         Ok(Db { pool })
     }
 
     pub fn connection(&self) -> Result<PooledConnection<SqliteConnectionManager>> {
-        Ok(self.pool.get()?)
+        let conn = self
+            .pool
+            .get()
+            .context("failed to get connection from pool")?;
+        Ok(conn)
     }
 
-    fn create_table(pool: Pool<SqliteConnectionManager>) -> Result<()> {
-        let conn = pool.get()?;
-        conn.execute("CREATE TABLE IF NOT EXISTS jstz_kv (jstz_key TEXT NOT NULL PRIMARY KEY, jstz_value, UNIQUE(jstz_key))", [])?;
+    fn setup(pool: Pool<SqliteConnectionManager>) -> Result<()> {
+        let conn = pool.get().context("failed to get connection from pool")?;
+        conn.execute("CREATE TABLE IF NOT EXISTS jstz_kv (jstz_key TEXT NOT NULL PRIMARY KEY, jstz_value, UNIQUE(jstz_key))", []).context("failed to create table")?;
+        // Allows reads while writes are taking place. This works when there is only one writer
+        // and is fine in our use case.
+        conn.pragma_update(None, "journal_mode", "WAL")
+            .context("failed to set pragma journal mode")?;
+        // Reduces the frequency that sqlite synchronises with the journal. NORMAL is fine with WAL.
+        conn.pragma_update(None, "synchronous", "NORMAL")
+            .context("failed to set pragma synchronous")?;
+
         Ok(())
     }
 

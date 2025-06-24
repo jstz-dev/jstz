@@ -11,6 +11,7 @@ use crate::{
 };
 use bincode::{Decode, Encode};
 use boa_gc::{empty_trace, Finalize, Trace};
+use derive_more::From;
 use jstz_core::kv::transaction::{Guarded, GuardedMut};
 use jstz_core::{
     host::HostRuntime,
@@ -32,6 +33,7 @@ pub type Amount = u64;
     Debug,
     PartialEq,
     Eq,
+    From,
     Serialize,
     Deserialize,
     ToSchema,
@@ -766,13 +768,17 @@ mod test {
             assert_eq!(code.deref(), "");
 
             // Test empty function code
-            assert!(
-                Account::set_function_code(&host, &mut tx, sf_hash, "".to_string())
-                    .is_ok()
-            );
+            assert!(Account::set_function_code(
+                &host,
+                &mut tx,
+                sf_hash,
+                "export default () => {}".to_string()
+            )
+            .is_ok());
 
             // Test setting and retrieving valid code
-            let valid_code = "function test() { return 42; }".to_string();
+            let valid_code =
+                "function test() { return 42; }; export default test;".to_string();
             assert!(Account::set_function_code(
                 &host,
                 &mut tx,

@@ -125,7 +125,7 @@ mod tests {
     use crate::{
         context::account::Nonce,
         operation::{Content, DeployFunction, RevealLargePayload, RunFunction},
-        receipt::ReceiptResult,
+        receipt::{ReceiptContent, ReceiptResult},
     };
 
     use crate::runtime::ParsedCode;
@@ -174,7 +174,7 @@ mod tests {
 
     fn deploy_function_content() -> Content {
         let raw_code =
-            r#"export default handler = () => new Response("hello world!");"#.to_string();
+            r#"export default () => new Response("hello world!");"#.to_string();
         let function_code = ParsedCode::try_from(raw_code).unwrap();
         let account_credit = 0;
         Content::DeployFunction(DeployFunction {
@@ -323,8 +323,22 @@ mod tests {
         let receipt =
             execute_operation(&mut host, &mut tx, run_op, &ticketer, &pk1).await;
 
-        assert!(
-            matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidScheme"))
-        );
+        if cfg!(feature = "v2_runtime") {
+            if let ReceiptResult::Success(ReceiptContent::RunFunction(r)) =
+                receipt.clone().result
+            {
+                assert_eq!(r.status_code, 500);
+                assert_eq!(
+                    String::from_utf8(r.body.unwrap()).unwrap(),
+                    "{\"class\":\"TypeError\",\"message\":\"Unsupport scheme 'tezos'\"}"
+                );
+            } else {
+                unreachable!()
+            }
+        } else {
+            assert!(
+                matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidScheme"))
+            );
+        }
     }
 }

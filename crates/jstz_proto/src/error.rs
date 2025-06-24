@@ -47,6 +47,8 @@ pub enum Error {
     RevealTypeMismatch,
     RevealNotSupported,
     InvalidInjector,
+    #[cfg(feature = "v2_runtime")]
+    V2Error(crate::runtime::v2::Error),
 }
 pub type Result<T> = std::result::Result<T, Error>;
 
@@ -132,6 +134,10 @@ impl From<Error> for JsError {
             }
             Error::InvalidScheme => {
                 JsNativeError::eval().with_message("InvalidScheme").into()
+            }
+            #[cfg(feature = "v2_runtime")]
+            Error::V2Error(_) => {
+                unimplemented!("V2 runtime errors are not supported in boa")
             }
         }
     }

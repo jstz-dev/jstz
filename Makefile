@@ -15,14 +15,14 @@ JSTZD_KERNEL_PATH := crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 CLI_KERNEL_PATH := crates/jstz_cli/jstz_kernel.wasm
 
 .PHONY: all
-all: build test check
+all: build test build-v2 test-v2 check
 
 .PHONY: build
 build: build-cli-kernel build-jstzd-kernel
 	@cargo build $(PROFILE_OPT)
 
-build-riscv: build-cli-kernel build-jstzd-kernel
-	@cargo build $(PROFILE_OPT) --features riscv
+build-v2: build-cli-kernel build-jstzd-kernel
+	@cargo build $(PROFILE_OPT) --features v2_runtime
 
 .PHONY: build-bridge
 build-bridge:
@@ -71,14 +71,21 @@ build-native-kernel:
 riscv-runtime:
 	@RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs cargo build -p jstz_runtime --release --target riscv64gc-unknown-linux-musl
 
+.PHONE: riscv-runtime
+riscv-v2-one-shot-kernel:
+	@RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs cargo build -p jstz_kernel --no-default-features --features v2_runtime --release --target riscv64gc-unknown-linux-musl
+
 .PHONY: test
 test: test-unit test-int
+
+.PHONY: test-v2
+test-v2: test-unit-v2 test-int-v2
 
 .PHONY: test-unit
 test-unit:
 # --lib only runs unit tests in library crates
 # --bins only runs unit tests in binary crates
-	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench" --features riscv,skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
+	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench" --features skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
 
 .PHONY: test-int
 test-int:
@@ -86,6 +93,18 @@ test-int:
 #        the glob pattern is used to match all integration tests
 # --exclude excludes the jstz_api wpt test
 	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features skip-wpt,skip-rollup-tests
+
+test-unit-v2:
+# --lib only runs unit tests in library crates
+# --bins only runs unit tests in binary crates
+	@cargo nextest run --lib --bins --workspace --exclude "jstz_tps_bench" --features v2_runtime,skip-wpt,skip-rollup-tests --config-file .config/nextest.toml
+
+.PHONY: test-int
+test-int-v2:
+# --test only runs a specified integration test (a test in /tests).
+#        the glob pattern is used to match all integration tests
+# --exclude excludes the jstz_api wpt test
+	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features v2_runtime,skip-wpt,skip-rollup-tests
 
 .PHONY: cov
 cov:
