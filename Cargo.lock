@@ -3086,6 +3086,7 @@ dependencies = [
  "either",
  "erased-serde",
  "futures",
+ "hex",
  "http 1.1.0",
  "http-serde",
  "jstz_api",

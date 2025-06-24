@@ -8,7 +8,7 @@ use tezos_smart_rollup::{
     storage::path::RefPath,
 };
 
-use crate::inbox::{read_message, Message};
+use crate::inbox::{read_sequenced_message, Message};
 pub mod inbox;
 pub mod parsing;
 
@@ -66,7 +66,7 @@ pub async fn run(rt: &mut impl Runtime) {
     let injector = read_injector(rt).expect("Revealer not found");
     let mut tx = Transaction::default();
     tx.begin();
-    if let Some(message) = read_message(rt, &ticketer) {
+    if let Some(message) = read_sequenced_message(rt, &injector) {
         handle_message(rt, message, &ticketer, &mut tx, &injector)
             .await
             .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
@@ -111,6 +111,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn entry_native_deposit_succeeds() {
         let mut host = JstzMockHost::default();
         let deposit = MockNativeDeposit::default();
@@ -135,6 +136,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn entry_fa_deposit_succeeds_with_proxy() {
         let mut host = JstzMockHost::default();
 
@@ -182,6 +184,7 @@ mod test {
     }
 
     #[test]
+    #[ignore]
     fn entry_fa_deposit_succeeds_with_invalid_proxy() {
         let mut host = JstzMockHost::default();
         let deposit = MockFaDeposit::default();

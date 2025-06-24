@@ -260,7 +260,7 @@ pub fn try_parse_fa_deposit(
         amount,
         receiver,
         proxy_smart_function,
-        ticket_hash,
+        ticket_hash: ticket_hash.into(),
     })
 }
 
@@ -379,7 +379,7 @@ mod test {
             amount,
             receiver: Address::User(jstz_mock::account1()),
             proxy_smart_function: Some(Address::SmartFunction(jstz_mock::sf_account1())),
-            ticket_hash,
+            ticket_hash: ticket_hash.into(),
         };
         assert_eq!(expected, fa_deposit)
     }
