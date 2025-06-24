@@ -191,7 +191,8 @@ impl OracleRequestStorage {
 }
 
 type Result<T> = std::result::Result<T, OracleError>;
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, deno_error::JsError)]
+#[class("OracleError")]
 pub enum OracleError {
     #[error("Oracle signer public key not found at '{ORACLE_PUBLIC_KEY_PATH}'")]
     PublicKeyNotFound,

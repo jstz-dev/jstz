@@ -88,7 +88,9 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                false,
                 None,
+                source_address.clone().into(),
                 source_address.into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
@@ -125,7 +127,9 @@ mod test {
             let response = process_and_dispatch_request(
                 host,
                 tx,
+                false,
                 None,
+                source_address.clone().into(),
                 source_address.into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
@@ -164,7 +168,9 @@ mod test {
             let _ = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
+                false,
                 None,
+                source_address.clone().into(),
                 source_address.clone().into(),
                 "GET".into(),
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),

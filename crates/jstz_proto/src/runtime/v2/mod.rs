@@ -20,6 +20,7 @@ mod parsed_code;
 pub use parsed_code::ParsedCode;
 mod ledger;
 pub mod oracle;
+pub mod protocol_context;
 
 pub async fn run_toplevel_fetch(
     hrt: &mut impl HostRuntime,
@@ -44,7 +45,9 @@ async fn run(
     let response: http::Response<Option<Vec<u8>>> = process_and_dispatch_request(
         JsHostRuntime::new(hrt),
         tx.clone(),
+        true,
         Some(operation_hash),
+        source_address.clone().into(),
         source_address.clone().into(),
         run_operation.method.to_string().into(),
         url,
