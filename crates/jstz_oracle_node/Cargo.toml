@@ -33,13 +33,12 @@ url.workspace = true
 jstz_utils = { path = "../jstz_utils" }
 jstz_proto = { path = "../jstz_proto"}
 jstz_crypto = { path = "../jstz_crypto" }
-jstz_node = { path = "../jstz_node" }
 jstz_client = { path = "../jstz_client" }
 serde_json.workspace = true
+octez = { path = "../octez" }
 
 [dev-dependencies]
 mockito.workspace = true
-octez = { path = "../octez" }
 
 [features]
 v2_runtime = []

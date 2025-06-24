@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+pub use jstz_proto::runtime::v2::oracle::request::OracleRequest;
 use once_cell::sync::Lazy;
 use regex::Regex;
 
@@ -20,6 +21,8 @@ mod tests {
     use jstz_proto::runtime::v2::fetch::http::Request as HttpReq;
     use std::str::FromStr;
     use url::Url;
+
+    use jstz_crypto::public_key_hash::PublicKeyHash;
 
     fn make_json(id: u64) -> String {
         let http_req = HttpReq {
