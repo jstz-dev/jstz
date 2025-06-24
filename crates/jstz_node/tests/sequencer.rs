@@ -263,16 +263,10 @@ fn make_mock_rollup_rpc_server(url: String) -> JoinHandle<()> {
 pub(crate) fn make_mock_monitor_blocks_filter(
 ) -> impl warp::Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
     warp::path!("global" / "monitor_blocks").map(|| {
-        let delay_stream = stream::once(async {
-            // TODO: remove this once db issue is fixed
-            // https://github.com/jstz-dev/jstz/actions/runs/15685845390/job/44188722352
-            tokio::time::sleep(Duration::from_secs(2)).await;
-            Ok::<Bytes, Infallible>(Bytes::new())
-        });
         let data_stream = stream::iter(vec![Ok::<Bytes, Infallible>(Bytes::from(
             "{\"level\": 123}\n",
         ))]);
-        warp::reply::Response::new(Body::wrap_stream(delay_stream.chain(data_stream)))
+        warp::reply::Response::new(Body::wrap_stream(data_stream))
     })
 }
 

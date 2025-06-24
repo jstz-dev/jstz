@@ -287,7 +287,6 @@
             # This tells the 'cc' Rust crate to build using this C compiler when
             # targeting other architectures.
             CC_wasm32_unknown_unknown = "${clangNoArch}/bin/clang";
-            CC_riscv64gc_unknown_hermit = "${clangNoArch}/bin/clang";
 
             RISCV_V8_ARCHIVE_DIR = "${riscvV8}";
 

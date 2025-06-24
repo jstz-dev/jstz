@@ -25,7 +25,7 @@
 //! arguments `FooInit` and `FooData`. Additionally, the developer must ensure the method
 //! `bar` exists and that it takes no arguments and returns a u64 number.
 
-use deno_core::v8;
+use deno_core::{error::JsError, v8};
 
 use crate::{
     error::{Result, RuntimeError, WebSysError},
@@ -58,10 +58,25 @@ pub(crate) fn new_instance<'s>(
     args: &[v8::Local<v8::Value>],
 ) -> Result<v8::Local<'s, v8::Object>> {
     let constructor = constructor(scope, class_name)?;
+    let mut tc_scope = v8::TryCatch::new(scope);
+    let maybe_instance = constructor.new_instance(&mut tc_scope, args);
+    match maybe_instance {
+        Some(instance) => Ok(instance),
+        None if tc_scope.has_caught() => {
+            Err(tc_exception_to_runtime_error(&mut tc_scope))
+        }
+        None => Err(WebSysError::ConstructorFailed(
+            class_name.to_rust_string_lossy(&mut tc_scope),
+        )
+        .into()),
+    }
+}
 
-    Ok(constructor.new_instance(scope, args).ok_or_else(|| {
-        WebSysError::ConstructorFailed(class_name.to_rust_string_lossy(scope))
-    })?)
+pub(crate) fn tc_exception_to_runtime_error(
+    tc_scope: &mut v8::TryCatch<'_, v8::HandleScope>,
+) -> RuntimeError {
+    let exception = tc_scope.exception().unwrap();
+    JsError::from_v8_exception(tc_scope, exception).into()
 }
 
 pub(crate) fn instance_call_method<'s, T: JsClass>(
@@ -87,10 +102,17 @@ pub(crate) fn instance_call_method_with_recv<'s, T: JsClass>(
         }
     })?;
     let method_fn = v8::Local::<v8::Function>::try_from(method_fn)?;
-
-    Ok(method_fn.call(scope, recv, args).ok_or_else(|| {
-        WebSysError::MethodCallFailed(method_name.to_rust_string_lossy(scope))
-    })?)
+    let mut tc_scope = v8::TryCatch::new(scope);
+    match method_fn.call(&mut tc_scope, recv, args) {
+        Some(ret_val) => Ok(ret_val),
+        None if tc_scope.has_caught() => {
+            Err(tc_exception_to_runtime_error(&mut tc_scope))
+        }
+        None => Err(WebSysError::MethodCallFailed(
+            method_name.to_rust_string_lossy(&mut tc_scope),
+        )
+        .into()),
+    }
 }
 
 pub(crate) fn static_call_method<'s, T: JsClass>(
@@ -127,13 +149,16 @@ pub(crate) fn instance_set(
     property_name: v8::Local<v8::String>,
     value: v8::Local<v8::Value>,
 ) -> Result<()> {
-    if let Some(true) = this.set(scope, property_name.into(), value) {
+    let mut tc_scope = v8::TryCatch::new(scope);
+    if let Some(true) = this.set(&mut tc_scope, property_name.into(), value) {
         Ok(())
+    } else if tc_scope.has_caught() {
+        Err(tc_exception_to_runtime_error(&mut tc_scope))
     } else {
-        Err(
-            WebSysError::PropertySetFailed(property_name.to_rust_string_lossy(scope))
-                .into(),
+        Err(WebSysError::PropertySetFailed(
+            property_name.to_rust_string_lossy(&mut tc_scope),
         )
+        .into())
     }
 }
 
@@ -354,4 +379,38 @@ macro_rules! js_class {
             }
         }
     };
+}
+
+#[cfg(test)]
+mod test {
+    use deno_core::{v8, ByteString};
+    use deno_error::JsErrorClass;
+
+    use crate::{
+        sys::{Request, RequestInit},
+        JstzRuntime,
+    };
+
+    #[test]
+    fn uncaught_constructor_errors_should_propagate() {
+        let mut runtime = JstzRuntime::new(Default::default());
+        let scope = &mut runtime.handle_scope();
+        let s = v8::String::new(scope, "test").unwrap().cast();
+        let request_init = RequestInit::new(scope);
+        request_init
+            .set_method(scope, ByteString::from("GET").into())
+            .unwrap();
+        request_init.set_body(scope, s).unwrap();
+        let err = Request::new_with_string_and_init(
+            scope,
+            "http://example.com".to_string(),
+            request_init,
+        )
+        .unwrap_err();
+        assert_eq!("TypeError", err.get_class());
+        assert_eq!(
+            "Uncaught TypeError: Request with GET/HEAD method cannot have body",
+            err.get_message()
+        );
+    }
 }

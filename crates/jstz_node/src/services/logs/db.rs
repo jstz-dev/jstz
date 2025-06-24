@@ -5,9 +5,7 @@ use super::Line;
 use anyhow::{anyhow, Result};
 use jstz_api::js_log::LogLevel;
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_proto::{
-    context::account::Address, js_logger::LogRecord, request_logger::RequestEvent,
-};
+use jstz_proto::{context::account::Address, js_logger::LogRecord, logger::RequestEvent};
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{params, Params, Statement};
