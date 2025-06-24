@@ -1,3 +1,4 @@
+use crate::operation::internal::{Deposit, FaDeposit};
 use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
@@ -247,11 +248,14 @@ impl From<SignedOperation> for Operation {
 }
 
 pub mod internal {
+    use std::borrow::Cow;
+
+    use bincode::{de::BorrowDecoder, error::DecodeError, BorrowDecode};
     use tezos_smart_rollup::michelson::ticket::TicketHash;
 
     use super::*;
 
-    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Encode, Decode)]
     pub struct Deposit {
         // Inbox message id is unique to each message and
         // suitable as a nonce
@@ -262,7 +266,57 @@ pub mod internal {
         pub receiver: Address,
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone)]
+    #[derive(Debug, PartialEq, Eq, Clone, Display)]
+    pub struct TicketHashWrap(pub TicketHash);
+
+    impl Encode for TicketHashWrap {
+        fn encode<E: bincode::enc::Encoder>(
+            &self,
+            encoder: &mut E,
+        ) -> std::result::Result<(), bincode::error::EncodeError> {
+            let s = self.0.to_string();
+            s.encode(encoder)
+        }
+    }
+
+    impl Decode for TicketHashWrap {
+        fn decode<D: bincode::de::Decoder>(
+            decoder: &mut D,
+        ) -> std::result::Result<Self, DecodeError> {
+            let s: String = String::decode(decoder)?;
+            let hash = TicketHash::try_from(s).map_err(|e| {
+                DecodeError::OtherString(format!("Invalid TicketHash hex: {e}"))
+            })?;
+            Ok(TicketHashWrap(hash))
+        }
+    }
+
+    impl<'de> BorrowDecode<'de> for TicketHashWrap {
+        fn borrow_decode<D: BorrowDecoder<'de>>(
+            decoder: &mut D,
+        ) -> std::result::Result<Self, DecodeError> {
+            let s: Cow<'de, str> = Cow::borrow_decode(decoder)?;
+            let hash = TicketHash::try_from(s.to_string()).map_err(|e| {
+                DecodeError::OtherString(format!("Invalid TicketHash hex: {e}"))
+            })?;
+            Ok(TicketHashWrap(hash))
+        }
+    }
+
+    impl From<TicketHash> for TicketHashWrap {
+        fn from(value: TicketHash) -> Self {
+            TicketHashWrap(value)
+        }
+    }
+
+    impl From<TicketHashWrap> for TicketHash {
+        fn from(value: TicketHashWrap) -> Self {
+            value.0
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq, Clone, Encode, Decode)]
+    #[bincode(decode_borrowed = false)]
     pub struct FaDeposit {
         // Inbox message id is unique to each message and
         // suitable as a nonce
@@ -274,7 +328,7 @@ pub mod internal {
         // Optional proxy contract
         pub proxy_smart_function: Option<Address>,
         // Ticket hash
-        pub ticket_hash: TicketHash,
+        pub ticket_hash: TicketHashWrap,
     }
 
     impl FaDeposit {
@@ -298,10 +352,35 @@ pub mod internal {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode)]
 pub enum InternalOperation {
     Deposit(internal::Deposit),
     FaDeposit(internal::FaDeposit),
+}
+
+impl InternalOperation {
+    pub fn hash(&self) -> OperationHash {
+        match self {
+            InternalOperation::Deposit(Deposit {
+                inbox_id,
+                amount,
+                receiver,
+            }) => Blake2b::from(format!("{}{}{}", inbox_id, amount, receiver).as_bytes()),
+            InternalOperation::FaDeposit(FaDeposit {
+                inbox_id,
+                amount,
+                receiver,
+                proxy_smart_function,
+                ticket_hash,
+            }) => Blake2b::from(
+                format!(
+                    "{}{}{}{:?}{}",
+                    inbox_id, amount, receiver, proxy_smart_function, ticket_hash
+                )
+                .as_bytes(),
+            ),
+        }
+    }
 }
 
 pub mod openapi {

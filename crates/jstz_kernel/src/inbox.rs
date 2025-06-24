@@ -1,5 +1,9 @@
-use jstz_core::{host::WriteDebug, BinEncodable};
+use bincode::{Decode, Encode};
+use jstz_core::host::WriteDebug;
+use jstz_crypto::public_key::PublicKey;
+use jstz_crypto::signature::Signature;
 use jstz_proto::context::account::Address;
+use jstz_proto::operation::OperationHash;
 use jstz_proto::operation::{internal::Deposit, InternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
@@ -19,10 +23,45 @@ use crate::parsing::try_parse_fa_deposit;
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = InternalOperation;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),
+}
+
+impl From<SequencedOperation> for Message {
+    fn from(value: SequencedOperation) -> Self {
+        match value.inner_op {
+            Message::External(op) => Message::External(op),
+            Message::Internal(op) => Message::Internal(op),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
+pub struct SequencedOperation {
+    inner_op: Message,
+    signature: Signature,
+}
+
+impl SequencedOperation {
+    pub fn new(inner_op: Message, signature: Signature) -> Self {
+        Self {
+            inner_op,
+            signature,
+        }
+    }
+
+    pub fn hash(&self) -> OperationHash {
+        match &self.inner_op {
+            Message::External(op) => op.hash(),
+            Message::Internal(op) => op.hash(),
+        }
+    }
+
+    pub fn verify(&self, pk: &PublicKey) -> jstz_crypto::Result<()> {
+        self.signature.verify(pk, self.hash().as_ref())
+    }
 }
 
 pub type MichelsonNativeDeposit = MichelsonPair<MichelsonContract, FA2_1Ticket>;
@@ -45,6 +84,54 @@ pub fn read_message(
     let _ = rt.mark_for_reboot();
     let jstz_rollup_address = rt.reveal_metadata().address();
     parse_inbox_message(rt, input.id, input.as_ref(), ticketer, &jstz_rollup_address)
+}
+
+pub fn read_sequenced_message(
+    rt: &mut impl Runtime,
+    injector: &PublicKey,
+) -> Option<Message> {
+    let input = rt.read_input().ok()??;
+    let _ = rt.mark_for_reboot();
+    let jstz_rollup_address = rt.reveal_metadata().address();
+    let (_, message) = InboxMessage::<RollupType>::parse(input.as_ref()).ok()?;
+
+    match message {
+        InboxMessage::External(bytes) => match ExternalMessageFrame::parse(bytes) {
+            Ok(frame) => match frame {
+                ExternalMessageFrame::Targetted { address, contents } => {
+                    if &jstz_rollup_address != address.hash() {
+                        rt.write_debug(
+                         "External message ignored because of different smart rollup address",
+                        );
+                        None
+                    } else {
+                        let msg: Option<SequencedOperation> =
+                            jstz_core::BinEncodable::decode(contents).ok()?;
+                        match msg {
+                            Some(msg) => match msg.verify(injector) {
+                                Ok(_) => Some(msg.into()),
+                                Err(_) => {
+                                    rt.write_debug(
+                                        "Invalid sequenced message signature\n",
+                                    );
+                                    None
+                                }
+                            },
+                            None => {
+                                rt.write_debug("Failed to parse the sequenced message\n");
+                                None
+                            }
+                        }
+                    }
+                }
+            },
+            Err(_) => {
+                rt.write_debug("Failed to parse the external message frame\n");
+                None
+            }
+        },
+        _ => None,
+    }
 }
 
 /// Parse a hex-encoded L1 inbox input message into a jstz operation.
@@ -216,7 +303,7 @@ fn read_external_message(
     logger: &impl WriteDebug,
     bytes: &[u8],
 ) -> Option<ExternalMessage> {
-    let msg = ExternalMessage::decode(bytes).ok()?;
+    let msg = jstz_core::BinEncodable::decode(bytes).ok()?;
     logger.write_debug("External message: {msg:?}\n");
     Some(msg)
 }
