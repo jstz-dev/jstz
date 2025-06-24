@@ -680,6 +680,8 @@ async fn call_contract_handler(
 mod tests {
     use axum::{body::to_bytes, response::IntoResponse};
     use indicatif::ProgressBar;
+    #[cfg(feature = "v2_runtime")]
+    use jstz_crypto::secret_key::SecretKey;
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
     use std::path::PathBuf;
     use std::str::FromStr;
@@ -829,7 +831,16 @@ mod tests {
                 0,
                 &PathBuf::from("/log"),
                 #[cfg(feature = "v2_runtime")]
-                None,
+                Some(KeyPair(
+                    PublicKey::from_base58(
+                        "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+                    )
+                    .unwrap(),
+                    SecretKey::from_base58(
+                        "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+                    )
+                    .unwrap(),
+                )),
             ),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(

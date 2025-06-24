@@ -105,7 +105,16 @@ mod tests {
             0,
             Path::new("/tmp/debug.log"),
             #[cfg(feature = "v2_runtime")]
-            None,
+            Some(KeyPair(
+                PublicKey::from_base58(
+                    "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+                )
+                .unwrap(),
+                SecretKey::from_base58(
+                    "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+                )
+                .unwrap(),
+            )),
         );
 
         let json = serde_json::to_value(&config).unwrap();
@@ -116,6 +125,21 @@ mod tests {
         assert_eq!(json["kernel_log_file"], "/tmp/kernel.log");
         assert_eq!(json["injector"], serde_json::Value::Null);
         assert_eq!(json["debug_log_file"], "/tmp/debug.log");
+        #[cfg(feature = "v2_runtime")]
+        {
+            let oracle_key_pair = &json["oracle_key_pair"];
+            assert!(oracle_key_pair.is_array());
+            let oracle_array = oracle_key_pair.as_array().unwrap();
+            assert_eq!(oracle_array.len(), 2);
+            assert_eq!(
+                oracle_array[0],
+                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"
+            );
+            assert_eq!(
+                oracle_array[1],
+                "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM"
+            );
+        }
     }
 
     #[test]
