@@ -156,6 +156,11 @@ impl JstzRuntime {
         Self { runtime }
     }
 
+    pub fn set_state<S: 'static>(&mut self, state: S) {
+        let op_state = self.op_state();
+        op_state.borrow_mut().put(state);
+    }
+
     /// Executes traditional, non-ECMAScript-module JavaScript code, ignoring
     /// its result
     pub fn execute(&mut self, code: &str) -> Result<()> {

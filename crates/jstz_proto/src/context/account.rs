@@ -167,6 +167,13 @@ impl Address {
         }
     }
 
+    pub fn as_user(&self) -> Option<&PublicKeyHash> {
+        match self {
+            Address::User(public_key_hash) => Some(public_key_hash),
+            Address::SmartFunction(_) => None,
+        }
+    }
+
     pub fn from_base58(data: &str) -> Result<Self> {
         if data.len() < 3 {
             return Err(Error::InvalidAddress);
