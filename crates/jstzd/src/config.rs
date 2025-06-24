@@ -87,6 +87,8 @@ struct UserJstzNodeConfig {
     #[serde(default)]
     capacity: usize,
     debug_log_file: Option<PathBuf>,
+    #[cfg(feature = "blueprint")]
+    blueprint_db_file: Option<PathBuf>,
 }
 
 #[derive(Deserialize, Default)]
@@ -192,6 +194,14 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
                 .into_temp_path()
                 .keep()
                 .context("failed to keep jstz node debug file path")?,
+        ),
+        #[cfg(feature = "blueprint")]
+        &config.jstz_node.blueprint_db_file.unwrap_or(
+            NamedTempFile::new()
+                .context("failed to create jstz node blueprint db path")?
+                .into_temp_path()
+                .keep()
+                .context("failed to keep jstz node blueprint db path")?,
         ),
     );
 

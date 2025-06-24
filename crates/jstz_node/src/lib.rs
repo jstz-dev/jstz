@@ -87,6 +87,8 @@ pub struct RunOptions {
     pub mode: RunMode,
     pub capacity: usize,
     pub debug_log_path: PathBuf,
+    #[cfg(feature = "blueprint")]
+    pub blueprint_db_path: PathBuf,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -103,6 +105,8 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         mode: config.mode,
         capacity: config.capacity,
         debug_log_path: config.debug_log_file,
+        #[cfg(feature = "blueprint")]
+        blueprint_db_path: config.blueprint_db_file,
     })
     .await
 }
@@ -118,6 +122,8 @@ pub async fn run(
         mode,
         capacity,
         debug_log_path,
+        #[cfg(feature = "blueprint")]
+        blueprint_db_path,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
@@ -130,7 +136,10 @@ pub async fn run(
     ))?;
     let runtime_db = sequencer::db::Db::init(Some(db_path))?;
     #[cfg(feature = "blueprint")]
-    let blueprint_db = sequencer::db::BlueprintDb::init(None)?;
+    let blueprint_db =
+        sequencer::db::BlueprintDb::init(Some(blueprint_db_path.to_str().ok_or(
+            anyhow::anyhow!("failed to convert temp db file path to str"),
+        )?))?;
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer => Some(

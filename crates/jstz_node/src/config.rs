@@ -44,6 +44,8 @@ pub struct JstzNodeConfig {
     pub capacity: usize,
     /// The path to the sequencer runtime debug log file.
     pub debug_log_file: PathBuf,
+    #[cfg(feature = "blueprint")]
+    pub blueprint_db_file: PathBuf,
 }
 
 impl JstzNodeConfig {
@@ -61,6 +63,7 @@ impl JstzNodeConfig {
         mode: RunMode,
         capacity: usize,
         debug_log_file: &Path,
+        #[cfg(feature = "blueprint")] blueprint_db_file: &Path,
     ) -> Self {
         Self {
             endpoint: endpoint.clone(),
@@ -71,6 +74,8 @@ impl JstzNodeConfig {
             mode,
             capacity,
             debug_log_file: debug_log_file.to_path_buf(),
+            #[cfg(feature = "blueprint")]
+            blueprint_db_file: blueprint_db_file.to_path_buf(),
         }
     }
 }

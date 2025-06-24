@@ -54,6 +54,7 @@ tezos_crypto_rs.workspace = true
 skip-rollup-tests = []
 build-image = ["octez/disable-alpha"]
 v2_runtime = ["jstz_node/v2_runtime"]
+blueprint = ["jstz_node/blueprint"]
 
 [[bin]]
 name = "jstzd"
