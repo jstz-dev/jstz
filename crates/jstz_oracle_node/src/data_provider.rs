@@ -89,10 +89,10 @@ async fn get_oracle_response(
 
     // Headers
     let mut headers = HeaderMap::new();
-    for (name, value) in request.headers.clone() {
+    for (name, value) in &request.headers {
         headers.append(
-            HeaderName::from_bytes(&name)?,
-            HeaderValue::from_bytes(&value)?,
+            HeaderName::from_bytes(name)?,
+            HeaderValue::from_bytes(value)?,
         );
     }
     builder = builder.headers(headers);
@@ -165,9 +165,13 @@ async fn inject_oracle_response(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use jstz_node::config::{JstzNodeConfig, KeyPair};
+    use jstz_node::RunMode;
     use jstz_proto::runtime::v2::fetch::http::Body;
     use jstz_proto::runtime::v2::fetch::http::Request as HttpReq;
+    use octez::r#async::endpoint::Endpoint;
     use once_cell::sync::Lazy;
+    use std::path::PathBuf;
     use std::str::FromStr;
     use tokio::time::Duration;
     use url::Url;
@@ -225,6 +229,175 @@ mod tests {
             text.contains(r#""data": "{\"msg\":\"hello world\"}""#),
             "response did not echo body: {text}"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn injects_oracle_response_successfully() -> Result<()> {
+        // Setup mock server
+        let mut server = mockito::Server::new_async().await;
+
+        // Mock the nonce endpoint
+        let mock_nonce = server
+            .mock(
+                "GET",
+                "/accounts/tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nonce",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body("0")
+            .create();
+
+        // Mock the post operation endpoint
+        let mock_post_op = server.mock("POST", "/operations").with_status(200).create();
+
+        // Mock the receipt endpoint
+        let mock_receipt = server
+            .mock("GET", "/operations/a09a7debdf7335564dca39f6b1ba9a711f7750ae7396cabf0ff42769c61bc3c5/receipt")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                "hash": [160, 154, 126, 219, 223, 115, 53, 86, 77, 202, 57, 246, 177, 186, 154, 113, 31, 119, 80, 174, 115, 156, 171, 240, 255, 66, 118, 156, 97, 188, 60, 197],
+                "result": {
+                    "_type": "Success",
+                    "inner": {
+                        "_type": "OracleResponse",
+                        "requestId": 99
+                    }
+                }
+            }"#,
+            )
+            .create();
+
+        eprintln!("Mock nonce: {}", mock_nonce);
+
+        // Create test data
+        let public_key = PublicKey::from_base58(
+            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+        )?;
+        let secret_key = SecretKey::from_base58(
+            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+        )?;
+
+        eprintln!("Starting node config");
+        let node_config = JstzNodeConfig::new(
+            &Endpoint::from_str(server.url().as_str())?,
+            &Endpoint::from_str(server.url().as_str())?,
+            &PathBuf::from("/tmp/preimages"),
+            &PathBuf::from("/tmp/kernel.log"),
+            KeyPair::default(),
+            RunMode::Default,
+            1000,
+            &PathBuf::from("/tmp/debug.log"),
+        );
+
+        let oracle_req = oracle_req("GET", Url::parse("https://example.com")?, None);
+        let response_bytes = Bytes::from("test response data");
+
+        // Call the function
+        let result = inject_oracle_response(
+            &oracle_req,
+            &public_key,
+            &secret_key,
+            &node_config,
+            response_bytes,
+        )
+        .await;
+
+        // Verify the result
+        assert!(
+            result.is_ok(),
+            "inject_oracle_response failed: {:?}",
+            result.err()
+        );
+
+        // Verify all mocks were called
+        mock_nonce.assert();
+        mock_post_op.assert();
+        mock_receipt.assert();
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn injects_oracle_response_with_failed_receipt() -> Result<()> {
+        // Setup mock server
+        let mut server = mockito::Server::new_async().await;
+
+        // Mock the nonce endpoint
+        let mock_nonce = server
+            .mock(
+                "GET",
+                "/accounts/tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nonce",
+            )
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body("0")
+            .create();
+
+        // Mock the post operation endpoint
+        let mock_post_op = server.mock("POST", "/operations").with_status(200).create();
+
+        // Mock the receipt endpoint with a failed result
+        let mock_receipt = server
+            .mock("GET", "/operations/a09a7debdf7335564dca39f6b1ba9a711f7750ae7396cabf0ff42769c61bc3c5/receipt")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                r#"{
+                "hash": [160, 154, 126, 219, 223, 115, 53, 86, 77, 202, 57, 246, 177, 186, 154, 113, 31, 119, 80, 174, 115, 156, 171, 240, 255, 66, 118, 156, 97, 188, 60, 197],
+                "result": {
+                    "_type": "Failed",
+                    "inner": "Operation failed"
+                }
+            }"#,
+            )
+            .create();
+
+        // Create test data
+        let public_key = PublicKey::from_base58(
+            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+        )?;
+        let secret_key = SecretKey::from_base58(
+            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+        )?;
+        let node_config = JstzNodeConfig::new(
+            &Endpoint::from_str(server.url().as_str())?,
+            &Endpoint::from_str(server.url().as_str())?,
+            &PathBuf::from("/tmp/preimages"),
+            &PathBuf::from("/tmp/kernel.log"),
+            KeyPair::default(),
+            RunMode::Default,
+            1000,
+            &PathBuf::from("/tmp/debug.log"),
+        );
+
+        let oracle_req = oracle_req("GET", Url::parse("https://example.com")?, None);
+        let response_bytes = Bytes::from("test response data");
+
+        // Call the function
+        let result = inject_oracle_response(
+            &oracle_req,
+            &public_key,
+            &secret_key,
+            &node_config,
+            response_bytes,
+        )
+        .await;
+
+        // Verify the result is an error
+        assert!(result.is_err(), "Expected error for failed receipt");
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Failed to inject oracle response"));
+
+        // Verify all mocks were called
+        mock_nonce.assert();
+        mock_post_op.assert();
+        mock_receipt.assert();
+
         Ok(())
     }
 }

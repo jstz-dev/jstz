@@ -37,5 +37,9 @@ jstz_node = { path = "../jstz_node" }
 jstz_client = { path = "../jstz_client" }
 serde_json.workspace = true
 
+[dev-dependencies]
+mockito.workspace = true
+octez = { path = "../octez" }
+
 [features]
 v2_runtime = []
