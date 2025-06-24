@@ -47,6 +47,7 @@ pub async fn handle_message(
         Message::Internal(internal_operation) => {
             let receipt =
                 executor::execute_internal_operation(hrt, tx, internal_operation).await;
+            debug_msg!(hrt, "Receipt: {receipt:?}\n");
             receipt.write(hrt, tx)?
         }
         Message::External(signed_operation) => {

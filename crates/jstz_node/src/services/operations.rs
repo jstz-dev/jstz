@@ -162,7 +162,7 @@ async fn inject(
     Ok(())
 }
 
-async fn inject_rollup_message(
+pub async fn inject_rollup_message(
     contents: Vec<u8>,
     rollup_client: &OctezRollupClient,
 ) -> ServiceResult<()> {

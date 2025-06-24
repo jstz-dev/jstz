@@ -325,7 +325,8 @@ mod tests {
                 "0000000000000000000000000000000000000000000000000000000000000000"
                     .to_string(),
             )
-            .unwrap(),
+            .unwrap()
+            .into(),
         }));
 
         // Execute the deposit

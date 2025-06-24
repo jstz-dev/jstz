@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
 use jstz_core::{host::JsHostRuntime, kv::Transaction};
+#[cfg(feature = "sequenced_op")]
+use jstz_crypto::public_key::PublicKey;
+#[cfg(not(feature = "sequenced_op"))]
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
@@ -39,7 +42,12 @@ async fn run_event_loop(rt: &mut impl Runtime) {
     let injector = Arc::new(read_injector(rt));
 
     loop {
-        match read_message(rt, &ticketer) {
+        #[cfg(feature = "sequenced_op")]
+        let msg = read_message(rt, injector.as_ref());
+        #[cfg(not(feature = "sequenced_op"))]
+        let msg = read_message(rt, &ticketer);
+
+        match msg {
             Some(ParsedInboxMessage::JstzMessage(message)) => {
                 let ticketer = ticketer.clone();
                 let injector = injector.clone();
@@ -78,6 +86,7 @@ async fn run_event_loop(rt: &mut impl Runtime) {
 // 1. No more inputs
 // 2. Input targetting the wrong rollup
 // 3. Parsing failures
+#[cfg(not(feature = "sequenced_op"))]
 fn read_message(
     rt: &mut impl Runtime,
     ticketer: &ContractKt1Hash,
@@ -91,6 +100,17 @@ fn read_message(
         ticketer,
         &jstz_rollup_address,
     )
+}
+
+#[cfg(feature = "sequenced_op")]
+fn read_message(
+    rt: &mut impl Runtime,
+    injector: &PublicKey,
+) -> Option<ParsedInboxMessage> {
+    match inbox::read_sequenced_message(rt, injector) {
+        Some(msg) => Some(ParsedInboxMessage::JstzMessage(msg)),
+        None => None,
+    }
 }
 
 #[cfg(test)]
@@ -140,6 +160,7 @@ mod test {
        - alice has 20 mutez
     */
     #[test]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn scenario_1() -> Result<(), anyhow::Error> {
         let mut host = JstzMockHost::new(false);
         // host.set_debug_handler(std::io::stdout());
@@ -270,6 +291,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn entry_native_deposit_succeeds() {
         let mut host = JstzMockHost::default();
         let deposit = MockNativeDeposit::default();
@@ -294,6 +316,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn entry_fa_deposit_succeeds_with_proxy() {
         let mut host = JstzMockHost::default();
 
@@ -341,6 +364,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn entry_fa_deposit_succeeds_with_invalid_proxy() {
         let mut host = JstzMockHost::default();
         let deposit = MockFaDeposit::default();

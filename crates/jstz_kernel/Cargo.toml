@@ -44,3 +44,4 @@ tokio.workspace = true
 [features]
 v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
 riscv_kernel = ["v2_runtime", "dep:tokio"]
+sequenced_op = []

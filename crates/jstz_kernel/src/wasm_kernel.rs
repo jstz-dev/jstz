@@ -1,8 +1,12 @@
 use crate::handle_message;
+#[cfg(not(feature = "sequenced_op"))]
 use crate::inbox::read_message;
+#[cfg(feature = "sequenced_op")]
+use crate::inbox::read_sequenced_message;
 use jstz_core::kv::Transaction;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
+#[cfg(not(feature = "sequenced_op"))]
 pub fn run(rt: &mut impl Runtime) {
     jstz_core::future::block_on(async {
         // TODO(https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct)
@@ -13,6 +17,27 @@ pub fn run(rt: &mut impl Runtime) {
         tx.begin();
         let _ = rt.mark_for_reboot();
         if let Some(message) = read_message(rt, &ticketer) {
+            handle_message(rt, message, &ticketer, &mut tx, &injector)
+                .await
+                .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
+        }
+        if let Err(commit_error) = tx.commit(rt) {
+            debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");
+        }
+    })
+}
+
+#[cfg(feature = "sequenced_op")]
+pub fn run(rt: &mut impl Runtime) {
+    jstz_core::future::block_on(async {
+        // TODO(https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct)
+        // we should organize protocol consts into a struct
+        let ticketer = crate::read_ticketer(rt);
+        let injector = crate::read_injector(rt);
+        let mut tx = Transaction::default();
+        tx.begin();
+        let _ = rt.mark_for_reboot();
+        if let Some(message) = read_sequenced_message(rt, &injector) {
             handle_message(rt, message, &ticketer, &mut tx, &injector)
                 .await
                 .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
@@ -57,6 +82,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn entry_native_deposit_succeeds() {
         let mut host = JstzMockHost::default();
         let deposit = MockNativeDeposit::default();
@@ -81,6 +107,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn entry_fa_deposit_succeeds_with_proxy() {
         let mut host = JstzMockHost::default();
 
@@ -128,6 +155,7 @@ mod test {
     }
 
     #[test]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn entry_fa_deposit_succeeds_with_invalid_proxy() {
         let mut host = JstzMockHost::default();
         let deposit = MockFaDeposit::default();
