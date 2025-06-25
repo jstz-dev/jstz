@@ -9,10 +9,10 @@ It provides these main commands:
 - [`sandbox`](#sandbox) - Start and interact with the local [sandbox](/sandbox) environment
 - [`bridge`](#bridge) - Bridge XTZ tokens from Tezos to Jstz and back
 - [`deploy`](#deploy) - Deploy smart functions
+- [`kv`](#kv) - Get data from the key-value store
+- [`logs`](#logs) - Get smart function logs
 - [`run`](#run) - Send requests to smart functions
 - [`transfer`](#transfer) - Transfer XTZ between Jstz accounts
-- [`logs`](#logs) - Get smart function logs
-- [`kv`](#kv) - Get data from the key-value store
 
 :::tip
 
@@ -163,6 +163,85 @@ Using the alias can lead to unexpected outcomes if you're not careful about whic
 jstz deploy examples/counter.js --name my_counter --balance 42
 ```
 
+### KV
+
+The `kv` commands get information from the Jstz key-value store.
+They cannot change that information because only smart functions can write to the key-value store.
+To get or change key-value data in a smart function, see [KV](/api/kv).
+
+The `list` command lists sub-keys for a given key.
+Sub-keys are separated with slashes, so if a smart function stores data with the keys `primaryKey/subKeyA` and `primaryKey/subKeyB`, the command `jstz kv list primaryKey` returns `subKeyA` and `subKeyB`.
+
+#### Commands
+
+- `get`: Gets a value from the key-value store.
+
+- `list`: Lists sub-keys for a given key.
+
+#### Usage
+
+```bash
+export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
+jstz run "jstz://${counter}/"
+jstz kv get -a $counter counter
+```
+
+#### Options
+
+- `--account (-a) <ADDRESS>`: The address of the smart function to get the key-value data for.
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+
+#### Example
+
+```bash
+jstz kv get -a $counter counter
+```
+
+### Logs
+
+The `trace` command follows logs from deployed smart functions and prints them to the console.
+
+As an alternative, you can add the `--trace` flag to the `jstz run` command to show the logs from a single smart function request.
+
+#### Commands
+
+- `trace`: Trace the logs from the specified function.
+
+#### Usage:
+
+```bash
+jstz logs trace [OPTIONS] <ALIAS|ADDRESS>
+```
+
+#### Arguments
+
+- `<ALIAS|ADDRESS>`: The function's address or alias.
+
+#### Options
+
+- `--level (-l) <level>`: Specifies the level of log. Default is `log`.
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+
+#### Example
+
+```bash
+jstz deploy examples/logs.js --name my_function
+jstz logs trace my_function
+```
+
+In a new terminal, run the counter function and you will see the following output:
+
+```bash
+[LOG]: log
+[LOG]: debug
+[INFO]: info
+[WARN]: warn
+[ERROR]: error
+[ERROR]: Assertion failed
+```
+
 ### Run
 
 The `run` command sends a request to a smart function using a specified URL.
@@ -240,83 +319,4 @@ jstz transfer [OPTIONS] <AMOUNT> <ADDRESS|ALIAS>
 
 ```bash
 jstz transfer 2 KT1CexuXoXuShARedvKSmxwDTLxRHNcvxqKR
-```
-
-### Logs
-
-The `trace` command follows logs from deployed smart functions and prints them to the console.
-
-As an alternative, you can add the `--trace` flag to the `jstz run` command to show the logs from a single smart function request.
-
-#### Commands
-
-- `trace`: Trace the logs from the specified function.
-
-#### Usage:
-
-```bash
-jstz logs trace [OPTIONS] <ALIAS|ADDRESS>
-```
-
-#### Arguments
-
-- `<ALIAS|ADDRESS>`: The function's address or alias.
-
-#### Options
-
-- `--level (-l) <level>`: Specifies the level of log. Default is `log`.
-
-- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
-
-#### Example
-
-```bash
-jstz deploy examples/logs.js --name my_function
-jstz logs trace my_function
-```
-
-In a new terminal, run the counter function and you will see the following output:
-
-```bash
-[LOG]: log
-[LOG]: debug
-[INFO]: info
-[WARN]: warn
-[ERROR]: error
-[ERROR]: Assertion failed
-```
-
-### KV
-
-The `kv` commands get information from the Jstz key-value store.
-They cannot change that information because only smart functions can write to the key-value store.
-To get or change key-value data in a smart function, see [KV](/api/kv).
-
-The `list` command lists sub-keys for a given key.
-Sub-keys are separated with slashes, so if a smart function stores data with the keys `primaryKey/subKeyA` and `primaryKey/subKeyB`, the command `jstz kv list primaryKey` returns `subKeyA` and `subKeyB`.
-
-#### Commands
-
-- `get`: Gets a value from the key-value store.
-
-- `list`: Lists sub-keys for a given key.
-
-#### Usage
-
-```bash
-export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
-jstz run "jstz://${counter}/"
-jstz kv get -a $counter counter
-```
-
-#### Options
-
-- `--account (-a) <ADDRESS>`: The address of the smart function to get the key-value data for.
-
-- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
-
-#### Example
-
-```bash
-jstz kv get -a $counter counter
 ```
