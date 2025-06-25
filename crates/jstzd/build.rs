@@ -1,7 +1,10 @@
 use anyhow::Result;
-use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
+use jstz_crypto::{
+    public_key::PublicKey, secret_key::SecretKey, smart_function_hash::SmartFunctionHash,
+};
 use jstz_kernel::{INJECTOR, TICKETER};
 use std::{
+    collections::HashSet,
     env, fs,
     path::{Path, PathBuf},
 };
@@ -22,8 +25,10 @@ const JSTZ_KERNEL_PATH: &str = "./resources/jstz_rollup/jstz_kernel.wasm";
 const JSTZ_PARAMETERS_TY_PATH: &str = "./resources/jstz_rollup/parameters_ty.json";
 /// Generated file that contains path getter functions
 const JSTZ_ROLLUP_PATH: &str = "jstz_rollup_path.rs";
+const BOOTSTRAP_ACCOUNT_PATH: &str = "./resources/bootstrap_account/accounts.json";
 
-/// Build script that generates and saves the following files in OUT_DIR:
+/// Build script that validates built-in bootstrap accounts and generates and saves
+/// the following files in OUT_DIR:
 ///
 /// Files copied:
 /// - parameters_ty.json: JSON file containing parameter types
@@ -40,6 +45,7 @@ const JSTZ_ROLLUP_PATH: &str = "jstz_rollup_path.rs";
 fn main() {
     println!("cargo:rerun-if-changed={}", JSTZ_KERNEL_PATH);
     println!("cargo:rerun-if-changed={}", JSTZ_PARAMETERS_TY_PATH);
+    println!("cargo:rerun-if-changed={}", BOOTSTRAP_ACCOUNT_PATH);
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
@@ -77,6 +83,9 @@ fn main() {
             panic!("Failed to copy kernel files to '{}': {:?}", &p, e)
         });
     }
+
+    // Validate built-in bootstrap accounts stored in the resource file
+    validate_builtin_bootstrap_accounts();
 }
 
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
@@ -204,4 +213,28 @@ fn generate_path_getter_code(out_dir: &Path, fn_name: &str, path_suffix: &str) -
         &name_upper,
         path_suffix
     )
+}
+
+fn validate_builtin_bootstrap_accounts() {
+    let bytes =
+        fs::read(BOOTSTRAP_ACCOUNT_PATH).expect("failed to read bootstrap account file");
+    let raw_accounts: Vec<(String, String, String)> = serde_json::from_slice(&bytes)
+        .unwrap_or_else(|e| panic!("failed to parse built-in bootstrap accounts: {e:?}"));
+    let mut seen_names = HashSet::new();
+    for (name, pk, raw_sk) in raw_accounts {
+        if !seen_names.insert(name.clone()) {
+            panic!("bootstrap account name '{name}' already exists");
+        }
+        PublicKey::from_base58(&pk).unwrap_or_else(|e| {
+            panic!("failed to parse public key of bootstrap account '{name}': {e:?}")
+        });
+        let sk = if raw_sk.starts_with("unencrypted") {
+            raw_sk.split(':').nth(1).unwrap()
+        } else {
+            &raw_sk
+        };
+        SecretKey::from_base58(sk).unwrap_or_else(|e| {
+            panic!("failed to parse secret key of bootstrap account '{name}': {e:?}")
+        });
+    }
 }

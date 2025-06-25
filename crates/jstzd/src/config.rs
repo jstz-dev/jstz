@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+
+use jstz_node::RunMode;
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
 use rust_embed::Embed;
 use tempfile::NamedTempFile;
@@ -32,38 +35,6 @@ pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
 ];
-pub const BOOTSTRAP_ACCOUNTS: [(&str, &str, &str); 6] = [
-    (
-        "bootstrap0",
-        "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
-        "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6",
-    ),
-    (
-        "bootstrap1",
-        "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-        "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
-    ),
-    (
-        "bootstrap2",
-        "edpktzNbDAUjUk697W7gYg2CRuBQjyPxbEg8dLccYYwKSKvkPvjtV9",
-        "unencrypted:edsk39qAm1fiMjgmPkw1EgQYkMzkJezLNewd7PLNHTkr6w9XA2zdfo",
-    ),
-    (
-        "bootstrap3",
-        "edpkuTXkJDGcFd5nh6VvMz8phXxU3Bi7h6hqgywNFi1vZTfQNnS1RV",
-        "unencrypted:edsk4ArLQgBTLWG5FJmnGnT689VKoqhXwmDPBuGx3z4cvwU9MmrPZZ",
-    ),
-    (
-        "bootstrap4",
-        "edpkuFrRoDSEbJYgxRtLx2ps82UdaYc1WwfS9sE11yhauZt5DgCHbU",
-        "unencrypted:edsk2uqQB9AY4FvioK2YMdfmyMrer5R8mGFyuaLLFfSRo8EoyNdht3",
-    ),
-    (
-        "bootstrap5",
-        "edpkv8EUUH68jmo3f7Um5PezmfGrRF24gnfLpH3sVNwJnV5bVCxL2n",
-        "unencrypted:edsk4QLrcijEffxV31gGdN2HU7UpyJjA8drFoNcmnB28n89YjPNRFm",
-    ),
-];
 pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
 const BOOTSTRAP_ACCOUNT_BALANCE: u64 = 100_000_000_000;
 
@@ -72,9 +43,23 @@ const BOOTSTRAP_ACCOUNT_BALANCE: u64 = 100_000_000_000;
 pub struct BootstrapContractFile;
 
 #[derive(Embed)]
+#[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_account/"]
+pub struct BootstrapAccountFile;
+
+#[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/jstz_rollup"]
 #[include = "*.json"]
 struct BootstrapRollupFile;
+
+// A subset of JstzNodeConfig that is exposed to users.
+#[derive(Deserialize, Default, PartialEq, Debug)]
+struct UserJstzNodeConfig {
+    #[serde(default)]
+    mode: RunMode,
+    #[serde(default)]
+    capacity: usize,
+    debug_log_file: Option<PathBuf>,
+}
 
 #[derive(Deserialize, Default)]
 pub struct Config {
@@ -86,6 +71,8 @@ pub struct Config {
     octez_client: Option<OctezClientConfigBuilder>,
     #[serde(default)]
     octez_rollup: Option<OctezRollupConfigBuilder>,
+    #[serde(default)]
+    jstz_node: UserJstzNodeConfig,
     #[serde(default)]
     protocol: ProtocolParameterBuilder,
 }
@@ -99,6 +86,15 @@ async fn parse_config(path: &str) -> Result<Config> {
         .await
         .context("failed to read config file")?;
     Ok(serde_json::from_str::<Config>(&s)?)
+}
+
+pub(crate) fn builtin_bootstrap_accounts() -> Result<Vec<(String, String, String)>> {
+    serde_json::from_slice(
+        &BootstrapAccountFile::get("accounts.json")
+            .ok_or(anyhow::anyhow!("bootstrap account file not found"))?
+            .data,
+    )
+    .context("error loading built-in bootstrap accounts")
 }
 
 pub(crate) async fn build_config_from_path(
@@ -163,26 +159,21 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
 
     let jstz_node_rpc_endpoint =
         Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
-    let jstz_node_debug_file_path = NamedTempFile::new()
-        .context("failed to create jstz node debug file path")?
-        .into_temp_path()
-        .keep()
-        .context("failed to keep jstz node debug file path")?;
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
         KeyPair::default(),
-        #[cfg(feature = "sequencer")]
-        jstz_node::RunMode::Sequencer,
-        #[cfg(not(feature = "sequencer"))]
-        jstz_node::RunMode::Default,
-        #[cfg(feature = "sequencer")]
-        1024,
-        #[cfg(not(feature = "sequencer"))]
-        0,
-        &jstz_node_debug_file_path,
+        config.jstz_node.mode,
+        config.jstz_node.capacity,
+        &config.jstz_node.debug_log_file.unwrap_or(
+            NamedTempFile::new()
+                .context("failed to create jstz node debug file path")?
+                .into_temp_path()
+                .keep()
+                .context("failed to keep jstz node debug file path")?,
+        ),
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
@@ -275,8 +266,9 @@ async fn build_protocol_params(
         .iter()
         .map(|v| (*v).to_owned())
         .collect::<Vec<BootstrapAccount>>();
-    for account in BOOTSTRAP_ACCOUNTS
-        .map(|(_, pk, _)| BootstrapAccount::new(pk, BOOTSTRAP_ACCOUNT_BALANCE).unwrap())
+    for account in builtin_bootstrap_accounts()?
+        .into_iter()
+        .map(|(_, pk, _)| BootstrapAccount::new(&pk, BOOTSTRAP_ACCOUNT_BALANCE).unwrap())
     {
         accounts.push(account);
     }
@@ -302,8 +294,11 @@ async fn build_protocol_params(
 mod tests {
     use std::{io::Read, io::Write, path::PathBuf, str::FromStr};
 
+    use crate::config::UserJstzNodeConfig;
+
     use super::{jstz_rollup_path, Config, JSTZ_ROLLUP_ADDRESS};
     use http::Uri;
+    use jstz_node::RunMode;
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::OctezClientConfigBuilder,
@@ -320,8 +315,6 @@ mod tests {
     use tempfile::{tempdir, NamedTempFile};
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tokio::io::AsyncReadExt;
-
-    const ACCOUNT_PUBLIC_KEY: &str = super::BOOTSTRAP_ACCOUNTS[0].1;
 
     async fn read_param_file(path: &PathBuf) -> serde_json::Value {
         let mut buf = String::new();
@@ -385,6 +378,18 @@ mod tests {
     }
 
     #[test]
+    fn user_jstz_node_config() {
+        assert_eq!(
+            UserJstzNodeConfig::default(),
+            UserJstzNodeConfig {
+                mode: RunMode::Default,
+                capacity: 0,
+                debug_log_file: None
+            }
+        )
+    }
+
+    #[test]
     fn deserialize_config_default() {
         let config = serde_json::from_value::<Config>(serde_json::json!({})).unwrap();
         assert_eq!(config.octez_baker, OctezBakerConfigBuilder::default());
@@ -392,6 +397,7 @@ mod tests {
         assert_eq!(config.octez_node, OctezNodeConfigBuilder::default());
         assert_eq!(config.protocol, ProtocolParameterBuilder::default());
         assert!(config.server_port.is_none());
+        assert_eq!(config.jstz_node, UserJstzNodeConfig::default());
     }
 
     #[test]
@@ -520,6 +526,40 @@ mod tests {
     }
 
     #[test]
+    fn deserialize_config_jstz_node() {
+        let config = serde_json::from_value::<Config>(serde_json::json!({
+            "jstz_node": {
+                "mode": "sequencer",
+                "capacity": 42,
+                "debug_log_file": "/tmp/log"
+            }
+        }))
+        .unwrap();
+        assert_eq!(
+            config.jstz_node,
+            UserJstzNodeConfig {
+                mode: RunMode::Sequencer,
+                capacity: 42,
+                debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap())
+            }
+        );
+
+        // default
+        let config = serde_json::from_value::<Config>(serde_json::json!({
+            "jstz_node": {}
+        }))
+        .unwrap();
+        assert_eq!(
+            config.jstz_node,
+            UserJstzNodeConfig {
+                mode: RunMode::Default,
+                capacity: 0,
+                debug_log_file: None
+            }
+        );
+    }
+
+    #[test]
     fn deserialize_config_partial_rollup() {
         let config = serde_json::from_value::<Config>(serde_json::json!({
             "octez_rollup": {
@@ -591,7 +631,7 @@ mod tests {
         let protocol_params = ProtocolParameterBuilder::new()
             .set_protocol(Protocol::Rio)
             .set_bootstrap_accounts([BootstrapAccount::new(
-                ACCOUNT_PUBLIC_KEY,
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
                 40_000_000_000,
             )
             .unwrap()])
@@ -657,6 +697,11 @@ mod tests {
             },
             "protocol": {
                 "bootstrap_accounts": [["edpktkhoky4f5kqm2EVwYrMBq5rY9sLYdpFgXixQDWifuBHjhuVuNN", "6000000000"]]
+            },
+            "jstz_node": {
+                "mode": "sequencer",
+                "capacity": 42,
+                "debug_log_file": "/debug/file"
             }
         }))
         .unwrap();
@@ -703,6 +748,12 @@ mod tests {
             config.jstz_node_config().rollup_endpoint,
             config.octez_rollup_config().rpc_endpoint
         );
+        assert_eq!(config.jstz_node_config().mode, RunMode::Sequencer);
+        assert_eq!(config.jstz_node_config().capacity, 42);
+        assert_eq!(
+            config.jstz_node_config().debug_log_file,
+            PathBuf::from_str("/debug/file").unwrap()
+        );
     }
 
     #[tokio::test]
@@ -736,10 +787,11 @@ mod tests {
             .map(|acc| serde_json::from_value::<BootstrapAccount>(acc.clone()).unwrap())
             .collect::<Vec<_>>();
 
-        for (_, pk, _) in super::BOOTSTRAP_ACCOUNTS {
+        for (_, pk, _) in super::builtin_bootstrap_accounts().unwrap() {
             assert!(
                 bootstrap_accounts.contains(
-                    &BootstrapAccount::new(pk, super::BOOTSTRAP_ACCOUNT_BALANCE).unwrap()
+                    &BootstrapAccount::new(&pk, super::BOOTSTRAP_ACCOUNT_BALANCE)
+                        .unwrap()
                 ),
                 "account {pk} not found in bootstrap accounts"
             );
@@ -797,7 +849,7 @@ mod tests {
     async fn build_protocol_params() {
         let mut builder = ProtocolParameterBuilder::new();
         builder.set_bootstrap_accounts([BootstrapAccount::new(
-            ACCOUNT_PUBLIC_KEY,
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
             40_000_000_000,
         )
         .unwrap()]);
@@ -827,7 +879,7 @@ mod tests {
         let mut builder = ProtocolParameterBuilder::new();
         builder
             .set_bootstrap_accounts([BootstrapAccount::new(
-                ACCOUNT_PUBLIC_KEY,
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
                 40_000_000_000,
             )
             .unwrap()])

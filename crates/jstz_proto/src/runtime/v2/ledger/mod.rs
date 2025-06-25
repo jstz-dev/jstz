@@ -110,8 +110,8 @@ mod test {
         TOKIO_MULTI_THREAD.block_on(async {
             // Code
             let run = r#"export default async (request) => {
-                let referrer = request.headers.get("referrer");
-                let balance = Ledger.balance(referrer);
+                let referer = request.headers.get("referer");
+                let balance = Ledger.balance(referer);
                 return new Response(balance)
             }"#;
 
@@ -133,7 +133,6 @@ mod test {
                 None,
             )
             .await;
-
             // Assert
             assert_eq!(
                 1_000_000_000,

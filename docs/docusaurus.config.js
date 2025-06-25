@@ -29,8 +29,8 @@ module.exports = async function createConfigAsync() {
     title: "Jstz documentation",
     tagline: "A JavaScript runtime powered by Tezos smart optimistic rollups",
     favicon: "/img/favicon.svg",
-    url: process.env.DOC_URL || "https://jstz-dev.github.io/",
-    baseUrl: process.env.DOC_BASE_URL || "/jstz/",
+    url: process.env.DOC_URL || "https://jstz.tezos.com/",
+    baseUrl: process.env.DOC_BASE_URL || "/",
     organizationName: "jstz-dev",
     projectName: "jstz",
     onBrokenLinks: "throw",
@@ -39,6 +39,9 @@ module.exports = async function createConfigAsync() {
     i18n: {
       defaultLocale: "en",
       locales: ["en"],
+    },
+    future: {
+      v4: true,
     },
 
     headTags: [
@@ -71,6 +74,7 @@ module.exports = async function createConfigAsync() {
               "sandbox.md",
               "transfer.md",
               "examples.md",
+              "alpha-tester.md",
             ],
             sidebarPath: require.resolve("./sidebars.js"),
             routeBasePath: "/", // Serve the docs at the site's root
