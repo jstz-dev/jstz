@@ -1,12 +1,21 @@
 use bincode::{
-    config::{Configuration, Fixint, LittleEndian},
+    config::{Configuration, Fixint, Limit, LittleEndian},
     Decode, Encode,
 };
 
-use crate::error::{Error, Result};
+use crate::{
+    error::{Error, Result},
+    reveal_data::MAX_REVEAL_SIZE,
+};
 
-const BINCODE_CONFIGURATION: Configuration<LittleEndian, Fixint> =
-    bincode::config::legacy();
+// FixintEncoding is used for predictable, fixed-width integer encoding, which makes decoding
+// more strict and less ambiguous compared to VarintEncoding.
+// The decode limit (MAX_REVEAL_SIZE) is critical for safety — it prevents unbounded memory
+// allocation on malformed input, mitigating potential denial-of-service (DoS) risks.
+const BINCODE_CONFIGURATION: Configuration<LittleEndian, Fixint, Limit<MAX_REVEAL_SIZE>> =
+    bincode::config::standard()
+        .with_fixed_int_encoding()
+        .with_limit();
 
 /// Trait for types that can be encoded to and decoded from binary format
 pub trait BinEncodable {
@@ -73,5 +82,18 @@ mod tests {
             Err(Error::SerializationError { description: _ }) => (),
             _ => panic!("Expected SerializationError"),
         }
+    }
+    #[test]
+    fn test_decode_without_limit_triggers_massive_allocation() {
+        let mut malicious = Vec::new();
+
+        // Craft a malicious payload with an absurdly large string length: 50 GB.
+        let large_len = 50_000_000_000u64;
+        malicious.extend_from_slice(&large_len.to_le_bytes()); // field1: String length = 50 GB
+        malicious.extend_from_slice(&42i32.to_le_bytes());
+
+        // Without a decode limit, this call may hang indefinitely or crash the process.
+        let result = <TestData as BinEncodable>::decode(&malicious);
+        assert!(result.is_err_and(|e| e.to_string().contains("LimitExceeded")));
     }
 }
