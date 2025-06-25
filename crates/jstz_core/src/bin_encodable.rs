@@ -51,7 +51,7 @@ mod tests {
     #[derive(Debug, Clone, PartialEq, Encode, Decode)]
     struct TestData {
         field1: String,
-        field2: i32,
+        field2: u32,
     }
 
     #[test]
