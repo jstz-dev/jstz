@@ -32,3 +32,4 @@ jstz_utils = { path = "../jstz_utils" }
 
 [features]
 v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
+sequenced_op = []

@@ -250,10 +250,9 @@ impl From<SignedOperation> for Operation {
 pub mod internal {
     use std::borrow::Cow;
 
-    use bincode::{de::BorrowDecoder, error::DecodeError, BorrowDecode};
-    use tezos_smart_rollup::michelson::ticket::TicketHash;
-
     use super::*;
+    use bincode::{de::BorrowDecoder, error::DecodeError, BorrowDecode};
+    use tezos_smart_rollup::michelson::ticket::TicketHash as L1TicketHash;
 
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Encode, Decode)]
     pub struct Deposit {
@@ -266,10 +265,12 @@ pub mod internal {
         pub receiver: Address,
     }
 
-    #[derive(Debug, PartialEq, Eq, Clone, Display)]
-    pub struct TicketHashWrap(pub TicketHash);
+    #[derive(
+        Debug, PartialEq, Eq, Clone, Display, Deref, derive_more::DerefMut, From,
+    )]
+    pub struct TicketHash(pub L1TicketHash);
 
-    impl Encode for TicketHashWrap {
+    impl Encode for TicketHash {
         fn encode<E: bincode::enc::Encoder>(
             &self,
             encoder: &mut E,
@@ -279,38 +280,32 @@ pub mod internal {
         }
     }
 
-    impl Decode for TicketHashWrap {
+    impl Decode for TicketHash {
         fn decode<D: bincode::de::Decoder>(
             decoder: &mut D,
         ) -> std::result::Result<Self, DecodeError> {
             let s: String = String::decode(decoder)?;
-            let hash = TicketHash::try_from(s).map_err(|e| {
+            let hash = L1TicketHash::try_from(s).map_err(|e| {
                 DecodeError::OtherString(format!("Invalid TicketHash hex: {e}"))
             })?;
-            Ok(TicketHashWrap(hash))
+            Ok(TicketHash(hash))
         }
     }
 
-    impl<'de> BorrowDecode<'de> for TicketHashWrap {
+    impl<'de> BorrowDecode<'de> for TicketHash {
         fn borrow_decode<D: BorrowDecoder<'de>>(
             decoder: &mut D,
         ) -> std::result::Result<Self, DecodeError> {
             let s: Cow<'de, str> = Cow::borrow_decode(decoder)?;
-            let hash = TicketHash::try_from(s.to_string()).map_err(|e| {
+            let hash = L1TicketHash::try_from(s.to_string()).map_err(|e| {
                 DecodeError::OtherString(format!("Invalid TicketHash hex: {e}"))
             })?;
-            Ok(TicketHashWrap(hash))
+            Ok(TicketHash(hash))
         }
     }
 
-    impl From<TicketHash> for TicketHashWrap {
+    impl From<TicketHash> for L1TicketHash {
         fn from(value: TicketHash) -> Self {
-            TicketHashWrap(value)
-        }
-    }
-
-    impl From<TicketHashWrap> for TicketHash {
-        fn from(value: TicketHashWrap) -> Self {
             value.0
         }
     }
@@ -328,7 +323,7 @@ pub mod internal {
         // Optional proxy contract
         pub proxy_smart_function: Option<Address>,
         // Ticket hash
-        pub ticket_hash: TicketHashWrap,
+        pub ticket_hash: TicketHash,
     }
 
     impl FaDeposit {

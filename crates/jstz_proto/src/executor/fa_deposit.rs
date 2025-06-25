@@ -95,7 +95,7 @@ async fn deposit_to_proxy_contract(
                     rt,
                     tx,
                     proxy_contract,
-                    &deposit.clone().ticket_hash.into(),
+                    &deposit.ticket_hash,
                     deposit.amount,
                 )?;
                 Ok(FaDepositReceipt {
@@ -108,7 +108,7 @@ async fn deposit_to_proxy_contract(
                     rt,
                     tx,
                     &deposit.receiver,
-                    &deposit.clone().ticket_hash.into(),
+                    &deposit.ticket_hash,
                     deposit.amount,
                 )?;
                 result.run_function = Some(run_receipt);
@@ -124,7 +124,7 @@ async fn deposit_to_proxy_contract(
                 rt,
                 tx,
                 &deposit.receiver,
-                &deposit.clone().ticket_hash.into(),
+                &deposit.ticket_hash,
                 deposit.amount,
             )?;
             Ok(result)
@@ -142,7 +142,7 @@ async fn execute_inner(
             rt,
             tx,
             &deposit.receiver,
-            &deposit.clone().ticket_hash.into(),
+            &deposit.ticket_hash,
             deposit.amount,
         ),
         Some(proxy_contract) => {
