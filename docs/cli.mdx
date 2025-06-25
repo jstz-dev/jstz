@@ -6,14 +6,17 @@ sidebar_label: CLI
 The Jstz CLI allows you to interact with Jstz, including managing accounts, starting the sandbox, and deploying and interacting with smart functions.
 It provides these main commands:
 
-- [`accounts`](#accounts) - Work with Jstz accounts
+- [`account`](#account) - Work with Jstz accounts
 - [`sandbox`](#sandbox) - Start and interact with the local [sandbox](/sandbox) environment
 - [`bridge`](#bridge) - Bridge XTZ tokens from Tezos to Jstz and back
 - [`deploy`](#deploy) - Deploy smart functions
 - [`kv`](#kv) - Get data from the key-value store
+- [`login`](#log-in) - Log in to Jstz accounts
+- [`logout`](#log-out) - Log out of the current account
 - [`logs`](#logs) - Get smart function logs
 - [`run`](#run) - Send requests to smart functions
 - [`transfer`](#transfer) - Transfer XTZ between Jstz accounts
+- [`whoami`](#whoami) - Print the current account
 
 :::tip
 
@@ -237,6 +240,51 @@ jstz kv get -a $counter counter
 jstz kv get -a $counter counter
 ```
 
+### Log in
+
+The `login` command switches the active account to an account from the config file.
+The active account is the account from which calls to smart functions come from.
+
+#### Usage
+
+```bash
+jstz login <ALIAS>
+```
+
+#### Arguments
+
+None.
+
+#### Example
+
+```bash
+jstz account create Alice
+jstz logout
+jstz login Alice
+```
+
+### Log out
+
+The `logout` command removes the active account from the config file.
+
+### Usage
+
+```bash
+jstz logout
+```
+
+#### Arguments
+
+None.
+
+#### Example
+
+```bash
+jstz account create Alice
+jstz logout
+jstz login Alice
+```
+
 ### Logs
 
 The `trace` command follows logs from deployed smart functions and prints them to the console.
@@ -247,7 +295,7 @@ As an alternative, you can add the `--trace` flag to the `jstz run` command to s
 
 - `trace`: Trace the logs from the specified function.
 
-#### Usage:
+#### Usage
 
 ```bash
 jstz logs trace [OPTIONS] <ALIAS|ADDRESS>
@@ -358,4 +406,25 @@ jstz transfer [OPTIONS] <AMOUNT> <ADDRESS|ALIAS>
 
 ```bash
 jstz transfer 2 KT1CexuXoXuShARedvKSmxwDTLxRHNcvxqKR
+```
+
+### whoami
+
+The `whoami` command prints the active account alias.
+Use the `login` and `logout` commands to change the active account.
+
+#### Usage
+
+```bash
+jstz whoami
+```
+
+#### Arguments
+
+None.
+
+#### Example
+
+```bash
+jstz whoami
 ```
