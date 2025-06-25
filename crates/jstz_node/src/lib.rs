@@ -135,6 +135,8 @@ pub async fn run(
                 runtime_db.clone(),
                 rollup_preimages_dir.clone(),
                 Some(&debug_log_path),
+                injector.clone(),
+                rollup_endpoint.clone(),
             )
             .context("failed to launch worker")?,
         ),
@@ -147,6 +149,8 @@ pub async fn run(
                     runtime_db.clone(),
                     rollup_preimages_dir.clone(),
                     Some(&debug_log_path),
+                    injector.clone(),
+                    rollup_endpoint.clone(),
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
