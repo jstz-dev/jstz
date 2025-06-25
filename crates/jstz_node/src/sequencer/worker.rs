@@ -1,4 +1,11 @@
-use crate::sequencer::runtime::{init_host, process_message};
+use crate::{
+    config::KeyPair,
+    sequencer::{
+        inbox::parsing::{Message, SequencedOperation},
+        runtime::{init_host, process_message},
+    },
+    services::operations::inject_rollup_message,
+};
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -11,7 +18,10 @@ use std::{
 };
 
 use anyhow::Context;
+use axum::response::IntoResponse;
+use jstz_core::BinEncodable;
 use log::warn;
+use octez::OctezRollupClient;
 
 use super::{db::Db, queue::OperationQueue};
 
@@ -41,6 +51,8 @@ pub fn spawn(
     db: Db,
     preimage_dir: PathBuf,
     debug_log_path: Option<&Path>,
+    injector: KeyPair,
+    rollup_endpoint: String,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
@@ -52,6 +64,7 @@ pub fn spawn(
     }
     let tokio_rt = tokio::runtime::Builder::new_current_thread()
         .enable_time()
+        .enable_io()
         .build()
         .context("failed to build tokio runtime")?;
     let heartbeat = Arc::new(AtomicU64::default());
@@ -59,6 +72,7 @@ pub fn spawn(
         thread_kill_sig,
         heartbeat: heartbeat.clone(),
         inner: Some(spawn_thread(move || {
+            let rollup_client = OctezRollupClient::new(rollup_endpoint);
             tokio_rt.block_on(async {
                 loop {
                     write_heartbeat(&heartbeat);
@@ -75,8 +89,37 @@ pub fn spawn(
 
                     match v {
                         Some(op) => {
-                            if let Err(e) = process_message(&mut host_rt, op).await {
+                            if let Err(e) =
+                                process_message(&mut host_rt, op.clone()).await
+                            {
                                 warn!("error processing message: {e:?}");
+                            } else {
+                                match sign_message(&injector, op) {
+                                    Ok(op) => match op.encode() {
+                                        Ok(encoded) => {
+                                            if let Err(e) = inject_rollup_message(
+                                                encoded,
+                                                &rollup_client,
+                                            )
+                                            .await
+                                            {
+                                                warn!(
+                                                    "failed to inject message: {:?}",
+                                                    e.into_response()
+                                                );
+                                            } else {
+                                                warn!(
+                                                    "message injected: {:?}",
+                                                    op.hash()
+                                                );
+                                            }
+                                        }
+                                        Err(e) => {
+                                            warn!("failed to encode message: {e:?}")
+                                        }
+                                    },
+                                    Err(e) => warn!("failed to sign message: {e:?}"),
+                                }
                             }
                         }
                         None => tokio::time::sleep(Duration::from_millis(100)).await,
@@ -94,6 +137,14 @@ pub fn spawn(
             })
         })),
     })
+}
+
+fn sign_message(signer: &KeyPair, op: Message) -> anyhow::Result<SequencedOperation> {
+    let KeyPair(_, secret_key) = signer;
+    let signature = secret_key
+        .sign(op.hash())
+        .map_err(|e| anyhow::anyhow!("failed to sign sequencer operation: {e}"))?;
+    Ok(SequencedOperation::new(op.clone(), signature))
 }
 
 fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
@@ -115,8 +166,8 @@ mod tests {
         time::Duration,
     };
 
-    use crate::sequencer::inbox::test_utils::hash_of;
     use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
+    use crate::{config::KeyPair, sequencer::inbox::test_utils::hash_of};
     use tempfile::NamedTempFile;
 
     #[test]
@@ -129,6 +180,8 @@ mod tests {
             Db::init(Some("")).unwrap(),
             PathBuf::new(),
             None,
+            KeyPair::default(),
+            "http://localhost:8732".to_string(),
             move || {
                 *cp.lock().unwrap() += 1;
             },
@@ -171,6 +224,8 @@ mod tests {
             cp,
             PathBuf::new(),
             Some(log_file.path()),
+            KeyPair::default(),
+            "http://localhost:8732".to_string(),
             move || {},
         );
 

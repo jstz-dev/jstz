@@ -1,11 +1,14 @@
 #![allow(dead_code)]
+use bincode::{Decode, Encode};
 /// This file is imported from the jstz_kernel crate. `jstz_kernel/src/inbox.rs`
 /// is the original source. There is some build issue importing the `inbox` module
 /// directly, so we copy the relevant parts here.
 /// https://linear.app/tezos/issue/JSTZ-627/build-script-issue
-use jstz_core::{host::WriteDebug, BinEncodable};
-use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_core::host::WriteDebug;
+use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
+use jstz_crypto::{public_key_hash::PublicKeyHash, signature::Signature};
+use jstz_proto::operation::OperationHash;
 use jstz_proto::operation::{
     internal::{Deposit, FaDeposit},
     InternalOperation, SignedOperation,
@@ -27,10 +30,54 @@ pub use tezos_smart_rollup::{
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = InternalOperation;
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Encode, Decode)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),
+}
+
+impl Message {
+    pub fn hash(&self) -> OperationHash {
+        match self {
+            Message::External(op) => op.hash(),
+            Message::Internal(op) => op.hash(),
+        }
+    }
+}
+
+impl From<SequencedOperation> for Message {
+    fn from(value: SequencedOperation) -> Self {
+        match value.inner_op {
+            Message::External(op) => Message::External(op),
+            Message::Internal(op) => Message::Internal(op),
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Encode, Decode)]
+pub struct SequencedOperation {
+    inner_op: Message,
+    signature: Signature,
+}
+
+impl SequencedOperation {
+    pub fn new(inner_op: Message, signature: Signature) -> Self {
+        Self {
+            inner_op,
+            signature,
+        }
+    }
+
+    pub fn hash(&self) -> OperationHash {
+        match &self.inner_op {
+            Message::External(op) => op.hash(),
+            Message::Internal(op) => op.hash(),
+        }
+    }
+
+    pub fn verify(&self, pk: &PublicKey) -> jstz_crypto::Result<()> {
+        self.signature.verify(pk, self.hash().as_ref())
+    }
 }
 
 pub type MichelsonNativeDeposit = MichelsonPair<MichelsonContract, FA2_1Ticket>;
@@ -214,7 +261,7 @@ fn read_external_message(
     logger: &impl WriteDebug,
     bytes: &[u8],
 ) -> Option<ExternalMessage> {
-    let msg = ExternalMessage::decode(bytes).ok()?;
+    let msg = jstz_core::BinEncodable::decode(bytes).ok()?;
     logger.write_debug("External message: {msg:?}\n");
     Some(msg)
 }

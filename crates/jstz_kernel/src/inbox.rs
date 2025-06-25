@@ -101,12 +101,12 @@ pub fn read_sequenced_message(
                 ExternalMessageFrame::Targetted { address, contents } => {
                     if &jstz_rollup_address != address.hash() {
                         rt.write_debug(
-                         "External message ignored because of different smart rollup address",
+                         "External message ignored because of different smart rollup address\n",
                         );
                         None
                     } else {
                         let msg: Option<SequencedOperation> =
-                            jstz_core::BinEncodable::decode(contents).ok()?;
+                            jstz_core::BinEncodable::decode(contents).ok();
                         match msg {
                             Some(msg) => match msg.verify(injector) {
                                 Ok(_) => Some(msg.into()),
