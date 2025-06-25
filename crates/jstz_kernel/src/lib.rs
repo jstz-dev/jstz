@@ -1,3 +1,4 @@
+use inbox::read_message;
 use jstz_core::kv::{Storage, Transaction};
 use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
 use jstz_proto::{executor, Result};
@@ -56,10 +57,31 @@ async fn handle_message(
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
-    futures::executor::block_on(run(rt))
+    #[cfg(not(feature = "sequenced_op"))]
+    futures::executor::block_on(run(rt));
+
+    #[cfg(feature = "sequenced_op")]
+    futures::executor::block_on(run_with_sequenced_op(rt));
 }
 
 pub async fn run(rt: &mut impl Runtime) {
+    // TODO: we should organize protocol consts into a struct
+    // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
+    let ticketer = read_ticketer(rt).expect("Ticketer not found");
+    let injector = read_injector(rt).expect("Revealer not found");
+    let mut tx = Transaction::default();
+    tx.begin();
+    if let Some(message) = read_message(rt, &ticketer) {
+        handle_message(rt, message, &ticketer, &mut tx, &injector)
+            .await
+            .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
+    }
+    if let Err(commit_error) = tx.commit(rt) {
+        debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");
+    }
+}
+
+pub async fn run_with_sequenced_op(rt: &mut impl Runtime) {
     // TODO: we should organize protocol consts into a struct
     // https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct
     let ticketer = read_ticketer(rt).expect("Ticketer not found");
@@ -111,7 +133,7 @@ mod test {
     }
 
     #[test]
-    #[ignore]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn entry_native_deposit_succeeds() {
         let mut host = JstzMockHost::default();
         let deposit = MockNativeDeposit::default();
@@ -136,7 +158,7 @@ mod test {
     }
 
     #[test]
-    #[ignore]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn entry_fa_deposit_succeeds_with_proxy() {
         let mut host = JstzMockHost::default();
 
@@ -184,7 +206,7 @@ mod test {
     }
 
     #[test]
-    #[ignore]
+    #[cfg_attr(feature = "sequenced_op", ignore)]
     fn entry_fa_deposit_succeeds_with_invalid_proxy() {
         let mut host = JstzMockHost::default();
         let deposit = MockFaDeposit::default();
