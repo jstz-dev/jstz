@@ -1,0 +1,40 @@
+:root {
+  --docsearch-primary-color: none !important;
+  --docsearch-text-color: var(--ifm-font-color-base);
+  --docsearch-hit-active-color: inherit;
+}
+
+.DocSearch-Button {
+  margin: 0;
+  background-color: #030405;
+  border: 1px white solid !important;
+  transition: all var(--ifm-transition-fast)
+    var(--ifm-transition-timing-default);
+}
+
+.DocSearch-Button:hover,
+.DocSearch-Button:focus,
+.DocSearch-Button:active {
+  background: #030405;
+  background-color: #030405;
+  border-color: gray !important;
+  box-shadow: var(--docsearch-searchbox-shadow);
+}
+
+.DocSearch-Container {
+  z-index: calc(var(--ifm-z-index-fixed) + 1);
+}
+
+.DocSearch-Button-Keys {
+  display: none;
+}
+
+.DocSearch-Button-Placeholder {
+  font-family: "Inter", "Tahoma", "sans-serif";
+  font-size: 14px;
+  color: #ffffff;
+}
+
+.DocSearch-Search-Icon path {
+  color: #ffffff;
+}
