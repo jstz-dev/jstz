@@ -7,7 +7,6 @@ The Jstz CLI allows you to interact with Jstz, including managing accounts, star
 It provides these main commands:
 
 - [`account`](#account) - Work with Jstz accounts
-- [`sandbox`](#sandbox) - Start and interact with the local [sandbox](/sandbox) environment
 - [`bridge`](#bridge) - Bridge XTZ tokens from Tezos to Jstz and back
 - [`deploy`](#deploy) - Deploy smart functions
 - [`kv`](#kv) - Get data from the key-value store
@@ -15,6 +14,7 @@ It provides these main commands:
 - [`logout`](#log-out) - Log out of the current account
 - [`logs`](#logs) - Get smart function logs
 - [`run`](#run) - Send requests to smart functions
+- [`sandbox`](#sandbox) - Start and interact with the local [sandbox](/sandbox) environment
 - [`transfer`](#transfer) - Transfer XTZ between Jstz accounts
 - [`whoami`](#whoami) - Print the current account
 
@@ -85,46 +85,6 @@ jstz account create Alice
 jstz account list
 jstz bridge deposit --from bootstrap1 --to Alice --amount 1
 jstz account balance -a Alice
-```
-
-### Sandbox
-
-The sandbox commands are responsible for managing the Jstz sandbox environment.
-For more information, see [sandbox](/sandbox).
-
-In most cases, start the sandbox in a Docker container by including the `--container` flag.
-If you don't use this flag, Jstz requires that you clone the Jstz repository at https://github.com/jstz-dev/jstz/ and install its `nix` environment as described in [Building from source](/installation#building-from-source).
-
-#### Commands
-
-- `start`: Starts the sandbox environment.
-
-- `stop`: Shuts down the sandbox environment.
-
-- `restart`: Restarts the sandbox.
-
-#### Usage
-
-```bash
-jstz sandbox start [OPTIONS]
-jstz sandbox restart [OPTIONS]
-jstz sandbox stop
-```
-
-#### Options
-
-- `--container`: Run the sandbox in a Docker container.
-  Requires Docker.
-- `--detach (-d)`: Detach the process to run in the background.
-
-#### Examples
-
-```bash
-jstz sandbox --container start -d
-
-jstz sandbox --container restart -d
-
-jstz sandbox --container stop
 ```
 
 ### Bridge
@@ -376,6 +336,46 @@ If you deploy the `counter` smart function and call it as in the previous exampl
 [LOG] Counter: 0
 [LOG] Counter: 1
 [LOG] Counter: 2
+```
+
+### Sandbox
+
+The sandbox commands are responsible for managing the Jstz sandbox environment.
+For more information, see [sandbox](/sandbox).
+
+In most cases, start the sandbox in a Docker container by including the `--container` flag.
+If you don't use this flag, Jstz requires that you clone the Jstz repository at https://github.com/jstz-dev/jstz/ and install its `nix` environment as described in [Building from source](/installation#building-from-source).
+
+#### Commands
+
+- `start`: Starts the sandbox environment.
+
+- `stop`: Shuts down the sandbox environment.
+
+- `restart`: Restarts the sandbox.
+
+#### Usage
+
+```bash
+jstz sandbox start [OPTIONS]
+jstz sandbox restart [OPTIONS]
+jstz sandbox stop
+```
+
+#### Options
+
+- `--container`: Run the sandbox in a Docker container.
+  Requires Docker.
+- `--detach (-d)`: Detach the process to run in the background.
+
+#### Examples
+
+```bash
+jstz sandbox --container start -d
+
+jstz sandbox --container restart -d
+
+jstz sandbox --container stop
 ```
 
 ### Transfer
