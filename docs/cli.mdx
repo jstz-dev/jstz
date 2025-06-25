@@ -3,9 +3,10 @@ title: Jstz CLI
 sidebar_label: CLI
 ---
 
-The Jstz CLI allows you to interact with Jstz, including starting the sandbox and deploying and interacting with smart functions.
+The Jstz CLI allows you to interact with Jstz, including managing accounts, starting the sandbox, and deploying and interacting with smart functions.
 It provides these main commands:
 
+- [`accounts`](#accounts) - Work with Jstz accounts
 - [`sandbox`](#sandbox) - Start and interact with the local [sandbox](/sandbox) environment
 - [`bridge`](#bridge) - Bridge XTZ tokens from Tezos to Jstz and back
 - [`deploy`](#deploy) - Deploy smart functions
@@ -44,6 +45,47 @@ You can add the local sandbox as the default network by opening the Jstz config 
 Remember, the `-h` or `--help` flag can always be used after any command or subcommand to receive more detailed information about its usage. This guide is a brief overview, and the `help` command will provide the most current and detailed instructions.
 
 :::
+
+### Account
+
+Account commands create and work with Jstz accounts, including user accounts and smart functions.
+For more information about accounts, see [Accounts](/architecture/accounts).
+
+#### Commands
+
+- `create`: Creates a Jstz user account and stores its information in the config file.
+- `import`: Imports a user account from a secret key.
+- `delete`: Removes a user account or smart function address from the config file.
+- `list`: Lists the user accounts and smart function aliases in the config file.
+- `code`: Prints the code for a smart function
+- `balance`: Prints the balance for a user account or smart function
+- `alias`: Adds an alias for an address to the config file
+
+#### Usage
+
+Note that some commands take the alias or address of the account as an unnamed argument and others take it as the value for the `--account` argument, as in the following examples:
+
+```bash
+jstz account create Alice
+jstz account list
+jstz account balance -a Alice
+jstz account delete Alice
+```
+
+#### Options
+
+- `--account (-a) <ALIAS|ADDRESS>`: The alias or address of the account
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+
+#### Examples
+
+```bash
+jstz account create Alice
+jstz account list
+jstz bridge deposit --from bootstrap1 --to Alice --amount 1
+jstz account balance -a Alice
+```
 
 ### Sandbox
 
