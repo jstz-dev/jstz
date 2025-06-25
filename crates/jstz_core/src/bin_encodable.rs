@@ -83,6 +83,7 @@ mod tests {
             _ => panic!("Expected SerializationError"),
         }
     }
+
     #[test]
     fn test_decode_without_limit_triggers_massive_allocation() {
         let mut malicious = Vec::new();
