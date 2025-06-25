@@ -47,3 +47,20 @@ Then you can use the alias of the network in the config file to deploy and inter
 ```bash
 jstz deploy examples/counter.js -n <NETWORK_NAME>
 ```
+
+You can set a network as the default by putting its name in the `default_network` field, as in this example:
+
+```json
+{
+  "current_alias": "my_account",
+  "default_network": "my_network",
+  "networks": {
+    "my_network": {
+      "octez_node_rpc_endpoint": "<OCTEZ_NODE_RPC>",
+      "jstz_node_endpoint": "<JSTZ_NODE>"
+    }
+  }
+}
+```
+
+Now, when you omit the `-n` argument from a Jstz command, it uses the default network.
