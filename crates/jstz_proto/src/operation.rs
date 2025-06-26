@@ -1,3 +1,5 @@
+#[cfg(feature = "v2_runtime")]
+use crate::runtime::v2::fetch::http::Response;
 use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
@@ -191,13 +193,15 @@ pub struct RevealLargePayload {
 
 #[cfg(feature = "v2_runtime")]
 #[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
-// #[schema(description = "An operation sending a response to an oracle request")]
+#[schema(description = "Response to an OracleRequest sent by the enshrined Oracle node")]
 #[serde(rename_all = "camelCase")]
 pub struct OracleResponse {
-    //#[schema(value_type = String)]
+    /// The request id of the OracleRequest that is being responded to
+    #[schema(value_type = String)]
     pub request_id: RequestId,
-    //#[schema(value_type = String)]
-    pub response: Vec<u8>,
+    /// The response to the OracleRequest
+    #[schema(value_type = String)]
+    pub response: Response,
 }
 
 #[derive(

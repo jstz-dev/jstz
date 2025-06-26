@@ -1,5 +1,4 @@
 use anyhow::{Context, Result};
-use bytes::Bytes;
 use jstz_client::JstzClient;
 use jstz_crypto::{
     public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
@@ -8,15 +7,18 @@ use jstz_node::config::JstzNodeConfig;
 use jstz_proto::context::account::Address;
 use jstz_proto::operation::{Content, Operation, OracleResponse, SignedOperation};
 use jstz_proto::receipt::{ReceiptContent, ReceiptResult};
+use jstz_proto::runtime::v2::fetch::http::{convert_header_map, Body, Response};
 use jstz_proto::runtime::v2::oracle::request::OracleRequest;
-use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+use log::{error, info};
+use reqwest::header::{HeaderMap as ReqwestHeaderMap, HeaderName, HeaderValue};
 use reqwest::Client;
 use reqwest::Method;
 use tokio::sync::broadcast::Receiver;
+use tokio::task::AbortHandle;
 
 #[allow(dead_code)]
 pub struct DataProvider {
-    _task: tokio::task::JoinHandle<()>,
+    _abort_handle: AbortHandle,
 }
 
 impl DataProvider {
@@ -31,23 +33,34 @@ impl DataProvider {
             .user_agent("jstz-oracle-data-provider/0.1")
             .build()?;
 
-        let task = tokio::spawn(async move {
-            while let Ok(req) = relay_rx.recv().await {
-                if let Err(e) = handle_request(
-                    &client,
-                    &req,
-                    &public_key,
-                    &secret_key,
-                    &node_endpoint,
-                )
-                .await
-                {
-                    eprintln!("Data provider error: {e:#}");
+        let abort_handle = {
+            let task = tokio::spawn(async move {
+                while let Ok(req) = relay_rx.recv().await {
+                    if let Err(e) = handle_request(
+                        &client,
+                        &req,
+                        &public_key,
+                        &secret_key,
+                        &node_endpoint,
+                    )
+                    .await
+                    {
+                        error!("Data provider error: {e:#}");
+                    }
                 }
-            }
-        });
+            });
+            task.abort_handle()
+        };
 
-        Ok(Self { _task: task })
+        Ok(Self {
+            _abort_handle: abort_handle,
+        })
+    }
+}
+
+impl Drop for DataProvider {
+    fn drop(&mut self) {
+        self._abort_handle.abort();
     }
 }
 
@@ -58,15 +71,9 @@ async fn handle_request(
     signing_key: &SecretKey,
     node_endpoint: &JstzNodeConfig,
 ) -> Result<()> {
-    let resp_bytes = get_oracle_response(client, oracle_req).await?;
-    inject_oracle_response(
-        oracle_req,
-        public_key,
-        signing_key,
-        node_endpoint,
-        resp_bytes,
-    )
-    .await?;
+    let response = get_oracle_response(client, oracle_req).await?;
+    inject_oracle_response(oracle_req, public_key, signing_key, node_endpoint, response)
+        .await?;
 
     Ok(())
 }
@@ -74,21 +81,15 @@ async fn handle_request(
 async fn get_oracle_response(
     client: &Client,
     oracle_req: &OracleRequest,
-) -> Result<Bytes> {
-    let OracleRequest {
-        id: _,
-        request,
-        caller: _,
-        gas_limit: _,
-        timeout: _,
-    } = oracle_req;
+) -> Result<Response> {
+    let OracleRequest { request, .. } = oracle_req;
 
     // Convert to reqwest::RequestBuilder
     let method = Method::from_bytes(&request.method).context("invalid HTTP method")?;
     let mut builder = client.request(method, request.url.clone());
 
     // Headers
-    let mut headers = HeaderMap::new();
+    let mut headers = ReqwestHeaderMap::new();
     for (name, value) in &request.headers {
         headers.append(
             HeaderName::from_bytes(name)?,
@@ -103,9 +104,32 @@ async fn get_oracle_response(
     }
 
     // Execute
-    let resp_bytes = builder.send().await?.bytes().await?;
+    let response = builder.send().await?;
+    let status = response.status().as_u16();
+    let status_text = response
+        .status()
+        .canonical_reason()
+        .unwrap_or("Unknown")
+        .to_string();
 
-    Ok(resp_bytes)
+    let headers = convert_header_map(http::HeaderMap::from_iter(
+        response.headers().iter().map(|(name, value)| {
+            (
+                http::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
+                http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+            )
+        }),
+    ));
+
+    let body_bytes = response.bytes().await?;
+    let body = Body::Vector(body_bytes.to_vec());
+
+    Ok(Response {
+        status,
+        status_text,
+        headers,
+        body,
+    })
 }
 
 async fn inject_oracle_response(
@@ -113,20 +137,14 @@ async fn inject_oracle_response(
     public_key: &PublicKey,
     signing_key: &SecretKey,
     node_endpoint: &JstzNodeConfig,
-    resp_bytes: Bytes,
+    response: Response,
 ) -> Result<()> {
-    let OracleRequest {
-        id,
-        request: _,
-        caller: _,
-        gas_limit: _,
-        timeout: _,
-    } = oracle_req;
+    let OracleRequest { id, .. } = oracle_req;
 
     // Build and sign operation
     let oracle_response = OracleResponse {
         request_id: id.clone(),
-        response: resp_bytes.to_vec(),
+        response,
     };
 
     let jstz_client = JstzClient::new(node_endpoint.endpoint.to_string());
@@ -150,14 +168,14 @@ async fn inject_oracle_response(
 
     match receipt.result {
         ReceiptResult::Success(ReceiptContent::OracleResponse(deploy)) => {
-            eprintln!("Oracle response injected for id={}", deploy.request_id);
+            info!("Oracle response injected for id={}", deploy.request_id);
             Ok(())
         }
         ReceiptResult::Success(_) => Err(anyhow::anyhow!(
             "Expected a `OracleResponse` receipt, but got something else."
         )),
         ReceiptResult::Failed(err) => Err(anyhow::anyhow!(
-            "Failed to inject oracle response with error {err:?}"
+            "Failed to inject oracle response with error {err}"
         )),
     }
 }
@@ -171,8 +189,8 @@ mod tests {
     use jstz_proto::runtime::v2::fetch::http::Request as HttpReq;
     use octez::r#async::endpoint::Endpoint;
     use once_cell::sync::Lazy;
-    use std::path::PathBuf;
     use std::str::FromStr;
+    use tempfile::TempDir;
     use tokio::time::Duration;
     use url::Url;
 
@@ -203,8 +221,9 @@ mod tests {
     #[tokio::test]
     async fn fetches_example_dot_com() -> Result<()> {
         let req = oracle_req("GET", Url::parse("https://example.com")?, None);
-        let bytes = super::get_oracle_response(&CLIENT, &req).await?;
-        let html = std::str::from_utf8(&bytes)?;
+        let response = super::get_oracle_response(&CLIENT, &req).await?;
+        let binding = response.body.to_vec();
+        let html = std::str::from_utf8(&binding)?;
         assert!(
             html.contains("Example Domain"),
             "unexpected response body: {html}"
@@ -221,8 +240,9 @@ mod tests {
             Some(Body::Vector(payload.clone())),
         );
 
-        let bytes = super::get_oracle_response(&CLIENT, &req).await?;
-        let text = std::str::from_utf8(&bytes)?;
+        let response = super::get_oracle_response(&CLIENT, &req).await?;
+        let binding = response.body.to_vec();
+        let text = std::str::from_utf8(&binding)?;
 
         // httpbin returns the posted body in the `"data"` JSON field.
         assert!(
@@ -253,7 +273,7 @@ mod tests {
 
         // Mock the receipt endpoint
         let mock_receipt = server
-            .mock("GET", "/operations/a09a7debdf7335564dca39f6b1ba9a711f7750ae7396cabf0ff42769c61bc3c5/receipt")
+            .mock("GET", "/operations/e5f9460ca912defddcffab260339e25eeb1525725385ba1b9d9dd0b2c9dbdbb4/receipt")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -270,8 +290,6 @@ mod tests {
             )
             .create();
 
-        eprintln!("Mock nonce: {}", mock_nonce);
-
         // Create test data
         let public_key = PublicKey::from_base58(
             "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
@@ -280,20 +298,24 @@ mod tests {
             "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
         )?;
 
-        eprintln!("Starting node config");
         let node_config = JstzNodeConfig::new(
             &Endpoint::from_str(server.url().as_str())?,
             &Endpoint::from_str(server.url().as_str())?,
-            &PathBuf::from("/tmp/preimages"),
-            &PathBuf::from("/tmp/kernel.log"),
+            &TempDir::new().unwrap().into_path(),
+            &TempDir::new().unwrap().into_path(),
             KeyPair::default(),
             RunMode::Default,
             1000,
-            &PathBuf::from("/tmp/debug.log"),
+            &TempDir::new().unwrap().into_path(),
         );
 
         let oracle_req = oracle_req("GET", Url::parse("https://example.com")?, None);
-        let response_bytes = Bytes::from("test response data");
+        let response = Response {
+            status: 200,
+            status_text: "OK".to_string(),
+            headers: vec![],
+            body: Body::Vector("test response data".into()),
+        };
 
         // Call the function
         let result = inject_oracle_response(
@@ -301,7 +323,7 @@ mod tests {
             &public_key,
             &secret_key,
             &node_config,
-            response_bytes,
+            response,
         )
         .await;
 
@@ -341,7 +363,7 @@ mod tests {
 
         // Mock the receipt endpoint with a failed result
         let mock_receipt = server
-            .mock("GET", "/operations/a09a7debdf7335564dca39f6b1ba9a711f7750ae7396cabf0ff42769c61bc3c5/receipt")
+            .mock("GET", "/operations/e5f9460ca912defddcffab260339e25eeb1525725385ba1b9d9dd0b2c9dbdbb4/receipt")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -365,16 +387,21 @@ mod tests {
         let node_config = JstzNodeConfig::new(
             &Endpoint::from_str(server.url().as_str())?,
             &Endpoint::from_str(server.url().as_str())?,
-            &PathBuf::from("/tmp/preimages"),
-            &PathBuf::from("/tmp/kernel.log"),
+            &TempDir::new().unwrap().into_path(),
+            &TempDir::new().unwrap().into_path(),
             KeyPair::default(),
             RunMode::Default,
             1000,
-            &PathBuf::from("/tmp/debug.log"),
+            &TempDir::new().unwrap().into_path(),
         );
 
         let oracle_req = oracle_req("GET", Url::parse("https://example.com")?, None);
-        let response_bytes = Bytes::from("test response data");
+        let response = Response {
+            status: 200,
+            status_text: "OK".to_string(),
+            headers: vec![],
+            body: Body::Vector("test response data".into()),
+        };
 
         // Call the function
         let result = inject_oracle_response(
@@ -382,7 +409,7 @@ mod tests {
             &public_key,
             &secret_key,
             &node_config,
-            response_bytes,
+            response,
         )
         .await;
 
