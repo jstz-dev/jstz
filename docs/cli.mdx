@@ -225,7 +225,9 @@ jstz login Alice
 
 ### Log out
 
-The `logout` command removes the active account from the config file.
+The `logout` command deselects the active account, removing the `current_alias` field from the config file.
+It does not remove the account from the config file entirely.
+You must log in to an account with the `login` command before you can run commands that use an account, such as the `deploy` or `run` commands.
 
 ### Usage
 
