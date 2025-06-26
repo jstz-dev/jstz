@@ -247,13 +247,22 @@ mod test {
     #[test]
     fn api_doc_regression() {
         let _ = include_str!("../openapi.json");
+        #[cfg(feature = "v2_runtime")]
         let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("openapi.json");
+        #[cfg(not(feature = "v2_runtime"))]
+        let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("openapi_v1.json");
         let current_spec = std::fs::read_to_string(filename).unwrap();
         let current_spec = current_spec.trim();
         let generated_spec = crate::openapi_json_raw().unwrap();
+        #[cfg(feature = "v2_runtime")]
         assert!(
             current_spec == generated_spec,
             "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
+        );
+        #[cfg(not(feature = "v2_runtime"))]
+        assert!(
+            current_spec == generated_spec,
+            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi_v1.json"
         );
     }
 
