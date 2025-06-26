@@ -64,3 +64,9 @@ You can set a network as the default by putting its name in the `default_network
 ```
 
 Now, when you omit the `-n` argument from a Jstz command, it uses the default network.
+
+:::tip
+
+To set the local sandbox as the default network, set the `default_network` field to `dev`.
+
+:::
