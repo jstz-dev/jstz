@@ -18,7 +18,7 @@ use tokio::task::AbortHandle;
 
 #[allow(dead_code)]
 pub struct DataProvider {
-    _abort_handle: AbortHandle,
+    abort_handle: AbortHandle,
 }
 
 impl DataProvider {
@@ -53,14 +53,14 @@ impl DataProvider {
         };
 
         Ok(Self {
-            _abort_handle: abort_handle,
+            abort_handle: abort_handle,
         })
     }
 }
 
 impl Drop for DataProvider {
     fn drop(&mut self) {
-        self._abort_handle.abort();
+        self.abort_handle.abort();
     }
 }
 
@@ -112,6 +112,7 @@ async fn get_oracle_response(
         .unwrap_or("Unknown")
         .to_string();
 
+    // TODO: Update reqwest and simplify this
     let headers = convert_header_map(http::HeaderMap::from_iter(
         response.headers().iter().map(|(name, value)| {
             (
@@ -187,6 +188,7 @@ mod tests {
     use jstz_node::RunMode;
     use jstz_proto::runtime::v2::fetch::http::Body;
     use jstz_proto::runtime::v2::fetch::http::Request as HttpReq;
+    use mockito::{Matcher, Mock};
     use octez::r#async::endpoint::Endpoint;
     use once_cell::sync::Lazy;
     use std::str::FromStr;
@@ -220,7 +222,18 @@ mod tests {
 
     #[tokio::test]
     async fn fetches_example_dot_com() -> Result<()> {
-        let req = oracle_req("GET", Url::parse("https://example.com")?, None);
+        let mut server = mockito::Server::new_async().await;
+
+        let _m = server
+            .mock("GET", "/")
+            .with_status(200)
+            .with_header("content-type", "text/html")
+            .with_body("<html><h1>Example Domain</h1></html>")
+            .create();
+
+        let url = Url::parse(&format!("{}/", server.url()))?;
+        let req = oracle_req("GET", url, None);
+
         let response = super::get_oracle_response(&CLIENT, &req).await?;
         let binding = response.body.to_vec();
         let html = std::str::from_utf8(&binding)?;
@@ -233,12 +246,19 @@ mod tests {
 
     #[tokio::test]
     async fn echoes_post_body_via_httpbin() -> Result<()> {
+        let mut server = mockito::Server::new_async().await;
+
         let payload = br#"{"msg":"hello world"}"#.to_vec();
-        let req = oracle_req(
-            "POST",
-            Url::parse("https://httpbin.org/post")?,
-            Some(Body::Vector(payload.clone())),
-        );
+        let _m = server
+            .mock("POST", "/post")
+            .match_body(Matcher::Exact(String::from_utf8(payload.clone())?))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"data": "{\"msg\":\"hello world\"}"}"#)
+            .create();
+
+        let url = Url::parse(&format!("{}/post", server.url()))?;
+        let req = oracle_req("POST", url, Some(Body::Vector(payload)));
 
         let response = super::get_oracle_response(&CLIENT, &req).await?;
         let binding = response.body.to_vec();
