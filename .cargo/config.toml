@@ -1,5 +1,5 @@
 [target.riscv64gc-unknown-linux-musl]
-linker = "riscv64-unknown-linux-musl-gcc"
+linker = "riscv64-unknown-linux-musl-g++"
 rustflags = [
 	"-C",
 	"target-feature=+crt-static",

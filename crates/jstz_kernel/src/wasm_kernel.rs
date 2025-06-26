@@ -4,7 +4,7 @@ use jstz_core::kv::Transaction;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
 pub fn run(rt: &mut impl Runtime) {
-    futures::executor::block_on(async {
+    jstz_core::future::block_on(async {
         // TODO(https://linear.app/tezos/issue/JSTZ-459/organize-protocol-consts-into-a-struct)
         // we should organize protocol consts into a struct
         let ticketer = crate::read_ticketer(rt);

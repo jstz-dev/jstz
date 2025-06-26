@@ -61,11 +61,7 @@ async fn run_event_loop(rt: &mut impl Runtime) {
             }
             Some(ParsedInboxMessage::LevelInfo(_)) => {}
             None => {
-                // We reach here in 3 cases
-                // 1. No more inputs
-                // 2. Input targetting the wrong rollup
-                // 3. Parsing failures
-
+                // See `read_message` for cases that return None
                 // Break enabled in tests only
                 #[cfg(test)]
                 break;
@@ -78,6 +74,10 @@ async fn run_event_loop(rt: &mut impl Runtime) {
     }
 }
 
+// We reach None in 3 cases
+// 1. No more inputs
+// 2. Input targetting the wrong rollup
+// 3. Parsing failures
 fn read_message(
     rt: &mut impl Runtime,
     ticketer: &ContractKt1Hash,
@@ -96,25 +96,29 @@ fn read_message(
 #[cfg(test)]
 mod test {
 
-    use jstz_core::{
-        host::HostRuntime,
-        kv::{Storage, Transaction},
-    };
+    use jstz_core::kv::Transaction;
     use jstz_crypto::{
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
     };
-    use jstz_mock::{host::JstzMockHost, message::native_deposit::MockNativeDeposit};
+    use jstz_mock::{
+        host::{JstzMockHost, MOCK_SOURCE},
+        message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
+    };
     use jstz_proto::{
-        context::account::Account,
-        operation::{
-            DeployFunction, Operation, OperationHash, RunFunction, SignedOperation,
+        context::{
+            account::{Account, Address},
+            ticket_table::TicketTable,
         },
-        receipt::Receipt,
+        executor::smart_function,
+        operation::{DeployFunction, Operation, RunFunction, SignedOperation},
         runtime::ParsedCode,
     };
-    use serde::de::DeserializeOwned;
-    use tezos_smart_rollup::{storage::path::OwnedPath, types::Contract as L1Address};
+    use tezos_smart_rollup::types::{
+        Contract as L1Address, PublicKeyHash as L1PublicKeyHash,
+    };
+
+    use crate::{parsing::try_parse_contract, read_ticketer};
 
     use super::run;
 
@@ -257,24 +261,112 @@ mod test {
         Ok(())
     }
 
-    // Helper to inpect fields in a receipt by tarversing the json path. Useful for debugging.
-    // For example, to inpect the body of a successful RunFunctionReceipt, you can provide the path
-    // vec!["result", "inner", "body"]. If you don't really care what the return type is and just
-    // want to print field value, you can parameterize with `serde_json::Value`
-    #[allow(unused)]
-    fn inspect_receipt<'a, T: DeserializeOwned>(
-        host: &impl HostRuntime,
-        op_hash: OperationHash,
-        path_into_receipt: Vec<String>,
-    ) -> T {
-        let receipt_path =
-            OwnedPath::try_from(format!("/jstz_receipt/{}", op_hash)).unwrap();
-        let receipt: Receipt = Storage::get(&*host, &receipt_path).unwrap().unwrap();
-        let receipt = serde_json::to_value(&receipt).unwrap();
-        let mut cursor = receipt.clone();
-        for p in path_into_receipt {
-            cursor = cursor[p].clone();
+    #[test]
+    fn read_ticketer_succeeds() {
+        let mut host = JstzMockHost::default();
+        let ticketer = read_ticketer(host.rt());
+        let expected_tickter = host.get_ticketer();
+        assert_eq!(ticketer, expected_tickter)
+    }
+
+    #[test]
+    fn entry_native_deposit_succeeds() {
+        let mut host = JstzMockHost::default();
+        let deposit = MockNativeDeposit::default();
+        host.add_internal_message(&deposit);
+        host.rt().run_level(run);
+        let tx = &mut Transaction::default();
+        tx.begin();
+        match deposit.receiver {
+            L1Address::Implicit(L1PublicKeyHash::Ed25519(tz1)) => {
+                let amount = Account::balance(
+                    host.rt(),
+                    tx,
+                    &Address::User(jstz_crypto::public_key_hash::PublicKeyHash::Tz1(
+                        tz1.into(),
+                    )),
+                )
+                .unwrap();
+                assert_eq!(amount, 100);
+            }
+            _ => panic!("Unexpected receiver"),
         }
-        serde_json::from_value(cursor).unwrap()
+    }
+
+    #[test]
+    fn entry_fa_deposit_succeeds_with_proxy() {
+        let mut host = JstzMockHost::default();
+
+        let tx = &mut Transaction::default();
+        tx.begin();
+        let parsed_code =
+            ParsedCode::try_from(jstz_mock::host::MOCK_PROXY_FUNCTION.to_string())
+                .unwrap();
+        let addr = Address::User(
+            jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
+                .unwrap(),
+        );
+        Account::set_balance(host.rt(), tx, &addr, 200).unwrap();
+        let proxy =
+            smart_function::deploy(host.rt(), tx, &addr, parsed_code, 100).unwrap();
+        tx.commit(host.rt()).unwrap();
+
+        let deposit = MockFaDeposit {
+            proxy_contract: Some(proxy),
+            ..MockFaDeposit::default()
+        };
+
+        host.add_internal_message(&deposit);
+        host.rt().run_level(run);
+        let ticket_hash = deposit.ticket_hash();
+        match deposit.proxy_contract {
+            Some(proxy) => {
+                tx.begin();
+                let proxy_balance = TicketTable::get_balance(
+                    host.rt(),
+                    tx,
+                    &Address::SmartFunction(proxy),
+                    &ticket_hash,
+                )
+                .unwrap();
+                assert_eq!(300, proxy_balance);
+                let owner = try_parse_contract(&deposit.receiver).unwrap();
+                let receiver_balance =
+                    TicketTable::get_balance(host.rt(), tx, &owner, &ticket_hash)
+                        .unwrap();
+                assert_eq!(0, receiver_balance);
+            }
+            _ => panic!("Unexpected receiver"),
+        }
+    }
+
+    #[test]
+    fn entry_fa_deposit_succeeds_with_invalid_proxy() {
+        let mut host = JstzMockHost::default();
+        let deposit = MockFaDeposit::default();
+
+        host.add_internal_message(&deposit);
+        host.rt().run_level(run);
+        let ticket_hash = deposit.ticket_hash();
+        match deposit.proxy_contract {
+            Some(proxy) => {
+                let mut tx = Transaction::default();
+                tx.begin();
+                let proxy_balance = TicketTable::get_balance(
+                    host.rt(),
+                    &mut tx,
+                    &Address::SmartFunction(proxy),
+                    &ticket_hash,
+                )
+                .unwrap();
+                assert_eq!(0, proxy_balance);
+                let owner = try_parse_contract(&deposit.receiver).unwrap();
+                let receiver_balance =
+                    TicketTable::get_balance(host.rt(), &mut tx, &owner, &ticket_hash)
+                        .unwrap();
+                assert_eq!(300, receiver_balance);
+            }
+            _ => panic!("Unexpected receiver"),
+        }
     }
 }
