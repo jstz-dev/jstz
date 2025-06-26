@@ -67,15 +67,15 @@ build-sdk-wasm-pkg:
 build-native-kernel:
 	@cargo build -p jstz_engine --release --features "native-kernel"
 
-.PHONE: riscv-runtime
+.PHONY: riscv-runtime
 riscv-runtime:
 	@RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs cargo build -p jstz_runtime --release --target riscv64gc-unknown-linux-musl
 
-.PHONE: riscv-runtime
+.PHONY: riscv-v2-one-shot-kernel
 riscv-v2-one-shot-kernel:
 	@RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs cargo build -p jstz_kernel --no-default-features --features v2_runtime --release --target riscv64gc-unknown-linux-musl
 
-	.PHONE: riscv-runtime
+.PHONY: riscv-pvm-kernel
 riscv-pvm-kernel:
 	@RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a \
 		RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs \
