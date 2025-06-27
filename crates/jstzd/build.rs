@@ -133,7 +133,8 @@ fn make_kernel_installer(
             kernel_file.display()
         ));
     }
-    let root_hash = preimages::content_to_preimages(kernel_file, preimages_dir)?;
+    let content = fs::read(kernel_file)?;
+    let root_hash = preimages::content_to_preimages(content, preimages_dir)?;
     let installer_program = OwnedConfigProgram(vec![
         // 1. Prepare kernel installer
         OwnedConfigInstruction::reveal_instr(
