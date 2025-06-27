@@ -4,9 +4,9 @@ use std::sync::Once;
 
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_crypto::{hash::Hash, public_key::PublicKey};
+use tezos_smart_rollup::entrypoint;
 use tezos_smart_rollup::prelude::Runtime;
-use tezos_smart_rollup::{entrypoint, storage::path::RefPath};
-use tezos_smart_rollup_core::smart_rollup_core::SmartRollupCore;
+use tezos_smart_rollup_host::path::RefPath;
 
 #[entrypoint::main]
 #[cfg_attr(
