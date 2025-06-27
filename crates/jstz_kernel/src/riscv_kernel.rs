@@ -1,8 +1,14 @@
 use std::sync::Arc;
 
 use jstz_core::{host::JsHostRuntime, kv::Transaction};
+use jstz_crypto::{
+    hash::Hash, public_key::PublicKey, smart_function_hash::SmartFunctionHash,
+};
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup::prelude::{debug_msg, Runtime};
+use tezos_smart_rollup::{
+    prelude::{debug_msg, Runtime},
+    storage::path::RefPath,
+};
 
 use crate::{
     handle_message,
@@ -18,6 +24,29 @@ use crate::{
 /// Additionally, LocalSet supports support `!Send` futures which is currently required
 /// by [`JsHostRuntime`]
 pub fn run(rt: &mut impl Runtime) {
+    // Set up ticketer and injector
+    let ticketer =
+        SmartFunctionHash::from_base58("KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ").unwrap();
+
+    const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
+    rt.store_write(
+        &TICKETER,
+        &bincode::encode_to_vec(&ticketer, bincode::config::legacy()).unwrap(),
+        0,
+    )
+    .unwrap();
+
+    let injector =
+        PublicKey::from_base58("edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav")
+            .unwrap();
+    const INJECTOR: RefPath = RefPath::assert_from(b"/injector");
+    rt.store_write(
+        &INJECTOR,
+        &bincode::encode_to_vec(&injector, bincode::config::legacy()).unwrap(),
+        0,
+    )
+    .unwrap();
+
     let tokio_runtime = match tokio::runtime::Builder::new_current_thread().build() {
         Ok(runtime) => runtime,
         Err(e) => {
