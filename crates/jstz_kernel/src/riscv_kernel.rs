@@ -1,13 +1,22 @@
 use std::sync::Arc;
 
-use jstz_core::{host::JsHostRuntime, kv::Transaction};
+use jstz_core::{
+    host::JsHostRuntime,
+    kv::{Storage, Transaction},
+};
+use jstz_crypto::{
+    hash::Hash, public_key::PublicKey, smart_function_hash::SmartFunctionHash,
+};
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_smart_rollup::prelude::{debug_msg, Runtime};
+use tezos_smart_rollup::{
+    prelude::{debug_msg, Runtime},
+    storage::path::RefPath,
+};
 
 use crate::{
     handle_message,
     inbox::{self, ParsedInboxMessage},
-    read_injector, read_ticketer,
+    read_injector, read_ticketer, INJECTOR, TICKETER,
 };
 
 /// Runs the event loop within LocalSet which maintains a task FIFO queue. This is
@@ -18,6 +27,16 @@ use crate::{
 /// Additionally, LocalSet supports support `!Send` futures which is currently required
 /// by [`JsHostRuntime`]
 pub fn run(rt: &mut impl Runtime) {
+    // Set up ticketer and injector
+    let ticketer =
+        SmartFunctionHash::from_base58("KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ").unwrap();
+    Storage::insert(rt, &TICKETER, &ticketer).unwrap();
+
+    let injector =
+        PublicKey::from_base58("edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav")
+            .unwrap();
+    Storage::insert(rt, &INJECTOR, &injector).unwrap();
+
     let tokio_runtime = match tokio::runtime::Builder::new_current_thread().build() {
         Ok(runtime) => runtime,
         Err(e) => {
