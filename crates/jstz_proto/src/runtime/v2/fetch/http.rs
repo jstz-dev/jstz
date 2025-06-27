@@ -19,7 +19,7 @@ use deno_core::{serde_v8, v8, ToJsBuffer};
 use crate::executor::smart_function::JSTZ_HOST;
 
 /// Response returned from fetch or [`crate::operation::RunFunction`]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize, Deserialize)]
 pub struct Response {
     pub status: u16,
     pub status_text: String,
@@ -84,6 +84,8 @@ impl PartialEq for Body {
         }
     }
 }
+
+impl Eq for Body {}
 
 impl Body {
     #[allow(unused)]

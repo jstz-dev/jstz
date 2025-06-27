@@ -39,6 +39,7 @@ http.workspace = true
 in-container.workspace = true
 indicatif.workspace = true
 jstz_api = { path = "../jstz_api" }
+jstz_client = { path = "../jstz_client" }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_kernel = { path = "../jstz_kernel" }
@@ -51,8 +52,8 @@ octez = { path = "../octez" }
 prettytable.workspace = true
 rand.workspace = true
 regex.workspace = true
-reqwest-eventsource.workspace = true
 reqwest.workspace = true
+reqwest-eventsource.workspace = true
 rustyline.workspace = true
 rust_decimal.workspace = true
 serde.workspace = true

@@ -4,6 +4,14 @@ rustflags = [
 	"-C",
 	"target-feature=+crt-static",
 	"-C",
-	"default-linker-libraries",
+	"link-arg=-latomic",
+	"-C",
+	"link-arg=-lstdc++",
+	"-C",
+	"link-arg=-lsupc++",
+	"-C",
+	"link-arg=-lgcc",
+	"-C",
+	"link-arg=-lc"
 ]
 

@@ -21,7 +21,6 @@ use std::{
 };
 
 use serde::Deserialize;
-use tokio;
 
 use crate::ext::{jstz_console, jstz_kv, jstz_kv::kv::Kv, jstz_main};
 use deno_console;
@@ -136,7 +135,6 @@ impl JstzRuntime {
         extensions.extend(options.extensions);
 
         let v8_platform = Some(new_single_threaded_default_platform(false).make_shared());
-
         // Construct Runtime options
         let js_runtime_options = RuntimeOptions {
             extensions,
@@ -148,7 +146,6 @@ impl JstzRuntime {
         // SAFETY: See `impl Drop for JstzRuntime`
         let mut runtime = ManuallyDrop::new(JsRuntime::new(js_runtime_options));
         unsafe { runtime.v8_isolate().exit() };
-
         // Give protocol access to the running script
         let op_state = runtime.op_state();
         if let Some(protocol) = options.protocol {
@@ -199,7 +196,6 @@ impl JstzRuntime {
           result = &mut receiver => {
             result
           }
-
           run_event_loop_result = self.run_event_loop(Default::default()) => {
             run_event_loop_result?;
             receiver.await

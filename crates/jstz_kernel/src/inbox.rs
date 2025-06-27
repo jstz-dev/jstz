@@ -3,6 +3,7 @@ use jstz_proto::context::account::Address;
 use jstz_proto::operation::{internal::Deposit, InternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
+use tezos_smart_rollup::inbox::InfoPerLevel;
 use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
 use tezos_smart_rollup::michelson::{
     MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
@@ -42,9 +43,17 @@ pub fn read_message(
     ticketer: &ContractKt1Hash,
 ) -> Option<Message> {
     let input = rt.read_input().ok()??;
-    let _ = rt.mark_for_reboot();
     let jstz_rollup_address = rt.reveal_metadata().address();
-    parse_inbox_message(rt, input.id, input.as_ref(), ticketer, &jstz_rollup_address)
+    match parse_inbox_message(
+        rt,
+        input.id,
+        input.as_ref(),
+        ticketer,
+        &jstz_rollup_address,
+    )? {
+        ParsedInboxMessage::JstzMessage(message) => Some(message),
+        _ => None,
+    }
 }
 
 /// Parse a hex-encoded L1 inbox input message into a jstz operation.
@@ -73,16 +82,21 @@ pub fn parse_inbox_message_hex(
     jstz_rollup_address: &SmartRollupHash,
 ) -> Option<Message> {
     let inbox_msg = hex::decode(inbox_msg).ok()?;
-    parse_inbox_message(logger, inbox_id, &inbox_msg, ticketer, jstz_rollup_address)
+    let msg =
+        parse_inbox_message(logger, inbox_id, &inbox_msg, ticketer, jstz_rollup_address)?;
+    match msg {
+        ParsedInboxMessage::JstzMessage(message) => Some(message),
+        _ => None,
+    }
 }
 
-fn parse_inbox_message(
+pub fn parse_inbox_message(
     logger: &impl WriteDebug,
     inbox_id: u32,
     inbox_msg: &[u8],
     ticketer: &ContractKt1Hash,
     jstz_rollup_address: &SmartRollupHash,
-) -> Option<Message> {
+) -> Option<ParsedInboxMessage> {
     let (_, message) = InboxMessage::<RollupType>::parse(inbox_msg).ok()?;
 
     match message {
@@ -90,7 +104,7 @@ fn parse_inbox_message(
             // Start of level message pushed by the Layer 1 at the
             // beginning of eavh level.
             logger.write_debug("Internal message: start of level\n");
-            None
+            Some(LevelInfo::Start.into())
         }
         InboxMessage::Internal(InternalInboxMessage::InfoPerLevel(info)) => {
             // The "Info per level" messages follows the "Start of level"
@@ -100,13 +114,13 @@ fn parse_inbox_message(
                         (block predecessor: {}, predecessor_timestamp: {}\n",
                 info.predecessor, info.predecessor_timestamp
             ));
-            None
+            Some(LevelInfo::Info(info).into())
         }
         InboxMessage::Internal(InternalInboxMessage::EndOfLevel) => {
             // The "End of level" message is pushed by the Layer 1
             // at the end of each level.
             logger.write_debug("Internal message: end of level\n");
-            None
+            Some(LevelInfo::End.into())
         }
         InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
             if jstz_rollup_address != transfer.destination.hash() {
@@ -115,14 +129,14 @@ fn parse_inbox_message(
                 );
                 return None;
             };
-            read_transfer(logger, transfer, ticketer, inbox_id)
+            read_transfer(logger, transfer, ticketer, inbox_id).map(|m| m.into())
         }
         InboxMessage::External(bytes) => match ExternalMessageFrame::parse(bytes) {
             Ok(frame) => match frame {
                 ExternalMessageFrame::Targetted { address, contents } => {
-                    if jstz_rollup_address != address.hash() {
+                    let message = if jstz_rollup_address != address.hash() {
                         logger.write_debug(
-                         "External message ignored because of different smart rollup address",
+                            "External message ignored because of different smart rollup address",
                         );
                         None
                     } else {
@@ -135,7 +149,8 @@ fn parse_inbox_message(
                                 None
                             }
                         }
-                    }
+                    };
+                    message.map(|m| m.into())
                 }
             },
             Err(_) => {
@@ -217,8 +232,21 @@ fn read_external_message(
     bytes: &[u8],
 ) -> Option<ExternalMessage> {
     let msg = ExternalMessage::decode(bytes).ok()?;
-    logger.write_debug("External message: {msg:?}\n");
+    logger.write_debug(&format!("External message: {msg:?}\n"));
     Some(msg)
+}
+
+#[derive(derive_more::From)]
+pub enum ParsedInboxMessage {
+    JstzMessage(Message),
+    LevelInfo(LevelInfo),
+}
+
+pub enum LevelInfo {
+    // Start of level
+    Start,
+    Info(InfoPerLevel),
+    End,
 }
 
 #[cfg(test)]

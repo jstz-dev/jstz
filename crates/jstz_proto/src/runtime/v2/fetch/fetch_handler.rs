@@ -251,6 +251,16 @@ async fn handle_address(
             body: Body::Vector(Vec::with_capacity(0)),
         }),
         AddressKind::SmartFunction => {
+            if !Account::exists(host, tx, &to)
+                .map_err(|e| FetchError::JstzError(e.to_string()))?
+            {
+                return Ok(Response {
+                    status: 404,
+                    status_text: "Not Found".to_string(),
+                    headers,
+                    body: "Account does not exist".into(),
+                });
+            }
             let address = to.as_smart_function().unwrap();
             let run_result = load_and_run(
                 host,
@@ -317,10 +327,8 @@ async fn load_and_run(
         address.clone(),
         operation_hash.map(|v| v.to_string()).unwrap_or_default(),
     );
-
     // 1. Load script
     let script = { load_script(tx, &mut proto.host, &proto.address)? };
-
     // 2. Prepare runtime
     let path = format!("jstz://{}", address);
     // `resolve_import` will panic without pinning
@@ -369,9 +377,15 @@ fn load_script(
     host: &impl HostRuntime,
     address: &SmartFunctionHash,
 ) -> Result<String> {
-    Account::function_code(host, tx, address)
+    let code = Account::function_code(host, tx, address)
         .map(|s| s.to_string())
-        .map_err(|err| FetchError::JstzError(err.to_string()))
+        .map_err(|err| FetchError::JstzError(err.to_string()))?;
+    if code.is_empty() {
+        return Err(FetchError::EmptyCode {
+            address: address.clone(),
+        });
+    }
+    Ok(code)
 }
 
 async fn convert_js_to_response(

@@ -2492,12 +2492,13 @@ dependencies = [
 
 [[package]]
 name = "hyper-util"
-version = "0.1.11"
+version = "0.1.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "497bbc33a26fdd4af9ed9c70d63f61cf56a938375fbb32df34db9b1cd6d643f2"
+checksum = "dc2fdfdbff08affe55bb779f33b053aa1fe5dd5b54c257343c17edfa55711bdb"
 dependencies = [
  "bytes",
  "futures-channel",
+ "futures-core",
  "futures-util",
  "http 1.1.0",
  "http-body 1.0.1",
@@ -2876,6 +2877,7 @@ dependencies = [
  "in-container",
  "indicatif",
  "jstz_api",
+ "jstz_client",
  "jstz_core",
  "jstz_crypto",
  "jstz_kernel",
@@ -2912,6 +2914,19 @@ dependencies = [
  "tokio",
  "tokio-util",
  "url",
+]
+
+[[package]]
+name = "jstz_client"
+version = "0.1.1-alpha.1"
+dependencies = [
+ "anyhow",
+ "jstz_crypto",
+ "jstz_proto",
+ "log",
+ "reqwest",
+ "reqwest-eventsource",
+ "tokio",
 ]
 
 [[package]]
@@ -2966,9 +2981,12 @@ dependencies = [
 name = "jstz_kernel"
 version = "0.1.1-alpha.1"
 dependencies = [
+ "anyhow",
  "bincode 2.0.0-rc.3",
+ "derive_more",
  "futures",
  "hex",
+ "http 1.1.0",
  "jstz_core",
  "jstz_crypto",
  "jstz_mock",
@@ -2976,9 +2994,11 @@ dependencies = [
  "jstz_utils",
  "num-traits",
  "serde",
+ "serde_json",
  "tezos-smart-rollup",
  "tezos_crypto_rs 0.6.0",
  "tezos_data_encoding 0.6.0",
+ "tokio",
 ]
 
 [[package]]
@@ -2991,6 +3011,7 @@ dependencies = [
  "tezos-smart-rollup",
  "tezos-smart-rollup-mock",
  "tezos_crypto_rs 0.6.0",
+ "tezos_data_encoding 0.6.0",
 ]
 
 [[package]]
@@ -3057,13 +3078,22 @@ dependencies = [
  "futures",
  "futures-core",
  "futures-util",
+ "http 1.1.0",
+ "hyper 1.6.0",
+ "jstz_client",
  "jstz_crypto",
+ "jstz_node",
  "jstz_proto",
  "jstz_utils",
+ "log",
+ "mockito",
+ "octez",
  "once_cell",
  "rand 0.8.5",
  "regex",
+ "reqwest",
  "serde",
+ "serde_bytes",
  "serde_json",
  "tempfile",
  "tokio",
@@ -6102,9 +6132,9 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.6.1"
+version = "0.6.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8437150ab6bbc8c5f0f519e3d5ed4aa883a83dd4cdd3d1b21f9482936046cb97"
+checksum = "adc82fd73de2a9722ac5da747f12383d2bfdb93591ee6c58486e0097890f05f2"
 dependencies = [
  "bitflags 2.6.0",
  "bytes",
