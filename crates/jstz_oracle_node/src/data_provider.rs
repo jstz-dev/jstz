@@ -192,7 +192,6 @@ mod tests {
 >>>>>>> 08a86178 (feat(oracle): connect relay and data provider, integrate in jstz node)
     use once_cell::sync::Lazy;
     use std::str::FromStr;
-    use tempfile::TempDir;
     use tokio::time::Duration;
     use url::Url;
 

@@ -28,7 +28,7 @@ impl OracleNode {
         node_endpoint: String,
     ) -> Result<Self> {
         let relay = Relay::spawn(log_path).await?;
-        let rx: Receiver<OracleRequest> = relay.subscribe();
+        let rx: Receiver<OracleRequest> = relay.subscribe()?;
         let provider =
             DataProvider::spawn(public_key, secret_key, node_endpoint, rx).await?;
 
