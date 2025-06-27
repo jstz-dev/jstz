@@ -11,8 +11,8 @@ use anyhow::Result;
 
 /// A relay that forwards oracle requests from a log file to a channel.
 pub struct Relay {
-    tx: broadcast::Sender<OracleRequest>,
-    subscriber_count: std::sync::atomic::AtomicUsize,
+    pub tx: broadcast::Sender<OracleRequest>,
+    pub subscriber_count: std::sync::atomic::AtomicUsize,
     abort_handle: AbortHandle,
 }
 

@@ -38,3 +38,80 @@ impl OracleNode {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use anyhow::Result;
+    use tempfile::NamedTempFile;
+    use tokio::time::{sleep, Duration};
+
+    fn create_test_keys() -> Result<(PublicKey, SecretKey)> {
+        let public_key = PublicKey::from_base58(
+            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+        )?;
+        let secret_key = SecretKey::from_base58(
+            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+        )?;
+        Ok((public_key, secret_key))
+    }
+
+    #[tokio::test]
+    async fn spawns_oracle_node_successfully() -> Result<()> {
+        let tmp = NamedTempFile::new()?;
+        let log_path = tmp.path().to_path_buf();
+
+        let (public_key, secret_key) = create_test_keys()?;
+
+        let node_endpoint = "http://localhost:8080".to_string();
+
+        let oracle_node =
+            OracleNode::spawn(log_path, public_key, secret_key, node_endpoint).await?;
+
+        assert!(oracle_node._relay.tx.receiver_count() > 0);
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn oracle_node_drops_gracefully() -> Result<()> {
+        let tmp = NamedTempFile::new()?;
+        let log_path = tmp.path().to_path_buf();
+
+        let (public_key, secret_key) = create_test_keys()?;
+
+        let node_endpoint = "http://localhost:8080".to_string();
+
+        {
+            let oracle_node = OracleNode::spawn(
+                log_path.clone(),
+                public_key,
+                secret_key,
+                node_endpoint,
+            )
+            .await?;
+
+            assert!(oracle_node._relay.tx.receiver_count() > 0);
+        }
+
+        sleep(Duration::from_millis(100)).await;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn handles_invalid_log_path() -> Result<()> {
+        let (public_key, secret_key) = create_test_keys()?;
+
+        let invalid_log_path = PathBuf::from("/non/existent/path.log");
+        let node_endpoint = "http://localhost:8080".to_string();
+
+        let result =
+            OracleNode::spawn(invalid_log_path, public_key, secret_key, node_endpoint)
+                .await;
+
+        assert!(result.is_err());
+
+        Ok(())
+    }
+}
