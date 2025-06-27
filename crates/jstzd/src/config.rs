@@ -38,6 +38,7 @@ pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
 ];
 pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
 pub(crate) const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
+pub(crate) const INJECTOR_ACCOUNT_ALIAS: &str = "injector";
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
@@ -778,7 +779,7 @@ mod tests {
         assert_eq!(contracts.len(), 2);
 
         let accounts = read_bootstrap_accounts_from_param_file(&config_path).await;
-        assert_eq!(accounts.len(), 7);
+        assert_eq!(accounts.len(), 8);
 
         assert_eq!(
             config.octez_rollup_config().address.to_base58_check(),
@@ -823,7 +824,7 @@ mod tests {
             .unwrap();
         let params = serde_json::from_str::<serde_json::Value>(&buf).unwrap();
 
-        // two bootstrap account should have been inserted: the activator account and the rollup operator account
+        // built-in bootstrap accounts
         let accounts = params
             .as_object()
             .unwrap()
@@ -831,7 +832,7 @@ mod tests {
             .unwrap()
             .as_array()
             .unwrap();
-        assert_eq!(accounts.len(), 6);
+        assert_eq!(accounts.len(), 7);
 
         let bootstrap_accounts = accounts
             .iter()
