@@ -103,6 +103,35 @@ impl Oracle {
         Ok(rx)
     }
 
+    pub fn respond(
+        &mut self,
+        host: &mut impl HostRuntime,
+        request_id: RequestId,
+        response: Response,
+    ) -> Result<()> {
+        let (oracle_request, sender) = self.remove(host, &request_id)?;
+        if sender.send(response).is_err() {
+            return Err(OracleError::ConnectionClosed);
+        }
+        Ok(())
+    }
+
+    /// Removes and returns the OracleRequest from starage and Sender from internal
+    /// senders map
+    pub fn remove(
+        &mut self,
+        host: &mut impl HostRuntime,
+        request_id: &RequestId,
+    ) -> Result<(OracleRequest, Sender<Response>)> {
+        let sender = self
+            .senders
+            .remove(&request_id)
+            .ok_or_else(|| OracleError::RequestDoesNotExist)?;
+        let oracle_request = OracleRequestStorage::get(host, &request_id).unwrap();
+        OracleRequestStorage::delete(host, &request_id);
+        Ok((oracle_request, sender))
+    }
+
     // Increments and returns the previous [`next_request_id`]
     fn incr_request_id(&mut self) -> RequestId {
         let curr = self.next_request_id;
@@ -178,6 +207,12 @@ pub enum OracleError {
 
     #[error("{0}")]
     BadState(&'static str),
+
+    #[error("Request Id does not exist or has expired")]
+    RequestDoesNotExist,
+
+    #[error("Connection closed by client")]
+    ConnectionClosed,
 }
 
 impl From<crate::error::Error> for OracleError {
@@ -191,7 +226,7 @@ mod test {
     use super::*;
     use crate::context::account::Account;
     use crate::event::decode_line;
-    use crate::runtime::v2::fetch::http::{Request, Response};
+    use crate::runtime::v2::fetch::http::{Body, Request, Response};
     use crate::runtime::v2::oracle::UserAddress;
     use crate::tests::DebugLogSink;
     use jstz_core::kv::Storage;
@@ -270,8 +305,8 @@ mod test {
         assert_eq!(oracle.incr_request_id(), 2);
     }
 
-    #[test]
-    fn send_request_success() {
+    #[tokio::test]
+    async fn send_request_success() {
         let gas_params = GasParams {
             protocol_fee: 1_000,
             oracle_fee: 340,
@@ -295,8 +330,9 @@ mod test {
             headers: vec![],
             body: None,
         };
+
         // Call send_request
-        let rx = oracle
+        let rx1 = oracle
             .send_request(&mut host, &mut tx, &caller, request.clone())
             .expect("send_request should succeed");
 
@@ -326,7 +362,7 @@ mod test {
         let headers = vec![("x-jstz-oracle-gas-limit".into(), "3500".into())];
         let request2 = Request { headers, ..request };
 
-        let rx = oracle
+        let rx2 = oracle
             .send_request(&mut host, &mut tx, &caller, request2.clone())
             .expect("send_request should succeed");
 
@@ -351,6 +387,20 @@ mod test {
 
         let line = sink.lines().iter().nth(1).unwrap().clone();
         assert_eq!(stored2, decode_line(&line).unwrap());
+
+        let response = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: vec![],
+            body: Body::zero_capacity(),
+        };
+        oracle.respond(&mut host, 1, response.clone()).unwrap();
+        let recv_response = rx2.await.unwrap();
+        assert_eq!(response, recv_response);
+
+        oracle.respond(&mut host, 0, response.clone()).unwrap();
+        let recv_response = rx1.await.unwrap();
+        assert_eq!(response, recv_response);
     }
 
     #[test]
@@ -386,5 +436,84 @@ mod test {
             "Oracle gas limit too low. Must be at least 1460 mutez at this time",
             error.to_string()
         );
+    }
+
+    #[test]
+    fn respond_missing_request() {
+        let pk = PublicKey::from_base58(
+            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+        )
+        .unwrap();
+        let mut host = setup_host_with_pk(&pk, None);
+        let mut oracle = Oracle::new(&host, None).unwrap();
+        let response = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: vec![],
+            body: Body::zero_capacity(),
+        };
+        let err = oracle.respond(&mut host, 10, response).unwrap_err();
+        assert!(matches!(err, OracleError::RequestDoesNotExist))
+    }
+
+    #[test]
+    fn respond_dropped_receiver() {
+        let pk = PublicKey::from_base58(
+            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+        )
+        .unwrap();
+        let mut host = setup_host_with_pk(&pk, None);
+        let mut oracle = Oracle::new(&host, None).unwrap();
+        let mut tx = Transaction::default();
+        tx.begin();
+        let caller = UserAddress::digest(&[1u8; 20]).unwrap();
+        Account::add_balance(&mut host, &mut tx, &caller, 100_000);
+        tx.commit(&mut host);
+        tx.begin();
+        let rx = oracle
+            .send_request(
+                &mut host,
+                &mut tx,
+                &caller,
+                Request {
+                    method: "GET".into(),
+                    url: "http://example.com".parse().unwrap(),
+                    headers: vec![],
+                    body: Some(Body::zero_capacity()),
+                },
+            )
+            .unwrap();
+    }
+
+    #[test]
+    fn remove_from_oracle_storage_and_sender() {
+        let pk = PublicKey::from_base58(
+            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+        )
+        .unwrap();
+        let mut host = setup_host_with_pk(&pk, None);
+        let mut oracle = Oracle::new(&host, None).unwrap();
+        let mut tx = Transaction::default();
+        tx.begin();
+        let caller = UserAddress::digest(&[1u8; 20]).unwrap();
+        Account::add_balance(&mut host, &mut tx, &caller, 100_000);
+        tx.commit(&mut host);
+        tx.begin();
+        oracle
+            .send_request(
+                &mut host,
+                &mut tx,
+                &caller,
+                Request {
+                    method: "GET".into(),
+                    url: "http://example.com".parse().unwrap(),
+                    headers: vec![],
+                    body: Some(Body::zero_capacity()),
+                },
+            )
+            .unwrap();
+        oracle.remove(&mut host, &0).unwrap();
+        assert_eq!(false, oracle.senders.contains_key(&0));
+        assert_eq!(None, OracleRequestStorage::get(&mut host, &0))
     }
 }
