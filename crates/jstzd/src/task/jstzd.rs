@@ -138,7 +138,7 @@ impl Task for Jstzd {
                 // we need secret keys
                 builtin_bootstrap_accounts()?
                     .into_iter()
-                    .map(|(alias, _, sk)| (alias, sk)),
+                    .map(|(alias, _, sk, _)| (alias, sk)),
             ),
         )
         .await?;
@@ -501,11 +501,10 @@ fn print_bootstrap_accounts<'a>(
     writer: &mut impl Write,
     accounts: impl IntoIterator<Item = &'a BootstrapAccount>,
 ) -> Result<()> {
-    let alias_address_mapping: HashMap<String, String> = HashMap::from_iter(
-        builtin_bootstrap_accounts()?
-            .into_iter()
-            .map(|(alias, pk, _)| (PublicKey::from_base58(&pk).unwrap().hash(), alias)),
-    );
+    let alias_address_mapping: HashMap<String, String> =
+        HashMap::from_iter(builtin_bootstrap_accounts()?.into_iter().map(
+            |(alias, pk, _, _)| (PublicKey::from_base58(&pk).unwrap().hash(), alias),
+        ));
 
     let mut table = Table::new();
     table.set_titles(Row::new(vec![

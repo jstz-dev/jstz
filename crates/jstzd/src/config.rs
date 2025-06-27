@@ -36,7 +36,6 @@ pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
 ];
 pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
-const BOOTSTRAP_ACCOUNT_BALANCE: u64 = 100_000_000_000;
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
@@ -88,7 +87,7 @@ async fn parse_config(path: &str) -> Result<Config> {
     Ok(serde_json::from_str::<Config>(&s)?)
 }
 
-pub(crate) fn builtin_bootstrap_accounts() -> Result<Vec<(String, String, String)>> {
+pub(crate) fn builtin_bootstrap_accounts() -> Result<Vec<(String, String, String, u64)>> {
     serde_json::from_slice(
         &BootstrapAccountFile::get("accounts.json")
             .ok_or(anyhow::anyhow!("bootstrap account file not found"))?
@@ -266,9 +265,12 @@ async fn build_protocol_params(
         .iter()
         .map(|v| (*v).to_owned())
         .collect::<Vec<BootstrapAccount>>();
-    for account in builtin_bootstrap_accounts()?
-        .into_iter()
-        .map(|(_, pk, _)| BootstrapAccount::new(&pk, BOOTSTRAP_ACCOUNT_BALANCE).unwrap())
+    for account in
+        builtin_bootstrap_accounts()?
+            .into_iter()
+            .map(|(_, pk, _, balance_mutez)| {
+                BootstrapAccount::new(&pk, balance_mutez).unwrap()
+            })
     {
         accounts.push(account);
     }
@@ -787,12 +789,10 @@ mod tests {
             .map(|acc| serde_json::from_value::<BootstrapAccount>(acc.clone()).unwrap())
             .collect::<Vec<_>>();
 
-        for (_, pk, _) in super::builtin_bootstrap_accounts().unwrap() {
+        for (_, pk, _, balance_mutez) in super::builtin_bootstrap_accounts().unwrap() {
             assert!(
-                bootstrap_accounts.contains(
-                    &BootstrapAccount::new(&pk, super::BOOTSTRAP_ACCOUNT_BALANCE)
-                        .unwrap()
-                ),
+                bootstrap_accounts
+                    .contains(&BootstrapAccount::new(&pk, balance_mutez).unwrap()),
                 "account {pk} not found in bootstrap accounts"
             );
         }
