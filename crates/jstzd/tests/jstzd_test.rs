@@ -264,23 +264,23 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
     let mut full_config = serde_json::json!({});
     for (key, expected_json) in [
         (
-            "octez-node",
+            "octez_node",
             serde_json::to_value(jstzd_config.octez_node_config()).unwrap(),
         ),
         (
-            "octez-client",
+            "octez_client",
             serde_json::to_value(jstzd_config.octez_client_config()).unwrap(),
         ),
         (
-            "octez-baker",
+            "octez_baker",
             serde_json::to_value(jstzd_config.baker_config()).unwrap(),
         ),
         (
-            "octez-rollup",
+            "octez_rollup",
             serde_json::to_value(jstzd_config.octez_rollup_config()).unwrap(),
         ),
         (
-            "jstz-node",
+            "jstz_node",
             serde_json::to_value(jstzd_config.jstz_node_config()).unwrap(),
         ),
     ] {
