@@ -1,4 +1,4 @@
-use crate::config::builtin_bootstrap_accounts;
+use crate::config::{builtin_bootstrap_accounts, ACTIVATOR_ACCOUNT_ALIAS};
 
 use super::{
     child_wrapper::Shared,
@@ -42,8 +42,6 @@ use tokio::{
     task::JoinHandle,
     time::{sleep, Duration},
 };
-
-const ACTIVATOR_ACCOUNT_ALIAS: &str = "bootstrap0";
 
 trait IntoShared {
     fn into_shared(self) -> Shared<Self>;
@@ -514,12 +512,18 @@ fn print_bootstrap_accounts<'a>(
 
     let mut lines = accounts
         .into_iter()
-        .map(|account| {
-            let address_string = match alias_address_mapping.get(&account.address()) {
-                Some(alias) => format!("({alias}) {}", account.address()),
-                None => account.address(),
-            };
-            (address_string, account.amount().to_string())
+        .filter_map(|account| {
+            let amount = account.amount().to_string();
+            match alias_address_mapping.get(&account.address()) {
+                Some(alias) => {
+                    if alias == ACTIVATOR_ACCOUNT_ALIAS {
+                        None
+                    } else {
+                        Some((format!("({alias}) {}", account.address()), amount))
+                    }
+                }
+                None => Some((account.address(), amount)),
+            }
         })
         .collect::<Vec<_>>();
     lines.sort();
@@ -734,6 +738,13 @@ mod tests {
         super::print_bootstrap_accounts(
             &mut buf,
             [
+                // Activator should not be printed out.
+                // The public key is taken from `resources/bootstrap_account/accounts.json`.
+                &BootstrapAccount::new(
+                    "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
+                    3,
+                )
+                .unwrap(),
                 &BootstrapAccount::new(
                     "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv",
                     1,
