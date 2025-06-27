@@ -627,6 +627,28 @@
               }
             ],
             "title": "RevealLargePayload"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OracleResponse"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "OracleResponse"
+                    ]
+                  }
+                }
+              }
+            ],
+            "title": "OracleResponse"
           }
         ],
         "discriminator": {
@@ -807,6 +829,37 @@
           }
         }
       },
+      "OracleResponse": {
+        "type": "object",
+        "description": "Response to an OracleRequest sent by the enshrined Oracle node",
+        "required": [
+          "requestId",
+          "response"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "description": "The request id of the OracleRequest that is being responded to"
+          },
+          "response": {
+            "type": "string",
+            "description": "The response to the OracleRequest"
+          }
+        }
+      },
+      "OracleResponseReceipt": {
+        "type": "object",
+        "required": [
+          "requestId"
+        ],
+        "properties": {
+          "requestId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "ParsedCode": {
         "type": "string",
         "format": "javascript",
@@ -978,6 +1031,28 @@
               }
             ],
             "title": "FaWithdraw"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/OracleResponseReceipt"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "_type"
+                ],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": [
+                      "OracleResponse"
+                    ]
+                  }
+                }
+              }
+            ],
+            "title": "OracleResponse"
           }
         ],
         "discriminator": {
