@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::path::PathBuf;
 
 use jstz_node::RunMode;
@@ -124,7 +125,8 @@ pub(crate) async fn build_config_from_path(
 }
 
 pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
-    patch_octez_node_config(&mut config.octez_node);
+    patch_octez_node_config(&mut config.octez_node)
+        .context("failed to patch octez node config")?;
     let octez_node_config = config.octez_node.build()?;
     let octez_client_config = match config.octez_client {
         Some(v) => v,
@@ -206,7 +208,9 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
     ))
 }
 
-fn patch_octez_node_config(builder: &mut OctezNodeConfigBuilder) {
+fn patch_octez_node_config(builder: &mut OctezNodeConfigBuilder) -> Result<()> {
+    let config_path = create_sandbox_config_file(builtin_bootstrap_accounts()?)
+        .context("failed to create sandbox config file")?;
     let mut option_builder = OctezNodeRunOptionsBuilder::new();
     if let Some(v) = builder.run_options() {
         option_builder
@@ -219,7 +223,35 @@ fn patch_octez_node_config(builder: &mut OctezNodeConfigBuilder) {
     if option_builder.history_mode().is_none() {
         option_builder.set_history_mode(OctezNodeHistoryMode::Rolling(15));
     }
+    option_builder.set_sandbox_config_path(&config_path);
     builder.set_run_options(&option_builder.build());
+    Ok(())
+}
+
+// Create a sandbox config file that informs octez node about the activator account.
+// Normally this is not necessary as octez node has a hard-coded default activator account,
+// but if we want to use a different account, we need to specify it in this config file.
+fn create_sandbox_config_file(
+    bootstrap_accounts: Vec<(String, String, String, u64)>,
+) -> Result<PathBuf> {
+    for (alias, pk, _, _) in bootstrap_accounts {
+        if alias == ACTIVATOR_ACCOUNT_ALIAS {
+            let (mut config_file, p) = NamedTempFile::new()?.keep()?;
+            config_file
+                .write_all(
+                    &serde_json::to_vec(&serde_json::json!({
+                      "genesis_pubkey": pk
+                    }))
+                    .context("failed to serialise sandbox config")?,
+                )
+                .context("failed to write to sandbox config file")?;
+            config_file
+                .flush()
+                .context("failed to flush sandbox config file")?;
+            return Ok(p);
+        }
+    }
+    anyhow::bail!("cannot find activator account")
 }
 
 fn populate_baker_config(
@@ -925,7 +957,7 @@ mod tests {
     #[test]
     fn patch_octez_node_config() {
         let mut builder = OctezNodeConfigBuilder::default();
-        super::patch_octez_node_config(&mut builder);
+        super::patch_octez_node_config(&mut builder).unwrap();
         assert_eq!(
             builder.run_options().unwrap().history_mode(),
             Some(&OctezNodeHistoryMode::Rolling(15))
@@ -939,7 +971,7 @@ mod tests {
                 .set_synchronisation_threshold(3)
                 .build(),
         );
-        super::patch_octez_node_config(&mut builder);
+        super::patch_octez_node_config(&mut builder).unwrap();
         let run_options = builder.run_options().unwrap();
         assert_eq!(
             run_options.history_mode(),
@@ -956,8 +988,50 @@ mod tests {
             .set_history_mode(OctezNodeHistoryMode::Archive)
             .build();
         builder.set_run_options(&run_options);
-        super::patch_octez_node_config(&mut builder);
-        assert_eq!(builder.run_options().unwrap(), &run_options);
+        super::patch_octez_node_config(&mut builder).unwrap();
+        let stored_run_options = builder.run_options().unwrap();
+        assert_eq!(
+            stored_run_options.history_mode(),
+            Some(&OctezNodeHistoryMode::Archive)
+        );
+        assert_eq!(stored_run_options.synchronisation_threshold(), 3);
+        assert_eq!(stored_run_options.network(), "test");
+        let sandbox_config_path = stored_run_options.sandbox_config_path().unwrap();
+        let content = serde_json::from_reader::<_, serde_json::Value>(
+            std::fs::File::open(sandbox_config_path).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            content,
+            serde_json::json!({
+                // should be the activator in resources/bootstrap_account/accounts.json
+                "genesis_pubkey": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
+            })
+        );
+    }
+
+    #[test]
+    fn create_sandbox_config_file() {
+        let err = super::create_sandbox_config_file(vec![]).unwrap_err();
+        assert_eq!(err.to_string(), "cannot find activator account");
+
+        let path = super::create_sandbox_config_file(vec![(
+            "activator".into(),
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav".into(),
+            "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh".into(),
+            1,
+        )])
+        .unwrap();
+        let content = serde_json::from_reader::<_, serde_json::Value>(
+            std::fs::File::open(path).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            content,
+            serde_json::json!({
+                "genesis_pubkey": "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav"
+            })
+        );
     }
 
     #[test]
