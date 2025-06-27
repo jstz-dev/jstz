@@ -287,7 +287,6 @@ mod tests {
     };
     use octez::OctezRollupClient;
     use tempfile::{NamedTempFile, TempDir};
-    use tezos_crypto_rs::base58::ToBase58Check;
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tower::ServiceExt;
 
@@ -598,14 +597,14 @@ mod tests {
             .runtime_db
             .write(
                 &format!("/jstz_receipt/{op_hash}"),
-                &receipt.encode().unwrap().to_base58check(),
+                &hex::encode(receipt.encode().unwrap()),
             )
             .unwrap();
         state
             .runtime_db
             .write(
                 "/jstz_receipt/bad_value",
-                &mock_code(10).encode().unwrap().to_base58check(),
+                &hex::encode(mock_code(10).encode().unwrap()),
             )
             .unwrap();
 
