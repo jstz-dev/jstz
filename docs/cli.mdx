@@ -10,8 +10,8 @@ It provides these main commands:
 - [`bridge`](#bridge) - Bridge XTZ tokens from Tezos to Jstz and back
 - [`deploy`](#deploy) - Deploy smart functions
 - [`kv`](#kv) - Get data from the key-value store
-- [`login`](#log-in) - Log in to Jstz accounts
-- [`logout`](#log-out) - Log out of the current account
+- [`login`](#log-in) - Set the account that the CLI uses to send requests to Jstz
+- [`logout`](#log-out) - Deselect the current account
 - [`logs`](#logs) - Get smart function logs
 - [`run`](#run) - Send requests to smart functions
 - [`sandbox`](#sandbox) - Start and interact with the local [sandbox](/sandbox) environment
@@ -53,6 +53,8 @@ Remember, the `-h` or `--help` flag can always be used after any command or subc
 
 Account commands create and work with Jstz accounts, including user accounts and smart functions.
 For more information about accounts, see [Accounts](/architecture/accounts).
+
+Some commands, such as `deploy` and `run`, require you to log in to an account with the `login` command to set the account from which the requests to Jstz are sent.
 
 #### Commands
 
@@ -186,7 +188,7 @@ Sub-keys are separated with slashes, so if a smart function stores data with the
 #### Usage
 
 ```bash
-export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
+export counter=KT1RdoBXrboPnS6tQdMCPKjRRt4baTQHUeh9 # Address of the previously deployed smart function examples/counter.js
 jstz run "jstz://${counter}/"
 jstz kv get -a $counter counter
 ```
@@ -206,6 +208,7 @@ jstz kv get -a $counter counter
 ### Log in
 
 The `login` command switches the active account to an account from the config file.
+It sets this account as the `current_alias` field in the config file.
 The active account is the account from which calls to smart functions come from.
 
 #### Usage
@@ -221,8 +224,8 @@ None.
 #### Example
 
 ```bash
-jstz account create Alice
 jstz logout
+jstz account create Alice
 jstz login Alice
 ```
 
@@ -327,7 +330,7 @@ jstz run [OPTIONS] <URL>
 #### Example
 
 ```bash
-export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
+export counter=KT1RdoBXrboPnS6tQdMCPKjRRt4baTQHUeh9 # Address of the previously deployed smart function examples/counter.js
 jstz run --trace "jstz://${counter}/"
 jstz run --trace "jstz://${counter}/"
 jstz run --trace "jstz://${counter}/"
