@@ -1,6 +1,8 @@
 use std::io::Write;
 use std::path::PathBuf;
 
+use jstz_crypto::public_key::PublicKey;
+use jstz_crypto::secret_key::SecretKey;
 use jstz_node::RunMode;
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
 use rust_embed::Embed;
@@ -178,12 +180,14 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
 
     let jstz_node_rpc_endpoint =
         Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
+    let injector = find_injector_account(builtin_bootstrap_accounts()?)
+        .context("failed to retrieve injector account")?;
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
-        KeyPair::default(),
+        injector,
         config.jstz_node.mode,
         config.jstz_node.capacity,
         &config.jstz_node.debug_log_file.unwrap_or(
@@ -227,6 +231,25 @@ fn patch_octez_node_config(builder: &mut OctezNodeConfigBuilder) -> Result<()> {
     option_builder.set_sandbox_config_path(&config_path);
     builder.set_run_options(&option_builder.build());
     Ok(())
+}
+
+fn find_injector_account(
+    bootstrap_accounts: Vec<(String, String, String, u64)>,
+) -> Result<KeyPair> {
+    for (alias, pk, raw_sk, _) in bootstrap_accounts {
+        if alias == INJECTOR_ACCOUNT_ALIAS {
+            let sk = if raw_sk.starts_with("unencrypted") {
+                raw_sk.split(':').nth(1).unwrap()
+            } else {
+                &raw_sk
+            };
+            return Ok(KeyPair(
+                PublicKey::from_base58(&pk)?,
+                SecretKey::from_base58(sk)?,
+            ));
+        }
+    }
+    anyhow::bail!("cannot find injector account")
 }
 
 // Create a sandbox config file that informs octez node about the activator account.
@@ -1070,5 +1093,34 @@ mod tests {
             bootstrap1.clone(),
         ]);
         assert_eq!(result.unwrap(), vec![activator, bootstrap1]);
+    }
+
+    #[test]
+    fn find_injector_account() {
+        let injector = (
+            "injector".into(),
+            "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2".into(),
+            "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6".into(),
+            1,
+        );
+        let bootstrap1 = (
+            "bootstrap1".into(),
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav".into(),
+            "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh".into(),
+            1,
+        );
+
+        let error = super::find_injector_account(vec![bootstrap1.clone()]).unwrap_err();
+        assert_eq!(error.to_string(), "cannot find injector account");
+
+        let keys = super::find_injector_account(vec![bootstrap1, injector]).unwrap();
+        assert_eq!(
+            keys.0.to_base58(),
+            "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
+        );
+        assert_eq!(
+            keys.1.to_base58(),
+            "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
+        );
     }
 }
