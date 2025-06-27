@@ -1,4 +1,7 @@
-use crate::sequencer::runtime::{init_host, process_message};
+use crate::{
+    config::KeyPair,
+    sequencer::runtime::{init_host, process_message},
+};
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -39,12 +42,14 @@ impl Drop for Worker {
 pub fn spawn(
     queue: Arc<RwLock<OperationQueue>>,
     db: Db,
+    injector: &KeyPair,
     preimage_dir: PathBuf,
     debug_log_path: Option<&Path>,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
-    let mut host_rt = init_host(db, preimage_dir).context("failed to init host")?;
+    let mut host_rt =
+        init_host(db, preimage_dir, injector).context("failed to init host")?;
     if let Some(p) = debug_log_path {
         host_rt = host_rt
             .with_debug_log_file(p)
@@ -115,8 +120,8 @@ mod tests {
         time::Duration,
     };
 
-    use crate::sequencer::inbox::test_utils::hash_of;
     use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
+    use crate::{config::KeyPair, sequencer::inbox::test_utils::hash_of};
     use tempfile::NamedTempFile;
 
     #[test]
@@ -127,6 +132,7 @@ mod tests {
         let worker = super::spawn(
             q,
             Db::init(Some("")).unwrap(),
+            &KeyPair::default(),
             PathBuf::new(),
             None,
             move || {
@@ -169,6 +175,7 @@ mod tests {
         let _worker = super::spawn(
             wrapper.clone(),
             cp,
+            &KeyPair::default(),
             PathBuf::new(),
             Some(log_file.path()),
             move || {},
