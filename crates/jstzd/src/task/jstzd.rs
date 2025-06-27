@@ -1,4 +1,6 @@
-use crate::config::{builtin_bootstrap_accounts, ACTIVATOR_ACCOUNT_ALIAS};
+use crate::config::{
+    builtin_bootstrap_accounts, ACTIVATOR_ACCOUNT_ALIAS, INJECTOR_ACCOUNT_ALIAS,
+};
 
 use super::{
     child_wrapper::Shared,
@@ -510,13 +512,14 @@ fn print_bootstrap_accounts<'a>(
         Cell::new("XTZ Balance (mutez)"),
     ]));
 
+    let internal_accounts = [ACTIVATOR_ACCOUNT_ALIAS, INJECTOR_ACCOUNT_ALIAS];
     let mut lines = accounts
         .into_iter()
         .filter_map(|account| {
             let amount = account.amount().to_string();
             match alias_address_mapping.get(&account.address()) {
                 Some(alias) => {
-                    if alias == ACTIVATOR_ACCOUNT_ALIAS {
+                    if internal_accounts.contains(&alias.as_str()) {
                         None
                     } else {
                         Some((format!("({alias}) {}", account.address()), amount))
@@ -743,6 +746,12 @@ mod tests {
                 &BootstrapAccount::new(
                     "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
                     3,
+                )
+                .unwrap(),
+                // Injector should not be printed out.
+                &BootstrapAccount::new(
+                    "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+                    4,
                 )
                 .unwrap(),
                 &BootstrapAccount::new(
