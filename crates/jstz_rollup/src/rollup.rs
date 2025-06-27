@@ -28,7 +28,8 @@ pub fn make_installer(
     preimages_dir: &Path,
     exchanger: &Exchanger,
 ) -> Result<Vec<u8>> {
-    let root_hash = preimages::content_to_preimages(kernel_file, preimages_dir)?;
+    let content = fs::read(kernel_file)?;
+    let root_hash = preimages::content_to_preimages(content, preimages_dir)?;
 
     let installer_program = OwnedConfigProgram(vec![
         // 1. Prepare kernel installer
