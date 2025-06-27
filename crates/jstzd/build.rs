@@ -218,10 +218,10 @@ fn generate_path_getter_code(out_dir: &Path, fn_name: &str, path_suffix: &str) -
 fn validate_builtin_bootstrap_accounts() {
     let bytes =
         fs::read(BOOTSTRAP_ACCOUNT_PATH).expect("failed to read bootstrap account file");
-    let raw_accounts: Vec<(String, String, String)> = serde_json::from_slice(&bytes)
+    let raw_accounts: Vec<(String, String, String, u64)> = serde_json::from_slice(&bytes)
         .unwrap_or_else(|e| panic!("failed to parse built-in bootstrap accounts: {e:?}"));
     let mut seen_names = HashSet::new();
-    for (name, pk, raw_sk) in raw_accounts {
+    for (name, pk, raw_sk, _) in raw_accounts {
         if !seen_names.insert(name.clone()) {
             panic!("bootstrap account name '{name}' already exists");
         }
