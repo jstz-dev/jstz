@@ -26,6 +26,8 @@ const JSTZ_PARAMETERS_TY_PATH: &str = "./resources/jstz_rollup/parameters_ty.jso
 /// Generated file that contains path getter functions
 const JSTZ_ROLLUP_PATH: &str = "jstz_rollup_path.rs";
 const BOOTSTRAP_ACCOUNT_PATH: &str = "./resources/bootstrap_account/accounts.json";
+// This alias is also used by jstzd during config validation.
+const ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "activator";
 
 /// Build script that validates built-in bootstrap accounts and generates and saves
 /// the following files in OUT_DIR:
@@ -236,5 +238,8 @@ fn validate_builtin_bootstrap_accounts() {
         SecretKey::from_base58(sk).unwrap_or_else(|e| {
             panic!("failed to parse secret key of bootstrap account '{name}': {e:?}")
         });
+    }
+    if !seen_names.contains(ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS) {
+        panic!("there must be one built-in bootstrap account with alias '{ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS}'");
     }
 }

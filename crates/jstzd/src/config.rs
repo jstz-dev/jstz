@@ -36,6 +36,7 @@ pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
 ];
 pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
+pub(crate) const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
@@ -88,12 +89,28 @@ async fn parse_config(path: &str) -> Result<Config> {
 }
 
 pub(crate) fn builtin_bootstrap_accounts() -> Result<Vec<(String, String, String, u64)>> {
-    serde_json::from_slice(
+    let accounts = serde_json::from_slice(
         &BootstrapAccountFile::get("accounts.json")
             .ok_or(anyhow::anyhow!("bootstrap account file not found"))?
             .data,
     )
-    .context("error loading built-in bootstrap accounts")
+    .context("error loading built-in bootstrap accounts")?;
+    validate_builtin_bootstrap_accounts(accounts)
+}
+
+// This is split from `builtin_bootstrap_accounts` just to make the logic easily testable
+fn validate_builtin_bootstrap_accounts(
+    accounts: Vec<(String, String, String, u64)>,
+) -> Result<Vec<(String, String, String, u64)>> {
+    if accounts.iter().fold(0, |acc, (alias, _, _, _)| {
+        acc + (alias == ACTIVATOR_ACCOUNT_ALIAS) as usize
+    }) != 1
+    {
+        anyhow::bail!(
+            "there must be exactly one built-in bootstrap account with alias '{ACTIVATOR_ACCOUNT_ALIAS}'"
+        )
+    }
+    Ok(accounts)
 }
 
 pub(crate) async fn build_config_from_path(
@@ -941,5 +958,42 @@ mod tests {
         builder.set_run_options(&run_options);
         super::patch_octez_node_config(&mut builder);
         assert_eq!(builder.run_options().unwrap(), &run_options);
+    }
+
+    #[test]
+    fn validate_builtin_bootstrap_accounts() {
+        let activator = (
+            "activator".into(),
+            "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2".into(),
+            "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6".into(),
+            1,
+        );
+        let bootstrap1 = (
+            "bootstrap1".into(),
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav".into(),
+            "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh".into(),
+            1,
+        );
+
+        let result = super::validate_builtin_bootstrap_accounts(vec![bootstrap1.clone()]);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "there must be exactly one built-in bootstrap account with alias 'activator'"
+        );
+
+        let result = super::validate_builtin_bootstrap_accounts(vec![
+            activator.clone(),
+            activator.clone(),
+        ]);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "there must be exactly one built-in bootstrap account with alias 'activator'"
+        );
+
+        let result = super::validate_builtin_bootstrap_accounts(vec![
+            activator.clone(),
+            bootstrap1.clone(),
+        ]);
+        assert_eq!(result.unwrap(), vec![activator, bootstrap1]);
     }
 }
