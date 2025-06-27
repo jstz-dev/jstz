@@ -10,7 +10,6 @@ use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 
 use log::{debug, error, trace};
-use tezos_crypto_rs::base58::{FromBase58Check, ToBase58Check};
 use tezos_smart_rollup::{
     core_unsafe::MAX_FILE_CHUNK_SIZE,
     host::{HostError, Runtime, RuntimeError, ValueType},
@@ -152,7 +151,7 @@ impl Runtime for Host {
             .map_err(|e| log_error(&log_title, e))?;
 
         Ok(match read_output {
-            Some(v) => v.from_base58check().map_err(|e| log_error(&log_title, e))?,
+            Some(v) => hex::decode(v).map_err(|e| log_error(&log_title, e))?,
             None => vec![],
         })
     }
@@ -171,7 +170,7 @@ impl Runtime for Host {
         let read_output =
             exec_read(&tx, &path.to_string()).map_err(|e| log_error(&log_title, e))?;
         let mut value = match read_output {
-            Some(v) => v.from_base58check().map_err(|e| log_error(&log_title, e))?,
+            Some(v) => hex::decode(v).map_err(|e| log_error(&log_title, e))?,
             None => vec![],
         };
 
@@ -186,7 +185,7 @@ impl Runtime for Host {
             value.extend_from_slice(src);
         };
 
-        exec_write(&tx, &path.to_string(), &value.to_base58check())
+        exec_write(&tx, &path.to_string(), &hex::encode(value))
             .map_err(|e| log_error(&log_title, e))?;
         tx.commit().map_err(|e| log_error(&log_title, e))?;
         Ok(())
@@ -201,7 +200,7 @@ impl Runtime for Host {
         trace!("{log_title}");
 
         let client = self.connection()?;
-        exec_write(&client, &path.to_string(), &src.to_base58check())
+        exec_write(&client, &path.to_string(), &hex::encode(src))
             .map_err(|e| log_error(&log_title, e))
     }
 
@@ -585,5 +584,14 @@ mod tests {
         let mut buf = [0u8; 15];
         assert_eq!(host.reveal_preimage(&preimage_hash, &mut buf).unwrap(), 10);
         assert_eq!(&buf, b"abcdefghij\0\0\0\0\0");
+
+        // store_write performance check
+        let now = std::time::SystemTime::now();
+        let expected = vec![1; 65536];
+        host.store_write(&path, &expected, 0).unwrap();
+        assert!(
+            now.elapsed().unwrap().as_secs() < 1,
+            "store_write takes too much time"
+        );
     }
 }
