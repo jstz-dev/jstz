@@ -58,9 +58,9 @@ struct Args {
     #[arg(long)]
     debug_log_path: Option<PathBuf>,
 
-    /// Oracle key pair for DataProvider (format: "public_key:secret_key")
+    /// Path to file containing oracle key pair for DataProvider (format: "public_key:secret_key")
     #[arg(long)]
-    oracle_key: Option<String>,
+    oracle_key_file: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -75,8 +75,10 @@ async fn main() -> anyhow::Result<()> {
 
             // Parse oracle key if provided
             #[cfg(feature = "v2_runtime")]
-            let oracle_key_pair = if let Some(oracle_key) = args.oracle_key {
-                let parts: Vec<&str> = oracle_key.split(':').collect();
+            let oracle_key_pair = if let Some(oracle_key_file) = args.oracle_key_file {
+                let key_pair = std::fs::read_to_string(oracle_key_file)
+                    .context("Failed to read oracle key file")?;
+                let parts: Vec<&str> = key_pair.split(':').collect();
                 if parts.len() != 2 {
                     anyhow::bail!("Oracle key must be in format 'public_key:secret_key'");
                 }
@@ -86,7 +88,7 @@ async fn main() -> anyhow::Result<()> {
                 let secret_key =
                     jstz_crypto::secret_key::SecretKey::from_base58(parts[1])
                         .context("Invalid oracle secret key")?;
-                Some((public_key, secret_key))
+                Some(KeyPair(public_key, secret_key))
             } else {
                 None
             };
