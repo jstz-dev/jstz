@@ -13,7 +13,7 @@ pub const JSTZ_NODE_DEFAULT_PK: &str =
 pub const JSTZ_NODE_DEFAULT_SK: &str =
     "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct KeyPair(pub PublicKey, pub SecretKey);
 
 impl Default for KeyPair {
@@ -44,6 +44,8 @@ pub struct JstzNodeConfig {
     pub capacity: usize,
     /// The path to the sequencer runtime debug log file.
     pub debug_log_file: PathBuf,
+    #[cfg(feature = "v2_runtime")]
+    pub oracle_key_pair: Option<KeyPair>,
 }
 
 impl JstzNodeConfig {
@@ -61,6 +63,7 @@ impl JstzNodeConfig {
         mode: RunMode,
         capacity: usize,
         debug_log_file: &Path,
+        #[cfg(feature = "v2_runtime")] oracle_key_pair: Option<KeyPair>,
     ) -> Self {
         Self {
             endpoint: endpoint.clone(),
@@ -71,6 +74,8 @@ impl JstzNodeConfig {
             mode,
             capacity,
             debug_log_file: debug_log_file.to_path_buf(),
+            #[cfg(feature = "v2_runtime")]
+            oracle_key_pair,
         }
     }
 }
@@ -99,6 +104,8 @@ mod tests {
             RunMode::Default,
             0,
             Path::new("/tmp/debug.log"),
+            #[cfg(feature = "v2_runtime")]
+            None,
         );
 
         let json = serde_json::to_value(&config).unwrap();
@@ -122,6 +129,8 @@ mod tests {
             RunMode::Default,
             0,
             Path::new("/tmp/debug.log"),
+            #[cfg(feature = "v2_runtime")]
+            None,
         );
 
         assert_eq!(config.injector, KeyPair::default());

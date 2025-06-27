@@ -185,11 +185,7 @@ mod tests {
     use super::*;
     use jstz_proto::runtime::v2::fetch::http::Body;
     use jstz_proto::runtime::v2::fetch::http::Request as HttpReq;
-<<<<<<< HEAD
-    use mockito::{Matcher, Mock};
-    use octez::r#async::endpoint::Endpoint;
-=======
->>>>>>> 08a86178 (feat(oracle): connect relay and data provider, integrate in jstz node)
+    use mockito::Matcher;
     use once_cell::sync::Lazy;
     use std::str::FromStr;
     use tokio::time::Duration;

@@ -183,6 +183,8 @@ async fn create_jstzd_server(
         jstz_node::RunMode::Default,
         0,
         &debug_log_path,
+        #[cfg(feature = "v2_runtime")]
+        None,
     );
     let config = JstzdConfig::new(
         octez_node_config,

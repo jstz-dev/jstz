@@ -817,6 +817,8 @@ mod tests {
                 jstz_node::RunMode::Default,
                 0,
                 &PathBuf::from("/log"),
+                #[cfg(feature = "v2_runtime")]
+                None,
             ),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(

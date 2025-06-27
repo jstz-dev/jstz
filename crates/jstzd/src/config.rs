@@ -197,6 +197,8 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
                 .keep()
                 .context("failed to keep jstz node debug file path")?,
         ),
+        #[cfg(feature = "v2_runtime")]
+        None,
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
