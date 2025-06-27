@@ -1,5 +1,6 @@
 use crate::config::{
     builtin_bootstrap_accounts, ACTIVATOR_ACCOUNT_ALIAS, INJECTOR_ACCOUNT_ALIAS,
+    ROLLUP_OPERATOR_ACCOUNT_ALIAS,
 };
 
 use super::{
@@ -512,7 +513,11 @@ fn print_bootstrap_accounts<'a>(
         Cell::new("XTZ Balance (mutez)"),
     ]));
 
-    let internal_accounts = [ACTIVATOR_ACCOUNT_ALIAS, INJECTOR_ACCOUNT_ALIAS];
+    let internal_accounts = [
+        ACTIVATOR_ACCOUNT_ALIAS,
+        INJECTOR_ACCOUNT_ALIAS,
+        ROLLUP_OPERATOR_ACCOUNT_ALIAS,
+    ];
     let mut lines = accounts
         .into_iter()
         .filter_map(|account| {
@@ -752,6 +757,12 @@ mod tests {
                 &BootstrapAccount::new(
                     "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
                     4,
+                )
+                .unwrap(),
+                // Rollup operator should not be printed out.
+                &BootstrapAccount::new(
+                    "edpktoeTraS2WW9iaceu8hvHJ1sUJFSKavtzrMcp4jwMoJWWBts8AK",
+                    5,
                 )
                 .unwrap(),
                 &BootstrapAccount::new(
