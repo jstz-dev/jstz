@@ -297,7 +297,6 @@ mod tests {
     use mockito::Matcher;
     use octez::OctezRollupClient;
     use tempfile::NamedTempFile;
-    use tezos_crypto_rs::base58::ToBase58Check;
     use tower::ServiceExt;
 
     use crate::{
@@ -340,7 +339,7 @@ mod tests {
             .runtime_db
             .write(
                 &format!("/jstz_account/{addr}"),
-                &expected.encode().unwrap().to_base58check(),
+                &hex::encode(expected.encode().unwrap()),
             )
             .unwrap();
 
@@ -465,7 +464,7 @@ mod tests {
             .runtime_db
             .write(
                 &format!("/jstz_account/{addr}"),
-                &account.encode().unwrap().to_base58check(),
+                &hex::encode(account.encode().unwrap()),
             )
             .unwrap();
 
@@ -516,14 +515,14 @@ mod tests {
             .runtime_db
             .write(
                 &format!("/jstz_account/{smart_function_hash}"),
-                &smart_function_account.encode().unwrap().to_base58check(),
+                &hex::encode(smart_function_account.encode().unwrap()),
             )
             .unwrap();
         state
             .runtime_db
             .write(
                 &format!("/jstz_account/{user_account_hash}"),
-                &user_account.encode().unwrap().to_base58check(),
+                &hex::encode(user_account.encode().unwrap()),
             )
             .unwrap();
 
@@ -589,14 +588,14 @@ mod tests {
             .runtime_db
             .write(
                 &format!("/jstz_account/{smart_function_hash}"),
-                &smart_function_account.encode().unwrap().to_base58check(),
+                &hex::encode(smart_function_account.encode().unwrap()),
             )
             .unwrap();
         state
             .runtime_db
             .write(
                 &format!("/jstz_account/{user_account_hash}"),
-                &user_account.encode().unwrap().to_base58check(),
+                &hex::encode(user_account.encode().unwrap()),
             )
             .unwrap();
 
@@ -651,37 +650,32 @@ mod tests {
             .runtime_db
             .write(
                 &format!("/jstz_kv/{address}/foo"),
-                &KvValue(serde_json::json!("foo!"))
-                    .encode()
-                    .unwrap()
-                    .to_base58check(),
+                &hex::encode(KvValue(serde_json::json!("foo!")).encode().unwrap()),
             )
             .unwrap();
         state
             .runtime_db
             .write(
                 &format!("/jstz_kv/{address}/foo/bar"),
-                &KvValue(serde_json::json!({"bar": "bar!"}))
-                    .encode()
-                    .unwrap()
-                    .to_base58check(),
+                &hex::encode(
+                    KvValue(serde_json::json!({"bar": "bar!"}))
+                        .encode()
+                        .unwrap(),
+                ),
             )
             .unwrap();
         state
             .runtime_db
             .write(
                 &format!("/jstz_kv/{address}/bad_value"),
-                &[6, 0, 0, 0, 0, 0, 0, 0, 34].to_base58check(),
+                &hex::encode([6, 0, 0, 0, 0, 0, 0, 0, 34]),
             )
             .unwrap();
         state
             .runtime_db
             .write(
                 &format!("/jstz_kv/{address}"),
-                &KvValue(serde_json::json!("root!"))
-                    .encode()
-                    .unwrap()
-                    .to_base58check(),
+                &hex::encode(KvValue(serde_json::json!("root!")).encode().unwrap()),
             )
             .unwrap();
 
@@ -766,10 +760,7 @@ mod tests {
                 .runtime_db
                 .write(
                     &format!("/jstz_kv/{address}/{key}"),
-                    &KvValue(serde_json::json!("!"))
-                        .encode()
-                        .unwrap()
-                        .to_base58check(),
+                    &hex::encode(KvValue(serde_json::json!("!")).encode().unwrap()),
                 )
                 .unwrap();
         }
