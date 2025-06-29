@@ -27,6 +27,9 @@ use crate::{
 static X_JSTZ_ORACLE_GAS_LIMIT: std::sync::LazyLock<ByteString> =
     std::sync::LazyLock::new(|| ByteString::from("x-jstz-oracle-gas-limit"));
 
+// FIXME(https://linear.app/tezos/issue/JSTZ-744/make-ttl-configurable)
+const ORACLE_REQUEST_TTL: u64 = 80;
+
 #[derive(Debug)]
 pub struct Oracle {
     /// Oracle's public key
@@ -81,11 +84,16 @@ impl Oracle {
         // TODO(https://linear.app/tezos/issue/JSTZ-735/fix-transaction-bond-issue)
         // Deduce balance for bond
         let request_id = self.next_request_id;
+        let current_level = PROTOCOL_CONTEXT
+            .get()
+            .expect("Protocol context should be initialized")
+            .current_level();
+        let timeout = current_level + ORACLE_REQUEST_TTL;
         let oracle_request = OracleRequest {
             id: request_id,
             caller: caller.clone(),
             gas_limit,
-            timeout: 0,
+            timeout,
             request: request,
         };
         let (sender, rx) = channel();
@@ -97,14 +105,8 @@ impl Oracle {
         // Checks have passed, we can do state updates
         self.incr_request_id();
         OracleRequestStorage::insert(rt, &oracle_request);
-        self.active_requests.insert(
-            request_id,
-            RequestMetadata {
-                sender: sender,
-                // TTL not yet implemented
-                timeout: 0,
-            },
-        );
+        self.active_requests
+            .insert(request_id, RequestMetadata { sender, timeout });
         EventPublisher::publish_event(rt, &oracle_request)?;
         Ok(rx)
     }
@@ -172,11 +174,9 @@ impl Oracle {
         let current_level = PROTOCOL_CONTEXT
             .get()
             .expect("Protocol context should be initialized")
-            .current_level()
-            .lock();
-
+            .current_level();
         while let Some(head) = self.active_requests.first_entry() {
-            if *current_level.deref() < head.get().timeout {
+            if current_level < head.get().timeout {
                 break;
             }
             {
@@ -282,6 +282,7 @@ mod test {
     fn setup_host_with_pk(pk: &PublicKey, sink: Option<DebugLogSink>) -> MockHost {
         let mut host = MockHost::default();
         Storage::insert(&mut host, &ORACLE_PUBLIC_KEY_PATH, pk).unwrap();
+        ProtocolContext::init_global(&mut host, 0).unwrap();
         if let Some(sink) = sink {
             host.set_debug_handler(sink);
         }
@@ -386,7 +387,7 @@ mod test {
         assert_eq!(oracle.active_requests.len(), 1);
         assert!(oracle.active_requests.contains_key(&0));
         let (_, value) = oracle.active_requests.first_key_value().unwrap();
-        assert_eq!(value.timeout, 0);
+        assert_eq!(value.timeout, ORACLE_REQUEST_TTL);
 
         // Check OracleRequest is stored
         let stored =
@@ -394,7 +395,7 @@ mod test {
         assert_eq!(0, stored.id);
         assert_eq!(caller, stored.caller);
         assert_eq!(request.clone(), stored.request);
-        assert_eq!(0, stored.timeout);
+        assert_eq!(ORACLE_REQUEST_TTL, stored.timeout);
         assert_eq!(minimal_gas, stored.gas_limit);
 
         // TODO(Deduct balances)
@@ -422,7 +423,7 @@ mod test {
         assert_eq!(1, stored2.id);
         assert_eq!(caller, stored.caller);
         assert_eq!(request2.clone(), stored2.request);
-        assert_eq!(0, stored2.timeout);
+        assert_eq!(ORACLE_REQUEST_TTL, stored2.timeout);
         assert_eq!(3500, stored2.gas_limit);
 
         // TODO(Deduct balances)
@@ -571,7 +572,6 @@ mod test {
         )
         .unwrap();
         let mut host = setup_host_with_pk(&pk, None);
-        ProtocolContext::init_global(&mut host, 0);
         let mut oracle = Oracle::new(&host, None).unwrap();
         let mut tx = Transaction::default();
         tx.begin();
@@ -585,16 +585,30 @@ mod test {
             headers: vec![],
             body: Some(Body::zero_capacity()),
         };
+        PROTOCOL_CONTEXT.get().unwrap().set_level(1);
+        // next 2 requests will expire at level 81
         oracle
             .send_request(&mut host, &mut tx, &caller, req.clone())
             .unwrap();
         oracle
             .send_request(&mut host, &mut tx, &caller, req.clone())
             .unwrap();
+        // next 2 requests will expire at level 86
+        PROTOCOL_CONTEXT.get().unwrap().set_level(5);
         oracle
             .send_request(&mut host, &mut tx, &caller, req)
             .unwrap();
+
         assert_eq!(oracle.active_requests.len(), 3);
+        oracle.gc_timeout_requests(&mut host);
+        assert_eq!(oracle.active_requests.len(), 3);
+
+        PROTOCOL_CONTEXT.get().unwrap().set_level(81);
+        oracle.gc_timeout_requests(&mut host);
+        assert_eq!(oracle.active_requests.len(), 1);
+        assert!(oracle.active_requests.contains_key(&2));
+
+        PROTOCOL_CONTEXT.get().unwrap().set_level(86);
         oracle.gc_timeout_requests(&mut host);
         assert_eq!(oracle.active_requests.len(), 0);
     }
