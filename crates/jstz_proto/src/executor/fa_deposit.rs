@@ -190,7 +190,7 @@ mod test {
             amount: 42,
             receiver: Address::User(jstz_mock::account2()),
             proxy_smart_function: proxy.map(Address::SmartFunction),
-            ticket_hash: jstz_mock::ticket_hash1(),
+            ticket_hash: jstz_mock::ticket_hash1().into(),
         }
     }
 
@@ -222,7 +222,7 @@ mod test {
                     &mut host,
                     &mut tx,
                     &expected_receiver,
-                    &ticket_hash,
+                    &ticket_hash.into(),
                 )
                 .unwrap();
                 assert_eq!(expected_balance, balance);
@@ -260,7 +260,7 @@ mod test {
                     &mut host,
                     &mut tx,
                     &expected_receiver,
-                    &ticket_hash,
+                    &ticket_hash.into(),
                 )
                 .unwrap();
                 assert_eq!(84, balance);
@@ -308,7 +308,7 @@ mod test {
                     &mut host,
                     &mut tx,
                     &Address::SmartFunction(proxy),
-                    &ticket_hash,
+                    &ticket_hash.into(),
                 )
                 .unwrap();
                 assert_eq!(42, balance);
@@ -360,7 +360,7 @@ mod test {
                     &mut host,
                     &mut tx,
                     &Address::SmartFunction(proxy),
-                    &ticket_hash,
+                    &ticket_hash.into(),
                 )
                 .unwrap();
                 assert_eq!(84, balance);
@@ -406,7 +406,7 @@ mod test {
                     &mut host,
                     &mut tx,
                     &Address::SmartFunction(proxy),
-                    &ticket_hash,
+                    &ticket_hash.clone().into(),
                 )
                 .unwrap();
                 assert_eq!(0, proxy_balance);
@@ -415,7 +415,7 @@ mod test {
                     &mut host,
                     &mut tx,
                     &expected_receiver,
-                    &ticket_hash,
+                    &ticket_hash.clone().into(),
                 )
                 .unwrap();
                 assert_eq!(42, receiver_balance);

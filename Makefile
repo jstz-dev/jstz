@@ -41,6 +41,14 @@ build-kernel:
 build-jstzd-kernel: build-kernel
 	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(JSTZD_KERNEL_PATH)
 
+.PHONY: build-kernel-sequenced-op
+build-kernel-sequenced-op:
+	@cargo build --package jstz_kernel --target wasm32-unknown-unknown $(PROFILE_OPT) --features sequenced_op
+
+.PHONY: build-jstzd-kernel-sequenced-op
+build-jstzd-kernel-sequenced-op: build-kernel-sequenced-op
+	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(JSTZD_KERNEL_PATH)
+
 # TODO: Remove once jstzd replaces the sandbox
 # https://linear.app/tezos/issue/JSTZ-205/remove-build-for-jstz-cli
 .PHONY: build-cli-kernel
