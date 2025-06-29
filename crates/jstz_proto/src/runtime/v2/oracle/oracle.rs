@@ -24,24 +24,19 @@ use crate::{
 static X_JSTZ_ORACLE_GAS_LIMIT: std::sync::LazyLock<ByteString> =
     std::sync::LazyLock::new(|| ByteString::from("x-jstz-oracle-gas-limit"));
 
-#[derive(Debug, Default)]
-pub struct OracleConfig {
-    gas: GasParams,
-}
-
-#[derive(Clone, Debug, Default)]
-struct GasParams {
-    protocol_fee: Gas,
-    oracle_fee: Gas,
-    spam_prevention: Gas,
-}
-
 #[derive(Debug)]
 pub struct Oracle {
     /// Oracle's public key
     public_key: PublicKey,
-    /// Sender channels for in-flight requests
-    senders: BTreeMap<RequestId, Sender<Response>>,
+    /// Holds cached metadata that is checked often
+    ///
+    /// Notes on timeout: The relationship between request id and timeout is such that
+    /// the timeout of the next rid will be at minimum equal to the timeout of the latest
+    /// rid. In addition, since rids are created through an incrementing counter, the
+    /// order of an rid is equivalent to timeout order. This means we can rely on `first_entry`
+    /// of BTreeMap to get the next timeout value (and efficiently delete it) while also having
+    /// an efficient way to delete requests by rid
+    active_requests: BTreeMap<RequestId, RequestMetadata>,
     /// Next request id
     next_request_id: RequestId,
     config: OracleConfig,
@@ -58,7 +53,7 @@ impl Oracle {
             .ok_or(OracleError::PublicKeyNotFound)?;
         Ok(Self {
             public_key,
-            senders: Default::default(),
+            active_requests: Default::default(),
             next_request_id: 0,
             config: config.unwrap_or_default(),
         })
@@ -84,21 +79,29 @@ impl Oracle {
         // Deduce balance for bond
         let request_id = self.next_request_id;
         let oracle_request = OracleRequest {
-            id: self.incr_request_id(),
+            id: request_id,
             caller: caller.clone(),
             gas_limit,
             timeout: 0,
             request: request,
         };
         let (sender, rx) = channel();
-        if self.senders.contains_key(&request_id) {
+        if self.active_requests.contains_key(&request_id) {
             // protocol error
             return Err(OracleError::BadState("Sender should not yet exist!"));
         }
 
         // Checks have passed, we can do state updates
+        self.incr_request_id();
         OracleRequestStorage::insert(rt, &oracle_request);
-        self.senders.insert(request_id, sender);
+        self.active_requests.insert(
+            request_id,
+            RequestMetadata {
+                sender: sender,
+                // TTL not yet implemented
+                timeout: 0,
+            },
+        );
         EventPublisher::publish_event(rt, &oracle_request)?;
         Ok(rx)
     }
@@ -109,8 +112,8 @@ impl Oracle {
         request_id: RequestId,
         response: Response,
     ) -> Result<()> {
-        let (oracle_request, sender) = self.remove(host, &request_id)?;
-        if sender.send(response).is_err() {
+        let (oracle_request, request_metadata) = self.remove(host, &request_id)?;
+        if request_metadata.sender.send(response).is_err() {
             return Err(OracleError::ConnectionClosed);
         }
         Ok(())
@@ -122,14 +125,14 @@ impl Oracle {
         &mut self,
         host: &mut impl HostRuntime,
         request_id: &RequestId,
-    ) -> Result<(OracleRequest, Sender<Response>)> {
-        let sender = self
-            .senders
+    ) -> Result<(OracleRequest, RequestMetadata)> {
+        let request_metadata = self
+            .active_requests
             .remove(&request_id)
             .ok_or_else(|| OracleError::RequestDoesNotExist)?;
         let oracle_request = OracleRequestStorage::get(host, &request_id).unwrap();
         OracleRequestStorage::delete(host, &request_id);
-        Ok((oracle_request, sender))
+        Ok((oracle_request, request_metadata))
     }
 
     // Increments and returns the previous [`next_request_id`]
@@ -160,6 +163,41 @@ impl Oracle {
         }
         Ok(gas_limit)
     }
+
+    /// Triggers the GC for timed out requests
+    pub fn gc_timeout_requests(
+        &mut self,
+        host: &mut impl HostRuntime,
+        current_level: BlockLevel,
+    ) {
+        while let Some(head) = self.active_requests.first_entry() {
+            if current_level < head.get().timeout {
+                break;
+            }
+            {
+                // Sender will send cancellation when dropped
+                head.remove_entry();
+            }
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct OracleConfig {
+    gas: GasParams,
+}
+
+#[derive(Clone, Debug, Default)]
+struct GasParams {
+    protocol_fee: Gas,
+    oracle_fee: Gas,
+    spam_prevention: Gas,
+}
+
+#[derive(Debug)]
+pub struct RequestMetadata {
+    sender: Sender<Response>,
+    timeout: BlockLevel,
 }
 
 struct OracleRequestStorage;
@@ -283,7 +321,7 @@ mod test {
         let oracle = Oracle::new(&host, None).expect("should succeed");
         assert_eq!(oracle.public_key, pk);
         assert_eq!(oracle.next_request_id, 0);
-        assert!(oracle.senders.is_empty());
+        assert!(oracle.active_requests.is_empty());
     }
 
     #[test]
@@ -339,8 +377,10 @@ mod test {
 
         // Check Oracle state: next_request_id incremented, sender inserted
         assert_eq!(oracle.next_request_id, 1);
-        assert_eq!(oracle.senders.len(), 1);
-        assert!(oracle.senders.contains_key(&0));
+        assert_eq!(oracle.active_requests.len(), 1);
+        assert!(oracle.active_requests.contains_key(&0));
+        let (_, value) = oracle.active_requests.first_key_value().unwrap();
+        assert_eq!(value.timeout, 0);
 
         // Check OracleRequest is stored
         let stored =
@@ -368,8 +408,8 @@ mod test {
             .expect("send_request should succeed");
 
         assert_eq!(oracle.next_request_id, 2);
-        assert_eq!(oracle.senders.len(), 2);
-        assert!(oracle.senders.contains_key(&1));
+        assert_eq!(oracle.active_requests.len(), 2);
+        assert!(oracle.active_requests.contains_key(&1));
 
         let stored2 =
             OracleRequestStorage::get(&host, &1).expect("OracleRequest should be stored");
@@ -514,7 +554,41 @@ mod test {
             )
             .unwrap();
         oracle.remove(&mut host, &0).unwrap();
-        assert_eq!(false, oracle.senders.contains_key(&0));
+        assert_eq!(false, oracle.active_requests.contains_key(&0));
         assert_eq!(None, OracleRequestStorage::get(&mut host, &0))
+    }
+
+    #[test]
+    fn test_garbage_collect_timeout_requests() {
+        let pk = PublicKey::from_base58(
+            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+        )
+        .unwrap();
+        let mut host = setup_host_with_pk(&pk, None);
+        let mut oracle = Oracle::new(&host, None).unwrap();
+        let mut tx = Transaction::default();
+        tx.begin();
+        let caller = UserAddress::digest(&[1u8; 20]).unwrap();
+        Account::add_balance(&mut host, &mut tx, &caller, 100_000);
+        tx.commit(&mut host);
+        tx.begin();
+        let req = Request {
+            method: "GET".into(),
+            url: "http://example.com".parse().unwrap(),
+            headers: vec![],
+            body: Some(Body::zero_capacity()),
+        };
+        oracle
+            .send_request(&mut host, &mut tx, &caller, req.clone())
+            .unwrap();
+        oracle
+            .send_request(&mut host, &mut tx, &caller, req.clone())
+            .unwrap();
+        oracle
+            .send_request(&mut host, &mut tx, &caller, req)
+            .unwrap();
+        assert_eq!(oracle.active_requests.len(), 3);
+        oracle.gc_timeout_requests(&mut host, 0);
+        assert_eq!(oracle.active_requests.len(), 0);
     }
 }
