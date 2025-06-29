@@ -9,14 +9,17 @@ use jstz_core::{
     kv::{Storage, Transaction},
 };
 use jstz_crypto::public_key::PublicKey;
-use std::{collections::BTreeMap, fmt::Display};
+use std::{collections::BTreeMap, fmt::Display, ops::Deref};
 use tezos_smart_rollup::storage::path::{concat, OwnedPath};
 
 use super::{OracleRequest, RequestId, UserAddress};
 use crate::{
     context::account::Account,
     event::{Event, EventError, EventPublisher},
-    runtime::v2::fetch::http::{Request, Response},
+    runtime::v2::{
+        fetch::http::{Request, Response},
+        protocol_context::PROTOCOL_CONTEXT,
+    },
     storage::{ORACLE_PUBLIC_KEY_PATH, ORACLE_REQUESTS_PATH},
     BlockLevel, Gas,
 };
@@ -165,13 +168,15 @@ impl Oracle {
     }
 
     /// Triggers the GC for timed out requests
-    pub fn gc_timeout_requests(
-        &mut self,
-        host: &mut impl HostRuntime,
-        current_level: BlockLevel,
-    ) {
+    pub fn gc_timeout_requests(&mut self, host: &mut impl HostRuntime) {
+        let current_level = PROTOCOL_CONTEXT
+            .get()
+            .expect("Protocol context should be initialized")
+            .current_level()
+            .lock();
+
         while let Some(head) = self.active_requests.first_entry() {
-            if current_level < head.get().timeout {
+            if *current_level.deref() < head.get().timeout {
                 break;
             }
             {
@@ -267,6 +272,7 @@ mod test {
     use crate::event::decode_line;
     use crate::runtime::v2::fetch::http::{Body, Request, Response};
     use crate::runtime::v2::oracle::UserAddress;
+    use crate::runtime::v2::protocol_context::ProtocolContext;
     use crate::tests::DebugLogSink;
     use jstz_core::kv::Storage;
     use jstz_crypto::{hash::Hash, public_key::PublicKey};
@@ -565,6 +571,7 @@ mod test {
         )
         .unwrap();
         let mut host = setup_host_with_pk(&pk, None);
+        ProtocolContext::init_global(&mut host, 0);
         let mut oracle = Oracle::new(&host, None).unwrap();
         let mut tx = Transaction::default();
         tx.begin();
@@ -588,7 +595,7 @@ mod test {
             .send_request(&mut host, &mut tx, &caller, req)
             .unwrap();
         assert_eq!(oracle.active_requests.len(), 3);
-        oracle.gc_timeout_requests(&mut host, 0);
+        oracle.gc_timeout_requests(&mut host);
         assert_eq!(oracle.active_requests.len(), 0);
     }
 }
