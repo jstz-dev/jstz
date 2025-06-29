@@ -20,8 +20,15 @@ impl ProtocolContext {
         self.oracle.clone()
     }
 
-    pub fn current_level(&self) -> &Arc<Mutex<BlockLevel>> {
-        &self.current_level
+    pub fn current_level(&self) -> BlockLevel {
+        let level = self.current_level.lock();
+        *level
+    }
+
+    #[cfg(test)]
+    pub fn set_level(&self, new_level: BlockLevel) {
+        let mut level = self.current_level.lock();
+        *level = new_level
     }
 
     /// Initialize the global protocol context
