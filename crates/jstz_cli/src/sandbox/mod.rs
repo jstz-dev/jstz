@@ -10,7 +10,7 @@ pub use consts::*;
 use container::*;
 
 const SANDBOX_CONTAINER_NAME: &str = "jstz-sandbox";
-const SANDBOX_IMAGE: &str = "ghcr.io/jstz-dev/jstz/jstzd:0.1.1-alpha.1";
+const SANDBOX_IMAGE: &str = "ghcr.io/jstz-dev/jstz/jstzd:0.1.1-alpha.2";
 
 pub async fn assert_sandbox_running(sandbox_base_url: &str) -> Result<()> {
     match jstzd::is_jstzd_running(sandbox_base_url).await {
