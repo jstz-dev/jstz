@@ -9,20 +9,24 @@ use jstz_core::{
     kv::{Storage, Transaction},
 };
 use jstz_crypto::public_key::PublicKey;
-use std::{collections::BTreeMap, fmt::Display};
+use std::{collections::BTreeMap, fmt::Display, ops::Deref};
 use tezos_smart_rollup::storage::path::{concat, OwnedPath};
 
 use super::{OracleRequest, RequestId, UserAddress};
 use crate::{
     context::account::Account,
     event::{Event, EventError, EventPublisher},
-    runtime::v2::fetch::http::{Request, Response},
+    runtime::v2::{
+        fetch::http::{Request, Response},
+        protocol_context::PROTOCOL_CONTEXT,
+    },
     storage::{ORACLE_PUBLIC_KEY_PATH, ORACLE_REQUESTS_PATH},
     BlockLevel, Gas,
 };
 
 static X_JSTZ_ORACLE_GAS_LIMIT: std::sync::LazyLock<ByteString> =
     std::sync::LazyLock::new(|| ByteString::from("x-jstz-oracle-gas-limit"));
+const ORACLE_REQUEST_TTL: u64 = 80;
 
 #[derive(Debug)]
 pub struct Oracle {
@@ -78,11 +82,16 @@ impl Oracle {
         // TODO(https://linear.app/tezos/issue/JSTZ-735/fix-transaction-bond-issue)
         // Deduce balance for bond
         let request_id = self.next_request_id;
+        let current_level = PROTOCOL_CONTEXT
+            .get()
+            .expect("Protocol context should be initialized")
+            .current_level();
+        let timeout = current_level + ORACLE_REQUEST_TTL;
         let oracle_request = OracleRequest {
             id: request_id,
             caller: caller.clone(),
             gas_limit,
-            timeout: 0,
+            timeout,
             request: request,
         };
         let (sender, rx) = channel();
@@ -94,14 +103,8 @@ impl Oracle {
         // Checks have passed, we can do state updates
         self.incr_request_id();
         OracleRequestStorage::insert(rt, &oracle_request);
-        self.active_requests.insert(
-            request_id,
-            RequestMetadata {
-                sender: sender,
-                // TTL not yet implemented
-                timeout: 0,
-            },
-        );
+        self.active_requests
+            .insert(request_id, RequestMetadata { sender, timeout });
         EventPublisher::publish_event(rt, &oracle_request)?;
         Ok(rx)
     }
@@ -165,11 +168,11 @@ impl Oracle {
     }
 
     /// Triggers the GC for timed out requests
-    pub fn gc_timeout_requests(
-        &mut self,
-        host: &mut impl HostRuntime,
-        current_level: BlockLevel,
-    ) {
+    pub fn gc_timeout_requests(&mut self, host: &mut impl HostRuntime) {
+        let current_level = PROTOCOL_CONTEXT
+            .get()
+            .expect("Protocol context should be initialized")
+            .current_level();
         while let Some(head) = self.active_requests.first_entry() {
             if current_level < head.get().timeout {
                 break;
@@ -267,6 +270,7 @@ mod test {
     use crate::event::decode_line;
     use crate::runtime::v2::fetch::http::{Body, Request, Response};
     use crate::runtime::v2::oracle::UserAddress;
+    use crate::runtime::v2::protocol_context::ProtocolContext;
     use crate::tests::DebugLogSink;
     use jstz_core::kv::Storage;
     use jstz_crypto::{hash::Hash, public_key::PublicKey};
@@ -276,6 +280,7 @@ mod test {
     fn setup_host_with_pk(pk: &PublicKey, sink: Option<DebugLogSink>) -> MockHost {
         let mut host = MockHost::default();
         Storage::insert(&mut host, &ORACLE_PUBLIC_KEY_PATH, pk).unwrap();
+        ProtocolContext::init_global(&mut host, 0).unwrap();
         if let Some(sink) = sink {
             host.set_debug_handler(sink);
         }
@@ -380,7 +385,7 @@ mod test {
         assert_eq!(oracle.active_requests.len(), 1);
         assert!(oracle.active_requests.contains_key(&0));
         let (_, value) = oracle.active_requests.first_key_value().unwrap();
-        assert_eq!(value.timeout, 0);
+        assert_eq!(value.timeout, ORACLE_REQUEST_TTL);
 
         // Check OracleRequest is stored
         let stored =
@@ -388,7 +393,7 @@ mod test {
         assert_eq!(0, stored.id);
         assert_eq!(caller, stored.caller);
         assert_eq!(request.clone(), stored.request);
-        assert_eq!(0, stored.timeout);
+        assert_eq!(ORACLE_REQUEST_TTL, stored.timeout);
         assert_eq!(minimal_gas, stored.gas_limit);
 
         // TODO(Deduct balances)
@@ -416,7 +421,7 @@ mod test {
         assert_eq!(1, stored2.id);
         assert_eq!(caller, stored.caller);
         assert_eq!(request2.clone(), stored2.request);
-        assert_eq!(0, stored2.timeout);
+        assert_eq!(ORACLE_REQUEST_TTL, stored2.timeout);
         assert_eq!(3500, stored2.gas_limit);
 
         // TODO(Deduct balances)
@@ -578,17 +583,31 @@ mod test {
             headers: vec![],
             body: Some(Body::zero_capacity()),
         };
+        PROTOCOL_CONTEXT.get().unwrap().set_level(1);
+        // next 2 requests will expire at level 81
         oracle
             .send_request(&mut host, &mut tx, &caller, req.clone())
             .unwrap();
         oracle
             .send_request(&mut host, &mut tx, &caller, req.clone())
             .unwrap();
+        // next 2 requests will expire at level 86
+        PROTOCOL_CONTEXT.get().unwrap().set_level(5);
         oracle
             .send_request(&mut host, &mut tx, &caller, req)
             .unwrap();
+
         assert_eq!(oracle.active_requests.len(), 3);
-        oracle.gc_timeout_requests(&mut host, 0);
+        oracle.gc_timeout_requests(&mut host);
+        assert_eq!(oracle.active_requests.len(), 3);
+
+        PROTOCOL_CONTEXT.get().unwrap().set_level(81);
+        oracle.gc_timeout_requests(&mut host);
+        assert_eq!(oracle.active_requests.len(), 1);
+        assert!(oracle.active_requests.contains_key(&2));
+
+        PROTOCOL_CONTEXT.get().unwrap().set_level(86);
+        oracle.gc_timeout_requests(&mut host);
         assert_eq!(oracle.active_requests.len(), 0);
     }
 }
