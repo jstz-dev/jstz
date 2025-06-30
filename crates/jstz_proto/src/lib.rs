@@ -70,15 +70,16 @@ pub mod tests {
     // For example, to inpect the body of a successful RunFunctionReceipt, you can provide the path
     // vec!["result", "inner", "body"]. If you don't really care what the return type is and just
     // want to print field value, you can parameterize with `serde_json::Value`
-    #[allow(unused)]
-    fn inspect_receipt<T: DeserializeOwned>(
+    pub fn inspect_receipt<T: DeserializeOwned>(
         host: &impl HostRuntime,
         op_hash: OperationHash,
-        path_into_receipt: Vec<String>,
+        path_into_receipt: Vec<&'static str>,
     ) -> T {
-        let receipt_path =
-            OwnedPath::try_from(format!("/jstz_receipt/{}", op_hash)).unwrap();
-        let receipt: Receipt = Storage::get(host, &receipt_path).unwrap().unwrap();
+        let receipt_path = OwnedPath::try_from(format!("/jstz_receipt/{}", op_hash))
+            .expect("Operation hash should exist");
+        let receipt: Receipt = Storage::get(host, &receipt_path)
+            .unwrap()
+            .expect("Receipt should exist");
         let receipt = serde_json::to_value(&receipt).unwrap();
         let mut cursor = receipt.clone();
         for p in path_into_receipt {

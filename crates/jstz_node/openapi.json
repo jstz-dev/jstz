@@ -838,7 +838,7 @@
         ],
         "properties": {
           "requestId": {
-            "type": "string",
+            "$ref": "#/components/schemas/u64",
             "description": "The request id of the OracleRequest that is being responded to"
           },
           "response": {
@@ -854,9 +854,7 @@
         ],
         "properties": {
           "requestId": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 0
+            "$ref": "#/components/schemas/u64"
           }
         }
       },

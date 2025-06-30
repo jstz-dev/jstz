@@ -1,3 +1,10 @@
+#[cfg(feature = "v2_runtime")]
+use crate::{
+    operation::OracleResponse,
+    receipt::{OracleResponseReceipt, ReceiptContent},
+    runtime::PROTOCOL_CONTEXT,
+};
+
 use crate::{
     operation::{
         self, Content, InternalOperation, Operation, OperationHash, SignedOperation,
@@ -61,8 +68,28 @@ async fn execute_operation_inner(
             Err(Error::RevealTypeMismatch)
         }
         #[cfg(feature = "v2_runtime")]
-        operation::Content::OracleResponse(_oracle_response) => {
-            todo!()
+        operation::Content::OracleResponse(OracleResponse {
+            request_id,
+            response,
+        }) => {
+            let oracle_ctx = PROTOCOL_CONTEXT
+                .get()
+                .expect("Protocol context should be initialized")
+                .oracle();
+            let mut oracle = oracle_ctx.lock();
+            if &op.public_key != oracle.public_key() {
+                // [execute_operation] verifies SignedOperation signature
+                // so we only need to check pk equality
+                return Err(Error::InvalidOracleKey);
+            }
+            oracle
+                .respond(hrt, request_id.clone(), response)
+                .map_err(|e| Error::V2Error(e.into()))?;
+
+            Ok((
+                op_hash.clone(),
+                ReceiptContent::OracleResponse(OracleResponseReceipt { request_id }),
+            ))
         }
     }
 }
@@ -126,6 +153,11 @@ mod tests {
     use tezos_smart_rollup_mock::MockHost;
 
     use super::*;
+    #[cfg(feature = "v2_runtime")]
+    use crate::runtime::{
+        v2::fetch::http::{Body, Request, Response},
+        ProtocolContext,
+    };
     use crate::{
         context::account::Nonce,
         operation::{Content, DeployFunction, RevealLargePayload, RunFunction},
@@ -257,7 +289,6 @@ mod tests {
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt =
             execute_operation(&mut host, &mut tx, rdc_op, &ticketer, &pk1).await;
-        println!("receipt: {:?}", receipt);
         assert!(matches!(
             receipt.result,
             ReceiptResult::Failed(e) if e.contains("RevealNotSupported")
@@ -344,5 +375,232 @@ mod tests {
                 matches!(receipt.clone().result, ReceiptResult::Failed(e) if e.contains("InvalidScheme"))
             );
         }
+    }
+
+    #[cfg(feature = "v2_runtime")]
+    #[tokio::test]
+    async fn operation_response_successful() {
+        let mut host = MockHost::default();
+        ProtocolContext::init_global(&mut host, 0).unwrap();
+
+        let mut tx = Transaction::default();
+        tx.begin();
+        let caller = PublicKeyHash::digest(&[0u8; 20]).unwrap();
+        let request = Request {
+            method: "GET".into(),
+            url: "http://example.com".parse().unwrap(),
+            headers: Vec::new(),
+            body: None,
+        };
+        let rx = {
+            let oracle_ctx = PROTOCOL_CONTEXT.get().unwrap().oracle();
+            let mut oracle = oracle_ctx.lock();
+            oracle
+                .send_request(&mut host, &mut tx, &caller, request)
+                .unwrap()
+        };
+
+        let oracle_pk = PublicKey::from_base58(
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        )
+        .unwrap();
+
+        let oracle_sk = SecretKey::from_base58(
+            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+        )
+        .unwrap();
+        let resp = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: Vec::new(),
+            body: Body::zero_capacity(),
+        };
+        let response_op = Operation {
+            public_key: oracle_pk,
+            nonce: 0.into(),
+            content: OracleResponse {
+                request_id: 0,
+                response: resp.clone(),
+            }
+            .into(),
+        };
+        let signed_resp_op = SignedOperation::new(
+            oracle_sk.sign(response_op.hash()).unwrap(),
+            response_op.clone(),
+        );
+
+        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
+        let injector = PublicKey::from_base58(
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        )
+        .unwrap();
+        let receipt =
+            execute_operation(&mut host, &mut tx, signed_resp_op, &ticketer, &injector)
+                .await;
+        let received_resp = rx.await.unwrap();
+        assert_eq!(resp, received_resp);
+        assert_eq!(format!("{:?}", receipt), "Receipt { hash: Blake2b([43, 173, 229, 86, 39, 53, 239, 75, 89, 125, 160, 162, 17, 118, 230, 15, 219, 184, 198, 23, 222, 64, 225, 230, 221, 14, 103, 28, 175, 82, 199, 222]), result: Success(OracleResponse(OracleResponseReceipt { request_id: 0 })) }")
+    }
+
+    #[cfg(feature = "v2_runtime")]
+    #[tokio::test]
+    async fn operation_response_invalid_request_id() {
+        let mut host = MockHost::default();
+        ProtocolContext::init_global(&mut host, 0).unwrap();
+
+        let mut tx = Transaction::default();
+        tx.begin();
+        let oracle_pk = PublicKey::from_base58(
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        )
+        .unwrap();
+
+        let oracle_sk = SecretKey::from_base58(
+            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+        )
+        .unwrap();
+        let resp = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: Vec::new(),
+            body: Body::zero_capacity(),
+        };
+        let response_op = Operation {
+            public_key: oracle_pk,
+            nonce: 0.into(),
+            content: OracleResponse {
+                request_id: 21,
+                response: resp.clone(),
+            }
+            .into(),
+        };
+        let signed_resp_op = SignedOperation::new(
+            oracle_sk.sign(response_op.hash()).unwrap(),
+            response_op.clone(),
+        );
+
+        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
+        let injector = PublicKey::from_base58(
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        )
+        .unwrap();
+        let receipt =
+            execute_operation(&mut host, &mut tx, signed_resp_op, &ticketer, &injector)
+                .await;
+        assert!(matches!(
+            receipt,
+            Receipt {
+                result: ReceiptResult::Failed(s),
+                ..
+            }
+            if s == "Request Id does not exist or has expired".to_string()
+        ));
+    }
+
+    #[cfg(feature = "v2_runtime")]
+    #[tokio::test]
+    async fn operation_response_invalid_pk() {
+        let mut host = MockHost::default();
+        ProtocolContext::init_global(&mut host, 0).unwrap();
+        let mut tx = Transaction::default();
+        tx.begin();
+        let invalid_sk = SecretKey::from_base58(
+            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
+        )
+        .unwrap();
+        let resp = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: Vec::new(),
+            body: Body::zero_capacity(),
+        };
+        let response_op = Operation {
+            public_key: PublicKey::from_base58(
+                "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
+            )
+            .unwrap(),
+            nonce: 0.into(),
+            content: OracleResponse {
+                request_id: 0,
+                response: resp.clone(),
+            }
+            .into(),
+        };
+        let signed_resp_op = SignedOperation::new(
+            invalid_sk.sign(response_op.hash()).unwrap(),
+            response_op.clone(),
+        );
+
+        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
+        let injector = PublicKey::from_base58(
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        )
+        .unwrap();
+        let receipt =
+            execute_operation(&mut host, &mut tx, signed_resp_op, &ticketer, &injector)
+                .await;
+        assert!(matches!(
+            receipt,
+            Receipt {
+                result: ReceiptResult::Failed(s),
+                ..
+            }
+            if s == "InvalidOracleKey".to_string()
+        ));
+    }
+
+    #[cfg(feature = "v2_runtime")]
+    #[tokio::test]
+    async fn operation_response_invalid_signature() {
+        let mut host = MockHost::default();
+        ProtocolContext::init_global(&mut host, 0).unwrap();
+
+        let mut tx = Transaction::default();
+        tx.begin();
+        let oracle_pk = PublicKey::from_base58(
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        )
+        .unwrap();
+
+        let invalid_sk = SecretKey::from_base58(
+            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
+        )
+        .unwrap();
+        let resp = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: Vec::new(),
+            body: Body::zero_capacity(),
+        };
+        let response_op = Operation {
+            public_key: oracle_pk,
+            nonce: 0.into(),
+            content: OracleResponse {
+                request_id: 0,
+                response: resp.clone(),
+            }
+            .into(),
+        };
+        let signed_resp_op = SignedOperation::new(
+            invalid_sk.sign(response_op.hash()).unwrap(),
+            response_op.clone(),
+        );
+
+        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
+        let injector = PublicKey::from_base58(
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        )
+        .unwrap();
+        let receipt =
+            execute_operation(&mut host, &mut tx, signed_resp_op, &ticketer, &injector)
+                .await;
+        assert!(matches!(
+            receipt,
+            Receipt {
+                result: ReceiptResult::Failed(s),
+                ..
+            }
+            if s == "Ed25519 error: signature error".to_string()
+        ));
     }
 }
