@@ -8,6 +8,7 @@ pub mod logger;
 pub mod operation;
 pub mod receipt;
 pub mod storage;
+
 pub use error::{Error, Result};
 
 pub mod runtime;
@@ -29,7 +30,7 @@ pub mod tests {
 
     use crate::{operation::OperationHash, receipt::Receipt};
 
-    #[derive(Default)]
+    #[derive(Clone, Default)]
     pub struct DebugLogSink {
         pub inner: Arc<Mutex<Vec<u8>>>,
     }
@@ -50,6 +51,18 @@ pub mod tests {
 
         pub fn content(&self) -> Arc<Mutex<Vec<u8>>> {
             self.inner.clone()
+        }
+
+        #[cfg(feature = "v2_runtime")]
+        pub fn str_content(&self) -> String {
+            let buf = self.inner.lock().unwrap();
+            String::from_utf8(buf.to_vec()).unwrap()
+        }
+
+        #[cfg(feature = "v2_runtime")]
+        pub fn lines(&self) -> Vec<String> {
+            let str_content = self.str_content();
+            str_content.split("\n").map(|s| s.to_string()).collect()
         }
     }
 

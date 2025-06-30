@@ -3,7 +3,6 @@ use jstz_client::JstzClient;
 use jstz_crypto::{
     public_key::PublicKey, public_key_hash::PublicKeyHash, secret_key::SecretKey,
 };
-use jstz_node::config::JstzNodeConfig;
 use jstz_proto::context::account::Address;
 use jstz_proto::operation::{Content, Operation, OracleResponse, SignedOperation};
 use jstz_proto::receipt::{ReceiptContent, ReceiptResult};
@@ -26,7 +25,7 @@ impl DataProvider {
     pub async fn spawn(
         public_key: PublicKey,
         secret_key: SecretKey,
-        node_endpoint: JstzNodeConfig,
+        node_endpoint: String,
         mut relay_rx: Receiver<OracleRequest>,
     ) -> Result<Self> {
         let client = Client::builder()
@@ -69,7 +68,7 @@ async fn handle_request(
     oracle_req: &OracleRequest,
     public_key: &PublicKey,
     signing_key: &SecretKey,
-    node_endpoint: &JstzNodeConfig,
+    node_endpoint: &String,
 ) -> Result<()> {
     let response = get_oracle_response(client, oracle_req).await?;
     inject_oracle_response(oracle_req, public_key, signing_key, node_endpoint, response)
@@ -137,7 +136,7 @@ async fn inject_oracle_response(
     oracle_req: &OracleRequest,
     public_key: &PublicKey,
     signing_key: &SecretKey,
-    node_endpoint: &JstzNodeConfig,
+    node_endpoint: &String,
     response: Response,
 ) -> Result<()> {
     let OracleRequest { id, .. } = oracle_req;
@@ -148,7 +147,7 @@ async fn inject_oracle_response(
         response,
     };
 
-    let jstz_client = JstzClient::new(node_endpoint.endpoint.to_string());
+    let jstz_client = JstzClient::new(node_endpoint.clone());
 
     let oracle_address = Address::User(PublicKeyHash::from(public_key));
     let nonce = jstz_client.get_nonce(&oracle_address).await?;
@@ -184,15 +183,11 @@ async fn inject_oracle_response(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jstz_node::config::{JstzNodeConfig, KeyPair};
-    use jstz_node::RunMode;
     use jstz_proto::runtime::v2::fetch::http::Body;
     use jstz_proto::runtime::v2::fetch::http::Request as HttpReq;
-    use mockito::{Matcher, Mock};
-    use octez::r#async::endpoint::Endpoint;
+    use mockito::Matcher;
     use once_cell::sync::Lazy;
     use std::str::FromStr;
-    use tempfile::TempDir;
     use tokio::time::Duration;
     use url::Url;
 
@@ -318,16 +313,7 @@ mod tests {
             "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
         )?;
 
-        let node_config = JstzNodeConfig::new(
-            &Endpoint::from_str(server.url().as_str())?,
-            &Endpoint::from_str(server.url().as_str())?,
-            &TempDir::new().unwrap().into_path(),
-            &TempDir::new().unwrap().into_path(),
-            KeyPair::default(),
-            RunMode::Default,
-            1000,
-            &TempDir::new().unwrap().into_path(),
-        );
+        let node_config = String::from(server.url().as_str());
 
         let oracle_req = oracle_req("GET", Url::parse("https://example.com")?, None);
         let response = Response {
@@ -404,16 +390,7 @@ mod tests {
         let secret_key = SecretKey::from_base58(
             "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
         )?;
-        let node_config = JstzNodeConfig::new(
-            &Endpoint::from_str(server.url().as_str())?,
-            &Endpoint::from_str(server.url().as_str())?,
-            &TempDir::new().unwrap().into_path(),
-            &TempDir::new().unwrap().into_path(),
-            KeyPair::default(),
-            RunMode::Default,
-            1000,
-            &TempDir::new().unwrap().into_path(),
-        );
+        let node_config = String::from(server.url().as_str());
 
         let oracle_req = oracle_req("GET", Url::parse("https://example.com")?, None);
         let response = Response {

@@ -26,9 +26,10 @@ const JSTZ_PARAMETERS_TY_PATH: &str = "./resources/jstz_rollup/parameters_ty.jso
 /// Generated file that contains path getter functions
 const JSTZ_ROLLUP_PATH: &str = "jstz_rollup_path.rs";
 const BOOTSTRAP_ACCOUNT_PATH: &str = "./resources/bootstrap_account/accounts.json";
-// This alias is also used by jstzd during config validation.
+// These aliases are also used by jstzd during config validation.
 const ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "activator";
 const INJECTOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "injector";
+const ROLLUP_OPERATOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "rollup_operator";
 
 /// Build script that validates built-in bootstrap accounts and generates and saves
 /// the following files in OUT_DIR:
@@ -132,7 +133,8 @@ fn make_kernel_installer(
             kernel_file.display()
         ));
     }
-    let root_hash = preimages::content_to_preimages(kernel_file, preimages_dir)?;
+    let content = fs::read(kernel_file)?;
+    let root_hash = preimages::content_to_preimages(content, preimages_dir)?;
     let installer_program = OwnedConfigProgram(vec![
         // 1. Prepare kernel installer
         OwnedConfigInstruction::reveal_instr(
@@ -254,6 +256,7 @@ fn validate_builtin_bootstrap_accounts() -> HashMap<String, PublicKey> {
     for required_alias in [
         INJECTOR_BOOTSTRAP_ACCOUNT_ALIAS,
         ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS,
+        ROLLUP_OPERATOR_BOOTSTRAP_ACCOUNT_ALIAS,
     ] {
         if !mapping.contains_key(ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS) {
             panic!("there must be one built-in bootstrap account with alias '{required_alias}'");

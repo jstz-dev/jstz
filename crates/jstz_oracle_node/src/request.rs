@@ -1,8 +1,7 @@
 use anyhow::{anyhow, Result};
+pub use jstz_proto::runtime::v2::oracle::request::OracleRequest;
 use once_cell::sync::Lazy;
 use regex::Regex;
-
-pub use jstz_proto::runtime::v2::oracle::request::OracleRequest;
 
 // [ORACLE]{"id":1, ... }
 pub(crate) static ORACLE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| {

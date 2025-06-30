@@ -85,6 +85,8 @@ pub struct RunOptions {
     pub mode: RunMode,
     pub capacity: usize,
     pub debug_log_path: PathBuf,
+    #[cfg(feature = "v2_runtime")]
+    pub oracle_key_pair: Option<KeyPair>,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -101,6 +103,8 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         mode: config.mode,
         capacity: config.capacity,
         debug_log_path: config.debug_log_file,
+        #[cfg(feature = "v2_runtime")]
+        oracle_key_pair: config.oracle_key_pair,
     })
     .await
 }
@@ -116,6 +120,8 @@ pub async fn run(
         mode,
         capacity,
         debug_log_path,
+        #[cfg(feature = "v2_runtime")]
+        oracle_key_pair,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
@@ -180,6 +186,24 @@ pub async fn run(
         &cancellation_token,
     )
     .await?;
+
+    // Start OracleNode if oracle keys are provided
+    #[cfg(feature = "v2_runtime")]
+    let _oracle_node = if let Some(oracle_key_pair) = oracle_key_pair {
+        let KeyPair(public_key, secret_key) = oracle_key_pair;
+        let node_endpoint = format!("http://{}:{}", addr, port);
+        Some(
+            jstz_oracle_node::node::OracleNode::spawn(
+                kernel_log_path.clone(),
+                public_key,
+                secret_key,
+                node_endpoint,
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
 
     let state = AppState {
         rollup_client,
@@ -287,6 +311,8 @@ mod test {
                 mode: mode.clone(),
                 capacity: 0,
                 debug_log_path: debug_log_file.path().to_path_buf(),
+                #[cfg(feature = "v2_runtime")]
+                oracle_key_pair: None,
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -332,6 +358,8 @@ mod test {
                 mode,
                 capacity: 0,
                 debug_log_path: debug_log_file.path().to_path_buf(),
+                #[cfg(feature = "v2_runtime")]
+                oracle_key_pair: None,
             }));
 
             sleep(Duration::from_secs(1)).await;

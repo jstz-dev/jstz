@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Display},
-    ops::Deref,
-    ops::DerefMut,
+    ops::Deref as _,
+    ops::DerefMut as _,
     str::FromStr,
 };
 
@@ -164,6 +164,13 @@ impl Address {
         match self {
             Self::SmartFunction(sfh) => Some(sfh),
             Self::User(_) => None,
+        }
+    }
+
+    pub fn as_user(&self) -> Option<&PublicKeyHash> {
+        match self {
+            Address::User(public_key_hash) => Some(public_key_hash),
+            Address::SmartFunction(_) => None,
         }
     }
 

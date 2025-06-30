@@ -31,8 +31,8 @@ use tokio::time::{sleep, timeout};
 const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 const CONTRACT_INIT_BALANCE: f64 = 1.0;
 pub const JSTZ_ROLLUP_OPERATOR_PK: &str =
-    "edpkuumXzkHj1AhFmjEVLRq4z54iU2atLPUKt4fcu7ihqsEBiUT4wK";
-pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "bootstrap1";
+    "edpktoeTraS2WW9iaceu8hvHJ1sUJFSKavtzrMcp4jwMoJWWBts8AK";
+pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "rollup_operator";
 
 #[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[tokio::test(flavor = "multi_thread")]
@@ -183,6 +183,8 @@ async fn create_jstzd_server(
         jstz_node::RunMode::Default,
         0,
         &debug_log_path,
+        #[cfg(feature = "v2_runtime")]
+        None,
     );
     let config = JstzdConfig::new(
         octez_node_config,

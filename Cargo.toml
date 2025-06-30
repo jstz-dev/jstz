@@ -114,7 +114,6 @@ simplelog = "0.11"
 spinners = "4.1.1"
 syntect = "5.2.0"
 tempfile = "3.10.0"
-tezos_data_encoding = "0.6.0"
 thiserror = "1.0.56"
 tl = "0.7.7"
 tokio = { version = "1.36.0", features = ["full"] }
@@ -138,7 +137,8 @@ features = ["sandbox"]
 default-features = false
 
 [workspace.dependencies.tezos-smart-rollup]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 default-features = false
 features = [
   "std",
@@ -150,40 +150,56 @@ features = [
 ]
 
 [workspace.dependencies.tezos-smart-rollup-host]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 features = ["proto-alpha"]
 
 [workspace.dependencies.tezos-smart-rollup-core]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-mock]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+
+[workspace.dependencies.tezos_data_encoding]
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+
+[workspace.dependencies.tezos-smart-rollup-debug]
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-encoding]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 default-features = false
 features = ["alloc", "tezos-encoding", "crypto"]
 
 [workspace.dependencies.tezos-smart-rollup-entrypoint]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
-[workspace.dependencies.tezos-smart-rollup-debug]
-version = "0.2.2"
 
 [workspace.dependencies.tezos-smart-rollup-panic-hook]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-storage]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-installer-config]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-installer]
-version = "0.2.2"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos_crypto_rs]
-version = "0.6.0"
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 default-features = false
 
 [workspace.dependencies.deno_console]
@@ -191,15 +207,6 @@ git = "https://github.com/jstz-dev/deno"
 branch = "v2.1.10-jstz"
 
 [patch.crates-io]
-tezos-smart-rollup = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
-tezos-smart-rollup-host = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
-tezos-smart-rollup-core = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
-tezos-smart-rollup-mock = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
-tezos-smart-rollup-encoding = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
-tezos-smart-rollup-entrypoint = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
-tezos-smart-rollup-debug = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
-tezos-smart-rollup-panic-hook = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
-tezos-smart-rollup-storage = { git = "https://gitlab.com/tezos/tezos.git", rev = "9642a3e9b8e8bc3c71cbcd6f513616d4310f7552" }
 boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
 boa_engine = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
 boa_gc = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
