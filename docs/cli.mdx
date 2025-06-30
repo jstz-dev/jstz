@@ -58,13 +58,13 @@ Some commands, such as `deploy` and `run`, require you to log in to an account w
 
 #### Commands
 
-- `create`: Creates a Jstz user account and stores its information in the config file.
-- `import`: Imports a user account from a secret key.
-- `delete`: Removes a user account or smart function address from the config file.
-- `list`: Lists the user accounts and smart function aliases in the config file.
-- `code`: Prints the code for a smart function
-- `balance`: Prints the balance for a user account or smart function
 - `alias`: Adds an alias for an address to the config file
+- `balance`: Prints the balance for a user account or smart function
+- `code`: Prints the code for a smart function
+- `create`: Creates a Jstz user account and stores its information in the config file.
+- `delete`: Removes a user account or smart function address from the config file.
+- `import`: Imports a user account from a secret key.
+- `list`: Lists the user accounts and smart function aliases in the config file.
 
 #### Usage
 
@@ -110,13 +110,13 @@ jstz bridge deposit [OPTIONS]
 
 #### Options
 
-- `--from (-f) <ALIAS|ADDRESS>`: Tezos L1 address or alias to withdraw from, which must be stored in the Octez client.
-
-- `--to (-t) <ALIAS|ADDRESS>`: The Jstz address or alias to deposit to.
-
 - `--amount (-a) <INTEGER>`: The amount in tez to transfer.
 
+- `--from (-f) <ALIAS|ADDRESS>`: Tezos L1 address or alias to withdraw from, which must be stored in the Octez client.
+
 - `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+
+- `--to (-t) <ALIAS|ADDRESS>`: The Jstz address or alias to deposit to.
 
 #### Example
 
@@ -143,13 +143,13 @@ jstz deploy [OPTIONS] [CODE|PATH]
 
 - `--balance (-b) <BALANCE>`: The initial balance for the function.
 
-- `--name <NAME>`: Local name or alias of the function.
-
-- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+- `--config <PATH>`: Overrides the path to the config file.
 
 - `--force (-f) <NETWORK>`: Overwrites an existing function name. Effective only when `name` is specified.
 
-- `--config <PATH>`: Overrides the path to the config file.
+- `--name <NAME>`: Local name or alias of the function.
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
 
 :::note
 
@@ -313,17 +313,17 @@ jstz run [OPTIONS] <URL>
 
 #### Options
 
-- `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
-
-- `--method (-m) <method>`: The HTTP method used in the request. Default is `GET`.
+- `--amount (-a) <data>`: The amount in XTZ to transfer.
 
 - `--data (-d) <data>`: Defines the JSON data to be included in the request body.
 
-- `--amount (-a) <data>`: The amount in XTZ to transfer.
-
-- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+- `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
 
 - `--include (-i)`: Include response headers in the output.
+
+- `--method (-m) <method>`: The HTTP method used in the request. Default is `GET`.
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
 
 - `--trace (-t)`: Flag to show the logs of the function.
 
@@ -356,11 +356,11 @@ If you don't use this flag, Jstz requires that you clone the Jstz repository at 
 
 #### Commands
 
+- `restart`: Restarts the sandbox.
+
 - `start`: Starts the sandbox environment.
 
 - `stop`: Shuts down the sandbox environment.
-
-- `restart`: Restarts the sandbox.
 
 #### Usage
 
@@ -398,17 +398,17 @@ jstz transfer [OPTIONS] <AMOUNT> <ADDRESS|ALIAS>
 
 #### Arguments
 
-- `<AMOUNT>`: The amount in XTZ to transfer.
-
 - `<ADDRESS|ALIAS>`: Destination address or alias of the account (user or smart function).
+
+- `<AMOUNT>`: The amount in XTZ to transfer.
 
 #### Options
 
 - `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
 
-- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
-
 - `--include (-i)`: Include response headers in the output.
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
 
 #### Example
 
