@@ -2,7 +2,6 @@ use crate::{sequencer::db::Db, services::AppState, RunMode};
 use anyhow::Context;
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
 use octez::OctezRollupClient;
-use tezos_crypto_rs::base58::FromBase58Check;
 
 pub async fn get_mode(
     State(AppState { mode, .. }): State<AppState>,
@@ -38,10 +37,9 @@ impl StoreWrapper {
                     .await
                     .context("failed to wait for db read task")??
                 {
-                    Some(v) => Some(
-                        v.from_base58check()
-                            .context("failed to decode value string")?,
-                    ),
+                    Some(v) => {
+                        Some(hex::decode(v).context("failed to decode value string")?)
+                    }
                     None => None,
                 }
             }
@@ -69,7 +67,7 @@ pub(crate) mod tests {
     use mockito::Matcher;
     use octez::OctezRollupClient;
     use tempfile::NamedTempFile;
-    use tezos_crypto_rs::{base58::ToBase58Check, hash::ContractKt1Hash};
+    use tezos_crypto_rs::hash::ContractKt1Hash;
     use tower::util::ServiceExt;
 
     use crate::{
@@ -190,7 +188,7 @@ pub(crate) mod tests {
         runtime_db
             .write(
                 &format!("/jstz_receipt/{op_hash}"),
-                &receipt.encode().unwrap().to_base58check(),
+                &hex::encode(receipt.encode().unwrap()),
             )
             .unwrap();
         runtime_db
