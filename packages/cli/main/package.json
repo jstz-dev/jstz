@@ -23,9 +23,9 @@
     "prettier": "^3.5.3"
   },
   "optionalDependencies": {
-    "@jstz-dev/cli-darwin-arm64": "0.1.1-alpha.1",
-    "@jstz-dev/cli-linux-arm64": "0.1.1-alpha.1",
-    "@jstz-dev/cli-linux-x64": "0.1.1-alpha.1"
+    "@jstz-dev/cli-darwin-arm64": "0.1.1-alpha.2",
+    "@jstz-dev/cli-linux-arm64": "0.1.1-alpha.2",
+    "@jstz-dev/cli-linux-x64": "0.1.1-alpha.2"
   },
   "repository": {
     "type": "git",
