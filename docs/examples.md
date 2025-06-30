@@ -40,10 +40,6 @@ In this way, you can create tokens to represent anything that you want them to r
 
 For more information about FA2 tokens, see [FA2 tokens](https://docs.tezos.com/architecture/tokens/FA2) on docs.tezos.com.
 
-### URL shortener
-
-The [`url_shortener`](https://github.com/jstz-dev/jstz/tree/main/examples/url_shortener) smart function stores long URLs with a shortcode and returns the full URL when you send the shortcode.
-
 ### Other examples
 
 Many other example smart functions are available in the `examples` folder to illustrate different things that you can do with Jstz:
@@ -63,20 +59,6 @@ For a walkthrough of setting up and running this application, see the [Quick sta
 <div style={{maxWidth:400}}>
 <Image img={require('./static/img/quick_start_web_app.png')} alt="The web application showing the response from a successful call to the sample smart function" width="100"/>
 </div>
-
-### Simple web application
-
-The example [`call-from-web`](https://github.com/jstz-dev/jstz/tree/main/examples/call-from-web) is a simple web application that shows how you can call a Jstz smart function from a web application.
-It calls the [Counter](#counter) smart function, but you could change it to call other smart functions.
-
-:::warning
-
-This application hard-codes the private key of an account to use to sign transactions to the smart function.
-That makes this example appropriate only for development and testing when you don't need to simulate real user interaction.
-Do not encode private keys like this.
-For an example that uses a wallet, see the [Web application with wallet integration](#web-application-with-wallet-integration).
-
-:::
 
 ## Other examples
 
