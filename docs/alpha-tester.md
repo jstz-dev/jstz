@@ -94,7 +94,7 @@ So posting is free, and is rewarded through likes.
 
 For bonus points, add features:
 
-- Provide the ability to mint a post as an NFT (5 points). 
+- Provide the ability to mint a post as an NFT (5 points).
   In this case, revenues due to the original author go instead to the current owner of the NFT.
 - Add group features (3 points)
 
