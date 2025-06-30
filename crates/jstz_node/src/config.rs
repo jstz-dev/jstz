@@ -6,14 +6,14 @@ use serde::Serialize;
 
 use crate::RunMode;
 
-/// Jstz node's signer defaults to `bootstrap1` account
-/// Make sure to update　the `INJECTOR_PK` in `jstzd/build_config.rs` if you change this
+/// Jstz node's signer defaults to `injector` account in jstzd/resources/bootstrap_account/accounts.json
+/// Make sure to keep these two in sync.
 pub const JSTZ_NODE_DEFAULT_PK: &str =
     "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
 pub const JSTZ_NODE_DEFAULT_SK: &str =
     "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct KeyPair(pub PublicKey, pub SecretKey);
 
 impl Default for KeyPair {
@@ -46,6 +46,8 @@ pub struct JstzNodeConfig {
     pub debug_log_file: PathBuf,
     #[cfg(feature = "blueprint")]
     pub blueprint_db_file: PathBuf,
+    #[cfg(feature = "v2_runtime")]
+    pub oracle_key_pair: Option<KeyPair>,
 }
 
 impl JstzNodeConfig {
@@ -64,6 +66,7 @@ impl JstzNodeConfig {
         capacity: usize,
         debug_log_file: &Path,
         #[cfg(feature = "blueprint")] blueprint_db_file: &Path,
+        #[cfg(feature = "v2_runtime")] oracle_key_pair: Option<KeyPair>,
     ) -> Self {
         Self {
             endpoint: endpoint.clone(),
@@ -76,6 +79,8 @@ impl JstzNodeConfig {
             debug_log_file: debug_log_file.to_path_buf(),
             #[cfg(feature = "blueprint")]
             blueprint_db_file: blueprint_db_file.to_path_buf(),
+            #[cfg(feature = "v2_runtime")]
+            oracle_key_pair,
         }
     }
 }
@@ -104,6 +109,8 @@ mod tests {
             RunMode::Default,
             0,
             Path::new("/tmp/debug.log"),
+            #[cfg(feature = "v2_runtime")]
+            None,
         );
 
         let json = serde_json::to_value(&config).unwrap();
@@ -127,6 +134,8 @@ mod tests {
             RunMode::Default,
             0,
             Path::new("/tmp/debug.log"),
+            #[cfg(feature = "v2_runtime")]
+            None,
         );
 
         assert_eq!(config.injector, KeyPair::default());

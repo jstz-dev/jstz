@@ -11,18 +11,21 @@ use tezos_smart_rollup::{
     storage::path::RefPath,
 };
 
-use crate::sequencer::inbox::parsing::Message;
+use crate::{config::KeyPair, sequencer::inbox::parsing::Message};
 
 use super::{db::Db, host::Host};
 
 const TICKETER_PATH: RefPath = RefPath::assert_from(b"/ticketer");
 const INJECTOR_PATH: RefPath = RefPath::assert_from(b"/injector");
-const INJECTOR_PK: &str = "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
 
 pub const TICKETER: &str = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";
 pub const JSTZ_ROLLUP_ADDRESS: &str = "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK";
 
-pub fn init_host(db: Db, preimage_dir: PathBuf) -> anyhow::Result<Host> {
+pub fn init_host(
+    db: Db,
+    preimage_dir: PathBuf,
+    injector: &KeyPair,
+) -> anyhow::Result<Host> {
     let mut host = Host::new(db, preimage_dir);
     let ticketer = SmartFunctionHash::from_base58(TICKETER)
         .context("failed to parse ticketer address")?;
@@ -34,12 +37,9 @@ pub fn init_host(db: Db, preimage_dir: PathBuf) -> anyhow::Result<Host> {
     )
     .context("failed to write ticketer to host store")?;
 
-    let injector = PublicKey::from_base58(INJECTOR_PK)
-        .context("failed to parse injector public key")?;
-
     host.store_write_all(
         &INJECTOR_PATH,
-        &bincode::encode_to_vec(&injector, bincode::config::legacy())
+        &bincode::encode_to_vec(&injector.0, bincode::config::legacy())
             .context("failed to encode injector")?,
     )
     .context("failed to write injector to host store")?;
@@ -142,16 +142,26 @@ mod tests {
 
     #[test]
     fn init_host() {
+        let keys = KeyPair(
+            PublicKey::from_base58(
+                "edpkv8EUUH68jmo3f7Um5PezmfGrRF24gnfLpH3sVNwJnV5bVCxL2n",
+            )
+            .unwrap(),
+            SecretKey::from_base58(
+                "edsk4QLrcijEffxV31gGdN2HU7UpyJjA8drFoNcmnB28n89YjPNRFm",
+            )
+            .unwrap(),
+        );
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
-        let rt = super::init_host(db, PathBuf::new()).unwrap();
+        let rt = super::init_host(db, PathBuf::new(), &keys).unwrap();
         assert_eq!(
             super::read_ticketer(&rt).unwrap(),
             SmartFunctionHash::from_base58(TICKETER).unwrap()
         );
         assert_eq!(
             super::read_injector(&rt).expect("Revealer not found"),
-            PublicKey::from_base58(super::INJECTOR_PK).unwrap()
+            keys.0
         );
     }
 
@@ -161,7 +171,7 @@ mod tests {
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
         let debug_log_file = NamedTempFile::new().unwrap();
-        let mut h = super::init_host(db, PathBuf::new())
+        let mut h = super::init_host(db, PathBuf::new(), &KeyPair::default())
             .unwrap()
             .with_debug_log_file(debug_log_file.path())
             .unwrap();
@@ -244,7 +254,7 @@ mod tests {
         // Using a slightly complicated scenario here to check if transaction works properly.
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
-        let mut h = super::init_host(db, PathBuf::new()).unwrap();
+        let mut h = super::init_host(db, PathBuf::new(), &KeyPair::default()).unwrap();
 
         let receiver =
             Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
@@ -301,7 +311,7 @@ mod tests {
         // Using a slightly complicated scenario here to check if transaction works properly.
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
-        let mut h = super::init_host(db, PathBuf::new()).unwrap();
+        let mut h = super::init_host(db, PathBuf::new(), &KeyPair::default()).unwrap();
 
         let receiver =
             Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
@@ -345,7 +355,7 @@ mod tests {
 
         // Deploy large smart function
         let deploy_fn = Operation {
-            public_key: PublicKey::from_base58(INJECTOR_PK).unwrap(),
+            public_key: PublicKey::from_base58("edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav").unwrap(),
             nonce: 1.into(),
             content: DeployFunction {
                 // # Safety: Ok in test
@@ -373,7 +383,10 @@ mod tests {
             .unwrap();
 
         let large_payload = Operation {
-            public_key: PublicKey::from_base58(INJECTOR_PK).unwrap(),
+            public_key: PublicKey::from_base58(
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+            )
+            .unwrap(),
             nonce: 0.into(),
             content: RevealLargePayload {
                 root_hash: preimage_hash,
@@ -386,7 +399,7 @@ mod tests {
         let signature = injector_sk.sign(large_payload.hash()).unwrap();
         let signed_large_payload = SignedOperation::new(signature, large_payload);
 
-        let mut h = super::init_host(db, path).unwrap();
+        let mut h = super::init_host(db, path, &KeyPair::default()).unwrap();
 
         super::process_message(&mut h, Message::External(signed_large_payload))
             .await

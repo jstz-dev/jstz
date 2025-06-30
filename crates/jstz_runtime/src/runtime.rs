@@ -21,7 +21,6 @@ use std::{
 };
 
 use serde::Deserialize;
-use tokio;
 
 use crate::ext::{jstz_console, jstz_kv, jstz_kv::kv::Kv, jstz_main};
 use deno_console;
@@ -79,7 +78,7 @@ impl Drop for JstzRuntime {
 }
 pub struct JstzRuntimeOptions {
     /// Protocol context accessible by protocol defined APIs
-    pub protocol: Option<ProtocolContext>,
+    pub protocol: Option<RuntimeContext>,
     /// Additional extensions to be registered on initialization.
     pub extensions: Vec<Extension>,
     /// Implementation of the `ModuleLoader` which will be
@@ -136,7 +135,6 @@ impl JstzRuntime {
         extensions.extend(options.extensions);
 
         let v8_platform = Some(new_single_threaded_default_platform(false).make_shared());
-
         // Construct Runtime options
         let js_runtime_options = RuntimeOptions {
             extensions,
@@ -148,7 +146,6 @@ impl JstzRuntime {
         // SAFETY: See `impl Drop for JstzRuntime`
         let mut runtime = ManuallyDrop::new(JsRuntime::new(js_runtime_options));
         unsafe { runtime.v8_isolate().exit() };
-
         // Give protocol access to the running script
         let op_state = runtime.op_state();
         if let Some(protocol) = options.protocol {
@@ -157,6 +154,11 @@ impl JstzRuntime {
         op_state.borrow_mut().put(JstzPermissions);
 
         Self { runtime }
+    }
+
+    pub fn set_state<S: 'static>(&mut self, state: S) {
+        let op_state = self.op_state();
+        op_state.borrow_mut().put(state);
     }
 
     /// Executes traditional, non-ECMAScript-module JavaScript code, ignoring
@@ -199,7 +201,6 @@ impl JstzRuntime {
           result = &mut receiver => {
             result
           }
-
           run_event_loop_result = self.run_event_loop(Default::default()) => {
             run_event_loop_result?;
             receiver.await
@@ -351,7 +352,7 @@ impl DerefMut for JstzRuntime {
     }
 }
 
-pub struct ProtocolContext {
+pub struct RuntimeContext {
     pub host: JsHostRuntime<'static>,
     pub tx: Transaction,
     pub kv: Kv,
@@ -359,7 +360,7 @@ pub struct ProtocolContext {
     pub request_id: String,
 }
 
-impl ProtocolContext {
+impl RuntimeContext {
     pub fn new(
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
@@ -367,7 +368,7 @@ impl ProtocolContext {
         request_id: String,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
-        ProtocolContext {
+        RuntimeContext {
             host,
             tx: tx.clone(),
             kv: Kv::new(address.to_base58()),

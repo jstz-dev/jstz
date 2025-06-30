@@ -180,7 +180,7 @@ in let
         buildInputs = commonWorkspace.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert];
         doCheck = true;
         # Run the unit tests
-        cargoNextestExtraArgs = "--bins --lib --features \"skip-wpt\" --config-file ${src}/.config/nextest.toml";
+        cargoNextestExtraArgs = "--bins --lib --features \"skip-wpt\",\"v2_runtime\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-test-int = craneLib.cargoNextest (commonWorkspace
@@ -191,7 +191,7 @@ in let
         #
         # FIXME(https://linear.app/tezos/issue/JSTZ-237):
         # Fix tests that only fail in CI/Nix
-        cargoNextestExtraArgs = "--test \"*\" --features \"skip-wpt\" --features \"skip-rollup-tests\" --config-file ${src}/.config/nextest.toml";
+        cargoNextestExtraArgs = "--test \"*\" --features \"skip-wpt\" --features \"skip-rollup-tests\",\"v2_runtime\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-llvm-cov = craneLib.cargoLlvmCov (commonWorkspace
@@ -200,7 +200,7 @@ in let
         # Use nextest for test harness (instead of `cargo test`)
         cargoLlvmCovCommand = "nextest";
         # Generate coverage reports for codecov
-        cargoLlvmCovExtraArgs = "--codecov --output-path $out --features \"skip-rollup-tests\" --features \"skip-wpt\" --config-file ${src}/.config/nextest.toml";
+        cargoLlvmCovExtraArgs = "--codecov --output-path $out --features \"skip-rollup-tests\" --features \"skip-wpt\",\"v2_runtime\" --config-file ${src}/.config/nextest.toml";
       });
 
     cargo-clippy = craneLib.cargoClippy (commonWorkspace

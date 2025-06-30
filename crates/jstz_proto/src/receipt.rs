@@ -76,6 +76,12 @@ pub struct DepositReceipt {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
+pub struct OracleResponseReceipt {
+    pub request_id: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 #[serde(tag = "_type")]
 pub enum ReceiptContent {
     #[schema(title = "DeployFunction")]
@@ -88,4 +94,7 @@ pub enum ReceiptContent {
     FaDeposit(FaDepositReceipt),
     #[schema(title = "FaWithdraw")]
     FaWithdraw(FaWithdrawReceipt),
+    #[cfg(feature = "v2_runtime")]
+    #[schema(title = "OracleResponse")]
+    OracleResponse(OracleResponseReceipt),
 }

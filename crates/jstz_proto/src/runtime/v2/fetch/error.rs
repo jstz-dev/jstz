@@ -1,8 +1,11 @@
 use std::borrow::Cow;
 
 use deno_error::JsErrorClass as _;
+use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_runtime::error::RuntimeError;
 use serde::Serialize;
+
+use crate::runtime::v2::oracle::OracleError;
 
 use super::http::*;
 
@@ -28,11 +31,23 @@ pub enum FetchError {
     #[class(not_supported)]
     #[error("{0}")]
     NotSupported(&'static str),
+    #[class(generic)]
+    #[error("Oracle calls are not allowed to be called from RunFunction")]
+    TopLevelOracleCallNotSupported,
+    #[class("ProtocolError")]
+    #[error("Source address must be user address")]
+    InvalidSourceAddress,
+    #[class(inherit)]
+    #[error(transparent)]
+    OracleError(#[from] OracleError),
     // TODO: Boa's JsClass errors are not Send safe. Once we remove boa, we
     // should be able to use crate::Error type directly
     #[class("RuntimeError")]
     #[error("{0}")]
     JstzError(String),
+    #[class(syntax)]
+    #[error("Smart function '{address}' has no code")]
+    EmptyCode { address: SmartFunctionHash },
 }
 
 #[derive(Serialize)]

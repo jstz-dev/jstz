@@ -89,14 +89,6 @@ body {
   font-family: "Roboto", sans-serif;
 }
 
-a {
-  color: #0d61ff;
-}
-
-a:hover {
-  color: #0d61ff;
-}
-
 nav.navbar {
   background-color: #030405;
   font-family: "GT Eesti Display Light", sans-serif;
