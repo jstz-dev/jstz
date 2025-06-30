@@ -297,129 +297,12 @@ mod test {
 
     #[tokio::test]
     async fn test_run() {
-        async fn check_mode(mode: RunMode, expected: &str) {
-            let port = unused_port();
-            let kernel_log_file = NamedTempFile::new().unwrap();
-            let debug_log_file = NamedTempFile::new().unwrap();
-            let h = tokio::spawn(run(RunOptions {
-                addr: "0.0.0.0".to_string(),
-                port,
-                rollup_endpoint: "0.0.0.0:5678".to_string(),
-                rollup_preimages_dir: TempDir::new().unwrap().into_path(),
-                kernel_log_path: kernel_log_file.path().to_path_buf(),
-                injector: KeyPair::default(),
-                mode: mode.clone(),
-                capacity: 0,
-                debug_log_path: debug_log_file.path().to_path_buf(),
-                #[cfg(feature = "v2_runtime")]
-                oracle_key_pair: None,
-            }));
-
-            let res = jstz_utils::poll(10, 500, || async {
-                reqwest::get(format!("http://0.0.0.0:{}/mode", port))
-                    .await
-                    .ok()
-            })
-            .await
-            .expect("should get response")
-            .text()
-            .await
-            .expect("should get text body");
-
-            assert_eq!(
-                res, expected,
-                "expecting '{expected}' for mode '{mode:?}' but got '{res}'"
-            );
-
-            h.abort();
-        }
-
-        check_mode(RunMode::Default, "\"default\"").await;
-        check_mode(RunMode::Sequencer, "\"sequencer\"").await;
-    }
-
-    #[tokio::test]
-    async fn worker() {
-        async fn run_test(
-            rollup_preimages_dir: PathBuf,
-            rollup_endpoint: String,
-            mode: RunMode,
-        ) {
-            let port = unused_port();
-            let kernel_log_file = NamedTempFile::new().unwrap();
-            let debug_log_file = NamedTempFile::new().unwrap();
-            let h = tokio::spawn(run(RunOptions {
-                addr: "0.0.0.0".to_string(),
-                port,
-                rollup_endpoint,
-                rollup_preimages_dir,
-                kernel_log_path: kernel_log_file.path().to_path_buf(),
-                injector: KeyPair::default(),
-                mode,
-                capacity: 0,
-                debug_log_path: debug_log_file.path().to_path_buf(),
-                #[cfg(feature = "v2_runtime")]
-                oracle_key_pair: None,
-            }));
-
-            sleep(Duration::from_secs(1)).await;
-            h.abort();
-            // wait for the worker in run to be dropped
-            sleep(Duration::from_secs(2)).await;
-        }
-        let preimages_dir = TempDir::new().unwrap().into_path();
-
-        run_test(
-            preimages_dir.clone(),
-            "sequencer-test-file".to_string(),
-            RunMode::Sequencer,
-        )
-        .await;
-        // the test worker's on_exit function should be called on drop and
-        // it should create this file
-        assert!(preimages_dir.join("sequencer-test-file.txt").exists());
-
-        run_test(
-            preimages_dir.clone(),
-            "default-test-file".to_string(),
-            RunMode::Default,
-        )
-        .await;
-        assert!(!preimages_dir.join("default-test-file.txt").exists());
-    }
-
-    #[tokio::test]
-    async fn worker_heartbeat() {
-        let now = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-
-        let mut state =
-            mock_app_state("", PathBuf::default(), "", RunMode::Default).await;
-        state.worker_heartbeat = Arc::new(AtomicU64::new(now - 60));
-        // heartbeat is too old
-        assert!(!state.is_worker_healthy());
-
-        let mut state =
-            mock_app_state("", PathBuf::default(), "", RunMode::Default).await;
-        state.worker_heartbeat = Arc::new(AtomicU64::new(now - 5));
-        // heartbeat is recent enough
-        assert!(state.is_worker_healthy());
-    }
-
-    #[cfg(feature = "v2_runtime")]
-    #[tokio::test]
-    async fn test_run_with_oracle_key_pair() {
-        async fn check_mode_with_oracle(
-            mode: RunMode,
-            expected: &str,
-            with_oracle: bool,
-        ) {
+        async fn check_mode(mode: RunMode, expected: &str, with_oracle: bool) {
             let port = unused_port();
             let kernel_log_file = NamedTempFile::new().unwrap();
             let debug_log_file = NamedTempFile::new().unwrap();
 
+            #[cfg(feature = "v2_runtime")]
             let oracle_key_pair = if with_oracle {
                 let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
                 let (public_key, secret_key) =
@@ -439,6 +322,7 @@ mod test {
                 mode: mode.clone(),
                 capacity: 0,
                 debug_log_path: debug_log_file.path().to_path_buf(),
+                #[cfg(feature = "v2_runtime")]
                 oracle_key_pair,
             }));
 
@@ -462,57 +346,130 @@ mod test {
         }
 
         // Test without oracle key pair
-        check_mode_with_oracle(RunMode::Default, "\"default\"", false).await;
-        check_mode_with_oracle(RunMode::Sequencer, "\"sequencer\"", false).await;
+        check_mode(RunMode::Default, "\"default\"", false).await;
+        check_mode(RunMode::Sequencer, "\"sequencer\"", false).await;
 
-        // Test with oracle key pair
-        check_mode_with_oracle(RunMode::Default, "\"default\"", true).await;
-        check_mode_with_oracle(RunMode::Sequencer, "\"sequencer\"", true).await;
+        // Test with oracle key pair (only when v2_runtime feature is enabled)
+        #[cfg(feature = "v2_runtime")]
+        {
+            check_mode(RunMode::Default, "\"default\"", true).await;
+            check_mode(RunMode::Sequencer, "\"sequencer\"", true).await;
+        }
     }
 
-    #[cfg(feature = "v2_runtime")]
     #[tokio::test]
-    async fn test_oracle_node_startup() {
-        let port = unused_port();
-        let kernel_log_file = NamedTempFile::new().unwrap();
-        let debug_log_file = NamedTempFile::new().unwrap();
+    async fn worker() {
+        async fn run_test(
+            rollup_preimages_dir: PathBuf,
+            rollup_endpoint: String,
+            mode: RunMode,
+            #[allow(unused_variables)] with_oracle: bool,
+        ) {
+            let port = unused_port();
+            let kernel_log_file = NamedTempFile::new().unwrap();
+            let debug_log_file = NamedTempFile::new().unwrap();
 
-        // Generate a test key pair
-        let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
-        let (public_key, secret_key) =
-            jstz_crypto::keypair_from_mnemonic(mnemonic, "").unwrap();
+            #[cfg(feature = "v2_runtime")]
+            let oracle_key_pair = if with_oracle {
+                let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
+                let (public_key, secret_key) =
+                    jstz_crypto::keypair_from_mnemonic(mnemonic, "").unwrap();
+                Some(KeyPair(public_key, secret_key))
+            } else {
+                None
+            };
 
-        let h = tokio::spawn(run(RunOptions {
-            addr: "0.0.0.0".to_string(),
-            port,
-            rollup_endpoint: "0.0.0.0:5678".to_string(),
-            rollup_preimages_dir: TempDir::new().unwrap().into_path(),
-            kernel_log_path: kernel_log_file.path().to_path_buf(),
-            injector: KeyPair::default(),
-            mode: RunMode::Default,
-            capacity: 0,
-            debug_log_path: debug_log_file.path().to_path_buf(),
-            oracle_key_pair: Some(KeyPair(public_key, secret_key)),
-        }));
+            let h = tokio::spawn(run(RunOptions {
+                addr: "0.0.0.0".to_string(),
+                port,
+                rollup_endpoint,
+                rollup_preimages_dir,
+                kernel_log_path: kernel_log_file.path().to_path_buf(),
+                injector: KeyPair::default(),
+                mode,
+                capacity: 0,
+                debug_log_path: debug_log_file.path().to_path_buf(),
+                #[cfg(feature = "v2_runtime")]
+                oracle_key_pair,
+            }));
 
-        // Give the oracle node time to start up
-        sleep(Duration::from_secs(2)).await;
+            sleep(Duration::from_secs(1)).await;
 
-        // Verify the main node is still responding
-        let res = jstz_utils::poll(10, 500, || async {
-            reqwest::get(format!("http://0.0.0.0:{}/health", port))
+            // If oracle is enabled, test that the health endpoint is accessible
+            #[cfg(feature = "v2_runtime")]
+            if with_oracle {
+                let res = jstz_utils::poll(10, 500, || async {
+                    reqwest::get(format!("http://0.0.0.0:{}/health", port))
+                        .await
+                        .ok()
+                })
                 .await
-                .ok()
-        })
-        .await
-        .expect("should get response");
+                .expect("should get response");
 
-        assert_eq!(
-            res.status(),
-            200,
-            "health endpoint should be accessible with oracle node running"
-        );
+                assert_eq!(
+                    res.status(),
+                    200,
+                    "health endpoint should be accessible with oracle node running"
+                );
+            }
 
-        h.abort();
+            h.abort();
+            // wait for the worker in run to be dropped
+            sleep(Duration::from_secs(2)).await;
+        }
+        let preimages_dir = TempDir::new().unwrap().into_path();
+
+        run_test(
+            preimages_dir.clone(),
+            "sequencer-test-file".to_string(),
+            RunMode::Sequencer,
+            false,
+        )
+        .await;
+        // the test worker's on_exit function should be called on drop and
+        // it should create this file
+        assert!(preimages_dir.join("sequencer-test-file.txt").exists());
+
+        // Test default mode without oracle
+        run_test(
+            preimages_dir.clone(),
+            "default-test-file".to_string(),
+            RunMode::Default,
+            false,
+        )
+        .await;
+        assert!(!preimages_dir.join("default-test-file.txt").exists());
+
+        #[cfg(feature = "v2_runtime")]
+        {
+            run_test(
+                preimages_dir.clone(),
+                "oracle-test-file".to_string(),
+                RunMode::Default,
+                true,
+            )
+            .await;
+            assert!(!preimages_dir.join("oracle-test-file.txt").exists());
+        }
+    }
+
+    #[tokio::test]
+    async fn worker_heartbeat() {
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_secs();
+
+        let mut state =
+            mock_app_state("", PathBuf::default(), "", RunMode::Default).await;
+        state.worker_heartbeat = Arc::new(AtomicU64::new(now - 60));
+        // heartbeat is too old
+        assert!(!state.is_worker_healthy());
+
+        let mut state =
+            mock_app_state("", PathBuf::default(), "", RunMode::Default).await;
+        state.worker_heartbeat = Arc::new(AtomicU64::new(now - 5));
+        // heartbeat is recent enough
+        assert!(state.is_worker_healthy());
     }
 }
