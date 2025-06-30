@@ -72,3 +72,4 @@ path = "src/main.rs"
 [features]
 persistent-logging = []
 v2_runtime = ["jstz_proto/v2_runtime"]
+blueprint = []

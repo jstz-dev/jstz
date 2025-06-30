@@ -1,3 +1,5 @@
+#[cfg(feature = "blueprint")]
+use crate::sequencer::db::BlueprintDb;
 use crate::sequencer::runtime::{init_host, process_message};
 use std::{
     path::{Path, PathBuf},
@@ -41,6 +43,7 @@ pub fn spawn(
     db: Db,
     preimage_dir: PathBuf,
     debug_log_path: Option<&Path>,
+    #[cfg(feature = "blueprint")] blueprint_db: BlueprintDb,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
@@ -75,6 +78,10 @@ pub fn spawn(
 
                     match v {
                         Some(op) => {
+                            #[cfg(feature = "blueprint")]
+                            if let Err(e) = blueprint_db.write(&op) {
+                                warn!("error writing blueprint: {e:?}");
+                            };
                             if let Err(e) = process_message(&mut host_rt, op).await {
                                 warn!("error processing message: {e:?}");
                             }
@@ -91,7 +98,7 @@ pub fn spawn(
                         Err(TryRecvError::Empty) => {}
                     }
                 }
-            })
+            });
         })),
     })
 }
@@ -105,6 +112,7 @@ fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
     heartbeat.store(current_sec, std::sync::atomic::Ordering::Relaxed);
 }
 
+#[cfg(not(feature = "blueprint"))]
 #[cfg(test)]
 mod tests {
     use std::{

@@ -14,6 +14,8 @@ use super::utils::StoreWrapper;
 use super::{AppState, Service};
 use anyhow::anyhow;
 use anyhow::Context;
+#[cfg(feature = "blueprint")]
+use axum::routing::get;
 use axum::{
     extract::{Path, State},
     Json,
@@ -246,14 +248,27 @@ async fn hash_operation(
     Ok(Json(format!("{}", operation.hash())))
 }
 
+#[cfg(feature = "blueprint")]
+async fn blueprint(
+    State(AppState { blueprint_db, .. }): State<AppState>,
+    Path(id): Path<u64>,
+) -> ServiceResult<Json<Vec<Message>>> {
+    match blueprint_db.read(id)? {
+        Some(msg) => Ok(Json(vec![msg])),
+        None => Err(ServiceError::NotFound)?,
+    }
+}
+
 impl Service for OperationsService {
     fn router_with_openapi() -> OpenApiRouter<AppState> {
-        let routes = OpenApiRouter::new()
+        let r = OpenApiRouter::new()
             .routes(routes!(inject))
             .routes(routes!(receipt))
             .routes(routes!(hash_operation));
+        #[cfg(feature = "blueprint")]
+        let r = r.route("/blueprint/{id}", get(blueprint));
 
-        OpenApiRouter::new().nest("/operations", routes)
+        OpenApiRouter::new().nest("/operations", r)
     }
 }
 

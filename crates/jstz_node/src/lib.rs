@@ -44,6 +44,8 @@ pub struct AppState {
     pub queue: Arc<RwLock<OperationQueue>>,
     pub runtime_db: sequencer::db::Db,
     worker_heartbeat: Arc<AtomicU64>,
+    #[cfg(feature = "blueprint")]
+    pub blueprint_db: sequencer::db::BlueprintDb,
 }
 
 impl AppState {
@@ -127,6 +129,8 @@ pub async fn run(
         "failed to convert temp db file path to str"
     ))?;
     let runtime_db = sequencer::db::Db::init(Some(db_path))?;
+    #[cfg(feature = "blueprint")]
+    let blueprint_db = sequencer::db::BlueprintDb::init(None)?;
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer => Some(
@@ -135,6 +139,8 @@ pub async fn run(
                 runtime_db.clone(),
                 rollup_preimages_dir.clone(),
                 Some(&debug_log_path),
+                #[cfg(feature = "blueprint")]
+                blueprint_db.clone(),
             )
             .context("failed to launch worker")?,
         ),
@@ -147,6 +153,8 @@ pub async fn run(
                     runtime_db.clone(),
                     rollup_preimages_dir.clone(),
                     Some(&debug_log_path),
+                    #[cfg(feature = "blueprint")]
+                    blueprint_db.clone(),
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
@@ -189,6 +197,8 @@ pub async fn run(
         queue,
         runtime_db,
         worker_heartbeat: worker.as_ref().map(|w| w.heartbeat()).unwrap_or_default(),
+        #[cfg(feature = "blueprint")]
+        blueprint_db,
     };
 
     let cors = CorsLayer::new()
