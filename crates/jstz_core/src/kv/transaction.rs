@@ -58,6 +58,8 @@ pub type Key = OwnedPath;
 #[derive(Debug, Default, Deref, DerefMut)]
 struct LookupMap(BTreeMap<Key, Vec<usize>>);
 
+pub type PendingChangesFilter = dyn Fn(&Key) -> bool;
+
 #[derive(Debug, Default)]
 pub struct InnerTransaction {
     // A stack of transactional snapshots
@@ -193,6 +195,27 @@ impl InnerTransaction {
 
     fn update_lookup_map(&mut self, key: Key) {
         self.lookup_map.update(key, self.current_snapshot_idx())
+    }
+
+    /// Check if the transaction has any pending changes in any snapshots
+    pub fn has_pending_changes(
+        &self,
+        insert_filter: Option<&PendingChangesFilter>,
+    ) -> bool {
+        for snapshot in &self.stack {
+            let has_insert_edits = snapshot.insert_edits.iter().any(|(key, _value)| {
+                if let Some(filter_fn) = insert_filter {
+                    filter_fn(key)
+                } else {
+                    true
+                }
+            });
+            let has_remove_edits = !snapshot.remove_edits.is_empty();
+            if has_insert_edits || has_remove_edits {
+                return true;
+            }
+        }
+        false
     }
 
     /// Return the current snapshot
@@ -501,8 +524,17 @@ impl Transaction {
     ) -> Result<()> {
         let rc = self.acquire_guard()?;
         let mut inner = rc.borrow_mut();
-
         inner.queue_outbox_message(rt, message)
+    }
+
+    /// Check if the transaction has any pending changes
+    pub fn has_pending_changes(
+        &self,
+        filter: Option<&PendingChangesFilter>,
+    ) -> Result<bool> {
+        let rc = self.acquire_guard()?;
+        let inner = rc.borrow();
+        Ok(inner.has_pending_changes(filter))
     }
 }
 
