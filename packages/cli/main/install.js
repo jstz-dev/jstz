@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { createWriteStream } from "fs";
-import { promises as fsPromises } from "fs";
-import path from "path";
-import { pipeline } from "stream/promises";
-import { fileURLToPath } from "url";
+import { createWriteStream } from "node:fs";
+import { promises as fsPromises } from "node:fs";
+import path from "node:path";
+import { pipeline } from "node:stream/promises";
+import { fileURLToPath } from "node:url";
 import packageJson from "./package.json" with { type: "json" };
 
 const __filename = fileURLToPath(import.meta.url);
