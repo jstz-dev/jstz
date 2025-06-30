@@ -3,7 +3,7 @@ ARG FEATURES="build-image,v2_runtime"
 FROM rust:1.82.0-slim-bookworm AS builder
 RUN apt update && apt install -y curl pkg-config libssl-dev libsqlite3-dev
 
-WORKDIR /
+WORKDIR /jstz_build
 ADD . .
 ARG KERNEL_PATH
 # set default path to a non-existent path such that docker ignores the copy when the path is not given
@@ -29,7 +29,7 @@ RUN apt update && apt install -y curl gpg && \
         cd /usr/bin && rm octez-admin-client octez-dal-node octez-accuser-* octez-signer octez-codec
 
 # Copy the jstzd binary & dependencies
-COPY --from=builder /target/release/jstzd /usr/bin/jstzd
+COPY --from=builder /jstz_build/target/release/jstzd /usr/bin/jstzd
 COPY --from=builder /jstzd_kernel_files /usr/share/jstzd
 
 ENTRYPOINT [ "/usr/bin/jstzd" ]
