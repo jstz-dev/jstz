@@ -1,3 +1,6 @@
+#[cfg(feature = "v2_runtime")]
+use crate::{operation::OracleResponse, runtime::PROTOCOL_CONTEXT};
+
 use crate::{
     operation::{
         self, Content, InternalOperation, Operation, OperationHash, SignedOperation,
@@ -61,7 +64,17 @@ async fn execute_operation_inner(
             Err(Error::RevealTypeMismatch)
         }
         #[cfg(feature = "v2_runtime")]
-        operation::Content::OracleResponse(_oracle_response) => {
+        operation::Content::OracleResponse(OracleResponse {
+            request_id,
+            response,
+        }) => {
+            let oracle_ctx = PROTOCOL_CONTEXT.get().unwrap().oracle();
+            let mut oracle = oracle_ctx.lock();
+            if &op.public_key != oracle.public_key() {
+                panic!("Oracle keys mismatch")
+            }
+
+            let _ = oracle.respond(hrt, request_id, response);
             todo!()
         }
     }
