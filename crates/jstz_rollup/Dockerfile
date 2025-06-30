@@ -6,7 +6,7 @@ FROM rust:1.73.0-alpine AS builder
 RUN apk --no-cache add musl-dev libcrypto3 openssl-dev clang
 ENV OPENSSL_DIR=/usr
 # Copy srcs
-WORKDIR /
+WORKDIR /jstz_build
 COPY . .
 # Build jstz-rollup
 # RUSTFLAGS is needed to avoid linking to the static version of the C runtime (provided by musl)
@@ -22,7 +22,7 @@ ENV RUST_BACKTRACE=1
 ENV RUST_LOG=debug
 COPY --from=octez /usr/local/bin/octez-smart-rollup-node /usr/bin/octez-smart-rollup-node
 COPY --from=octez /usr/local/bin/octez-client /usr/bin/octez-client
-COPY --from=builder /target/release/jstz-rollup /usr/bin/jstz-rollup
+COPY --from=builder /jstz_build/target/release/jstz-rollup /usr/bin/jstz-rollup
 ARG KERNEL_PATH
 COPY $KERNEL_PATH /root/jstz_kernel.wasm
 COPY ./crates/jstz_rollup/entrypoint.sh ./entrypoint.sh
