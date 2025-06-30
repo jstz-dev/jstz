@@ -285,14 +285,17 @@ impl Account {
         tx: &'a mut Transaction,
         addr: &impl Addressable,
     ) -> Result<GuardedMut<'a, Nonce>> {
+        let is_dirty = tx.get_dirty();
         let mut account = Self::get_mut(hrt, tx, addr)?;
-        Ok(GuardedMut::new(
+        let result = Ok(GuardedMut::new(
             account.clone_guard(),
             match account.deref_mut() {
                 Self::User(UserAccount { nonce, .. }) => nonce,
                 Self::SmartFunction(SmartFunctionAccount { nonce, .. }) => nonce,
             },
-        ))
+        ));
+        tx.set_dirty(is_dirty);
+        result
     }
 
     pub fn create_smart_function(
@@ -321,13 +324,16 @@ impl Account {
         tx: &'a mut Transaction,
         addr: &SmartFunctionHash,
     ) -> Result<Guarded<'a, str>> {
+        let is_dirty = tx.get_dirty();
         let account = Self::get_mut(hrt, tx, addr)?;
-        match account.deref() {
+        let result: Result<Guarded<'a, str>> = match account.deref() {
             Self::SmartFunction(SmartFunctionAccount { function_code, .. }) => {
                 Ok(Guarded::new(account.clone_guard(), &function_code.0))
             }
             Self::User(_) => Err(Error::AddressTypeMismatch),
-        }
+        };
+        tx.set_dirty(is_dirty);
+        result
     }
 
     // TODO: Used only in repl, conditionally compile
