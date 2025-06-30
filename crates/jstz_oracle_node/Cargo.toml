@@ -41,4 +41,4 @@ octez = { path = "../octez" }
 mockito.workspace = true
 
 [features]
-v2_runtime = []
+v2_runtime = ["jstz_proto/v2_runtime"]

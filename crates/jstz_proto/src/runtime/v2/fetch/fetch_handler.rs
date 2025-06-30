@@ -2096,7 +2096,7 @@ mod test {
             let mut host = tezos_smart_rollup_mock::MockHost::default();
             host.set_debug_handler(debug_sink.clone());
             let pk = PublicKey::from_base58(
-                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
             )
             .unwrap();
             Storage::insert(&mut host, &ORACLE_PUBLIC_KEY_PATH, &pk).unwrap();

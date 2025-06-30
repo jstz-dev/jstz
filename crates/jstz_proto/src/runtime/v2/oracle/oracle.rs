@@ -121,6 +121,8 @@ impl Oracle {
         if request_metadata.sender.send(response).is_err() {
             return Err(OracleError::ConnectionClosed);
         }
+        // TODO(https://linear.app/tezos/issue/JSTZ-735/fix-oracle-bond-issue)
+        // Recredit the account
         Ok(())
     }
 
@@ -184,6 +186,10 @@ impl Oracle {
                 head.remove_entry();
             }
         }
+    }
+
+    pub fn public_key(&self) -> &PublicKey {
+        &self.public_key
     }
 }
 
@@ -295,7 +301,7 @@ mod test {
     ) -> (Oracle, MockHost, DebugLogSink, UserAddress) {
         // Setup
         let pk = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )
         .unwrap();
         let sink = DebugLogSink::new();
@@ -321,7 +327,7 @@ mod test {
     #[test]
     fn oracle_new_success() {
         let pk = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )
         .unwrap();
         let host = setup_host_with_pk(&pk, None);
@@ -341,7 +347,7 @@ mod test {
     #[test]
     fn oracle_incr_request_id_increments() {
         let pk = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )
         .unwrap();
         let host = setup_host_with_pk(&pk, None);
@@ -489,7 +495,7 @@ mod test {
     #[test]
     fn respond_missing_request() {
         let pk = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )
         .unwrap();
         let mut host = setup_host_with_pk(&pk, None);
@@ -507,7 +513,7 @@ mod test {
     #[test]
     fn respond_dropped_receiver() {
         let pk = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )
         .unwrap();
         let mut host = setup_host_with_pk(&pk, None);
@@ -536,7 +542,7 @@ mod test {
     #[test]
     fn remove_from_oracle_storage_and_sender() {
         let pk = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )
         .unwrap();
         let mut host = setup_host_with_pk(&pk, None);
@@ -568,7 +574,7 @@ mod test {
     #[test]
     fn test_garbage_collect_timeout_requests() {
         let pk = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )
         .unwrap();
         let mut host = setup_host_with_pk(&pk, None);
