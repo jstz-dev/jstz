@@ -67,6 +67,7 @@ pub struct InnerTransaction {
     lookup_map: LookupMap,
     persistent_outbox: PersistentOutboxQueue,
     snapshot_outbox_len: u32,
+    dirty: bool,
 }
 
 type GuardInner = ArcMutexGuard<RawMutex, InnerTransaction>;
@@ -189,6 +190,10 @@ impl LookupMap {
 }
 
 impl InnerTransaction {
+    fn set_dirty(&mut self, value: bool) {
+        self.dirty = value
+    }
+
     fn current_snapshot_idx(&self) -> usize {
         self.stack.len().saturating_sub(1)
     }
@@ -435,7 +440,7 @@ impl Transaction {
     ) -> Result<Option<Guarded<'a, V>>> {
         let rc = self.acquire_guard()?;
         let mut inner = rc.borrow_mut();
-
+        inner.set_dirty(true);
         match inner.lookup::<V>(rt, key)? {
             Some(entry) => {
                 let value = entry.as_ref()?;
@@ -452,7 +457,7 @@ impl Transaction {
     ) -> Result<Option<GuardedMut<'a, V>>> {
         let rc = self.acquire_guard()?;
         let mut inner = rc.borrow_mut();
-
+        inner.set_dirty(true);
         match inner.lookup_mut::<V>(rt, key)? {
             Some(entry) => {
                 let value = entry.as_mut()?;
@@ -464,19 +469,22 @@ impl Transaction {
 
     pub fn contains_key(&self, rt: &impl Runtime, key: &Key) -> Result<bool> {
         let rc = self.acquire_guard()?;
-        let inner = rc.borrow_mut();
+        let mut inner = rc.borrow_mut();
+        inner.set_dirty(true);
         inner.contains_key(rt, key)
     }
 
     pub fn insert<V: Value>(&self, key: Key, value: V) -> Result<()> {
         let rc = self.acquire_guard()?;
         let mut inner = rc.borrow_mut();
+        inner.set_dirty(true);
         inner.current_snapshot_insert(key, SnapshotValue::new(value))
     }
 
     pub fn remove(&self, key: Key) -> Result<()> {
         let rc = self.acquire_guard()?;
         let mut inner = rc.borrow_mut();
+        inner.set_dirty(true);
         inner.current_snapshot_remove(key)
     }
 
@@ -496,6 +504,7 @@ impl Transaction {
             let mut inner_tx = rc.borrow_mut();
             // A mutable lookup ensures the key is in the current snapshot
             inner_tx.lookup_mut::<V>(rt, key.clone())?;
+            inner_tx.set_dirty(true);
         }
 
         let rc_current_snapshot = rc.clone();
@@ -524,17 +533,20 @@ impl Transaction {
     ) -> Result<()> {
         let rc = self.acquire_guard()?;
         let mut inner = rc.borrow_mut();
+        inner.set_dirty(true);
         inner.queue_outbox_message(rt, message)
     }
 
-    /// Check if the transaction has any pending changes
-    pub fn has_pending_changes(
-        &self,
-        filter: Option<&PendingChangesFilter>,
-    ) -> Result<bool> {
-        let rc = self.acquire_guard()?;
+    pub fn get_dirty(&self) -> bool {
+        let rc = self.acquire_guard().unwrap();
         let inner = rc.borrow();
-        Ok(inner.has_pending_changes(filter))
+        inner.dirty
+    }
+
+    pub fn set_dirty(&self, value: bool) {
+        let rc = self.acquire_guard().unwrap();
+        let mut inner = rc.borrow_mut();
+        inner.dirty = value
     }
 }
 

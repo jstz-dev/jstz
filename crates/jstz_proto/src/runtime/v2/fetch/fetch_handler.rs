@@ -223,31 +223,16 @@ pub async fn process_and_dispatch_request(
                     let response = resp.await;
                     // Check if transaction has any pending changes when resuming from oracle response
                     // TODO: Once async is supported, this check can be removed
-                    let filter = move |key: &jstz_core::kv::transaction::Key| {
-                        !key.to_string().contains("/jstz_account/KT1")
-                    };
-                    match tx.has_pending_changes(Some(&filter)) {
-                        Ok(has_changes) => {
-                            if has_changes {
-                                Response {
+                    if tx.get_dirty() {
+                        return Response {
                                     status: 400,
                                     status_text: "Bad Request".into(),
                                     headers: Vec::with_capacity(0),
                                     body: "Oracle requests are not allowed when transaction has pending changes".into(),
-                                }
-                            } else {
-                                response
-                            }
-                        }
-                        Err(_) => {
-                            // If we can't check for pending changes, assume there are changes to be safe
-                            Response {
-                                status: 400,
-                                status_text: "Bad Request".into(),
-                                headers: Vec::with_capacity(0),
-                                body: "Cannot check for pending changes".into(),
-                            }
-                        }
+
+                                };
+                    } else {
+                        response
                     }
                 }
                 Err(e) => Err(e).into(),
@@ -287,13 +272,7 @@ fn dispatch_oracle(
 
     // Check if transaction has any pending changes before allowing oracle requests
     // TODO: Once async is supported, this check can be removed
-    let filter = move |key: &jstz_core::kv::transaction::Key| {
-        !key.to_string().contains("/jstz_account/KT1")
-    };
-    if tx
-        .has_pending_changes(Some(&filter))
-        .map_err(|e| FetchError::JstzError(e.to_string()))?
-    {
+    if tx.get_dirty() {
         return Ok(async {
             Response {
                 status: 400,
