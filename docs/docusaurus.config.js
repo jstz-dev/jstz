@@ -144,13 +144,13 @@ module.exports = async function createConfigAsync() {
         },
         algolia: {
           // The application ID provided by Algolia
-          appId: process.env.NEXT_PUBLIC_DOCSEARCH_APP_ID || "XJJKSPLGTN",
+          appId: process.env.NEXT_PUBLIC_DOCSEARCH_APP_ID || "JH91L9LBDJ",
           // Public API key: it is safe to commit it
           apiKey:
             process.env.NEXT_PUBLIC_DOCSEARCH_API_KEY ||
-            "6173a0326b67c01cc1ee67a2bfea0adf",
+            "00e57b6610f452508627bc5519b7a57e",
           indexName:
-            process.env.NEXT_PUBLIC_DOCSEARCH_INDEX_NAME || "jstz-devio",
+            process.env.NEXT_PUBLIC_DOCSEARCH_INDEX_NAME || "jstz-tezos",
           // Optional: see doc section below
           contextualSearch: true,
           // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.
