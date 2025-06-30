@@ -86,15 +86,19 @@ For bonus points, expand the simple tic-tac-toe application in one or more of th
 ### Social media app (5 points)
 
 Write a simple social media application that allows users to post messages and follow other users.
+Implement a "like" feature that requires from the "liker" a symbolic amount to reward the author (e.g., 0.01 tez).
+
+So posting is free, and is rewarded through likes.
 
 <img src="/img/SocialMedia.png" alt="A few posts and a text box to add a new post to a social media stream" style={{width: 300}} />
 
 For bonus points, add features:
 
-- Provide the ability to mint a post as an NFT (5 points)
+- Provide the ability to mint a post as an NFT (5 points). 
+  In this case, revenues due to the original author go instead to the current owner of the NFT.
 - Add group features (3 points)
 
-**Backend**: The backend must keep track of user messages and who each user is following.
+**Backend**: The backend must keep track of user messages and who each user is following, and must correctly distribute revenues from likes.
 
 **Frontend**: The frontend must allow users to post messages.
 It should show separate feeds for followed users and for all users so users can find new people to follow.
@@ -105,6 +109,8 @@ Some of the best games don’t require a complex user interface, like the classi
 You can write a flowchart of the adventure, find data for one of these games online to use, or have an LLM generate one for you.
 
 <img src="/img/TextAdventure.png" alt="A simple interface for the text game Zork" style={{width: 400}} />
+
+Require 1 tez from the player for each adventure, and reward each completed adventure with 2 tez.
 
 **Backend**: The backend must keep track of where the user is in the adventure and information about their inventory and status.
 It should support multiple users who can be at any different place in the adventure at any time.
