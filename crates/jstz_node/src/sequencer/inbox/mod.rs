@@ -165,7 +165,7 @@ async fn retry_fetch_block(rollup_endpoint: &str, block_level: u32) -> BlockResp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sequencer::inbox::parsing::Message;
+    use crate::sequencer::inbox::parsing::{LevelInfo, Message};
     use crate::sequencer::inbox::test_utils::{hash_of, make_mock_monitor_blocks_filter};
     use std::time::Duration;
     use std::{
@@ -242,22 +242,28 @@ mod tests {
             messages: vec![String::from("0001"), String::from(op)],
         };
         let msgs = parse_inbox_messages(block_content, &ticketer, &jstz);
-        assert_eq!(msgs.len(), 1);
-        matches!(&msgs[0], ParsedInboxMessage::JstzMessage(Message::External(op)) if op.hash().to_string() == op_hash);
+        assert_eq!(msgs.len(), 2);
+        assert!(matches!(
+            &msgs[0],
+            ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+        ));
+        assert!(
+            matches!(&msgs[1], ParsedInboxMessage::JstzMessage(Message::External(op)) if op.hash().to_string() == op_hash)
+        );
     }
 
     #[tokio::test]
     async fn test_process_inbox_messages() {
         let (op_hash, op) = mock_deploy_op();
-        let q = Arc::new(RwLock::new(OperationQueue::new(1)));
+        let q = Arc::new(RwLock::new(OperationQueue::new(2)));
         let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
         let block_content = BlockResponse {
             messages: vec![
+                String::from("0000"),
+                String::from(op),
+                String::from(op),
                 String::from("0001"),
-                String::from(op),
-                String::from(op),
-                String::from("0002"),
             ],
         };
 
@@ -270,10 +276,14 @@ mod tests {
 
         tokio::time::sleep(Duration::from_millis(10)).await;
         // only one message should be in the queue to respect the limit
-        assert_eq!(q.read().unwrap().len(), 1);
+        assert_eq!(q.read().unwrap().len(), 2);
 
+        let sol = q.write().unwrap().pop().unwrap();
         let op = q.write().unwrap().pop().unwrap();
-
+        assert!(matches!(
+            sol,
+            ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+        ));
         assert_eq!(hash_of(&op), op_hash);
         assert_eq!(q.read().unwrap().len(), 0);
 
