@@ -456,16 +456,9 @@ fn oracle_config_serialization_test() {
     );
 
     let json = serde_json::to_value(&cfg).unwrap();
-    let oracle_arr = json["oracle_key_pair"]
-        .as_array()
-        .expect("oracle_key_pair should be JSON array");
-    assert_eq!(oracle_arr.len(), 2);
+    let oracle_pk = json["oracle"].as_str().expect("oracle should be string");
     assert_eq!(
-        oracle_arr[0],
+        oracle_pk,
         "edpkuEb5VsDrcVZnbWg6sAsSG3VYVUNRKATfryPCDkzi77ZVLiXE3Z"
-    );
-    assert_eq!(
-        oracle_arr[1],
-        "edsk2uqim1xRamoBVn6WEHVWEtiKq2ZCXooAzpjC3tGNSVrL9aLcKM"
     );
 }
