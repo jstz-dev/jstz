@@ -41,7 +41,7 @@ jstz bridge deposit --from bootstrap1 --to <ALIAS> --amount 1 -n dev
 
 ## Signing transactions from user accounts
 
-You must provide the secret key of the user account to sign transactions.
+Unless you are using a wallet (see example), you must provide the secret key of the user account to sign transactions.
 For example, the [`call-from-web`](https://github.com/jstz-dev/jstz/tree/main/examples/call-from-web) sample application uses the Jstz client SDK to sign applications given the address, public key, and secret key of the application:
 
 ```typescript
