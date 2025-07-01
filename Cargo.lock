@@ -2793,7 +2793,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_api"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "base64 0.21.7",
@@ -2822,7 +2822,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_cli"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "ansi_term",
  "anyhow",
@@ -2890,7 +2890,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_client"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "jstz_crypto",
@@ -2903,7 +2903,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_core"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
@@ -2934,7 +2934,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_crypto"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
@@ -2951,7 +2951,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_kernel"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
@@ -2975,7 +2975,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_mock"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "derive_more",
  "jstz_core",
@@ -2988,7 +2988,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_node"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3043,7 +3043,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_oracle_node"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
@@ -3075,7 +3075,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_proto"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "bincode 2.0.0-rc.3",
  "boa_engine",
@@ -3113,7 +3113,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_rollup"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
@@ -3135,7 +3135,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_runtime"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
@@ -3167,7 +3167,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_sdk"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "jstz_crypto",
  "jstz_proto",
@@ -3177,7 +3177,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_tps_bench"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "base64 0.21.7",
  "bincode 2.0.0-rc.3",
@@ -3201,7 +3201,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_utils"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "reqwest",
@@ -3211,7 +3211,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_wpt"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "clap 4.5.20",
@@ -3229,7 +3229,7 @@ dependencies = [
 
 [[package]]
 name = "jstzd"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -3694,7 +3694,7 @@ dependencies = [
 
 [[package]]
 name = "octez"
-version = "0.1.1-alpha.1"
+version = "0.1.1-alpha.2"
 dependencies = [
  "anyhow",
  "hex",

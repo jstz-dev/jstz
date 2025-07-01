@@ -1,12 +1,13 @@
 use std::sync::Arc;
 
 use jstz_core::{host::JsHostRuntime, kv::Transaction};
+use jstz_proto::runtime::{ProtocolContext, PROTOCOL_CONTEXT};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
 use crate::{
     handle_message,
-    inbox::{self, ParsedInboxMessage},
+    inbox::{self, LevelInfo, ParsedInboxMessage},
     read_injector, read_ticketer,
 };
 
@@ -37,6 +38,7 @@ pub fn run(rt: &mut impl Runtime) {
 async fn run_event_loop(rt: &mut impl Runtime) {
     let ticketer = Arc::new(read_ticketer(rt));
     let injector = Arc::new(read_injector(rt));
+    ProtocolContext::init_global(rt, 0).unwrap();
 
     loop {
         match read_message(rt, &ticketer) {
@@ -58,6 +60,12 @@ async fn run_event_loop(rt: &mut impl Runtime) {
                         );
                     }
                 });
+            }
+            Some(ParsedInboxMessage::LevelInfo(LevelInfo::Start)) => {
+                PROTOCOL_CONTEXT.get().unwrap().increment_level();
+                let oracle_ctx = PROTOCOL_CONTEXT.get().unwrap().oracle();
+                let mut oracle = oracle_ctx.lock();
+                oracle.gc_timeout_requests(rt);
             }
             Some(ParsedInboxMessage::LevelInfo(_)) => {}
             None => {

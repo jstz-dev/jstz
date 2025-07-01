@@ -255,11 +255,11 @@ fn dispatch_oracle(
         .boxed_local());
     }
     let response_rx = {
-        let ctx = PROTOCOL_CONTEXT
+        let oracle_ctx = PROTOCOL_CONTEXT
             .get()
-            .expect("Protocol context should be initialized");
-        let mut ctx_lock = ctx.lock();
-        let oracle = ctx_lock.oracle();
+            .expect("Protocol context should be initialized")
+            .oracle();
+        let mut oracle = oracle_ctx.lock();
         oracle.send_request(
             host,
             tx,
@@ -2096,7 +2096,7 @@ mod test {
             let mut host = tezos_smart_rollup_mock::MockHost::default();
             host.set_debug_handler(debug_sink.clone());
             let pk = PublicKey::from_base58(
-                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
             )
             .unwrap();
             Storage::insert(&mut host, &ORACLE_PUBLIC_KEY_PATH, &pk).unwrap();
@@ -2105,7 +2105,7 @@ mod test {
             tx.commit(&mut host).unwrap();
 
             let run_address = hashes[0].clone();
-            ProtocolContext::init_global(&mut host).unwrap();
+            ProtocolContext::init_global(&mut host, 0).unwrap();
             tokio::pin! {
                 let response_fut = process_and_dispatch_request(
                     JsHostRuntime::new(&mut host),
@@ -2147,8 +2147,8 @@ mod test {
                         Url::parse("http://example.com").unwrap()
                     );
                     assert_eq!(oracle_request.caller, source_address);
-                    let mut locked = PROTOCOL_CONTEXT.get().unwrap().lock();
-                    let oracle = locked.oracle();
+                    let oracle_ctx = PROTOCOL_CONTEXT.get().unwrap().oracle();
+                    let mut oracle = oracle_ctx.lock();
 
                     oracle
                         .respond(&mut host, oracle_request.id, response.clone())

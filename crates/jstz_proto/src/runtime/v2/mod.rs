@@ -69,6 +69,8 @@ pub enum Error {
     FetchError(#[from] FetchError),
     #[error(transparent)]
     ParsedCodeError(#[from] parsed_code::ParseError),
+    #[error(transparent)]
+    OracleError(#[from] oracle::OracleError),
 }
 
 #[cfg(test)]

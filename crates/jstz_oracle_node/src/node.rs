@@ -48,10 +48,10 @@ mod tests {
 
     fn create_test_keys() -> Result<(PublicKey, SecretKey)> {
         let public_key = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )?;
         let secret_key = SecretKey::from_base58(
-            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
         )?;
         Ok((public_key, secret_key))
     }

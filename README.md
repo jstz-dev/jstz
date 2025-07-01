@@ -44,6 +44,16 @@ For a more detailed quick start, see [Quick start](https://jstz-dev.github.io/js
 
 For the latest `jstz` documentation, [click here](https://jstz-dev.github.io/jstz/).
 
+To build the documentation locally with Docusaurus, first do `npm i`, and then:
+
+    npm run docs:dev
+
+to quickly see the results in your browser, or:
+
+    npm run docs:build
+
+to build a production-grade website.
+
 ## Contributing
 
 Please, check the [CONTRIBUTING.md](/CONTRIBUTING.md) file to know how to effectively contribute
