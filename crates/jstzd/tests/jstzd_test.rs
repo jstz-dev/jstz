@@ -31,7 +31,7 @@ use tokio::time::{sleep, timeout};
 const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 const CONTRACT_INIT_BALANCE: f64 = 1.0;
 pub const JSTZ_ROLLUP_OPERATOR_PK: &str =
-    "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
+    "edpkuumXzkHj1AhFmjEVLRq4z54iU2atLPUKt4fcu7ihqsEBiUT4wK";
 pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "bootstrap1";
 
 #[cfg_attr(feature = "skip-rollup-tests", ignore)]

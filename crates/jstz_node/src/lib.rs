@@ -137,6 +137,7 @@ pub async fn run(
             worker::spawn(
                 queue.clone(),
                 runtime_db.clone(),
+                &injector,
                 rollup_preimages_dir.clone(),
                 Some(&debug_log_path),
                 #[cfg(feature = "blueprint")]
@@ -151,6 +152,7 @@ pub async fn run(
                 worker::spawn(
                     queue.clone(),
                     runtime_db.clone(),
+                    &injector,
                     rollup_preimages_dir.clone(),
                     Some(&debug_log_path),
                     #[cfg(feature = "blueprint")]

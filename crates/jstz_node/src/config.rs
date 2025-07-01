@@ -6,8 +6,8 @@ use serde::Serialize;
 
 use crate::RunMode;
 
-/// Jstz node's signer defaults to `bootstrap1` account
-/// Make sure to update　the `INJECTOR_PK` in `jstzd/build_config.rs` if you change this
+/// Jstz node's signer defaults to `injector` account in jstzd/resources/bootstrap_account/accounts.json
+/// Make sure to keep these two in sync.
 pub const JSTZ_NODE_DEFAULT_PK: &str =
     "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
 pub const JSTZ_NODE_DEFAULT_SK: &str =
