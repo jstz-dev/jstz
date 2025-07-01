@@ -212,6 +212,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-stream"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b5a71a6f37880a80d1d7f19efd781e4b5de42c88f0722cc13bcb6cc2cfe8476"
+dependencies = [
+ "async-stream-impl",
+ "futures-core",
+ "pin-project-lite",
+]
+
+[[package]]
+name = "async-stream-impl"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+]
+
+[[package]]
 name = "async-trait"
 version = "0.1.83"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1341,14 +1363,11 @@ dependencies = [
 [[package]]
 name = "deno_fetch_base"
 version = "0.202.0"
-source = "git+https://github.com/jstz-dev/deno?branch=leo%2Fextend-fetch-base#8d1d5522ee06190fcc68bd7e5ba65534520edac5"
+source = "git+https://github.com/jstz-dev/deno?branch=leo%2Fextend-fetch-base#26c62e089fe3f1ba624d017821d9c836106bf729"
 dependencies = [
  "bytes",
  "deno_core",
  "deno_error",
- "http 1.1.0",
- "http-body-util",
- "hyper 1.6.0",
  "serde",
 ]
 
@@ -2464,13 +2483,12 @@ dependencies = [
 
 [[package]]
 name = "hyper-util"
-version = "0.1.14"
+version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc2fdfdbff08affe55bb779f33b053aa1fe5dd5b54c257343c17edfa55711bdb"
+checksum = "497bbc33a26fdd4af9ed9c70d63f61cf56a938375fbb32df34db9b1cd6d643f2"
 dependencies = [
  "bytes",
  "futures-channel",
- "futures-core",
  "futures-util",
  "http 1.1.0",
  "http-body 1.0.1",
@@ -2993,6 +3011,7 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "async-dropper-simple",
+ "async-stream",
  "async-trait",
  "axum",
  "base64 0.21.7",
@@ -3017,6 +3036,7 @@ dependencies = [
  "num-traits",
  "octez",
  "parking_lot",
+ "pin-project",
  "pretty_assertions",
  "r2d2",
  "r2d2_sqlite",
@@ -3031,6 +3051,7 @@ dependencies = [
  "tezos_data_encoding",
  "thiserror 1.0.67",
  "tokio",
+ "tokio-retry",
  "tokio-stream",
  "tokio-util",
  "tower",
@@ -5900,6 +5921,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tokio-retry"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f57eb36ecbe0fc510036adff84824dd3c24bb781e21bfa67b69d556aa85214f"
+dependencies = [
+ "pin-project",
+ "rand 0.8.5",
+ "tokio",
+]
+
+[[package]]
 name = "tokio-stream"
 version = "0.1.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5970,9 +6002,9 @@ dependencies = [
 
 [[package]]
 name = "tower-http"
-version = "0.6.6"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adc82fd73de2a9722ac5da747f12383d2bfdb93591ee6c58486e0097890f05f2"
+checksum = "8437150ab6bbc8c5f0f519e3d5ed4aa883a83dd4cdd3d1b21f9482936046cb97"
 dependencies = [
  "bitflags 2.6.0",
  "bytes",

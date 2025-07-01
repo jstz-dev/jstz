@@ -167,9 +167,10 @@ pub async fn run(
 
     let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => {
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
-        }
+        RunMode::Sequencer => Some(
+            inbox::spawn_monitor(rollup_endpoint, queue.clone(), tempfile::tempfile()?)
+                .await?,
+        ),
         #[cfg(test)]
         RunMode::Sequencer => None,
         RunMode::Default => None,
