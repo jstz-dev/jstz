@@ -16,10 +16,11 @@ bincode.workspace = true
 boa_engine.workspace = true
 boa_gc.workspace = true
 bytes.workspace = true
-derive_more.workspace = true
+derive_more = { workspace = true, features = ["deref", "deref_mut", "from"] }
 either.workspace = true
 erased-serde.workspace = true
 futures.workspace = true
+hex.workspace = true
 http-serde.workspace = true
 http.workspace = true
 nom.workspace = true

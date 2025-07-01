@@ -5,6 +5,7 @@ use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::secret_key::SecretKey;
 use jstz_node::RunMode;
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
+use octez::r#async::rollup::HistoryMode;
 use rust_embed::Embed;
 use tempfile::NamedTempFile;
 
@@ -174,6 +175,7 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
         .set_data_dir(RollupDataDir::TempWithPreImages {
             preimages_dir: jstz_rollup_path::preimages_path(),
         })
+        .set_history_mode(HistoryMode::Archive)
         .set_kernel_debug_file(kernel_debug_file)
         .build()
         .unwrap();
