@@ -43,6 +43,7 @@ pub fn read_message(
     ticketer: &ContractKt1Hash,
 ) -> Option<Message> {
     let input = rt.read_input().ok()??;
+    let _ = rt.mark_for_reboot();
     let jstz_rollup_address = rt.reveal_metadata().address();
     match parse_inbox_message(
         rt,
