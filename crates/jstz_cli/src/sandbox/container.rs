@@ -183,6 +183,10 @@ async fn create_config_file_and_client_dir() -> Result<(PathBuf, PathBuf)> {
         "octez_rollup": {
             "rpc_endpoint": format!("http://0.0.0.0:{SANDBOX_OCTEZ_ROLLUP_RPC_PORT}")
         },
+        "jstz_node": {
+            "mode": "sequencer",
+            "capacity": 64,
+        }
     })).context("Failed to serialise sandbox config")?;
     let config_file_path = NamedTempFile::new()
         .context("Failed to create a file as the config file")?
@@ -489,6 +493,10 @@ mod tests {
                 "octez_rollup": {
                     "rpc_endpoint": format!("http://0.0.0.0:{SANDBOX_OCTEZ_ROLLUP_RPC_PORT}")
                 },
+                "jstz_node": {
+                    "mode": "sequencer",
+                    "capacity": 64
+                }
             })
         );
     }

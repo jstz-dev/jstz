@@ -1,3 +1,5 @@
+#[cfg(feature = "v2_runtime")]
+use crate::runtime::v2::oracle::RequestId;
 use crate::{
     context::account::Address,
     executor::{fa_deposit::FaDepositReceipt, fa_withdraw::FaWithdrawReceipt},
@@ -75,6 +77,13 @@ pub struct DepositReceipt {
     pub updated_balance: u64,
 }
 
+#[cfg(feature = "v2_runtime")]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[serde(rename_all = "camelCase")]
+pub struct OracleResponseReceipt {
+    pub request_id: RequestId,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
 #[serde(tag = "_type")]
 pub enum ReceiptContent {
@@ -88,4 +97,7 @@ pub enum ReceiptContent {
     FaDeposit(FaDepositReceipt),
     #[schema(title = "FaWithdraw")]
     FaWithdraw(FaWithdrawReceipt),
+    #[cfg(feature = "v2_runtime")]
+    #[schema(title = "OracleResponse")]
+    OracleResponse(OracleResponseReceipt),
 }

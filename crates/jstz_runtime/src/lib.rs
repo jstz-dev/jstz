@@ -5,7 +5,7 @@ pub use ext::jstz_kv::kv::*;
 pub mod runtime;
 pub mod sys;
 
-pub use runtime::{JstzRuntime, JstzRuntimeOptions, ProtocolContext};
+pub use runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 
 #[cfg(test)]
 mod test_utils {
@@ -100,7 +100,7 @@ mod test_utils {
             let request_id = String::new();
             $(let request_id = $request_id.to_string();)?
             #[allow(unused)]
-            let protocol  = Some($crate::ProtocolContext::new(&mut init_host, &mut init_tx, init_addr.clone(), request_id));
+            let protocol  = Some($crate::RuntimeContext::new(&mut init_host, &mut init_tx, init_addr.clone(), request_id));
             #[allow(unused)]
             let mut $runtime = $crate::JstzRuntime::new($crate::JstzRuntimeOptions {
                 protocol,

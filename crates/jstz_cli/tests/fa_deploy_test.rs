@@ -12,7 +12,6 @@ use jstz_crypto::{
 use jstzd::{
     self,
     task::jstzd::{JstzdConfig, JstzdServer},
-    BOOTSTRAP_ACCOUNTS,
 };
 use octez::r#async::client::OctezClient;
 use std::{fs, path::Path, process::Command, str::FromStr};
@@ -36,7 +35,11 @@ async fn fa_deploy_test() {
     // 1. Deploy FA2.1 contract
     // The `TEST` (0x54455354) token has a total supply of `1000` tokens and is minted to `bootstrap2`.
     // https://github.com/oxheadalpha/smart-contracts/blob/master/multi_asset/ligo/src/fa2_multi_asset.mligo
-    let bootstrap2 = BOOTSTRAP_ACCOUNTS[2];
+    let bootstrap2 = (
+        "bootstrap2",
+        "edpktzNbDAUjUk697W7gYg2CRuBQjyPxbEg8dLccYYwKSKvkPvjtV9",
+        "unencrypted:edsk39qAm1fiMjgmPkw1EgQYkMzkJezLNewd7PLNHTkr6w9XA2zdfo",
+    );
     let bootstrap2_alias = bootstrap2.0;
     let bootstrap2 = PublicKey::from_base58(bootstrap2.1).unwrap().hash();
 

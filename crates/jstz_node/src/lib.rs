@@ -85,6 +85,8 @@ pub struct RunOptions {
     pub mode: RunMode,
     pub capacity: usize,
     pub debug_log_path: PathBuf,
+    #[cfg(feature = "v2_runtime")]
+    pub oracle_key_pair: Option<KeyPair>,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -101,6 +103,8 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         mode: config.mode,
         capacity: config.capacity,
         debug_log_path: config.debug_log_file,
+        #[cfg(feature = "v2_runtime")]
+        oracle_key_pair: config.oracle_key_pair,
     })
     .await
 }
@@ -116,6 +120,8 @@ pub async fn run(
         mode,
         capacity,
         debug_log_path,
+        #[cfg(feature = "v2_runtime")]
+        oracle_key_pair,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
@@ -133,6 +139,7 @@ pub async fn run(
             worker::spawn(
                 queue.clone(),
                 runtime_db.clone(),
+                &injector,
                 rollup_preimages_dir.clone(),
                 Some(&debug_log_path),
             )
@@ -145,6 +152,7 @@ pub async fn run(
                 worker::spawn(
                     queue.clone(),
                     runtime_db.clone(),
+                    &injector,
                     rollup_preimages_dir.clone(),
                     Some(&debug_log_path),
                     move || {
@@ -178,6 +186,24 @@ pub async fn run(
         &cancellation_token,
     )
     .await?;
+
+    // Start OracleNode if oracle keys are provided
+    #[cfg(feature = "v2_runtime")]
+    let _oracle_node = if let Some(oracle_key_pair) = oracle_key_pair {
+        let KeyPair(public_key, secret_key) = oracle_key_pair;
+        let node_endpoint = format!("http://{}:{}", addr, port);
+        Some(
+            jstz_oracle_node::node::OracleNode::spawn(
+                kernel_log_path.clone(),
+                public_key,
+                secret_key,
+                node_endpoint,
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
 
     let state = AppState {
         rollup_client,
@@ -245,13 +271,22 @@ mod test {
     #[test]
     fn api_doc_regression() {
         let _ = include_str!("../openapi.json");
+        #[cfg(feature = "v2_runtime")]
         let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("openapi.json");
+        #[cfg(not(feature = "v2_runtime"))]
+        let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("openapi_v1.json");
         let current_spec = std::fs::read_to_string(filename).unwrap();
         let current_spec = current_spec.trim();
         let generated_spec = crate::openapi_json_raw().unwrap();
+        #[cfg(feature = "v2_runtime")]
         assert!(
             current_spec == generated_spec,
-            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
+            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node --features v2_runtime -- spec -o crates/jstz_node/openapi.json"
+        );
+        #[cfg(not(feature = "v2_runtime"))]
+        assert!(
+            current_spec == generated_spec,
+            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi_v1.json"
         );
     }
 
@@ -276,6 +311,8 @@ mod test {
                 mode: mode.clone(),
                 capacity: 0,
                 debug_log_path: debug_log_file.path().to_path_buf(),
+                #[cfg(feature = "v2_runtime")]
+                oracle_key_pair: None,
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -321,6 +358,8 @@ mod test {
                 mode,
                 capacity: 0,
                 debug_log_path: debug_log_file.path().to_path_buf(),
+                #[cfg(feature = "v2_runtime")]
+                oracle_key_pair: None,
             }));
 
             sleep(Duration::from_secs(1)).await;

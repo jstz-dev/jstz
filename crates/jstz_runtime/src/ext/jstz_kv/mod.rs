@@ -1,7 +1,7 @@
 pub mod kv;
 pub(crate) mod extension {
     use super::kv::KvValue;
-    use crate::{ext::NotSupported, runtime::ProtocolContext};
+    use crate::{ext::NotSupported, runtime::RuntimeContext};
     use deno_core::{extension, op2, OpState};
     use thiserror;
     struct Kv;
@@ -15,9 +15,9 @@ pub(crate) mod extension {
             op_state: &mut OpState,
             #[string] key: &str,
         ) -> Result<Option<serde_json::Value>> {
-            let maybe_proto = op_state.try_borrow_mut::<ProtocolContext>();
+            let maybe_proto = op_state.try_borrow_mut::<RuntimeContext>();
             match maybe_proto {
-                Some(ProtocolContext { host, tx, kv, .. }) => {
+                Some(RuntimeContext { host, tx, kv, .. }) => {
                     let maybe_value = kv
                         .get(host, tx, key)
                         .map_err(|e| KvError::JstzCoreError(e.to_string()))?;
@@ -33,9 +33,9 @@ pub(crate) mod extension {
             #[string] key: &str,
             #[serde] value: serde_json::Value,
         ) -> Result<()> {
-            let maybe_proto = op_state.try_borrow_mut::<ProtocolContext>();
+            let maybe_proto = op_state.try_borrow_mut::<RuntimeContext>();
             match maybe_proto {
-                Some(ProtocolContext { tx, kv, .. }) => kv
+                Some(RuntimeContext { tx, kv, .. }) => kv
                     .set(tx, key, KvValue(value))
                     .map_err(|e| KvError::JstzCoreError(e.to_string())),
                 None => Err(NOT_SUPPORTED_ERROR)?,
@@ -45,9 +45,9 @@ pub(crate) mod extension {
         #[fast]
         #[static_method]
         fn delete(op_state: &mut OpState, #[string] key: &str) -> Result<()> {
-            let maybe_proto = op_state.try_borrow_mut::<ProtocolContext>();
+            let maybe_proto = op_state.try_borrow_mut::<RuntimeContext>();
             match maybe_proto {
-                Some(ProtocolContext { tx, kv, .. }) => kv
+                Some(RuntimeContext { tx, kv, .. }) => kv
                     .delete(tx, key)
                     .map_err(|e| KvError::JstzCoreError(e.to_string())),
                 None => Err(NOT_SUPPORTED_ERROR)?,
@@ -57,9 +57,9 @@ pub(crate) mod extension {
         #[fast]
         #[static_method]
         fn contains(op_state: &mut OpState, #[string] key: &str) -> Result<bool> {
-            let maybe_proto = op_state.try_borrow_mut::<ProtocolContext>();
+            let maybe_proto = op_state.try_borrow_mut::<RuntimeContext>();
             match maybe_proto {
-                Some(ProtocolContext { tx, kv, host, .. }) => kv
+                Some(RuntimeContext { tx, kv, host, .. }) => kv
                     .has(host, tx, key)
                     .map_err(|e| KvError::JstzCoreError(e.to_string())),
                 None => Err(NOT_SUPPORTED_ERROR)?,

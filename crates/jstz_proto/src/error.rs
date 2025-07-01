@@ -15,6 +15,7 @@ pub enum Error {
     CryptoError {
         source: jstz_crypto::Error,
     },
+    AccountDoesNotExist,
     BalanceOverflow,
     InsufficientFunds,
     InvalidNonce,
@@ -47,6 +48,7 @@ pub enum Error {
     RevealTypeMismatch,
     RevealNotSupported,
     InvalidInjector,
+    InvalidOracleKey,
     #[cfg(feature = "v2_runtime")]
     V2Error(crate::runtime::v2::Error),
 }
@@ -135,6 +137,12 @@ impl From<Error> for JsError {
             Error::InvalidScheme => {
                 JsNativeError::eval().with_message("InvalidScheme").into()
             }
+            Error::AccountDoesNotExist => JsNativeError::eval()
+                .with_message("AccountDoesNotExist")
+                .into(),
+            Error::InvalidOracleKey => JsNativeError::eval()
+                .with_message("InvalidOracleKey")
+                .into(),
             #[cfg(feature = "v2_runtime")]
             Error::V2Error(_) => {
                 unimplemented!("V2 runtime errors are not supported in boa")

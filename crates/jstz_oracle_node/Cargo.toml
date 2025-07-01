@@ -22,4 +22,23 @@ tempfile.workspace = true
 rand.workspace = true
 futures-util.workspace = true
 tokio-util.workspace = true
+once_cell.workspace = true
+http.workspace = true
+hyper.workspace = true
+reqwest.workspace = true
+log.workspace = true
+bincode.workspace = true
+serde_bytes.workspace = true
+url.workspace = true
 jstz_utils = { path = "../jstz_utils" }
+jstz_proto = { path = "../jstz_proto"}
+jstz_crypto = { path = "../jstz_crypto" }
+jstz_client = { path = "../jstz_client" }
+serde_json.workspace = true
+octez = { path = "../octez" }
+
+[dev-dependencies]
+mockito.workspace = true
+
+[features]
+v2_runtime = ["jstz_proto/v2_runtime"]

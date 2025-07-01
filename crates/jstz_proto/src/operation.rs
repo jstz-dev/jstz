@@ -1,3 +1,5 @@
+#[cfg(feature = "v2_runtime")]
+use crate::runtime::v2::fetch::http::Response;
 use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
@@ -6,6 +8,9 @@ use crate::{
 use bincode::{Decode, Encode};
 use derive_more::{Deref, Display, From};
 use http::{HeaderMap, Method, Uri};
+
+#[cfg(feature = "v2_runtime")]
+use crate::runtime::v2::oracle::request::RequestId;
 
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
 use jstz_crypto::{
@@ -103,6 +108,13 @@ impl Operation {
                 )
                 .as_bytes(),
             ),
+            #[cfg(feature = "v2_runtime")]
+            Content::OracleResponse(OracleResponse {
+                request_id,
+                response,
+            }) => Blake2b::from(
+                format!("{}{}{}{:?}", public_key, nonce, request_id, response).as_bytes(),
+            ),
         }
     }
 }
@@ -179,6 +191,18 @@ pub struct RevealLargePayload {
     pub original_op_hash: OperationHash,
 }
 
+#[cfg(feature = "v2_runtime")]
+#[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
+#[schema(description = "Response to an OracleRequest sent by the enshrined Oracle node")]
+#[serde(rename_all = "camelCase")]
+pub struct OracleResponse {
+    /// The request id of the OracleRequest that is being responded to
+    pub request_id: RequestId,
+    /// The response to the OracleRequest
+    #[schema(value_type = String)]
+    pub response: Response,
+}
+
 #[derive(
     Debug, From, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
 )]
@@ -190,6 +214,9 @@ pub enum Content {
     RunFunction(#[bincode(with_serde)] RunFunction),
     #[schema(title = "RevealLargePayload")]
     RevealLargePayload(#[bincode(with_serde)] RevealLargePayload),
+    #[cfg(feature = "v2_runtime")]
+    #[schema(title = "OracleResponse")]
+    OracleResponse(#[bincode(with_serde)] OracleResponse),
 }
 
 impl Content {

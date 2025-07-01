@@ -26,7 +26,7 @@ function buildRequest(
     ),
     gasLimit: 55000,
     headers: {},
-    method: "GET",
+    method: "POST",
     uri: `jstz://${contractAddress}`,
   };
 }

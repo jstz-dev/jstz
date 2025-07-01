@@ -19,12 +19,21 @@ use deno_core::{serde_v8, v8, ToJsBuffer};
 use crate::executor::smart_function::JSTZ_HOST;
 
 /// Response returned from fetch or [`crate::operation::RunFunction`]
-#[derive(Debug)]
+#[derive(Debug, Eq, Clone, Serialize, Deserialize)]
 pub struct Response {
     pub status: u16,
     pub status_text: String,
     pub headers: Vec<(ByteString, ByteString)>,
     pub body: Body,
+}
+
+impl PartialEq for Response {
+    fn eq(&self, other: &Self) -> bool {
+        self.status == other.status
+            && self.status_text == other.status_text
+            && self.headers == other.headers
+            && self.body.as_slice() == other.body.as_slice()
+    }
 }
 
 impl Into<http::Response<Option<Vec<u8>>>> for Response {
@@ -85,6 +94,8 @@ impl PartialEq for Body {
     }
 }
 
+impl Eq for Body {}
+
 impl Body {
     #[allow(unused)]
     pub fn to_vec(self) -> Vec<u8> {
@@ -106,6 +117,13 @@ impl Body {
         match self {
             Self::Vector(v) => v.len(),
             Self::Buffer(b) => b.len(),
+        }
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        match self {
+            Body::Vector(vec) => vec.as_slice(),
+            Body::Buffer(buffer) => buffer.as_ref(),
         }
     }
 }
@@ -134,6 +152,12 @@ impl From<&str> for Body {
 impl From<&[u8]> for Body {
     fn from(bytes: &[u8]) -> Self {
         Body::Vector(bytes.to_vec())
+    }
+}
+
+impl From<Vec<u8>> for Body {
+    fn from(value: Vec<u8>) -> Self {
+        Body::Vector(value)
     }
 }
 
@@ -173,6 +197,7 @@ impl<'s> ToV8<'s> for Body {
 
 pub enum SupportedScheme {
     Jstz,
+    Http,
 }
 
 impl TryFrom<&Url> for SupportedScheme {
@@ -181,6 +206,7 @@ impl TryFrom<&Url> for SupportedScheme {
     fn try_from(value: &Url) -> Result<Self> {
         match value.scheme() {
             "jstz" => Ok(Self::Jstz),
+            "http" => Ok(Self::Http),
             scheme => Err(FetchError::UnsupportedScheme(scheme.to_string())),
         }
     }

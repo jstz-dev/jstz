@@ -1,11 +1,11 @@
 #![allow(unused)]
+use crate::runtime::v2::oracle::OracleRequest;
 use bincode::{Decode, Encode};
+use derive_more::From;
 use jstz_core::host::HostRuntime;
 use nom::{bytes::complete::tag, InputTake};
 use serde::{Deserialize, Serialize};
 use tezos_smart_rollup::prelude::debug_msg;
-
-use crate::runtime::v2::oracle::OracleRequest;
 
 /// Jstz Events
 pub trait Event: PartialEq + Serialize {
@@ -13,24 +13,25 @@ pub trait Event: PartialEq + Serialize {
 }
 
 /// Responsible for publishing events to the kernel debug log
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct EventPublisher;
 
 impl EventPublisher {
     /// Jstz events are published as single line in the kernel debug log with the
     /// schema "[JSTZ]<json payload>
-    pub(crate) fn publish_event<R, E: Event>(&mut self, rt: &R, event: &E) -> Result<()>
+    pub(crate) fn publish_event<R, E: Event>(rt: &R, event: &E) -> Result<()>
     where
         R: HostRuntime,
     {
         let json = serde_json::to_string(event).map_err(EncodeError::from)?;
         let prefix = E::tag();
-        debug_msg!(rt, "[{prefix}]{json}");
+        debug_msg!(rt, "[{prefix}]{json}\n");
         Ok(())
     }
 }
 
 pub fn decode_line<'de, E: Event + Deserialize<'de>>(input: &'de str) -> Result<E> {
+    let input = input.trim();
     let str = parse_line::<E>(input)?;
     Ok(serde_json::from_str(str).map_err(DecodeError::from)?)
 }
@@ -163,8 +164,7 @@ mod test {
                 )),
             },
         };
-        let mut publisher = EventPublisher::default();
-        publisher.publish_event(&mut host, &event);
+        EventPublisher::publish_event(&mut host, &event);
         let head_line = sink.lines().first().unwrap().clone();
         assert_eq!(
             head_line,
