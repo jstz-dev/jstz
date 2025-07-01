@@ -104,7 +104,7 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         capacity: config.capacity,
         debug_log_path: config.debug_log_file,
         #[cfg(feature = "v2_runtime")]
-        oracle_key_pair: config.oracle_key_pair,
+        oracle_key_pair: config.oracle,
     })
     .await
 }
