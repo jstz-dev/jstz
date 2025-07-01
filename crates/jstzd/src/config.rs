@@ -387,7 +387,7 @@ mod tests {
             BootstrapAccount, BootstrapContract, BootstrapSmartRollup, Protocol,
             ProtocolConstants, ProtocolParameterBuilder, SmartRollupPvmKind,
         },
-        rollup::RollupDataDir,
+        rollup::{HistoryMode, RollupDataDir},
     };
     use tempfile::{tempdir, NamedTempFile};
     use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -660,7 +660,8 @@ mod tests {
         let mut tmp_file = NamedTempFile::new().unwrap();
         let content = serde_json::to_string(&serde_json::json!({
             "octez_rollup": {
-                "rpc_endpoint": "http://0.0.0.0:18741"
+                "rpc_endpoint": "http://0.0.0.0:18741",
+                "history_mode": "archive"
             }
         }))
         .unwrap();
@@ -689,6 +690,10 @@ mod tests {
         assert_eq!(
             config.octez_rollup_config().operator,
             super::ROLLUP_OPERATOR_ACCOUNT_ALIAS
+        );
+        assert_eq!(
+            config.octez_rollup_config().history_mode,
+            HistoryMode::Archive
         );
     }
 
