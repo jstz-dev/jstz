@@ -409,7 +409,7 @@ async fn jstzd_with_oracle_key_pair_test() {
 
     let KeyPair(cfg_pk, cfg_sk) = config
         .jstz_node_config()
-        .oracle_key_pair
+        .oracle
         .as_ref()
         .expect("oracle key pair missing");
     assert_eq!(

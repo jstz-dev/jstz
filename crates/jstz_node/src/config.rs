@@ -14,6 +14,7 @@ pub const JSTZ_NODE_DEFAULT_SK: &str =
     "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(into = "PublicKey")]
 pub struct KeyPair(pub PublicKey, pub SecretKey);
 
 impl Default for KeyPair {
@@ -22,6 +23,12 @@ impl Default for KeyPair {
             PublicKey::from_base58(JSTZ_NODE_DEFAULT_PK).unwrap(),
             SecretKey::from_base58(JSTZ_NODE_DEFAULT_SK).unwrap(),
         )
+    }
+}
+
+impl From<KeyPair> for PublicKey {
+    fn from(value: KeyPair) -> Self {
+        value.0
     }
 }
 
@@ -45,7 +52,8 @@ pub struct JstzNodeConfig {
     /// The path to the sequencer runtime debug log file.
     pub debug_log_file: PathBuf,
     #[cfg(feature = "v2_runtime")]
-    pub oracle_key_pair: Option<KeyPair>,
+    /// The Oracle signer used to authenticate valid oracle responses
+    pub oracle: Option<KeyPair>,
 }
 
 impl JstzNodeConfig {
@@ -75,7 +83,7 @@ impl JstzNodeConfig {
             capacity,
             debug_log_file: debug_log_file.to_path_buf(),
             #[cfg(feature = "v2_runtime")]
-            oracle_key_pair,
+            oracle: oracle_key_pair,
         }
     }
 }
