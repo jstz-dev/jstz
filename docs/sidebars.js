@@ -18,6 +18,7 @@ const sidebars = {
         "architecture/bridge",
         "architecture/accounts",
         "architecture/networks",
+        "architecture/oracle",
       ],
     },
 
