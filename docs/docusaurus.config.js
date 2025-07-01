@@ -124,7 +124,7 @@ module.exports = async function createConfigAsync() {
           buttonPosition: "center-right",
           version: "latest",
           suggestedQuestions: [
-            "Write a simple smart function for me.",
+            "Can I call third-party JavaScript libraries in smart functions?",
             "How do I deploy a smart function?",
             "What can I do and not do with smart functions?",
           ],
