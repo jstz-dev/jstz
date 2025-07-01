@@ -1,8 +1,8 @@
-# 👨‍⚖️ jstz
+# Jstz
 
 [![codecov](https://codecov.io/gh/jstz-dev/jstz/graph/badge.svg?token=FA7IPI5Q9J)](https://codecov.io/gh/jstz-dev/jstz)
 
-`Jstz` (pronounced: "justice") is a JavaScript runtime powered by Tezos Smart Optimistic Rollups that uses [Boa](https://boajs.dev/) and is built in [Rust](https://www.rust-lang.org/).
+Jstz (pronounced: "justice") is a JavaScript runtime powered by Tezos Smart Optimistic Rollups that is built in [Rust](https://www.rust-lang.org/).
 
 ## Installation
 
@@ -23,26 +23,26 @@ make build-deps
 make build
 ```
 
-See [installing Octez](/CONTRIBUTING.md#installing-octez-🐙) for installing the necessary dependencies for running `jstz`.
+See [installing Octez](/CONTRIBUTING.md#installing-octez-) for installing the necessary dependencies for running Jstz.
 
 ## Quick Start
 
 ```sh
-# Make a javascript file
+# Create a smart function in a JavaScript file
 echo "export default (() => new Response('hello world'))" > index.js
-# Start the sandbox (as a daemon)
-jstz sandbox start -d
+# Start the sandbox in detach mode
+jstz sandbox --container start -d
 # Deploy smart function
-jstz deploy index.js --name example
+jstz deploy index.js --name example -n dev
 # Send request to smart function
-jstz run jstz://example/
+jstz run jstz://example/ -n dev
 ```
 
-For a more detailed quick start, see [Quick start](https://jstz-dev.github.io/jstz/quick_start.html).
+For a more detailed quick start, see [Quick start](https://jstz.tezos.com/quick_start).
 
 ## Documentation
 
-For the latest `jstz` documentation, [click here](https://jstz-dev.github.io/jstz/).
+For the latest Jstz documentation, [click here](https://jstz.tezos.com/).
 
 To build the documentation locally with Docusaurus, first do `npm i`, and then:
 
