@@ -15,7 +15,9 @@ const userSchema = z.object({
 const router = AutoRouter();
 
 router.get("/user/:name", async (request) => {
-  const value = Kv.get(request.params.name);
+  let name = decodeURIComponent(request.params.name);
+  // Keys cannot contain space characters
+  const value = Kv.get(name.replace(" ", "_"));
   if (!value) {
     return new Response("User not found", { status: 404 });
   }
@@ -30,7 +32,9 @@ router.post("/user", async (request) => {
     return new Response(parsed.error.message, { status: 422 });
   }
   const user = parsed.data;
-  Kv.set(user.name, user);
+  let name = decodeURIComponent(user.name);
+  // Keys cannot contain space characters
+  Kv.set(name.replace(" ", "_"), user);
   return json({ message: `user '${user.name}' successfully created 🚀` });
 });
 
