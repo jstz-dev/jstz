@@ -11,7 +11,6 @@ pub fn run(rt: &mut impl Runtime) {
         let injector = crate::read_injector(rt);
         let mut tx = Transaction::default();
         tx.begin();
-        let _ = rt.mark_for_reboot();
         if let Some(message) = read_message(rt, &ticketer) {
             handle_message(rt, message, &ticketer, &mut tx, &injector)
                 .await
