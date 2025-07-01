@@ -17,7 +17,9 @@ pub mod tests {
 
     use crate::sequencer::inbox::parsing::Message;
 
-    pub fn dummy_op() -> Message {
+    use super::inbox::parsing::ParsedInboxMessage;
+
+    pub fn dummy_op() -> ParsedInboxMessage {
         let inner = SignedOperation::new(
         Signature::Ed25519(Ed25519Signature::from_base58_check("edsigtkikkYx71PqeJigBom8sAf8ajRqynraWUFxej5XcbVFSzga6gHYz7whJTFJhZZRywQfXKUjSQeXHPikHJt114hUTEXJzED").unwrap().into()),
          Operation {
@@ -36,6 +38,6 @@ pub mod tests {
         },
     );
 
-        Message::External(inner)
+        ParsedInboxMessage::JstzMessage(Message::External(inner))
     }
 }
