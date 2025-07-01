@@ -161,7 +161,6 @@ async fn inject_oracle_response(
     let op_hash = op.hash();
 
     let signed_op = SignedOperation::new(signing_key.sign(op_hash.clone())?, op);
-
     // Post operation to node
     jstz_client.post_operation(&signed_op).await?;
     let receipt = jstz_client.wait_for_operation_receipt(&op_hash).await?;
@@ -276,7 +275,7 @@ mod tests {
         let mock_nonce = server
             .mock(
                 "GET",
-                "/accounts/tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nonce",
+                "/accounts/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/nonce",
             )
             .with_status(200)
             .with_header("content-type", "application/json")
@@ -288,7 +287,7 @@ mod tests {
 
         // Mock the receipt endpoint
         let mock_receipt = server
-            .mock("GET", "/operations/e5f9460ca912defddcffab260339e25eeb1525725385ba1b9d9dd0b2c9dbdbb4/receipt")
+            .mock("GET", "/operations/9b14cf6a10e07c8f4fb436a0e137e230a8fb5a2ea736316c9d428fa56d9c4414/receipt")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -307,10 +306,10 @@ mod tests {
 
         // Create test data
         let public_key = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )?;
         let secret_key = SecretKey::from_base58(
-            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
         )?;
 
         let node_config = String::from(server.url().as_str());
@@ -357,7 +356,7 @@ mod tests {
         let mock_nonce = server
             .mock(
                 "GET",
-                "/accounts/tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nonce",
+                "/accounts/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/nonce",
             )
             .with_status(200)
             .with_header("content-type", "application/json")
@@ -369,7 +368,7 @@ mod tests {
 
         // Mock the receipt endpoint with a failed result
         let mock_receipt = server
-            .mock("GET", "/operations/e5f9460ca912defddcffab260339e25eeb1525725385ba1b9d9dd0b2c9dbdbb4/receipt")
+            .mock("GET", "/operations/9b14cf6a10e07c8f4fb436a0e137e230a8fb5a2ea736316c9d428fa56d9c4414/receipt")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -385,10 +384,10 @@ mod tests {
 
         // Create test data
         let public_key = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )?;
         let secret_key = SecretKey::from_base58(
-            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
         )?;
         let node_config = String::from(server.url().as_str());
 
@@ -409,7 +408,6 @@ mod tests {
             response,
         )
         .await;
-
         // Verify the result is an error
         assert!(result.is_err(), "Expected error for failed receipt");
         assert!(result
