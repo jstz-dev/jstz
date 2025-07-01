@@ -64,6 +64,18 @@ pub fn spawn(
         thread_kill_sig,
         heartbeat: heartbeat.clone(),
         inner: Some(spawn_thread(move || {
+            #[cfg(feature = "v2_runtime")]
+            run_event_loop(
+                tokio_rt,
+                host_rt,
+                queue,
+                heartbeat,
+                rx,
+                #[cfg(test)]
+                on_exit,
+            );
+
+            #[cfg(not(feature = "v2_runtime"))]
             tokio_rt.block_on(async {
                 loop {
                     write_heartbeat(&heartbeat);
@@ -98,6 +110,61 @@ pub fn spawn(
                 }
             })
         })),
+    })
+}
+
+#[cfg(feature = "v2_runtime")]
+fn run_event_loop(
+    tokio_rt: tokio::runtime::Runtime,
+    host: super::host::Host,
+    queue: Arc<RwLock<OperationQueue>>,
+    heartbeat: Arc<AtomicU64>,
+    rx: std::sync::mpsc::Receiver<()>,
+    #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
+) {
+    let local_set = tokio::task::LocalSet::new();
+    local_set.block_on(&tokio_rt, async {
+        let host_rt = Arc::new(tokio::sync::Mutex::new(host));
+        loop {
+            write_heartbeat(&heartbeat);
+
+            let v = {
+                match queue.write() {
+                    Ok(mut q) => q.pop(),
+                    Err(e) => {
+                        warn!("worker failed to read from queue: {e:?}");
+                        None
+                    }
+                }
+            };
+
+            match v {
+                Some(op) => {
+                    let host_rt_cloned = host_rt.clone();
+                    local_set.spawn_local(async move {
+                        let mut hrt = host_rt_cloned.lock().await;
+                        if let Err(e) =
+                            process_message(std::ops::DerefMut::deref_mut(&mut hrt), op)
+                                .await
+                        {
+                            warn!("error processing message: {e:?}");
+                        }
+                    });
+                    tokio::task::yield_now().await;
+                    tokio::task::yield_now().await;
+                }
+                None => tokio::time::sleep(Duration::from_millis(100)).await,
+            };
+
+            match rx.try_recv() {
+                Ok(_) | Err(TryRecvError::Disconnected) => {
+                    #[cfg(test)]
+                    on_exit();
+                    break;
+                }
+                Err(TryRecvError::Empty) => {}
+            }
+        }
     })
 }
 
