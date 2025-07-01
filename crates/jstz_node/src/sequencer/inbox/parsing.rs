@@ -13,10 +13,10 @@ use jstz_proto::operation::{
 use jstz_proto::{context::account::Address, Result};
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
-use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
 use tezos_smart_rollup::michelson::{
     MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
 };
+use tezos_smart_rollup::{inbox::InfoPerLevel, michelson::ticket::FA2_1Ticket};
 pub use tezos_smart_rollup::{
     inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage, Transfer},
     michelson::MichelsonPair,
@@ -69,18 +69,18 @@ pub fn parse_inbox_message_hex(
     inbox_msg: &str,
     ticketer: &ContractKt1Hash,
     jstz_rollup_address: &SmartRollupHash,
-) -> Option<Message> {
+) -> Option<ParsedInboxMessage> {
     let inbox_msg = hex::decode(inbox_msg).ok()?;
     parse_inbox_message(logger, inbox_id, &inbox_msg, ticketer, jstz_rollup_address)
 }
 
-fn parse_inbox_message(
+pub fn parse_inbox_message(
     logger: &impl WriteDebug,
     inbox_id: u32,
     inbox_msg: &[u8],
     ticketer: &ContractKt1Hash,
     jstz_rollup_address: &SmartRollupHash,
-) -> Option<Message> {
+) -> Option<ParsedInboxMessage> {
     let (_, message) = InboxMessage::<RollupType>::parse(inbox_msg).ok()?;
 
     match message {
@@ -88,7 +88,7 @@ fn parse_inbox_message(
             // Start of level message pushed by the Layer 1 at the
             // beginning of eavh level.
             logger.write_debug("Internal message: start of level\n");
-            None
+            Some(LevelInfo::Start.into())
         }
         InboxMessage::Internal(InternalInboxMessage::InfoPerLevel(info)) => {
             // The "Info per level" messages follows the "Start of level"
@@ -98,13 +98,13 @@ fn parse_inbox_message(
                         (block predecessor: {}, predecessor_timestamp: {}\n",
                 info.predecessor, info.predecessor_timestamp
             ));
-            None
+            Some(LevelInfo::Info(info).into())
         }
         InboxMessage::Internal(InternalInboxMessage::EndOfLevel) => {
             // The "End of level" message is pushed by the Layer 1
             // at the end of each level.
             logger.write_debug("Internal message: end of level\n");
-            None
+            Some(LevelInfo::End.into())
         }
         InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
             if jstz_rollup_address != transfer.destination.hash() {
@@ -113,14 +113,14 @@ fn parse_inbox_message(
                 );
                 return None;
             };
-            read_transfer(logger, transfer, ticketer, inbox_id)
+            read_transfer(logger, transfer, ticketer, inbox_id).map(|m| m.into())
         }
         InboxMessage::External(bytes) => match ExternalMessageFrame::parse(bytes) {
             Ok(frame) => match frame {
                 ExternalMessageFrame::Targetted { address, contents } => {
-                    if jstz_rollup_address != address.hash() {
+                    let message = if jstz_rollup_address != address.hash() {
                         logger.write_debug(
-                         "External message ignored because of different smart rollup address",
+                            "External message ignored because of different smart rollup address",
                         );
                         None
                     } else {
@@ -133,7 +133,8 @@ fn parse_inbox_message(
                                 None
                             }
                         }
-                    }
+                    };
+                    message.map(|m| m.into())
                 }
             },
             Err(_) => {
@@ -264,6 +265,20 @@ pub fn try_parse_fa_deposit(
     })
 }
 
+#[derive(Clone, derive_more::From)]
+pub enum ParsedInboxMessage {
+    JstzMessage(Message),
+    LevelInfo(LevelInfo),
+}
+
+#[derive(Clone)]
+pub enum LevelInfo {
+    // Start of level
+    Start,
+    Info(InfoPerLevel),
+    End,
+}
+
 #[cfg(test)]
 mod test {
     use jstz_core::host::WriteDebug;
@@ -278,7 +293,9 @@ mod test {
     };
     use tezos_smart_rollup::types::Contract;
 
-    use crate::sequencer::inbox::parsing::{try_parse_contract, try_parse_fa_deposit};
+    use crate::sequencer::inbox::parsing::{
+        try_parse_contract, try_parse_fa_deposit, ParsedInboxMessage,
+    };
 
     use super::{parse_inbox_message_hex, Message};
 
@@ -301,7 +318,7 @@ mod test {
             parse_inbox_message_hex(&MockLogger, 0, run_function, &ticketer, &jstz)
                 .expect("Failed to parse inbox message");
 
-        let Message::External(signed) = message else {
+        let ParsedInboxMessage::JstzMessage(Message::External(signed)) = message else {
             panic!("Expected external message, got internal message");
         };
 
@@ -335,7 +352,7 @@ mod test {
         let message = parse_inbox_message_hex(&MockLogger, 0, deposit, &ticketer, &jstz)
             .expect("Failed to parse inbox message");
 
-        let Message::Internal(transfer) = message else {
+        let ParsedInboxMessage::JstzMessage(Message::Internal(transfer)) = message else {
             panic!("Expected external message, got internal message");
         };
 
