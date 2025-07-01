@@ -197,7 +197,6 @@ pub struct RevealLargePayload {
 #[serde(rename_all = "camelCase")]
 pub struct OracleResponse {
     /// The request id of the OracleRequest that is being responded to
-    #[schema(value_type = String)]
     pub request_id: RequestId,
     /// The response to the OracleRequest
     #[schema(value_type = String)]

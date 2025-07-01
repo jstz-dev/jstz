@@ -281,7 +281,7 @@ mod test {
         #[cfg(feature = "v2_runtime")]
         assert!(
             current_spec == generated_spec,
-            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
+            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node --features v2_runtime -- spec -o crates/jstz_node/openapi.json"
         );
         #[cfg(not(feature = "v2_runtime"))]
         assert!(
