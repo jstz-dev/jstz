@@ -16,7 +16,10 @@ use std::{
 use anyhow::Context;
 use log::warn;
 
-use super::{db::Db, queue::OperationQueue};
+use super::{db::Db, inbox::parsing::ParsedInboxMessage, queue::OperationQueue};
+
+#[cfg(feature = "v2_runtime")]
+use super::inbox::parsing::LevelInfo;
 
 pub struct Worker {
     thread_kill_sig: Sender<()>,
@@ -91,13 +94,13 @@ pub fn spawn(
                     };
 
                     match v {
-                        Some(op) => {
+                        Some(ParsedInboxMessage::JstzMessage(op)) => {
                             if let Err(e) = process_message(&mut host_rt, op).await {
                                 warn!("error processing message: {e:?}");
                             }
                         }
-                        None => tokio::time::sleep(Duration::from_millis(100)).await,
-                    };
+                        _ => tokio::time::sleep(Duration::from_millis(100)).await,
+                    }
 
                     match rx.try_recv() {
                         Ok(_) | Err(TryRecvError::Disconnected) => {
@@ -114,6 +117,7 @@ pub fn spawn(
 }
 
 #[cfg(feature = "v2_runtime")]
+// See [jstz_kernel::riscv_kernel::run_event_loop]
 fn run_event_loop(
     tokio_rt: tokio::runtime::Runtime,
     host: super::host::Host,
@@ -139,7 +143,7 @@ fn run_event_loop(
             };
 
             match v {
-                Some(op) => {
+                Some(ParsedInboxMessage::JstzMessage(op)) => {
                     let host_rt_cloned = host_rt.clone();
                     local_set.spawn_local(async move {
                         let mut hrt = host_rt_cloned.lock().await;
@@ -153,7 +157,8 @@ fn run_event_loop(
                     tokio::task::yield_now().await;
                     tokio::task::yield_now().await;
                 }
-                None => tokio::time::sleep(Duration::from_millis(100)).await,
+                Some(ParsedInboxMessage::LevelInfo(LevelInfo::Start)) => {}
+                _ => tokio::time::sleep(Duration::from_millis(100)).await,
             };
 
             match rx.try_recv() {
