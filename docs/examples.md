@@ -31,6 +31,11 @@ The smart function sends 1 tez to any account that asks, as long as it has enoug
 You can use this example to see how tez works on Jstz and how smart functions work with tez.
 Because it keeps track of the messages it receives and the accounts that it has sent tez to, it's also an example of how smart functions [store data](/functions/data_storage).
 
+### Third-party libraries
+
+The [`zod`](https://github.com/jstz-dev/jstz/tree/main/examples/zod) example shows how you can use third-party JavaScript libraries in Jstz smart functions.
+It uses [itty-router](https://github.com/kwhitley/itty-router) to route requests and [zod](https://github.com/colinhacks/zod) to validate user input.
+
 ### FA2 token
 
 The [`fa2`](https://github.com/jstz-dev/jstz/tree/main/examples/fa2) smart function is an implementation of the Tezos FA2 standard for tokens.
