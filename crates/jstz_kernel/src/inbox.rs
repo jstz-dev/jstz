@@ -414,7 +414,7 @@ mod test {
 
         assert!(
             parse_inbox_message_hex(&MockLogger, 0, start_level, &ticketer, &jstz)
-                .is_none()
+                .is_some()
         )
     }
 

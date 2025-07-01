@@ -120,13 +120,14 @@ pub fn spawn(
 // See [jstz_kernel::riscv_kernel::run_event_loop]
 fn run_event_loop(
     tokio_rt: tokio::runtime::Runtime,
-    host: super::host::Host,
+    mut host: super::host::Host,
     queue: Arc<RwLock<OperationQueue>>,
     heartbeat: Arc<AtomicU64>,
     rx: std::sync::mpsc::Receiver<()>,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) {
     let local_set = tokio::task::LocalSet::new();
+    jstz_proto::runtime::ProtocolContext::init_global(&mut host, 0).unwrap(); // unwrap to propagate error
     local_set.block_on(&tokio_rt, async {
         let host_rt = Arc::new(tokio::sync::Mutex::new(host));
         loop {
@@ -157,7 +158,16 @@ fn run_event_loop(
                     tokio::task::yield_now().await;
                     tokio::task::yield_now().await;
                 }
-                Some(ParsedInboxMessage::LevelInfo(LevelInfo::Start)) => {}
+                Some(ParsedInboxMessage::LevelInfo(LevelInfo::Start)) => {
+                    let mut host = host_rt.lock().await;
+                    let ctx = jstz_proto::runtime::PROTOCOL_CONTEXT
+                        .get()
+                        .expect("Protocol context should be initialized");
+                    ctx.increment_level();
+                    let oracle_ctx = ctx.oracle();
+                    let mut oracle = oracle_ctx.lock();
+                    oracle.gc_timeout_requests(std::ops::DerefMut::deref_mut(&mut host));
+                }
                 _ => tokio::time::sleep(Duration::from_millis(100)).await,
             };
 

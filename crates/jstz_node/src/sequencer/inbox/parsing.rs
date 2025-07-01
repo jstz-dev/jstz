@@ -265,13 +265,13 @@ pub fn try_parse_fa_deposit(
     })
 }
 
-#[derive(Clone, derive_more::From)]
+#[derive(Debug, Clone, derive_more::From)]
 pub enum ParsedInboxMessage {
     JstzMessage(Message),
     LevelInfo(LevelInfo),
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub enum LevelInfo {
     // Start of level
     Start,
@@ -339,7 +339,7 @@ mod test {
 
         assert!(
             parse_inbox_message_hex(&MockLogger, 0, start_level, &ticketer, &jstz)
-                .is_none()
+                .is_some()
         )
     }
 
