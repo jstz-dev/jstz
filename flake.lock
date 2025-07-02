@@ -100,16 +100,16 @@
         ]
       },
       "locked": {
-        "lastModified": 1740505579,
-        "narHash": "sha256-Gf83zujQlUWJVu8UFweDB+NBefCQ6dlOKX5FAs68eQk=",
+        "lastModified": 1749631672,
+        "narHash": "sha256-TuYBH94Hneg5PQ5hdLC09H6dErhqkRTVYy/vqPISvLE=",
         "owner": "tezos",
         "repo": "tezos",
-        "rev": "f1704a0580f70c48451cf0beef0a93bf10f536a9",
+        "rev": "9758b259f7dd9de1fd4dbd0d4f63f2aac4465ddf",
         "type": "gitlab"
       },
       "original": {
         "owner": "tezos",
-        "ref": "octez-v22.0-rc1",
+        "ref": "octez-v22.1",
         "repo": "tezos",
         "type": "gitlab"
       }
