@@ -28,7 +28,7 @@ static X_JSTZ_ORACLE_GAS_LIMIT: std::sync::LazyLock<ByteString> =
     std::sync::LazyLock::new(|| ByteString::from("x-jstz-oracle-gas-limit"));
 
 // FIXME(https://linear.app/tezos/issue/JSTZ-744/make-ttl-configurable)
-const ORACLE_REQUEST_TTL: u64 = 80;
+const ORACLE_REQUEST_TTL: u64 = 20;
 
 #[derive(Debug)]
 pub struct Oracle {
@@ -592,14 +592,14 @@ mod test {
             body: Some(Body::zero_capacity()),
         };
         PROTOCOL_CONTEXT.get().unwrap().set_level(1);
-        // next 2 requests will expire at level 81
+        // next 2 requests will expire at level 21
         oracle
             .send_request(&mut host, &mut tx, &caller, req.clone())
             .unwrap();
         oracle
             .send_request(&mut host, &mut tx, &caller, req.clone())
             .unwrap();
-        // next 2 requests will expire at level 86
+        // next 2 requests will expire at level 26
         PROTOCOL_CONTEXT.get().unwrap().set_level(5);
         oracle
             .send_request(&mut host, &mut tx, &caller, req)
@@ -609,12 +609,12 @@ mod test {
         oracle.gc_timeout_requests(&mut host);
         assert_eq!(oracle.active_requests.len(), 3);
 
-        PROTOCOL_CONTEXT.get().unwrap().set_level(81);
+        PROTOCOL_CONTEXT.get().unwrap().set_level(21);
         oracle.gc_timeout_requests(&mut host);
         assert_eq!(oracle.active_requests.len(), 1);
         assert!(oracle.active_requests.contains_key(&2));
 
-        PROTOCOL_CONTEXT.get().unwrap().set_level(86);
+        PROTOCOL_CONTEXT.get().unwrap().set_level(26);
         oracle.gc_timeout_requests(&mut host);
         assert_eq!(oracle.active_requests.len(), 0);
     }

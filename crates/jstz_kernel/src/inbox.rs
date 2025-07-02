@@ -338,5 +338,4 @@ mod test {
             panic!("Expected deposit message")
         }
     }
-
 }

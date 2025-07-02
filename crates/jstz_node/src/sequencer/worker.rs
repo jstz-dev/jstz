@@ -146,10 +146,7 @@ fn run_event_loop(
                 Some(ParsedInboxMessage::JstzMessage(op)) => {
                     let mut hrt = host.clone();
                     local_set.spawn_local(async move {
-                        if let Err(e) =
-                            process_message(&mut hrt, op)
-                                .await
-                        {
+                        if let Err(e) = process_message(&mut hrt, op).await {
                             warn!("error processing message: {e:?}");
                         }
                     });
