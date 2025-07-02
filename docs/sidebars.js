@@ -33,6 +33,7 @@ const sidebars = {
         "functions/requests",
         "functions/data_storage",
         "functions/calling",
+        "functions/apis",
         "functions/tokens",
         "functions/errors",
       ],

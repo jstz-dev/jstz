@@ -1,35 +1,67 @@
 ---
-title: Enshrined Oracle
+title: Enshrined oracle
 ---
 
-:::note
+:::warning
 
-This feature is bleeding edge and hence highly unstable. Constants and implementation details might change but the experience of fetching off chain data, the reliability, latency and trust assumptions will only improve
+This feature is under development and unstable.
+Implementation details might change.
 
 :::
 
-Smart functions can leverage the enshrined oracle to access off chain data in a deterministic and secure (and soon trust minimal) way. The Oracle can be thought off as a Proxy Gateway any network accessible API. If you're coming from web3, tts design was influened by [Town Crier](https://www.town-crier.org/dev/) oracles. However. unlike TC, it is directly inetegrated into the Jstz protocol and exposed through Fetch API. Instead of targetting an endpoint with the jstzs scheme, target an endpoint using the http/https schemes. HTTP/S URLs will be routed to the protocol's enshrined oracle which wil handle the request and return a promise that will eventually resolve with a Response from the Oracle node, 408 Request Timeout if the Oracle node cannot fulfill the request within roughly 20 seconds (subject to change) or 502 Bad Gateway if the endpoint is totally unreachable eg. DNS cannot be resolved.
+For technical reasons, Web3 programs such as smart contracts and smart functions cannot access off-chain data directly, including calling external APIs.
+They must use programs called oracles to get data that is not available to them on the chain.
+For more information about oracles in general, see [Oracles](https://docs.tezos.com/smart-contracts/oracles) on docs.tezos.com.
 
-Most of the time, however, the response should arrive within a few seconds or less. The oracle calls take full advantage of Jstz's async nature; awaiting on pending fetch calls do not block the Jstz chain and will instead suspend
-your smart function, allowing other operations to interact with your contract. Note that uncommited state is both isolated and atomic. That means that local/global updates within the smart function will not be reflected in another RunFunction call of your contract. Similarly, KV updates will not be reflected to another RunFunction either.
+For information about calling the oracle from a smart function,see [Calling external APIs](/functions/apis).
 
-Underneath the hood
-When SF makes an oracle call, the request is routed to the enshrined Oracle which will leak it via the Events channel being listened too by off chain Oracle Node. The Oracle Node will pick up the request, execute it, sign the Respopnse and inject an OracleResponseOperation. When the protocol processes the operation, it will check that signature is valid and attempt to resume the suspended execution with the Response.
+Jstz provides a built-in, or _enshrined_, oracle to provide off-chain data to smart functions in a deterministic, secure, and soon trust-minimal way.
+You can imagine this oracle as a proxy gateway for network-accessible APIs.
+Smart functions can call the oracle with an ordinary HTTP request and the oracle retrieves the data and returns it to the smart function.
+This process can take up to 20 seconds.
+If it fails to get the data, such as if the endpoint is unreachable, the oracle returns a 502 Bad Gateway error.
 
-The oracle node today does not run in a TEE but support for it is planned which will reduce the trust required around Response correctnes. There is also planned support for private requests, enabling acess to authenticated endpoints like those requiring API tokens. These are planned for mainnet launch.
+Oracle calls take full advantage of Jstz's asynchronous nature; smart functions awaiting pending oracle calls do not block the Jstz chain or other calls to the same smart function.
+As with asynchronous JavaScript, awaiting an async call suspends the smart function, allowing other operations to call the same smart function in the interim.
+As described in [Smart functions](/functions/overview), the state of a running smart function is isolated and atomic, so other smart function calls are not aware of the suspended smart function's uncommitted state until it completes running and commits its changes to the key-value store and ledger.
 
-Decentralization
+:::note
 
-For the time being, there will only be a single Oracle Node operator as we plan to release Jstz as a private network in the short term as we build out and design the best user experience possible while gradually decentralizing over the long term.
+The Jstz oracle's design was influenced by [Town Crier](https://www.town-crier.org/dev/) oracles.
+However, unlike Town Crier, it is directly integrated into the Jstz protocol and exposed through Fetch API.
 
-The Oracle infra is shipped with jstzd and will be available on privatenet
+:::
 
-Additional details that are subject to change
+## How the oracle works
 
-- Since the internal atomic state update component (called Transaction) does not support async yet, only calls within a clean Transaction context is allowed to call the oracle and receive a response. That means your smart function must not use the KV before making an Oracle request or while an oracle request is in flight. If the protocol detects that the Traansaction state is dirty, the oracle call promise will be rejected. This is also true if you call another smart function or was called by another smart function; any KV access/update is any part of the compute chain will reject the Oracle call promises
-- Oracle calls are free today but will consume gas in the future. Additionally, suspended execution cost no gas
-  The current planned model for gas is such that the caller must define upfront a maximum limit similar to how Tezos does it.
-- Oracle calls cannot be cancelled but support for cancellation is planned
-- TTL for requests is 20 seconds - roughly 20 blocks in Jstzd/Privatenet
-- Long requests are not supported and will likely not be supported for a while
-- There is roughly a 10MiB cap on the size of a response but do keep in mind that processing larger responses will cost more
+Calling the oracle involves these general steps:
+
+1. A smart function sends a `fetch` request to the on-chain component of the oracle and suspends to await the promise.
+1. The oracle publishes the request.
+1. The off-chain oracle node receives the request and executes it as usual for a `fetch` request.
+1. When it receives the response, the off-chain oracle node signs it to authenticate it and injects it into Jstz as a specific operation type known as an `OracleResponseOperation` operation.
+1. Jstz receives the operation, verifies the signature, and returns a Response object to the smart function.
+1. The `fetch` request promise resolves with the Response object and the smart function resumes operation.
+
+## Limitations
+
+The oracle is under active development and is changing rapidly.
+At this time it lacks some features that are necessary to be a truly trustless, decentralized web3 platform.
+Here are some notes about limitations and how it may change to work better as a web3 tool:
+
+- The oracle node does not run in a JavaScript [`tee`](https://streams.spec.whatwg.org/#tee-a-readable-stream) `ReadableStream` stream, but support for it is planned, which will reduce the trust required around the correctness of the response.
+- Support is planned for private requests that will allow smart functions to access authenticated endpoints like those requiring API tokens.
+- For now there is only a single centralized oracle node operator.
+
+Additional details that are subject to change:
+
+- Smart functions cannot call the oracle during or after they read from or write to the key-value store.
+  They must make oracle calls first in their operation, before accessing the key-value store.
+  If the oracle detects that the smart function has accessed the key-value store before sending the request, it returns a rejected promise.
+- Similarly, smart functions cannot send or receive tez or call other smart functions before or during an oracle call.
+- Oracle calls are free today but will consume gas (transaction fees) in the future based on factors such as the size of the request and response.
+  Similarly, a smart function consumes no gas while suspended but may in the future.
+- The cap on the size of an API response is approximately 10MiB.
+- Oracle calls cannot currently be cancelled.
+- TTL for requests is 20 seconds.
+- Requests that require a long-lived, persistent, or keep-alive connection are not supported.
