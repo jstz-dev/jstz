@@ -103,33 +103,53 @@ async fn get_oracle_response(
     }
 
     // Execute
-    let response = builder.send().await?;
-    let status = response.status().as_u16();
-    let status_text = response
-        .status()
-        .canonical_reason()
-        .unwrap_or("Unknown")
-        .to_string();
+    let send_result = builder.send().await;
+    match send_result {
+        Ok(response) => {
+            let status = response.status().as_u16();
+            let status_text = response
+                .status()
+                .canonical_reason()
+                .unwrap_or("Unknown")
+                .to_string();
 
-    // TODO: Update reqwest and simplify this
-    let headers = convert_header_map(http::HeaderMap::from_iter(
-        response.headers().iter().map(|(name, value)| {
-            (
-                http::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
-                http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
-            )
-        }),
-    ));
+            // TODO: Update reqwest and simplify this
+            let headers = convert_header_map(http::HeaderMap::from_iter(
+                response.headers().iter().map(|(name, value)| {
+                    (
+                        http::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
+                        http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+                    )
+                }),
+            ));
 
-    let body_bytes = response.bytes().await?;
-    let body = Body::Vector(body_bytes.to_vec());
+            let body_bytes = response.bytes().await;
+            if let Err(e) = body_bytes {
+                return Ok(bad_gateway_error_response(e.to_string().as_bytes()));
+            }
+            let body = Body::Vector(body_bytes.unwrap().to_vec());
+            Ok(Response {
+                status,
+                status_text,
+                headers,
+                body,
+            })
+        }
+        Err(e) => Ok(bad_gateway_error_response(e.to_string().as_bytes())),
+    }
+}
 
-    Ok(Response {
-        status,
-        status_text,
-        headers,
-        body,
-    })
+// MSDN reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/502
+// The HTTP 502 Bad Gateway server error response status code
+// indicates that a server was acting as a gateway or proxy
+// and that it received an invalid response from the upstream server.
+fn bad_gateway_error_response(body: &[u8]) -> Response {
+    Response {
+        status: 502,
+        status_text: "Bad Gateway".into(),
+        headers: vec![],
+        body: body.to_vec().into(),
+    }
 }
 
 async fn inject_oracle_response(
@@ -235,6 +255,18 @@ mod tests {
             html.contains("Example Domain"),
             "unexpected response body: {html}"
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn handles_gateway_proxy_errors() -> Result<()> {
+        let url = Url::parse(&format!("{}/", "http://abc123"))?;
+        let req = oracle_req("GET", url, None);
+
+        let response = super::get_oracle_response(&CLIENT, &req).await?;
+        assert_eq!(response.status, 502);
+        assert_eq!(response.status_text, "Bad Gateway");
+        // We do not compare body because the actual error in CI and local differ
         Ok(())
     }
 
