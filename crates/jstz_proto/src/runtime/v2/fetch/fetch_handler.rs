@@ -2135,7 +2135,7 @@ mod test {
             let (mut host, mut tx, source_address, hashes) = setup(&mut host, [code]);
             Account::add_balance(&mut host, &mut tx, &source_address, 0).unwrap();
             tx.commit(&mut host).unwrap();
-
+            let tx = Transaction::default();
             let run_address = hashes[0].clone();
             ProtocolContext::init_global(&mut host, 0).unwrap();
             tokio::pin! {

@@ -247,7 +247,10 @@ impl Account {
         tx: &Transaction,
         addr: &impl Addressable,
     ) -> Result<bool> {
-        Ok(tx.contains_key(hrt, &Self::path(addr)?)?)
+        let is_dirty = tx.get_dirty();
+        let result = Ok(tx.contains_key(hrt, &Self::path(addr)?)?);
+        tx.set_dirty(is_dirty);
+        result
     }
 
     fn try_insert(
@@ -305,6 +308,7 @@ impl Account {
         amount: Amount,
         function_code: ParsedCode,
     ) -> Result<SmartFunctionHash> {
+        let is_dirty = tx.get_dirty();
         let nonce = Self::nonce(hrt, tx, creator)?;
         let address = SmartFunctionHash::digest(
             format!("{}{}{}", creator.to_base58(), function_code, nonce.deref())
@@ -316,6 +320,7 @@ impl Account {
             function_code,
         };
         Self::SmartFunction(account).try_insert(hrt, tx, Self::path(&address)?)?;
+        tx.set_dirty(is_dirty);
         Ok(address)
     }
 
@@ -369,6 +374,7 @@ impl Account {
         addr: &impl Addressable,
         amount: Amount,
     ) -> Result<u64> {
+        // let is_dirty = tx.get_dirty();
         let mut balance = Self::balance_mut(hrt, tx, addr)?;
         let checked_balance = balance
             .deref()
@@ -376,6 +382,7 @@ impl Account {
             .ok_or(crate::error::Error::BalanceOverflow)?;
 
         *balance = checked_balance;
+        // tx.set_dirty(is_dirty);
         Ok(checked_balance)
     }
 
