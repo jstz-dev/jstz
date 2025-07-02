@@ -1,7 +1,7 @@
 use std::{
     fmt::{self, Display},
-    ops::Deref,
-    ops::DerefMut,
+    ops::Deref as _,
+    ops::DerefMut as _,
     str::FromStr,
 };
 
@@ -167,6 +167,13 @@ impl Address {
         }
     }
 
+    pub fn as_user(&self) -> Option<&PublicKeyHash> {
+        match self {
+            Address::User(public_key_hash) => Some(public_key_hash),
+            Address::SmartFunction(_) => None,
+        }
+    }
+
     pub fn from_base58(data: &str) -> Result<Self> {
         if data.len() < 3 {
             return Err(Error::InvalidAddress);
@@ -233,6 +240,14 @@ impl Account {
     ) -> Result<GuardedMut<'a, Account>> {
         let account_entry = tx.entry::<Self>(hrt, Self::path(addr)?)?;
         Ok(account_entry.or_insert_with(|| Self::default_account(addr)))
+    }
+
+    pub fn exists(
+        hrt: &impl HostRuntime,
+        tx: &Transaction,
+        addr: &impl Addressable,
+    ) -> Result<bool> {
+        Ok(tx.contains_key(hrt, &Self::path(addr)?)?)
     }
 
     fn try_insert(

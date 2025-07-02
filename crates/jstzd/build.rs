@@ -4,7 +4,7 @@ use jstz_crypto::{
 };
 use jstz_kernel::{INJECTOR, TICKETER};
 use std::{
-    collections::HashSet,
+    collections::HashMap,
     env, fs,
     path::{Path, PathBuf},
 };
@@ -26,6 +26,10 @@ const JSTZ_PARAMETERS_TY_PATH: &str = "./resources/jstz_rollup/parameters_ty.jso
 /// Generated file that contains path getter functions
 const JSTZ_ROLLUP_PATH: &str = "jstz_rollup_path.rs";
 const BOOTSTRAP_ACCOUNT_PATH: &str = "./resources/bootstrap_account/accounts.json";
+// These aliases are also used by jstzd during config validation.
+const ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "activator";
+const INJECTOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "injector";
+const ROLLUP_OPERATOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "rollup_operator";
 
 /// Build script that validates built-in bootstrap accounts and generates and saves
 /// the following files in OUT_DIR:
@@ -53,18 +57,28 @@ fn main() {
     fs::copy(JSTZ_PARAMETERS_TY_PATH, out_dir.join("parameters_ty.json"))
         .expect("Failed to copy parameters_ty.json to OUT_DIR");
 
-    // 2. Create preimages directory and the kernel installer in OUT_DIR
+    // 2. Validate built-in bootstrap accounts stored in the resource file
+    let bootstrap_accounts = validate_builtin_bootstrap_accounts();
+
+    // 3. Create preimages directory and the kernel installer in OUT_DIR
     let preimages_dir = out_dir.join("preimages");
     fs::create_dir_all(&preimages_dir).expect("Failed to create preimages directory");
-    let kernel_installer =
-        make_kernel_installer(PathBuf::from(JSTZ_KERNEL_PATH).as_path(), &preimages_dir)
-            .expect("Failed to make kernel installer");
+    let injector_pk = bootstrap_accounts
+        .get(INJECTOR_BOOTSTRAP_ACCOUNT_ALIAS)
+        .expect("injector bootstrap account should exist")
+        .clone();
+    let kernel_installer = make_kernel_installer(
+        PathBuf::from(JSTZ_KERNEL_PATH).as_path(),
+        &preimages_dir,
+        injector_pk,
+    )
+    .expect("Failed to make kernel installer");
 
-    // 3. Save hex-encoded kernel installer to OUT_DIR
+    // 4. Save hex-encoded kernel installer to OUT_DIR
     fs::write(out_dir.join("kernel_installer.hex"), kernel_installer)
         .expect("Failed to write kernel_installer.hex");
 
-    // 4. Generate path getter code in OUT_DIR
+    // 5. Generate path getter code in OUT_DIR
     generate_code(&out_dir);
 
     println!(
@@ -83,9 +97,6 @@ fn main() {
             panic!("Failed to copy kernel files to '{}': {:?}", &p, e)
         });
     }
-
-    // Validate built-in bootstrap accounts stored in the resource file
-    validate_builtin_bootstrap_accounts();
 }
 
 fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result<()> {
@@ -111,14 +122,19 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result
 ///
 /// # Returns
 /// Hex-encoded kernel installer string
-fn make_kernel_installer(kernel_file: &Path, preimages_dir: &Path) -> Result<String> {
+fn make_kernel_installer(
+    kernel_file: &Path,
+    preimages_dir: &Path,
+    injector_pk: PublicKey,
+) -> Result<String> {
     if !kernel_file.exists() {
         return Err(anyhow::anyhow!(
             "kernel file not found: {}",
             kernel_file.display()
         ));
     }
-    let root_hash = preimages::content_to_preimages(kernel_file, preimages_dir)?;
+    let content = fs::read(kernel_file)?;
+    let root_hash = preimages::content_to_preimages(content, preimages_dir)?;
     let installer_program = OwnedConfigProgram(vec![
         // 1. Prepare kernel installer
         OwnedConfigInstruction::reveal_instr(
@@ -142,7 +158,7 @@ fn make_kernel_installer(kernel_file: &Path, preimages_dir: &Path) -> Result<Str
         // 3. Set `jstz` injector as the `jstz_node` account
         OwnedConfigInstruction::set_instr(
             OwnedBytes(bincode::encode_to_vec(
-                PublicKey::from_base58(INJECTOR_PK)?,
+                injector_pk,
                 bincode::config::legacy(),
             )?),
             OwnedPath::from(INJECTOR),
@@ -215,17 +231,14 @@ fn generate_path_getter_code(out_dir: &Path, fn_name: &str, path_suffix: &str) -
     )
 }
 
-fn validate_builtin_bootstrap_accounts() {
+fn validate_builtin_bootstrap_accounts() -> HashMap<String, PublicKey> {
     let bytes =
         fs::read(BOOTSTRAP_ACCOUNT_PATH).expect("failed to read bootstrap account file");
-    let raw_accounts: Vec<(String, String, String)> = serde_json::from_slice(&bytes)
+    let raw_accounts: Vec<(String, String, String, u64)> = serde_json::from_slice(&bytes)
         .unwrap_or_else(|e| panic!("failed to parse built-in bootstrap accounts: {e:?}"));
-    let mut seen_names = HashSet::new();
-    for (name, pk, raw_sk) in raw_accounts {
-        if !seen_names.insert(name.clone()) {
-            panic!("bootstrap account name '{name}' already exists");
-        }
-        PublicKey::from_base58(&pk).unwrap_or_else(|e| {
+    let mut mapping = HashMap::new();
+    for (name, pk, raw_sk, _) in raw_accounts {
+        let public_key = PublicKey::from_base58(&pk).unwrap_or_else(|e| {
             panic!("failed to parse public key of bootstrap account '{name}': {e:?}")
         });
         let sk = if raw_sk.starts_with("unencrypted") {
@@ -236,5 +249,18 @@ fn validate_builtin_bootstrap_accounts() {
         SecretKey::from_base58(sk).unwrap_or_else(|e| {
             panic!("failed to parse secret key of bootstrap account '{name}': {e:?}")
         });
+        if mapping.insert(name.clone(), public_key).is_some() {
+            panic!("bootstrap account name '{name}' already exists");
+        }
     }
+    for required_alias in [
+        INJECTOR_BOOTSTRAP_ACCOUNT_ALIAS,
+        ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS,
+        ROLLUP_OPERATOR_BOOTSTRAP_ACCOUNT_ALIAS,
+    ] {
+        if !mapping.contains_key(ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS) {
+            panic!("there must be one built-in bootstrap account with alias '{required_alias}'");
+        }
+    }
+    mapping
 }

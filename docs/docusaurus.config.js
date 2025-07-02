@@ -3,6 +3,14 @@
 
 import { themes } from "prism-react-renderer";
 
+const BIEL_PROJECT = "w30c27l8fg";
+const BIEL_WARNING =
+  'AI-generated answers may contain errors. Verify the information before use. For more information, see <a href="https://docs.tezos.com/overview/chatbot">Using the chatbot</a>.';
+const BIEL_SEARCH_HEADER_TITLE =
+  "Search or use AI to learn about Jstz and Tezos";
+const BIEL_SEARCH_BOX_TEXT = "Search all docs/Ask AI";
+const ALGOLIA_SEARCH_BOX_TEXT = "Search Jstz docs";
+
 // script-src causes development builds to fail
 // But unsafe-eval should NOT be in production builds
 // Also, put GTM first because sometimes the ';' in the escaped single quotes causes the browser to think it's the end
@@ -21,7 +29,7 @@ font-src https://cdn.jsdelivr.net https://fonts.gstatic.com 'self';
 img-src 'self' https://*.googletagmanager.com https://*.google-analytics.com data: 'unsafe-eval';
 media-src 'self';
 form-action 'self';
-connect-src 'self' https://*.algolia.net https://*.algolianet.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com;`;
+connect-src 'self' https://*.algolia.net https://*.algolianet.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com wss://app.biel.ai https://app.biel.ai;`;
 
 /** @type {import('@docusaurus/types').Config} */
 module.exports = async function createConfigAsync() {
@@ -42,6 +50,14 @@ module.exports = async function createConfigAsync() {
     },
     future: {
       v4: true,
+    },
+
+    customFields: {
+      BIEL_PROJECT,
+      BIEL_WARNING,
+      BIEL_SEARCH_HEADER_TITLE,
+      BIEL_SEARCH_BOX_TEXT,
+      ALGOLIA_SEARCH_BOX_TEXT,
     },
 
     headTags: [
@@ -100,6 +116,22 @@ module.exports = async function createConfigAsync() {
           disableInDev: false,
         },
       ],
+      [
+        "docusaurus-biel",
+        {
+          project: BIEL_PROJECT,
+          headerTitle: "Jstz/Tezos documentation chatbot (beta)",
+          buttonPosition: "center-right",
+          version: "latest",
+          suggestedQuestions: [
+            "Can I call third-party JavaScript libraries in smart functions?",
+            "How do I deploy a smart function?",
+            "What can I do and not do with smart functions?",
+          ],
+          welcomeMessage: "Hi! How can I help you learn about Jstz and Tezos?",
+          footerText: BIEL_WARNING,
+        },
+      ],
     ],
 
     themeConfig:
@@ -144,13 +176,13 @@ module.exports = async function createConfigAsync() {
         },
         algolia: {
           // The application ID provided by Algolia
-          appId: process.env.NEXT_PUBLIC_DOCSEARCH_APP_ID || "XJJKSPLGTN",
+          appId: process.env.NEXT_PUBLIC_DOCSEARCH_APP_ID || "JH91L9LBDJ",
           // Public API key: it is safe to commit it
           apiKey:
             process.env.NEXT_PUBLIC_DOCSEARCH_API_KEY ||
-            "6173a0326b67c01cc1ee67a2bfea0adf",
+            "00e57b6610f452508627bc5519b7a57e",
           indexName:
-            process.env.NEXT_PUBLIC_DOCSEARCH_INDEX_NAME || "jstz-devio",
+            process.env.NEXT_PUBLIC_DOCSEARCH_INDEX_NAME || "jstz-tezos",
           // Optional: see doc section below
           contextualSearch: true,
           // Optional: Specify domains where the navigation should occur through window.location instead on history.push. Useful when our Algolia config crawls multiple documentation sites and we want to navigate with window.location.href to them.

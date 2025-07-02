@@ -1,4 +1,7 @@
-use crate::sequencer::runtime::{init_host, process_message};
+use crate::{
+    config::KeyPair,
+    sequencer::runtime::{init_host, process_message},
+};
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -13,7 +16,10 @@ use std::{
 use anyhow::Context;
 use log::warn;
 
-use super::{db::Db, queue::OperationQueue};
+use super::{db::Db, inbox::parsing::ParsedInboxMessage, queue::OperationQueue};
+
+#[cfg(feature = "v2_runtime")]
+use super::inbox::parsing::LevelInfo;
 
 pub struct Worker {
     thread_kill_sig: Sender<()>,
@@ -39,12 +45,14 @@ impl Drop for Worker {
 pub fn spawn(
     queue: Arc<RwLock<OperationQueue>>,
     db: Db,
+    injector: &KeyPair,
     preimage_dir: PathBuf,
     debug_log_path: Option<&Path>,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
-    let mut host_rt = init_host(db, preimage_dir).context("failed to init host")?;
+    let mut host_rt =
+        init_host(db, preimage_dir, injector).context("failed to init host")?;
     if let Some(p) = debug_log_path {
         host_rt = host_rt
             .with_debug_log_file(p)
@@ -59,6 +67,18 @@ pub fn spawn(
         thread_kill_sig,
         heartbeat: heartbeat.clone(),
         inner: Some(spawn_thread(move || {
+            #[cfg(feature = "oracle")]
+            run_event_loop(
+                tokio_rt,
+                host_rt,
+                queue,
+                heartbeat,
+                rx,
+                #[cfg(test)]
+                on_exit,
+            );
+
+            #[cfg(not(feature = "oracle"))]
             tokio_rt.block_on(async {
                 loop {
                     write_heartbeat(&heartbeat);
@@ -74,13 +94,13 @@ pub fn spawn(
                     };
 
                     match v {
-                        Some(op) => {
+                        Some(ParsedInboxMessage::JstzMessage(op)) => {
                             if let Err(e) = process_message(&mut host_rt, op).await {
                                 warn!("error processing message: {e:?}");
                             }
                         }
-                        None => tokio::time::sleep(Duration::from_millis(100)).await,
-                    };
+                        _ => tokio::time::sleep(Duration::from_millis(100)).await,
+                    }
 
                     match rx.try_recv() {
                         Ok(_) | Err(TryRecvError::Disconnected) => {
@@ -93,6 +113,69 @@ pub fn spawn(
                 }
             })
         })),
+    })
+}
+
+#[cfg(feature = "v2_runtime")]
+// See [jstz_kernel::riscv_kernel::run_event_loop]
+fn run_event_loop(
+    tokio_rt: tokio::runtime::Runtime,
+    mut host: super::host::Host,
+    queue: Arc<RwLock<OperationQueue>>,
+    heartbeat: Arc<AtomicU64>,
+    rx: std::sync::mpsc::Receiver<()>,
+    #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
+) {
+    let local_set = tokio::task::LocalSet::new();
+    jstz_proto::runtime::ProtocolContext::init_global(&mut host, 0).unwrap(); // unwrap to propagate error
+    local_set.block_on(&tokio_rt, async {
+        loop {
+            write_heartbeat(&heartbeat);
+
+            let v = {
+                match queue.write() {
+                    Ok(mut q) => q.pop(),
+                    Err(e) => {
+                        warn!("worker failed to read from queue: {e:?}");
+                        None
+                    }
+                }
+            };
+
+            match v {
+                Some(ParsedInboxMessage::JstzMessage(op)) => {
+                    let mut hrt = host.clone();
+                    local_set.spawn_local(async move {
+                        if let Err(e) = process_message(&mut hrt, op).await {
+                            warn!("error processing message: {e:?}");
+                        }
+                    });
+                    tokio::task::yield_now().await;
+                    tokio::task::yield_now().await;
+                }
+                Some(ParsedInboxMessage::LevelInfo(LevelInfo::Start)) => {
+                    let mut hrt = host.clone();
+                    let ctx = jstz_proto::runtime::PROTOCOL_CONTEXT
+                        .get()
+                        .expect("Protocol context should be initialized");
+                    ctx.increment_level();
+                    let oracle_ctx = ctx.oracle();
+                    let mut oracle = oracle_ctx.lock();
+                    oracle.gc_timeout_requests(&mut hrt);
+                    tokio::task::yield_now().await;
+                }
+                _ => tokio::time::sleep(Duration::from_millis(100)).await,
+            };
+
+            match rx.try_recv() {
+                Ok(_) | Err(TryRecvError::Disconnected) => {
+                    #[cfg(test)]
+                    on_exit();
+                    break;
+                }
+                Err(TryRecvError::Empty) => {}
+            }
+        }
     })
 }
 
@@ -115,8 +198,8 @@ mod tests {
         time::Duration,
     };
 
-    use crate::sequencer::inbox::test_utils::hash_of;
     use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
+    use crate::{config::KeyPair, sequencer::inbox::test_utils::hash_of};
     use tempfile::NamedTempFile;
 
     #[test]
@@ -127,6 +210,7 @@ mod tests {
         let worker = super::spawn(
             q,
             Db::init(Some("")).unwrap(),
+            &KeyPair::default(),
             PathBuf::new(),
             None,
             move || {
@@ -169,6 +253,7 @@ mod tests {
         let _worker = super::spawn(
             wrapper.clone(),
             cp,
+            &KeyPair::default(),
             PathBuf::new(),
             Some(log_file.path()),
             move || {},

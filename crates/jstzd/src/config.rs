@@ -1,5 +1,8 @@
+use std::io::Write;
 use std::path::PathBuf;
 
+use jstz_crypto::public_key::PublicKey;
+use jstz_crypto::secret_key::SecretKey;
 use jstz_node::RunMode;
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
 use rust_embed::Embed;
@@ -35,8 +38,9 @@ pub const BOOTSTRAP_CONTRACT_NAMES: [(&str, &str); 2] = [
     ("exchanger", EXCHANGER_ADDRESS),
     ("jstz_native_bridge", JSTZ_NATIVE_BRIDGE_ADDRESS),
 ];
-pub const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "bootstrap1";
-const BOOTSTRAP_ACCOUNT_BALANCE: u64 = 100_000_000_000;
+pub(crate) const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "rollup_operator";
+pub(crate) const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
+pub(crate) const INJECTOR_ACCOUNT_ALIAS: &str = "injector";
 
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
@@ -88,13 +92,29 @@ async fn parse_config(path: &str) -> Result<Config> {
     Ok(serde_json::from_str::<Config>(&s)?)
 }
 
-pub(crate) fn builtin_bootstrap_accounts() -> Result<Vec<(String, String, String)>> {
-    serde_json::from_slice(
+pub(crate) fn builtin_bootstrap_accounts() -> Result<Vec<(String, String, String, u64)>> {
+    let accounts = serde_json::from_slice(
         &BootstrapAccountFile::get("accounts.json")
             .ok_or(anyhow::anyhow!("bootstrap account file not found"))?
             .data,
     )
-    .context("error loading built-in bootstrap accounts")
+    .context("error loading built-in bootstrap accounts")?;
+    validate_builtin_bootstrap_accounts(accounts)
+}
+
+// This is split from `builtin_bootstrap_accounts` just to make the logic easily testable
+fn validate_builtin_bootstrap_accounts(
+    accounts: Vec<(String, String, String, u64)>,
+) -> Result<Vec<(String, String, String, u64)>> {
+    if accounts.iter().fold(0, |acc, (alias, _, _, _)| {
+        acc + (alias == ACTIVATOR_ACCOUNT_ALIAS) as usize
+    }) != 1
+    {
+        anyhow::bail!(
+            "there must be exactly one built-in bootstrap account with alias '{ACTIVATOR_ACCOUNT_ALIAS}'"
+        )
+    }
+    Ok(accounts)
 }
 
 pub(crate) async fn build_config_from_path(
@@ -108,7 +128,8 @@ pub(crate) async fn build_config_from_path(
 }
 
 pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
-    patch_octez_node_config(&mut config.octez_node);
+    patch_octez_node_config(&mut config.octez_node)
+        .context("failed to patch octez node config")?;
     let octez_node_config = config.octez_node.build()?;
     let octez_client_config = match config.octez_client {
         Some(v) => v,
@@ -159,12 +180,14 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
 
     let jstz_node_rpc_endpoint =
         Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
+    let injector = find_injector_account(builtin_bootstrap_accounts()?)
+        .context("failed to retrieve injector account")?;
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
-        KeyPair::default(),
+        injector.clone(),
         config.jstz_node.mode,
         config.jstz_node.capacity,
         &config.jstz_node.debug_log_file.unwrap_or(
@@ -174,6 +197,8 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
                 .keep()
                 .context("failed to keep jstz node debug file path")?,
         ),
+        #[cfg(feature = "v2_runtime")]
+        Some(injector),
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
@@ -190,7 +215,9 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
     ))
 }
 
-fn patch_octez_node_config(builder: &mut OctezNodeConfigBuilder) {
+fn patch_octez_node_config(builder: &mut OctezNodeConfigBuilder) -> Result<()> {
+    let config_path = create_sandbox_config_file(builtin_bootstrap_accounts()?)
+        .context("failed to create sandbox config file")?;
     let mut option_builder = OctezNodeRunOptionsBuilder::new();
     if let Some(v) = builder.run_options() {
         option_builder
@@ -203,7 +230,54 @@ fn patch_octez_node_config(builder: &mut OctezNodeConfigBuilder) {
     if option_builder.history_mode().is_none() {
         option_builder.set_history_mode(OctezNodeHistoryMode::Rolling(15));
     }
+    option_builder.set_sandbox_config_path(&config_path);
     builder.set_run_options(&option_builder.build());
+    Ok(())
+}
+
+fn find_injector_account(
+    bootstrap_accounts: Vec<(String, String, String, u64)>,
+) -> Result<KeyPair> {
+    for (alias, pk, raw_sk, _) in bootstrap_accounts {
+        if alias == INJECTOR_ACCOUNT_ALIAS {
+            let sk = if raw_sk.starts_with("unencrypted") {
+                raw_sk.split(':').nth(1).unwrap()
+            } else {
+                &raw_sk
+            };
+            return Ok(KeyPair(
+                PublicKey::from_base58(&pk)?,
+                SecretKey::from_base58(sk)?,
+            ));
+        }
+    }
+    anyhow::bail!("cannot find injector account")
+}
+
+// Create a sandbox config file that informs octez node about the activator account.
+// Normally this is not necessary as octez node has a hard-coded default activator account,
+// but if we want to use a different account, we need to specify it in this config file.
+fn create_sandbox_config_file(
+    bootstrap_accounts: Vec<(String, String, String, u64)>,
+) -> Result<PathBuf> {
+    for (alias, pk, _, _) in bootstrap_accounts {
+        if alias == ACTIVATOR_ACCOUNT_ALIAS {
+            let (mut config_file, p) = NamedTempFile::new()?.keep()?;
+            config_file
+                .write_all(
+                    &serde_json::to_vec(&serde_json::json!({
+                      "genesis_pubkey": pk
+                    }))
+                    .context("failed to serialise sandbox config")?,
+                )
+                .context("failed to write to sandbox config file")?;
+            config_file
+                .flush()
+                .context("failed to flush sandbox config file")?;
+            return Ok(p);
+        }
+    }
+    anyhow::bail!("cannot find activator account")
 }
 
 fn populate_baker_config(
@@ -266,9 +340,12 @@ async fn build_protocol_params(
         .iter()
         .map(|v| (*v).to_owned())
         .collect::<Vec<BootstrapAccount>>();
-    for account in builtin_bootstrap_accounts()?
-        .into_iter()
-        .map(|(_, pk, _)| BootstrapAccount::new(&pk, BOOTSTRAP_ACCOUNT_BALANCE).unwrap())
+    for account in
+        builtin_bootstrap_accounts()?
+            .into_iter()
+            .map(|(_, pk, _, balance_mutez)| {
+                BootstrapAccount::new(&pk, balance_mutez).unwrap()
+            })
     {
         accounts.push(account);
     }
@@ -727,7 +804,7 @@ mod tests {
         assert_eq!(contracts.len(), 2);
 
         let accounts = read_bootstrap_accounts_from_param_file(&config_path).await;
-        assert_eq!(accounts.len(), 7);
+        assert_eq!(accounts.len(), 9);
 
         assert_eq!(
             config.octez_rollup_config().address.to_base58_check(),
@@ -772,7 +849,7 @@ mod tests {
             .unwrap();
         let params = serde_json::from_str::<serde_json::Value>(&buf).unwrap();
 
-        // two bootstrap account should have been inserted: the activator account and the rollup operator account
+        // built-in bootstrap accounts
         let accounts = params
             .as_object()
             .unwrap()
@@ -780,19 +857,17 @@ mod tests {
             .unwrap()
             .as_array()
             .unwrap();
-        assert_eq!(accounts.len(), 6);
+        assert_eq!(accounts.len(), 8);
 
         let bootstrap_accounts = accounts
             .iter()
             .map(|acc| serde_json::from_value::<BootstrapAccount>(acc.clone()).unwrap())
             .collect::<Vec<_>>();
 
-        for (_, pk, _) in super::builtin_bootstrap_accounts().unwrap() {
+        for (_, pk, _, balance_mutez) in super::builtin_bootstrap_accounts().unwrap() {
             assert!(
-                bootstrap_accounts.contains(
-                    &BootstrapAccount::new(&pk, super::BOOTSTRAP_ACCOUNT_BALANCE)
-                        .unwrap()
-                ),
+                bootstrap_accounts
+                    .contains(&BootstrapAccount::new(&pk, balance_mutez).unwrap()),
                 "account {pk} not found in bootstrap accounts"
             );
         }
@@ -908,7 +983,7 @@ mod tests {
     #[test]
     fn patch_octez_node_config() {
         let mut builder = OctezNodeConfigBuilder::default();
-        super::patch_octez_node_config(&mut builder);
+        super::patch_octez_node_config(&mut builder).unwrap();
         assert_eq!(
             builder.run_options().unwrap().history_mode(),
             Some(&OctezNodeHistoryMode::Rolling(15))
@@ -922,7 +997,7 @@ mod tests {
                 .set_synchronisation_threshold(3)
                 .build(),
         );
-        super::patch_octez_node_config(&mut builder);
+        super::patch_octez_node_config(&mut builder).unwrap();
         let run_options = builder.run_options().unwrap();
         assert_eq!(
             run_options.history_mode(),
@@ -939,7 +1014,115 @@ mod tests {
             .set_history_mode(OctezNodeHistoryMode::Archive)
             .build();
         builder.set_run_options(&run_options);
-        super::patch_octez_node_config(&mut builder);
-        assert_eq!(builder.run_options().unwrap(), &run_options);
+        super::patch_octez_node_config(&mut builder).unwrap();
+        let stored_run_options = builder.run_options().unwrap();
+        assert_eq!(
+            stored_run_options.history_mode(),
+            Some(&OctezNodeHistoryMode::Archive)
+        );
+        assert_eq!(stored_run_options.synchronisation_threshold(), 3);
+        assert_eq!(stored_run_options.network(), "test");
+        let sandbox_config_path = stored_run_options.sandbox_config_path().unwrap();
+        let content = serde_json::from_reader::<_, serde_json::Value>(
+            std::fs::File::open(sandbox_config_path).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            content,
+            serde_json::json!({
+                // should be the activator in resources/bootstrap_account/accounts.json
+                "genesis_pubkey": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
+            })
+        );
+    }
+
+    #[test]
+    fn create_sandbox_config_file() {
+        let err = super::create_sandbox_config_file(vec![]).unwrap_err();
+        assert_eq!(err.to_string(), "cannot find activator account");
+
+        let path = super::create_sandbox_config_file(vec![(
+            "activator".into(),
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav".into(),
+            "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh".into(),
+            1,
+        )])
+        .unwrap();
+        let content = serde_json::from_reader::<_, serde_json::Value>(
+            std::fs::File::open(path).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            content,
+            serde_json::json!({
+                "genesis_pubkey": "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav"
+            })
+        );
+    }
+
+    #[test]
+    fn validate_builtin_bootstrap_accounts() {
+        let activator = (
+            "activator".into(),
+            "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2".into(),
+            "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6".into(),
+            1,
+        );
+        let bootstrap1 = (
+            "bootstrap1".into(),
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav".into(),
+            "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh".into(),
+            1,
+        );
+
+        let result = super::validate_builtin_bootstrap_accounts(vec![bootstrap1.clone()]);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "there must be exactly one built-in bootstrap account with alias 'activator'"
+        );
+
+        let result = super::validate_builtin_bootstrap_accounts(vec![
+            activator.clone(),
+            activator.clone(),
+        ]);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "there must be exactly one built-in bootstrap account with alias 'activator'"
+        );
+
+        let result = super::validate_builtin_bootstrap_accounts(vec![
+            activator.clone(),
+            bootstrap1.clone(),
+        ]);
+        assert_eq!(result.unwrap(), vec![activator, bootstrap1]);
+    }
+
+    #[test]
+    fn find_injector_account() {
+        let injector = (
+            "injector".into(),
+            "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2".into(),
+            "unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6".into(),
+            1,
+        );
+        let bootstrap1 = (
+            "bootstrap1".into(),
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav".into(),
+            "unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh".into(),
+            1,
+        );
+
+        let error = super::find_injector_account(vec![bootstrap1.clone()]).unwrap_err();
+        assert_eq!(error.to_string(), "cannot find injector account");
+
+        let keys = super::find_injector_account(vec![bootstrap1, injector]).unwrap();
+        assert_eq!(
+            keys.0.to_base58(),
+            "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
+        );
+        assert_eq!(
+            keys.1.to_base58(),
+            "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
+        );
     }
 }

@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
+#[cfg(feature = "v2_runtime")]
+use jstz_crypto::keypair_from_mnemonic;
 use jstz_node::config::{JstzNodeConfig, KeyPair};
 use jstzd::jstz_rollup_path::*;
 
@@ -31,8 +33,8 @@ use tokio::time::{sleep, timeout};
 const ACTIVATOR_PK: &str = "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2";
 const CONTRACT_INIT_BALANCE: f64 = 1.0;
 pub const JSTZ_ROLLUP_OPERATOR_PK: &str =
-    "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
-pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "bootstrap1";
+    "edpktoeTraS2WW9iaceu8hvHJ1sUJFSKavtzrMcp4jwMoJWWBts8AK";
+pub const JSTZ_ROLLUP_OPERATOR_ALIAS: &str = "rollup_operator";
 
 #[cfg_attr(feature = "skip-rollup-tests", ignore)]
 #[tokio::test(flavor = "multi_thread")]
@@ -49,6 +51,8 @@ async fn jstzd_test() {
         &rollup_rpc_endpoint,
         &jstz_node_rpc_endpoint,
         jstzd_port,
+        #[cfg(feature = "v2_runtime")]
+        None,
     )
     .await;
 
@@ -98,6 +102,7 @@ async fn create_jstzd_server(
     rollup_rpc_endpoint: &Endpoint,
     jstz_node_rpc_endpoint: &Endpoint,
     jstzd_port: u16,
+    #[cfg(feature = "v2_runtime")] oracle_key_pair: Option<KeyPair>,
 ) -> (JstzdServer, JstzdConfig) {
     let run_options = OctezNodeRunOptionsBuilder::new()
         .set_synchronisation_threshold(0)
@@ -183,6 +188,8 @@ async fn create_jstzd_server(
         jstz_node::RunMode::Default,
         0,
         &debug_log_path,
+        #[cfg(feature = "v2_runtime")]
+        oracle_key_pair,
     );
     let config = JstzdConfig::new(
         octez_node_config,
@@ -264,23 +271,23 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
     let mut full_config = serde_json::json!({});
     for (key, expected_json) in [
         (
-            "octez-node",
+            "octez_node",
             serde_json::to_value(jstzd_config.octez_node_config()).unwrap(),
         ),
         (
-            "octez-client",
+            "octez_client",
             serde_json::to_value(jstzd_config.octez_client_config()).unwrap(),
         ),
         (
-            "octez-baker",
+            "octez_baker",
             serde_json::to_value(jstzd_config.baker_config()).unwrap(),
         ),
         (
-            "octez-rollup",
+            "octez_rollup",
             serde_json::to_value(jstzd_config.octez_rollup_config()).unwrap(),
         ),
         (
-            "jstz-node",
+            "jstz_node",
             serde_json::to_value(jstzd_config.jstz_node_config()).unwrap(),
         ),
     ] {
@@ -364,10 +371,94 @@ async fn check_bootstrap_contracts(octez_client: &OctezClient) {
         );
     }
 }
+
 async fn ensure_rollup_is_logging_to(kernel_debug_file: &NamedTempFile) {
     let mut file = kernel_debug_file.reopen().unwrap();
     let mut contents = String::new();
     file.read_to_string(&mut contents).unwrap();
     assert!(contents.contains("Internal message: start of level"));
     assert!(contents.contains("Internal message: end of level"));
+}
+
+#[cfg_attr(feature = "skip-rollup-tests", ignore)]
+#[cfg(feature = "v2_runtime")]
+#[tokio::test(flavor = "multi_thread")]
+async fn jstzd_with_oracle_key_pair_test() {
+    let octez_node_rpc_endpoint = Endpoint::localhost(unused_port());
+    let rollup_rpc_endpoint = Endpoint::try_from(
+        Uri::from_str(&format!("http://127.0.0.1:{}", unused_port())).unwrap(),
+    )
+    .unwrap();
+    let jstz_node_rpc_endpoint = Endpoint::localhost(unused_port());
+    let jstzd_port = unused_port();
+
+    let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
+    let (oracle_pk, oracle_sk) = keypair_from_mnemonic(mnemonic, "").unwrap();
+
+    let (mut jstzd, config) = create_jstzd_server(
+        &octez_node_rpc_endpoint,
+        &rollup_rpc_endpoint,
+        &jstz_node_rpc_endpoint,
+        jstzd_port,
+        Some(KeyPair(oracle_pk, oracle_sk)),
+    )
+    .await;
+
+    jstzd.run(false).await.unwrap();
+    ensure_jstzd_components_are_up(&jstzd, &octez_node_rpc_endpoint, jstzd_port).await;
+
+    let KeyPair(cfg_pk, cfg_sk) = config
+        .jstz_node_config()
+        .oracle
+        .as_ref()
+        .expect("oracle key pair missing");
+    assert_eq!(
+        cfg_pk.to_string(),
+        "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"
+    );
+    assert_eq!(
+        cfg_sk.to_string(),
+        "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM"
+    );
+
+    // graceful shutdown
+    tokio::spawn(async move {
+        sleep(Duration::from_secs(3)).await;
+        reqwest::Client::new()
+            .put(format!("http://localhost:{}/shutdown", jstzd_port))
+            .send()
+            .await
+            .unwrap();
+    });
+
+    timeout(Duration::from_secs(30), jstzd.wait())
+        .await
+        .expect("shutdown timed out");
+    ensure_jstzd_components_are_down(&jstzd, &octez_node_rpc_endpoint, jstzd_port).await;
+}
+
+#[cfg(feature = "v2_runtime")]
+#[test]
+fn oracle_config_serialization_test() {
+    let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
+    let (oracle_pk, oracle_sk) = keypair_from_mnemonic(mnemonic, "").unwrap();
+
+    let cfg = JstzNodeConfig::new(
+        &Endpoint::localhost(8932),
+        &Endpoint::localhost(8933),
+        PathBuf::from("/tmp/preimages").as_path(),
+        PathBuf::from("/tmp/kernel.log").as_path(),
+        KeyPair::default(),
+        jstz_node::RunMode::Default,
+        0,
+        PathBuf::from("/tmp/debug.log").as_path(),
+        Some(KeyPair(oracle_pk, oracle_sk)),
+    );
+
+    let json = serde_json::to_value(&cfg).unwrap();
+    let oracle_pk = json["oracle"].as_str().expect("oracle should be string");
+    assert_eq!(
+        oracle_pk,
+        "edpkuEb5VsDrcVZnbWg6sAsSG3VYVUNRKATfryPCDkzi77ZVLiXE3Z"
+    );
 }

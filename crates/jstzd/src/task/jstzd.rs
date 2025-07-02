@@ -1,4 +1,7 @@
-use crate::config::builtin_bootstrap_accounts;
+use crate::config::{
+    builtin_bootstrap_accounts, ACTIVATOR_ACCOUNT_ALIAS, INJECTOR_ACCOUNT_ALIAS,
+    ROLLUP_OPERATOR_ACCOUNT_ALIAS,
+};
 
 use super::{
     child_wrapper::Shared,
@@ -42,8 +45,6 @@ use tokio::{
     task::JoinHandle,
     time::{sleep, Duration},
 };
-
-const ACTIVATOR_ACCOUNT_ALIAS: &str = "bootstrap0";
 
 trait IntoShared {
     fn into_shared(self) -> Shared<Self>;
@@ -138,7 +139,7 @@ impl Task for Jstzd {
                 // we need secret keys
                 builtin_bootstrap_accounts()?
                     .into_iter()
-                    .map(|(alias, _, sk)| (alias, sk)),
+                    .map(|(alias, _, sk, _)| (alias, sk)),
             ),
         )
         .await?;
@@ -501,11 +502,10 @@ fn print_bootstrap_accounts<'a>(
     writer: &mut impl Write,
     accounts: impl IntoIterator<Item = &'a BootstrapAccount>,
 ) -> Result<()> {
-    let alias_address_mapping: HashMap<String, String> = HashMap::from_iter(
-        builtin_bootstrap_accounts()?
-            .into_iter()
-            .map(|(alias, pk, _)| (PublicKey::from_base58(&pk).unwrap().hash(), alias)),
-    );
+    let alias_address_mapping: HashMap<String, String> =
+        HashMap::from_iter(builtin_bootstrap_accounts()?.into_iter().map(
+            |(alias, pk, _, _)| (PublicKey::from_base58(&pk).unwrap().hash(), alias),
+        ));
 
     let mut table = Table::new();
     table.set_titles(Row::new(vec![
@@ -513,14 +513,25 @@ fn print_bootstrap_accounts<'a>(
         Cell::new("XTZ Balance (mutez)"),
     ]));
 
+    let internal_accounts = [
+        ACTIVATOR_ACCOUNT_ALIAS,
+        INJECTOR_ACCOUNT_ALIAS,
+        ROLLUP_OPERATOR_ACCOUNT_ALIAS,
+    ];
     let mut lines = accounts
         .into_iter()
-        .map(|account| {
-            let address_string = match alias_address_mapping.get(&account.address()) {
-                Some(alias) => format!("({alias}) {}", account.address()),
-                None => account.address(),
-            };
-            (address_string, account.amount().to_string())
+        .filter_map(|account| {
+            let amount = account.amount().to_string();
+            match alias_address_mapping.get(&account.address()) {
+                Some(alias) => {
+                    if internal_accounts.contains(&alias.as_str()) {
+                        None
+                    } else {
+                        Some((format!("({alias}) {}", account.address()), amount))
+                    }
+                }
+                None => Some((account.address(), amount)),
+            }
         })
         .collect::<Vec<_>>();
     lines.sort();
@@ -669,6 +680,8 @@ async fn call_contract_handler(
 mod tests {
     use axum::{body::to_bytes, response::IntoResponse};
     use indicatif::ProgressBar;
+    #[cfg(feature = "v2_runtime")]
+    use jstz_crypto::secret_key::SecretKey;
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
     use std::path::PathBuf;
     use std::str::FromStr;
@@ -735,6 +748,25 @@ mod tests {
         super::print_bootstrap_accounts(
             &mut buf,
             [
+                // Activator should not be printed out.
+                // The public key is taken from `resources/bootstrap_account/accounts.json`.
+                &BootstrapAccount::new(
+                    "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
+                    3,
+                )
+                .unwrap(),
+                // Injector should not be printed out.
+                &BootstrapAccount::new(
+                    "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+                    4,
+                )
+                .unwrap(),
+                // Rollup operator should not be printed out.
+                &BootstrapAccount::new(
+                    "edpktoeTraS2WW9iaceu8hvHJ1sUJFSKavtzrMcp4jwMoJWWBts8AK",
+                    5,
+                )
+                .unwrap(),
                 &BootstrapAccount::new(
                     "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv",
                     1,
@@ -798,6 +830,17 @@ mod tests {
                 jstz_node::RunMode::Default,
                 0,
                 &PathBuf::from("/log"),
+                #[cfg(feature = "v2_runtime")]
+                Some(KeyPair(
+                    PublicKey::from_base58(
+                        "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+                    )
+                    .unwrap(),
+                    SecretKey::from_base58(
+                        "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+                    )
+                    .unwrap(),
+                )),
             ),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(

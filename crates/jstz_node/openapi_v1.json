@@ -1,0 +1,1123 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Jstz Node",
+    "description": "JavaScript server runtime for Tezos Smart Rollups",
+    "contact": {
+      "name": "Trilitech",
+      "email": "contact@trili.tech"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://github.com/jstz-dev/jstz/blob/main/LICENSE"
+    },
+    "version": "0.1.1-alpha.2"
+  },
+  "paths": {
+    "/accounts/{address}": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "Get account",
+        "operationId": "get_account",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Account"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/accounts/{address}/balance": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "Get balance of an account",
+        "operationId": "get_balance",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/accounts/{address}/code": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "Get code of an account",
+        "operationId": "get_code",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ParsedCode"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/accounts/{address}/kv": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "Get KV value under a given key path",
+        "description": "Get KV value under a given key path for an account. If `key` is not provided,\nthe empty key path will be used.",
+        "operationId": "get_kv_value",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KvValue"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/accounts/{address}/kv/subkeys": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "Get array of KV subkeys under a given key path",
+        "description": "Get array of KV subkeys under a given key path for an account. If `key` is not provided,\nthe empty key path will be used.",
+        "operationId": "get_kv_subkeys",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": ["string", "null"]
+            }
+          },
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/accounts/{address}/nonce": {
+      "get": {
+        "tags": ["Accounts"],
+        "summary": "Get nonce of an account",
+        "operationId": "get_nonce",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Nonce"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/logs/{address}/persistent/requests": {
+      "get": {
+        "tags": ["Logs"],
+        "summary": "Fetch console logs by address",
+        "description": "Fetch console logs by address from the log store only if persistent\nlogging is enabled on this Jstz node instance",
+        "operationId": "persistent_logs",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LogRecord"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/logs/{address}/persistent/requests/{request_id}": {
+      "get": {
+        "tags": ["Logs"],
+        "summary": "Fetch console logs by address and request id",
+        "description": "Fetch console logs by address and request id from the log store only if persistent\nlogging is enabled on this Jstz node instance",
+        "operationId": "persistent_logs_by_request_id",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "request_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LogRecord"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/logs/{address}/stream": {
+      "get": {
+        "tags": ["Logs"],
+        "summary": "Stream console logs",
+        "description": "Returns a stream of console logs from the given Smart Function as Server-Sent Events.",
+        "operationId": "stream_log",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully connected to log stream as Server-Sent Events"
+          },
+          "400": {
+            "description": ""
+          },
+          "404": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/operations": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Inject an operation into Jstz",
+        "operationId": "inject",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignedOperation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Operation successfully injected"
+          },
+          "400": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/operations/hash": {
+      "post": {
+        "tags": ["Operations"],
+        "summary": "Returns the hex encoded hash of an Operation",
+        "operationId": "hash_operation",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Operation"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/String"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/operations/{operation_hash}/receipt": {
+      "get": {
+        "tags": ["Operations"],
+        "summary": "Get the receipt of an operation",
+        "operationId": "receipt",
+        "parameters": [
+          {
+            "name": "operation_hash",
+            "in": "path",
+            "description": "Operation hash",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Receipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": ""
+          },
+          "500": {
+            "description": ""
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Account": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["User"],
+            "properties": {
+              "User": {
+                "$ref": "#/components/schemas/UserAccount"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": ["SmartFunction"],
+            "properties": {
+              "SmartFunction": {
+                "$ref": "#/components/schemas/SmartFunctionAccount"
+              }
+            }
+          }
+        ]
+      },
+      "Address": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/PublicKeyHash"
+          },
+          {
+            "$ref": "#/components/schemas/SmartFunctionHash"
+          }
+        ],
+        "description": "Tezos Address"
+      },
+      "Blake2b": {
+        "type": "array",
+        "items": {
+          "type": "integer",
+          "format": "int32",
+          "minimum": 0
+        }
+      },
+      "Content": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeployFunction"
+              },
+              {
+                "type": "object",
+                "required": ["_type"],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": ["DeployFunction"]
+                  }
+                }
+              }
+            ],
+            "title": "DeployFunction"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RunFunction"
+              },
+              {
+                "type": "object",
+                "required": ["_type"],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": ["RunFunction"]
+                  }
+                }
+              }
+            ],
+            "title": "RunFunction"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RevealLargePayload"
+              },
+              {
+                "type": "object",
+                "required": ["_type"],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": ["RevealLargePayload"]
+                  }
+                }
+              }
+            ],
+            "title": "RevealLargePayload"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "_type"
+        }
+      },
+      "DeployFunction": {
+        "type": "object",
+        "required": ["functionCode", "accountCredit"],
+        "properties": {
+          "accountCredit": {
+            "$ref": "#/components/schemas/u64",
+            "description": "Amount of tez to credit to the smart function account, debited from the sender"
+          },
+          "functionCode": {
+            "$ref": "#/components/schemas/ParsedCode",
+            "description": "Smart function code"
+          }
+        }
+      },
+      "DeployFunctionReceipt": {
+        "type": "object",
+        "required": ["address"],
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/SmartFunctionHash"
+          }
+        }
+      },
+      "DepositReceipt": {
+        "type": "object",
+        "required": ["account", "updatedBalance"],
+        "properties": {
+          "account": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "updatedBalance": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "FaDepositReceipt": {
+        "type": "object",
+        "required": ["receiver", "ticketBalance"],
+        "properties": {
+          "receiver": {
+            "$ref": "#/components/schemas/Address"
+          },
+          "runFunction": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RunFunctionReceipt"
+              }
+            ]
+          },
+          "ticketBalance": {
+            "$ref": "#/components/schemas/u64"
+          }
+        }
+      },
+      "FaWithdraw": {
+        "type": "object",
+        "required": ["amount", "routingInfo", "ticketInfo"],
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/u64"
+          },
+          "routingInfo": {
+            "$ref": "#/components/schemas/RoutingInfo"
+          },
+          "ticketInfo": {
+            "$ref": "#/components/schemas/TicketInfo"
+          }
+        }
+      },
+      "FaWithdrawReceipt": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/FaWithdraw"
+          },
+          {
+            "type": "object",
+            "required": ["source"],
+            "properties": {
+              "source": {
+                "$ref": "#/components/schemas/Address"
+              }
+            }
+          }
+        ]
+      },
+      "Kt1Hash": {
+        "type": "string",
+        "title": "KT1",
+        "example": "KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w"
+      },
+      "KvValue": {
+        "description": "A value stored in the Key-Value store. Always valid JSON."
+      },
+      "LogLevel": {
+        "type": "string",
+        "enum": ["ERROR", "WARN", "INFO", "DEBUG"]
+      },
+      "LogRecord": {
+        "type": "object",
+        "required": ["address", "requestId", "level", "text"],
+        "properties": {
+          "address": {
+            "$ref": "#/components/schemas/SmartFunctionHash"
+          },
+          "level": {
+            "$ref": "#/components/schemas/LogLevel"
+          },
+          "requestId": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "Nonce": {
+        "type": "integer",
+        "format": "int64",
+        "minimum": 0
+      },
+      "Operation": {
+        "type": "object",
+        "required": ["publicKey", "nonce", "content"],
+        "properties": {
+          "content": {
+            "$ref": "#/components/schemas/Content",
+            "description": "The content of the operation"
+          },
+          "nonce": {
+            "$ref": "#/components/schemas/Nonce",
+            "description": "Nonce is used to avoid replay attacks."
+          },
+          "publicKey": {
+            "$ref": "#/components/schemas/PublicKey",
+            "description": "The public key of the account which was used to sign the operation"
+          }
+        }
+      },
+      "ParsedCode": {
+        "type": "string",
+        "format": "javascript",
+        "example": "export default (request) => new Response('Hello world!')"
+      },
+      "PublicKey": {
+        "oneOf": [
+          {
+            "type": "string",
+            "title": "Ed25519",
+            "example": "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"
+          },
+          {
+            "type": "string",
+            "title": "Secp256k1",
+            "example": "sppk7aMwoVDiMGXkzwqPMrqHNE6QrZ1vAJ2CvTEeGZRLSSTM8jogmKY"
+          },
+          {
+            "type": "string",
+            "title": "P256",
+            "example": "p2pk67ArUx3aDGyFgRco8N3pTnnnbodpP2FMZLAewV6ZAVvCxKjW3Q1"
+          }
+        ],
+        "description": "Tezos public key"
+      },
+      "PublicKeyHash": {
+        "oneOf": [
+          {
+            "type": "string",
+            "title": "Tz1",
+            "example": "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU"
+          },
+          {
+            "type": "string",
+            "title": "Tz2",
+            "example": "tz2KDvEL9fuvytRfe1cVVDo1QfDfaBktGNkh"
+          },
+          {
+            "type": "string",
+            "title": "Tz3",
+            "example": "tz3QxNCB8HgxJyp5V9ZmCVGcTm6BzYc14k9C"
+          }
+        ],
+        "description": "Tezos Address"
+      },
+      "Receipt": {
+        "type": "object",
+        "required": ["hash", "result"],
+        "properties": {
+          "hash": {
+            "$ref": "#/components/schemas/Blake2b"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ReceiptResult"
+          }
+        }
+      },
+      "ReceiptContent": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DeployFunctionReceipt"
+              },
+              {
+                "type": "object",
+                "required": ["_type"],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": ["DeployFunction"]
+                  }
+                }
+              }
+            ],
+            "title": "DeployFunction"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RunFunctionReceipt"
+              },
+              {
+                "type": "object",
+                "required": ["_type"],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": ["RunFunction"]
+                  }
+                }
+              }
+            ],
+            "title": "RunFunction"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/DepositReceipt"
+              },
+              {
+                "type": "object",
+                "required": ["_type"],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": ["Deposit"]
+                  }
+                }
+              }
+            ],
+            "title": "Deposit"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FaDepositReceipt"
+              },
+              {
+                "type": "object",
+                "required": ["_type"],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": ["FaDeposit"]
+                  }
+                }
+              }
+            ],
+            "title": "FaDeposit"
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/FaWithdrawReceipt"
+              },
+              {
+                "type": "object",
+                "required": ["_type"],
+                "properties": {
+                  "_type": {
+                    "type": "string",
+                    "enum": ["FaWithdraw"]
+                  }
+                }
+              }
+            ],
+            "title": "FaWithdraw"
+          }
+        ],
+        "discriminator": {
+          "propertyName": "_type"
+        }
+      },
+      "ReceiptResult": {
+        "oneOf": [
+          {
+            "type": "object",
+            "title": "Success",
+            "required": ["inner", "_type"],
+            "properties": {
+              "_type": {
+                "type": "string",
+                "enum": ["Success"]
+              },
+              "inner": {
+                "$ref": "#/components/schemas/ReceiptContent"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "title": "Failure",
+            "required": ["inner", "_type"],
+            "properties": {
+              "_type": {
+                "type": "string",
+                "enum": ["Failed"]
+              },
+              "inner": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "RevealLargePayload": {
+        "type": "object",
+        "description": "An operation to reveal an operation with a large payload of type `RevealType`. The root hash is the hash of the SignedOperation and the data is assumed to be available.",
+        "required": ["rootHash", "revealType", "originalOpHash"],
+        "properties": {
+          "originalOpHash": {
+            "$ref": "#/components/schemas/Blake2b",
+            "description": "The original operation hash that is being revealed."
+          },
+          "revealType": {
+            "type": "string",
+            "description": "The type of operation being revealed.",
+            "example": "DeployFunction"
+          },
+          "rootHash": {
+            "type": "string",
+            "description": "The root hash of the preimage of the operation used to reveal the operation data."
+          }
+        }
+      },
+      "RoutingInfo": {
+        "type": "object",
+        "required": ["receiver", "proxyL1Contract"],
+        "properties": {
+          "proxyL1Contract": {
+            "$ref": "#/components/schemas/Kt1Hash"
+          },
+          "receiver": {
+            "$ref": "#/components/schemas/Address"
+          }
+        }
+      },
+      "RunFunction": {
+        "type": "object",
+        "description": "Request used to run a smart function. The target smart function is given by the host part of the uri. The rest of the attributes will be handled by the smart function itself.",
+        "required": ["uri", "method", "headers", "body", "gasLimit"],
+        "properties": {
+          "body": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          "gasLimit": {
+            "type": "integer",
+            "description": "Maximum amount of gas that is allowed for the execution of this operation",
+            "minimum": 0
+          },
+          "headers": {
+            "type": "object",
+            "description": "Any valid HTTP headers",
+            "properties": {
+              "X-JSTZ-TRANSFER": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Amount in mutez to transfer on request",
+                "minimum": 1
+              }
+            },
+            "additionalProperties": true
+          },
+          "method": {
+            "type": "string",
+            "description": "Any valid HTTP method",
+            "examples": ["GET", "POST", "PUT", "UPDATE", "DELETE"]
+          },
+          "uri": {
+            "type": "string",
+            "format": "uri",
+            "description": "Smart function URI in the form jstz://{smart_function_address}/rest/of/path",
+            "examples": [
+              "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold"
+            ]
+          }
+        }
+      },
+      "RunFunctionReceipt": {
+        "type": "object",
+        "required": ["body", "statusCode", "headers"],
+        "properties": {
+          "body": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          "headers": {
+            "type": "object",
+            "description": "Any valid HTTP headers",
+            "properties": {
+              "X-JSTZ-AMOUNT": {
+                "type": "integer",
+                "format": "int64",
+                "description": "Amount in mutez that was transferred on response",
+                "readOnly": true,
+                "minimum": 1
+              }
+            },
+            "additionalProperties": true
+          },
+          "statusCode": {
+            "type": "integer",
+            "description": "Valid status code",
+            "minimum": 0
+          }
+        }
+      },
+      "Signature": {
+        "oneOf": [
+          {
+            "type": "string",
+            "title": "Ed25519 signature",
+            "example": "edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB"
+          },
+          {
+            "type": "string",
+            "title": "Secp256k1 signature",
+            "example": "spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H"
+          },
+          {
+            "type": "string",
+            "title": "P256 signature",
+            "example": "p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH"
+          }
+        ]
+      },
+      "SignedOperation": {
+        "type": "object",
+        "required": ["signature", "inner"],
+        "properties": {
+          "inner": {
+            "$ref": "#/components/schemas/Operation"
+          },
+          "signature": {
+            "$ref": "#/components/schemas/Signature"
+          }
+        }
+      },
+      "SmartFunctionAccount": {
+        "type": "object",
+        "required": ["amount", "nonce", "functionCode"],
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/u64"
+          },
+          "functionCode": {
+            "$ref": "#/components/schemas/ParsedCode"
+          },
+          "nonce": {
+            "$ref": "#/components/schemas/Nonce"
+          }
+        }
+      },
+      "SmartFunctionHash": {
+        "$ref": "#/components/schemas/Kt1Hash"
+      },
+      "String": {
+        "type": "string"
+      },
+      "TicketInfo": {
+        "type": "object",
+        "required": ["id", "ticketer"],
+        "properties": {
+          "content": {
+            "type": ["array", "null"],
+            "items": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          },
+          "id": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "ticketer": {
+            "$ref": "#/components/schemas/Kt1Hash"
+          }
+        }
+      },
+      "UserAccount": {
+        "type": "object",
+        "required": ["amount", "nonce"],
+        "properties": {
+          "amount": {
+            "$ref": "#/components/schemas/u64"
+          },
+          "nonce": {
+            "$ref": "#/components/schemas/Nonce"
+          }
+        }
+      },
+      "u64": {
+        "type": "integer",
+        "format": "int64",
+        "minimum": 0
+      }
+    }
+  }
+}

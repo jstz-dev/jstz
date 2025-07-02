@@ -1,16 +1,16 @@
 use std::{
-    cell::RefCell,
     fmt::Debug,
     fs::{File, OpenOptions},
     io::Write,
     path::PathBuf,
+    sync::Arc,
 };
 
+use parking_lot::Mutex;
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 
 use log::{debug, error, trace};
-use tezos_crypto_rs::base58::{FromBase58Check, ToBase58Check};
 use tezos_smart_rollup::{
     core_unsafe::MAX_FILE_CHUNK_SIZE,
     host::{HostError, Runtime, RuntimeError, ValueType},
@@ -20,10 +20,11 @@ use tezos_smart_rollup::{
 
 use super::db::{exec_delete, exec_delete_glob, exec_read, exec_write, Db};
 
+#[derive(Clone)]
 pub struct Host {
     db: Db,
     preimage_dir: PathBuf,
-    log_file: Option<RefCell<File>>,
+    log_file: Option<Arc<Mutex<File>>>,
 }
 
 impl Host {
@@ -45,7 +46,7 @@ impl Host {
             .create(true)
             .append(true)
             .open(log_path)?;
-        self.log_file.replace(RefCell::new(log_file));
+        self.log_file.replace(Arc::new(Mutex::new(log_file)));
         Ok(self)
     }
 
@@ -72,15 +73,15 @@ impl Runtime for Host {
 
     fn write_debug(&self, msg: &str) {
         match &self.log_file {
-            Some(c) => match c.try_borrow_mut() {
-                Ok(mut f) => {
+            Some(c) => match c.try_lock() {
+                Some(mut f) => {
                     if let Err(e) = f.write_all(msg.as_bytes()) {
                         error!("failed to write debug log: {e}");
                     };
                     #[cfg(test)]
                     f.flush().unwrap();
                 }
-                Err(e) => error!("failed to borrow debug log file: {e}"),
+                None => error!("failed to borrow debug log file: already borrowed"),
             },
             None => debug!("{msg}"),
         }
@@ -152,7 +153,7 @@ impl Runtime for Host {
             .map_err(|e| log_error(&log_title, e))?;
 
         Ok(match read_output {
-            Some(v) => v.from_base58check().map_err(|e| log_error(&log_title, e))?,
+            Some(v) => hex::decode(v).map_err(|e| log_error(&log_title, e))?,
             None => vec![],
         })
     }
@@ -171,7 +172,7 @@ impl Runtime for Host {
         let read_output =
             exec_read(&tx, &path.to_string()).map_err(|e| log_error(&log_title, e))?;
         let mut value = match read_output {
-            Some(v) => v.from_base58check().map_err(|e| log_error(&log_title, e))?,
+            Some(v) => hex::decode(v).map_err(|e| log_error(&log_title, e))?,
             None => vec![],
         };
 
@@ -186,7 +187,7 @@ impl Runtime for Host {
             value.extend_from_slice(src);
         };
 
-        exec_write(&tx, &path.to_string(), &value.to_base58check())
+        exec_write(&tx, &path.to_string(), &hex::encode(value))
             .map_err(|e| log_error(&log_title, e))?;
         tx.commit().map_err(|e| log_error(&log_title, e))?;
         Ok(())
@@ -201,7 +202,7 @@ impl Runtime for Host {
         trace!("{log_title}");
 
         let client = self.connection()?;
-        exec_write(&client, &path.to_string(), &src.to_base58check())
+        exec_write(&client, &path.to_string(), &hex::encode(src))
             .map_err(|e| log_error(&log_title, e))
     }
 
@@ -415,7 +416,7 @@ mod tests {
         assert_eq!(buf, "foo");
 
         // borrow the file to fail write_debug
-        let _r = host.log_file.as_ref().unwrap().borrow_mut();
+        let _r = host.log_file.as_ref().unwrap().lock();
         host.write_debug("bar");
         assert_eq!(
             LOG_RECORDS.take(),
@@ -585,5 +586,14 @@ mod tests {
         let mut buf = [0u8; 15];
         assert_eq!(host.reveal_preimage(&preimage_hash, &mut buf).unwrap(), 10);
         assert_eq!(&buf, b"abcdefghij\0\0\0\0\0");
+
+        // store_write performance check
+        let now = std::time::SystemTime::now();
+        let expected = vec![1; 65536];
+        host.store_write(&path, &expected, 0).unwrap();
+        assert!(
+            now.elapsed().unwrap().as_secs() < 1,
+            "store_write takes too much time"
+        );
     }
 }

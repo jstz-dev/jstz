@@ -16,10 +16,10 @@ The `jstz` CLI empowers you to effortlessly transfer assets between a Tezos addr
 To deposit assets from a Tezos address to a `jstz` L2 address, run the following command:
 
 ```bash
-jstz bridge deposit --from <TZ1_ADDRESS/ALIAS> --to <TZ1_ADDRESS/ALIAS> --amount <AMOUNT>
+jstz bridge deposit --from <TEZOS_ADDRESS|ALIAS> --to <JSTZ_ADDRESS|ALIAS> --amount <AMOUNT>
 ```
 
-Replace `<TZ1_ADDRESS/ALIAS>` with the source Tezos address or alias (managed by `octez-client`), `<TZ1_ADDRESS/ALIAS>` with the destination `jstz` address, and `<AMOUNT>` with the quantity of XTZ to deposit.
+Replace `<TEZOS_ADDRESS|ALIAS>` with the source Tezos address or alias (managed by `octez-client`), `<JSTZ_ADDRESS|ALIAS>` with the destination `jstz` address, and `<AMOUNT>` with the quantity of XTZ to deposit.
 
 For example, running:
 
@@ -44,10 +44,10 @@ Deposited 42 XTZ to tz4N7y3T2e2dfCyHB1Ama68jnt3Fps7Ufu6d
 To withdraw assets from `jstz` L2 address to a Tezos address, run the following command:
 
 ```bash
- jstz bridge withdraw --to <TZ1_ADDRESS/ALIAS> --amount <AMOUNT>
+ jstz bridge withdraw --to <TEZOS_ADDRESS|ALIAS> --amount <AMOUNT>
 ```
 
-This will withdraw `<AMOUNT>`ꜩ from the current logged in `jstz` account to `<TZ1_ADDRESS/ALIAS>` Tezos account
+This will withdraw `<AMOUNT>`ꜩ from the current logged in `jstz` account to `<TEZOS_ADDRESS|ALIAS>` Tezos account
 
 For example, running:
 

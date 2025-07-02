@@ -13,10 +13,17 @@ description.workspace = true
 [lib]
 crate-type = ["cdylib", "lib"]
 
+[[bin]]
+name = "kernel-executable"
+path = "src/executable.rs"
+required-features = ["riscv_kernel"]
+
 [dependencies]
 bincode.workspace = true
+derive_more = { workspace = true, features = ["from"] }
 hex.workspace = true
 futures.workspace = true
+tokio = { workspace = true, optional = true }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
@@ -24,11 +31,16 @@ num-traits.workspace = true
 serde.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
-tezos_data_encoding = "0.6.0"
+tezos_data_encoding.workspace = true
 
 [dev-dependencies]
+anyhow.workspace = true
 jstz_mock = { path = "../jstz_mock" }
 jstz_utils = { path = "../jstz_utils" }
+http.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
 
 [features]
 v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
+riscv_kernel = ["v2_runtime", "dep:tokio"]

@@ -2,6 +2,7 @@ use std::path::PathBuf;
 
 use futures_util::StreamExt;
 use tokio::sync::broadcast;
+use tokio::task::AbortHandle;
 
 use crate::filtered_log_stream::FilteredLogStream;
 use crate::request::{request_event_from_log_line, OracleRequest, ORACLE_LINE_REGEX};
@@ -10,8 +11,9 @@ use anyhow::Result;
 
 /// A relay that forwards oracle requests from a log file to a channel.
 pub struct Relay {
-    tx: broadcast::Sender<OracleRequest>,
-    subscriber_count: std::sync::atomic::AtomicUsize,
+    pub tx: broadcast::Sender<OracleRequest>,
+    pub subscriber_count: std::sync::atomic::AtomicUsize,
+    abort_handle: AbortHandle,
 }
 
 impl Relay {
@@ -21,38 +23,42 @@ impl Relay {
         let mut stream =
             FilteredLogStream::new(ORACLE_LINE_REGEX.clone(), log_path).await?;
 
-        tokio::spawn({
-            let tx = tx.clone();
-            async move {
-                while let Some(line_res) = stream.next().await {
-                    match line_res {
-                        Ok(line) => match request_event_from_log_line(&line) {
-                            Ok(ev) => {
-                                if let Err(e) = tx.send(ev) {
-                                    eprintln!("Failed to send event: {}", e);
+        let abort_handle = {
+            let task = tokio::spawn({
+                let tx = tx.clone();
+                async move {
+                    while let Some(line_res) = stream.next().await {
+                        match line_res {
+                            Ok(line) => match request_event_from_log_line(&line) {
+                                Ok(ev) => {
+                                    if let Err(e) = tx.send(ev) {
+                                        eprintln!("Failed to send event: {}", e);
+                                        break;
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!(
+                                        "Failed to parse oracle log line: {}; line={}",
+                                        e, line
+                                    );
                                     break;
                                 }
-                            }
+                            },
                             Err(e) => {
-                                eprintln!(
-                                    "Failed to parse oracle log line: {}; line={}",
-                                    e, line
-                                );
+                                eprintln!("Log stream error: {}", e);
                                 break;
                             }
-                        },
-                        Err(e) => {
-                            eprintln!("Log stream error: {}", e);
-                            break;
                         }
                     }
                 }
-            }
-        });
+            });
+            task.abort_handle()
+        };
 
         Ok(Self {
             tx,
             subscriber_count: std::sync::atomic::AtomicUsize::new(0),
+            abort_handle,
         })
     }
 
@@ -64,6 +70,12 @@ impl Relay {
             return Err(anyhow::anyhow!("Relay already has a subscriber"));
         }
         Ok(self.tx.subscribe())
+    }
+}
+
+impl Drop for Relay {
+    fn drop(&mut self) {
+        self.abort_handle.abort();
     }
 }
 

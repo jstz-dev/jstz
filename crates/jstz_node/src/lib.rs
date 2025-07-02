@@ -85,6 +85,8 @@ pub struct RunOptions {
     pub mode: RunMode,
     pub capacity: usize,
     pub debug_log_path: PathBuf,
+    #[cfg(feature = "v2_runtime")]
+    pub oracle_key_pair: Option<KeyPair>,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -101,6 +103,8 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         mode: config.mode,
         capacity: config.capacity,
         debug_log_path: config.debug_log_file,
+        #[cfg(feature = "v2_runtime")]
+        oracle_key_pair: config.oracle,
     })
     .await
 }
@@ -116,6 +120,8 @@ pub async fn run(
         mode,
         capacity,
         debug_log_path,
+        #[cfg(feature = "v2_runtime")]
+        oracle_key_pair,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
@@ -133,6 +139,7 @@ pub async fn run(
             worker::spawn(
                 queue.clone(),
                 runtime_db.clone(),
+                &injector,
                 rollup_preimages_dir.clone(),
                 Some(&debug_log_path),
             )
@@ -145,6 +152,7 @@ pub async fn run(
                 worker::spawn(
                     queue.clone(),
                     runtime_db.clone(),
+                    &injector,
                     rollup_preimages_dir.clone(),
                     Some(&debug_log_path),
                     move || {
@@ -178,6 +186,30 @@ pub async fn run(
         &cancellation_token,
     )
     .await?;
+
+    // Start OracleNode if oracle keys are provided
+    #[cfg(feature = "v2_runtime")]
+    let _oracle_node = if let Some(oracle_key_pair) = oracle_key_pair {
+        let KeyPair(public_key, secret_key) = oracle_key_pair;
+        let node_endpoint = format!("http://{}:{}", addr, port);
+        let path = match mode {
+            // If sequencer, then listen to its debug path
+            RunMode::Sequencer => debug_log_path,
+            // otherwise, listen directly to the kernel debug log
+            RunMode::Default => kernel_log_path.clone(),
+        };
+        Some(
+            jstz_oracle_node::node::OracleNode::spawn(
+                path,
+                public_key,
+                secret_key,
+                node_endpoint,
+            )
+            .await?,
+        )
+    } else {
+        None
+    };
 
     let state = AppState {
         rollup_client,
@@ -245,13 +277,22 @@ mod test {
     #[test]
     fn api_doc_regression() {
         let _ = include_str!("../openapi.json");
+        #[cfg(feature = "v2_runtime")]
         let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("openapi.json");
+        #[cfg(not(feature = "v2_runtime"))]
+        let filename = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("openapi_v1.json");
         let current_spec = std::fs::read_to_string(filename).unwrap();
         let current_spec = current_spec.trim();
         let generated_spec = crate::openapi_json_raw().unwrap();
+        #[cfg(feature = "v2_runtime")]
         assert!(
             current_spec == generated_spec,
-            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi.json"
+            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node --features v2_runtime -- spec -o crates/jstz_node/openapi.json"
+        );
+        #[cfg(not(feature = "v2_runtime"))]
+        assert!(
+            current_spec == generated_spec,
+            "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi_v1.json"
         );
     }
 
@@ -262,10 +303,21 @@ mod test {
 
     #[tokio::test]
     async fn test_run() {
-        async fn check_mode(mode: RunMode, expected: &str) {
+        async fn check_mode(mode: RunMode, expected: &str, with_oracle: bool) {
             let port = unused_port();
             let kernel_log_file = NamedTempFile::new().unwrap();
             let debug_log_file = NamedTempFile::new().unwrap();
+
+            #[cfg(feature = "v2_runtime")]
+            let oracle_key_pair = if with_oracle {
+                let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
+                let (public_key, secret_key) =
+                    jstz_crypto::keypair_from_mnemonic(mnemonic, "").unwrap();
+                Some(KeyPair(public_key, secret_key))
+            } else {
+                None
+            };
+
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
                 port,
@@ -276,6 +328,8 @@ mod test {
                 mode: mode.clone(),
                 capacity: 0,
                 debug_log_path: debug_log_file.path().to_path_buf(),
+                #[cfg(feature = "v2_runtime")]
+                oracle_key_pair,
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -291,14 +345,22 @@ mod test {
 
             assert_eq!(
                 res, expected,
-                "expecting '{expected}' for mode '{mode:?}' but got '{res}'"
+                "expecting '{expected}' for mode '{mode:?}' with oracle={with_oracle} but got '{res}'"
             );
 
             h.abort();
         }
 
-        check_mode(RunMode::Default, "\"default\"").await;
-        check_mode(RunMode::Sequencer, "\"sequencer\"").await;
+        // Test without oracle key pair
+        check_mode(RunMode::Default, "\"default\"", false).await;
+        check_mode(RunMode::Sequencer, "\"sequencer\"", false).await;
+
+        // Test with oracle key pair (only when v2_runtime feature is enabled)
+        #[cfg(feature = "v2_runtime")]
+        {
+            check_mode(RunMode::Default, "\"default\"", true).await;
+            check_mode(RunMode::Sequencer, "\"sequencer\"", true).await;
+        }
     }
 
     #[tokio::test]
@@ -307,10 +369,22 @@ mod test {
             rollup_preimages_dir: PathBuf,
             rollup_endpoint: String,
             mode: RunMode,
+            #[allow(unused_variables)] with_oracle: bool,
         ) {
             let port = unused_port();
             let kernel_log_file = NamedTempFile::new().unwrap();
             let debug_log_file = NamedTempFile::new().unwrap();
+
+            #[cfg(feature = "v2_runtime")]
+            let oracle_key_pair = if with_oracle {
+                let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
+                let (public_key, secret_key) =
+                    jstz_crypto::keypair_from_mnemonic(mnemonic, "").unwrap();
+                Some(KeyPair(public_key, secret_key))
+            } else {
+                None
+            };
+
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
                 port,
@@ -321,9 +395,30 @@ mod test {
                 mode,
                 capacity: 0,
                 debug_log_path: debug_log_file.path().to_path_buf(),
+                #[cfg(feature = "v2_runtime")]
+                oracle_key_pair,
             }));
 
             sleep(Duration::from_secs(1)).await;
+
+            // If oracle is enabled, test that the health endpoint is accessible
+            #[cfg(feature = "v2_runtime")]
+            if with_oracle {
+                let res = jstz_utils::poll(10, 500, || async {
+                    reqwest::get(format!("http://0.0.0.0:{}/health", port))
+                        .await
+                        .ok()
+                })
+                .await
+                .expect("should get response");
+
+                assert_eq!(
+                    res.status(),
+                    200,
+                    "health endpoint should be accessible with oracle node running"
+                );
+            }
+
             h.abort();
             // wait for the worker in run to be dropped
             sleep(Duration::from_secs(2)).await;
@@ -334,19 +429,34 @@ mod test {
             preimages_dir.clone(),
             "sequencer-test-file".to_string(),
             RunMode::Sequencer,
+            false,
         )
         .await;
         // the test worker's on_exit function should be called on drop and
         // it should create this file
         assert!(preimages_dir.join("sequencer-test-file.txt").exists());
 
+        // Test default mode without oracle
         run_test(
             preimages_dir.clone(),
             "default-test-file".to_string(),
             RunMode::Default,
+            false,
         )
         .await;
         assert!(!preimages_dir.join("default-test-file.txt").exists());
+
+        #[cfg(feature = "v2_runtime")]
+        {
+            run_test(
+                preimages_dir.clone(),
+                "oracle-test-file".to_string(),
+                RunMode::Default,
+                true,
+            )
+            .await;
+            assert!(!preimages_dir.join("oracle-test-file.txt").exists());
+        }
     }
 
     #[tokio::test]

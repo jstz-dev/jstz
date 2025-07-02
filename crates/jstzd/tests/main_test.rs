@@ -113,3 +113,71 @@ fn terminate_with_sigint() {
         .unwrap();
     assert!(child.wait().is_ok());
 }
+
+#[cfg(feature = "v2_runtime")]
+#[cfg_attr(feature = "skip-rollup-tests", ignore)]
+#[test]
+fn test_oracle_config_from_file() {
+    let port = unused_port();
+    let mut tmp_file = NamedTempFile::new().unwrap();
+
+    // Create a config file with oracle key pair
+    let config_json = format!(
+        r#"{{
+            "server_port": {},
+            "jstz_node": {{
+                "endpoint": "http://localhost:8932",
+                "rollup_endpoint": "http://localhost:8933",
+                "rollup_preimages_dir": "/tmp/preimages",
+                "kernel_log_file": "/tmp/kernel.log",
+                "mode": "default",
+                "capacity": 0,
+                "debug_log_file": "/tmp/debug.log",
+                "oracle_key_pair": ["edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi", "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM"]
+            }}
+        }}"#,
+        port
+    );
+
+    tmp_file.write_all(config_json.as_bytes()).unwrap();
+
+    let handle = thread::spawn(move || {
+        Command::cargo_bin("jstzd")
+            .unwrap()
+            .args(["run", &tmp_file.path().to_string_lossy()])
+            .assert()
+            .success();
+    });
+
+    let client = reqwest::blocking::Client::new();
+    for _ in 0..30 {
+        thread::sleep(Duration::from_secs(1));
+        if let Ok(r) = client.get(format!("http://localhost:{port}/health")).send() {
+            if r.status().is_success() {
+                break;
+            }
+        }
+    }
+
+    // Wait a bit more to ensure oracle node has time to start
+    thread::sleep(Duration::from_secs(3));
+
+    // Verify the server is still running
+    let health_response = client
+        .get(format!("http://localhost:{port}/health"))
+        .send()
+        .unwrap();
+    assert!(health_response.status().is_success());
+
+    // Shutdown
+    assert!(client
+        .put(format!("http://localhost:{port}/shutdown"))
+        .send()
+        .unwrap()
+        .status()
+        .is_success());
+
+    handle
+        .join()
+        .expect("jstzd should have been taken down without any error");
+}

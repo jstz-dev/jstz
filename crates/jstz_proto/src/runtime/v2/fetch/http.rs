@@ -19,12 +19,22 @@ use deno_core::{serde_v8, v8, ToJsBuffer};
 use crate::executor::smart_function::JSTZ_HOST;
 
 /// Response returned from fetch or [`crate::operation::RunFunction`]
-#[derive(Debug)]
+#[derive(Debug, Eq, Clone, Serialize, Deserialize)]
 pub struct Response {
     pub status: u16,
     pub status_text: String,
+    #[serde(with = "serde_vec_tuple_bytestring")]
     pub headers: Vec<(ByteString, ByteString)>,
     pub body: Body,
+}
+
+impl PartialEq for Response {
+    fn eq(&self, other: &Self) -> bool {
+        self.status == other.status
+            && self.status_text == other.status_text
+            && self.headers == other.headers
+            && self.body.as_slice() == other.body.as_slice()
+    }
 }
 
 impl Into<http::Response<Option<Vec<u8>>>> for Response {
@@ -85,6 +95,8 @@ impl PartialEq for Body {
     }
 }
 
+impl Eq for Body {}
+
 impl Body {
     #[allow(unused)]
     pub fn to_vec(self) -> Vec<u8> {
@@ -106,6 +118,13 @@ impl Body {
         match self {
             Self::Vector(v) => v.len(),
             Self::Buffer(b) => b.len(),
+        }
+    }
+
+    pub fn as_slice(&self) -> &[u8] {
+        match self {
+            Body::Vector(vec) => vec.as_slice(),
+            Body::Buffer(buffer) => buffer.as_ref(),
         }
     }
 }
@@ -134,6 +153,12 @@ impl From<&str> for Body {
 impl From<&[u8]> for Body {
     fn from(bytes: &[u8]) -> Self {
         Body::Vector(bytes.to_vec())
+    }
+}
+
+impl From<Vec<u8>> for Body {
+    fn from(value: Vec<u8>) -> Self {
+        Body::Vector(value)
     }
 }
 
@@ -173,6 +198,8 @@ impl<'s> ToV8<'s> for Body {
 
 pub enum SupportedScheme {
     Jstz,
+    Http,
+    Https,
 }
 
 impl TryFrom<&Url> for SupportedScheme {
@@ -181,6 +208,8 @@ impl TryFrom<&Url> for SupportedScheme {
     fn try_from(value: &Url) -> Result<Self> {
         match value.scheme() {
             "jstz" => Ok(Self::Jstz),
+            "http" => Ok(Self::Http),
+            "https" => Ok(Self::Https),
             scheme => Err(FetchError::UnsupportedScheme(scheme.to_string())),
         }
     }
@@ -335,34 +364,53 @@ mod test {
     use serde_json::json;
     use url::Url;
 
-    use super::{Body, Request};
+    use super::{Body, Request, Response};
 
     #[test]
     fn request_json_roundtrip() {
         let request = Request {
             method: "POST".into(),
             url: Url::from_str("http://example.com/foo").unwrap(),
-            headers: vec![],
+            headers: vec![
+                ("k1".into(), "v1".into()),
+                ("k2".into(), "v3".into()),
+                ("k2".into(), "v2".into()),
+                ("k1".into(), "v4".into()),
+            ],
             body: Some(Body::Vector(
                 serde_json::to_vec(&json!({ "message": "hello"})).unwrap(),
             )),
         };
-        let json = serde_json::to_value(request.clone()).unwrap();
+        let json = serde_json::to_string(&request.clone()).unwrap();
         assert_eq!(
-            json!({
-                "method":[80,79,83,84],
-                "url":"http://example.com/foo",
-                "headers":[],
-                "body":{
-                    "Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]
-                }
-            }),
+            r#"{"method":[80,79,83,84],"url":"http://example.com/foo","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":{"Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}"#,
             json
         );
-
-        let json = json.to_string();
-
         let de: Request = serde_json::from_str(json.as_str()).unwrap();
+        assert_eq!(request, de);
+    }
+
+    #[test]
+    fn response_json_roundtrip() {
+        let request = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: vec![
+                ("k1".into(), "v1".into()),
+                ("k2".into(), "v3".into()),
+                ("k2".into(), "v2".into()),
+                ("k1".into(), "v4".into()),
+            ],
+            body: Body::Vector(
+                serde_json::to_vec(&json!({ "message": "hello"})).unwrap(),
+            ),
+        };
+        let json = serde_json::to_string(&request.clone()).unwrap();
+        assert_eq!(
+            r#"{"status":200,"status_text":"OK","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":{"Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}"#,
+            json
+        );
+        let de: Response = serde_json::from_str(json.as_str()).unwrap();
         assert_eq!(request, de);
     }
 

@@ -69,7 +69,7 @@ pub async fn spawn_baker(
     octez_client: &OctezClient,
 ) -> octez_baker::OctezBaker {
     let baker_config = OctezBakerConfigBuilder::new()
-        .set_binary_path(BakerBinaryPath::Env(Protocol::Alpha))
+        .set_binary_path(BakerBinaryPath::Env(Protocol::default()))
         .set_octez_client_base_dir(
             PathBuf::from(octez_client.base_dir()).to_str().unwrap(),
         )

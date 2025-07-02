@@ -1,3 +1,5 @@
+#[cfg(feature = "v2_runtime")]
+use crate::runtime::v2::fetch::http::Response;
 use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
@@ -6,6 +8,9 @@ use crate::{
 use bincode::{Decode, Encode};
 use derive_more::{Deref, Display, From};
 use http::{HeaderMap, Method, Uri};
+
+#[cfg(feature = "v2_runtime")]
+use crate::runtime::v2::oracle::request::RequestId;
 
 use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
 use jstz_crypto::{
@@ -103,6 +108,13 @@ impl Operation {
                 )
                 .as_bytes(),
             ),
+            #[cfg(feature = "v2_runtime")]
+            Content::OracleResponse(OracleResponse {
+                request_id,
+                response,
+            }) => Blake2b::from(
+                format!("{}{}{}{:?}", public_key, nonce, request_id, response).as_bytes(),
+            ),
         }
     }
 }
@@ -179,6 +191,18 @@ pub struct RevealLargePayload {
     pub original_op_hash: OperationHash,
 }
 
+#[cfg(feature = "v2_runtime")]
+#[derive(Debug, PartialEq, Eq, Clone, ToSchema, Serialize, Deserialize)]
+#[schema(description = "Response to an OracleRequest sent by the enshrined Oracle node")]
+#[serde(rename_all = "camelCase")]
+pub struct OracleResponse {
+    /// The request id of the OracleRequest that is being responded to
+    pub request_id: RequestId,
+    /// The response to the OracleRequest
+    #[schema(value_type = String)]
+    pub response: Response,
+}
+
 #[derive(
     Debug, From, Serialize, Deserialize, PartialEq, Eq, Clone, ToSchema, Encode, Decode,
 )]
@@ -190,6 +214,9 @@ pub enum Content {
     RunFunction(#[bincode(with_serde)] RunFunction),
     #[schema(title = "RevealLargePayload")]
     RevealLargePayload(#[bincode(with_serde)] RevealLargePayload),
+    #[cfg(feature = "v2_runtime")]
+    #[schema(title = "OracleResponse")]
+    OracleResponse(#[bincode(with_serde)] OracleResponse),
 }
 
 impl Content {
@@ -581,5 +608,52 @@ mod test {
         let binary = reveal_large_payload_operation.encode().unwrap();
         let bin_decoded = Content::decode(binary.as_slice()).unwrap();
         assert_eq!(reveal_large_payload_operation, bin_decoded);
+    }
+
+    #[cfg(feature = "v2_runtime")]
+    #[test]
+    fn test_oracle_response_signed_operation_json_round_trip() {
+        use http::HeaderValue;
+        use jstz_crypto::secret_key::SecretKey;
+
+        use crate::runtime::v2::fetch::http::{convert_header_map, Response};
+
+        use super::OracleResponse;
+        let mut header_map = HeaderMap::new();
+        header_map.append("test1", HeaderValue::from_str("value1").unwrap());
+        header_map.append("test2", HeaderValue::from_str("value2").unwrap());
+        header_map.append("test2", HeaderValue::from_str("value3").unwrap());
+
+        let headers = convert_header_map(header_map);
+        let op = Operation {
+            public_key: PublicKey::from_base58(
+                "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
+            )
+            .unwrap(),
+            nonce: 21943045950.into(),
+            content: Content::OracleResponse(OracleResponse {
+                request_id: 284958,
+                response: Response {
+                    status: 404,
+                    status_text: "Not Found".into(),
+                    headers: headers,
+                    body: vec![].into(),
+                },
+            }),
+        };
+        let signature = SecretKey::from_base58(
+            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
+        )
+        .unwrap()
+        .sign(op.hash())
+        .unwrap();
+        let signed_op = SignedOperation {
+            signature,
+            inner: op,
+        };
+        let json = serde_json::to_vec(&signed_op).unwrap();
+        let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
+
+        assert_eq!(signed_op, decoded)
     }
 }

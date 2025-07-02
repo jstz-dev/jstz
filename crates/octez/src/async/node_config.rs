@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_with::DeserializeFromStr;
 use std::{
     fmt::{self, Display, Formatter},
-    path::PathBuf,
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
@@ -79,6 +79,8 @@ pub struct OctezNodeRunOptions {
     network: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     history_mode: Option<OctezNodeHistoryMode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    sandbox_config_path: Option<PathBuf>,
 }
 
 impl Display for OctezNodeRunOptions {
@@ -92,6 +94,9 @@ impl Display for OctezNodeRunOptions {
         if let Some(v) = &self.history_mode {
             s.push(format!("--history-mode {}", v));
         }
+        if let Some(v) = &self.sandbox_config_path {
+            s.push(format!("--sandbox {}", v.to_string_lossy()));
+        }
         let line = s.join(" ");
         write!(f, "{}", line)
     }
@@ -103,6 +108,7 @@ impl Default for OctezNodeRunOptions {
             network: DEFAULT_NETWORK.to_owned(),
             synchronisation_threshold: 0,
             history_mode: None,
+            sandbox_config_path: None,
         }
     }
 }
@@ -110,6 +116,10 @@ impl Default for OctezNodeRunOptions {
 impl OctezNodeRunOptions {
     pub fn synchronisation_threshold(&self) -> u8 {
         self.synchronisation_threshold
+    }
+
+    pub fn sandbox_config_path(&self) -> Option<&PathBuf> {
+        self.sandbox_config_path.as_ref()
     }
 
     pub fn network(&self) -> &str {
@@ -126,6 +136,7 @@ pub struct OctezNodeRunOptionsBuilder {
     synchronisation_threshold: Option<u8>,
     network: Option<String>,
     history_mode: Option<OctezNodeHistoryMode>,
+    sandbox_config_path: Option<PathBuf>,
 }
 
 impl OctezNodeRunOptionsBuilder {
@@ -150,6 +161,11 @@ impl OctezNodeRunOptionsBuilder {
         self
     }
 
+    pub fn set_sandbox_config_path(&mut self, path: &Path) -> &mut Self {
+        self.sandbox_config_path.replace(path.to_owned());
+        self
+    }
+
     pub fn history_mode(&self) -> Option<&OctezNodeHistoryMode> {
         self.history_mode.as_ref()
     }
@@ -162,6 +178,7 @@ impl OctezNodeRunOptionsBuilder {
                 .unwrap_or_default(),
             network: self.network.take().unwrap_or(DEFAULT_NETWORK.to_owned()),
             history_mode: self.history_mode.take(),
+            sandbox_config_path: self.sandbox_config_path.take(),
         }
     }
 }
@@ -392,6 +409,7 @@ mod tests {
         assert!(run_options.history_mode.is_none());
         assert_eq!(run_options.network, "sandbox");
         assert_eq!(run_options.synchronisation_threshold, 0);
+        assert!(run_options.sandbox_config_path.is_none());
     }
 
     #[test]
@@ -400,6 +418,7 @@ mod tests {
         assert!(run_options.history_mode.is_none());
         assert_eq!(run_options.network, "sandbox");
         assert_eq!(run_options.synchronisation_threshold, 0);
+        assert!(run_options.sandbox_config_path.is_none());
     }
 
     #[test]
@@ -408,6 +427,7 @@ mod tests {
             synchronisation_threshold: 1,
             network: "foo".to_owned(),
             history_mode: Some(OctezNodeHistoryMode::Full(2)),
+            sandbox_config_path: Some(PathBuf::from_str("/tmp/config").unwrap()),
         };
         assert_eq!(
             run_options.history_mode(),
@@ -415,6 +435,10 @@ mod tests {
         );
         assert_eq!(run_options.network(), "foo");
         assert_eq!(run_options.synchronisation_threshold(), 1);
+        assert_eq!(
+            run_options.sandbox_config_path(),
+            Some(&PathBuf::from_str("/tmp/config").unwrap())
+        );
     }
 
     #[test]
@@ -424,11 +448,12 @@ mod tests {
             .set_network("foo")
             .set_history_mode(OctezNodeHistoryMode::Full(5))
             .set_synchronisation_threshold(3)
+            .set_sandbox_config_path(&PathBuf::from_str("/tmp/config").unwrap())
             .build()
             .to_string();
         assert_eq!(
             run_options,
-            "--synchronisation-threshold 3 --network foo --history-mode full:5"
+            "--synchronisation-threshold 3 --network foo --history-mode full:5 --sandbox /tmp/config"
         );
 
         // No history mode
@@ -448,12 +473,13 @@ mod tests {
                 .set_network("foo")
                 .set_history_mode(OctezNodeHistoryMode::Full(5))
                 .set_synchronisation_threshold(3)
+                .set_sandbox_config_path(&PathBuf::from_str("/tmp/config").unwrap())
                 .build(),
         )
         .unwrap();
         assert_eq!(
             run_options,
-            serde_json::json!({"network": "foo", "history_mode": "full:5", "synchronisation_threshold": 3})
+            serde_json::json!({"network": "foo", "history_mode": "full:5", "synchronisation_threshold": 3, "sandbox_config_path": "/tmp/config"})
         );
 
         // No history mode
