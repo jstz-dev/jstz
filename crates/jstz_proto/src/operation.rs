@@ -609,4 +609,51 @@ mod test {
         let bin_decoded = Content::decode(binary.as_slice()).unwrap();
         assert_eq!(reveal_large_payload_operation, bin_decoded);
     }
+
+    #[cfg(feature = "v2_runtime")]
+    #[test]
+    fn test_oracle_response_signed_operation_json_round_trip() {
+        use http::HeaderValue;
+        use jstz_crypto::secret_key::SecretKey;
+
+        use crate::runtime::v2::fetch::http::{convert_header_map, Response};
+
+        use super::OracleResponse;
+        let mut header_map = HeaderMap::new();
+        header_map.append("test1", HeaderValue::from_str("value1").unwrap());
+        header_map.append("test2", HeaderValue::from_str("value2").unwrap());
+        header_map.append("test2", HeaderValue::from_str("value3").unwrap());
+
+        let headers = convert_header_map(header_map);
+        let op = Operation {
+            public_key: PublicKey::from_base58(
+                "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
+            )
+            .unwrap(),
+            nonce: 21943045950.into(),
+            content: Content::OracleResponse(OracleResponse {
+                request_id: 284958,
+                response: Response {
+                    status: 404,
+                    status_text: "Not Found".into(),
+                    headers: headers,
+                    body: vec![].into(),
+                },
+            }),
+        };
+        let signature = SecretKey::from_base58(
+            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
+        )
+        .unwrap()
+        .sign(op.hash())
+        .unwrap();
+        let signed_op = SignedOperation {
+            signature,
+            inner: op,
+        };
+        let json = serde_json::to_vec(&signed_op).unwrap();
+        let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
+
+        assert_eq!(signed_op, decoded)
+    }
 }
