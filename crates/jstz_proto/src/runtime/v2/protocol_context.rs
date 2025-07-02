@@ -47,7 +47,7 @@ impl ProtocolContext {
         // Make configurable
         // Hardcode oracle value pk to injector pk for now
         let oracle_key = if cfg!(test) {
-            // Hard code in tests. Remove later by always Initializing store
+            // TODO: Hard code in tests. Remove later by always Initializing store
             // with an injector
             PublicKey::from_base58(
                 "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",

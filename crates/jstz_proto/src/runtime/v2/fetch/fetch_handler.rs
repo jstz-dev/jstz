@@ -208,7 +208,7 @@ pub async fn process_and_dispatch_request(
                 commit_or_rollback(&mut host, &mut tx, is_successful && result.is_ok());
             result.into()
         }
-        Ok(SupportedScheme::Http) => {
+        Ok(SupportedScheme::Http) | Ok(SupportedScheme::Https) => {
             match dispatch_oracle(
                 &mut host,
                 &mut tx,
