@@ -279,7 +279,7 @@ fn dispatch_oracle(
                 status: 408,
                 status_text: "Request Timeout".to_string(),
                 headers: Vec::with_capacity(0),
-                body: Body::zero_capacity(),
+                body: "Oracle request timed out".into(),
             },
         }
     }
