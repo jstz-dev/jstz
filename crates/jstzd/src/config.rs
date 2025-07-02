@@ -42,16 +42,6 @@ pub(crate) const ROLLUP_OPERATOR_ACCOUNT_ALIAS: &str = "rollup_operator";
 pub(crate) const ACTIVATOR_ACCOUNT_ALIAS: &str = "activator";
 pub(crate) const INJECTOR_ACCOUNT_ALIAS: &str = "injector";
 
-#[cfg(feature = "v2_runtime")]
-pub fn oracle_key_pair() -> Option<KeyPair> {
-    Some(KeyPair(
-        PublicKey::from_base58("edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi")
-            .unwrap(),
-        SecretKey::from_base58("edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM")
-            .unwrap(),
-    ))
-}
-
 #[derive(Embed)]
 #[folder = "$CARGO_MANIFEST_DIR/resources/bootstrap_contract/"]
 pub struct BootstrapContractFile;
@@ -197,7 +187,7 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
         &octez_rollup_config.rpc_endpoint,
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
-        injector,
+        injector.clone(),
         config.jstz_node.mode,
         config.jstz_node.capacity,
         &config.jstz_node.debug_log_file.unwrap_or(
@@ -208,7 +198,7 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
                 .context("failed to keep jstz node debug file path")?,
         ),
         #[cfg(feature = "v2_runtime")]
-        oracle_key_pair(),
+        Some(injector),
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
