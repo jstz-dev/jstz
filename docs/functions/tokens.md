@@ -43,7 +43,10 @@ const call_request = new Request(`jstz://${smart_function}/-/noop`, {
 
 As described in [Errors](/functions/errors), any transfers are reverted if a smart function throws an uncaught error.
 
-## Transferring tez in a response
+## Receiving tez and transferring tez in a response
+
+Smart functions automatically accept tez sent to them.
+You can see how many mutez are in a request by checking the `X-JSTZ-AMOUNT` header, which includes the amount as a string.
 
 A smart function can transfer tez in a response by setting the `X-JSTZ-TRANSFER` header in the response.
 For example, this smart function receives tez and returns it in the response:
@@ -64,30 +67,6 @@ const handler = async (request: Request): Promise<Response> => {
     headers: {
       "Content-Type": "text/utf-8",
       "X-JSTZ-TRANSFER": transferred_amount.toString(),
-    },
-  });
-};
-
-export default handler;
-```
-
-## Receiving tez
-
-Smart functions automatically accept tez sent to them.
-You can see how many mutez are in a request by checking the `X-JSTZ-AMOUNT` header, which includes the amount as a string:
-
-```typescript
-const ONE_TEZ = 1000000; // 1 XTZ in mutez
-
-const handler = async (request: Request): Promise<Response> => {
-  const transferred_amount_string = request.headers.get("X-JSTZ-AMOUNT");
-  const transferred_amount = parseInt(transferred_amount_string || "0");
-  console.log(`Received ${transferred_amount} mutez.`);
-
-  return new Response("Thank you!", {
-    headers: {
-      "Content-Type": "text/utf-8",
-      "X-JSTZ-TRANSFER": ONE_TEZ.toString(),
     },
   });
 };
