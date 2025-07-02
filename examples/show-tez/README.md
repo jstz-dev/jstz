@@ -1,7 +1,8 @@
 # Command-line tool
 
 This program is an example of a command-line tool that interacts with Jstz.
-It allows users to call the [get-tez function example](https://github.com/jstz-dev/jstz/blob/main/examples/get-tez/README.md) more comfortably than using Jstz command lines, using a dialog involving sending requests, receiving tez, and querying the key-value store.
+It allows users to call the [get-tez function example](https://github.com/jstz-dev/jstz/blob/main/examples/get-tez/README.md) more comfortably than using the Jstz CLI.
+It provides a dialog that allows you to send requests, receive tez, and query the key-value store.
 
 Follow these steps to use it:
 
