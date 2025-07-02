@@ -129,7 +129,6 @@ fn run_event_loop(
     let local_set = tokio::task::LocalSet::new();
     jstz_proto::runtime::ProtocolContext::init_global(&mut host, 0).unwrap(); // unwrap to propagate error
     local_set.block_on(&tokio_rt, async {
-        let host_rt = Arc::new(tokio::sync::Mutex::new(host));
         loop {
             write_heartbeat(&heartbeat);
 
@@ -145,11 +144,10 @@ fn run_event_loop(
 
             match v {
                 Some(ParsedInboxMessage::JstzMessage(op)) => {
-                    let host_rt_cloned = host_rt.clone();
+                    let mut hrt = host.clone();
                     local_set.spawn_local(async move {
-                        let mut hrt = host_rt_cloned.lock().await;
                         if let Err(e) =
-                            process_message(std::ops::DerefMut::deref_mut(&mut hrt), op)
+                            process_message(&mut hrt, op)
                                 .await
                         {
                             warn!("error processing message: {e:?}");
@@ -159,14 +157,15 @@ fn run_event_loop(
                     tokio::task::yield_now().await;
                 }
                 Some(ParsedInboxMessage::LevelInfo(LevelInfo::Start)) => {
-                    let mut host = host_rt.lock().await;
+                    let mut hrt = host.clone();
                     let ctx = jstz_proto::runtime::PROTOCOL_CONTEXT
                         .get()
                         .expect("Protocol context should be initialized");
                     ctx.increment_level();
                     let oracle_ctx = ctx.oracle();
                     let mut oracle = oracle_ctx.lock();
-                    oracle.gc_timeout_requests(std::ops::DerefMut::deref_mut(&mut host));
+                    oracle.gc_timeout_requests(&mut hrt);
+                    tokio::task::yield_now().await;
                 }
                 _ => tokio::time::sleep(Duration::from_millis(100)).await,
             };
