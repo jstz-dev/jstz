@@ -199,6 +199,7 @@ impl<'s> ToV8<'s> for Body {
 pub enum SupportedScheme {
     Jstz,
     Http,
+    Https,
 }
 
 impl TryFrom<&Url> for SupportedScheme {
@@ -207,7 +208,8 @@ impl TryFrom<&Url> for SupportedScheme {
     fn try_from(value: &Url) -> Result<Self> {
         match value.scheme() {
             "jstz" => Ok(Self::Jstz),
-            "http" | "https" => Ok(Self::Http),
+            "http" => Ok(Self::Http),
+            "https" => Ok(Self::Https),
             scheme => Err(FetchError::UnsupportedScheme(scheme.to_string())),
         }
     }
