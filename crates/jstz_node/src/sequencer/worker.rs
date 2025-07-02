@@ -67,7 +67,7 @@ pub fn spawn(
         thread_kill_sig,
         heartbeat: heartbeat.clone(),
         inner: Some(spawn_thread(move || {
-            #[cfg(feature = "v2_runtime")]
+            #[cfg(feature = "oracle")]
             run_event_loop(
                 tokio_rt,
                 host_rt,
@@ -78,7 +78,7 @@ pub fn spawn(
                 on_exit,
             );
 
-            #[cfg(not(feature = "v2_runtime"))]
+            #[cfg(not(feature = "oracle"))]
             tokio_rt.block_on(async {
                 loop {
                     write_heartbeat(&heartbeat);
