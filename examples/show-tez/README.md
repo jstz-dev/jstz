@@ -1,13 +1,13 @@
 # Command-line tool
 
 This program is an example of a command-line tool that interacts with Jstz.
-It allows users to call the "get-tez" example from the command line, including sending requests, receiving tez, and querying the key-value store.
+It allows users to call the [get-tez function example](https://github.com/jstz-dev/jstz/blob/main/examples/get-tez/README.md) more comfortably than using Jstz command lines, using a dialog involving sending requests, receiving tez, and querying the key-value store.
 
 Follow these steps to use it:
 
 1. Deploy the "get-tez" example as described in its [`README.md`](https://github.com/jstz-dev/jstz/blob/main/examples/get-tez/README.md) file, including bridging some tez to it.
 
-2. From the folder with this README.md file, run `npm i` and `npm run build` to build the command-line tool.
+2. Back in the folder of the "show-tez" example (containing the current README.md file), run `npm i` and `npm run build` to build the command-line tool.
 
 3. Make sure that you are logged in to your Jstz account by running `jstz whoami`.
    If you are not logged in, run `jstz login <MY_ACCOUNT>` where `<MY_ACCOUNT` is the local alias of your account.
