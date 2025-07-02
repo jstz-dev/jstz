@@ -192,9 +192,15 @@ pub async fn run(
     let _oracle_node = if let Some(oracle_key_pair) = oracle_key_pair {
         let KeyPair(public_key, secret_key) = oracle_key_pair;
         let node_endpoint = format!("http://{}:{}", addr, port);
+        let path = match mode {
+            // If sequencer, then listen to its debug path
+            RunMode::Sequencer => debug_log_path,
+            // otherwise, listen directly to the kernel debug log
+            RunMode::Default => kernel_log_path.clone(),
+        };
         Some(
             jstz_oracle_node::node::OracleNode::spawn(
-                kernel_log_path.clone(),
+                path,
                 public_key,
                 secret_key,
                 node_endpoint,
