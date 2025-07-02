@@ -3,19 +3,19 @@ title: Installing Jstz
 sidebar_label: Installation
 ---
 
-## Download and Install
-
-Jstz has several [components](/architecture/overview#components), but the primary tool that you need to develop on Jstz is the [Jstz CLI](/cli), which is available as the package [`@jstz-dev/cli`](https://www.npmjs.com/package/@jstz-dev/cli).
+Jstz has several [components](/architecture/overview#components), but the primary tool that you need to develop on Jstz is the [Jstz CLI](/cli), which is available as the NPM package [`@jstz-dev/cli`](https://www.npmjs.com/package/@jstz-dev/cli).
 It allows you to start the Jstz sandbox, deploy smart functions to it, and interact with them.
+
+:::note
+
+Jstz is available only on Unix-based systems.
+
+:::
 
 Follow these instructions to install the Jstz CLI:
 
-:::danger
-⚠️ `jstz` is only available on Unix-based systems. ⚠️
-:::
-
-Ensure `docker` is installed on your system. If not, please follow [this guide](https://docs.docker.com/get-docker/).
-Download and install `jstz` via NPM with this command:
+Ensure that [Docker](https://docs.docker.com/get-docker/) is installed on your system.
+Then, download and install `jstz` via NPM with this command:
 
 ```sh
 npm i -g @jstz-dev/cli
@@ -28,108 +28,89 @@ yarn global add @jstz-dev/cli
 ```
 
 Congratulations! 🎉 `jstz` is now installed and configured on your system.
-You are now ready to [write your first smart function](./quick_start.md) 🚀.
+You are now ready to [write your first smart function](/quick_start) 🚀.
 
-## Building from Source
+## Building from source
 
-Below are instruction on how to build `jstz` from source. Additionally, this section details how to install all the prerequisites needed to build `jstz` from sources.
+Follow these steps to build Jstz from its source code:
 
-### Cloning the Repository
+1. Install the Nix package management and system configuration tool.
+   See https://nixos.org/download.html.
 
-```sh
-git clone https://github.com/jstz-dev/jstz.git
-```
+1. Ensure that Nix flakes are enabled: https://nixos.wiki/wiki/Flakes#Enable_flakes.
 
-### Prerequisites 📋
+1. Clone the repository:
 
-:::tip
-Both `jstz` and Octez are packaged with Nix, a package manager and system configuration tool that makes building from sources easy! See the [Nix docs](https://nixos.org/download.html) for instructions for your system. Additionally, ensure [Nix flakes are enabled](https://nixos.wiki/wiki/Flakes#Enable_flakes).
-:::
+   ```sh
+   git clone https://github.com/jstz-dev/jstz.git
+   ```
 
-#### LLVM 🛠️
+1. Install LLVM:
 
-MacOS:
+   MacOS:
 
-```sh
-brew install llvm
-export CC="$(brew --prefix llvm)/bin/clang"
-```
+   ```sh
+   brew install llvm
+   export CC="$(brew --prefix llvm)/bin/clang"
+   ```
 
-Ubuntu:
+   Ubuntu:
 
-```sh
-sudo apt-get install clang-11
-export CC=clang-11
-```
+   ```sh
+   sudo apt-get install clang-11
+   export CC=clang-11
+   ```
 
-Fedora:
+   Fedora:
 
-```sh
-sudo dnf install clang
-export CC=clang
-```
+   ```sh
+   sudo dnf install clang
+   export CC=clang
+   ```
 
-Linux:
+   Linux:
 
-```sh Arch
-pacman -S clang
-export CC=clang
-```
+   ```sh Arch
+   pacman -S clang
+   export CC=clang
+   ```
 
-Nix:
+   Nix:
 
-```sh
-nix-env -iA nixpkgs.llvm
-```
+   ```sh
+   nix-env -iA nixpkgs.llvm
+   ```
 
-#### Rust 🦀
+1. From the `jstz` directory, install the specific version of Rust that Jstz requires, which is specified in the `rust-toolchain` file:
 
-> `jstz` requires a specific release of Rust. The version of Rust required is specified in the `rust-toolchain` file.
+   ```sh
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
 
-Install the [Rust](https://rustup.rs/) toolchain:
+1. Download the following Octez binaries to the `jstz` directory:
 
-```sh
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
+   - `octez-client`
+   - `octez-node`
+   - `octez-smart-rollup-node`
 
-#### Octez 🐙
+   You can get the Octez suite of tools from the Octez release page here: https://gitlab.com/tezos/tezos/-/releases.
 
-:::tip
+1. If you are using Nix, run `nix develop` to enter a shell with all build dependencies or use `direnv` to automatically enter the shell when you `cd` into the `jstz` directory.
 
-The Nix shell ships with Octez binaries for convenience but it does take a little while to build for the very first time.
-Skip ahead to [Building](#building-%EF%B8%8F)
+1. Build the Jstz kernel by running this command:
 
-:::
-The jstz sandbox uses a custom distribution of Octez found [here](https://gitlab.com/tezos/tezos/-/tree/jstz@octez-dev). See the [Octez docs](https://tezos.gitlab.io/introduction/howtoget.html?highlight=building#compiling-with-make) for instructions on building Octez from source.
+   ```sh
+   make build
+   ```
 
-Once Octez has been built, copy the following binaries to `jstz`:
+   You can locate the resulting built artifact at `/target/wasm32-unknown-unknown/release/jstz_kernel.wasm`.
 
-- `octez-client`
-- `octez-node`
-- `octez-smart-rollup-node`
+1. Build and start the sandbox by running these commands:
 
-### Building 👷‍♂️
+   ```sh
+   make build-cli
+   PATH=.:$PATH cargo run --bin jstz -- sandbox start
+   ```
 
-:::tip
-Using Nix, simply run `nix develop` to enter a shell with all build dependencies or use `direnv` to automatically enter the shell when you `cd` into the `jstz` directory.
-:::
-
-The kernel can be built with:
-
-```sh
-make build
-```
-
-You can locate the resulting build artifact at `/target/wasm32-unknown-unknown/release/jstz_kernel.wasm`.
-
-### Running the Sandbox 🏝️
-
-You can start the sandbox with:
-
-```sh
-make build-cli
-PATH=.:$PATH cargo run --bin jstz -- sandbox start
-```
-
-This will initially run `octez-node` and initialize `octez-client`. Once the client is initialized, the `jstz_kernel` and `jstz_bridge`
-is originated, a `octez-smart-rollup-node` and `jstz-node` is spun up.
+This command runs `octez-node` and initializes `octez-client`.
+When the client is initialized, it originates the `jstz_kernel` and `jstz_bridge` components and starts a `octez-smart-rollup-node` and `jstz-node`.
