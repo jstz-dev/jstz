@@ -88,7 +88,6 @@ module.exports = async function createConfigAsync() {
               "installation.md",
               "quick_start.md",
               "sandbox.md",
-              "transfer.md",
               "examples.md",
               "alpha-tester.md",
             ],
