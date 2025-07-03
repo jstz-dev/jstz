@@ -54,3 +54,5 @@ export default handler;
 ```
 
 Jstz automatically sends this request to the oracle and returns a response within 20 seconds or rejects the promise that the `fetch` API returns.
+
+For an example, see the [`oracle_basic`](https://github.com/jstz-dev/jstz/blob/main/examples/oracle_basic.js) example.
