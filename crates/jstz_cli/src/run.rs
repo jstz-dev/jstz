@@ -305,7 +305,7 @@ fn validate_scheme(url: &Uri) -> Result<()> {
     match url.scheme_str() {
         Some("jstz") => Ok(()),
         Some(invalid_scheme) => bail!(format!(
-            "Unsupport scheme '{invalid_scheme}'. {supported_scheme_msg}"
+            "Unsupported scheme '{invalid_scheme}'. {supported_scheme_msg}"
         )),
         None => bail!(format!("Missing scheme. {supported_scheme_msg}")),
     }

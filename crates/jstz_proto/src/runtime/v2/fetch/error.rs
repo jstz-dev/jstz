@@ -17,7 +17,7 @@ pub enum FetchError {
     #[error("Invalid Header type")]
     InvalidHeaderType,
     #[class(type)]
-    #[error("Unsupport scheme '{0}'")]
+    #[error("Unsupported scheme '{0}'")]
     UnsupportedScheme(String),
     #[class(uri)]
     #[error(transparent)]
