@@ -59,13 +59,13 @@ async fn get_account(
     State(AppState {
         mode,
         rollup_client,
-        runtime_db,
+        sequencer_db,
         ..
     }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Account>> {
     let key = format!("/jstz_account/{}", address);
-    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let store = StoreWrapper::new(mode, rollup_client, sequencer_db);
     let value = store.get_value(key).await?;
     let account = match value {
         Some(value) => deserialize_account(value.as_slice())?,
@@ -104,12 +104,12 @@ async fn get_nonce(
     State(AppState {
         mode,
         rollup_client,
-        runtime_db,
+        sequencer_db,
         ..
     }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
-    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let store = StoreWrapper::new(mode, rollup_client, sequencer_db);
     let account_nonce = get_account_nonce(store, &address).await?;
     match account_nonce {
         Some(nonce) => Ok(Json(nonce)),
@@ -133,13 +133,13 @@ async fn get_code(
     State(AppState {
         mode,
         rollup_client,
-        runtime_db,
+        sequencer_db,
         ..
     }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<ParsedCode>> {
     let key = construct_accounts_key(&address);
-    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let store = StoreWrapper::new(mode, rollup_client, sequencer_db);
     let value = store.get_value(key).await?;
     let account_code = match value {
         Some(value) => {
@@ -174,13 +174,13 @@ async fn get_balance(
     State(AppState {
         mode,
         rollup_client,
-        runtime_db,
+        sequencer_db,
         ..
     }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<u64>> {
     let key = construct_accounts_key(&address);
-    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let store = StoreWrapper::new(mode, rollup_client, sequencer_db);
     let value = store.get_value(key).await?;
     let account_balance = match value {
         Some(value) => match deserialize_account(value.as_slice())? {
@@ -211,14 +211,14 @@ async fn get_kv_value(
     State(AppState {
         mode,
         rollup_client,
-        runtime_db,
+        sequencer_db,
         ..
     }): State<AppState>,
     Path(address): Path<String>,
     Query(KvQuery { key }): Query<KvQuery>,
 ) -> ServiceResult<Json<KvValue>> {
     let key = construct_storage_key(&address, &key);
-    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let store = StoreWrapper::new(mode, rollup_client, sequencer_db);
     let value = store.get_value(key).await?;
     let kv_value = match value {
         Some(value) => KvValue::decode(value.as_slice())
@@ -247,7 +247,7 @@ async fn get_kv_subkeys(
     State(AppState {
         mode,
         rollup_client,
-        runtime_db,
+        sequencer_db,
         ..
     }): State<AppState>,
     Path(address): Path<String>,
@@ -257,7 +257,7 @@ async fn get_kv_subkeys(
     let value = match mode {
         RunMode::Default => rollup_client.get_subkeys(&key).await?,
         RunMode::Sequencer => {
-            tokio::task::spawn_blocking(move || runtime_db.get_subkeys(&key))
+            tokio::task::spawn_blocking(move || sequencer_db.get_subkeys(&key))
                 .await
                 .context("failed to wait for db read task")?
                 .context("failed to read subkeys from db")?
@@ -336,7 +336,7 @@ mod tests {
         )
         .await;
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_account/{addr}"),
                 &hex::encode(expected.encode().unwrap()),
@@ -461,7 +461,7 @@ mod tests {
         )
         .await;
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_account/{addr}"),
                 &hex::encode(account.encode().unwrap()),
@@ -512,14 +512,14 @@ mod tests {
         )
         .await;
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_account/{smart_function_hash}"),
                 &hex::encode(smart_function_account.encode().unwrap()),
             )
             .unwrap();
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_account/{user_account_hash}"),
                 &hex::encode(user_account.encode().unwrap()),
@@ -585,14 +585,14 @@ mod tests {
         )
         .await;
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_account/{smart_function_hash}"),
                 &hex::encode(smart_function_account.encode().unwrap()),
             )
             .unwrap();
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_account/{user_account_hash}"),
                 &hex::encode(user_account.encode().unwrap()),
@@ -647,14 +647,14 @@ mod tests {
         )
         .await;
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_kv/{address}/foo"),
                 &hex::encode(KvValue(serde_json::json!("foo!")).encode().unwrap()),
             )
             .unwrap();
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_kv/{address}/foo/bar"),
                 &hex::encode(
@@ -665,14 +665,14 @@ mod tests {
             )
             .unwrap();
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_kv/{address}/bad_value"),
                 &hex::encode([6, 0, 0, 0, 0, 0, 0, 0, 34]),
             )
             .unwrap();
         state
-            .runtime_db
+            .sequencer_db
             .write(
                 &format!("/jstz_kv/{address}"),
                 &hex::encode(KvValue(serde_json::json!("root!")).encode().unwrap()),
@@ -757,7 +757,7 @@ mod tests {
         .await;
         for key in ["a", "a/b1", "a/b1/c", "a/b2", "a/b3", "b", "c/d"] {
             state
-                .runtime_db
+                .sequencer_db
                 .write(
                     &format!("/jstz_kv/{address}/{key}"),
                     &hex::encode(KvValue(serde_json::json!("!")).encode().unwrap()),
