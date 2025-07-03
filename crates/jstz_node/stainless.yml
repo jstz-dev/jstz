@@ -4,7 +4,7 @@ organization:
   # Name of your organization or company, used to determine the name of the client
   # and headings.
   name: jstz # Strangely, the organisation name is used as the name of the root class
-  docs: https://jstz-dev.github.io/jstz/
+  docs: https://jstz.tezos.com/
   contact: contact@trili.tech
 
 # `targets` define the output targets and their customization options, such as

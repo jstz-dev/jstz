@@ -187,7 +187,7 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
         &octez_rollup_config.rpc_endpoint,
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
-        injector,
+        injector.clone(),
         config.jstz_node.mode,
         config.jstz_node.capacity,
         &config.jstz_node.debug_log_file.unwrap_or(
@@ -198,7 +198,7 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
                 .context("failed to keep jstz node debug file path")?,
         ),
         #[cfg(feature = "v2_runtime")]
-        None,
+        Some(injector),
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);

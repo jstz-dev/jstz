@@ -31,6 +31,11 @@ The smart function sends 1 tez to any account that asks, as long as it has enoug
 You can use this example to see how tez works on Jstz and how smart functions work with tez.
 Because it keeps track of the messages it receives and the accounts that it has sent tez to, it's also an example of how smart functions [store data](/functions/data_storage).
 
+### Third-party libraries
+
+The [`zod`](https://github.com/jstz-dev/jstz/tree/main/examples/zod) example shows how you can use third-party JavaScript libraries in Jstz smart functions.
+It uses [itty-router](https://github.com/kwhitley/itty-router) to route requests and [zod](https://github.com/colinhacks/zod) to validate user input.
+
 ### FA2 token
 
 The [`fa2`](https://github.com/jstz-dev/jstz/tree/main/examples/fa2) smart function is an implementation of the Tezos FA2 standard for tokens.
@@ -39,10 +44,6 @@ The smart function allows you to create FA2 tokens, transfer them between accoun
 In this way, you can create tokens to represent anything that you want them to represent.
 
 For more information about FA2 tokens, see [FA2 tokens](https://docs.tezos.com/architecture/tokens/FA2) on docs.tezos.com.
-
-### URL shortener
-
-The [`url_shortener`](https://github.com/jstz-dev/jstz/tree/main/examples/url_shortener) smart function stores long URLs with a shortcode and returns the full URL when you send the shortcode.
 
 ### Other examples
 
@@ -63,20 +64,6 @@ For a walkthrough of setting up and running this application, see the [Quick sta
 <div style={{maxWidth:400}}>
 <Image img={require('./static/img/quick_start_web_app.png')} alt="The web application showing the response from a successful call to the sample smart function" width="100"/>
 </div>
-
-### Simple web application
-
-The example [`call-from-web`](https://github.com/jstz-dev/jstz/tree/main/examples/call-from-web) is a simple web application that shows how you can call a Jstz smart function from a web application.
-It calls the [Counter](#counter) smart function, but you could change it to call other smart functions.
-
-:::warning
-
-This application hard-codes the private key of an account to use to sign transactions to the smart function.
-That makes this example appropriate only for development and testing when you don't need to simulate real user interaction.
-Do not encode private keys like this.
-For an example that uses a wallet, see the [Web application with wallet integration](#web-application-with-wallet-integration).
-
-:::
 
 ## Other examples
 

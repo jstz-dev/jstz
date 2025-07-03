@@ -103,33 +103,53 @@ async fn get_oracle_response(
     }
 
     // Execute
-    let response = builder.send().await?;
-    let status = response.status().as_u16();
-    let status_text = response
-        .status()
-        .canonical_reason()
-        .unwrap_or("Unknown")
-        .to_string();
+    let send_result = builder.send().await;
+    match send_result {
+        Ok(response) => {
+            let status = response.status().as_u16();
+            let status_text = response
+                .status()
+                .canonical_reason()
+                .unwrap_or("Unknown")
+                .to_string();
 
-    // TODO: Update reqwest and simplify this
-    let headers = convert_header_map(http::HeaderMap::from_iter(
-        response.headers().iter().map(|(name, value)| {
-            (
-                http::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
-                http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
-            )
-        }),
-    ));
+            // TODO: Update reqwest and simplify this
+            let headers = convert_header_map(http::HeaderMap::from_iter(
+                response.headers().iter().map(|(name, value)| {
+                    (
+                        http::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
+                        http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+                    )
+                }),
+            ));
 
-    let body_bytes = response.bytes().await?;
-    let body = Body::Vector(body_bytes.to_vec());
+            let body_bytes = response.bytes().await;
+            if let Err(e) = body_bytes {
+                return Ok(bad_gateway_error_response(e.to_string().as_bytes()));
+            }
+            let body = Body::Vector(body_bytes.unwrap().to_vec());
+            Ok(Response {
+                status,
+                status_text,
+                headers,
+                body,
+            })
+        }
+        Err(e) => Ok(bad_gateway_error_response(e.to_string().as_bytes())),
+    }
+}
 
-    Ok(Response {
-        status,
-        status_text,
-        headers,
-        body,
-    })
+// MSDN reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Status/502
+// The HTTP 502 Bad Gateway server error response status code
+// indicates that a server was acting as a gateway or proxy
+// and that it received an invalid response from the upstream server.
+fn bad_gateway_error_response(body: &[u8]) -> Response {
+    Response {
+        status: 502,
+        status_text: "Bad Gateway".into(),
+        headers: vec![],
+        body: body.to_vec().into(),
+    }
 }
 
 async fn inject_oracle_response(
@@ -161,7 +181,6 @@ async fn inject_oracle_response(
     let op_hash = op.hash();
 
     let signed_op = SignedOperation::new(signing_key.sign(op_hash.clone())?, op);
-
     // Post operation to node
     jstz_client.post_operation(&signed_op).await?;
     let receipt = jstz_client.wait_for_operation_receipt(&op_hash).await?;
@@ -240,6 +259,18 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn handles_gateway_proxy_errors() -> Result<()> {
+        let url = Url::parse(&format!("{}/", "http://abc123"))?;
+        let req = oracle_req("GET", url, None);
+
+        let response = super::get_oracle_response(&CLIENT, &req).await?;
+        assert_eq!(response.status, 502);
+        assert_eq!(response.status_text, "Bad Gateway");
+        // We do not compare body because the actual error in CI and local differ
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn echoes_post_body_via_httpbin() -> Result<()> {
         let mut server = mockito::Server::new_async().await;
 
@@ -276,7 +307,7 @@ mod tests {
         let mock_nonce = server
             .mock(
                 "GET",
-                "/accounts/tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nonce",
+                "/accounts/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/nonce",
             )
             .with_status(200)
             .with_header("content-type", "application/json")
@@ -288,7 +319,7 @@ mod tests {
 
         // Mock the receipt endpoint
         let mock_receipt = server
-            .mock("GET", "/operations/e5f9460ca912defddcffab260339e25eeb1525725385ba1b9d9dd0b2c9dbdbb4/receipt")
+            .mock("GET", "/operations/9b14cf6a10e07c8f4fb436a0e137e230a8fb5a2ea736316c9d428fa56d9c4414/receipt")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -307,10 +338,10 @@ mod tests {
 
         // Create test data
         let public_key = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )?;
         let secret_key = SecretKey::from_base58(
-            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
         )?;
 
         let node_config = String::from(server.url().as_str());
@@ -357,7 +388,7 @@ mod tests {
         let mock_nonce = server
             .mock(
                 "GET",
-                "/accounts/tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nonce",
+                "/accounts/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/nonce",
             )
             .with_status(200)
             .with_header("content-type", "application/json")
@@ -369,7 +400,7 @@ mod tests {
 
         // Mock the receipt endpoint with a failed result
         let mock_receipt = server
-            .mock("GET", "/operations/e5f9460ca912defddcffab260339e25eeb1525725385ba1b9d9dd0b2c9dbdbb4/receipt")
+            .mock("GET", "/operations/9b14cf6a10e07c8f4fb436a0e137e230a8fb5a2ea736316c9d428fa56d9c4414/receipt")
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -385,10 +416,10 @@ mod tests {
 
         // Create test data
         let public_key = PublicKey::from_base58(
-            "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )?;
         let secret_key = SecretKey::from_base58(
-            "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
         )?;
         let node_config = String::from(server.url().as_str());
 
@@ -409,7 +440,6 @@ mod tests {
             response,
         )
         .await;
-
         // Verify the result is an error
         assert!(result.is_err(), "Expected error for failed receipt");
         assert!(result

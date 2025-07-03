@@ -1,11 +1,12 @@
 use std::{
-    cell::RefCell,
     fmt::Debug,
     fs::{File, OpenOptions},
     io::Write,
     path::PathBuf,
+    sync::Arc,
 };
 
+use parking_lot::Mutex;
 use r2d2::PooledConnection;
 use r2d2_sqlite::SqliteConnectionManager;
 
@@ -19,10 +20,11 @@ use tezos_smart_rollup::{
 
 use super::db::{exec_delete, exec_delete_glob, exec_read, exec_write, Db};
 
+#[derive(Clone)]
 pub struct Host {
     db: Db,
     preimage_dir: PathBuf,
-    log_file: Option<RefCell<File>>,
+    log_file: Option<Arc<Mutex<File>>>,
 }
 
 impl Host {
@@ -44,7 +46,7 @@ impl Host {
             .create(true)
             .append(true)
             .open(log_path)?;
-        self.log_file.replace(RefCell::new(log_file));
+        self.log_file.replace(Arc::new(Mutex::new(log_file)));
         Ok(self)
     }
 
@@ -71,15 +73,15 @@ impl Runtime for Host {
 
     fn write_debug(&self, msg: &str) {
         match &self.log_file {
-            Some(c) => match c.try_borrow_mut() {
-                Ok(mut f) => {
+            Some(c) => match c.try_lock() {
+                Some(mut f) => {
                     if let Err(e) = f.write_all(msg.as_bytes()) {
                         error!("failed to write debug log: {e}");
                     };
                     #[cfg(test)]
                     f.flush().unwrap();
                 }
-                Err(e) => error!("failed to borrow debug log file: {e}"),
+                None => error!("failed to borrow debug log file: already borrowed"),
             },
             None => debug!("{msg}"),
         }
@@ -414,7 +416,7 @@ mod tests {
         assert_eq!(buf, "foo");
 
         // borrow the file to fail write_debug
-        let _r = host.log_file.as_ref().unwrap().borrow_mut();
+        let _r = host.log_file.as_ref().unwrap().lock();
         host.write_debug("bar");
         assert_eq!(
             LOG_RECORDS.take(),
