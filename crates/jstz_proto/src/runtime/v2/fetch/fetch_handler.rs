@@ -858,7 +858,7 @@ mod test {
         assert_eq!(response.status, 500);
         assert_eq!(response.status_text, "InternalServerError");
         assert_eq!(
-            json!({"class":"TypeError","message":"Unsupport scheme 'tezos'"}),
+            json!({"class":"TypeError","message":"Unsupported scheme 'tezos'"}),
             serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
                 .unwrap()
         );
