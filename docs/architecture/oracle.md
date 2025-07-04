@@ -18,7 +18,7 @@ For information about calling the oracle from a smart function,see [Calling exte
 Jstz provides a built-in, or _enshrined_, oracle to provide off-chain data to smart functions in a deterministic, secure, and soon trust-minimal way.
 You can imagine this oracle as a proxy gateway for network-accessible APIs.
 Smart functions can call the oracle with an ordinary HTTP request and the oracle retrieves the data and returns it to the smart function.
-This process can take up to 20 seconds.
+This process has a 20 second timeout.
 If it fails to get the data, such as if the endpoint is unreachable, the oracle returns a 502 Bad Gateway error.
 
 Oracle calls take full advantage of Jstz's asynchronous nature; smart functions awaiting pending oracle calls do not block the Jstz chain or other calls to the same smart function.
