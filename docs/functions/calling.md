@@ -20,6 +20,13 @@ console.log(await response.json());
 The URL for the [`Request`](/api/request) object must be `jstz://` followed by the address of a Jstz smart function.
 You can set the method in the `Request` object but you cannot set the `Referer` header because it automatically becomes the address of the smart function.
 
+:::note
+
+Smart functions cannot call external APIs or Tezos smart contracts directly.
+To call external APIs, they can use the oracle, as described in [Calling external APIs](/functions/apis).
+
+:::
+
 :::tip
 
 To transfer tez with the call, use the `X-JSTZ-TRANSFER` header as described in [Managing tokens](/functions/tokens).
