@@ -365,7 +365,7 @@ mod tests {
                 assert_eq!(r.status_code, 500);
                 assert_eq!(
                     String::from_utf8(r.body.unwrap()).unwrap(),
-                    "{\"class\":\"TypeError\",\"message\":\"Unsupport scheme 'tezos'\"}"
+                    "{\"class\":\"TypeError\",\"message\":\"Unsupported scheme 'tezos'\"}"
                 );
             } else {
                 unreachable!()

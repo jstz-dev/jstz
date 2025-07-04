@@ -219,7 +219,22 @@ pub async fn process_and_dispatch_request(
                 headers,
                 data,
             ) {
-                Ok(resp) => resp.await,
+                Ok(resp) => {
+                    let response = resp.await;
+                    // Check if transaction has any pending changes when resuming from oracle response
+                    // TODO: Once async is supported, this check can be removed
+                    if tx.get_dirty() {
+                        return Response {
+                                    status: 400,
+                                    status_text: "Bad Request".into(),
+                                    headers: Vec::with_capacity(0),
+                                    body: "Oracle requests are not allowed when transaction has pending changes".into(),
+
+                                };
+                    } else {
+                        response
+                    }
+                }
                 Err(e) => Err(e).into(),
             }
         }
@@ -254,6 +269,23 @@ fn dispatch_oracle(
         }
         .boxed_local());
     }
+
+    // Check if transaction has any pending changes before allowing oracle requests
+    // TODO: Once async is supported, this check can be removed
+    if tx.get_dirty() {
+        return Ok(async {
+            Response {
+                status: 400,
+                status_text: "Bad Request".into(),
+                headers: Vec::with_capacity(0),
+                body:
+                    "Oracle requests are not allowed when transaction has pending changes"
+                        .into(),
+            }
+        }
+        .boxed_local());
+    }
+
     let response_rx = {
         let oracle_ctx = PROTOCOL_CONTEXT
             .get()
@@ -826,7 +858,7 @@ mod test {
         assert_eq!(response.status, 500);
         assert_eq!(response.status_text, "InternalServerError");
         assert_eq!(
-            json!({"class":"TypeError","message":"Unsupport scheme 'tezos'"}),
+            json!({"class":"TypeError","message":"Unsupported scheme 'tezos'"}),
             serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
                 .unwrap()
         );
@@ -2101,9 +2133,9 @@ mod test {
             .unwrap();
             Storage::insert(&mut host, &ORACLE_PUBLIC_KEY_PATH, &pk).unwrap();
             let (mut host, mut tx, source_address, hashes) = setup(&mut host, [code]);
-            Account::add_balance(&mut host,&mut tx, &source_address, 0).unwrap();
+            Account::add_balance(&mut host, &mut tx, &source_address, 0).unwrap();
             tx.commit(&mut host).unwrap();
-
+            let tx = Transaction::default();
             let run_address = hashes[0].clone();
             ProtocolContext::init_global(&mut host, 0).unwrap();
             tokio::pin! {
@@ -2149,7 +2181,6 @@ mod test {
                     assert_eq!(oracle_request.caller, source_address);
                     let oracle_ctx = PROTOCOL_CONTEXT.get().unwrap().oracle();
                     let mut oracle = oracle_ctx.lock();
-
                     oracle
                         .respond(&mut host, oracle_request.id, response.clone())
                         .unwrap();
@@ -2158,6 +2189,56 @@ mod test {
                 }
             };
             assert_eq!(response, fetch_response);
+        })
+    }
+
+    #[test]
+    fn oracle_fetch_rejected_when_transaction_has_pending_changes() {
+        TOKIO.block_on(async {
+            let code = r#"
+        export default async () => {
+            // First make a change to the transaction
+            Kv.set("test", "value");
+            // Then try to make an oracle request
+            let result = await fetch("http://example.com")
+            return result
+        }
+        "#;
+            let debug_sink = DebugLogSink::new();
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            host.set_debug_handler(debug_sink.clone());
+            let pk = PublicKey::from_base58(
+                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            )
+            .unwrap();
+            Storage::insert(&mut host, &ORACLE_PUBLIC_KEY_PATH, &pk).unwrap();
+            let (mut host, mut tx, source_address, hashes) = setup(&mut host, [code]);
+            Account::add_balance(&mut host, &mut tx, &source_address, 0).unwrap();
+            tx.commit(&mut host).unwrap();
+
+            let run_address = hashes[0].clone();
+            ProtocolContext::init_global(&mut host, 0).unwrap();
+
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx.clone(),
+                false,
+                None,
+                jstz_mock::account1().into(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
+                vec![],
+                None,
+            )
+            .await;
+
+            assert_eq!(response.status, 400);
+            assert_eq!(response.status_text, "Bad Request");
+            assert_eq!(
+                "Oracle requests are not allowed when transaction has pending changes",
+                String::from_utf8(response.body.to_vec()).unwrap()
+            );
         })
     }
 }

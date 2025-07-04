@@ -247,7 +247,10 @@ impl Account {
         tx: &Transaction,
         addr: &impl Addressable,
     ) -> Result<bool> {
-        Ok(tx.contains_key(hrt, &Self::path(addr)?)?)
+        let is_dirty = tx.get_dirty();
+        let result = Ok(tx.contains_key(hrt, &Self::path(addr)?)?);
+        tx.set_dirty(is_dirty);
+        result
     }
 
     fn try_insert(
@@ -285,14 +288,17 @@ impl Account {
         tx: &'a mut Transaction,
         addr: &impl Addressable,
     ) -> Result<GuardedMut<'a, Nonce>> {
+        let is_dirty = tx.get_dirty();
         let mut account = Self::get_mut(hrt, tx, addr)?;
-        Ok(GuardedMut::new(
+        let result = Ok(GuardedMut::new(
             account.clone_guard(),
             match account.deref_mut() {
                 Self::User(UserAccount { nonce, .. }) => nonce,
                 Self::SmartFunction(SmartFunctionAccount { nonce, .. }) => nonce,
             },
-        ))
+        ));
+        tx.set_dirty(is_dirty);
+        result
     }
 
     pub fn create_smart_function(
@@ -302,6 +308,7 @@ impl Account {
         amount: Amount,
         function_code: ParsedCode,
     ) -> Result<SmartFunctionHash> {
+        let is_dirty = tx.get_dirty();
         let nonce = Self::nonce(hrt, tx, creator)?;
         let address = SmartFunctionHash::digest(
             format!("{}{}{}", creator.to_base58(), function_code, nonce.deref())
@@ -313,6 +320,7 @@ impl Account {
             function_code,
         };
         Self::SmartFunction(account).try_insert(hrt, tx, Self::path(&address)?)?;
+        tx.set_dirty(is_dirty);
         Ok(address)
     }
 
@@ -321,13 +329,16 @@ impl Account {
         tx: &'a mut Transaction,
         addr: &SmartFunctionHash,
     ) -> Result<Guarded<'a, str>> {
+        let is_dirty = tx.get_dirty();
         let account = Self::get_mut(hrt, tx, addr)?;
-        match account.deref() {
+        let result: Result<Guarded<'a, str>> = match account.deref() {
             Self::SmartFunction(SmartFunctionAccount { function_code, .. }) => {
                 Ok(Guarded::new(account.clone_guard(), &function_code.0))
             }
             Self::User(_) => Err(Error::AddressTypeMismatch),
-        }
+        };
+        tx.set_dirty(is_dirty);
+        result
     }
 
     // TODO: Used only in repl, conditionally compile
@@ -363,6 +374,7 @@ impl Account {
         addr: &impl Addressable,
         amount: Amount,
     ) -> Result<u64> {
+        // let is_dirty = tx.get_dirty();
         let mut balance = Self::balance_mut(hrt, tx, addr)?;
         let checked_balance = balance
             .deref()
@@ -370,6 +382,7 @@ impl Account {
             .ok_or(crate::error::Error::BalanceOverflow)?;
 
         *balance = checked_balance;
+        // tx.set_dirty(is_dirty);
         Ok(checked_balance)
     }
 
