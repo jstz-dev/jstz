@@ -36,6 +36,10 @@ Because it keeps track of the messages it receives and the accounts that it has 
 The [`zod`](https://github.com/jstz-dev/jstz/tree/main/examples/zod) example shows how you can use third-party JavaScript libraries in Jstz smart functions.
 It uses [itty-router](https://github.com/kwhitley/itty-router) to route requests and [zod](https://github.com/colinhacks/zod) to validate user input.
 
+### HTTP libraries and external APIs
+
+The [`Axios`](https://github.com/jstz-dev/jstz/tree/main/examples/axios) example shows how you can use the Axios HTTP request library both to call smart functions and to call external APIs via the Jstz [enshrined oracle](https://jstz.tezos.com/architecture/oracle).
+
 ### FA2 token
 
 The [`fa2`](https://github.com/jstz-dev/jstz/tree/main/examples/fa2) smart function is an implementation of the Tezos FA2 standard for tokens.
