@@ -1,0 +1,17 @@
+{
+  "name": "@jstz-dev/get-tez",
+  "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
+  "private": true,
+  "version": "0.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "axios": "^1.10.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.20.2"
+  },
+  "scripts": {
+    "build": "./build.sh",
+    "deploy": "./deploy.sh"
+  }
+}
