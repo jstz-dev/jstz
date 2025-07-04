@@ -56,7 +56,7 @@ Here are some notes about limitations and how it may change to work better as a 
 Additional details that are subject to change:
 
 - Smart functions cannot call the oracle during or after they read from or write to the key-value store.
-  They must make oracle calls first in their operation, before accessing the key-value store.
+  They must make oracle calls first and wait for its promise to be resolved before accessing the key-value store.
   If the oracle detects that the smart function has accessed the key-value store before sending the request, it returns a rejected promise.
 - Similarly, smart functions cannot send or receive tez or call other smart functions before or during an oracle call.
 - Oracle calls are free today but will consume gas (transaction fees) in the future based on factors such as the size of the request and response.
