@@ -49,7 +49,7 @@ The oracle is under active development and is changing rapidly.
 At this time it lacks some features that are necessary to be a truly trustless, decentralized web3 platform.
 Here are some notes about limitations and how it may change to work better as a web3 tool:
 
-- The oracle node does not run in a JavaScript [`tee`](https://streams.spec.whatwg.org/#tee-a-readable-stream) `ReadableStream` stream, but support for it is planned, which will reduce the trust required around the correctness of the response.
+- The oracle node does not run in a JavaScript [trusted execution environment](https://en.wikipedia.org/wiki/Trusted_execution_environment), but support for it is planned, which will reduce the trust required around the correctness of the response.
 - Support is planned for private requests that will allow smart functions to access authenticated endpoints like those requiring API tokens.
 - For now there is only a single centralized oracle node operator.
 
