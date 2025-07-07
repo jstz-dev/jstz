@@ -19,7 +19,10 @@ use jstz_proto::{
 };
 use octez::unused_port;
 use reqwest::Client;
-use std::process::{Child, Command};
+use std::{
+    io::Write,
+    process::{Child, Command},
+};
 use tempfile::{NamedTempFile, TempDir};
 use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
 use tokio_stream::StreamExt;
@@ -48,6 +51,11 @@ const DEFAULT_ROLLUP_NODE_RPC: &str = "127.0.0.1:8932";
 async fn run_sequencer() {
     let tmp_dir = TempDir::new().unwrap();
     let log_file = NamedTempFile::new().unwrap();
+    let mut injector_file = NamedTempFile::new().unwrap();
+    injector_file
+            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6\n")
+            .unwrap();
+    injector_file.flush().unwrap();
     let port = unused_port();
     let base_uri = format!("http://127.0.0.1:{port}");
     let _rollup_rpc = make_mock_rollup_rpc_server(DEFAULT_ROLLUP_NODE_RPC.to_string());
@@ -65,6 +73,8 @@ async fn run_sequencer() {
                 log_file.path().to_str().unwrap(),
                 "--mode",
                 "sequencer",
+                "--injector-key-file",
+                injector_file.path().to_str().unwrap(),
             ])
             .spawn()
             .unwrap(),
