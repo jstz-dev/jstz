@@ -58,6 +58,10 @@ struct Args {
     #[arg(long)]
     debug_log_path: Option<PathBuf>,
 
+    /// Path to file containing injector key pair (format: "public_key:secret_key")
+    #[arg(long)]
+    injector_key_file: PathBuf,
+
     /// Path to file containing oracle key pair for DataProvider (format: "public_key:secret_key")
     #[arg(long)]
     oracle_key_file: Option<PathBuf>,
@@ -76,19 +80,10 @@ async fn main() -> anyhow::Result<()> {
             // Parse oracle key if provided
             #[cfg(feature = "v2_runtime")]
             let oracle_key_pair = if let Some(oracle_key_file) = args.oracle_key_file {
-                let key_pair = std::fs::read_to_string(oracle_key_file)
-                    .context("Failed to read oracle key file")?;
-                let parts: Vec<&str> = key_pair.split(':').collect();
-                if parts.len() != 2 {
-                    anyhow::bail!("Oracle key must be in format 'public_key:secret_key'");
-                }
-                let public_key =
-                    jstz_crypto::public_key::PublicKey::from_base58(parts[0])
-                        .context("Invalid oracle public key")?;
-                let secret_key =
-                    jstz_crypto::secret_key::SecretKey::from_base58(parts[1])
-                        .context("Invalid oracle secret key")?;
-                Some(KeyPair(public_key, secret_key))
+                Some(
+                    parse_key_file(oracle_key_file)
+                        .context("failed to parse oracle key file")?,
+                )
             } else {
                 None
             };
@@ -99,9 +94,8 @@ async fn main() -> anyhow::Result<()> {
                 rollup_endpoint,
                 rollup_preimages_dir: args.preimages_dir,
                 kernel_log_path: args.kernel_log_path,
-                // TODO: make the keypair configurable
-                // https://linear.app/tezos/issue/JSTZ-424/make-keypair-configurable-in-jstz-main
-                injector: KeyPair::default(),
+                injector: parse_key_file(args.injector_key_file)
+                    .context("failed to parse injector key file")?,
                 mode: args.mode,
                 capacity: args.capacity,
                 debug_log_path: args.debug_log_path.unwrap_or(
@@ -125,5 +119,94 @@ async fn main() -> anyhow::Result<()> {
             }
             Ok(())
         }
+    }
+}
+
+fn parse_key_file(path: PathBuf) -> anyhow::Result<KeyPair> {
+    let key_pair = std::fs::read_to_string(path).context("Failed to read key file")?;
+    let parts: Vec<&str> = key_pair.trim().split(':').collect();
+    if parts.len() != 2 {
+        anyhow::bail!("Key pair must be in format 'public_key:secret_key'");
+    }
+    let public_key = jstz_crypto::public_key::PublicKey::from_base58(parts[0])
+        .context("Invalid public key")?;
+    let secret_key = jstz_crypto::secret_key::SecretKey::from_base58(parts[1])
+        .context("Invalid secret key")?;
+    Ok(KeyPair(public_key, secret_key))
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        io::{Seek, Write},
+        path::PathBuf,
+        str::FromStr,
+    };
+
+    use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+    use jstz_node::config::KeyPair;
+    use tempfile::NamedTempFile;
+
+    #[test]
+    fn parse_key_file() {
+        assert_eq!(
+            super::parse_key_file(PathBuf::from_str("/foo/bar").unwrap())
+                .unwrap_err()
+                .to_string(),
+            "Failed to read key file"
+        );
+
+        let mut tmp_file = NamedTempFile::new().unwrap();
+        tmp_file.write_all(b"a:b:c").unwrap();
+        tmp_file.flush().unwrap();
+        assert_eq!(
+            super::parse_key_file(tmp_file.path().to_path_buf())
+                .unwrap_err()
+                .to_string(),
+            "Key pair must be in format 'public_key:secret_key'"
+        );
+
+        tmp_file.rewind().unwrap();
+        tmp_file
+            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ3:edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2")
+            .unwrap();
+        tmp_file.flush().unwrap();
+        assert_eq!(
+            super::parse_key_file(tmp_file.path().to_path_buf())
+                .unwrap_err()
+                .to_string(),
+            "Invalid public key"
+        );
+
+        tmp_file.rewind().unwrap();
+        tmp_file
+            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:a")
+            .unwrap();
+        tmp_file.flush().unwrap();
+        assert_eq!(
+            super::parse_key_file(tmp_file.path().to_path_buf())
+                .unwrap_err()
+                .to_string(),
+            "Invalid secret key"
+        );
+
+        tmp_file.rewind().unwrap();
+        tmp_file
+            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6\n")
+            .unwrap();
+        tmp_file.flush().unwrap();
+        assert_eq!(
+            super::parse_key_file(tmp_file.path().to_path_buf()).unwrap(),
+            KeyPair(
+                PublicKey::from_base58(
+                    "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
+                )
+                .unwrap(),
+                SecretKey::from_base58(
+                    "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
+                )
+                .unwrap()
+            )
+        );
     }
 }
