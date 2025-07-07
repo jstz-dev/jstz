@@ -80,6 +80,7 @@ pub struct Request {
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(from = "BodyDeserializeHelper", into = "BodySerializeHelper")]
 pub enum Body {
     Vector(Vec<u8>),
     Buffer(JsBuffer),
@@ -193,6 +194,38 @@ impl<'s> ToV8<'s> for Body {
             }
             Body::Buffer(js_buffer) => js_buffer.to_v8(scope),
         }
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "PascalCase")]
+enum BodySerializeHelper {
+    Vector(Vec<u8>),
+    Buffer(Vec<u8>),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "PascalCase")]
+enum BodyDeserializeHelper {
+    Vector(Vec<u8>),
+    Buffer(Vec<u8>),
+}
+
+impl From<Body> for BodySerializeHelper {
+    fn from(value: Body) -> Self {
+        match value {
+            Body::Vector(bytes) => Self::Vector(bytes),
+            Body::Buffer(buf) => Self::Buffer(buf.to_vec()),
+        }
+    }
+}
+
+impl From<BodyDeserializeHelper> for Body {
+    fn from(value: BodyDeserializeHelper) -> Self {
+        let bytes = match value {
+            BodyDeserializeHelper::Vector(b) | BodyDeserializeHelper::Buffer(b) => b,
+        };
+        Body::Vector(bytes)
     }
 }
 
@@ -509,5 +542,34 @@ mod test {
         ]
         .map(|(k, v)| (k.as_bytes().into(), v.as_bytes().into()));
         assert_eq!(expected, *res);
+    }
+
+    #[test]
+    fn body_buffer_roundtrip() {
+        use deno_core::{serde_v8, JsBuffer, JsRuntime, RuntimeOptions, ToJsBuffer};
+        use serde_json as json;
+
+        let mut runtime = JsRuntime::new(RuntimeOptions::default());
+
+        let payload = vec![1u8, 2, 3, 4];
+
+        let json_wire: String = {
+            let scope = &mut runtime.handle_scope();
+
+            let v8_val =
+                serde_v8::to_v8(scope, ToJsBuffer::from(payload.clone())).unwrap();
+
+            let js_buf: JsBuffer = serde_v8::from_v8(scope, v8_val).unwrap();
+
+            let original = Body::Buffer(js_buf);
+            let txt = json::to_string(&original).unwrap();
+
+            assert!(txt.contains("\"Buffer\":[1,2,3,4]"));
+
+            txt
+        };
+
+        let roundtrip: Body = json::from_str(&json_wire).unwrap();
+        assert_eq!(roundtrip, Body::Vector(payload));
     }
 }
