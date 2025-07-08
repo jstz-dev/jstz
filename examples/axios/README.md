@@ -24,6 +24,4 @@ Follow these steps to use it
 jstz run jstz://axios.example -m POST -d '{ "echoSf": "<ECHO ADDRESS>" }' -t --network dev
 ```
 
-The response shows that the number in storage was incremented and what the current number is/
-
 For more information about Jstz, see https://jstz.tezos.com/.
