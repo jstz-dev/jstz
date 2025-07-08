@@ -2974,6 +2974,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "tokio-retry",
  "tokio-util",
  "url",
 ]

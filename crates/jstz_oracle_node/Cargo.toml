@@ -27,6 +27,7 @@ http.workspace = true
 hyper.workspace = true
 reqwest.workspace = true
 log.workspace = true
+tokio-retry.workspace = true
 bincode.workspace = true
 serde_bytes.workspace = true
 url.workspace = true
