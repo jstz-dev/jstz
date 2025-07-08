@@ -1,4 +1,6 @@
-use jstz_node::config::{JstzNodeConfig, KeyPair};
+use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+use jstz_node::config::JstzNodeConfig;
+use jstz_utils::KeyPair;
 use jstzd::task::{utils::retry, Task};
 use octez::{r#async::endpoint::Endpoint, unused_port};
 use tempfile::{NamedTempFile, TempDir};
@@ -17,7 +19,16 @@ async fn jstz_node_test() {
         &mock_rollup_endpoint,
         &preimages_dir_path,
         &path,
-        KeyPair::default(),
+        KeyPair(
+            PublicKey::from_base58(
+                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            )
+            .unwrap(),
+            SecretKey::from_base58(
+                "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+            )
+            .unwrap(),
+        ),
         jstz_node::RunMode::Default,
         0,
         debug_log_file.path(),

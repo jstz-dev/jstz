@@ -6,7 +6,10 @@ use std::time::Duration;
 
 #[cfg(feature = "v2_runtime")]
 use jstz_crypto::keypair_from_mnemonic;
-use jstz_node::config::{JstzNodeConfig, KeyPair};
+use jstz_crypto::public_key::PublicKey;
+use jstz_crypto::secret_key::SecretKey;
+use jstz_node::config::JstzNodeConfig;
+use jstz_utils::KeyPair;
 use jstzd::jstz_rollup_path::*;
 
 use http::Uri;
@@ -184,7 +187,16 @@ async fn create_jstzd_server(
         &rollup_config.rpc_endpoint,
         &preimages_dir_path,
         &kernel_debug_file_path,
-        KeyPair::default(),
+        KeyPair(
+            PublicKey::from_base58(
+                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            )
+            .unwrap(),
+            SecretKey::from_base58(
+                "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+            )
+            .unwrap(),
+        ),
         jstz_node::RunMode::Default,
         0,
         &debug_log_path,
@@ -448,7 +460,16 @@ fn oracle_config_serialization_test() {
         &Endpoint::localhost(8933),
         PathBuf::from("/tmp/preimages").as_path(),
         PathBuf::from("/tmp/kernel.log").as_path(),
-        KeyPair::default(),
+        KeyPair(
+            PublicKey::from_base58(
+                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            )
+            .unwrap(),
+            SecretKey::from_base58(
+                "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+            )
+            .unwrap(),
+        ),
         jstz_node::RunMode::Default,
         0,
         PathBuf::from("/tmp/debug.log").as_path(),

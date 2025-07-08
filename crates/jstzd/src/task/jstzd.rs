@@ -680,13 +680,13 @@ async fn call_contract_handler(
 mod tests {
     use axum::{body::to_bytes, response::IntoResponse};
     use indicatif::ProgressBar;
-    #[cfg(feature = "v2_runtime")]
     use jstz_crypto::secret_key::SecretKey;
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
+    use jstz_utils::KeyPair;
     use std::path::PathBuf;
     use std::str::FromStr;
 
-    use jstz_node::config::{JstzNodeConfig, KeyPair};
+    use jstz_node::config::JstzNodeConfig;
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::{Address, OctezClientConfigBuilder},
@@ -826,7 +826,16 @@ mod tests {
                 &Endpoint::default(),
                 &PathBuf::from("/foo"),
                 &PathBuf::from("/foo"),
-                KeyPair::default(),
+                KeyPair(
+                    PublicKey::from_base58(
+                        "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+                    )
+                    .unwrap(),
+                    SecretKey::from_base58(
+                        "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+                    )
+                    .unwrap(),
+                ),
                 jstz_node::RunMode::Default,
                 0,
                 &PathBuf::from("/log"),
