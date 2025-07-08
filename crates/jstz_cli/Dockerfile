@@ -22,7 +22,4 @@ COPY --from=octez /usr/share/zcash-params /root/.zcash-params
 # Copy the jstz binary & dependencies
 COPY --from=builder /jstz_build/target/debug/jstz /usr/bin/jstz
 COPY --from=builder /jstz_build/crates/jstz_cli/jstz_kernel.wasm /usr/share/jstz/jstz_kernel.wasm
-COPY --from=builder /jstz_build/crates/jstz_cli/sandbox.json /usr/share/jstz/sandbox.json
-# octez is the source of truth for the sandbox-params.json
-COPY --from=octez /usr/local/share/tezos/alpha-parameters/sandbox-parameters.json /usr/share/jstz/sandbox-params.json
 ENTRYPOINT [ "/usr/bin/jstz" ]
