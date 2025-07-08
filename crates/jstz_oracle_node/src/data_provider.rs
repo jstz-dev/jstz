@@ -12,8 +12,10 @@ use log::{error, info};
 use reqwest::header::{HeaderMap as ReqwestHeaderMap, HeaderName, HeaderValue};
 use reqwest::Client;
 use reqwest::Method;
+use std::time::Duration;
 use tokio::sync::broadcast::Receiver;
 use tokio::task::AbortHandle;
+use tokio_retry::{strategy::ExponentialBackoff, RetryIf};
 
 #[allow(dead_code)]
 pub struct DataProvider {
@@ -63,6 +65,26 @@ impl Drop for DataProvider {
     }
 }
 
+fn exponential_backoff(base: u64, attempts: usize) -> impl Iterator<Item = Duration> {
+    ExponentialBackoff::from_millis(base)
+        .factor(2)
+        .max_delay(Duration::from_secs(8))
+        .take(attempts)
+}
+
+async fn retry_async<F, Fut, T, E, C>(
+    backoff: impl Iterator<Item = Duration>,
+    mut op: F,
+    should_retry: C,
+) -> Result<T, E>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<T, E>>,
+    C: Fn(&E) -> bool + Copy,
+{
+    RetryIf::spawn(backoff, || op(), should_retry).await
+}
+
 async fn handle_request(
     client: &Client,
     oracle_req: &OracleRequest,
@@ -85,25 +107,45 @@ async fn get_oracle_response(
 
     // Convert to reqwest::RequestBuilder
     let method = Method::from_bytes(&request.method).context("invalid HTTP method")?;
-    let mut builder = client.request(method, request.url.clone());
 
-    // Headers
-    let mut headers = ReqwestHeaderMap::new();
-    for (name, value) in &request.headers {
-        headers.append(
-            HeaderName::from_bytes(name)?,
-            HeaderValue::from_bytes(value)?,
-        );
-    }
-    builder = builder.headers(headers);
+    let attempt = || async {
+        let mut builder = client.request(method.clone(), request.url.clone());
 
-    // Body
-    if let Some(body) = request.body.clone() {
-        builder = builder.body::<Vec<u8>>(body.into());
-    }
+        // Headers
+        let mut headers = ReqwestHeaderMap::new();
+        for (name, value) in &request.headers {
+            headers.append(
+                HeaderName::from_bytes(name)?,
+                HeaderValue::from_bytes(value)?,
+            );
+        }
+        builder = builder.headers(headers);
+
+        // Body
+        if let Some(body) = request.body.clone() {
+            builder = builder.body::<Vec<u8>>(body.into());
+        }
+
+        builder.send().await.map_err(anyhow::Error::from)
+    };
+
+    // Retry only when it's safe and likely transient
+    let should_retry = |e: &anyhow::Error| {
+        e.downcast_ref::<reqwest::Error>()
+            .map(|re| re.is_timeout() || re.is_connect() || re.is_request())
+            .unwrap_or(false)
+    };
 
     // Execute
-    let send_result = builder.send().await;
+    let send_result =
+        if method == Method::GET || method == Method::HEAD || method == Method::OPTIONS {
+            // 5 attempts: 100 ms → 3.2 s
+            retry_async(exponential_backoff(100, 5), attempt, should_retry).await
+        } else {
+            // single attempt
+            attempt().await
+        };
+
     match send_result {
         Ok(response) => {
             let status = response.status().as_u16();
@@ -170,7 +212,21 @@ async fn inject_oracle_response(
     let jstz_client = JstzClient::new(node_endpoint.clone());
 
     let oracle_address = Address::User(PublicKeyHash::from(public_key));
-    let nonce = jstz_client.get_nonce(&oracle_address).await?;
+    let should_retry = |e: &anyhow::Error| e.is::<reqwest::Error>();
+    let nonce = RetryIf::spawn(
+        ExponentialBackoff::from_millis(200)
+            .factor(2)
+            .max_delay(Duration::from_secs(5))
+            .take(6), // total 6 tries
+        || async {
+            jstz_client
+                .get_nonce(&oracle_address)
+                .await
+                .map_err(Into::into)
+        },
+        should_retry,
+    )
+    .await?;
 
     let op = Operation {
         public_key: public_key.clone(),
@@ -182,7 +238,20 @@ async fn inject_oracle_response(
 
     let signed_op = SignedOperation::new(signing_key.sign(op_hash.clone())?, op);
     // Post operation to node
-    jstz_client.post_operation(&signed_op).await?;
+    RetryIf::spawn(
+        ExponentialBackoff::from_millis(200)
+            .factor(2)
+            .max_delay(Duration::from_secs(5))
+            .take(6),
+        || async {
+            jstz_client
+                .post_operation(&signed_op)
+                .await
+                .map_err(Into::into)
+        },
+        should_retry,
+    )
+    .await?;
     let receipt = jstz_client.wait_for_operation_receipt(&op_hash).await?;
 
     match receipt.result {
@@ -451,6 +520,75 @@ mod tests {
         mock_nonce.assert();
         mock_post_op.assert();
         mock_receipt.assert();
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn retries_nonce_and_post_operation_then_succeeds() -> Result<()> {
+        let mut server = mockito::Server::new_async().await;
+
+        let nonce_path = "/accounts/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/nonce";
+        let _nonce_fail = server
+            .mock("GET", nonce_path)
+            .with_status(500)
+            .expect(1)
+            .create();
+        let _nonce_ok = server
+            .mock("GET", nonce_path)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body("0")
+            .expect(1)
+            .create();
+
+        let _post_fail = server
+            .mock("POST", "/operations")
+            .with_status(500)
+            .expect(1)
+            .create();
+        let _post_ok = server
+            .mock("POST", "/operations")
+            .with_status(200)
+            .expect(1)
+            .create();
+
+        let _receipt_ok = server
+            .mock("GET", "/operations/9b14cf6a10e07c8f4fb436a0e137e230a8fb5a2ea736316c9d428fa56d9c4414/receipt")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{
+                "hash": [160,154,126,219,223,115,53,86,77,202,57,246,177,186,154,113,31,119,80,174,115,156,171,240,255,66,118,156,97,188,60,197],
+                "result": { "_type": "Success", "inner": { "_type": "OracleResponse", "requestId": 99 } }
+            }"#)
+            .expect(1)
+            .create();
+
+        let public_key = PublicKey::from_base58(
+            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+        )?;
+        let secret_key = SecretKey::from_base58(
+            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+        )?;
+
+        let node_cfg = String::from(server.url().as_str());
+
+        let oracle_req = oracle_req("GET", Url::parse("https://example.com")?, None);
+        let fake_http_resp = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: vec![],
+            body: Body::Vector("dummy".into()),
+        };
+
+        inject_oracle_response(
+            &oracle_req,
+            &public_key,
+            &secret_key,
+            &node_cfg,
+            fake_http_resp,
+        )
+        .await?;
 
         Ok(())
     }
