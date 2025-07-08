@@ -4,11 +4,13 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-#[cfg(feature = "v2_runtime")]
+#[cfg(feature = "oracle")]
 use jstz_crypto::keypair_from_mnemonic;
 use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::secret_key::SecretKey;
 use jstz_node::config::JstzNodeConfig;
+#[cfg(feature = "oracle")]
+use jstz_oracle_node::OracleNodeConfig;
 use jstz_utils::KeyPair;
 use jstzd::jstz_rollup_path::*;
 
@@ -54,7 +56,7 @@ async fn jstzd_test() {
         &rollup_rpc_endpoint,
         &jstz_node_rpc_endpoint,
         jstzd_port,
-        #[cfg(feature = "v2_runtime")]
+        #[cfg(feature = "oracle")]
         None,
     )
     .await;
@@ -105,7 +107,7 @@ async fn create_jstzd_server(
     rollup_rpc_endpoint: &Endpoint,
     jstz_node_rpc_endpoint: &Endpoint,
     jstzd_port: u16,
-    #[cfg(feature = "v2_runtime")] oracle_key_pair: Option<KeyPair>,
+    #[cfg(feature = "oracle")] oracle_key_pair: Option<KeyPair>,
 ) -> (JstzdServer, JstzdConfig) {
     let run_options = OctezNodeRunOptionsBuilder::new()
         .set_synchronisation_threshold(0)
@@ -200,14 +202,18 @@ async fn create_jstzd_server(
         jstz_node::RunMode::Default,
         0,
         &debug_log_path,
-        #[cfg(feature = "v2_runtime")]
-        oracle_key_pair,
     );
     let config = JstzdConfig::new(
         octez_node_config,
         baker_config,
         octez_client_config.clone(),
         rollup_config.clone(),
+        #[cfg(feature = "oracle")]
+        OracleNodeConfig {
+            key_pair: oracle_key_pair,
+            log_path: kernel_debug_file_path.clone(),
+            jstz_node_endpoint: jstz_node_rpc_endpoint.to_owned(),
+        },
         jstz_node_config,
         protocol_params,
     );
@@ -393,7 +399,7 @@ async fn ensure_rollup_is_logging_to(kernel_debug_file: &NamedTempFile) {
 }
 
 #[cfg_attr(feature = "skip-rollup-tests", ignore)]
-#[cfg(feature = "v2_runtime")]
+#[cfg(feature = "oracle")]
 #[tokio::test(flavor = "multi_thread")]
 async fn jstzd_with_oracle_key_pair_test() {
     let octez_node_rpc_endpoint = Endpoint::localhost(unused_port());
@@ -420,8 +426,8 @@ async fn jstzd_with_oracle_key_pair_test() {
     ensure_jstzd_components_are_up(&jstzd, &octez_node_rpc_endpoint, jstzd_port).await;
 
     let KeyPair(cfg_pk, cfg_sk) = config
-        .jstz_node_config()
-        .oracle
+        .oracle_node_config()
+        .key_pair
         .as_ref()
         .expect("oracle key pair missing");
     assert_eq!(
@@ -447,39 +453,4 @@ async fn jstzd_with_oracle_key_pair_test() {
         .await
         .expect("shutdown timed out");
     ensure_jstzd_components_are_down(&jstzd, &octez_node_rpc_endpoint, jstzd_port).await;
-}
-
-#[cfg(feature = "v2_runtime")]
-#[test]
-fn oracle_config_serialization_test() {
-    let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
-    let (oracle_pk, oracle_sk) = keypair_from_mnemonic(mnemonic, "").unwrap();
-
-    let cfg = JstzNodeConfig::new(
-        &Endpoint::localhost(8932),
-        &Endpoint::localhost(8933),
-        PathBuf::from("/tmp/preimages").as_path(),
-        PathBuf::from("/tmp/kernel.log").as_path(),
-        KeyPair(
-            PublicKey::from_base58(
-                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
-            )
-            .unwrap(),
-            SecretKey::from_base58(
-                "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
-            )
-            .unwrap(),
-        ),
-        jstz_node::RunMode::Default,
-        0,
-        PathBuf::from("/tmp/debug.log").as_path(),
-        Some(KeyPair(oracle_pk, oracle_sk)),
-    );
-
-    let json = serde_json::to_value(&cfg).unwrap();
-    let oracle_pk = json["oracle"].as_str().expect("oracle should be string");
-    assert_eq!(
-        oracle_pk,
-        "edpkuEb5VsDrcVZnbWg6sAsSG3VYVUNRKATfryPCDkzi77ZVLiXE3Z"
-    );
 }
