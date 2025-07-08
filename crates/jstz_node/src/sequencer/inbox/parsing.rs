@@ -109,7 +109,7 @@ pub fn parse_inbox_message(
         InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
             if jstz_rollup_address != transfer.destination.hash() {
                 logger.write_debug(
-                    "Internal message ignored because of different smart rollup address",
+                    "Internal message ignored because of different smart rollup address\n",
                 );
                 return None;
             };
@@ -120,7 +120,7 @@ pub fn parse_inbox_message(
                 ExternalMessageFrame::Targetted { address, contents } => {
                     let message = if jstz_rollup_address != address.hash() {
                         logger.write_debug(
-                            "External message ignored because of different smart rollup address",
+                            "External message ignored because of different smart rollup address\n",
                         );
                         None
                     } else {
@@ -162,12 +162,12 @@ fn is_valid_native_deposit(
 
     let native_ticket_id = MichelsonNat::from(NATIVE_TICKET_ID);
     if contents.0 != native_ticket_id {
-        logger.write_debug("Deposit ignored because of different ticket id");
+        logger.write_debug("Deposit ignored because of different ticket id\n");
         return false;
     }
 
     if contents.1 != NATIVE_TICKET_CONTENT {
-        logger.write_debug("Deposit ignored because of different ticket content");
+        logger.write_debug("Deposit ignored because of different ticket content\n");
         return false;
     }
 
@@ -194,7 +194,7 @@ fn read_transfer(
                     amount,
                     receiver,
                 };
-                logger.write_debug("Deposit: {content:?}\n");
+                logger.write_debug(&format!("Deposit: {content:?}\n"));
                 Some(Message::Internal(InternalMessage::Deposit(content)))
             } else {
                 None
@@ -216,7 +216,7 @@ fn read_external_message(
     bytes: &[u8],
 ) -> Option<ExternalMessage> {
     let msg = ExternalMessage::decode(bytes).ok()?;
-    logger.write_debug("External message: {msg:?}\n");
+    logger.write_debug(&format!("External message: {msg:?}\n"));
     Some(msg)
 }
 
