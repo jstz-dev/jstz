@@ -447,6 +447,47 @@ mod test {
         assert_eq!(request, de);
     }
 
+    #[test]
+    fn response_buffer_roundtrip() {
+        use deno_core::{serde_v8, JsBuffer, JsRuntime, RuntimeOptions, ToJsBuffer};
+        use serde_json as json;
+
+        let mut rt = JsRuntime::new(RuntimeOptions::default());
+        let payload = vec![9u8, 8, 7];
+
+        let json_wire: String = {
+            let scope = &mut rt.handle_scope();
+            let v8_val =
+                serde_v8::to_v8(scope, ToJsBuffer::from(payload.clone())).unwrap();
+            let js_buf: JsBuffer = serde_v8::from_v8(scope, v8_val).unwrap();
+
+            let resp = super::Response {
+                status: 201,
+                status_text: "CREATED".into(),
+                headers: vec![("k".into(), "v".into())],
+                body: super::Body::Buffer(js_buf),
+            };
+
+            let txt = json::to_string(&resp).unwrap();
+            assert!(txt.contains("\"Buffer\":[9,8,7]"));
+            txt
+        };
+
+        let de: super::Response = json::from_str(&json_wire).unwrap();
+
+        assert_eq!(
+            de,
+            super::Response {
+                status: 201,
+                status_text: "CREATED".into(),
+                headers: vec![("k".into(), "v".into())],
+                body: super::Body::Vector(payload),
+            }
+        );
+
+        assert_eq!(de.body.as_slice(), &[9, 8, 7]);
+    }
+
     #[tokio::test]
     async fn test_response_body() {
         let inner = vec![1, 2, 3, 4, 5];
