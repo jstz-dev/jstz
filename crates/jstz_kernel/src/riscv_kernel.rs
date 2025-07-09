@@ -8,6 +8,7 @@ use jstz_crypto::{
     hash::Hash, public_key::PublicKey, smart_function_hash::SmartFunctionHash,
 };
 use jstz_proto::runtime::{ProtocolContext, PROTOCOL_CONTEXT};
+use jstz_runtime::JstzRuntime;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
@@ -42,6 +43,7 @@ pub fn run(rt: &mut impl Runtime) {
             return;
         }
     };
+    let _ = JstzRuntime::new(Default::default());
     let local_set = tokio::task::LocalSet::new();
     local_set.block_on(&tokio_runtime, run_event_loop(rt))
 }
