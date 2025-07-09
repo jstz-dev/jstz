@@ -3,7 +3,6 @@ use bytes::Bytes;
 use jstz_crypto::{
     public_key::PublicKey,
     public_key_hash::PublicKeyHash,
-    secret_key::SecretKey,
     signature::Signature,
     smart_function_hash::{Kt1Hash, SmartFunctionHash},
 };
@@ -21,6 +20,7 @@ use jstz_proto::{
     },
     runtime::ParsedCode,
 };
+use jstz_utils::{test_util::alice_keys, KeyPair};
 use octez::unused_port;
 use reqwest::Client;
 use std::{
@@ -313,18 +313,8 @@ pub(crate) fn make_mock_global_block_filter(
     })
 }
 
-pub fn alice_keys() -> (PublicKey, SecretKey) {
-    let alice_sk =
-        SecretKey::from_base58("edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a")
-            .unwrap();
-    let alice_pk =
-        PublicKey::from_base58("edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or")
-            .unwrap();
-    (alice_pk, alice_sk)
-}
-
 fn mock_deploy_op() -> SignedOperation {
-    let (alice_pk, alice_sk) = alice_keys();
+    let KeyPair(alice_pk, alice_sk) = alice_keys();
     let code = r#"
         const handler = async () => {{
             return new Response();
@@ -402,7 +392,7 @@ async fn call_function_and_stream_logs(base_uri: &str) {
 
 // Utilities for encoding various inbox messages to hex strings.
 #[cfg(test)]
-mod inbox_utils {
+pub mod inbox_utils {
     use super::*;
     use tezos_crypto_rs::hash::{BlockHash, HashTrait};
     use tezos_smart_rollup::{
@@ -412,21 +402,21 @@ mod inbox_utils {
     };
 
     // Returns the hex-encoded serialized StartOfLevel inbox message.
-    pub(super) fn hex_start_of_level_message() -> String {
+    pub fn hex_start_of_level_message() -> String {
         let message =
             InboxMessage::<RollupType>::Internal(InternalInboxMessage::StartOfLevel);
         inbox_message_to_hex(message)
     }
 
     // Returns the hex-encoded serialized EndOfLevel inbox message.
-    pub(super) fn hex_end_of_level_message() -> String {
+    pub fn hex_end_of_level_message() -> String {
         let message =
             InboxMessage::<RollupType>::Internal(InternalInboxMessage::EndOfLevel);
         inbox_message_to_hex(message)
     }
 
     // Returns the hex-encoded serialized InfoPerLevel inbox message.
-    pub(super) fn hex_info_per_level_message() -> String {
+    pub fn hex_info_per_level_message() -> String {
         let message = InboxMessage::<RollupType>::Internal(
             InternalInboxMessage::InfoPerLevel(info_per_level().clone()),
         );
@@ -434,7 +424,7 @@ mod inbox_utils {
     }
 
     // Returns the hex-encoded serialized external message for a given SignedOperation.
-    pub(super) fn hex_external_message(op: SignedOperation) -> String {
+    pub fn hex_external_message(op: SignedOperation) -> String {
         let message = op.encode().unwrap();
         let external_message = ExternalMessageFrame::Targetted {
             address: SmartRollupAddress::from_b58check(JSTZ_ROLLUP_ADDRESS).unwrap(),

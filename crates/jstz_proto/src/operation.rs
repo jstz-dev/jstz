@@ -390,6 +390,8 @@ mod test {
     use jstz_core::{kv::Transaction, BinEncodable};
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
     use jstz_mock::host::JstzMockHost;
+    #[cfg(feature = "v2_runtime")]
+    use jstz_utils::{test_util::alice_keys, KeyPair};
     use serde_json::json;
 
     fn run_function_content() -> Content {
@@ -614,7 +616,6 @@ mod test {
     #[test]
     fn test_oracle_response_signed_operation_json_round_trip() {
         use http::HeaderValue;
-        use jstz_crypto::secret_key::SecretKey;
 
         use crate::runtime::v2::fetch::http::{convert_header_map, Response};
 
@@ -623,13 +624,10 @@ mod test {
         header_map.append("test1", HeaderValue::from_str("value1").unwrap());
         header_map.append("test2", HeaderValue::from_str("value2").unwrap());
         header_map.append("test2", HeaderValue::from_str("value3").unwrap());
-
+        let KeyPair(alice_pk, alice_sk) = alice_keys();
         let headers = convert_header_map(header_map);
         let op = Operation {
-            public_key: PublicKey::from_base58(
-                "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
-            )
-            .unwrap(),
+            public_key: alice_pk,
             nonce: 21943045950.into(),
             content: Content::OracleResponse(OracleResponse {
                 request_id: 284958,
@@ -641,12 +639,7 @@ mod test {
                 },
             }),
         };
-        let signature = SecretKey::from_base58(
-            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
-        )
-        .unwrap()
-        .sign(op.hash())
-        .unwrap();
+        let signature = alice_sk.sign(op.hash()).unwrap();
         let signed_op = SignedOperation {
             signature,
             inner: op,
