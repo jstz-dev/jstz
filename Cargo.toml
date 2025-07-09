@@ -23,11 +23,11 @@ members = [
 
 [workspace.package]
 edition = "2021"
-version = "0.1.1-alpha.2"
+version = "0.1.1-alpha.3"
 authors = ["TriliTech <contact@trili.tech>"]
 repository = "https://github.com/jstz-dev/jstz"
 homepage = "https://github.com/jstz-dev/jstz"
-documentation = "https://jstz-dev.github.io/jstz/"
+documentation = "https://jstz.tezos.com/"
 readme = "README.md"
 license-file = "LICENSE"
 description = "JavaScript server runtime for Tezos Smart Rollups"

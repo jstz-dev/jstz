@@ -12,7 +12,7 @@ const decoder = new TextDecoder("utf-8");
 
 // Accept a smart function address and message and put together a request
 function buildRequest(
-  contractAddress: string,
+  functionAddress: string,
   message: string,
 ): JstzType.Operation.RunFunction {
   return {
@@ -26,16 +26,16 @@ function buildRequest(
     ),
     gasLimit: 55000,
     headers: {},
-    method: "GET",
-    uri: `jstz://${contractAddress}`,
+    method: "POST",
+    uri: `jstz://${functionAddress}`,
   };
 }
 
 // Main function to manage CLI application
 async function main() {
   const args = process.argv.slice(2);
-  const contractAddress = args[0];
-  if (!contractAddress) {
+  const functionAddress = args[0];
+  if (!functionAddress) {
     fail("Please provide a smart function address to target");
   }
 
@@ -74,11 +74,11 @@ async function main() {
   terminal.on("line", async (input: string) => {
     try {
       if (input.toLocaleLowerCase() === "show") {
-        // If the user sends "show," print their messages from the contract's key-value store
+        // If the user sends "show," print their messages from the smart function's key-value store
         const length: number = Number.parseInt(
           // Get the total number of messages sent by the user account
           (await jstzClient.accounts
-            .getKv(contractAddress, {
+            .getKv(functionAddress, {
               key: `messages/${address}/length`,
             })
             .catch(() => {
@@ -88,7 +88,7 @@ async function main() {
         );
         // Print each message
         for (let index = 0; index < length; index++) {
-          const message = await jstzClient.accounts.getKv(contractAddress, {
+          const message = await jstzClient.accounts.getKv(functionAddress, {
             key: `messages/${address}/${index}`,
           });
           console.log(`[${index}]`, message);
@@ -99,7 +99,7 @@ async function main() {
         }
         // If the user sends any message other than "show,"
         // send that message as a request to the smart function
-        const runFunction = buildRequest(contractAddress, input);
+        const runFunction = buildRequest(functionAddress, input);
         const nonce = await jstzClient.accounts.getNonce(address);
         const operation = {
           content: runFunction,

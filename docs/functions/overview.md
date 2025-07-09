@@ -10,7 +10,7 @@ Any global variables are reset each time they run, and if a smart function is ca
 
 As described in [Accepting requests](/functions/requests), each smart function must have a `handler` function that receives these requests from callers.
 This function receives a Jstz [Request](/api/request) object that includes the message sent from the client and metadata such as the address of the account that called the smart function.
-The function runs and returns a Jstz[Response](/api/response) object to the caller.
+The function runs and returns a Jstz [Response](/api/response) object to the caller.
 
 ## Example smart function
 
@@ -79,7 +79,7 @@ For more information, see [Handling errors](/functions/errors).
 
 Smart functions look like ordinary JavaScript functions, but because they run on Jstz, they have some differences in their behavior.
 
-- Smart functions cannot be changed or stopped after they are deployed.
+- Smart functions cannot be changed or deleted after they are deployed.
 - Smart functions are permissionless, so anyone can call them, but you can add your own logic to them to restrict who can call them.
 - Anyone can inspect the code and storage of deployed smart functions.
 - Because smart functions run in a decentralized manner on many Jstz Smart Rollup nodes, they are censorship-resistant.

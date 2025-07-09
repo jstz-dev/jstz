@@ -5,6 +5,7 @@ use std::sync::RwLock;
 
 use crate::config::KeyPair;
 use crate::sequencer::inbox::parsing::Message;
+use crate::sequencer::inbox::parsing::ParsedInboxMessage;
 use crate::sequencer::queue::OperationQueue;
 use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
@@ -189,7 +190,9 @@ async fn insert_operation_queue(
                 "failed to insert operation to the queue: {e}"
             ))
         })?
-        .insert(Message::External(operation))
+        .insert(ParsedInboxMessage::JstzMessage(Message::External(
+            operation,
+        )))
         .map_err(|e| ServiceError::ServiceUnavailable(Some(e)))?;
     Ok(())
 }
@@ -305,7 +308,7 @@ mod tests {
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tower::ServiceExt;
 
-    use crate::sequencer::inbox::parsing::Message;
+    use crate::sequencer::inbox::parsing::{Message, ParsedInboxMessage};
     use crate::services::utils::StoreWrapper;
     use crate::{
         config::KeyPair,
@@ -579,8 +582,8 @@ mod tests {
         assert_eq!(res.status(), 200);
         assert_eq!(queue.read().unwrap().len(), 1);
         let injected_op = match queue.write().unwrap().pop().unwrap() {
-            Message::External(op) => op,
-            Message::Internal(_) => panic!("invalid message type"),
+            ParsedInboxMessage::JstzMessage(Message::External(op)) => op,
+            _ => panic!("invalid message type"),
         };
         let inner = injected_op.verify_ref().unwrap();
         matches!(

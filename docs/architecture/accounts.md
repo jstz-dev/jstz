@@ -10,12 +10,11 @@ Jstz works with two kinds of accounts:
 
 ## Working with user accounts
 
-User accounts are stored in the local file `~/.config/jstz/config.json`, including the alias, address, public key, and secret key for each account.
+The CLI stores user accounts in the local file `~/.config/jstz/config.json`, including the alias, address, public key, and secret key for each account.
 
 :::warning
 
 You must keep the secret keys for the accounts secure.
-Jstz does not yet support storing keys in wallets, on hardware devices, or with remote signers.
 
 :::
 
@@ -42,8 +41,11 @@ jstz bridge deposit --from bootstrap1 --to <ALIAS> --amount 1 -n dev
 
 ## Signing transactions from user accounts
 
-Because Jstz does not yet support wallets, you must provide the secret key of the user account to sign transactions.
-For example, the [`call-from-web`](https://github.com/jstz-dev/jstz/tree/main/examples/call-from-web) sample application uses the Jstz client SDK to sign applications given the address, public key, and secret key of the application:
+To sign transactions from user accounts, use a wallet, as in the Jstz development wallet: https://github.com/jstz-dev/dev-wallet.
+For an example, see the [Quick start](/quick_start).
+
+You can also sign transactions directly with the account's secret key, but in this case, managing the security of the key is up to you.
+For example, the [`show-tez`](https://github.com/jstz-dev/jstz/tree/main/examples/show-tez) example signs accounts with the `jstz_sdk` library:
 
 ```typescript
 import { Jstz } from "@jstz-dev/jstz-client";
@@ -51,12 +53,19 @@ import * as signer from "jstz_sdk";
 
 // ...
 
-// Sign operation using provided secret key
-// DO NOT use this in production until Jstz has a way of signing in a secure manner
+const runFunction = buildRequest(functionAddress, input);
+const nonce = await jstzClient.accounts.getNonce(address);
+const operation = {
+  content: runFunction,
+  nonce,
+  source: address,
+  publicKey: publicKey,
+};
+// Sign the operation
 const signature = signer.sign_operation(operation, secretKey);
-const response = await jstzClient.operations.injectAndPoll({
+// Send the operation
+const response = jstzClient.operations.injectAndPoll({
   inner: operation,
-  public_key: publicKey,
   signature: signature,
 });
 ```

@@ -14,6 +14,7 @@ pub const JSTZ_NODE_DEFAULT_SK: &str =
     "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
 
 #[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(into = "PublicKey")]
 pub struct KeyPair(pub PublicKey, pub SecretKey);
 
 impl Default for KeyPair {
@@ -22,6 +23,12 @@ impl Default for KeyPair {
             PublicKey::from_base58(JSTZ_NODE_DEFAULT_PK).unwrap(),
             SecretKey::from_base58(JSTZ_NODE_DEFAULT_SK).unwrap(),
         )
+    }
+}
+
+impl From<KeyPair> for PublicKey {
+    fn from(value: KeyPair) -> Self {
+        value.0
     }
 }
 
@@ -47,7 +54,8 @@ pub struct JstzNodeConfig {
     #[cfg(feature = "blueprint")]
     pub blueprint_db_file: PathBuf,
     #[cfg(feature = "v2_runtime")]
-    pub oracle_key_pair: Option<KeyPair>,
+    /// The Oracle signer used to authenticate valid oracle responses
+    pub oracle: Option<KeyPair>,
 }
 
 impl JstzNodeConfig {
@@ -80,7 +88,7 @@ impl JstzNodeConfig {
             #[cfg(feature = "blueprint")]
             blueprint_db_file: blueprint_db_file.to_path_buf(),
             #[cfg(feature = "v2_runtime")]
-            oracle_key_pair,
+            oracle: oracle_key_pair,
         }
     }
 }
@@ -110,7 +118,16 @@ mod tests {
             0,
             Path::new("/tmp/debug.log"),
             #[cfg(feature = "v2_runtime")]
-            None,
+            Some(KeyPair(
+                PublicKey::from_base58(
+                    "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+                )
+                .unwrap(),
+                SecretKey::from_base58(
+                    "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+                )
+                .unwrap(),
+            )),
         );
 
         let json = serde_json::to_value(&config).unwrap();
@@ -121,6 +138,15 @@ mod tests {
         assert_eq!(json["kernel_log_file"], "/tmp/kernel.log");
         assert_eq!(json["injector"], serde_json::Value::Null);
         assert_eq!(json["debug_log_file"], "/tmp/debug.log");
+        #[cfg(feature = "v2_runtime")]
+        {
+            let oracle_key_pair = &json["oracle"];
+            assert!(oracle_key_pair.is_string());
+            assert_eq!(
+                serde_json::from_value::<String>(oracle_key_pair.clone()).unwrap(),
+                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"
+            );
+        }
     }
 
     #[test]

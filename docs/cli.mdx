@@ -3,14 +3,20 @@ title: Jstz CLI
 sidebar_label: CLI
 ---
 
-The Jstz CLI allows you to interact with Jstz, including starting the sandbox and deploying and interacting with smart functions.
+The Jstz CLI allows you to interact with Jstz, including managing accounts, starting the sandbox, and deploying and interacting with smart functions.
 It provides these main commands:
 
-- [`sandbox`](#sandbox) - Start and interact with the local [sandbox](/sandbox) environment
+- [`account`](#account) - Work with Jstz accounts
 - [`bridge`](#bridge) - Bridge XTZ tokens from Tezos to Jstz and back
 - [`deploy`](#deploy) - Deploy smart functions
+- [`kv`](#kv) - Get data from the key-value store
+- [`login`](#log-in) - Set the account that the CLI uses to send requests to Jstz
+- [`logout`](#log-out) - Deselect the current account
+- [`logs`](#logs) - Get smart function logs
 - [`run`](#run) - Send requests to smart functions
+- [`sandbox`](#sandbox) - Start and interact with the local [sandbox](/sandbox) environment
 - [`transfer`](#transfer) - Transfer XTZ between Jstz accounts
+- [`whoami`](#whoami) - Print the current account
 
 :::tip
 
@@ -23,6 +29,9 @@ It provides these main commands:
 :::tip
 
 Many of these commands require the `-n` or `--network` argument to specify which Jstz environment to interact with, such as `-n dev` to interact with the Jstz sandbox or a network that is listed in your Jstz config file.
+For more information, see [Networks](/architecture/networks).
+
+You can add the local sandbox as the default network by opening the Jstz config file at `~/.config/jstz/config.json` and adding the line `"default_network": "dev"`.
 
 :::
 
@@ -40,44 +49,47 @@ Remember, the `-h` or `--help` flag can always be used after any command or subc
 
 :::
 
-### Sandbox
+### Account
 
-The sandbox commands are responsible for managing the Jstz sandbox environment.
-For more information, see [sandbox](/sandbox).
+Account commands create and work with Jstz accounts, including user accounts and smart functions.
+For more information about accounts, see [Accounts](/architecture/accounts).
 
-In most cases, start the sandbox in a Docker container by including the `--container` flag.
-If you don't use this flag, Jstz requires that you clone the Jstz repository at https://github.com/jstz-dev/jstz/ and install its `nix` environment as described in [Building from source](/installation#building-from-source).
+Some commands, such as `deploy` and `run`, require you to log in to an account with the `login` command to set the account from which the requests to Jstz are sent.
 
 #### Commands
 
-- `start`: Starts the sandbox environment.
-
-- `stop`: Shuts down the sandbox environment.
-
-- `restart`: Restarts the sandbox.
+- `alias`: Adds an alias for an address to the config file
+- `balance`: Prints the balance for a user account or smart function
+- `code`: Prints the code for a smart function
+- `create`: Creates a Jstz user account and stores its information in the config file.
+- `delete`: Removes a user account or smart function address from the config file.
+- `import`: Imports a user account from a secret key.
+- `list`: Lists the user accounts and smart function aliases in the config file.
 
 #### Usage
 
+Note that some commands take the alias or address of the account as an unnamed argument and others take it as the value for the `--account` argument, as in the following examples:
+
 ```bash
-jstz sandbox start [OPTIONS]
-jstz sandbox restart [OPTIONS]
-jstz sandbox stop
+jstz account create Alice
+jstz account list
+jstz account balance -a Alice
+jstz account delete Alice
 ```
 
 #### Options
 
-- `--container`: Run the sandbox in a Docker container.
-  Requires Docker.
-- `--detach (-d)`: Detach the process to run in the background.
+- `--account (-a) <ALIAS|ADDRESS>`: The alias or address of the account
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
 
 #### Examples
 
 ```bash
-jstz sandbox --container start -d
-
-jstz sandbox --container restart -d
-
-jstz sandbox --container stop
+jstz account create Alice
+jstz account list
+jstz bridge deposit --from bootstrap1 --to Alice --amount 1
+jstz account balance -a Alice
 ```
 
 ### Bridge
@@ -98,13 +110,13 @@ jstz bridge deposit [OPTIONS]
 
 #### Options
 
-- `--from (-f) <ALIAS|ADDRESS>`: Tezos L1 address or alias to withdraw from, which must be stored in the Octez client.
-
-- `--to (-t) <ALIAS|ADDRESS>`: The Jstz address or alias to deposit to.
-
 - `--amount (-a) <INTEGER>`: The amount in tez to transfer.
 
+- `--from (-f) <ALIAS|ADDRESS>`: Tezos L1 address or alias to withdraw from, which must be stored in the Octez client.
+
 - `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+
+- `--to (-t) <ALIAS|ADDRESS>`: The Jstz address or alias to deposit to.
 
 #### Example
 
@@ -131,13 +143,13 @@ jstz deploy [OPTIONS] [CODE|PATH]
 
 - `--balance (-b) <BALANCE>`: The initial balance for the function.
 
-- `--name <NAME>`: Local name or alias of the function.
-
-- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+- `--config <PATH>`: Overrides the path to the config file.
 
 - `--force (-f) <NETWORK>`: Overwrites an existing function name. Effective only when `name` is specified.
 
-- `--config <PATH>`: Overrides the path to the config file.
+- `--name <NAME>`: Local name or alias of the function.
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
 
 :::note
 
@@ -158,83 +170,88 @@ Using the alias can lead to unexpected outcomes if you're not careful about whic
 jstz deploy examples/counter.js --name my_counter --balance 42
 ```
 
-### Run
+### KV
 
-The `run` command sends a request to a smart function using a specified URL.
+The `kv` commands get information from the Jstz key-value store.
+They cannot change that information because only smart functions can write to the key-value store.
+To get or change key-value data in a smart function, see [KV](/api/kv).
 
-#### Usage
+The `list` command lists sub-keys for a given key.
+Sub-keys are separated with slashes, so if a smart function stores data with the keys `primaryKey/subKeyA` and `primaryKey/subKeyB`, the command `jstz kv list primaryKey` returns `subKeyA` and `subKeyB`.
 
-```bash
-jstz run [OPTIONS] <URL>
-```
+#### Commands
 
-#### Arguments
+- `get`: Gets a value from the key-value store.
 
-- `<URL>`: The URL to send the request to, in the format `jstz://<ADDRESS|ALIAS>/<PATH>`, where `<ADDRESS|ALIAS>` is the address or alias of the smart function and `<PATH>` is the path to call, which is passed to the smart function.
-
-#### Options
-
-- `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
-
-- `--method (-m) <method>`: The HTTP method used in the request. Default is `GET`.
-
-- `--data (-d) <data>`: Defines the JSON data to be included in the request body.
-
-- `--amount (-a) <data>`: The amount in XTZ to transfer.
-
-- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
-
-- `--include (-i)`: Include response headers in the output.
-
-- `--trace (-t)`: Flag to show the logs of the function.
-
-#### Example
-
-```bash
-export counter=tz4CYGgcFtphw3AXS2Mx2CMmfj6voV5mPc9b # Address of the previously deployed smart function examples/counter.js
-jstz run --trace "jstz://${counter}/"
-jstz run --trace "jstz://${counter}/"
-jstz run --trace "jstz://${counter}/"
-jstz run --trace "jstz://${counter}/"
-```
-
-If you deploy the `counter` smart function and call it as in the previous examples, you should see its output in the console, as in this example:
-
-```
-[LOG] Counter: null
-[LOG] Counter: 0
-[LOG] Counter: 1
-[LOG] Counter: 2
-```
-
-### Transfer
-
-Transfer XTZ between Jstz accounts.
+- `list`: Lists sub-keys for a given key.
 
 #### Usage
 
 ```bash
-jstz transfer [OPTIONS] <AMOUNT> <ADDRESS|ALIAS>
+export counter=KT1RdoBXrboPnS6tQdMCPKjRRt4baTQHUeh9 # Address of the previously deployed smart function examples/counter.js
+jstz run "jstz://${counter}/"
+jstz kv get -a $counter counter
 ```
-
-#### Arguments
-
-- `<AMOUNT>`: The amount in XTZ to transfer.
-
-- `<ADDRESS|ALIAS>`: Destination address or alias of the account (user or smart function).
 
 #### Options
 
-- `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
+- `--account (-a) <ADDRESS>`: The address of the smart function to get the key-value data for.
 
 - `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
-
-- `--include (-i)`: Include response headers in the output.
 
 #### Example
 
 ```bash
-jstz transfer 2 KT1CexuXoXuShARedvKSmxwDTLxRHNcvxqKR
+jstz kv get -a $counter counter
+```
+
+### Log in
+
+The `login` command switches the active account to an account from the config file.
+It sets this account as the `current_alias` field in the config file.
+The active account is the account from which calls to smart functions come from.
+
+#### Usage
+
+```bash
+jstz login <ALIAS>
+```
+
+#### Arguments
+
+None.
+
+#### Example
+
+```bash
+jstz logout
+jstz account create Alice
+jstz login Alice
+```
+
+### Log out
+
+The `logout` command deselects the active account, removing the `current_alias` field from the config file.
+It does not remove the account from the config file entirely.
+You must log in to an account with the `login` command before you can run commands that use an account, such as the `deploy` or `run` commands.
+
+### Usage
+
+```bash
+jstz logout
+```
+
+#### Arguments
+
+None.
+
+#### Example
+
+```bash
+jstz logout
+jstz account create Alice
+jstz login Alice
+jstz logout
 ```
 
 ### Logs
@@ -247,7 +264,7 @@ As an alternative, you can add the `--trace` flag to the `jstz run` command to s
 
 - `trace`: Trace the logs from the specified function.
 
-#### Usage:
+#### Usage
 
 ```bash
 jstz logs trace [OPTIONS] <ALIAS|ADDRESS>
@@ -279,4 +296,144 @@ In a new terminal, run the counter function and you will see the following outpu
 [WARN]: warn
 [ERROR]: error
 [ERROR]: Assertion failed
+```
+
+### Run
+
+The `run` command sends a request to a smart function using a specified URL.
+
+#### Usage
+
+```bash
+jstz run [OPTIONS] <URL>
+```
+
+#### Arguments
+
+- `<URL>`: The URL to send the request to, in the format `jstz://<ADDRESS|ALIAS>/<PATH>`, where `<ADDRESS|ALIAS>` is the address or alias of the smart function and `<PATH>` is the path to call, which is passed to the smart function.
+
+#### Options
+
+- `--amount (-a) <data>`: The amount in XTZ to transfer.
+
+- `--data (-d) <data>`: Defines the JSON data to be included in the request body.
+
+- `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
+
+- `--include (-i)`: Include response headers in the output.
+
+- `--method (-m) <method>`: The HTTP method used in the request. Default is `GET`.
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+
+- `--trace (-t)`: Flag to show the logs of the function.
+
+#### Example
+
+```bash
+export counter=KT1RdoBXrboPnS6tQdMCPKjRRt4baTQHUeh9 # Address of the previously deployed smart function examples/counter.js
+jstz run --trace "jstz://${counter}/"
+jstz run --trace "jstz://${counter}/"
+jstz run --trace "jstz://${counter}/"
+jstz run --trace "jstz://${counter}/"
+```
+
+If you deploy the `counter` smart function and call it as in the previous examples, you should see its output in the console, as in this example:
+
+```
+[LOG] Counter: null
+[LOG] Counter: 0
+[LOG] Counter: 1
+[LOG] Counter: 2
+```
+
+### Sandbox
+
+The sandbox commands are responsible for managing the Jstz sandbox environment.
+For more information, see [sandbox](/sandbox).
+
+In most cases, start the sandbox in a Docker container by including the `--container` flag.
+If you don't use this flag, Jstz requires that you clone the Jstz repository at https://github.com/jstz-dev/jstz/ and install its `nix` environment as described in [Building from source](/installation#building-from-source).
+
+#### Commands
+
+- `restart`: Restarts the sandbox.
+
+- `start`: Starts the sandbox environment.
+
+- `stop`: Shuts down the sandbox environment.
+
+#### Usage
+
+```bash
+jstz sandbox start [OPTIONS]
+jstz sandbox restart [OPTIONS]
+jstz sandbox stop
+```
+
+#### Options
+
+- `--container`: Run the sandbox in a Docker container.
+  Requires Docker.
+- `--detach (-d)`: Detach the process to run in the background.
+
+#### Examples
+
+```bash
+jstz sandbox --container start -d
+
+jstz sandbox --container restart -d
+
+jstz sandbox --container stop
+```
+
+### Transfer
+
+Transfer XTZ between Jstz accounts.
+
+#### Usage
+
+```bash
+jstz transfer [OPTIONS] <AMOUNT> <ADDRESS|ALIAS>
+```
+
+#### Arguments
+
+- `<ADDRESS|ALIAS>`: Destination address or alias of the account (user or smart function).
+
+- `<AMOUNT>`: The amount in XTZ to transfer.
+
+#### Options
+
+- `--gas-limit (-g) <GAS_LIMIT>`: The maximum amount of gas to be used. Default is `100000`.
+
+- `--include (-i)`: Include response headers in the output.
+
+- `--network (-n) <NETWORK>`: The network from the config file, such as `dev` for the local sandbox.
+
+#### Example
+
+```bash
+jstz transfer 2 KT1CexuXoXuShARedvKSmxwDTLxRHNcvxqKR
+```
+
+### whoami
+
+The `whoami` command prints the active account alias.
+Use the `login` and `logout` commands to change the active account.
+
+#### Usage
+
+```bash
+jstz whoami
+```
+
+#### Arguments
+
+None.
+
+#### Example
+
+```bash
+jstz whoami
 ```

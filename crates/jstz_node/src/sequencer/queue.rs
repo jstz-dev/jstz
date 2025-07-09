@@ -1,10 +1,10 @@
 use std::collections::VecDeque;
 
-use crate::sequencer::inbox::parsing::Message;
+use super::inbox::parsing::ParsedInboxMessage;
 
 pub struct OperationQueue {
     capacity: usize,
-    queue: VecDeque<Message>,
+    queue: VecDeque<ParsedInboxMessage>,
 }
 
 impl OperationQueue {
@@ -15,7 +15,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn insert(&mut self, op: Message) -> anyhow::Result<()> {
+    pub fn insert(&mut self, op: ParsedInboxMessage) -> anyhow::Result<()> {
         if self.is_full() {
             anyhow::bail!("queue is full")
         } else {
@@ -24,7 +24,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn insert_ref(&mut self, op: &Message) -> anyhow::Result<()> {
+    pub fn insert_ref(&mut self, op: &ParsedInboxMessage) -> anyhow::Result<()> {
         if self.is_full() {
             anyhow::bail!("queue is full")
         } else {
@@ -33,7 +33,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn pop(&mut self) -> Option<Message> {
+    pub fn pop(&mut self) -> Option<ParsedInboxMessage> {
         self.queue.pop_front()
     }
 
