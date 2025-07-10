@@ -2946,6 +2946,7 @@ dependencies = [
  "jstz_api",
  "jstz_core",
  "jstz_crypto",
+ "jstz_kernel",
  "jstz_mock",
  "jstz_oracle_node",
  "jstz_proto",

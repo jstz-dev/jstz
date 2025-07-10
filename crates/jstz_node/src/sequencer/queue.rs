@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use super::inbox::parsing::ParsedInboxMessage;
+use jstz_kernel::ParsedInboxMessage;
 
 pub struct OperationQueue {
     capacity: usize,

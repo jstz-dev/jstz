@@ -1,22 +1,16 @@
 #![allow(dead_code)]
-/// This file is imported from the jstz_kernel crate. `jstz_kernel/src/inbox.rs`
-/// is the original source. There is some build issue importing the `inbox` module
-/// directly, so we copy the relevant parts here.
-/// https://linear.app/tezos/issue/JSTZ-627/build-script-issue
 use jstz_core::{host::WriteDebug, BinEncodable};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_proto::operation::{
-    internal::{Deposit, FaDeposit},
-    InternalOperation, SignedOperation,
-};
+use jstz_kernel::{try_parse_fa_deposit, LevelInfo, Message, ParsedInboxMessage};
+use jstz_proto::operation::{internal::Deposit, InternalOperation, SignedOperation};
 use jstz_proto::{context::account::Address, Result};
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
+use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
 use tezos_smart_rollup::michelson::{
     MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
 };
-use tezos_smart_rollup::{inbox::InfoPerLevel, michelson::ticket::FA2_1Ticket};
 pub use tezos_smart_rollup::{
     inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage, Transfer},
     michelson::MichelsonPair,
@@ -26,12 +20,6 @@ pub use tezos_smart_rollup::{
 
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = InternalOperation;
-
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum Message {
-    External(ExternalMessage),
-    Internal(InternalMessage),
-}
 
 pub type MichelsonNativeDeposit = MichelsonPair<MichelsonContract, FA2_1Ticket>;
 
@@ -232,53 +220,6 @@ pub fn try_parse_contract(contract: &Contract) -> Result<Address> {
     }
 }
 
-pub fn try_parse_fa_deposit(
-    inbox_id: u32,
-    ticket: FA2_1Ticket,
-    receiver: MichelsonContract,
-    proxy_contract: Option<MichelsonContract>,
-) -> Result<FaDeposit> {
-    let receiver = try_parse_contract(&receiver.0)?;
-
-    let proxy_smart_function = (proxy_contract)
-        .map(|c| {
-            if let addr @ Address::SmartFunction(_) = try_parse_contract(&c.0)? {
-                Ok(addr)
-            } else {
-                Err(jstz_proto::Error::AddressTypeMismatch)
-            }
-        })
-        .transpose()?;
-
-    let amount = ticket
-        .amount()
-        .to_u64()
-        .ok_or(jstz_proto::Error::TicketAmountTooLarge)?;
-    let ticket_hash = ticket.hash()?;
-
-    Ok(FaDeposit {
-        inbox_id,
-        amount,
-        receiver,
-        proxy_smart_function,
-        ticket_hash,
-    })
-}
-
-#[derive(Debug, Clone, derive_more::From)]
-pub enum ParsedInboxMessage {
-    JstzMessage(Message),
-    LevelInfo(LevelInfo),
-}
-
-#[derive(Debug, Clone)]
-pub enum LevelInfo {
-    // Start of level
-    Start,
-    Info(InfoPerLevel),
-    End,
-}
-
 #[cfg(test)]
 mod test {
     use jstz_core::host::WriteDebug;
@@ -293,9 +234,8 @@ mod test {
     };
     use tezos_smart_rollup::types::Contract;
 
-    use crate::sequencer::inbox::parsing::{
-        try_parse_contract, try_parse_fa_deposit, ParsedInboxMessage,
-    };
+    use crate::sequencer::inbox::parsing::try_parse_contract;
+    use jstz_kernel::{try_parse_fa_deposit, ParsedInboxMessage};
 
     use super::{parse_inbox_message_hex, Message};
 

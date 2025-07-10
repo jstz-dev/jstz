@@ -20,7 +20,7 @@ use crate::parsing::try_parse_fa_deposit;
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = InternalOperation;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),
@@ -203,12 +203,13 @@ fn read_external_message(
     Some(msg)
 }
 
-#[derive(derive_more::From)]
+#[derive(Debug, Clone, derive_more::From)]
 pub enum ParsedInboxMessage {
     JstzMessage(Message),
     LevelInfo(LevelInfo),
 }
 
+#[derive(Debug, Clone)]
 pub enum LevelInfo {
     // Start of level
     Start,
