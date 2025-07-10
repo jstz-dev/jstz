@@ -79,8 +79,7 @@ pub struct Request {
     pub body: Option<Body>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-#[serde(from = "BodyDeserializeHelper", into = "BodySerializeHelper")]
+#[derive(Clone, Debug)]
 pub enum Body {
     Vector(Vec<u8>),
     Buffer(JsBuffer),
@@ -197,35 +196,23 @@ impl<'s> ToV8<'s> for Body {
     }
 }
 
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "PascalCase")]
-enum BodySerializeHelper {
-    Vector(Vec<u8>),
-    Buffer(Vec<u8>),
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-enum BodyDeserializeHelper {
-    Vector(Vec<u8>),
-    Buffer(Vec<u8>),
-}
-
-impl From<Body> for BodySerializeHelper {
-    fn from(value: Body) -> Self {
-        match value {
-            Body::Vector(bytes) => Self::Vector(bytes),
-            Body::Buffer(buf) => Self::Buffer(buf.to_vec()),
-        }
+impl Serialize for Body {
+    fn serialize<S>(&self, ser: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let vec: Vec<u8> = self.clone().into();
+        ser.serialize_bytes(&vec)
     }
 }
 
-impl From<BodyDeserializeHelper> for Body {
-    fn from(value: BodyDeserializeHelper) -> Self {
-        let bytes = match value {
-            BodyDeserializeHelper::Vector(b) | BodyDeserializeHelper::Buffer(b) => b,
-        };
-        Body::Vector(bytes)
+impl<'de> Deserialize<'de> for Body {
+    fn deserialize<D>(de: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let vec = Vec::<u8>::deserialize(de)?;
+        Ok(Body::from(vec))
     }
 }
 
@@ -416,7 +403,7 @@ mod test {
         };
         let json = serde_json::to_string(&request.clone()).unwrap();
         assert_eq!(
-            r#"{"method":[80,79,83,84],"url":"http://example.com/foo","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":{"Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}"#,
+            r#"{"method":[80,79,83,84],"url":"http://example.com/foo","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}"#,
             json
         );
         let de: Request = serde_json::from_str(json.as_str()).unwrap();
@@ -440,7 +427,7 @@ mod test {
         };
         let json = serde_json::to_string(&request.clone()).unwrap();
         assert_eq!(
-            r#"{"status":200,"status_text":"OK","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":{"Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}"#,
+            r#"{"status":200,"status_text":"OK","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}"#,
             json
         );
         let de: Response = serde_json::from_str(json.as_str()).unwrap();
@@ -469,7 +456,7 @@ mod test {
             };
 
             let txt = json::to_string(&resp).unwrap();
-            assert!(txt.contains("\"Buffer\":[9,8,7]"));
+            assert!(txt.contains("\"body\":[9,8,7]"));
             txt
         };
 
@@ -605,12 +592,37 @@ mod test {
             let original = Body::Buffer(js_buf);
             let txt = json::to_string(&original).unwrap();
 
-            assert!(txt.contains("\"Buffer\":[1,2,3,4]"));
+            assert!(txt.contains("[1,2,3,4]"));
 
             txt
         };
 
         let roundtrip: Body = json::from_str(&json_wire).unwrap();
+        assert_eq!(roundtrip, Body::Vector(payload));
+    }
+
+    #[test]
+    fn body_buffer_bincode_roundtrip() {
+        use bincode::config::standard;
+        use bincode::serde::{decode_from_slice, encode_to_vec};
+
+        use deno_core::{serde_v8, JsBuffer, JsRuntime, RuntimeOptions, ToJsBuffer};
+
+        let mut rt = JsRuntime::new(RuntimeOptions::default());
+        let payload = vec![0xAA_u8, 0xBB, 0xCC];
+
+        let original = {
+            let scope = &mut rt.handle_scope();
+            let v8_val =
+                serde_v8::to_v8(scope, ToJsBuffer::from(payload.clone())).unwrap();
+            let js_buf: JsBuffer = serde_v8::from_v8(scope, v8_val).unwrap();
+            Body::Buffer(js_buf)
+        };
+
+        let wire = encode_to_vec(&original, standard()).unwrap();
+        let (roundtrip, _bytes_read): (Body, usize) =
+            decode_from_slice(&wire, standard()).unwrap();
+
         assert_eq!(roundtrip, Body::Vector(payload));
     }
 }
