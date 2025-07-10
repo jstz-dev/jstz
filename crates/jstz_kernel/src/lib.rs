@@ -1,4 +1,3 @@
-use inbox::Message;
 use jstz_core::kv::{Storage, Transaction};
 use jstz_crypto::{public_key::PublicKey, smart_function_hash::SmartFunctionHash};
 use jstz_proto::executor;
@@ -12,6 +11,9 @@ use tezos_smart_rollup::{
 
 pub mod inbox;
 pub mod parsing;
+
+pub use inbox::{LevelInfo, Message, ParsedInboxMessage};
+pub use parsing::try_parse_fa_deposit;
 
 #[cfg(feature = "riscv_kernel")]
 pub mod riscv_kernel;

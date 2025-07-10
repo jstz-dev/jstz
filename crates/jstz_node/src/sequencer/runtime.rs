@@ -11,7 +11,8 @@ use tezos_smart_rollup::{
     storage::path::RefPath,
 };
 
-use crate::{config::KeyPair, sequencer::inbox::parsing::Message};
+use crate::config::KeyPair;
+use jstz_kernel::Message;
 
 use super::{db::Db, host::Host};
 

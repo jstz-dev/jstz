@@ -16,10 +16,11 @@ use std::{
 use anyhow::Context;
 use log::warn;
 
-use super::{db::Db, inbox::parsing::ParsedInboxMessage, queue::OperationQueue};
+use super::{db::Db, queue::OperationQueue};
+use jstz_kernel::ParsedInboxMessage;
 
 #[cfg(feature = "v2_runtime")]
-use super::inbox::parsing::LevelInfo;
+use jstz_kernel::LevelInfo;
 
 pub struct Worker {
     thread_kill_sig: Sender<()>,
