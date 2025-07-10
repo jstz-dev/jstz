@@ -1,11 +1,15 @@
+# [env]
+# CC_riscv64gc_unknown_linux_musl = "riscv64-unknown-linux-musl-cc"
+
 [target.riscv64gc-unknown-linux-musl]
-linker = "riscv64-unknown-linux-musl-g++"
+linker = "riscv64-unknown-linux-musl-gcc"
 rustflags = [
   "-C",
   "target-feature=+crt-static",
   "-C",
   "default-linker-libraries=y",
   "-C",
-  "link-arg=-latomic"
+  "link-arg=-latomic",
+  "-C",
+  "link-arg=-lstdc++"
 ]
-

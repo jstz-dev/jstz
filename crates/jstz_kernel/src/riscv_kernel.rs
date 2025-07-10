@@ -122,7 +122,14 @@ fn read_message(
 #[cfg(test)]
 mod test {
 
-    use jstz_core::kv::Transaction;
+    use std::{fs, path::PathBuf};
+
+    use http::{HeaderMap, Method};
+    use jstz_core::{
+        host::HostRuntime,
+        kv::{Storage, Transaction},
+        BinEncodable,
+    };
     use jstz_crypto::{
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
@@ -137,14 +144,25 @@ mod test {
             ticket_table::TicketTable,
         },
         executor::smart_function,
-        operation::{DeployFunction, Operation, RunFunction, SignedOperation},
+        operation::{
+            DeployFunction, Operation, OperationHash, RunFunction, SignedOperation,
+        },
+        receipt::Receipt,
         runtime::ParsedCode,
     };
-    use tezos_smart_rollup::types::{
-        Contract as L1Address, PublicKeyHash as L1PublicKeyHash,
+    use rand::{Rng, SeedableRng};
+    use serde::{de::DeserializeOwned, Serialize};
+    use serde_json::json;
+    use tezos_data_encoding::enc::BinWriter;
+    use tezos_smart_rollup::{
+        inbox::ExternalMessageFrame,
+        storage::path::OwnedPath,
+        types::{
+            Contract as L1Address, PublicKeyHash as L1PublicKeyHash, SmartRollupAddress,
+        },
     };
 
-    use crate::{parsing::try_parse_contract, read_ticketer};
+    use crate::{inbox::ExternalMessage, parsing::try_parse_contract, read_ticketer};
 
     use super::run;
 
@@ -394,5 +412,187 @@ mod test {
             }
             _ => panic!("Unexpected receiver"),
         }
+    }
+
+    #[test]
+    fn generate_inbox_messages() {
+        fn sign_op(sk: &SecretKey, op: Operation) -> SignedOperation {
+            let signature = sk.sign(op.hash()).unwrap();
+            SignedOperation::new(signature, op)
+        }
+
+        fn generate_transfers(
+            pk: &PublicKey,
+            sk: &SecretKey,
+            mut nonce: u64,
+            fa_address: String,
+            n: u64,
+        ) -> Vec<SignedOperation> {
+            let mut signed_operations = Vec::new();
+
+            for seed in 0..n {
+                nonce += 1;
+                let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+                let mut array = [0u8; 20];
+                for i in 0..20 {
+                    array[i] = rng.gen()
+                }
+                let pkh = PublicKeyHash::digest(&array).unwrap();
+                let signed_op = sign_op(
+                    sk,
+                    Operation {
+                        public_key: pk.clone(),
+                        nonce: nonce.into(),
+                        content: RunFunction {
+                            uri: format!("jstz://{}/transfer", fa_address)
+                                .parse()
+                                .unwrap(),
+                            method: Method::POST,
+                            headers: HeaderMap::new(),
+                            body: Some(
+                                serde_json::to_vec(&json!({
+                                    "dest": pkh.to_base58(),
+                                    "amount": 1000
+                                }))
+                                .unwrap(),
+                            ),
+                            gas_limit: 0,
+                        }
+                        .into(),
+                    },
+                );
+                signed_operations.push(signed_op);
+            }
+
+            signed_operations
+        }
+
+        let mut host = JstzMockHost::new(false);
+        host.set_debug_handler(std::io::stdout());
+
+        let code =
+            include_str!("fa2.js");
+
+        let alice_pk = PublicKey::from_base58(
+            "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
+        )
+        .unwrap();
+        let alice_sk = SecretKey::from_base58(
+            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
+        )
+        .unwrap();
+
+        let deploy_op = sign_op(
+            &alice_sk,
+            Operation {
+                public_key: alice_pk.clone(),
+                nonce: 0.into(),
+                content: DeployFunction {
+                    function_code: ParsedCode::try_from(code.to_string()).unwrap(),
+                    account_credit: 0,
+                }
+                .into(),
+            },
+        );
+
+        let mint_op = sign_op(
+            &alice_sk,
+            Operation {
+                public_key: alice_pk.clone(),
+                nonce: 1.into(),
+                content: RunFunction {
+                    uri: "jstz://KT1DQHQNCBSrdYTyVdUMtLyocgJNmRo4SqYA/mint"
+                        .parse()
+                        .unwrap(),
+                    method: Method::POST,
+                    headers: HeaderMap::new(),
+                    body: None,
+                    gas_limit: 0,
+                }
+                .into(),
+            },
+        );
+
+        let mut buffer: Vec<ExternalMessage> = Vec::new();
+        buffer.push(deploy_op.clone());
+        buffer.push(mint_op.clone());
+
+        host.add_external_message(deploy_op);
+        host.add_external_message(mint_op);
+
+        let fa_transfers = generate_transfers(
+            &alice_pk,
+            &alice_sk,
+            1,
+            "KT1DQHQNCBSrdYTyVdUMtLyocgJNmRo4SqYA".to_string(),
+            200,
+        );
+        let hashes: Vec<_> = fa_transfers.iter().map(|op| op.hash()).collect();
+        for op in fa_transfers {
+            buffer.push(op.clone());
+            host.add_external_message(op);
+        }
+        host.run_level(run);
+
+        #[derive(Serialize)]
+        struct Inner {
+            external: String,
+        }
+        let ext_messages: Vec<Vec<_>> = vec![buffer
+            .iter()
+            .map(|op| {
+                let bin_op = op.encode().unwrap();
+                let external_message_frame = ExternalMessageFrame::Targetted {
+                    address: SmartRollupAddress::from_b58check(
+                        "sr1FXevDx86EyU1BBwhn94gtKvVPTNwoVxUC",
+                    )
+                    .unwrap(),
+                    contents: bin_op,
+                };
+                let mut output = Vec::new();
+                ExternalMessageFrame::bin_write(&external_message_frame, &mut output)
+                    .unwrap();
+                let payload = hex::encode(output.as_slice());
+                Inner { external: payload }
+            })
+            .collect()];
+
+        let result = serde_json::to_string_pretty(&ext_messages).unwrap();
+        println!("{result}");
+        let base = env!("CARGO_MANIFEST_DIR");
+        fs::write(
+            PathBuf::new()
+                .join(format!("{}/generated_inbox.json", base)),
+            result,
+        )
+        .unwrap();
+
+        for h in hashes {
+            let body: Vec<u8> =
+                inspect_receipt(host.rt(), h, vec!["result", "inner", "body"]);
+            println!("{}", String::from_utf8(body).unwrap())
+        }
+    }
+
+    // Helper to inpect fields in a receipt by tarversing the json path. Useful for debugging.
+    // For example, to inpect the body of a successful RunFunctionReceipt, you can provide the path
+    // vec!["result", "inner", "body"]. If you don't really care what the return type is and just
+    // want to print field value, you can parameterize with `serde_json::Value`
+    pub fn inspect_receipt<T: DeserializeOwned>(
+        host: &impl HostRuntime,
+        op_hash: OperationHash,
+        path_into_receipt: Vec<&'static str>,
+    ) -> T {
+        let receipt_path = OwnedPath::try_from(format!("/jstz_receipt/{}", op_hash))
+            .expect("Operation hash should exist");
+        let receipt: Receipt = Storage::get(host, &receipt_path)
+            .unwrap()
+            .expect("Receipt should exist");
+        let receipt = serde_json::to_value(&receipt).unwrap();
+        let mut cursor = receipt.clone();
+        for p in path_into_receipt {
+            cursor = cursor[p].clone();
+        }
+        serde_json::from_value(cursor).unwrap()
     }
 }

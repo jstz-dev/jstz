@@ -18,6 +18,10 @@ name = "kernel-executable"
 path = "src/executable.rs"
 required-features = ["riscv_kernel"]
 
+[[bin]]
+name = "hello-kernel"
+path = "src/hello-kernel.rs"
+
 [dependencies]
 bincode.workspace = true
 derive_more = { workspace = true, features = ["from"] }
@@ -41,6 +45,7 @@ jstz_utils = { path = "../jstz_utils" }
 http.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
+rand.workspace = true
 
 [features]
 v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
