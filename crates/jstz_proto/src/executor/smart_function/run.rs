@@ -168,9 +168,9 @@ mod test {
         assert_eq!(balance_after, balance_before);
     }
 
+    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
     #[tokio::test]
     #[cfg_attr(feature = "v2_runtime", ignore = "v2 fetch does not support noop path")]
-    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
     async fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
@@ -288,12 +288,12 @@ mod test {
         assert!(result.status_code.is_server_error());
     }
 
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
     #[tokio::test]
     #[cfg_attr(
         feature = "v2_runtime",
         ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
     )]
-    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
     async fn invalid_request_should_fail() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
@@ -358,12 +358,12 @@ mod test {
         assert!(call_failed);
     }
 
+    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
     #[tokio::test]
     #[cfg_attr(
         feature = "v2_runtime",
         ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
     )]
-    // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
     async fn invalid_response_should_fail() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
