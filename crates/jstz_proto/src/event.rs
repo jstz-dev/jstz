@@ -168,7 +168,7 @@ mod test {
         let head_line = sink.lines().first().unwrap().clone();
         assert_eq!(
             head_line,
-            r#"[ORACLE]{"id":1,"caller":"tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb","gas_limit":100,"timeout":21,"request":{"method":[80,79,83,84],"url":"http://example.com/foo","headers":[],"body":{"Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}}"#
+            r#"[ORACLE]{"id":1,"caller":"tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb","gas_limit":100,"timeout":21,"request":{"method":[80,79,83,84],"url":"http://example.com/foo","headers":[],"body":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}"#
         );
         let decoded = decode_line(&head_line).unwrap();
         assert_eq!(event, decoded)
