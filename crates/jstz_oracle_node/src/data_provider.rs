@@ -6,7 +6,9 @@ use jstz_crypto::{
 use jstz_proto::context::account::Address;
 use jstz_proto::operation::{Content, Operation, OracleResponse, SignedOperation};
 use jstz_proto::receipt::{ReceiptContent, ReceiptResult};
-use jstz_proto::runtime::v2::fetch::http::{convert_header_map, Body, Response};
+use jstz_proto::runtime::v2::fetch::http::{
+    convert_header_map, Body, Request as HttpRequest, Response,
+};
 use jstz_proto::runtime::v2::oracle::request::OracleRequest;
 use log::{error, info};
 use reqwest::header::{HeaderMap as ReqwestHeaderMap, HeaderName, HeaderValue};
@@ -65,16 +67,77 @@ impl Drop for DataProvider {
     }
 }
 
-fn exponential_backoff(base: u64, attempts: usize) -> impl Iterator<Item = Duration> {
+fn extract_status_code(msg: &str) -> Option<u16> {
+    msg.find("Status:")
+        .and_then(|pos| msg[pos + 7..].trim().split_whitespace().next())
+        .and_then(|code_str| code_str.parse::<u16>().ok())
+}
+
+pub fn exponential_backoff(
+    base: u64,
+    max_attempts: usize,
+    max_delay: Duration,
+) -> impl Iterator<Item = Duration> {
     ExponentialBackoff::from_millis(base)
         .factor(2)
-        .max_delay(Duration::from_secs(8))
-        .take(attempts)
+        .max_delay(max_delay)
+        .take(max_attempts)
+}
+
+async fn execute_http_request(
+    client: &reqwest::Client,
+    method: &Method,
+    request: &HttpRequest,
+) -> Result<Response> {
+    let mut builder = client.request(method.clone(), request.url.clone());
+
+    // Headers
+    let mut headers = ReqwestHeaderMap::new();
+    for (name, value) in &request.headers {
+        headers.append(
+            HeaderName::from_bytes(name)?,
+            HeaderValue::from_bytes(value)?,
+        );
+    }
+    builder = builder.headers(headers);
+
+    // Body
+    if let Some(body) = request.body.clone() {
+        builder = builder.body::<Vec<u8>>(body.into());
+    }
+
+    let resp = builder.send().await?;
+
+    let status = resp.status().as_u16();
+    let status_text = resp
+        .status()
+        .canonical_reason()
+        .unwrap_or("Unknown")
+        .to_string();
+
+    // TODO: Update reqwest and simplify this
+    let headers = convert_header_map(http::HeaderMap::from_iter(
+        resp.headers().iter().map(|(name, value)| {
+            (
+                http::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
+                http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+            )
+        }),
+    ));
+
+    let body = Body::Vector(resp.bytes().await?.to_vec());
+
+    Ok(Response {
+        status,
+        status_text,
+        headers,
+        body,
+    })
 }
 
 async fn retry_async<F, Fut, T, E, C>(
     backoff: impl Iterator<Item = Duration>,
-    mut op: F,
+    op: F,
     should_retry: C,
 ) -> Result<T, E>
 where
@@ -82,7 +145,7 @@ where
     Fut: std::future::Future<Output = Result<T, E>>,
     C: Fn(&E) -> bool + Copy,
 {
-    RetryIf::spawn(backoff, || op(), should_retry).await
+    RetryIf::spawn(backoff, op, should_retry).await
 }
 
 async fn handle_request(
@@ -111,55 +174,7 @@ async fn get_oracle_response(
 ) -> Result<Response> {
     let OracleRequest { request, .. } = oracle_req;
 
-    // Convert to reqwest::RequestBuilder
     let method = Method::from_bytes(&request.method).context("invalid HTTP method")?;
-
-    let attempt = || async {
-        let mut builder = client.request(method.clone(), request.url.clone());
-
-        // Headers
-        let mut headers = ReqwestHeaderMap::new();
-        for (name, value) in &request.headers {
-            headers.append(
-                HeaderName::from_bytes(name)?,
-                HeaderValue::from_bytes(value)?,
-            );
-        }
-        builder = builder.headers(headers);
-
-        // Body
-        if let Some(body) = request.body.clone() {
-            builder = builder.body::<Vec<u8>>(body.into());
-        }
-
-        let resp = builder.send().await?;
-
-        let status = resp.status().as_u16();
-        let status_text = resp
-            .status()
-            .canonical_reason()
-            .unwrap_or("Unknown")
-            .to_string();
-
-        // TODO: Update reqwest and simplify this
-        let headers = convert_header_map(http::HeaderMap::from_iter(
-            resp.headers().iter().map(|(name, value)| {
-                (
-                    http::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
-                    http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
-                )
-            }),
-        ));
-
-        let body = Body::Vector(resp.bytes().await?.to_vec());
-
-        Ok(Response {
-            status,
-            status_text,
-            headers,
-            body,
-        })
-    };
 
     // Retry only when it's safe and likely transient
     let should_retry = |e: &anyhow::Error| is_transient_error(e);
@@ -167,11 +182,16 @@ async fn get_oracle_response(
     // Execute
     let send_result =
         if method == Method::GET || method == Method::HEAD || method == Method::OPTIONS {
-            // 5 attempts: 100 ms → 3.2 s
-            retry_async(exponential_backoff(100, 5), attempt, should_retry).await
+            // 5 attempts: 100 ms → 1.6 s (total back‑off time ≈ 3.1 s)
+            retry_async(
+                exponential_backoff(100, 5, Duration::from_secs(8)),
+                || execute_http_request(client, &method, &request),
+                should_retry,
+            )
+            .await
         } else {
             // single attempt
-            attempt().await
+            execute_http_request(client, &method, &request).await
         };
 
     send_result.or_else(|e| Ok(bad_gateway_error_response(e.to_string().as_bytes())))
@@ -214,20 +234,13 @@ async fn inject_oracle_response(
         }
 
         let msg = e.to_string();
-        if let Some(pos) = msg.find("Status:") {
-            if let Some(code_str) = msg[pos + 7..].trim().split_whitespace().next() {
-                if let Ok(code) = code_str.parse::<u16>() {
-                    return code == 429 || (500..600).contains(&code);
-                }
-            }
+        if let Some(code) = extract_status_code(&msg) {
+            return code == 429 || (500 <= code && code <= 599);
         }
         false
     };
     let nonce = RetryIf::spawn(
-        ExponentialBackoff::from_millis(200)
-            .factor(2)
-            .max_delay(Duration::from_secs(5))
-            .take(6), // total 6 tries
+        exponential_backoff(200, 6, Duration::from_secs(5)),
         || async {
             jstz_client
                 .get_nonce(&oracle_address)
@@ -600,6 +613,13 @@ mod tests {
         )
         .await?;
 
+        // Verify all mocks were called
+        _nonce_fail.assert();
+        _nonce_ok.assert();
+        _post_fail.assert();
+        _post_ok.assert();
+        _receipt_ok.assert();
+
         Ok(())
     }
 
@@ -623,7 +643,7 @@ mod tests {
             .with_status(200)
             // send the whole body ("later") as one chunk,
             // but only after sleeping 200 ms  (> client timeout)
-            .with_chunked_body(|mut writer| {
+            .with_chunked_body(|writer| {
                 std::thread::sleep(Duration::from_millis(200));
                 writer.write_all(b"later").map(|_| ())
             })
@@ -665,7 +685,7 @@ mod tests {
         let _slow = server
             .mock("POST", "/echo")
             .with_status(200)
-            .with_chunked_body(|mut writer| {
+            .with_chunked_body(|writer| {
                 std::thread::sleep(Duration::from_millis(200));
                 writer.write_all(b"ignored").map(|_| ())
             })
