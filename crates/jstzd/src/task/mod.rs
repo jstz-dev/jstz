@@ -4,6 +4,8 @@ pub mod jstzd;
 pub mod octez_baker;
 pub mod octez_node;
 pub mod octez_rollup;
+#[cfg(feature = "oracle")]
+mod oracle_node;
 pub mod utils;
 
 use anyhow::Result;

@@ -32,8 +32,6 @@ async fn jstz_node_test() {
         jstz_node::RunMode::Default,
         0,
         debug_log_file.path(),
-        #[cfg(feature = "v2_runtime")]
-        None,
     );
     let mut jstz_node = jstzd::task::jstz_node::JstzNode::spawn(jstz_node_config)
         .await
