@@ -3,7 +3,6 @@ use std::path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::config::KeyPair;
 use crate::sequencer::inbox::parsing::Message;
 use crate::sequencer::inbox::parsing::ParsedInboxMessage;
 use crate::sequencer::queue::OperationQueue;
@@ -24,6 +23,7 @@ use jstz_core::reveal_data::{PreimageHash, RevealData, MAX_REVEAL_SIZE};
 use jstz_core::BinEncodable;
 use jstz_proto::operation::{Content, Operation, SignedOperation};
 use jstz_proto::receipt::Receipt;
+use jstz_utils::KeyPair;
 use octez::OctezRollupClient;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
@@ -288,6 +288,7 @@ mod tests {
         receipt::{DeployFunctionReceipt, Receipt},
         runtime::ParsedCode,
     };
+    use jstz_utils::KeyPair;
     use octez::OctezRollupClient;
     use tempfile::{NamedTempFile, TempDir};
     use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -296,7 +297,6 @@ mod tests {
     use crate::sequencer::inbox::parsing::{Message, ParsedInboxMessage};
     use crate::services::utils::StoreWrapper;
     use crate::{
-        config::KeyPair,
         services::{
             error::ServiceError,
             operations::{encode_operation, OperationsService},

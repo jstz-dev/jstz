@@ -4,6 +4,7 @@ use std::path::PathBuf;
 use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::secret_key::SecretKey;
 use jstz_node::RunMode;
+use jstz_utils::KeyPair;
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
 use rust_embed::Embed;
 use tempfile::NamedTempFile;
@@ -15,7 +16,6 @@ use crate::{
 use anyhow::{Context, Result};
 use http::Uri;
 use jstz_node::config::JstzNodeConfig;
-use jstz_node::config::KeyPair;
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{
     BootstrapContract, BootstrapSmartRollup, ProtocolParameter, SmartRollupPvmKind,

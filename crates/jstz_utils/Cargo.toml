@@ -12,6 +12,8 @@ description = "Utility functions"
 
 [dependencies]
 anyhow.workspace = true
+jstz_crypto = { path = "../jstz_crypto" }
 reqwest.workspace = true
+serde.workspace = true
 serde_json.workspace = true
 tokio.workspace = true

@@ -1,3 +1,6 @@
+use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+use serde::Serialize;
+
 pub mod tailed_file;
 
 pub async fn poll<'a, F, T>(
@@ -16,6 +19,16 @@ where
         }
     }
     None
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize)]
+#[serde(into = "PublicKey")]
+pub struct KeyPair(pub PublicKey, pub SecretKey);
+
+impl From<KeyPair> for PublicKey {
+    fn from(value: KeyPair) -> Self {
+        value.0
+    }
 }
 
 // WARNING: Should only be used in tests!
