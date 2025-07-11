@@ -1,1 +1,4 @@
 tests/deno_report.json
+tests/api_coverage/baseline.js
+tests/api_coverage/utils.js
+tests/api_coverage/output.json
