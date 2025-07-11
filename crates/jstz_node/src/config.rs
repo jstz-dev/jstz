@@ -1,36 +1,10 @@
 use std::path::{Path, PathBuf};
 
-use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+use jstz_utils::KeyPair;
 use octez::r#async::endpoint::Endpoint;
 use serde::Serialize;
 
 use crate::RunMode;
-
-/// Jstz node's signer defaults to `injector` account in jstzd/resources/bootstrap_account/accounts.json
-/// Make sure to keep these two in sync.
-pub const JSTZ_NODE_DEFAULT_PK: &str =
-    "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
-pub const JSTZ_NODE_DEFAULT_SK: &str =
-    "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh";
-
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(into = "PublicKey")]
-pub struct KeyPair(pub PublicKey, pub SecretKey);
-
-impl Default for KeyPair {
-    fn default() -> Self {
-        Self(
-            PublicKey::from_base58(JSTZ_NODE_DEFAULT_PK).unwrap(),
-            SecretKey::from_base58(JSTZ_NODE_DEFAULT_SK).unwrap(),
-        )
-    }
-}
-
-impl From<KeyPair> for PublicKey {
-    fn from(value: KeyPair) -> Self {
-        value.0
-    }
-}
 
 #[derive(Clone, Serialize)]
 pub struct JstzNodeConfig {
@@ -90,6 +64,8 @@ impl JstzNodeConfig {
 
 #[cfg(test)]
 mod tests {
+    use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+
     use super::*;
 
     #[test]
@@ -142,23 +118,5 @@ mod tests {
                 "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi"
             );
         }
-    }
-
-    #[test]
-    fn test_default_injector() {
-        let config = JstzNodeConfig::new(
-            &Endpoint::localhost(8932),
-            &Endpoint::localhost(8933),
-            Path::new("/tmp/preimages"),
-            Path::new("/tmp/kernel.log"),
-            KeyPair::default(),
-            RunMode::Default,
-            0,
-            Path::new("/tmp/debug.log"),
-            #[cfg(feature = "v2_runtime")]
-            None,
-        );
-
-        assert_eq!(config.injector, KeyPair::default());
     }
 }

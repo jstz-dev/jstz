@@ -1,8 +1,9 @@
 use anyhow::{Context, Result};
 use api_doc::{modify, ApiDoc};
 use axum::{extract::DefaultBodyLimit, http, routing::get};
-use config::{JstzNodeConfig, KeyPair};
+use config::JstzNodeConfig;
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
+use jstz_utils::KeyPair;
 use octez::OctezRollupClient;
 #[cfg(not(test))]
 use sequencer::inbox;
@@ -265,6 +266,7 @@ mod test {
         time::SystemTime,
     };
 
+    use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
     use octez::unused_port;
     use pretty_assertions::assert_eq;
     use tempfile::{NamedTempFile, TempDir};
@@ -273,6 +275,19 @@ mod test {
     use crate::{
         run, services::utils::tests::mock_app_state, KeyPair, RunMode, RunOptions,
     };
+
+    pub fn default_injector() -> KeyPair {
+        KeyPair(
+            PublicKey::from_base58(
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+            )
+            .unwrap(),
+            SecretKey::from_base58(
+                "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+            )
+            .unwrap(),
+        )
+    }
 
     #[test]
     fn api_doc_regression() {
@@ -324,7 +339,7 @@ mod test {
                 rollup_endpoint: "0.0.0.0:5678".to_string(),
                 rollup_preimages_dir: TempDir::new().unwrap().into_path(),
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
-                injector: KeyPair::default(),
+                injector: default_injector(),
                 mode: mode.clone(),
                 capacity: 0,
                 debug_log_path: debug_log_file.path().to_path_buf(),
@@ -391,7 +406,7 @@ mod test {
                 rollup_endpoint,
                 rollup_preimages_dir,
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
-                injector: KeyPair::default(),
+                injector: default_injector(),
                 mode,
                 capacity: 0,
                 debug_log_path: debug_log_file.path().to_path_buf(),

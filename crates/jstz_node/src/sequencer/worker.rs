@@ -1,7 +1,4 @@
-use crate::{
-    config::KeyPair,
-    sequencer::runtime::{init_host, process_message},
-};
+use crate::sequencer::runtime::{init_host, process_message};
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -14,6 +11,7 @@ use std::{
 };
 
 use anyhow::Context;
+use jstz_utils::KeyPair;
 use log::warn;
 
 use super::{db::Db, inbox::parsing::ParsedInboxMessage, queue::OperationQueue};
@@ -199,7 +197,7 @@ mod tests {
     };
 
     use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
-    use crate::{config::KeyPair, sequencer::inbox::test_utils::hash_of};
+    use crate::{sequencer::inbox::test_utils::hash_of, test::default_injector};
     use tempfile::NamedTempFile;
 
     #[test]
@@ -210,7 +208,7 @@ mod tests {
         let worker = super::spawn(
             q,
             Db::init(Some("")).unwrap(),
-            &KeyPair::default(),
+            &default_injector(),
             PathBuf::new(),
             None,
             move || {
@@ -253,7 +251,7 @@ mod tests {
         let _worker = super::spawn(
             wrapper.clone(),
             cp,
-            &KeyPair::default(),
+            &default_injector(),
             PathBuf::new(),
             Some(log_file.path()),
             move || {},

@@ -3142,7 +3142,9 @@ name = "jstz_utils"
 version = "0.1.1-alpha.3"
 dependencies = [
  "anyhow",
+ "jstz_crypto",
  "reqwest",
+ "serde",
  "serde_json",
  "tokio",
 ]

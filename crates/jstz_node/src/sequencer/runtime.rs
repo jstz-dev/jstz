@@ -11,7 +11,8 @@ use tezos_smart_rollup::{
     storage::path::RefPath,
 };
 
-use crate::{config::KeyPair, sequencer::inbox::parsing::Message};
+use crate::sequencer::inbox::parsing::Message;
+use jstz_utils::KeyPair;
 
 use super::{db::Db, host::Host};
 
@@ -116,7 +117,7 @@ mod tests {
         storage::path::{OwnedPath, RefPath},
     };
 
-    use crate::sequencer::db::Db;
+    use crate::{sequencer::db::Db, test::default_injector};
 
     fn dummy_op(
         sig_str: &str,
@@ -171,7 +172,7 @@ mod tests {
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
         let debug_log_file = NamedTempFile::new().unwrap();
-        let mut h = super::init_host(db, PathBuf::new(), &KeyPair::default())
+        let mut h = super::init_host(db, PathBuf::new(), &default_injector())
             .unwrap()
             .with_debug_log_file(debug_log_file.path())
             .unwrap();
@@ -254,7 +255,7 @@ mod tests {
         // Using a slightly complicated scenario here to check if transaction works properly.
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
-        let mut h = super::init_host(db, PathBuf::new(), &KeyPair::default()).unwrap();
+        let mut h = super::init_host(db, PathBuf::new(), &default_injector()).unwrap();
 
         let receiver =
             Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
@@ -311,7 +312,7 @@ mod tests {
         // Using a slightly complicated scenario here to check if transaction works properly.
         let db_file = NamedTempFile::new().unwrap();
         let db = Db::init(Some(db_file.path().to_str().unwrap())).unwrap();
-        let mut h = super::init_host(db, PathBuf::new(), &KeyPair::default()).unwrap();
+        let mut h = super::init_host(db, PathBuf::new(), &default_injector()).unwrap();
 
         let receiver =
             Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
@@ -399,7 +400,7 @@ mod tests {
         let signature = injector_sk.sign(large_payload.hash()).unwrap();
         let signed_large_payload = SignedOperation::new(signature, large_payload);
 
-        let mut h = super::init_host(db, path, &KeyPair::default()).unwrap();
+        let mut h = super::init_host(db, path, &default_injector()).unwrap();
 
         super::process_message(&mut h, Message::External(signed_large_payload))
             .await

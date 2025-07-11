@@ -71,9 +71,9 @@ pub(crate) mod tests {
     use tower::util::ServiceExt;
 
     use crate::{
-        config::KeyPair,
         sequencer::queue::OperationQueue,
         services::{logs::broadcaster::Broadcaster, utils::StoreWrapper},
+        test::default_injector,
         AppState, RunMode,
     };
 
@@ -99,7 +99,7 @@ pub(crate) mod tests {
             rollup_preimages_dir,
             broadcaster: Broadcaster::new(),
             db: crate::services::logs::db::Db::init().await.unwrap(),
-            injector: KeyPair::default(),
+            injector: default_injector(),
             mode,
             queue: Arc::new(RwLock::new(OperationQueue::new(1))),
             runtime_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),

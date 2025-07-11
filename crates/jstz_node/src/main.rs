@@ -3,7 +3,8 @@ use std::path::PathBuf;
 use anyhow::Context;
 use clap::Parser;
 use env_logger::Env;
-use jstz_node::{config::KeyPair, RunMode, RunOptions};
+use jstz_node::{RunMode, RunOptions};
+use jstz_utils::KeyPair;
 use tempfile::NamedTempFile;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
@@ -144,7 +145,7 @@ mod tests {
     };
 
     use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
-    use jstz_node::config::KeyPair;
+    use jstz_utils::KeyPair;
     use tempfile::NamedTempFile;
 
     #[test]
