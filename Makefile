@@ -12,16 +12,15 @@ else
 endif
 
 JSTZD_KERNEL_PATH := crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
-CLI_KERNEL_PATH := crates/jstz_cli/jstz_kernel.wasm
 
 .PHONY: all
 all: build test build-v2 test-v2 check
 
 .PHONY: build
-build: build-cli-kernel build-jstzd-kernel
+build: build-jstzd-kernel
 	@cargo build $(PROFILE_OPT)
 
-build-v2: build-cli-kernel build-jstzd-kernel
+build-v2: build-jstzd-kernel
 	@cargo build $(PROFILE_OPT) --features v2_runtime
 
 .PHONY: build-bridge
@@ -41,14 +40,8 @@ build-kernel:
 build-jstzd-kernel: build-kernel
 	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(JSTZD_KERNEL_PATH)
 
-# TODO: Remove once jstzd replaces the sandbox
-# https://linear.app/tezos/issue/JSTZ-205/remove-build-for-jstz-cli
-.PHONY: build-cli-kernel
-build-cli-kernel: build-kernel
-	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(CLI_KERNEL_PATH)
-
 .PHONY: build-cli
-build-cli: build-cli-kernel
+build-cli:
 	@cargo build --package jstz_cli $(PROFILE_OPT)
 
 .PHONY: build-deps
@@ -140,8 +133,7 @@ fmt-check:
 
 .PHONY: lint
 lint:
-	@touch $(CLI_KERNEL_PATH) 
 #  Jstzd has to processes a non-empty kernel in its build script
 	@echo "ignore" > $(JSTZD_KERNEL_PATH)
 	@cargo clippy --all-targets -- --deny warnings
-	@rm -f $(CLI_KERNEL_PATH) $(JSTZD_KERNEL_PATH)
+	@rm -f $(JSTZD_KERNEL_PATH)
