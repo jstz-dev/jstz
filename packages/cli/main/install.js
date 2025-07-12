@@ -44,6 +44,13 @@ function isOptionalDependencyInstalled(platformKey) {
 
 try {
   const platformKey = `${process.platform}_${process.arch}`;
+  const binaryName = PLATFORM_TO_BINARY_NAME.get(platformKey);
+
+  if (!binaryName) {
+    throw new Error(
+      `Unsupported platform: ${platformKey}. Pre-compiled jstz binaries are not available.`,
+    );
+  }
 
   if (isOptionalDependencyInstalled(platformKey)) {
     console.log("Installation complete.");
@@ -53,13 +60,6 @@ try {
   console.log(
     "Optional dependency not found. Attempting to download binary as a fallback.",
   );
-
-  const binaryName = PLATFORM_TO_BINARY_NAME.get(platformKey);
-  if (!binaryName) {
-    throw new Error(
-      `Unsupported platform: ${platformKey}. Pre-compiled jstz binaries are not available.`,
-    );
-  }
 
   await fsPromises.mkdir(BIN_DIR, { recursive: true });
 
