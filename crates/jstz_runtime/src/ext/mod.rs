@@ -3,6 +3,8 @@ pub(crate) mod jstz_fetch;
 pub mod jstz_kv;
 pub(crate) mod jstz_main;
 
+pub use jstz_fetch::FetchHandlerOptions;
+
 #[derive(Debug, ::thiserror::Error, deno_error::JsError)]
 #[class(not_supported)]
 #[error("{name} is not supported")]

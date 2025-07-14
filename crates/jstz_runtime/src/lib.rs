@@ -5,6 +5,7 @@ pub use ext::jstz_kv::kv::*;
 pub mod runtime;
 pub mod sys;
 
+pub use ext::*;
 pub use runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 
 #[cfg(test)]
