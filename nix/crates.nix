@@ -89,7 +89,6 @@
       buildInputs = common.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert pkgs.sqlite];
       preBuildPhases = ["cpJstzKernel"];
       cpJstzKernel = ''
-        cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
         cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
       '';
     };
@@ -119,17 +118,7 @@ in let
     # When adding a new crate, add it to this list
     # in alphabetical order.
     jstz_api = crate "jstz_api";
-    jstz_cli = craneLib.buildPackage (commonWorkspace
-      // rec {
-        pname = "jstz_cli";
-        cargoExtraArgs = "-p ${pname}";
-        # The `jstz_cli` crate depends on the `jstz_kernel` crate
-        # to build the `jstz_kernel.wasm` file.
-        preBuildPhases = ["mkJstzKernelForCli"];
-        mkJstzKernelForCli = ''
-          cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
-        '';
-      });
+    jstz_cli = crate "jstz_cli";
     jstz_core = crate "jstz_core";
     jstz_crypto = crate "jstz_crypto";
     inherit jstz_kernel;
