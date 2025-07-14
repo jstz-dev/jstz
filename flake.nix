@@ -49,6 +49,43 @@
     with inputs;
       flake-utils.lib.eachDefaultSystem (
         system: let
+          # Configure cargo to get dependencies from vendored dir
+          # Network access for fetching cargo dependencies is disabled in sandboxed
+          # builds. Instead we need to explicitly fetch the dependencies. Nixpkgs
+          # provides two ways to do this:
+          #
+          #  - `fetchCargoTarball` fetches the dependencies using `cargo vendor`
+          #     It requires an explicit `hash`.
+          #
+          #  - `importCargoLock` parses the `Cargo.lock` file and fetches each
+          #     dependency using `fetchurl`. It doesn't require an explicit `hash`.
+          #
+          # The latter is slower but doesn't require an explicit `hash` and is therefore
+          # more maintainable (since this derivation isn't built in CI).
+          vendorDeps = {
+            old,
+            rustPlatform,
+            dir,
+            gitDepHashes ? {},
+          }: let
+            vendoredDir = rustPlatform.importCargoLock {
+              lockFile = "${old.src}/${dir}/Cargo.lock";
+              outputHashes = gitDepHashes;
+            };
+          in ''
+            mkdir -p ${dir}/.cargo
+            cat >> ${dir}/.cargo/config.toml << EOF
+            [net]
+            offline = true
+
+            [source.crates-io]
+            replace-with = "vendored-sources"
+
+            [source.vendored-sources]
+            directory = "${vendoredDir}"
+            EOF
+          '';
+
           pkgs = import nixpkgs {
             inherit system;
             overlays = [
@@ -76,47 +113,12 @@
                 ./nix/patches/octez/0002-allow-floats-in-wasm-rollup.patch
               ];
 
-            # Network access for fetching cargo dependencies is disabled in sandboxed
-            # builds. Instead we need to explicitly fetch the dependencies. Nixpkgs
-            # provides two ways to do this:
-            #
-            #  - `fetchCargoTarball` fetches the dependencies using `cargo vendor`
-            #     It requires an explicit `hash`.
-            #
-            #  - `importCargoLock` parses the `Cargo.lock` file and fetches each
-            #     dependency using `fetchurl`. It doesn't require an explicit `hash`.
-            #
-            # The latter is slower but doesn't require an explicit `hash` and is therefore
-            # more maintainable (since this derivation isn't built in CI).
-            preBuild = let
-              # Configure cargo to get dependencies from vendored dir
-              vendorDeps = {
-                dir,
-                gitDepHashes ? {},
-              }: let
-                vendoredDir = rustPlatform.importCargoLock {
-                  lockFile = "${old.src}/${dir}/Cargo.lock";
-                  outputHashes = gitDepHashes;
-                };
-              in ''
-                mkdir -p ${dir}/.cargo
-                cat >> ${dir}/.cargo/config.toml << EOF
-                [net]
-                offline = true
-
-                [source.crates-io]
-                replace-with = "vendored-sources"
-
-                [source.vendored-sources]
-                directory = "${vendoredDir}"
-                EOF
-              '';
-            in
+            preBuild =
               # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
               # but does for Linux.
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                ${vendorDeps {dir = "src/rust_deps";}}
-                ${vendorDeps {dir = "src/rustzcash_deps";}}
+                ${vendorDeps {inherit rustPlatform old; dir = "src/rust_deps";}}
+                ${vendorDeps {inherit rustPlatform old; dir = "src/rustzcash_deps";}}
               '';
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
@@ -174,20 +176,24 @@
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
 
-          riscvSandbox = with pkgs;
-            rustPlatform.buildRustPackage {
-              name = "riscv-sandbox";
-              src = builtins.fetchGit {
-                url = "https://gitlab.com/tezos/tezos.git";
-                ref = "master";
-                rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3";
-              };
-              cargoRoot = "src/riscv";
-              buildAndTestSubdir = "src/riscv/sandbox";
-              useFetchCargoVendor = true;
-              cargoHash = "sha256-ZhvEguaALAbxo/Icf3SIA6ROc5eq7GhNA/ZIfWoT5oc=";
-              buildFeatures = ["supervisor"];
+          rustPlatform = pkgs.makeRustPlatform {
+            rustc = rust-toolchain;
+            cargo = rust-toolchain;
+          };
+
+          riscvSandbox = rustPlatform.buildRustPackage {
+            name = "riscv-sandbox";
+            src = builtins.fetchGit {
+              url = "https://github.com/tezos/riscv-pvm.git";
+              ref = "main";
+              rev = "1378be6b983e15d4ff7d47f9c08a1a0eb4d99e1d";
             };
+            cargoRoot = "src/riscv";
+            buildAndTestSubdir = "src/riscv/sandbox";
+            useFetchCargoVendor = true;
+            cargoHash = "sha256-vpmKzpn8hus9sB+smyz7bWf3JwHaKg6J92/eHEdjjr4=";
+            buildFeatures = ["huge-memory"];
+          };
 
           llvmPackages = pkgs.llvmPackages_16;
 
