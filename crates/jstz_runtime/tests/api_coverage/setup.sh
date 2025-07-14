@@ -8,6 +8,9 @@ TARGET_SHA=426ca553141d5ac41764beb9078bd27efd980756
 # be straightforward, so here it is changed to a script file whose only job is to export the baseline
 # data as a JSON object.
 curl -s --output /tmp/baseline.json https://raw.githubusercontent.com/cloudflare/workers-nodejs-compat-matrix/$TARGET_SHA/data/baseline.json
-(echo "export default "; cat /tmp/baseline.json) > ./tests/api_coverage/baseline.js
+(
+  echo "export default "
+  cat /tmp/baseline.json
+) >./tests/api_coverage/baseline.js
 
 curl -s --output ./tests/api_coverage/utils.js https://raw.githubusercontent.com/cloudflare/workers-nodejs-compat-matrix/$TARGET_SHA/dump-utils.mjs

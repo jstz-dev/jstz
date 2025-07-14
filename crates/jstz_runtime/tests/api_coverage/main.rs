@@ -40,10 +40,11 @@ async fn test() {
 
     let output = execute(&mut rt).await;
 
-    let path =
-        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/api_coverage/output.json");
-    let output_file = std::fs::File::create(path).unwrap();
-    serde_json::to_writer_pretty(output_file, &output).unwrap();
+    if let Ok(v) = std::env::var("OUTPUT_PATH") {
+        let path = Path::new(&v);
+        let output_file = std::fs::File::create(path).unwrap();
+        serde_json::to_writer_pretty(output_file, &output).unwrap();
+    }
 }
 
 async fn execute(rt: &mut JstzRuntime) -> serde_json::Value {
