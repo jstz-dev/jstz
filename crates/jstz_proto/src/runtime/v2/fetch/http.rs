@@ -79,7 +79,7 @@ pub struct Request {
     pub body: Option<Body>,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 pub enum Body {
     Vector(Vec<u8>),
     Buffer(JsBuffer),
@@ -193,6 +193,26 @@ impl<'s> ToV8<'s> for Body {
             }
             Body::Buffer(js_buffer) => js_buffer.to_v8(scope),
         }
+    }
+}
+
+impl Serialize for Body {
+    fn serialize<S>(&self, ser: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let vec: Vec<u8> = self.clone().into();
+        ser.serialize_bytes(&vec)
+    }
+}
+
+impl<'de> Deserialize<'de> for Body {
+    fn deserialize<D>(de: D) -> std::result::Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let vec = Vec::<u8>::deserialize(de)?;
+        Ok(Body::from(vec))
     }
 }
 
@@ -383,7 +403,7 @@ mod test {
         };
         let json = serde_json::to_string(&request.clone()).unwrap();
         assert_eq!(
-            r#"{"method":[80,79,83,84],"url":"http://example.com/foo","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":{"Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}"#,
+            r#"{"method":[80,79,83,84],"url":"http://example.com/foo","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}"#,
             json
         );
         let de: Request = serde_json::from_str(json.as_str()).unwrap();
@@ -407,11 +427,52 @@ mod test {
         };
         let json = serde_json::to_string(&request.clone()).unwrap();
         assert_eq!(
-            r#"{"status":200,"status_text":"OK","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":{"Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}"#,
+            r#"{"status":200,"status_text":"OK","headers":[[[107,49],[118,49]],[[107,50],[118,51]],[[107,50],[118,50]],[[107,49],[118,52]]],"body":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}"#,
             json
         );
         let de: Response = serde_json::from_str(json.as_str()).unwrap();
         assert_eq!(request, de);
+    }
+
+    #[test]
+    fn response_buffer_roundtrip() {
+        use deno_core::{serde_v8, JsBuffer, JsRuntime, RuntimeOptions, ToJsBuffer};
+        use serde_json as json;
+
+        let mut rt = JsRuntime::new(RuntimeOptions::default());
+        let payload = vec![9u8, 8, 7];
+
+        let json_wire: String = {
+            let scope = &mut rt.handle_scope();
+            let v8_val =
+                serde_v8::to_v8(scope, ToJsBuffer::from(payload.clone())).unwrap();
+            let js_buf: JsBuffer = serde_v8::from_v8(scope, v8_val).unwrap();
+
+            let resp = super::Response {
+                status: 201,
+                status_text: "CREATED".into(),
+                headers: vec![("k".into(), "v".into())],
+                body: super::Body::Buffer(js_buf),
+            };
+
+            let txt = json::to_string(&resp).unwrap();
+            assert!(txt.contains("\"body\":[9,8,7]"));
+            txt
+        };
+
+        let de: super::Response = json::from_str(&json_wire).unwrap();
+
+        assert_eq!(
+            de,
+            super::Response {
+                status: 201,
+                status_text: "CREATED".into(),
+                headers: vec![("k".into(), "v".into())],
+                body: super::Body::Vector(payload),
+            }
+        );
+
+        assert_eq!(de.body.as_slice(), &[9, 8, 7]);
     }
 
     #[tokio::test]
@@ -509,5 +570,59 @@ mod test {
         ]
         .map(|(k, v)| (k.as_bytes().into(), v.as_bytes().into()));
         assert_eq!(expected, *res);
+    }
+
+    #[test]
+    fn body_buffer_roundtrip() {
+        use deno_core::{serde_v8, JsBuffer, JsRuntime, RuntimeOptions, ToJsBuffer};
+        use serde_json as json;
+
+        let mut runtime = JsRuntime::new(RuntimeOptions::default());
+
+        let payload = vec![1u8, 2, 3, 4];
+
+        let json_wire: String = {
+            let scope = &mut runtime.handle_scope();
+
+            let v8_val =
+                serde_v8::to_v8(scope, ToJsBuffer::from(payload.clone())).unwrap();
+
+            let js_buf: JsBuffer = serde_v8::from_v8(scope, v8_val).unwrap();
+
+            let original = Body::Buffer(js_buf);
+            let txt = json::to_string(&original).unwrap();
+
+            assert!(txt.contains("[1,2,3,4]"));
+
+            txt
+        };
+
+        let roundtrip: Body = json::from_str(&json_wire).unwrap();
+        assert_eq!(roundtrip, Body::Vector(payload));
+    }
+
+    #[test]
+    fn body_buffer_bincode_roundtrip() {
+        use bincode::config::standard;
+        use bincode::serde::{decode_from_slice, encode_to_vec};
+
+        use deno_core::{serde_v8, JsBuffer, JsRuntime, RuntimeOptions, ToJsBuffer};
+
+        let mut rt = JsRuntime::new(RuntimeOptions::default());
+        let payload = vec![0xAA_u8, 0xBB, 0xCC];
+
+        let original = {
+            let scope = &mut rt.handle_scope();
+            let v8_val =
+                serde_v8::to_v8(scope, ToJsBuffer::from(payload.clone())).unwrap();
+            let js_buf: JsBuffer = serde_v8::from_v8(scope, v8_val).unwrap();
+            Body::Buffer(js_buf)
+        };
+
+        let wire = encode_to_vec(&original, standard()).unwrap();
+        let (roundtrip, _bytes_read): (Body, usize) =
+            decode_from_slice(&wire, standard()).unwrap();
+
+        assert_eq!(roundtrip, Body::Vector(payload));
     }
 }
