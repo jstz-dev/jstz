@@ -1,4 +1,3 @@
-#![cfg(not(feature = "skip-wpt"))]
 use std::path::Path;
 
 use deno_core::StaticModuleLoader;
@@ -15,6 +14,7 @@ deno_core::extension!(
     esm = [dir "tests/api_coverage", "entrypoint.js", "baseline.js", "utils.js"]
 );
 
+#[cfg_attr(feature = "skip-wpt", ignore)]
 #[tokio::test]
 async fn test() {
     let mut tx = Transaction::default();

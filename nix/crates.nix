@@ -79,6 +79,23 @@
       cargoExtraArgs = "-p ${pname} --target ${target}";
     });
 
+  apiCoverageTestScripts = with pkgs; let
+    TARGET_SHA = "426ca553141d5ac41764beb9078bd27efd980756";
+    baseline = fetchurl {
+      url = "https://raw.githubusercontent.com/cloudflare/workers-nodejs-compat-matrix/${TARGET_SHA}/data/baseline.json";
+      sha256 = "sha256-TuRKy5HRwkZD5Ng8kNsFQxhKBFKj/3uUwu66cjVCO1c=";
+    };
+    utils = fetchurl {
+      url = "https://raw.githubusercontent.com/cloudflare/workers-nodejs-compat-matrix/${TARGET_SHA}/dump-utils.mjs";
+      sha256 = "sha256-2NtB5g1nkezVQYTytOk6aR5uw5L1aMNJZQAMz6uC2yQ=";
+    };
+  in
+    runCommand "fetch-scripts" {} ''
+      mkdir -p $out
+      cp ${baseline} $out/baseline.json
+      cp ${utils} $out/utils.js
+    '';
+
   # A common set of attributes for workspace crates
   commonWorkspace =
     common
@@ -87,10 +104,17 @@
       cargoArtifacts = cargoDeps;
       doCheck = false;
       buildInputs = common.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert pkgs.sqlite];
-      preBuildPhases = ["cpJstzKernel"];
+      preBuildPhases = ["cpJstzKernel" "setUpApiCoverageTest"];
       cpJstzKernel = ''
         cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
         cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
+      '';
+      setUpApiCoverageTest = ''
+        cp ${apiCoverageTestScripts}/utils.js ./crates/jstz_runtime/tests/api_coverage/
+        (
+          echo "export default "
+          cat ${apiCoverageTestScripts}/baseline.json
+        ) > ./crates/jstz_runtime/tests/api_coverage/baseline.js
       '';
     };
 
