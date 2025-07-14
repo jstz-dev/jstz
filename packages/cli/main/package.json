@@ -8,8 +8,7 @@
   },
   "files": [
     "run.js",
-    "install.js",
-    "bin/"
+    "install.js"
   ],
   "exports": {
     ".": "./run.js",
