@@ -174,3 +174,35 @@ impl From<tezos_smart_rollup::storage::path::PathError> for Error {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use boa_engine::{JsError, JsNativeError};
+    use tezos_smart_rollup::storage::path::PathError;
+
+    #[test]
+    fn from_js_native_error_for_error() {
+        let js_native_error = JsNativeError::eval().with_message("dummy");
+        let error: Error = js_native_error.into();
+        assert!(matches!(error, Error::CoreError { .. }));
+    }
+
+    #[test]
+    fn from_js_error_for_error() {
+        let js_native_error = JsNativeError::eval().with_message("dummy");
+        let js_error: JsError = js_native_error.into();
+        let error: Error = js_error.into();
+        assert!(
+            matches!(error, Error::CoreError { source } if matches!(source, jstz_core::Error::JsError { .. }))
+        );
+    }
+
+    #[test]
+    fn from_path_error_for_error() {
+        let error: Error = PathError::PathEmpty.into();
+        assert!(
+            matches!(error, Error::CoreError { source } if matches!(source, jstz_core::Error::PathError { .. }))
+        );
+    }
+}
