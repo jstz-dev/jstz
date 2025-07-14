@@ -11,6 +11,6 @@ curl -s --output /tmp/baseline.json https://raw.githubusercontent.com/cloudflare
 (
   echo "export default "
   cat /tmp/baseline.json
-) > ./tests/api_coverage/baseline.js
+) >./tests/api_coverage/baseline.js
 
 curl -s --output ./tests/api_coverage/utils.js https://raw.githubusercontent.com/cloudflare/workers-nodejs-compat-matrix/$TARGET_SHA/dump-utils.mjs
