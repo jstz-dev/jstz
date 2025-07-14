@@ -174,19 +174,27 @@
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
 
-          riscvSandbox = with pkgs;
-            rustPlatform.buildRustPackage {
-              name = "riscv-sandbox";
-              src = builtins.fetchGit {
-                url = "https://gitlab.com/tezos/tezos.git";
-                ref = "master";
-                rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3";
-              };
-              cargoRoot = "src/riscv";
-              buildAndTestSubdir = "src/riscv/sandbox";
-              useFetchCargoVendor = true;
-              cargoHash = "sha256-ZhvEguaALAbxo/Icf3SIA6ROc5eq7GhNA/ZIfWoT5oc=";
-              buildFeatures = ["supervisor"];
+          riscvSandbox = with builtins; let
+            craneLib = (crane.mkLib pkgs).overrideToolchain (_: rust-toolchain);
+            fetchedSrc = fetchGit {
+              url = "https://github.com/tezos/riscv-pvm.git";
+              rev = "0de5159bcd6a25cb32249b161de19d5a72e1272c";
+            };
+            sandboxManifest = fromTOML (readFile "${fetchedSrc}/src/riscv/sandbox/Cargo.toml");
+          in
+            # Note on `craneLib` vs `buildRustPackage`
+            #
+            # `buildRustPackage` will attempt to vendor all dependencies in a workspace. Because
+            # riscv sandbox depends on `tezos-smart-rollup-*` crates (which is a tezos workpace crate),
+            # `buildRustPackage` vendors irrelevant dependencies from `tezos/tezos` like `rust_deps` which
+            # tries to build `wasmer` and fails. Its overrides are completely broken. `craneLib` does the
+            # right thing by only building the exact nested dependencies even if they were workpace dependent
+            craneLib.buildPackage rec {
+              src = "${fetchedSrc}/src/riscv";
+              pname = sandboxManifest.package.name;
+              version = sandboxManifest.package.version;
+              doCheck = false;
+              cargoExtraArgs = "--package ${pname} --features huge-memory";
             };
 
           llvmPackages = pkgs.llvmPackages_16;
