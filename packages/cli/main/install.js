@@ -26,7 +26,6 @@ const PLATFORM_TO_PACKAGE = new Map([
   ["linux_x64", "@jstz-dev/cli-linux-x64"],
 ]);
 
-
 try {
   const platformKey = `${process.platform}_${process.arch}`;
   const binaryName = PLATFORM_TO_BINARY_NAME.get(platformKey);
