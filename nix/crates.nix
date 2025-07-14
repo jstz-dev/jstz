@@ -79,6 +79,7 @@
       cargoExtraArgs = "-p ${pname} --target ${target}";
     });
 
+  # Fetch the necessary scripts for the runtime API coverage test in jstz_runtime
   apiCoverageTestScripts = with pkgs; let
     TARGET_SHA = "426ca553141d5ac41764beb9078bd27efd980756";
     baseline = fetchurl {
@@ -109,6 +110,7 @@
         cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstz_cli/jstz_kernel.wasm
         cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
       '';
+      # This is the same as the script at `jstz_runtime/tests/api_coverage/setup.sh`.
       setUpApiCoverageTest = ''
         cp ${apiCoverageTestScripts}/utils.js ./crates/jstz_runtime/tests/api_coverage/
         (
