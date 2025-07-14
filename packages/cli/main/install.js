@@ -26,21 +26,6 @@ const PLATFORM_TO_PACKAGE = new Map([
   ["linux_x64", "@jstz-dev/cli-linux-x64"],
 ]);
 
-function isOptionalDependencyInstalled(platformKey) {
-  const packageName = PLATFORM_TO_PACKAGE.get(platformKey);
-  if (!packageName) {
-    return false;
-  }
-  try {
-    import.meta.resolveSync(`${packageName}/package.json`);
-    console.log(
-      `Found optional dependency: ${packageName}. Skipping download.`,
-    );
-    return true;
-  } catch (e) {
-    return false;
-  }
-}
 
 try {
   const platformKey = `${process.platform}_${process.arch}`;
@@ -52,9 +37,16 @@ try {
     );
   }
 
-  if (isOptionalDependencyInstalled(platformKey)) {
-    console.log("Installation complete.");
-    process.exit(0);
+  const packageName = PLATFORM_TO_PACKAGE.get(platformKey);
+
+  if (packageName != null) {
+    try {
+      import.meta.resolveSync(`${packageName}/package.json`);
+      console.log(
+        `Found optional dependency: ${packageName}. Skipping download.`,
+      );
+      process.exit(0);
+    } catch (e) {}
   }
 
   console.log(
