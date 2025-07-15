@@ -1,0 +1,3 @@
+# Reference: https://doc.rust-lang.org/clippy/lint_configuration.html
+large-error-threshold = 256
+enum-variant-size-threshold = 512

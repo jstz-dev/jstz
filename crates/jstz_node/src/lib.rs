@@ -203,7 +203,7 @@ pub async fn run(
     modify(&mut openapi);
     let router = router.merge(Scalar::with_url("/scalar", openapi));
 
-    let listener = TcpListener::bind(format!("{}:{}", addr, port)).await?;
+    let listener = TcpListener::bind(format!("{addr}:{port}")).await?;
     axum::serve(listener, router).await?;
 
     cancellation_token.cancel();
@@ -306,7 +306,7 @@ mod test {
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
-                reqwest::get(format!("http://0.0.0.0:{}/mode", port))
+                reqwest::get(format!("http://0.0.0.0:{port}/mode"))
                     .await
                     .ok()
             })

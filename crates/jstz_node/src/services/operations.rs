@@ -55,8 +55,7 @@ async fn prepare_rlp_operation(
         .try_into()
         .map_err(|e| {
             ServiceError::BadRequest(format!(
-                "Large payload operation not supported: {}",
-                e,
+                "Large payload operation not supported: {e}",
             ))
         })?;
 
@@ -218,7 +217,7 @@ async fn receipt(
     }): State<AppState>,
     Path(hash): Path<String>,
 ) -> ServiceResult<Json<Receipt>> {
-    let key = format!("/jstz_receipt/{}", hash);
+    let key = format!("/jstz_receipt/{hash}");
 
     let store = StoreWrapper::new(mode, rollup_client, runtime_db);
     let value = store.get_value(key).await?;
@@ -384,8 +383,7 @@ mod tests {
         let (pkh, pk, sk) = bootstrap1();
         let mut server = mockito::Server::new_async().await;
         let url = format!(
-            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{}",
-            pkh
+            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{pkh}"
         );
         server
             .mock("GET", url.as_str())
@@ -433,8 +431,7 @@ mod tests {
         let (pkh, pk, sk) = bootstrap1();
         let mut server = mockito::Server::new_async().await;
         let url = format!(
-            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{}",
-            pkh
+            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{pkh}"
         );
         server
             .mock("GET", url.as_str())

@@ -100,7 +100,7 @@ impl OctezThread {
             if let Some(signal) = signals.pending().next() {
                 match signal {
                     SIGINT | SIGTERM => {
-                        println!("Received signal {:?}, shutting down...", signal);
+                        println!("Received signal {signal:?}, shutting down...");
                         break 'main_loop;
                     }
                     _ => unreachable!(),

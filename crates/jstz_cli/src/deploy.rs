@@ -59,7 +59,7 @@ pub async fn exec(
     let code = read_file_or_input_or_piped(code_op)?
         .ok_or(user_error!("No function code supplied. Please provide a filename or pipe the file contents into stdin."))?;
 
-    if code.bytes().len() > MAX_REVEAL_SIZE {
+    if code.len() > MAX_REVEAL_SIZE {
         bail_user_error!(
             "Smart functions are currently restricted to {MAX_REVEAL_SIZE} bytes"
         );
@@ -112,13 +112,13 @@ pub async fn exec(
     // Show message showing how to run the smart function
     // TODO: add --trace flag
     let network_flag = match network {
-        Some(network) => format!(" --network {}", network),
+        Some(network) => format!(" --network {network}"),
         None => "".to_string(),
     };
     info!(
         "Run with `{}{}{}`",
         styles::command("jstz run "),
-        styles::url(format!("jstz://{}/", address)),
+        styles::url(format!("jstz://{address}/")),
         styles::command(network_flag)
     );
 

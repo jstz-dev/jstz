@@ -74,13 +74,12 @@ impl<'de> Visitor<'de> for BootstrapAccountVisitor {
         BootstrapAccount::new(
             &first_element.unwrap(),
             second_element.unwrap().parse::<u64>().map_err(|e| {
-                A::Error::custom(format!("failed to parse account balance: {:?}", e))
+                A::Error::custom(format!("failed to parse account balance: {e:?}"))
             })?,
         )
         .map_err(|e| {
             A::Error::custom(format!(
-                "failed to instantiate bootstrap account from the given value: {:?}",
-                e
+                "failed to instantiate bootstrap account from the given value: {e:?}"
             ))
         })
     }
@@ -147,10 +146,9 @@ impl<'de> Visitor<'de> for BootstrapAccountsVisitor {
         while let Some(element) = seq.next_element()? {
             match serde_json::from_value(element) {
                 Ok(account) => accounts.add_account(account),
-                Err(e) => Err(A::Error::custom(format!(
-                    "failed to parse account: {:?}",
-                    e
-                )))?,
+                Err(e) => {
+                    Err(A::Error::custom(format!("failed to parse account: {e:?}")))?
+                }
             };
         }
         Ok(accounts)
@@ -259,8 +257,7 @@ impl<'de> Visitor<'de> for BootstrapContractsVisitor {
                 Ok(contract) => contracts.add_contract(contract),
                 Err(e) => {
                     return Err(A::Error::custom(format!(
-                        "failed to parse contract: {:?}",
-                        e
+                        "failed to parse contract: {e:?}"
                     )))
                 }
             };
@@ -315,7 +312,7 @@ impl fmt::Display for SmartRollupPvmKind {
             SmartRollupPvmKind::Wasm => "wasm_2_0_0",
             SmartRollupPvmKind::Riscv => "riscv",
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 
@@ -391,8 +388,7 @@ impl<'de> Visitor<'de> for BootstrapRollupsVisitor {
                 Ok(rollup) => rollups.add_rollup(rollup),
                 Err(e) => {
                     return Err(A::Error::custom(format!(
-                        "failed to parse rollup: {:?}",
-                        e
+                        "failed to parse rollup: {e:?}"
                     )))
                 }
             };

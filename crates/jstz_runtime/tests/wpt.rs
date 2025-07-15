@@ -482,10 +482,7 @@ async fn dump_stats(
         lines += &format!("|{}|{}|{}|{}|\n", name, total, passed, metrics.passed);
     }
 
-    lines += &format!(
-        "|Total|{}|{}|{}|\n",
-        expected_total, expected_passed, total_passed
-    );
+    lines += &format!("|Total|{expected_total}|{expected_passed}|{total_passed}|\n");
     file.write_all(
         format!(
             "### WPT summary\nTotal pass rate: {:.2}%\n|Test suite|Test count|Should pass|Passed|\n|---|---|---|---|\n|Total|{}|{}|{}|\n{}",

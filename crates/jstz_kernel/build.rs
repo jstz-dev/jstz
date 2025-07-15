@@ -6,6 +6,6 @@ fn main() {
     let injector_pk = env::var("INJECTOR")
         .unwrap_or("edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav".to_string());
 
-    println!("cargo:rustc-env=TICKETER={}", ticketer_pk);
-    println!("cargo:rustc-env=INJECTOR={}", injector_pk);
+    println!("cargo:rustc-env=TICKETER={ticketer_pk}");
+    println!("cargo:rustc-env=INJECTOR={injector_pk}");
 }

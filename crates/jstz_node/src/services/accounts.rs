@@ -24,8 +24,8 @@ const ACCOUNTS_TAG: &str = "Accounts";
 
 fn construct_storage_key(address: &str, key: &Option<String>) -> String {
     match key {
-        Some(value) if !value.is_empty() => format!("/jstz_kv/{}/{}", address, value),
-        _ => format!("/jstz_kv/{}", address),
+        Some(value) if !value.is_empty() => format!("/jstz_kv/{address}/{value}"),
+        _ => format!("/jstz_kv/{address}"),
     }
 }
 
@@ -34,7 +34,7 @@ fn deserialize_account(data: &[u8]) -> ServiceResult<Account> {
 }
 
 fn construct_accounts_key(address: &str) -> String {
-    format!("{}/{}", ACCOUNTS_PATH_PREFIX, address)
+    format!("{ACCOUNTS_PATH_PREFIX}/{address}")
 }
 
 #[derive(Deserialize, IntoParams)]
@@ -64,7 +64,7 @@ async fn get_account(
     }): State<AppState>,
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Account>> {
-    let key = format!("/jstz_account/{}", address);
+    let key = format!("/jstz_account/{address}");
     let store = StoreWrapper::new(mode, rollup_client, runtime_db);
     let value = store.get_value(key).await?;
     let account = match value {

@@ -407,8 +407,7 @@ mod tests {
             .unwrap();
         let v = Receipt::decode(
             &h.store_read_all(
-                &OwnedPath::try_from(format!("/jstz_receipt/{}", deploy_op_hash))
-                    .unwrap(),
+                &OwnedPath::try_from(format!("/jstz_receipt/{deploy_op_hash}")).unwrap(),
             )
             .unwrap(),
         )
@@ -448,7 +447,7 @@ mod tests {
             .unwrap();
         let v = Receipt::decode(
             &h.store_read_all(
-                &OwnedPath::try_from(format!("/jstz_receipt/{}", op_hash)).unwrap(),
+                &OwnedPath::try_from(format!("/jstz_receipt/{op_hash}")).unwrap(),
             )
             .unwrap(),
         )

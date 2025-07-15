@@ -118,7 +118,7 @@ impl TryFromJs for JsUndefined {
             Ok(JsUndefined::Undefined)
         } else {
             Err(JsNativeError::typ()
-                .with_message(format!("Expected undefined but found {:?}", value))
+                .with_message(format!("Expected undefined but found {value:?}"))
                 .into())
         }
     }

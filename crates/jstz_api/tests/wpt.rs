@@ -221,15 +221,15 @@ impl jstz_core::Api for TestHarnessReportApi {
             let value = context
                 .global_object()
                 .get(js_string!(name), context)
-                .unwrap_or_else(|_| panic!("globalThis.{} is undefined", name));
+                .unwrap_or_else(|_| panic!("globalThis.{name} is undefined"));
 
             let function = value
                 .as_callable()
-                .unwrap_or_else(|| panic!("globalThis.{} is not callable", name));
+                .unwrap_or_else(|| panic!("globalThis.{name} is not callable"));
 
             function
                 .call(&JsValue::undefined(), args, context)
-                .unwrap_or_else(|_| panic!("Failed to call globalThis.{}", name));
+                .unwrap_or_else(|_| panic!("Failed to call globalThis.{name}"));
         }
 
         call_global_function(

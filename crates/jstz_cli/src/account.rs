@@ -140,7 +140,7 @@ async fn delete_account(alias: String) -> Result<()> {
         warn!("You are currently logged into the account: {}.", alias);
     }
 
-    let confirmation_alias: String = Input::new().with_prompt(format!("Are you sure you want to delete the account {0}? Please type '{0}' to confirm", alias)).interact()?;
+    let confirmation_alias: String = Input::new().with_prompt(format!("Are you sure you want to delete the account {alias}? Please type '{alias}' to confirm")).interact()?;
 
     debug!("User input: {:?}", confirmation_alias);
 
@@ -161,8 +161,7 @@ pub async fn login(alias: String) -> Result<()> {
     if cfg.accounts.current_alias().is_some()
         && !Confirm::new()
             .with_prompt(format!(
-                "You are already logged in. Do you want to logout and login in to {}?",
-                alias
+                "You are already logged in. Do you want to logout and login in to {alias}?"
             ))
             .default(true)
             .interact()?

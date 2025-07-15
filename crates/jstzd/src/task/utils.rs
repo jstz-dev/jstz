@@ -23,7 +23,7 @@ where
 }
 
 pub async fn get_block_level(rpc_endpoint: &str) -> Result<i64> {
-    let blocks_head_endpoint = format!("{}/chains/main/blocks/head", rpc_endpoint);
+    let blocks_head_endpoint = format!("{rpc_endpoint}/chains/main/blocks/head");
     let response: Value = reqwest::get(&blocks_head_endpoint).await?.json().await?;
 
     let level = response

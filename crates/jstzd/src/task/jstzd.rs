@@ -570,7 +570,7 @@ fn print_bootstrap_accounts<'a>(
         format
     });
 
-    Ok(writeln!(writer, "{}", table)?)
+    Ok(writeln!(writer, "{table}")?)
 }
 
 async fn health_check(state: &ServerState) -> bool {
@@ -589,7 +589,7 @@ async fn health_check(state: &ServerState) -> bool {
 async fn shutdown(state: &mut ServerState) -> Result<()> {
     if let Some(mut jstzd) = state.jstzd.take() {
         if let Err(e) = jstzd.kill().await {
-            eprintln!("failed to shutdown jstzd: {:?}", e);
+            eprintln!("failed to shutdown jstzd: {e:?}");
             state.jstzd.replace(jstzd);
             return Err(e);
         };

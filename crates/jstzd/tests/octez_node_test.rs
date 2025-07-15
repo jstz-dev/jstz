@@ -37,7 +37,7 @@ async fn octez_node_test() {
 
     let _ = f.kill().await;
     // Wait for the process to shutdown entirely
-    let health_check_endpoint = format!("{}/health/ready", rpc_endpoint);
+    let health_check_endpoint = format!("{rpc_endpoint}/health/ready");
     let node_destroyed = retry(10, 1000, || async {
         let res = reqwest::get(&health_check_endpoint).await;
         // Should get an error since the node should have been terminated

@@ -44,7 +44,7 @@ fn valid_config_file() {
     let port = unused_port();
     let mut tmp_file = NamedTempFile::new().unwrap();
     tmp_file
-        .write_all(format!(r#"{{"server_port":{}}}"#, port).as_bytes())
+        .write_all(format!(r#"{{"server_port":{port}}}"#).as_bytes())
         .unwrap();
 
     let handle = thread::spawn(move || {

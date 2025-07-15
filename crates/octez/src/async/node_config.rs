@@ -26,8 +26,8 @@ impl Display for OctezNodeHistoryMode {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         match self {
             Self::Archive => write!(f, "archive"),
-            Self::Full(v) => write!(f, "full:{}", v),
-            Self::Rolling(v) => write!(f, "rolling:{}", v),
+            Self::Full(v) => write!(f, "full:{v}"),
+            Self::Rolling(v) => write!(f, "rolling:{v}"),
         }
     }
 }
@@ -92,13 +92,13 @@ impl Display for OctezNodeRunOptions {
         ));
         s.push(format!("--network {}", &self.network));
         if let Some(v) = &self.history_mode {
-            s.push(format!("--history-mode {}", v));
+            s.push(format!("--history-mode {v}"));
         }
         if let Some(v) = &self.sandbox_config_path {
             s.push(format!("--sandbox {}", v.to_string_lossy()));
         }
         let line = s.join(" ");
-        write!(f, "{}", line)
+        write!(f, "{line}")
     }
 }
 

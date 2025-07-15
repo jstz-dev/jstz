@@ -52,7 +52,7 @@ impl Display for FileWrapper {
             FileWrapper::File(p) => p.1.to_string_lossy(),
             FileWrapper::TempFile(p) => p.path().to_string_lossy(),
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

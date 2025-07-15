@@ -576,7 +576,7 @@ impl OctezClient {
         burn_cap: Option<f64>,
     ) -> Result<(BlockHash, OperationHash)> {
         let burn_cap_str = burn_cap.map(|v| v.to_string());
-        let inbox_message = format!("hex: [\"{}\"]", message_hex);
+        let inbox_message = format!("hex: [\"{message_hex}\"]");
         let mut args = vec![
             "send",
             "smart",

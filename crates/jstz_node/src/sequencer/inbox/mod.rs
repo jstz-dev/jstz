@@ -204,7 +204,7 @@ mod tests {
         let (addr, server) = warp::serve(make_mock_monitor_blocks_filter())
             .bind_ephemeral(([127, 0, 0, 1], 0));
         task::spawn(server);
-        let endpoint = format!("http://{}", addr);
+        let endpoint = format!("http://{addr}");
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
         let (counter, on_new_block) = make_on_new_block();
         let mut monitor = spawn_monitor(endpoint.clone(), q.clone(), on_new_block)
@@ -222,7 +222,7 @@ mod tests {
         let (addr, server) = warp::serve(make_mock_monitor_blocks_filter())
             .bind_ephemeral(([127, 0, 0, 1], 0));
         task::spawn(server);
-        let endpoint = format!("http://{}", addr);
+        let endpoint = format!("http://{addr}");
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
         let (counter, on_new_block) = make_on_new_block();
         let _ = spawn_monitor(endpoint, q, on_new_block).await.unwrap();

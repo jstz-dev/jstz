@@ -36,7 +36,7 @@ pub enum Host {
 impl Display for Host {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Host::Addr(ip) => write!(f, "{}", ip),
+            Host::Addr(ip) => write!(f, "{ip}"),
             Host::HostGateway => write!(f, "host-gateway"),
         }
     }

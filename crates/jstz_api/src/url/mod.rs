@@ -204,7 +204,7 @@ impl Url {
     pub fn host(&self) -> Option<String> {
         self.url.host_str().map(|host| {
             if let Some(port) = self.url.port() {
-                format!("{}:{}", host, port)
+                format!("{host}:{port}")
             } else {
                 String::from(host)
             }

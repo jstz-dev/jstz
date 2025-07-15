@@ -16,7 +16,7 @@ impl Display for Directory {
             Directory::Path(p) => p.to_string_lossy(),
             Directory::TempDir(p) => p.path().to_string_lossy(),
         };
-        write!(f, "{}", s)
+        write!(f, "{s}")
     }
 }
 

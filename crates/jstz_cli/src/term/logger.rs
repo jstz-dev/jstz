@@ -6,8 +6,8 @@ use crate::term::styles::{ErrorPrefix, WarningPrefix};
 
 fn format(fmt: &mut fmt::Formatter, record: &log::Record<'_>) -> io::Result<()> {
     match record.level() {
-        log::Level::Error => write!(fmt, "{} ", ErrorPrefix)?,
-        log::Level::Warn => write!(fmt, "{} ", WarningPrefix)?,
+        log::Level::Error => write!(fmt, "{ErrorPrefix} ")?,
+        log::Level::Warn => write!(fmt, "{WarningPrefix} ")?,
         log::Level::Info | log::Level::Debug | log::Level::Trace => (),
     };
 

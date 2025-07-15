@@ -38,8 +38,8 @@ pub async fn main(config_path: &Option<String>) {
         Ok((port, config)) => run(port, config).await,
         Err(e) => {
             match config_path {
-                Some(p) => eprintln!("failed to build config from {}: {:?}", p, e),
-                None => eprintln!("failed to build default config: {:?}", e),
+                Some(p) => eprintln!("failed to build config from {p}: {e:?}"),
+                None => eprintln!("failed to build default config: {e:?}"),
             };
             exit(1);
         }
@@ -62,7 +62,7 @@ async fn run(port: u16, config: JstzdConfig) {
     let mut server = JstzdServer::new(config, port);
     print_banner(&mut stdout());
     if let Err(e) = server.run(true).await {
-        eprintln!("failed to run jstzd server: {:?}", e);
+        eprintln!("failed to run jstzd server: {e:?}");
         let _ = server.stop().await;
         exit(1);
     }

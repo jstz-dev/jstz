@@ -842,7 +842,7 @@ mod test {
 
         impl Account {
             fn path(name: &str) -> OwnedPath {
-                OwnedPath::try_from(format!("/jstz_account/{}", name)).unwrap()
+                OwnedPath::try_from(format!("/jstz_account/{name}")).unwrap()
             }
 
             fn get<'a>(
@@ -925,7 +925,7 @@ mod test {
             if i % 10 == 0 {
                 tx.begin();
             }
-            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let acc = PublicKeyHash::digest(format!("account{i}").as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
             tx.queue_outbox_message(&mut host, message).unwrap();
         }
@@ -966,7 +966,7 @@ mod test {
             if i % 60 == 0 {
                 tx.begin();
             }
-            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let acc = PublicKeyHash::digest(format!("account{i}").as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
             tx.queue_outbox_message(&mut host, message).unwrap();
         }
@@ -996,7 +996,7 @@ mod test {
             if i % 60 == 0 {
                 tx.begin();
             }
-            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let acc = PublicKeyHash::digest(format!("account{i}").as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
             tx.queue_outbox_message(&mut host, message).unwrap();
         }
@@ -1028,7 +1028,7 @@ mod test {
                 tx.begin();
             }
 
-            let acc = PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+            let acc = PublicKeyHash::digest(format!("account{i}").as_bytes()).unwrap();
             let message = make_withdrawal(&acc);
             tx.queue_outbox_message(&mut host, message).unwrap();
         }
@@ -1061,7 +1061,7 @@ mod test {
             assert_eq!(
                 message,
                 make_withdrawal(
-                    &PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap()
+                    &PublicKeyHash::digest(format!("account{i}").as_bytes()).unwrap()
                 )
                 .into()
             );
