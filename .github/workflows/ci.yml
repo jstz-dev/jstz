@@ -18,6 +18,6 @@ jobs:
       repo_token: ${{ secrets.TEST_REPO_TOKEN }}
     with:
       target_repo: huancheng-trili/test-matrix
-      branch: test
+      target_branch: test
       build_ref: 0.1.1-alpha.3
       deploy_report: true
