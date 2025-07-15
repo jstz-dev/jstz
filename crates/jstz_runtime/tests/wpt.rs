@@ -247,7 +247,7 @@ fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntim
     let address =
         SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton").unwrap();
 
-    let mut options = JstzRuntime::options();
+    let mut options = JstzRuntimeOptions::default();
     options
         .extensions
         .push(test_harness_api::init_ops_and_esm());
