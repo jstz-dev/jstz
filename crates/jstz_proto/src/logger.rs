@@ -12,7 +12,7 @@ pub const REQUEST_START_PREFIX: &str = "[JSTZ:SMART_FUNCTION:REQUEST_START] ";
 pub const REQUEST_END_PREFIX: &str = "[JSTZ:SMART_FUNCTION:REQUEST_END] ";
 const RESPONSE_PREFIX: &str = "[JSTZ:RESPONSE]";
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(tag = "type")]
 pub enum RequestEvent {
     Start {
@@ -207,5 +207,21 @@ mod tests {
             503,
         );
         assert_eq!(String::from_utf8(buf.lock().unwrap().to_vec()).unwrap(), "[JSTZ:RESPONSE] {\"url\":\"foo://bar\",\"request_id\":\"foobar\",\"status_code\":503}\n");
+    }
+
+    #[test]
+    fn log_request_try_from_string() {
+        let json = r#"{"type":"Start","address":"KT1D5U6oBmtvYmjBtjzR5yPbrzxw8fa2kCn9","request_id":"start_request"}"#;
+        let event = super::RequestEvent::try_from_string(json).unwrap();
+        assert_eq!(
+            event,
+            super::RequestEvent::Start {
+                address: SmartFunctionHash::from_base58(
+                    "KT1D5U6oBmtvYmjBtjzR5yPbrzxw8fa2kCn9"
+                )
+                .unwrap(),
+                request_id: "start_request".to_string(),
+            }
+        );
     }
 }

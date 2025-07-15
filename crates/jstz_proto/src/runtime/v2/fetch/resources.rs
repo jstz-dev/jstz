@@ -32,3 +32,19 @@ impl Resource for FetchResponseResource {
         })
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::rc::Rc;
+
+    #[tokio::test]
+    async fn test_read_vector() {
+        let data = vec![1, 2, 3, 4, 5];
+        let resource = Rc::new(FetchResponseResource {
+            body: RefCell::new(Some(Body::Vector(data.clone()))),
+        });
+        let buf_view = resource.read(1024).await.unwrap();
+        assert_eq!(buf_view.as_ref(), data.as_slice());
+    }
+}

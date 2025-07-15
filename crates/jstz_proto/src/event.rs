@@ -106,11 +106,11 @@ impl nom::error::ParseError<&str> for NomError {
 #[cfg(test)]
 mod test {
 
-    use std::{fmt::Display, str::FromStr};
-
     use http::HeaderMap;
     use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
+    use nom::error::ParseError;
     use serde_json::json;
+    use std::{fmt::Display, str::FromStr};
     use tezos_smart_rollup_mock::MockHost;
     use url::Url;
 
@@ -188,5 +188,15 @@ mod test {
             decoded.to_string(),
             "Error while decoding event: missing field `id` at line 1 column 19"
         )
+    }
+
+    #[test]
+    fn test_nomerror_append() {
+        use nom::error::ErrorKind;
+        let child = NomError::from_error_kind("childinput", ErrorKind::Alpha);
+        let appended = NomError::append("parentinput", ErrorKind::Alpha, child);
+        let msg = appended.to_string();
+        assert!(msg.contains("while decoding kind 'Alphabetic' for 'parentinpu[1..]'"));
+        assert!(msg.contains("kind 'Alphabetic' on input 'childinput'"));
     }
 }
