@@ -46,8 +46,3 @@ jobs:
   runtime_api_coverage:
     name: Runtime API coverage
     uses: jstz-dev/jstz/.github/workflows/runtime-api-coverage.yml@main
-    secrets:
-      repo_token: ${{ secrets.RUNTIME_API_REPORT_REPO }}
-    with:
-      target_repo: jstz-dev/nodejs-compat-matrix
-      branch: deploy
