@@ -5,19 +5,19 @@ on:
     inputs:
       target_repo:
         description: Target repository (owner/repo_name) where the report will be deployed.
-        required: true
         type: string
       target_branch:
         description: Name of the branch in the target repository where the report will be deployed.
-        required: true
         type: string
       build_ref:
         description: Ref that triggered the build. If not provided, the commit that triggers the build will be used.
         type: string
+      deploy_report:
+        description: Flag indicating if the report should be deployed.
+        type: boolean
     secrets:
       repo_token:
         description: API token that gives access to manage the target repo.
-        required: true
 
 jobs:
   runtime_api_coverage:
@@ -46,9 +46,20 @@ jobs:
 
   push_api_coverage_report:
     name: Push runtime API coverage report
+    if: ${{ inputs.deploy_report }}
     needs: runtime_api_coverage
     runs-on: ubuntu-latest
     steps:
+      - name: Check input values
+        run: |
+          if [ -z "${{ inputs.target_repo }}" ]; then
+              echo "target_repo is unset or set to the empty string"
+              exit 1
+          fi
+          if [ -z "${{ inputs.target_branch }}" ]; then
+              echo "target_branch is unset or set to the empty string"
+              exit 1
+          fi
       - name: Download report
         uses: actions/download-artifact@v4
         with:
