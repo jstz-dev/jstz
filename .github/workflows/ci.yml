@@ -4,73 +4,20 @@ on:
   pull_request:
   merge_group:
   push:
-    branches: [main]
+    branches: [huan/test]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref_name != 'main' }}
 
 jobs:
-  commitlint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: wagoid/commitlint-github-action@v6
-
-  # FIXME(https://linear.app/tezos/issue/JSTZ-49):
-  # Add build and tests for LIGO contracts
-
-  build:
-    name: Build
-    runs-on: [x86_64, linux, nix]
-    needs: [commitlint]
-    steps:
-      - uses: actions/checkout@v4
-      - run: nix --version
-      - name: Format
-        run: nix --accept-flake-config fmt -- --fail-on-change
-      - name: Prevent blst
-        run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
-      - name: Build
-        run: nix --accept-flake-config --log-format raw -L build -j auto .#all
-      - name: Flake check
-        run: nix --accept-flake-config --log-format raw --log-lines 1500 -L flake check -j auto
-      # Coverage is part of nix flake check, but we want to upload it to Codecov
-      # So we run it again (it's cached) and upload the result
-      - name: Coverage
-        run: nix --accept-flake-config --log-format raw -L build .#checks.x86_64-linux.cargo-llvm-cov
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: result
-          fail_ci_if_error: true
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
-  build-docs:
-    name: Build Documentation
-    runs-on: ubuntu-latest
-    needs: [commitlint]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: npm
-      - name: Get npm cache directory
-        id: npm-cache-dir
-        shell: bash
-        run: echo "dir=$(npm config get cache)" >> ${GITHUB_OUTPUT}
-      - name: Configure npm cache
-        uses: actions/cache@v4
-        id: npm-cache
-        with:
-          path: ${{ steps.npm-cache-dir.outputs.dir }}
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
-      - run: npm ci
-
-      - name: Build
-        run: npm run docs:build
+  runtime_api_coverage:
+    name: Runtime API coverage
+    uses: jstz-dev/jstz/.github/workflows/runtime-api-coverage.yml@huan/test
+    secrets:
+      repo_token: ${{ secrets.TEST_REPO_TOKEN }}
+    with:
+      target_repo: huancheng-trili/test-matrix
+      branch: test
+      build_ref: 0.1.1-alpha.3
+      deploy_report: true
