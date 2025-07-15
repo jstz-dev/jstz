@@ -60,7 +60,6 @@ jobs:
               echo "target_branch is unset or set to the empty string"
               exit 1
           fi
-      - uses: actions/checkout@v4
       - name: Download report
         uses: actions/download-artifact@v4
         with:
