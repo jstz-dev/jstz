@@ -44,4 +44,4 @@ jobs:
           echo "Result for commit $GITHUB_SHA: ${{ steps.bench.outputs.result }}"
 
   runtime_api_coverage:
-    uses: jstz-dev/jstz/.github/workflows/runtime-api-coverage.yml@huan/test
+    uses: jstz-dev/jstz/.github/workflows/runtime-api-coverage.yml@main
