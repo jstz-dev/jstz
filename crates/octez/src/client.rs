@@ -302,7 +302,7 @@ impl OctezClient {
             "999",
             "--force",
             "--whitelist",
-            format!("[\"{}\"]", account).as_str(),
+            format!("[\"{account}\"]").as_str(),
         ]))?;
 
         let operation = regex_extract(r"Operation hash is '(o[^\s]+)'", &output)?;

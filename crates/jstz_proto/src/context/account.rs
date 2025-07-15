@@ -630,10 +630,10 @@ mod test {
 
             // Test basic paths
             let user_path = Account::path(&user_addr).unwrap();
-            assert_eq!(user_path.to_string(), format!("/jstz_account/{}", TZ1));
+            assert_eq!(user_path.to_string(), format!("/jstz_account/{TZ1}"));
 
             let sf_path = Account::path(&sf_addr).unwrap();
-            assert_eq!(sf_path.to_string(), format!("/jstz_account/{}", KT1));
+            assert_eq!(sf_path.to_string(), format!("/jstz_account/{KT1}"));
 
             // Test path validation
             let addr = Address::User(

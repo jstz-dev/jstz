@@ -99,7 +99,7 @@ async fn main() -> anyhow::Result<()> {
             let spec = jstz_node::openapi_json_raw()?;
             match out {
                 Some(out) => std::fs::write(out, spec)?,
-                None => println!("{}", spec),
+                None => println!("{spec}"),
             }
             Ok(())
         }

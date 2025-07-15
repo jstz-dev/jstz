@@ -126,9 +126,9 @@ pub async fn exec_transfer(
     let cfg = Config::load().await?;
     let to = AddressOrAlias::resolve_or_use_current_user(Some(to), &cfg)?;
     let url = match &to {
-        Address::User(_) => format!("jstz://{}", to),
+        Address::User(_) => format!("jstz://{to}"),
         // for sf address, ignore the function execution and just transfer the amount
-        Address::SmartFunction(_) => format!("jstz://{}{}", to, NOOP_PATH),
+        Address::SmartFunction(_) => format!("jstz://{to}{NOOP_PATH}"),
     };
     let args = RunArgs::new(url, "POST".to_string(), gas_limit);
     exec(
