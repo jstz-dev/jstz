@@ -3,9 +3,21 @@ name: Runtime API coverage
 on:
   workflow_call:
     inputs:
+      target_repo:
+        description: Target repository (owner/repo_name) where the report will be deployed.
+        required: true
+        type: string
+      target_branch:
+        description: Name of the branch in the target repository where the report will be deployed.
+        required: true
+        type: string
       build_ref:
         description: Ref that triggered the build. If not provided, the commit that triggers the build will be used.
         type: string
+    secrets:
+      repo_token:
+        description: API token that gives access to manage the target repo.
+        required: true
 
 jobs:
   runtime_api_coverage:
@@ -31,3 +43,46 @@ jobs:
           name: report
           path: crates/jstz_runtime/output.json
           retention-days: 1
+
+  push_api_coverage_report:
+    name: Push runtime API coverage report
+    needs: runtime_api_coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download report
+        uses: actions/download-artifact@v4
+        with:
+          name: report
+          path: report
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          repository: ${{ inputs.target_repo }}
+          # This is the branch that the report will be pushed to in the target repo
+          ref: ${{ inputs.target_branch }}
+          # This token should have write access to the target repo content
+          token: ${{ secrets.repo_token }}
+          path: dest_repo
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: dest_repo/package.json
+      - name: push to destination repo
+        run: |
+          mv $GITHUB_WORKSPACE/report/output.json $GITHUB_WORKSPACE/dest_repo/data/jstz.json
+          cd $GITHUB_WORKSPACE/dest_repo
+          build_ref=${{ inputs.build_ref }}
+          short_sha=$(echo ${GITHUB_SHA} | cut -c1-7)
+          cat report/src/data/versionMap.json |  jq ". | with_entries(if .key == \"jstz\" then .value = \"${build_ref:-$short_sha}\" else . end)" > /tmp/tmp.json && mv /tmp/tmp.json report/src/data/versionMap.json
+
+          if [[ ! `git status --porcelain` ]]; then
+            echo "No change in coverage"
+            exit 0
+          fi
+
+          pnpm install --frozen-lockfile && pnpm generate:timestamp && pnpm run generate:table
+
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+          git add .
+          git commit -m "Report built from ${{ github.sha }}"
+          git push origin ${{ inputs.target_branch }}
