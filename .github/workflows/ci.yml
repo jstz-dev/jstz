@@ -19,5 +19,4 @@ jobs:
     with:
       target_repo: huancheng-trili/test-matrix
       target_branch: test
-      build_ref: huan/test
       deploy_report: true
