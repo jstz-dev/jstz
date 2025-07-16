@@ -71,7 +71,7 @@ jobs:
           repository: ${{ inputs.target_repo }}
           # This is the branch that the report will be pushed to in the target repo
           ref: ${{ inputs.target_branch }}
-          # This token should have write access to the target repo content
+          # This token should have write access to the target repo content.
           token: ${{ secrets.repo_token }}
           path: dest_repo
       - uses: pnpm/action-setup@v4
