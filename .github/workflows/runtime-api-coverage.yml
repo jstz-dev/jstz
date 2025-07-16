@@ -4,7 +4,7 @@ on:
   workflow_call:
     inputs:
       build_ref:
-        description: Ref that triggered the build. If not provided, the commit that triggers the build will be used.
+        description: Ref that triggered the build. If not provided, the SHA of the commit that triggered the build will be used.
         type: string
 
 jobs:
