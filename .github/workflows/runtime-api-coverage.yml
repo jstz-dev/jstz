@@ -79,11 +79,13 @@ jobs:
           package_json_file: dest_repo/package.json
       - name: push to destination repo
         run: |
+          set -eo pipefail
+
           mv $GITHUB_WORKSPACE/report/output.json $GITHUB_WORKSPACE/dest_repo/data/jstz.json
           cd $GITHUB_WORKSPACE/dest_repo
           build_ref=${{ inputs.build_ref }}
           short_sha=$(echo ${GITHUB_SHA} | cut -c1-7)
-          cat report/src/data/versionMap.json |  jq ". | with_entries(if .key == \"jstz\" then .value = \"${build_ref:-$short_sha}\" else . end)" > /tmp/tmp.json && mv /tmp/tmp.json report/src/data/versionMap.json
+          cat report/src/data/versionMap.json |  jq ". | with_entries(if .key == \"jstz\" then .value = \"${build_ref:-$short_sha}\" else . end)" > /tmp/tmp.json && foo && mv /tmp/tmp.json report/src/data/versionMap.json
 
           if [[ ! `git status --porcelain` ]]; then
             echo "No change in coverage"
