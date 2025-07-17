@@ -88,7 +88,7 @@
       doCheck = false;
       pname = "jstz_kernel";
       target = "riscv64gc-unknown-linux-musl";
-      cargoExtraArgs = "-p ${pname} --target ${target} --no-default-features --features riscv_kernel --release";
+      cargoExtraArgs = "-p ${pname} --target ${target} --no-default-features --features riscv_kernel";
     });
 
   # A common set of attributes for workspace crates
