@@ -197,7 +197,6 @@
 
           llvmPackages = pkgs.llvmPackages_16;
 
-          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
 
           # It is necessary to use fetchurl instead of fetchTarball to
@@ -212,6 +211,8 @@
               mkdir -p $out
               tar -xzf ${tarball} -C $out --strip-components=1
             '';
+
+          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez riscvV8;};
 
           fmt = treefmt.lib.evalModule pkgs {
             projectRootFile = "flake.nix";

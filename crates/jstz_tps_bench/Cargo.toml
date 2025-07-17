@@ -33,6 +33,7 @@ clap.workspace = true
 [features]
 default = ["tezos-smart-rollup/utils", "tezos-smart-rollup/extra"]
 static-inbox = ["tezos-smart-rollup/native-kernel"]
+v2_runtime = ["jstz_proto/v2_runtime", "jstz_kernel/v2_runtime"]
 
 [[bin]]
 name = "bench"
