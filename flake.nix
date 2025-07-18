@@ -192,22 +192,9 @@
               src = src;
               cargoRoot = "src/riscv";
               buildAndTestSubdir = "src/riscv/sandbox";
-              cargoHash = "sha256-cN2zAnzgLBC9+EZfi4IaeOWUCh5psHDJeI7T9MAmxKk=";
+              cargoHash = "sha256-vL0TN5Rft9ErjypfJbhLyaPEuRTFJrXKRjrT/G7ANCo=";
               buildFeatures = ["huge-memory"];
               useFetchCargoVendor = true;
-              preBuild =
-                # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
-                # but does for Linux.
-                ''
-                  ${vendorDeps {
-                    inherit rustPlatform;
-                    old = src;
-                    dir = "src/riscv";
-                    gitDepHashes = {
-                      "tezos-smart-rollup-0.2.2" = "sha256-RaOpToExqqClbTvOChPudEpa28Fm/wguUHWb+2z/ysQ=";
-                    };
-                  }}
-                '';
             };
 
           llvmPackages = pkgs.llvmPackages_16;
