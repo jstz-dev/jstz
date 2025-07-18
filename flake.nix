@@ -182,9 +182,9 @@
               cargo = rust-toolchain;
             };
             src = builtins.fetchGit {
-              url = "https://github.com/tezos/riscv-pvm.git";
-              ref = "main";
-              rev = "1378be6b983e15d4ff7d47f9c08a1a0eb4d99e1d";
+              url = "https://github.com/huancheng-trili/riscv-pvm.git";
+              ref = "test";
+              rev = "fbaf9fa8de652107cb0e570e3a275c394e8ab9fe";
             };
           in
             rustPlatform.buildRustPackage {
@@ -192,13 +192,13 @@
               src = src;
               cargoRoot = "src/riscv";
               buildAndTestSubdir = "src/riscv/sandbox";
-              cargoHash = "sha256-vpmKzpn8hus9sB+smyz7bWf3JwHaKg6J92/eHEdjjr4=";
+              cargoHash = "sha256-cN2zAnzgLBC9+EZfi4IaeOWUCh5psHDJeI7T9MAmxKk=";
               buildFeatures = ["huge-memory"];
               useFetchCargoVendor = true;
               preBuild =
                 # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
                 # but does for Linux.
-                pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
+                ''
                   ${vendorDeps {
                     inherit rustPlatform;
                     old = src;
