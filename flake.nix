@@ -174,8 +174,9 @@
               })
             else pkgs.clang;
 
+          rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
+
           riscvSandbox = let
-            rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
             rustPlatform = pkgs.makeRustPlatform {
               rustc = rust-toolchain;
               cargo = rust-toolchain;
