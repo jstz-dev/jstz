@@ -6,6 +6,7 @@
   rust-toolchain,
   octez,
   riscvV8,
+  riscvCC,
 }: let
   craneLib = (crane.mkLib pkgs).overrideToolchain (_: rust-toolchain);
 
@@ -87,6 +88,7 @@
       inherit (craneLib.crateNameFromCargoToml {inherit src;}) version;
       cargoArtifacts = cargoDeps;
       doCheck = false;
+      buildInputs = common.buildInputs ++ [riscvCC];
       pname = "jstz_kernel";
       target = "riscv64gc-unknown-linux-musl";
       cargoExtraArgs = "-p ${pname} --target ${target} --no-default-features --features riscv_kernel";

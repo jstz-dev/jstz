@@ -212,7 +212,15 @@
               tar -xzf ${tarball} -C $out --strip-components=1
             '';
 
-          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez riscvV8;};
+          riscv64MuslPkgs = let
+            crossPkgs = import nixpkgs {
+              inherit system;
+              crossSystem.config = "riscv64-unknown-linux-musl";
+            };
+          in
+            crossPkgs.pkgsCross.riscv64;
+
+          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez riscvV8 riscv64MuslPkgs.pkgsStatic.stdenv.cc;};
 
           fmt = treefmt.lib.evalModule pkgs {
             projectRootFile = "flake.nix";
@@ -266,14 +274,6 @@
               )
               frameworks
             );
-
-          riscv64MuslPkgs = let
-            crossPkgs = import nixpkgs {
-              inherit system;
-              crossSystem.config = "riscv64-unknown-linux-musl";
-            };
-          in
-            crossPkgs.pkgsCross.riscv64;
         in {
           packages =
             crates.packages
