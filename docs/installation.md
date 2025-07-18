@@ -70,9 +70,6 @@ Nix is the easiest way to build Jstz on MacOS:
    PATH=.:$PATH cargo run --bin jstz -- sandbox start
    ```
 
-This command runs `octez-node` and initializes `octez-client`, which are installed by Nix and required to start the sandbox.
-When the client is initialized, it originates the `jstz_kernel` and `jstz_bridge` components and starts a `octez-smart-rollup-node` and `jstz-node`.
-
 ### Building on Linux
 
 Nix is not required on Linux systems but it is easier than installing dependencies individually.
@@ -144,6 +141,3 @@ Nix is not required on Linux systems but it is easier than installing dependenci
    make build-cli
    PATH=.:$PATH cargo run --bin jstz -- sandbox start
    ```
-
-This command runs `octez-node` and initializes `octez-client`.
-When the client is initialized, it originates the `jstz_kernel` and `jstz_bridge` components and starts a `octez-smart-rollup-node` and `jstz-node`.
