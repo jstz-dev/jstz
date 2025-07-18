@@ -181,25 +181,32 @@
             cargo = rust-toolchain;
           };
 
-          riscvSandbox = rustPlatform.buildRustPackage {
-            name = "riscv-sandbox";
+          riscvSandbox = let
             src = builtins.fetchGit {
               url = "https://github.com/tezos/riscv-pvm.git";
               ref = "main";
               rev = "1378be6b983e15d4ff7d47f9c08a1a0eb4d99e1d";
             };
-            cargoRoot = "src/riscv";
-            buildAndTestSubdir = "src/riscv/sandbox";
-            useFetchCargoVendor = true;
-            cargoHash = "sha256-vpmKzpn8hus9sB+smyz7bWf3JwHaKg6J92/eHEdjjr4=";
-            buildFeatures = ["huge-memory"];
-            preBuild =
-              # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
-              # but does for Linux.
-              pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                ${vendorDeps {inherit rustPlatform; old = src; dir = "src/riscv";}}
-              '';
-          };
+          in
+            rustPlatform.buildRustPackage {
+              name = "riscv-sandbox";
+              src = src;
+              cargoRoot = "src/riscv";
+              buildAndTestSubdir = "src/riscv/sandbox";
+              useFetchCargoVendor = true;
+              cargoHash = "sha256-vpmKzpn8hus9sB+smyz7bWf3JwHaKg6J92/eHEdjjr4=";
+              buildFeatures = ["huge-memory"];
+              preBuild =
+                # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
+                # but does for Linux.
+                pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
+                  ${vendorDeps {
+                    inherit rustPlatform;
+                    old = src;
+                    dir = "src/riscv";
+                  }}
+                '';
+            };
 
           llvmPackages = pkgs.llvmPackages_16;
 
