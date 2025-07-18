@@ -16,6 +16,8 @@ jobs:
     runs-on: [x86_64, linux, nix]
     steps:
       - uses: actions/checkout@v4
+      - name: Build kernel
+        run: nix develop --command make riscv-pvm-kernel
       - name: Run
         id: bench
         run: nix --accept-flake-config --log-format raw -L run .#tps_bench

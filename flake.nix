@@ -220,7 +220,7 @@
           in
             crossPkgs.pkgsCross.riscv64;
 
-          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez riscvV8 riscv64MuslPkgs;};
+          crates = pkgs.callPackage ./nix/crates.nix {inherit crane rust-toolchain octez;};
 
           fmt = treefmt.lib.evalModule pkgs {
             projectRootFile = "flake.nix";

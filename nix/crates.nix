@@ -5,8 +5,6 @@
   crane,
   rust-toolchain,
   octez,
-  riscvV8,
-  riscv64MuslPkgs,
 }: let
   craneLib = (crane.mkLib pkgs).overrideToolchain (_: rust-toolchain);
 
@@ -65,8 +63,6 @@
       (with darwin.apple_sdk.frameworks; [Security SystemConfiguration]);
 
     RUSTY_V8_ARCHIVE = pkgs.callPackage ./v8.nix {};
-    RISCV_V8_ARCHIVE_DIR = "${riscvV8}";
-    RUSTY_V8_SRC_BINDING_PATH = "${riscvV8}/src_binding.rs";
   };
 
   # Build *just* the workspace dependencies.
@@ -81,17 +77,6 @@
       pname = "jstz_kernel";
       target = "wasm32-unknown-unknown";
       cargoExtraArgs = "-p ${pname} --target ${target}";
-    });
-
-  jstz_kernel_riscv = craneLib.buildPackage (common
-    // rec {
-      inherit (craneLib.crateNameFromCargoToml {inherit src;}) version;
-      cargoArtifacts = cargoDeps;
-      doCheck = false;
-      buildInputs = common.buildInputs ++ [riscv64MuslPkgs.pkgsStatic.stdenv.cc];
-      pname = "jstz_kernel";
-      target = "riscv64gc-unknown-linux-musl";
-      cargoExtraArgs = "-p ${pname} --target ${target} --no-default-features --features riscv_kernel";
     });
 
   # A common set of attributes for workspace crates
@@ -137,7 +122,6 @@ in let
     jstz_core = crate "jstz_core";
     jstz_crypto = crate "jstz_crypto";
     inherit jstz_kernel;
-    inherit jstz_kernel_riscv;
     jstz_mock = crate "jstz_mock";
     jstz_node = crate "jstz_node";
     jstz_proto = crate "jstz_proto";
@@ -208,7 +192,7 @@ in {
     tps_bench = let
       bench-script = pkgs.writeShellScriptBin "run-bench" ''
         ${packages.jstz_tps_bench}/bin/bench generate --transfers $transfer_count --inbox-file ./crates/jstz_tps_bench/src/kernel/inbox.json
-        ls ${packages.jstz_kernel_riscv}
+        ls
       '';
     in { type = "app"; program = "${bench-script}/bin/run-bench"; };
   };
