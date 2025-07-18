@@ -17,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build kernel
-        run: nix develop --command make riscv-pvm-kernel
+        run: nix --accept-flake-config --log-format raw -L develop --command make riscv-pvm-kernel
       - name: Run
         id: bench
         run: nix --accept-flake-config --log-format raw -L run .#tps_bench
