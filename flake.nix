@@ -204,7 +204,7 @@
                     old = src;
                     dir = "src/riscv";
                     gitDepHashes = {
-                      "tezos-smart-rollup-0.2.2" = "sha256-vpmKzpn8hus9sB+smyz7bWf3JwHaKg6J92/eHEdjjr4=";
+                      "tezos-smart-rollup-0.2.2" = "sha256-RaOpToExqqClbTvOChPudEpa28Fm/wguUHWb+2z/ysQ=";
                     };
                   }}
                 '';
