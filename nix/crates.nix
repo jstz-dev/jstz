@@ -65,6 +65,7 @@
 
     RUSTY_V8_ARCHIVE = pkgs.callPackage ./v8.nix {};
     RISCV_V8_ARCHIVE_DIR = "${riscvV8}";
+    RUSTY_V8_SRC_BINDING_PATH = "${riscvV8}/src_binding.rs";
   };
 
   # Build *just* the workspace dependencies.
