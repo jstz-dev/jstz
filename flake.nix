@@ -69,7 +69,7 @@
             gitDepHashes ? {},
           }: let
             vendoredDir = rustPlatform.importCargoLock {
-              lockFile = "${old.src}/${dir}/Cargo.lock";
+              lockFile = "${old}/${dir}/Cargo.lock";
               outputHashes = gitDepHashes;
             };
           in ''
@@ -117,8 +117,8 @@
               # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
               # but does for Linux.
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                ${vendorDeps {inherit rustPlatform old; dir = "src/rust_deps";}}
-                ${vendorDeps {inherit rustPlatform old; dir = "src/rustzcash_deps";}}
+                ${vendorDeps {inherit rustPlatform; old = old.src; dir = "src/rust_deps";}}
+                ${vendorDeps {inherit rustPlatform; old = old.src; dir = "src/rustzcash_deps";}}
               '';
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
