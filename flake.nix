@@ -197,7 +197,7 @@
               # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
               # but does for Linux.
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                ${vendorDeps {inherit rustPlatform old; dir = "src/riscv";}}
+                ${vendorDeps {inherit rustPlatform src; dir = "src/riscv";}}
               '';
           };
 
