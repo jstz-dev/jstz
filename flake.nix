@@ -174,14 +174,12 @@
               })
             else pkgs.clang;
 
-          rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
-
-          rustPlatform = pkgs.makeRustPlatform {
-            rustc = rust-toolchain;
-            cargo = rust-toolchain;
-          };
-
           riscvSandbox = let
+            rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
+            rustPlatform = pkgs.makeRustPlatform {
+              rustc = rust-toolchain;
+              cargo = rust-toolchain;
+            };
             src = builtins.fetchGit {
               url = "https://github.com/tezos/riscv-pvm.git";
               ref = "main";
@@ -195,6 +193,7 @@
               buildAndTestSubdir = "src/riscv/sandbox";
               cargoHash = "sha256-vpmKzpn8hus9sB+smyz7bWf3JwHaKg6J92/eHEdjjr4=";
               buildFeatures = ["huge-memory"];
+              useFetchCargoVendor = true;
               preBuild =
                 # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
                 # but does for Linux.
