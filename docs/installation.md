@@ -32,70 +32,103 @@ You are now ready to [write your first smart function](/quick_start) 🚀.
 
 ## Building from source
 
-Follow these steps to build Jstz from its source code:
+For simplicity, you can install and initialize the Nix package management and system configuration tool, which provides the dependencies to build Jstz.
+If you don't use Nix, you must install the dependencies yourself.
 
-1. Install the Nix package management and system configuration tool.
-   See https://nixos.org/download.html.
+These sections show how to build Jstz on MacOS and Linux systems:
 
-1. Ensure that Nix flakes are enabled: https://nixos.wiki/wiki/Flakes#Enable_flakes.
+### Building on MacOS
 
-1. Clone the repository:
+Nix is the easiest way to build Jstz on MacOS:
+
+1. Clone the Jstz repository:
 
    ```sh
    git clone https://github.com/jstz-dev/jstz.git
    ```
 
-1. Install LLVM:
+1. Install and configure Nix:
 
-   MacOS:
+   1. Install Nix as described in its documentation: https://nixos.org/download.html.
 
-   ```sh
-   brew install llvm
-   export CC="$(brew --prefix llvm)/bin/clang"
-   ```
+   1. Ensure that Nix flakes are enabled: https://nixos.wiki/wiki/Flakes#Enable_flakes.
 
-   Ubuntu:
+   1. Run `nix develop` to enter a shell with the build dependencies or use `direnv` to automatically enter the shell when you enter the `jstz` directory.
 
-   ```sh
-   sudo apt install clang-11
-   export CC=clang-11
-   ```
-
-   Fedora:
+1. Build the Jstz kernel by running this command:
 
    ```sh
-   sudo dnf install clang
-   export CC=clang
+   make build
    ```
 
-   Linux:
+   You can locate the resulting built artifact at `/target/wasm32-unknown-unknown/release/jstz_kernel.wasm`.
 
-   ```sh Arch
-   pacman -S clang
-   export CC=clang
-   ```
-
-   Nix:
+1. Build and start the sandbox by running these commands:
 
    ```sh
-   nix-env -iA nixpkgs.llvm
+   make build-cli
+   PATH=.:$PATH cargo run --bin jstz -- sandbox start
    ```
 
-1. From the `jstz` directory, install the specific version of Rust that Jstz requires, which is specified in the `rust-toolchain` file:
+This command runs `octez-node` and initializes `octez-client`, which are installed by Nix and required to start the sandbox.
+When the client is initialized, it originates the `jstz_kernel` and `jstz_bridge` components and starts a `octez-smart-rollup-node` and `jstz-node`.
+
+### Building on Linux
+
+Nix is not required on Linux systems but it is easier than installing dependencies individually.
+
+1. Clone the Jstz repository:
 
    ```sh
-   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   git clone https://github.com/jstz-dev/jstz.git
    ```
 
-1. Download the following Octez binaries to the `jstz` directory:
+1. (Optional) If you are using Nix, install and configure it:
 
-   - `octez-client`
-   - `octez-node`
-   - `octez-smart-rollup-node`
+   1. Install Nix as described in its documentation: https://nixos.org/download.html.
 
-   You can get the Octez suite of tools from the Octez release page here: https://gitlab.com/tezos/tezos/-/releases.
+   1. Ensure that Nix flakes are enabled: https://nixos.wiki/wiki/Flakes#Enable_flakes.
 
-1. If you are using Nix, run `nix develop` to enter a shell with all build dependencies or use `direnv` to automatically enter the shell when you `cd` into the `jstz` directory.
+   1. Run `nix develop` to enter a shell with the build dependencies or use `direnv` to automatically enter the shell when you enter the `jstz` directory.
+
+1. If you are not using Nix, install these dependencies manually:
+
+   1. Install LLVM:
+
+      Ubuntu:
+
+      ```sh
+      sudo apt install clang
+      export CC=clang
+      ```
+
+      Fedora:
+
+      ```sh
+      sudo dnf install clang
+      export CC=clang
+      ```
+
+      Linux:
+
+      ```sh Arch
+      pacman -S clang
+      export CC=clang
+      ```
+
+   1. From the `jstz` directory, install the specific version of Rust that Jstz requires, which is specified in the `rust-toolchain` file:
+
+      ```sh
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+      ```
+
+   1. Install the following Octez binaries and ensure that they are on your system `$PATH`:
+
+      - `octez-client`
+      - `octez-node`
+      - `octez-smart-rollup-node`
+
+      You can get the Octez suite of tools from the Octez release page here: https://gitlab.com/tezos/tezos/-/releases.
 
 1. Build the Jstz kernel by running this command:
 
