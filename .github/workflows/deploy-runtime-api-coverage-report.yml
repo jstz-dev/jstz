@@ -7,7 +7,6 @@ on:
         description: Ref that the build runs against. If not provided, HEAD will be used.
         type: string
 
-
 jobs:
   runtime_api_coverage:
     name: Runtime API coverage
