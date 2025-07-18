@@ -193,7 +193,6 @@
               src = src;
               cargoRoot = "src/riscv";
               buildAndTestSubdir = "src/riscv/sandbox";
-              useFetchCargoVendor = true;
               cargoHash = "sha256-vpmKzpn8hus9sB+smyz7bWf3JwHaKg6J92/eHEdjjr4=";
               buildFeatures = ["huge-memory"];
               preBuild =
