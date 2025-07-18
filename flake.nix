@@ -175,24 +175,21 @@
             else pkgs.clang;
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
-
-          riscvSandbox = let
-            rustPlatform = pkgs.makeRustPlatform {
+          rustPlatform = pkgs.makeRustPlatform {
               rustc = rust-toolchain;
               cargo = rust-toolchain;
             };
-            src = builtins.fetchGit {
-              url = "https://github.com/huancheng-trili/riscv-pvm.git";
-              ref = "test";
-              rev = "fbaf9fa8de652107cb0e570e3a275c394e8ab9fe";
-            };
-          in
-            rustPlatform.buildRustPackage {
+
+          riscvSandbox = rustPlatform.buildRustPackage {
               name = "riscv-sandbox";
-              src = src;
+              src = builtins.fetchGit {
+                url = "https://github.com/huancheng-trili/riscv-pvm.git";
+                ref = "test";
+                rev = "fbaf9fa8de652107cb0e570e3a275c394e8ab9fe";
+              };
               cargoRoot = "src/riscv";
               buildAndTestSubdir = "src/riscv/sandbox";
-              cargoHash = "sha256-vL0TN5Rft9ErjypfJbhLyaPEuRTFJrXKRjrT/G7ANCo=";
+              cargoHash = "sha256-cN2zAnzgLBC9+EZfi4IaeOWUCh5psHDJeI7T9MAmxKk=";
               buildFeatures = ["huge-memory"];
               useFetchCargoVendor = true;
             };
