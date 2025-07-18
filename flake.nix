@@ -185,11 +185,11 @@
               src = builtins.fetchGit {
                 url = "https://github.com/huancheng-trili/riscv-pvm.git";
                 ref = "test";
-                rev = "d42949e9df84ddf0e38c0241560bf23e25acba12";
+                rev = "83f34104130425d6251543bafa23d441f4bd7af8";
               };
               cargoRoot = "src/riscv";
               buildAndTestSubdir = "src/riscv/sandbox";
-              cargoHash = "sha256-TMVPXcEcpL8QvFp18AeSuPXeJXxg3xcWTOYz1IFr43I=";
+              cargoHash = "sha256-C1+Tv5qq1Jq6jNZ3e7k9fyx/bY9S8rSbJ7pbWSeIRWw=";
               buildFeatures = ["huge-memory"];
               useFetchCargoVendor = true;
             };
