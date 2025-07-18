@@ -57,7 +57,7 @@ Follow these steps to build Jstz from its source code:
    Ubuntu:
 
    ```sh
-   sudo apt-get install clang-11
+   sudo apt install clang-11
    export CC=clang-11
    ```
 
