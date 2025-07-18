@@ -193,6 +193,12 @@
             useFetchCargoVendor = true;
             cargoHash = "sha256-vpmKzpn8hus9sB+smyz7bWf3JwHaKg6J92/eHEdjjr4=";
             buildFeatures = ["huge-memory"];
+            preBuild =
+              # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
+              # but does for Linux.
+              pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
+                ${vendorDeps {inherit rustPlatform old; dir = "src/riscv";}}
+              '';
           };
 
           llvmPackages = pkgs.llvmPackages_16;
