@@ -119,13 +119,18 @@ Nix is not required on Linux systems but it is easier than installing dependenci
       curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
       ```
 
-   1. Install the following Octez binaries and ensure that they are on your system `$PATH`:
+   1. Install the following Octez binaries:
 
       - `octez-client`
       - `octez-node`
       - `octez-smart-rollup-node`
+      - The appropriate Octez baker for the current protocol
 
       You can get the Octez suite of tools from the Octez release page here: https://gitlab.com/tezos/tezos/-/releases.
+
+      Currently, Jstz uses the protocol-specific baker, such as `octez-baker-PsRiotum` or `octez-baker-PtSeouLo`, not the agnostic baker named `octez-baker`.
+
+      For each of these binaries, you must download or build the appropriate binary for your system architecture (x86 or arm64), rename the file to remove the architecture prefix (so, for example, `arm64-octez-baker-PtSeouLo` becomes `octez-baker-PtSeouLo`), make the binary executable with the `chmod +x` command, and ensure that the file is on your system's `PATH` environment variable.
 
 1. Build the Jstz kernel by running this command:
 
@@ -139,5 +144,5 @@ Nix is not required on Linux systems but it is easier than installing dependenci
 
    ```sh
    make build-cli
-   PATH=.:$PATH cargo run --bin jstz -- sandbox start
+   cargo run --bin jstz -- sandbox start
    ```
