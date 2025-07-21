@@ -3,7 +3,7 @@ import { visit } from "ext:api_coverage_test/utils.js";
 
 async function runTest() {
   // This test function is basically taken from
-  // https://raw.githubusercontent.com/cloudflare/workers-nodejs-compat-matrix/426ca553141d5ac41764beb9078bd27efd980756/deno/dump.js
+  // https://raw.githubusercontent.com/jstz-dev/nodejs-compat-matrix/426ca553141d5ac41764beb9078bd27efd980756/deno/dump.js
   const globals = {};
   const importedModules = {};
   for (const name of Object.keys(baseline)) {

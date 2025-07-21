@@ -7,10 +7,10 @@ TARGET_SHA=426ca553141d5ac41764beb9078bd27efd980756
 # The source baseline file is a JSON file. Importing JSON files in a deno extension doesn't seem to
 # be straightforward, so here it is changed to a script file whose only job is to export the baseline
 # data as a JSON object.
-curl -s --output /tmp/baseline.json https://raw.githubusercontent.com/cloudflare/workers-nodejs-compat-matrix/$TARGET_SHA/data/baseline.json
+curl -s --output /tmp/baseline.json https://raw.githubusercontent.com/jstz-dev/nodejs-compat-matrix/$TARGET_SHA/data/baseline.json
 (
   echo "export default "
   cat /tmp/baseline.json
 ) >./tests/api_coverage/baseline.js
 
-curl -s --output ./tests/api_coverage/utils.js https://raw.githubusercontent.com/cloudflare/workers-nodejs-compat-matrix/$TARGET_SHA/dump-utils.mjs
+curl -s --output ./tests/api_coverage/utils.js https://raw.githubusercontent.com/jstz-dev/nodejs-compat-matrix/$TARGET_SHA/dump-utils.mjs
