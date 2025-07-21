@@ -58,6 +58,10 @@ struct Args {
     #[arg(long)]
     debug_log_path: Option<PathBuf>,
 
+    #[cfg(feature = "blueprint")]
+    #[arg(long)]
+    blueprint_db_path: Option<PathBuf>,
+
     /// Path to file containing oracle key pair for DataProvider (format: "public_key:secret_key")
     #[arg(long)]
     oracle_key_file: Option<PathBuf>,
@@ -110,6 +114,15 @@ async fn main() -> anyhow::Result<()> {
                         .into_temp_path()
                         .keep()
                         .context("failed to convert temporary debug log file to path")?
+                        .to_path_buf(),
+                ),
+                #[cfg(feature = "blueprint")]
+                blueprint_db_path: args.blueprint_db_path.unwrap_or(
+                    NamedTempFile::new()
+                        .context("failed to create temporary blueprint db file")?
+                        .into_temp_path()
+                        .keep()
+                        .context("failed to convert temporary blueprint db file to path")?
                         .to_path_buf(),
                 ),
                 #[cfg(feature = "v2_runtime")]

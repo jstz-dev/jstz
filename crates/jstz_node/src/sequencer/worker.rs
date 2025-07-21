@@ -77,6 +77,8 @@ pub fn spawn(
                 queue,
                 heartbeat,
                 rx,
+                #[cfg(feature = "blueprint")]
+                blueprint_db,
                 #[cfg(test)]
                 on_exit,
             );
@@ -131,6 +133,7 @@ fn run_event_loop(
     queue: Arc<RwLock<OperationQueue>>,
     heartbeat: Arc<AtomicU64>,
     rx: std::sync::mpsc::Receiver<()>,
+    #[cfg(feature = "blueprint")] blueprint_db: BlueprintDb,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) {
     let local_set = tokio::task::LocalSet::new();
@@ -152,6 +155,10 @@ fn run_event_loop(
             match v {
                 Some(ParsedInboxMessage::JstzMessage(op)) => {
                     let mut hrt = host.clone();
+                    #[cfg(feature = "blueprint")]
+                    if let Err(e) = blueprint_db.write(&op) {
+                        warn!("error writing blueprint: {e:?}");
+                    };
                     local_set.spawn_local(async move {
                         if let Err(e) = process_message(&mut hrt, op).await {
                             warn!("error processing message: {e:?}");
