@@ -1,27 +1,32 @@
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
-use std::sync::{Arc, RwLock};
 
-use std::time::Duration;
-
+use crate::sequencer::inbox::stream::{
+    create_sequential_block_stream, Error, FileBlockProgressStore,
+};
 use crate::sequencer::queue::OperationQueue;
 use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use anyhow::Result;
 use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
+use futures::StreamExt;
 use jstz_core::host::WriteDebug;
+use jstz_proto::BlockLevel;
 use log::{debug, error};
 use parsing::{parse_inbox_message_hex, ParsedInboxMessage};
+use std::fs::File;
 #[cfg(test)]
 use std::future::Future;
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tokio::{select, task::JoinHandle};
-use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 pub mod api;
 pub mod parsing;
+mod stream;
 
 #[derive(Default)]
 pub struct Monitor {
@@ -56,15 +61,29 @@ impl WriteDebug for Logger {
 /// precondition: the rollup node is healthy.
 pub async fn spawn_monitor<
     #[cfg(test)] Fut: Future<Output = ()> + 'static + Send,
-    #[cfg(test)] F: Fn(u32) -> Fut + Send + 'static,
+    #[cfg(test)] F: Fn(BlockLevel) -> Fut + Send + 'static,
 >(
     rollup_endpoint: String,
     queue: Arc<RwLock<OperationQueue>>,
+    file: File,
     #[cfg(test)] on_new_block: F,
 ) -> Result<Monitor> {
     let kill_sig = CancellationToken::new();
     let kill_sig_clone = kill_sig.clone();
-    let mut block_stream = api::monitor_blocks(&rollup_endpoint).await?;
+    let rep = rollup_endpoint.clone();
+    let store = FileBlockProgressStore::new(file);
+    let mk_live_stream = move || {
+        let rep = rep.clone();
+        Ok(Box::pin(async_stream::stream! {
+            let block_stream = api::monitor_blocks(&rep).await?;
+            for await result in block_stream {
+                yield result.map(|b| b.level);
+            }
+        }))
+    };
+    let mut stream =
+        create_sequential_block_stream(store.clone(), mk_live_stream.clone()).boxed();
+    // let mut stream = SequentialBlockStream::new(store.clone(), mk_live_stream);
     let handle = tokio::spawn(async move {
         let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
@@ -73,16 +92,27 @@ pub async fn spawn_monitor<
                 _ = kill_sig_clone.cancelled() => {
                     break;
                 }
-                result = block_stream.next() => {
+                result = stream.next() => {
                     match result {
-                        Some(Ok(block)) => {
+                        Some(Ok(block_level)) => {
                             #[cfg(test)]
                             {
-                                on_new_block(block.level).await;
+                                on_new_block(block_level.level()).await;
                                 continue;
                             }
-                            let block_content = retry_fetch_block(&rollup_endpoint, block.level).await;
+                            let block_content = retry_fetch_block(&rollup_endpoint, block_level.level()).await;
+                            println!("block_content: {:?}", block_content);
                             process_inbox_messages(block_content, queue.clone(), &ticketer, &jstz).await;
+                            if let Err(Error::StorageError(e)) = block_level.commit().await {
+                                    // TODO: handle db error
+                                    //  https://linear.app/tezos/issue/JSTZ-693/handle-db-error
+                                    error!("spawn_monitor db write error: {e:?}");
+                            }
+                        }
+                        Some(Err(Error::StorageError(e))) => {
+                            // TODO: handle db error
+                            //  https://linear.app/tezos/issue/JSTZ-693/handle-db-error
+                            error!("spawn_monitor db write error: {e:?}");
                         }
                         _ => {
                             //TODO: handle the case when the stream ended/errored
@@ -142,7 +172,10 @@ fn parse_inbox_messages(
 // 2. The block data must eventually become available (it's part of the chain)
 // 3. Temporary network issues or API unavailability should not stop the sequencer
 // 4. The exponential backoff ensures we don't overwhelm the API
-async fn retry_fetch_block(rollup_endpoint: &str, block_level: u32) -> BlockResponse {
+async fn retry_fetch_block(
+    rollup_endpoint: &str,
+    block_level: BlockLevel,
+) -> BlockResponse {
     let mut attempts = 0;
     let mut backoff = Duration::from_millis(200);
     const MAX_BACKOFF: Duration = Duration::from_secs(5);
@@ -182,13 +215,14 @@ mod tests {
         (op_hash, op)
     }
 
-    type OnNewBlockCallback =
-        Box<dyn Fn(u32) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static>;
+    type OnNewBlockCallback = Box<
+        dyn Fn(BlockLevel) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static,
+    >;
 
-    fn make_on_new_block() -> (Arc<Mutex<u32>>, OnNewBlockCallback) {
-        let counter = Arc::new(Mutex::new(0u32));
+    fn make_on_new_block() -> (Arc<Mutex<BlockLevel>>, OnNewBlockCallback) {
+        let counter = Arc::new(Mutex::new(0));
         let counter_clone = counter.clone();
-        let on_new_block = move |num: u32| {
+        let on_new_block = move |num: BlockLevel| {
             let counter_clone = counter_clone.clone();
             Box::pin(async move {
                 let mut value = counter_clone.lock().unwrap();
@@ -206,8 +240,9 @@ mod tests {
         task::spawn(server);
         let endpoint = format!("http://{}", addr);
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
+        let file = tempfile::tempfile().unwrap();
         let (counter, on_new_block) = make_on_new_block();
-        let mut monitor = spawn_monitor(endpoint.clone(), q.clone(), on_new_block)
+        let mut monitor = spawn_monitor(endpoint.clone(), q.clone(), file, on_new_block)
             .await
             .unwrap();
         sleep(Duration::from_millis(100)).await;
@@ -225,7 +260,10 @@ mod tests {
         let endpoint = format!("http://{}", addr);
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
         let (counter, on_new_block) = make_on_new_block();
-        let _ = spawn_monitor(endpoint, q, on_new_block).await.unwrap();
+        let file = tempfile::tempfile().unwrap();
+        let _ = spawn_monitor(endpoint, q, file, on_new_block)
+            .await
+            .unwrap();
         sleep(Duration::from_millis(100)).await;
         assert_eq!(*counter.lock().unwrap(), 123);
         sleep(Duration::from_millis(400)).await;

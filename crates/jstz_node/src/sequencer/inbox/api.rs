@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use anyhow::Result;
 use futures_util::{Stream, StreamExt, TryStreamExt};
+use jstz_proto::BlockLevel;
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::time::Duration;
@@ -17,7 +18,7 @@ pub struct BlockResponse {
 /// Fetches block data from the rollup node for a specific block level.
 pub async fn fetch_block(
     rollup_endpoint: &str,
-    block_level: u32,
+    block_level: BlockLevel,
 ) -> Result<BlockResponse> {
     let url = format!("{}/global/block/{}", rollup_endpoint, block_level);
     let response = reqwest::get(url).await?;
@@ -28,7 +29,7 @@ pub async fn fetch_block(
 /// Response structure for block monitoring, containing the block level information.
 #[derive(Debug, Deserialize)]
 pub struct MonitorBlocksResponse {
-    pub level: u32,
+    pub level: BlockLevel,
 }
 
 /// Establishes a streaming connection to monitor new blocks from the rollup node.
