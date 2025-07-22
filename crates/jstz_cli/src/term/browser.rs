@@ -16,7 +16,7 @@ pub fn open_browser(url: &str) -> Result<()> {
 
     // TODO: Support Windows
     if cfg!(target_os = "linux") {
-        let linux_cmd = format!(r#"xdg-open "{}""#, url);
+        let linux_cmd = format!(r#"xdg-open "{url}""#);
         Command::new("sh")
             .arg("-c")
             .arg(&linux_cmd)
@@ -24,7 +24,7 @@ pub fn open_browser(url: &str) -> Result<()> {
             .stderr(Stdio::null())
             .spawn()?;
     } else {
-        let mac_cmd = format!(r#"open "{}""#, url);
+        let mac_cmd = format!(r#"open "{url}""#);
         Command::new("sh")
             .arg("-c")
             .arg(&mac_cmd)

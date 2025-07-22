@@ -88,11 +88,10 @@ async fn check_bootstrap_contract(
     expected_balance: u64,
 ) {
     let balance_str = reqwest::get(format!(
-        "{}/chains/main/blocks/head/context/contracts/{}/full_balance",
-        endpoint, address
+        "{endpoint}/chains/main/blocks/head/context/contracts/{address}/full_balance"
     ))
     .await
-    .unwrap_or_else(|_| panic!("should be able to get bootstrap contract {}", address))
+    .unwrap_or_else(|_| panic!("should be able to get bootstrap contract {address}"))
     .text()
     .await
     .expect("should be a valid string")
@@ -101,10 +100,7 @@ async fn check_bootstrap_contract(
     assert_eq!(
         balance_str,
         expected_balance.to_string(),
-        "address {} has {} mutez in full balance but should have {}",
-        address,
-        balance_str,
-        expected_balance
+        "address {address} has {balance_str} mutez in full balance but should have {expected_balance}"
     );
 }
 
@@ -114,8 +110,7 @@ async fn check_bootstrap_rollup(
     pvm_kind: SmartRollupPvmKind,
 ) {
     let kind = reqwest::get(format!(
-        "{}/chains/main/blocks/head/context/smart_rollups/smart_rollup/{}/kind",
-        endpoint, address
+        "{endpoint}/chains/main/blocks/head/context/smart_rollups/smart_rollup/{address}/kind"
     ))
     .await
     .expect("should be able to get bootstrap rollup")

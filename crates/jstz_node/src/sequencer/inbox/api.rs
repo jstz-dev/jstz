@@ -19,7 +19,7 @@ pub async fn fetch_block(
     rollup_endpoint: &str,
     block_level: u32,
 ) -> Result<BlockResponse> {
-    let url = format!("{}/global/block/{}", rollup_endpoint, block_level);
+    let url = format!("{rollup_endpoint}/global/block/{block_level}");
     let response = reqwest::get(url).await?;
     let block: BlockResponse = response.json().await?;
     Ok(block)
@@ -41,15 +41,13 @@ pub struct MonitorBlocksResponse {
 pub async fn monitor_blocks(
     rollup_endpoint: &str,
 ) -> Result<impl Stream<Item = Result<MonitorBlocksResponse, anyhow::Error>> + Unpin> {
-    let url = format!("{}/global/monitor_blocks", rollup_endpoint);
+    let url = format!("{rollup_endpoint}/global/monitor_blocks");
     let client = reqwest::Client::builder()
         .tcp_keepalive(Some(Duration::from_secs(10)))
         .build()?;
     let response = client.get(url).send().await?;
     let bytes_stream = response.bytes_stream();
-    let reader = StreamReader::new(
-        bytes_stream.map_err(|e| io::Error::new(io::ErrorKind::Other, e)),
-    );
+    let reader = StreamReader::new(bytes_stream.map_err(io::Error::other));
     let line_stream = FramedRead::new(reader, LinesCodec::new());
     let response_stream = line_stream.map(|result| match result {
         Ok(line) => Ok(serde_json::from_str::<MonitorBlocksResponse>(&line).unwrap()),
@@ -72,7 +70,7 @@ mod tests {
         let (addr, server) = warp::serve(make_mock_monitor_blocks_filter())
             .bind_ephemeral(([127, 0, 0, 1], 0));
         task::spawn(server);
-        let endpoint = format!("http://{}", addr);
+        let endpoint = format!("http://{addr}");
 
         let mut stream = monitor_blocks(&endpoint).await.unwrap();
 
@@ -90,7 +88,7 @@ mod tests {
         let (addr, server) = warp::serve(make_mock_global_block_filter())
             .bind_ephemeral(([127, 0, 0, 1], 0));
         task::spawn(server);
-        let endpoint = format!("http://{}", addr);
+        let endpoint = format!("http://{addr}");
 
         // Test block endpoint
         let block_response = fetch_block(&endpoint, 123).await.unwrap();

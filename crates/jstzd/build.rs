@@ -47,9 +47,9 @@ const ROLLUP_OPERATOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "rollup_operator";
 /// - parameters_ty_path(): Path to the parameters type JSON file
 /// - preimages_path(): Path to the preimages directory
 fn main() {
-    println!("cargo:rerun-if-changed={}", JSTZ_KERNEL_PATH);
-    println!("cargo:rerun-if-changed={}", JSTZ_PARAMETERS_TY_PATH);
-    println!("cargo:rerun-if-changed={}", BOOTSTRAP_ACCOUNT_PATH);
+    println!("cargo:rerun-if-changed={JSTZ_KERNEL_PATH}");
+    println!("cargo:rerun-if-changed={JSTZ_PARAMETERS_TY_PATH}");
+    println!("cargo:rerun-if-changed={BOOTSTRAP_ACCOUNT_PATH}");
 
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
 
@@ -86,10 +86,7 @@ fn main() {
         out_dir.display()
     );
     if let Ok(p) = env::var("KERNEL_DEST_DIR") {
-        println!(
-            "cargo:warning=Copying content in output directory to: {}",
-            p
-        );
+        println!("cargo:warning=Copying content in output directory to: {p}");
         fs::create_dir_all(&p).unwrap_or_else(|e| {
             panic!("Failed to create destination directory '{}': {:?}", &p, e)
         });

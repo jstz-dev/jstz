@@ -45,13 +45,12 @@ async fn fa_deploy_test() {
 
     let octez_client = OctezClient::new(jstzd_config.octez_client_config().clone());
     let init_data = format!(
-        "(Pair (Pair \"{}\" None False) \
-        (Pair {{ Elt (Pair \"{}\" 1) 1000 }} \
+        "(Pair (Pair \"{bootstrap2}\" None False) \
+        (Pair {{ Elt (Pair \"{bootstrap2}\" 1) 1000 }} \
               {{}} \
               {{ Elt 1 1000 }} \
               {{ Elt 1 (Pair 1 {{ Elt \"decimals\" 0x31 ; Elt \"name\" 0x54455354 ; Elt \"symbol\" 0x54455354 }}) }}) \
-        {{}})",
-        bootstrap2, bootstrap2
+        {{}})"
     );
     let fa_token_alias = "fa-token";
     let tezos_fa_path = format!(
@@ -109,10 +108,7 @@ async fn fa_deploy_test() {
             &fa_address.to_base58_check(),
             0.0,
             "update_operators",
-            &format!(
-                "{{ Left (Pair \"{}\" \"{}\" 1) }}",
-                bootstrap2, bridge_address
-            ),
+            &format!("{{ Left (Pair \"{bootstrap2}\" \"{bridge_address}\" 1) }}"),
             Some(999.0),
         )
         .await
@@ -120,9 +116,9 @@ async fn fa_deploy_test() {
 
     // 4. Execute FA token Deposit
     let jstz_address = jstzd_config.octez_rollup_config().address.to_string();
-    let bridge_alias = format!("{}-bridge", fa_token_alias);
+    let bridge_alias = format!("{fa_token_alias}-bridge");
     let receiver_addr = bootstrap2.clone();
-    let args = format!("Pair \"{}\" \"{}\" 1000", jstz_address, receiver_addr);
+    let args = format!("Pair \"{jstz_address}\" \"{receiver_addr}\" 1000");
     octez_client
         .call_contract(
             bootstrap2_alias,
@@ -147,7 +143,7 @@ async fn fa_deploy_test() {
         .unwrap()
         .args([
             "run",
-            &format!("jstz://{}/balances/{}", fa_token_alias, receiver_addr),
+            &format!("jstz://{fa_token_alias}/balances/{receiver_addr}"),
         ])
         .output()
         .unwrap();

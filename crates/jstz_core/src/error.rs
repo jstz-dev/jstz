@@ -42,13 +42,13 @@ impl From<Error> for JsError {
     fn from(value: Error) -> Self {
         match value {
             Error::KvError { source } => JsNativeError::eval()
-                .with_message(format!("KvError: {}", source))
+                .with_message(format!("KvError: {source}"))
                 .into(),
             Error::HostError { source } => JsNativeError::eval()
-                .with_message(format!("HostError: {}", source))
+                .with_message(format!("HostError: {source}"))
                 .into(),
             Error::PathError { source } => JsNativeError::eval()
-                .with_message(format!("PathError: {}", source))
+                .with_message(format!("PathError: {source}"))
                 .into(),
             Error::JsError { source } => JsNativeError::eval()
                 .with_message("JsError")
@@ -58,10 +58,10 @@ impl From<Error> for JsError {
                 .with_message(format!("serialization error: {description}"))
                 .into(),
             Error::OutboxError { source } => JsNativeError::eval()
-                .with_message(format!("OutboxError: {}", source))
+                .with_message(format!("OutboxError: {source}"))
                 .into(),
             Error::RevealDataError { source } => JsNativeError::eval()
-                .with_message(format!("RevealDataError: {}", source))
+                .with_message(format!("RevealDataError: {source}"))
                 .into(),
         }
     }

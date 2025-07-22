@@ -49,7 +49,7 @@ struct ChildWrapper(Child);
 impl Drop for ChildWrapper {
     fn drop(&mut self) {
         if let Err(e) = self.0.kill() {
-            println!("Could not kill child process: {}", e)
+            println!("Could not kill child process: {e}")
         }
     }
 }
@@ -385,7 +385,7 @@ async fn call_function_and_stream_logs(base_uri: &str) {
         }
     }
     if let Err(e) = h.await {
-        panic!("call_function panicked: {}", e);
+        panic!("call_function panicked: {e}");
     }
     assert!(found_message, "did not find message in log stream");
 }

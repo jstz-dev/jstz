@@ -557,7 +557,7 @@ mod test {
 
         tx.begin();
         let run_function = RunFunction {
-            uri: format!("jstz://{}/", smart_function).try_into().unwrap(),
+            uri: format!("jstz://{smart_function}/").try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
             body: None,
@@ -1359,7 +1359,7 @@ mod test {
         let ticket_id = 1234;
         let ticket_content = b"random ticket content".to_vec();
         let json_ticket_content = json!(&ticket_content);
-        assert_eq!("[114,97,110,100,111,109,32,116,105,99,107,101,116,32,99,111,110,116,101,110,116]", format!("{}", json_ticket_content));
+        assert_eq!("[114,97,110,100,111,109,32,116,105,99,107,101,116,32,99,111,110,116,101,110,116]", format!("{json_ticket_content}"));
         let ticket =
             jstz_mock::parse_ticket(ticketer, 1, (ticket_id, Some(ticket_content)));
         let ticket_hash = ticket.hash().unwrap();

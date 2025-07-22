@@ -59,7 +59,7 @@ impl From<Error> for JsError {
         match value {
             Error::CoreError { source } => source.into(),
             Error::CryptoError { source } => JsNativeError::eval()
-                .with_message(format!("CryptoError: {}", source))
+                .with_message(format!("CryptoError: {source}"))
                 .into(),
             Error::BalanceOverflow => {
                 JsNativeError::eval().with_message("BalanceOverflow").into()
@@ -95,16 +95,16 @@ impl From<Error> for JsError {
                 JsNativeError::eval().with_message("UnsupportedPath").into()
             }
             Error::TicketTableError { source } => JsNativeError::eval()
-                .with_message(format!("TicketTableError: {}", source))
+                .with_message(format!("TicketTableError: {source}"))
                 .into(),
             Error::FaDepositError { source } => JsNativeError::eval()
-                .with_message(format!("FaDepositError: {}", source))
+                .with_message(format!("FaDepositError: {source}"))
                 .into(),
             Error::FaWithdrawError { source } => JsNativeError::eval()
-                .with_message(format!("FaWithdrawError: {}", source))
+                .with_message(format!("FaWithdrawError: {source}"))
                 .into(),
             Error::TicketHashError(inner) => JsNativeError::eval()
-                .with_message(format!("{}", inner))
+                .with_message(format!("{inner}"))
                 .into(),
             Error::TicketAmountTooLarge => JsNativeError::eval()
                 .with_message("TicketAmountTooLarge")
