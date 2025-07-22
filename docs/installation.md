@@ -61,7 +61,7 @@ Nix is the easiest way to build Jstz on MacOS:
    make build
    ```
 
-   You can locate the resulting built artifact at `/target/wasm32-unknown-unknown/release/jstz_kernel.wasm`.
+   You can locate the resulting built artifact at `target/wasm32-unknown-unknown/release/jstz_kernel.wasm`.
 
 1. Build and start the sandbox by running these commands:
 
@@ -138,7 +138,7 @@ Nix is not required on Linux systems but it is easier than installing dependenci
    make build
    ```
 
-   You can locate the resulting built artifact at `/target/wasm32-unknown-unknown/release/jstz_kernel.wasm`.
+   You can locate the resulting built artifact at `target/wasm32-unknown-unknown/release/jstz_kernel.wasm`.
 
 1. Build and start the sandbox by running these commands:
 
