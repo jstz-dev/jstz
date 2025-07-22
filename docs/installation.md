@@ -143,8 +143,7 @@ Nix is not required on Linux systems but it is easier than installing dependenci
 1. Build and start the sandbox by running these commands:
 
    ```sh
-   make build-cli
+   make build-jstzd-kernel
    echo '{"protocol":{"protocol":"rio"}}' > config.json
    cargo run --bin jstzd -- run config.json
-   cargo run --bin jstz -- sandbox start
    ```
