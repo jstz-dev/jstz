@@ -4,6 +4,8 @@ Using the fa2 example in examples/fa2. `fa2.js` is created with [this script](ht
 
 ## Run
 
+### Native kernel
+
 ```
 cd $(git rev-parse --show-toplevel)
 # build the crate first to get the bench binary to generate an inbox file
@@ -14,4 +16,11 @@ cargo build -p jstz_tps_bench --features static-inbox
 ./target/debug/kernel --timings > /tmp/benchmark-log
 # show the result
 ./target/debug/bench results --inbox-file ./crates/jstz_tps_bench/src/kernel/inbox.json --log-file /tmp/benchmark-log --expected-transfers 10
+```
+
+### RISCV kernel
+
+```
+# run.sh must be executed from the root of this crate.
+cd $(git rev-parse --show-toplevel)/crates/jstz_tps_bench && sh run.sh
 ```
