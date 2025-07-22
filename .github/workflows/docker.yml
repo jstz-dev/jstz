@@ -23,9 +23,6 @@ on:
       jstz-cli:
         description: "jstz docker image tag"
         value: ${{ jobs.build-image.outputs.tag }}
-      jstz-rollup:
-        description: "jstz-rollup docker image tag"
-        value: ${{ jobs.build-image.outputs.tag }}
       jstz-node:
         description: "jstz-node docker image tag"
         value: ${{ jobs.build-image.outputs.tag }}
@@ -69,8 +66,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - image: jstz-rollup
-            dockerfile: ./crates/jstz_rollup/Dockerfile
           - image: jstzd
             dockerfile: ./crates/jstzd/Dockerfile
           - image: jstz-cli

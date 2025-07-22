@@ -140,6 +140,10 @@ mod test {
         operation::{DeployFunction, Operation, RunFunction, SignedOperation},
         runtime::ParsedCode,
     };
+    use jstz_utils::{
+        test_util::{alice_keys, bob_keys},
+        KeyPair,
+    };
     use tezos_smart_rollup::types::{
         Contract as L1Address, PublicKeyHash as L1PublicKeyHash,
     };
@@ -169,19 +173,9 @@ mod test {
     fn scenario_1() -> Result<(), anyhow::Error> {
         let mut host = JstzMockHost::new(false);
         // host.set_debug_handler(std::io::stdout());
-        let bob_sk = SecretKey::from_base58(
-            "edsk3eA4FyZDnDSC2pzEh4kwnaLLknvdikvRuXZAV4T4pWMVd6GUyS",
-        )?;
-        let bob_pk = PublicKey::from_base58(
-            "edpkusQcxu7Zv33x1p54p62UgzcawjBRSdEFJbPKEtjQ1h1TaFV3U5",
-        )?;
+        let KeyPair(bob_pk, bob_sk) = bob_keys();
 
-        let alice_sk = SecretKey::from_base58(
-            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
-        )?;
-        let alice_pk = PublicKey::from_base58(
-            "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
-        )?;
+        let KeyPair(alice_pk, alice_sk) = alice_keys();
 
         // 100 mutez deposited into bob's account
         let op1 = MockNativeDeposit::new(

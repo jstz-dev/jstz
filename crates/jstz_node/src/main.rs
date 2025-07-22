@@ -62,10 +62,6 @@ struct Args {
     /// Path to file containing injector key pair (format: "public_key:secret_key")
     #[arg(long)]
     injector_key_file: PathBuf,
-
-    /// Path to file containing oracle key pair for DataProvider (format: "public_key:secret_key")
-    #[arg(long)]
-    oracle_key_file: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -77,17 +73,6 @@ async fn main() -> anyhow::Result<()> {
                 "http://{}:{}",
                 args.rollup_node_rpc_addr, args.rollup_node_rpc_port
             ));
-
-            // Parse oracle key if provided
-            #[cfg(feature = "v2_runtime")]
-            let oracle_key_pair = if let Some(oracle_key_file) = args.oracle_key_file {
-                Some(
-                    parse_key_file(oracle_key_file)
-                        .context("failed to parse oracle key file")?,
-                )
-            } else {
-                None
-            };
 
             jstz_node::run(RunOptions {
                 addr: args.addr,
@@ -107,8 +92,6 @@ async fn main() -> anyhow::Result<()> {
                         .context("failed to convert temporary debug log file to path")?
                         .to_path_buf(),
                 ),
-                #[cfg(feature = "v2_runtime")]
-                oracle_key_pair,
             })
             .await
         }

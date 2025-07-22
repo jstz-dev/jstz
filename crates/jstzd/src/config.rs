@@ -4,6 +4,8 @@ use std::path::PathBuf;
 use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::secret_key::SecretKey;
 use jstz_node::RunMode;
+#[cfg(feature = "oracle")]
+use jstz_oracle_node::OracleNodeConfig;
 use jstz_utils::KeyPair;
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
 use rust_embed::Embed;
@@ -197,8 +199,6 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
                 .keep()
                 .context("failed to keep jstz node debug file path")?,
         ),
-        #[cfg(feature = "v2_runtime")]
-        Some(injector),
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
@@ -209,6 +209,8 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
             baker_config,
             octez_client_config,
             octez_rollup_config,
+            #[cfg(feature = "oracle")]
+            build_oracle_config(Some(injector.clone()), &jstz_node_config),
             jstz_node_config,
             protocol_params,
         ),
@@ -252,6 +254,21 @@ fn find_injector_account(
         }
     }
     anyhow::bail!("cannot find injector account")
+}
+
+#[cfg(feature = "oracle")]
+fn build_oracle_config(
+    key_pair: Option<KeyPair>,
+    jstz_node_config: &JstzNodeConfig,
+) -> OracleNodeConfig {
+    OracleNodeConfig {
+        key_pair,
+        jstz_node_endpoint: jstz_node_config.endpoint.clone(),
+        log_path: match jstz_node_config.mode {
+            RunMode::Default => jstz_node_config.kernel_log_file.clone(),
+            RunMode::Sequencer => jstz_node_config.debug_log_file.clone(),
+        },
+    }
 }
 
 // Create a sandbox config file that informs octez node about the activator account.
@@ -1129,5 +1146,49 @@ mod tests {
             keys.1.to_base58(),
             "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
         );
+    }
+
+    #[cfg(feature = "oracle")]
+    #[test]
+    fn build_oracle_config() {
+        let keys = jstz_utils::KeyPair(
+            jstz_crypto::public_key::PublicKey::from_base58(
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+            )
+            .unwrap(),
+            jstz_crypto::secret_key::SecretKey::from_base58(
+                "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+            )
+            .unwrap(),
+        );
+        let config = super::build_oracle_config(
+            Some(keys.clone()),
+            &jstz_node::config::JstzNodeConfig::new(
+                &Endpoint::default(),
+                &Endpoint::default(),
+                &PathBuf::from("/foo/bar"),
+                &PathBuf::from("/kernel/debug"),
+                keys.clone(),
+                jstz_node::RunMode::Default,
+                0,
+                &PathBuf::from("/jstz_node/debug"),
+            ),
+        );
+        assert_eq!(config.log_path.to_str().unwrap(), "/kernel/debug");
+
+        let config = super::build_oracle_config(
+            Some(keys.clone()),
+            &jstz_node::config::stzNodeConfig::new(
+                &Endpoint::default(),
+                &Endpoint::default(),
+                &PathBuf::from("/foo/bar"),
+                &PathBuf::from("/kernel/debug"),
+                keys.clone(),
+                jstz_node::RunMode::Sequencer,
+                0,
+                &PathBuf::from("/jstz_node/debug"),
+            ),
+        );
+        assert_eq!(config.log_path.to_str().unwrap(), "/jstz_node/debug");
     }
 }

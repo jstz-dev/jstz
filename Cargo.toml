@@ -12,7 +12,6 @@ members = [
   "crates/jstz_node",
   "crates/jstz_oracle_node",
   "crates/jstz_proto",
-  "crates/jstz_rollup",
   "crates/jstz_sdk",
   "crates/jstz_tps_bench",
   "crates/jstz_utils",
