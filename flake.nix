@@ -322,6 +322,11 @@
                     npm install --lockfile-version 2
                     export PATH="$PWD/node_modules/.bin/:$PATH"
                   ''
+                  ''
+                    if [ ! -f ".git/hooks/pre-commit" ]; then
+                      ./scripts/install-hooks.sh
+                    fi
+                  ''
                 ]
                 ++ lib.optionals stdenv.isLinux [
                   ''
