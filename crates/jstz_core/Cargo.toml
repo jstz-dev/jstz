@@ -18,6 +18,7 @@ clap.workspace = true
 chrono.workspace = true
 derive_more.workspace = true
 erased-serde.workspace = true
+futures.workspace = true
 getrandom.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
 nom.workspace = true

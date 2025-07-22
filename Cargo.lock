@@ -2816,6 +2816,7 @@ dependencies = [
  "derive_more",
  "erased-serde",
  "expect-test",
+ "futures",
  "getrandom 0.2.15",
  "hex",
  "jstz_crypto",

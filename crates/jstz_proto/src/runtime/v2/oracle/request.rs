@@ -1,7 +1,7 @@
 use bincode::{Decode, Encode};
+use jstz_core::event::Event;
 use serde::{Deserialize, Serialize};
 
-use crate::event::Event;
 use crate::runtime::v2::fetch::http::Request;
 use crate::{BlockLevel, Gas};
 

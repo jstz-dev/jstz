@@ -15,7 +15,7 @@ use tezos_smart_rollup::storage::path::{concat, OwnedPath};
 use super::{OracleRequest, RequestId, UserAddress};
 use crate::{
     context::account::Account,
-    event::{Event, EventError, EventPublisher},
+    event::{EventError, EventPublisher},
     runtime::v2::{
         fetch::http::{Request, Response},
         protocol_context::PROTOCOL_CONTEXT,
