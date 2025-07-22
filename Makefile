@@ -137,3 +137,7 @@ lint:
 	@echo "ignore" > $(JSTZD_KERNEL_PATH)
 	@cargo clippy --all-targets -- --deny warnings
 	@rm -f $(JSTZD_KERNEL_PATH)
+
+.PHONY: run-manual-test
+run-manual-test: riscv-pvm-kernel
+	@riscv-sandbox run --timings --address sr1FXevDx86EyU1BBwhn94gtKvVPTNwoVxUC --inbox-file manual_test/inbox.json --input target/riscv64gc-unknown-linux-musl/release/kernel-executable

@@ -44,7 +44,7 @@ mod tests {
         let hash = receipt.hash();
         let path = path::concat(
             &RECEIPTS_PATH,
-            &OwnedPath::try_from(format!("/{}", hash)).unwrap(),
+            &OwnedPath::try_from(format!("/{hash}")).unwrap(),
         )
         .unwrap();
         let stored = tx.get::<Receipt>(&host, path).unwrap();
