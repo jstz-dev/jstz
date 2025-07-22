@@ -144,5 +144,7 @@ Nix is not required on Linux systems but it is easier than installing dependenci
 
    ```sh
    make build-cli
+   echo '{"protocol":{"protocol":"rio"}}' > config.json
+   cargo run --bin jstzd -- run config.json
    cargo run --bin jstz -- sandbox start
    ```
