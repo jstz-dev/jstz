@@ -21,6 +21,7 @@ cargo build -p jstz_tps_bench --features static-inbox
 ### RISCV kernel
 
 ```
+make riscv-pvm-kernel
 # riscv-sandbox needs to be in '$PATH'.
 # run.sh must be executed from the root of this crate.
 cd $(git rev-parse --show-toplevel)/crates/jstz_tps_bench && sh run.sh
