@@ -61,7 +61,7 @@ impl TryFrom<&str> for LogLevel {
             "WARN" => Ok(LogLevel::WARN),
             "INFO" => Ok(LogLevel::INFO),
             "DEBUG" => Ok(LogLevel::DEBUG),
-            _ => Err(format!("Invalid LogLevel: {}", value)),
+            _ => Err(format!("Invalid LogLevel: {value}")),
         }
     }
 }

@@ -83,7 +83,7 @@ async fn jstzd_test() {
     tokio::spawn(async move {
         sleep(Duration::from_secs(10)).await;
         reqwest::Client::new()
-            .put(format!("http://localhost:{}/shutdown", jstzd_port))
+            .put(format!("http://localhost:{jstzd_port}/shutdown"))
             .send()
             .await
             .unwrap();
@@ -225,9 +225,9 @@ async fn ensure_jstzd_components_are_up(
     octez_node_rpc_endpoint: &Endpoint,
     jstzd_port: u16,
 ) {
-    let jstzd_health_check_endpoint = format!("http://localhost:{}/health", jstzd_port);
+    let jstzd_health_check_endpoint = format!("http://localhost:{jstzd_port}/health");
     let octez_node_health_check_endpoint =
-        format!("{}/health/ready", octez_node_rpc_endpoint);
+        format!("{octez_node_rpc_endpoint}/health/ready");
 
     let jstzd_running = retry(30, 1000, || async {
         let res = reqwest::get(&jstzd_health_check_endpoint).await;
@@ -253,9 +253,9 @@ async fn ensure_jstzd_components_are_down(
     octez_node_rpc_endpoint: &Endpoint,
     jstzd_port: u16,
 ) {
-    let jstzd_health_check_endpoint = format!("http://localhost:{}/health", jstzd_port);
+    let jstzd_health_check_endpoint = format!("http://localhost:{jstzd_port}/health");
     let octez_node_health_check_endpoint =
-        format!("{}/health/ready", octez_node_rpc_endpoint);
+        format!("{octez_node_rpc_endpoint}/health/ready");
 
     let jstzd_stopped = retry(30, 1000, || async {
         let res = reqwest::get(&jstzd_health_check_endpoint).await;
@@ -309,16 +309,14 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
             serde_json::to_value(jstzd_config.jstz_node_config()).unwrap(),
         ),
     ] {
-        let res =
-            reqwest::get(&format!("http://localhost:{}/config/{}", jstzd_port, key))
-                .await
-                .unwrap();
+        let res = reqwest::get(&format!("http://localhost:{jstzd_port}/config/{key}"))
+            .await
+            .unwrap();
         assert_eq!(
             expected_json,
             serde_json::from_str::<serde_json::Value>(&res.text().await.unwrap())
                 .unwrap(),
-            "config mismatch at /config/{}",
-            key
+            "config mismatch at /config/{key}"
         );
         full_config
             .as_object_mut()
@@ -328,7 +326,7 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
 
     // invalid config type
     assert_eq!(
-        reqwest::get(&format!("http://localhost:{}/config/foobar", jstzd_port))
+        reqwest::get(&format!("http://localhost:{jstzd_port}/config/foobar"))
             .await
             .unwrap()
             .status(),
@@ -336,7 +334,7 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
     );
 
     // all configs
-    let res = reqwest::get(&format!("http://localhost:{}/config/", jstzd_port))
+    let res = reqwest::get(&format!("http://localhost:{jstzd_port}/config/"))
         .await
         .unwrap();
     assert_eq!(
@@ -384,8 +382,7 @@ async fn check_bootstrap_contracts(octez_client: &OctezClient) {
                     "should be able to find contract '{contract_name}' at '{hash}'"
                 )),
             CONTRACT_INIT_BALANCE,
-            "balance mismatch for contract '{}'",
-            contract_name
+            "balance mismatch for contract '{contract_name}'"
         );
     }
 }

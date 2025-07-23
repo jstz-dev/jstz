@@ -75,7 +75,7 @@ pub mod tests {
         op_hash: OperationHash,
         path_into_receipt: Vec<&'static str>,
     ) -> T {
-        let receipt_path = OwnedPath::try_from(format!("/jstz_receipt/{}", op_hash))
+        let receipt_path = OwnedPath::try_from(format!("/jstz_receipt/{op_hash}"))
             .expect("Operation hash should exist");
         let receipt: Receipt = Storage::get(host, &receipt_path)
             .unwrap()

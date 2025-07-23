@@ -81,8 +81,7 @@ impl Operation {
                 function_code,
                 account_credit,
             }) => Blake2b::from(
-                format!("{}{}{}{}", public_key, nonce, function_code, account_credit)
-                    .as_bytes(),
+                format!("{public_key}{nonce}{function_code}{account_credit}").as_bytes(),
             ),
             Content::RunFunction(RunFunction {
                 uri,
@@ -91,22 +90,15 @@ impl Operation {
                 body,
                 ..
             }) => Blake2b::from(
-                format!(
-                    "{}{}{}{}{:?}{:?}",
-                    public_key, nonce, uri, method, headers, body
-                )
-                .as_bytes(),
+                format!("{public_key}{nonce}{uri}{method}{headers:?}{body:?}").as_bytes(),
             ),
             Content::RevealLargePayload(RevealLargePayload {
                 root_hash,
                 reveal_type,
                 original_op_hash,
             }) => Blake2b::from(
-                format!(
-                    "{}{}{}{}{}",
-                    public_key, nonce, root_hash, reveal_type, original_op_hash,
-                )
-                .as_bytes(),
+                format!("{public_key}{nonce}{root_hash}{reveal_type}{original_op_hash}",)
+                    .as_bytes(),
             ),
             #[cfg(feature = "v2_runtime")]
             Content::OracleResponse(OracleResponse {

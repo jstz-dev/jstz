@@ -382,8 +382,7 @@ impl TryFromJs for ReadableStreamType {
         ReadableStreamType::from_str(&str).map_err(|()| {
             JsNativeError::typ()
                 .with_message(format!(
-                    "{} is not a valid value for enumeration ReadableStreamType.",
-                    str
+                    "{str} is not a valid value for enumeration ReadableStreamType."
                 ))
                 .into()
         })

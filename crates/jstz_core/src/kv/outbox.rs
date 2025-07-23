@@ -462,7 +462,7 @@ mod test {
         let mut messages: Vec<OutboxMessage> = vec![];
         for i in 0..120 {
             let account =
-                PublicKeyHash::digest(format!("account{}", i).as_bytes()).unwrap();
+                PublicKeyHash::digest(format!("account{i}").as_bytes()).unwrap();
             messages.push(make_withdrawal(&account))
         }
         let mut messages = messages.into_iter();

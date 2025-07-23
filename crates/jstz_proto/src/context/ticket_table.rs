@@ -23,7 +23,7 @@ pub struct TicketTable;
 
 impl TicketTable {
     fn path(ticket_hash: &TicketHash, owner: &impl Addressable) -> Result<OwnedPath> {
-        let ticket_hash_path = OwnedPath::try_from(format!("/{}", ticket_hash))?;
+        let ticket_hash_path = OwnedPath::try_from(format!("/{ticket_hash}"))?;
         let owner_path = OwnedPath::try_from(format!("/{}", owner.to_base58()))?;
 
         Ok(path::concat(

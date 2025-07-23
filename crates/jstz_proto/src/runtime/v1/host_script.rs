@@ -80,7 +80,7 @@ impl HostScript {
             .map_err(|e| {
                 JsError::from_native(
                     JsNativeError::typ()
-                        .with_message(format!("Invalid transfer amount: {}", e)),
+                        .with_message(format!("Invalid transfer amount: {e}")),
                 )
             })?;
 
@@ -120,7 +120,7 @@ impl HostScript {
                 .map_err(|e| {
                     JsError::from_native(
                         JsNativeError::eval()
-                            .with_message(format!("Transfer failed: {}", e)),
+                            .with_message(format!("Transfer failed: {e}")),
                     )
                 })
         })?;
@@ -170,7 +170,7 @@ mod test {
             .map_err(|e| {
                 JsError::from_native(
                     JsNativeError::error()
-                        .with_message(format!("Failed to create request: {}", e)),
+                        .with_message(format!("Failed to create request: {e}")),
                 )
             })?;
 
@@ -181,13 +181,13 @@ mod test {
                 HeaderName::from_str(&key).map_err(|e| {
                     JsError::from_native(
                         JsNativeError::error()
-                            .with_message(format!("Invalid header name: {}", e)),
+                            .with_message(format!("Invalid header name: {e}")),
                     )
                 })?,
                 HeaderValue::from_str(&value).map_err(|e| {
                     JsError::from_native(
                         JsNativeError::error()
-                            .with_message(format!("Invalid header value: {}", e)),
+                            .with_message(format!("Invalid header value: {e}")),
                     )
                 })?,
             );

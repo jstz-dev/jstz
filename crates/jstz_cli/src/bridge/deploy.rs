@@ -39,9 +39,9 @@ impl FaToken {
 
     pub fn to_micheline(&self) -> String {
         match self {
-            FaToken::Fa12 { address } => format!("Left \"{}\"", address),
+            FaToken::Fa12 { address } => format!("Left \"{address}\""),
             FaToken::Fa2 { address, token_id } => {
-                format!("Right (Pair \"{}\" {})", address, token_id)
+                format!("Right (Pair \"{address}\" {token_id})")
             }
         }
     }
@@ -51,11 +51,11 @@ fn format_ticket_content(ticket_id: u32, content: Option<String>) -> Result<Stri
     let content = match content {
         Some(value) => {
             let bytes = hex::encode(value);
-            anyhow::Ok(format!("Some 0x{}", bytes))
+            anyhow::Ok(format!("Some 0x{bytes}"))
         }
         None => Ok("None".to_string()),
     }?;
-    Ok(format!("Pair {} {}", ticket_id, content))
+    Ok(format!("Pair {ticket_id} {content}"))
 }
 
 #[derive(Debug, Args)]
@@ -114,7 +114,7 @@ impl DeployBridge {
         let fa_token_object = FaToken::from(&fa_token_address, fa_token_id);
 
         // 2. Deploy the FA ticketer
-        let ticketer_name = format!("{}-ticketer", tezos_fa_token);
+        let ticketer_name = format!("{tezos_fa_token}-ticketer");
         let ticketer_storage = format!(
             "Pair {{}} ({}) ({}) {}",
             fa_token_object.to_micheline(),
@@ -134,7 +134,7 @@ impl DeployBridge {
         );
 
         // 3. Deploy the FA token bridge
-        let bridge_name = format!("{}-bridge", tezos_fa_token);
+        let bridge_name = format!("{tezos_fa_token}-bridge");
         let bridge_storage = format!(
             "Pair ({}) \"{}\" (Some \"{}\") None {{}}",
             fa_token_object.to_micheline(),

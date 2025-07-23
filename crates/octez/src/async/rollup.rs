@@ -212,7 +212,7 @@ impl OctezRollupConfigBuilder {
                 .ok_or_else(|| anyhow::anyhow!("boot_sector_file is required"))?,
             rpc_endpoint: self.rpc_endpoint.unwrap_or_else(|| {
                 let port = unused_port();
-                let uri = Uri::from_str(&format!("127.0.0.1:{}", port)).unwrap();
+                let uri = Uri::from_str(&format!("127.0.0.1:{port}")).unwrap();
                 Endpoint::try_from(uri).unwrap()
             }),
             kernel_debug_file: self.kernel_debug_file.map(Arc::new),
@@ -393,7 +393,7 @@ mod test {
         let port = rollup_config.rpc_endpoint.port();
         assert_eq!(
             rollup_config.rpc_endpoint.to_string(),
-            format!("http://127.0.0.1:{}", port)
+            format!("http://127.0.0.1:{port}")
         );
         assert_eq!(
             rollup_config.kernel_debug_file.map(|v| v.path()),
