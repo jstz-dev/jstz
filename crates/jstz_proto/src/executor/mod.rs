@@ -148,6 +148,8 @@ mod tests {
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
     };
+    #[cfg(feature = "v2_runtime")]
+    use jstz_utils::{test_util::alice_keys, KeyPair};
     use operation::RevealType;
     use tezos_crypto_rs::hash::HashTrait;
     use tezos_smart_rollup_mock::MockHost;
@@ -504,10 +506,7 @@ mod tests {
         ProtocolContext::init_global(&mut host, 0).unwrap();
         let mut tx = Transaction::default();
         tx.begin();
-        let invalid_sk = SecretKey::from_base58(
-            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
-        )
-        .unwrap();
+        let KeyPair(public_key, invalid_sk) = alice_keys();
         let resp = Response {
             status: 200,
             status_text: "OK".into(),
@@ -515,10 +514,7 @@ mod tests {
             body: Body::zero_capacity(),
         };
         let response_op = Operation {
-            public_key: PublicKey::from_base58(
-                "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
-            )
-            .unwrap(),
+            public_key,
             nonce: 0.into(),
             content: OracleResponse {
                 request_id: 0,
@@ -561,11 +557,8 @@ mod tests {
             "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
         )
         .unwrap();
+        let KeyPair(_, invalid_sk) = alice_keys();
 
-        let invalid_sk = SecretKey::from_base58(
-            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
-        )
-        .unwrap();
         let resp = Response {
             status: 200,
             status_text: "OK".into(),

@@ -20,6 +20,7 @@ http.workspace = true
 indicatif.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_node = {path = "../jstz_node"}
+jstz_oracle_node = { path = "../jstz_oracle_node", features = ["v2_runtime"], optional = true}
 jstz_utils = { path = "../jstz_utils" }
 octez = { path = "../octez" }
 prettytable.workspace = true
@@ -55,7 +56,7 @@ tezos_crypto_rs.workspace = true
 skip-rollup-tests = []
 build-image = ["octez/disable-alpha"]
 v2_runtime = ["jstz_node/v2_runtime"]
-oracle = ["v2_runtime", "jstz_node/oracle"]
+oracle = ["v2_runtime", "jstz_node/oracle", "dep:jstz_oracle_node"]
 
 [[bin]]
 name = "jstzd"

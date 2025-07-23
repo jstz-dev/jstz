@@ -3,6 +3,8 @@ use crate::config::{
     ROLLUP_OPERATOR_ACCOUNT_ALIAS,
 };
 
+#[cfg(feature = "oracle")]
+use super::oracle_node::OracleNode;
 use super::{
     child_wrapper::Shared,
     jstz_node::JstzNode,
@@ -24,6 +26,8 @@ use axum::{
 use indicatif::{ProgressBar, ProgressStyle};
 use jstz_crypto::public_key::PublicKey;
 use jstz_node::config::JstzNodeConfig;
+#[cfg(feature = "oracle")]
+use jstz_oracle_node::OracleNodeConfig;
 use octez::r#async::{
     baker::OctezBakerConfig,
     client::{Address, OctezClient, OctezClientConfig},
@@ -61,6 +65,8 @@ struct Jstzd {
     baker: Shared<OctezBaker>,
     rollup: Shared<OctezRollup>,
     jstz_node: Shared<JstzNode>,
+    #[cfg(feature = "oracle")]
+    oracle_node: Shared<OracleNode>,
 }
 
 #[derive(Clone, Serialize)]
@@ -75,6 +81,9 @@ pub struct JstzdConfig {
     octez_rollup_config: OctezRollupConfig,
     #[serde(rename(serialize = "jstz_node"))]
     jstz_node_config: JstzNodeConfig,
+    #[cfg(feature = "oracle")]
+    #[serde(rename(serialize = "oracle_node"))]
+    oracle_node_config: OracleNodeConfig,
     #[serde(skip_serializing)]
     protocol_params: ProtocolParameter,
 }
@@ -85,6 +94,7 @@ impl JstzdConfig {
         baker_config: OctezBakerConfig,
         octez_client_config: OctezClientConfig,
         octez_rollup_config: OctezRollupConfig,
+        #[cfg(feature = "oracle")] oracle_node_config: OracleNodeConfig,
         jstz_node_config: JstzNodeConfig,
         protocol_params: ProtocolParameter,
     ) -> Self {
@@ -94,6 +104,8 @@ impl JstzdConfig {
             octez_client_config,
             octez_rollup_config,
             jstz_node_config,
+            #[cfg(feature = "oracle")]
+            oracle_node_config,
             protocol_params,
         }
     }
@@ -120,6 +132,11 @@ impl JstzdConfig {
 
     pub fn protocol_params(&self) -> &ProtocolParameter {
         &self.protocol_params
+    }
+
+    #[cfg(feature = "oracle")]
+    pub fn oracle_node_config(&self) -> &OracleNodeConfig {
+        &self.oracle_node_config
     }
 }
 
@@ -149,11 +166,15 @@ impl Task for Jstzd {
         let rollup = OctezRollup::spawn(config.octez_rollup_config.clone()).await?;
         Self::wait_for_rollup(&rollup).await?;
         let jstz_node = JstzNode::spawn(config.jstz_node_config.clone()).await?;
+        #[cfg(feature = "oracle")]
+        let oracle_node = OracleNode::spawn(config.oracle_node_config.clone()).await?;
         Ok(Self {
             octez_node: octez_node.into_shared(),
             baker: baker.into_shared(),
             rollup: rollup.into_shared(),
             jstz_node: jstz_node.into_shared(),
+            #[cfg(feature = "oracle")]
+            oracle_node: oracle_node.into_shared(),
         })
     }
 
@@ -163,6 +184,8 @@ impl Task for Jstzd {
             self.baker.write().await.kill(),
             self.rollup.write().await.kill(),
             self.jstz_node.write().await.kill(),
+            #[cfg(feature = "oracle")]
+            self.oracle_node.write().await.kill(),
         ])
         .await;
 
@@ -192,6 +215,8 @@ impl Jstzd {
             self.baker.read().await.health_check(),
             self.rollup.read().await.health_check(),
             self.jstz_node.read().await.health_check(),
+            #[cfg(feature = "oracle")]
+            self.oracle_node.read().await.health_check(),
         ])
         .await;
 
@@ -682,6 +707,8 @@ mod tests {
     use indicatif::ProgressBar;
     use jstz_crypto::secret_key::SecretKey;
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
+    #[cfg(feature = "oracle")]
+    use jstz_oracle_node::OracleNodeConfig;
     use jstz_utils::KeyPair;
     use std::path::PathBuf;
     use std::str::FromStr;
@@ -821,6 +848,21 @@ mod tests {
             )
             .build()
             .unwrap(),
+            #[cfg(feature = "oracle")]
+            OracleNodeConfig {
+                key_pair: Some(KeyPair(
+                    PublicKey::from_base58(
+                        "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+                    )
+                    .unwrap(),
+                    SecretKey::from_base58(
+                        "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+                    )
+                    .unwrap(),
+                )),
+                jstz_node_endpoint: Endpoint::default(),
+                log_path: PathBuf::from_str("/log/path").unwrap(),
+            },
             JstzNodeConfig::new(
                 &Endpoint::default(),
                 &Endpoint::default(),
@@ -839,17 +881,6 @@ mod tests {
                 jstz_node::RunMode::Default,
                 0,
                 &PathBuf::from("/log"),
-                #[cfg(feature = "v2_runtime")]
-                Some(KeyPair(
-                    PublicKey::from_base58(
-                        "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
-                    )
-                    .unwrap(),
-                    SecretKey::from_base58(
-                        "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
-                    )
-                    .unwrap(),
-                )),
             ),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(
@@ -871,6 +902,8 @@ mod tests {
                 "octez_client",
                 "octez_node",
                 "octez_rollup",
+                #[cfg(feature = "oracle")]
+                "oracle_node",
             ]
         );
     }
