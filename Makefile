@@ -135,7 +135,7 @@ fmt-check:
 lint:
 #  Jstzd has to processes a non-empty kernel in its build script
 	@echo "ignore" > $(JSTZD_KERNEL_PATH)
-	@cargo clippy --all-targets -- --deny warnings
+	@cargo clippy --all-targets --features skip-wpt -- --deny warnings
 	@rm -f $(JSTZD_KERNEL_PATH)
 
 .PHONY: run-manual-test
