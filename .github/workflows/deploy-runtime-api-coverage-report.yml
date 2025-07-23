@@ -1,0 +1,20 @@
+name: Deploy runtime API coverage report
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_ref:
+        description: Ref that the build runs against. If not provided, HEAD will be used.
+        type: string
+
+jobs:
+  runtime_api_coverage:
+    name: Runtime API coverage
+    uses: jstz-dev/jstz/.github/workflows/runtime-api-coverage.yml@main
+    secrets:
+      repo_token: ${{ secrets.RUNTIME_API_REPORT_REPO }}
+    with:
+      dest_repo: jstz-dev/nodejs-compat-matrix
+      dest_branch: deploy
+      build_ref: ${{ inputs.build_ref }}
+      deploy_report: true
