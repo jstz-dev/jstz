@@ -30,18 +30,18 @@ jobs:
           done < $(pwd)/out.txt
 
   benchmark:
-    name: Benchmark
-    runs-on: [x86_64, linux, nix]
+    name: Benchmark RISCV kernel
+    runs-on: [large, nix]
     steps:
       - uses: actions/checkout@v4
-      - name: Run benchmark
-        id: bench
+      - name: Build kernel
+        run: nix --accept-flake-config --log-format raw -L develop --command make riscv-pvm-kernel
+      - name: Run
         run: |
-          result=$(nix --accept-flake-config --log-format raw -L run .#tps_bench)
-          echo "result=$result" >> $GITHUB_OUTPUT || true
-      - name: Display result
-        run: |
-          echo "Result for commit $GITHUB_SHA: ${{ steps.bench.outputs.result }}"
+          cd crates/jstz_tps_bench
+          nix --accept-flake-config --log-format raw -L develop --command sh ./run.sh
+          echo "### Benchmark summary" >> $GITHUB_STEP_SUMMARY
+          cat ./result.log >> $GITHUB_STEP_SUMMARY
 
   runtime_api_coverage:
     name: Runtime API coverage
