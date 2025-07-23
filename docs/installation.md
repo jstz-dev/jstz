@@ -66,7 +66,6 @@ Nix is the easiest way to build Jstz on MacOS:
 1. Build and start the sandbox by running these commands:
 
    ```sh
-   make build-jstzd-kernel
    cargo run --bin jstzd -- run
    ```
 
@@ -143,7 +142,6 @@ Nix is not required on Linux systems but it is easier than installing dependenci
 1. Build and start the sandbox by running these commands:
 
    ```sh
-   make build-jstzd-kernel
    echo '{"protocol":{"protocol":"rio"}}' > config.json
    cargo run --bin jstzd -- run config.json
    ```
