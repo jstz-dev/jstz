@@ -7,7 +7,7 @@ n_transfer=10
 log_file_path=./output.log
 result_path=./result.log
 
-cargo build --bin bench
+cargo build --bin bench --features v2_runtime
 
 # Generate inbox file
 ../../target/debug/bench generate --transfers $n_transfer --inbox-file $inbox_file_path --address $rollup_address

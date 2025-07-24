@@ -25,7 +25,7 @@ serde.workspace = true
 clap.workspace = true
 
 [features]
-default = ["jstz_proto/v2_runtime"]
+v2_runtime = ["jstz_proto/v2_runtime"]
 
 [[bin]]
 name = "bench"
