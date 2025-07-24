@@ -4,6 +4,7 @@ use futures::{
     channel::oneshot::{channel, Receiver, Sender},
     future::UnwrapOrElse,
 };
+use jstz_core::event::{EventError, EventPublisher};
 use jstz_core::{
     host::HostRuntime,
     kv::{Storage, Transaction},
@@ -15,7 +16,6 @@ use tezos_smart_rollup::storage::path::{concat, OwnedPath};
 use super::{OracleRequest, RequestId, UserAddress};
 use crate::{
     context::account::Account,
-    event::{Event, EventError, EventPublisher},
     runtime::v2::{
         fetch::http::{Request, Response},
         protocol_context::PROTOCOL_CONTEXT,
@@ -275,11 +275,11 @@ impl From<crate::error::Error> for OracleError {
 mod test {
     use super::*;
     use crate::context::account::Account;
-    use crate::event::decode_line;
     use crate::runtime::v2::fetch::http::{Body, Request, Response};
     use crate::runtime::v2::oracle::UserAddress;
     use crate::runtime::v2::protocol_context::ProtocolContext;
     use crate::tests::DebugLogSink;
+    use jstz_core::event::decode_line;
     use jstz_core::kv::Storage;
     use jstz_crypto::{hash::Hash, public_key::PublicKey};
     use serde_json::json;
