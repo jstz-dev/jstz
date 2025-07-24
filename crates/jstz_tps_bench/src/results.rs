@@ -158,11 +158,8 @@ fn check_balances(
     messages: &[Message],
     num_transfers: usize,
 ) -> Result<()> {
-    #[cfg(feature = "v2_runtime")]
     let re =
         Regex::new(r#"^.*"([\w0-9]+) has ([0-9]+) of token ([0-9]+)\\n".*$"#).unwrap();
-    #[cfg(not(feature = "v2_runtime"))]
-    let re = Regex::new(r#"^.*"([\w0-9]+) has ([0-9]+) of token ([0-9]+)".*$"#).unwrap();
 
     let mut accounts = HashSet::new();
     let mut tokens = HashSet::new();
@@ -283,10 +280,7 @@ enum LogType {
 
 const SOL: &str = "Message: Internal(StartOfLevel)";
 const DEPLOY: &str = "[📜] Smart function deployed";
-#[cfg(feature = "v2_runtime")]
 const SUCCESS: &str = "[JSTZ:SMART_FUNCTION:REQUEST_END]";
-#[cfg(not(feature = "v2_runtime"))]
-const SUCCESS: &str = "🚀 Smart function executed successfully";
 const EOL: &str = "Internal message: end of level";
 const LOG: &str = "[JSTZ:SMART_FUNCTION:LOG]";
 
