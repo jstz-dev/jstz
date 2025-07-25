@@ -8,6 +8,7 @@ use jstz_proto::{
     context::account::{Address, Nonce},
     operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
     runtime::ParsedCode,
+    HttpBody,
 };
 use std::error::Error;
 use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -157,7 +158,7 @@ impl InboxBuilder {
         uri: Uri,
         method: Method,
         headers: HeaderMap,
-        body: Option<Vec<u8>>,
+        body: HttpBody,
     ) -> Result<()> {
         let content = Content::RunFunction(RunFunction {
             uri,
@@ -231,6 +232,7 @@ mod tests {
         context::account::{Address, Nonce},
         operation::{Content, DeployFunction, SignedOperation},
         runtime::ParsedCode,
+        HttpBody,
     };
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tezos_smart_rollup::{
@@ -287,7 +289,7 @@ mod tests {
                 Uri::try_from("jstz://foobar/transfer".to_string()).unwrap(),
                 Method::GET,
                 HeaderMap::new(),
-                None,
+                HttpBody::empty(),
             )
             .unwrap();
         assert_eq!(builder.messages.len(), 1);

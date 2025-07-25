@@ -762,6 +762,14 @@
           }
         ]
       },
+      "HttpBody": {
+        "type": [
+          "string",
+          "null"
+        ],
+        "title": "HTTP Body",
+        "description": "A HTTP body, which can be empty or contain data. Encoded as a base64 string."
+      },
       "Kt1Hash": {
         "type": "string",
         "title": "KT1",
@@ -1150,15 +1158,7 @@
         ],
         "properties": {
           "body": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "type": "integer",
-              "format": "int32",
-              "minimum": 0
-            }
+            "$ref": "#/components/schemas/HttpBody"
           },
           "gasLimit": {
             "type": "integer",
@@ -1208,15 +1208,7 @@
         ],
         "properties": {
           "body": {
-            "type": [
-              "array",
-              "null"
-            ],
-            "items": {
-              "type": "integer",
-              "format": "int32",
-              "minimum": 0
-            }
+            "$ref": "#/components/schemas/HttpBody"
           },
           "headers": {
             "type": "object",

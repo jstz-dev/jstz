@@ -145,7 +145,6 @@ pub struct RunFunction {
     #[serde(with = "http_serde::header_map")]
     #[schema(schema_with = openapi::request_headers)]
     pub headers: HeaderMap,
-    #[schema(schema_with = openapi::http_body_schema)]
     pub body: HttpBody,
     /// Maximum amount of gas that is allowed for the execution of this operation
     pub gas_limit: usize,
@@ -306,8 +305,7 @@ pub mod internal {
         }
 
         pub fn to_http_body(&self) -> HttpBody {
-            let body = self.json();
-            Some(String::as_bytes(&body.to_string()).to_vec())
+            self.json().into()
         }
 
         pub fn hash(&self) -> OperationHash {
@@ -325,17 +323,11 @@ pub enum InternalOperation {
 
 pub mod openapi {
     use utoipa::{
-        openapi::{
-            schema::AdditionalProperties, Array, Object, ObjectBuilder, RefOr, Schema,
-        },
+        openapi::{schema::AdditionalProperties, Object, ObjectBuilder, RefOr, Schema},
         schema,
     };
 
     use crate::executor::smart_function::{X_JSTZ_AMOUNT, X_JSTZ_TRANSFER};
-
-    pub fn http_body_schema() -> Array {
-        schema!(Option<Vec<u8>>).build()
-    }
 
     fn http_headers(
         properties: Vec<(impl Into<String>, impl Into<RefOr<Schema>>)>,
@@ -377,6 +369,7 @@ mod test {
     use crate::context::account::{Account, Nonce};
     use crate::operation::OperationHash;
     use crate::runtime::ParsedCode;
+    use crate::HttpBody;
     use http::{HeaderMap, Method, Uri};
     use jstz_core::reveal_data::PreimageHash;
     use jstz_core::{kv::Transaction, BinEncodable};
@@ -387,7 +380,7 @@ mod test {
     use serde_json::json;
 
     fn run_function_content() -> Content {
-        let body = r#""value":1""#.to_string().into_bytes();
+        let body = HttpBody::from_string(r#"{"value":1"}"#.to_string());
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
                 "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
@@ -395,7 +388,7 @@ mod test {
             .unwrap(),
             method: Method::POST,
             headers: HeaderMap::new(),
-            body: Some(body),
+            body,
             gas_limit: 10000,
         })
     }
@@ -424,7 +417,7 @@ mod test {
             json,
             json!({
                 "_type":"RunFunction",
-                "body":[34,118,97,108,117,101,34,58,49,34],
+                "body":"eyJ2YWx1ZSI6MSJ9",
                 "gasLimit":10000,
                 "headers":{},
                 "method":"POST",
