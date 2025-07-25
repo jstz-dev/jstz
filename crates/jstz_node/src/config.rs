@@ -113,7 +113,7 @@ mod tests {
 
     #[test]
     fn test_serialize_config() {
-        let config = JstzNodeConfig::new(
+        let mut config = JstzNodeConfig::new(
             &Endpoint::localhost(8932),
             &Endpoint::localhost(8933),
             Path::new("/tmp/preimages"),
@@ -142,27 +142,10 @@ mod tests {
         assert_eq!(json["capacity"], serde_json::Value::Null);
         assert_eq!(json["debug_log_path"], serde_json::Value::Null);
 
-        let config = JstzNodeConfig::new(
-            &Endpoint::localhost(8932),
-            &Endpoint::localhost(8933),
-            Path::new("/tmp/preimages"),
-            Path::new("/tmp/kernel.log"),
-            KeyPair(
-                PublicKey::from_base58(
-                    "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-                )
-                .unwrap(),
-                SecretKey::from_base58(
-                    "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
-                )
-                .unwrap(),
-            ),
-            RunMode::Sequencer {
-                capacity: 123,
-                debug_log_path: PathBuf::from_str("/debug/log").unwrap(),
-            },
-        );
-
+        config.mode = RunMode::Sequencer {
+            capacity: 123,
+            debug_log_path: PathBuf::from_str("/debug/log").unwrap(),
+        };
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(json["mode"], "sequencer");
         assert_eq!(json["capacity"], 123);
