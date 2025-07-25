@@ -92,7 +92,7 @@ pub struct FaWithdrawReceipt {
 
 impl FaWithdrawReceipt {
     pub fn to_http_body(&self) -> HttpBody {
-        Some(String::as_bytes(&json!(&self).to_string()).to_vec())
+        HttpBody::from_json(json!(&self))
     }
 }
 

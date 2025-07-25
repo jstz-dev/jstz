@@ -136,7 +136,7 @@ fn run_function_from_request(
     let uri = Uri::try_from(request_deref.url().clone().to_string()).map_err(|_| {
         JsError::from_native(JsNativeError::error().with_message("Invalid host"))
     })?;
-    let body = request_deref.body().clone().to_http_body();
+    let body = request_deref.body().clone().to_http_body().into();
     let headers = request_deref.headers().deref_mut().to_http_headers();
     Ok(RunFunction {
         uri,

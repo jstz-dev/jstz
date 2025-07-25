@@ -281,20 +281,29 @@ pub enum LevelInfo {
 
 #[cfg(test)]
 mod test {
+    use http::{HeaderMap, Method, Uri};
     use jstz_core::host::WriteDebug;
+    use jstz_core::BinEncodable;
+    use jstz_crypto::public_key::PublicKey;
+    use jstz_crypto::secret_key::SecretKey;
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_proto::context::account::{Address, Addressable};
     use jstz_proto::operation::internal::FaDeposit;
-    use jstz_proto::operation::{Content, InternalOperation, Operation};
+    use jstz_proto::operation::{
+        Content, InternalOperation, Operation, RunFunction, SignedOperation,
+    };
+    use jstz_proto::HttpBody;
     use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
+    use tezos_data_encoding::enc::BinWriter;
+    use tezos_smart_rollup::inbox::{ExternalMessageFrame, InboxMessage};
     use tezos_smart_rollup::michelson::ticket::{FA2_1Ticket, Ticket};
     use tezos_smart_rollup::michelson::{
         MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonPair,
     };
-    use tezos_smart_rollup::types::Contract;
+    use tezos_smart_rollup::types::{Contract, SmartRollupAddress};
 
     use crate::sequencer::inbox::parsing::{
-        try_parse_contract, try_parse_fa_deposit, ParsedInboxMessage,
+        try_parse_contract, try_parse_fa_deposit, ParsedInboxMessage, RollupType,
     };
 
     use super::{parse_inbox_message_hex, Message};
@@ -312,10 +321,49 @@ mod test {
     fn parse_external_inbox_message() {
         let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
-        let run_function = "0100c3ea4c18195bcfac262dcb29e3d803ae74681739000000004000000000000000b084122920ce655297b86d29e0115ea7b05fe12a22044c8aeaee0fc506915e9a3d955995aec5095840b744deb77470d6d0388042f06f6264e1b1aeec371b100f00000000200000000000000073c58fbff04bb1bc965986ad626d2a233e630ea253d49e1714a0bc9610c1ef450200000000000000010000002c000000000000006a73747a3a2f2f4b543145573235576b5343616b6f686d436a58486363674d61325a5567564759634851372f03000000000000004745540000000000000000007064080000000000";
+
+        // Create a mock external message
+        let run_op = Operation {
+            public_key: PublicKey::from_base58(
+                "edpkuERbaNDzoXLskejBgBtySZxFN84t4iBKoSHYKRfzbK74HoP1zX",
+            )
+            .unwrap(),
+            nonce: 0.into(),
+            content: Content::RunFunction(RunFunction {
+                uri: Uri::from_static("jstz://KT1FTckranMJ2on3TDufWqJumzSyRUd1tQf2/"),
+                method: Method::GET,
+                headers: HeaderMap::new(),
+                body: HttpBody::empty(),
+                gas_limit: 550000,
+            }),
+        };
+        let sk = SecretKey::from_base58(
+            "edsk4aBPdyDUC4V7RJ5dFTKDTpzMP2sGbAfXSRMPYGdFmXorj9RAYp",
+        )
+        .unwrap();
+        let signed_op = SignedOperation::new(sk.sign(run_op.hash()).unwrap(), run_op);
+
+        let contents = signed_op.encode().unwrap();
+
+        const EXTERNAL_FRAME_SIZE: usize = 21;
+        let contents_size = contents.len();
+        let mut external_message =
+            Vec::with_capacity(contents_size + EXTERNAL_FRAME_SIZE);
+        let frame = ExternalMessageFrame::Targetted {
+            address: SmartRollupAddress::new(jstz.clone()),
+            contents,
+        };
+        frame.bin_write(&mut external_message).unwrap();
+        let message = InboxMessage::<RollupType>::External(&external_message);
+        // Add an additional byte for the tag
+        let mut message_bytes =
+            Vec::with_capacity(contents_size + EXTERNAL_FRAME_SIZE + 1);
+        message.serialize(&mut message_bytes).unwrap();
+
+        let run_function = hex::encode(&message_bytes);
 
         let message =
-            parse_inbox_message_hex(&MockLogger, 0, run_function, &ticketer, &jstz)
+            parse_inbox_message_hex(&MockLogger, 0, &run_function, &ticketer, &jstz)
                 .expect("Failed to parse inbox message");
 
         let ParsedInboxMessage::JstzMessage(Message::External(signed)) = message else {

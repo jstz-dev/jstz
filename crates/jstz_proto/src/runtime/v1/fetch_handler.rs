@@ -277,7 +277,7 @@ pub fn runtime_and_request_from_run_operation(
     let mut rt = Runtime::new(gas_limit)?;
     rt.realm().clone().register_api(WebApi, &mut rt);
 
-    let http_request = create_http_request(uri, method, headers, body)?;
+    let http_request = create_http_request(uri, method, headers, body.into())?;
     let request = JsNativeObject::new::<RequestClass>(
         Request::from_http_request(http_request, &mut rt)?,
         &mut rt,
@@ -290,7 +290,7 @@ pub fn response_from_run_receipt(
     run_receipt: RunFunctionReceipt,
     context: &mut Context,
 ) -> JsResult<Response> {
-    let body = Body::from_http_body(run_receipt.body, context)?;
+    let body = Body::from_http_body(run_receipt.body.into(), context)?;
     let options = ResponseOptions::from(run_receipt.status_code, run_receipt.headers);
     Response::new(
         BodyWithType {

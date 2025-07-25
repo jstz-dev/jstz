@@ -16,6 +16,7 @@ use jstz_proto::operation::{
     Content, DeployFunction, Operation, RunFunction, SignedOperation,
 };
 use jstz_proto::runtime::ParsedCode;
+use jstz_proto::HttpBody;
 use serde::{Serialize, Serializer};
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
@@ -170,7 +171,7 @@ fn transfer_op(
         uri: Uri::try_from(format!("jstz://{fa2}/transfer"))?,
         method: Method::POST,
         headers: HeaderMap::default(),
-        body: Some(body),
+        body: HttpBody::from_bytes(body),
         gas_limit: DEFAULT_GAS_LIMIT.try_into()?,
     });
 
@@ -196,7 +197,7 @@ fn balance(
         uri: Uri::try_from(format!("jstz://{fa2}/balance_of?requests={query}"))?,
         method: Method::GET,
         headers: HeaderMap::default(),
-        body: None,
+        body: HttpBody::empty(),
         gas_limit: DEFAULT_GAS_LIMIT.try_into()?,
     });
 
@@ -226,7 +227,7 @@ fn batch_mint(
         uri: Uri::try_from(format!("jstz://{fa2}/mint_new"))?,
         method: Method::POST,
         headers: HeaderMap::default(),
-        body: Some(body),
+        body: HttpBody::from_bytes(body),
         gas_limit: DEFAULT_GAS_LIMIT.try_into()?,
     });
 
