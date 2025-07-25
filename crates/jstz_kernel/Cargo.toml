@@ -18,6 +18,11 @@ name = "kernel-executable"
 path = "src/executable.rs"
 required-features = ["riscv_kernel"]
 
+[[bin]]
+name = "program"
+path = "src/program.rs"
+required-features = ["riscv_kernel"]
+
 [dependencies]
 bincode.workspace = true
 derive_more = { workspace = true, features = ["from"] }
