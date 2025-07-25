@@ -36,51 +36,16 @@ impl Display for RunMode {
     }
 }
 
-#[derive(Default, Debug, clap::ValueEnum, Clone, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum RunModeType {
-    #[default]
-    Default,
-    Sequencer,
-}
-
-#[derive(Default, Debug)]
-pub struct RunModeBuilder {
-    mode: RunModeType,
-    capacity: Option<usize>,
-    debug_log_path: Option<PathBuf>,
-}
-
-impl RunModeBuilder {
-    pub fn new(mode: RunModeType) -> Self {
-        Self {
-            mode,
-            ..Default::default()
-        }
-    }
-
-    pub fn with_capacity(mut self, capacity: usize) -> anyhow::Result<Self> {
-        if let RunModeType::Default = self.mode {
-            anyhow::bail!("cannot set capacity when run mode is 'default'");
-        }
-        self.capacity.replace(capacity);
-        Ok(self)
-    }
-
-    pub fn with_debug_log_path(mut self, path: PathBuf) -> anyhow::Result<Self> {
-        if let RunModeType::Default = self.mode {
-            anyhow::bail!("cannot set debug log path when run mode is 'default'");
-        }
-        self.debug_log_path.replace(path);
-        Ok(self)
-    }
-
-    pub fn build(self) -> anyhow::Result<RunMode> {
-        Ok(match self.mode {
-            RunModeType::Default => RunMode::Default,
-            RunModeType::Sequencer => RunMode::Sequencer {
-                capacity: self.capacity.unwrap_or(1),
-                debug_log_path: self.debug_log_path.unwrap_or(
+impl RunMode {
+    pub fn new(
+        mode_str: Option<&str>,
+        capacity: Option<usize>,
+        debug_log_path: Option<PathBuf>,
+    ) -> anyhow::Result<Self> {
+        match mode_str.unwrap_or("default") {
+            "sequencer" => Ok(RunMode::Sequencer {
+                capacity: capacity.unwrap_or(1),
+                debug_log_path: debug_log_path.unwrap_or(
                     NamedTempFile::new()
                         .context("failed to create temporary debug log file")?
                         .into_temp_path()
@@ -88,8 +53,10 @@ impl RunModeBuilder {
                         .context("failed to convert temporary debug log file to path")?
                         .to_path_buf(),
                 ),
-            },
-        })
+            }),
+            "default" => Ok(RunMode::Default),
+            v => Err(anyhow::anyhow!("invalid run mode '{v}'")),
+        }
     }
 }
 
@@ -204,27 +171,14 @@ mod tests {
     }
 
     #[test]
-    fn runmode_builder() {
+    fn runmode_new() {
+        assert_eq!(RunMode::new(None, None, None).unwrap(), RunMode::Default);
         assert_eq!(
-            RunModeBuilder::new(RunModeType::Default).build().unwrap(),
+            RunMode::new(Some("default"), None, None).unwrap(),
             RunMode::Default
         );
-        assert_eq!(
-            RunModeBuilder::new(RunModeType::Default)
-                .with_capacity(1)
-                .unwrap_err()
-                .to_string(),
-            "cannot set capacity when run mode is 'default'"
-        );
-        assert_eq!(
-            RunModeBuilder::new(RunModeType::Default)
-                .with_debug_log_path(PathBuf::new())
-                .unwrap_err()
-                .to_string(),
-            "cannot set debug log path when run mode is 'default'"
-        );
 
-        let mode = RunModeBuilder::new(RunModeType::Sequencer).build().unwrap();
+        let mode = RunMode::new(Some("sequencer"), None, None).unwrap();
         matches!(
             mode,
             RunMode::Sequencer {
@@ -234,17 +188,23 @@ mod tests {
         );
 
         assert_eq!(
-            RunModeBuilder::new(RunModeType::Sequencer)
-                .with_capacity(123)
-                .unwrap()
-                .with_debug_log_path(PathBuf::from_str("/foo/bar").unwrap())
-                .unwrap()
-                .build()
-                .unwrap(),
+            RunMode::new(
+                Some("sequencer"),
+                Some(123),
+                Some(PathBuf::from_str("/foo/bar").unwrap())
+            )
+            .unwrap(),
             RunMode::Sequencer {
                 capacity: 123,
                 debug_log_path: PathBuf::from_str("/foo/bar").unwrap()
             }
+        );
+
+        assert_eq!(
+            RunMode::new(Some("bad"), None, None)
+                .unwrap_err()
+                .to_string(),
+            "invalid run mode 'bad'"
         );
     }
 }
