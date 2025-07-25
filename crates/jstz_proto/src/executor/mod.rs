@@ -164,6 +164,7 @@ mod tests {
         context::account::Nonce,
         operation::{Content, DeployFunction, RevealLargePayload, RunFunction},
         receipt::{ReceiptContent, ReceiptResult},
+        HttpBody,
     };
 
     use crate::runtime::ParsedCode;
@@ -197,7 +198,7 @@ mod tests {
     }
 
     fn run_function_content() -> Content {
-        let body = vec![0];
+        let body = HttpBody::from_bytes(vec![0]);
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
                 "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
@@ -205,7 +206,7 @@ mod tests {
             .unwrap(),
             method: Method::POST,
             headers: HeaderMap::new(),
-            body: Some(body),
+            body,
             gas_limit: 10000,
         })
     }
@@ -349,7 +350,7 @@ mod tests {
                 .unwrap(),
                 method: Method::GET,
                 headers: HeaderMap::new(),
-                body: None,
+                body: HttpBody::empty(),
                 gas_limit: 10000,
             }),
             pk1.clone(),

@@ -197,7 +197,9 @@ pub async fn exec(args: RunArgs) -> Result<()> {
 
     debug!("Method: {:?}", method);
 
-    let body = read_file_or_input_or_piped(args.json_data)?.map(String::into_bytes);
+    let body = read_file_or_input_or_piped(args.json_data)?
+        .map(String::into_bytes)
+        .into();
 
     debug!("Body: {:?}", body);
 
@@ -280,7 +282,7 @@ pub async fn exec(args: RunArgs) -> Result<()> {
         info!("\n")
     }
 
-    if let Some(body) = body {
+    if let Some(body) = body.0 {
         let json = serde_json::from_slice::<Value>(&body)
             .and_then(|s| serde_json::to_string_pretty(&s));
         if json.is_ok() {

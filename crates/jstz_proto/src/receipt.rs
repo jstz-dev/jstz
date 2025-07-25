@@ -58,7 +58,6 @@ pub struct DeployFunctionReceipt {
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct RunFunctionReceipt {
-    #[schema(schema_with = crate::operation::openapi::http_body_schema)]
     pub body: HttpBody,
     /// Valid status code
     #[serde(with = "http_serde::status_code")]
