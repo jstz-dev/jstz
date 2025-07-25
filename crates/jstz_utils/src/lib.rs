@@ -1,5 +1,6 @@
 use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
 use serde::Serialize;
+pub mod event_stream;
 pub mod tailed_file;
 
 pub async fn poll<'a, F, T>(

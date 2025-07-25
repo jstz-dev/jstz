@@ -1,11 +1,11 @@
 use std::path::PathBuf;
 
 use futures_util::StreamExt;
+use jstz_utils::event_stream::EventStream;
 use tokio::sync::broadcast;
 use tokio::task::AbortHandle;
 
-use crate::filtered_log_stream::FilteredLogStream;
-use crate::request::{request_event_from_log_line, OracleRequest, ORACLE_LINE_REGEX};
+use crate::request::{OracleRequest, ORACLE_LINE_REGEX};
 
 use anyhow::Result;
 
@@ -21,29 +21,20 @@ impl Relay {
         let (tx, _rx0) = broadcast::channel(1024);
 
         let mut stream =
-            FilteredLogStream::new(ORACLE_LINE_REGEX.clone(), log_path).await?;
+            EventStream::from_file(ORACLE_LINE_REGEX.clone(), log_path).await?;
 
         let abort_handle = {
             let task = tokio::spawn({
                 let tx = tx.clone();
                 async move {
-                    while let Some(line_res) = stream.next().await {
-                        match line_res {
-                            Ok(line) => match request_event_from_log_line(&line) {
-                                Ok(ev) => {
-                                    if let Err(e) = tx.send(ev) {
-                                        eprintln!("Failed to send event: {}", e);
-                                        break;
-                                    }
-                                }
-                                Err(e) => {
-                                    eprintln!(
-                                        "Failed to parse oracle log line: {}; line={}",
-                                        e, line
-                                    );
+                    while let Some(mb_req) = stream.next().await {
+                        match mb_req {
+                            Ok(req) => {
+                                if let Err(e) = tx.send(req) {
+                                    eprintln!("Failed to send event: {}", e);
                                     break;
                                 }
-                            },
+                            }
                             Err(e) => {
                                 eprintln!("Log stream error: {}", e);
                                 break;

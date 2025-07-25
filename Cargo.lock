@@ -2966,6 +2966,7 @@ dependencies = [
  "mockito",
  "octez",
  "once_cell",
+ "pin-project",
  "rand 0.8.5",
  "regex",
  "reqwest",
@@ -3087,11 +3088,18 @@ name = "jstz_utils"
 version = "0.1.1-alpha.3"
 dependencies = [
  "anyhow",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "jstz_core",
  "jstz_crypto",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
+ "tokio-util",
 ]
 
 [[package]]
