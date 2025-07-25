@@ -8,7 +8,6 @@ use octez::OctezRollupClient;
 #[cfg(not(test))]
 use sequencer::inbox;
 use sequencer::{inbox::Monitor, queue::OperationQueue, worker};
-use serde::{Deserialize, Serialize};
 use services::{
     accounts::AccountsService,
     logs::{broadcaster::Broadcaster, db::Db, LogsService},
@@ -16,7 +15,6 @@ use services::{
     utils,
 };
 use std::{
-    fmt::Display,
     path::PathBuf,
     sync::{atomic::AtomicU64, Arc, RwLock},
     time::SystemTime,
@@ -34,6 +32,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 pub mod config;
 pub mod sequencer;
+pub use config::RunMode;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -60,57 +59,6 @@ impl AppState {
                 .worker_heartbeat
                 .load(std::sync::atomic::Ordering::Relaxed);
         diff <= 30
-    }
-}
-
-#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
-#[serde(rename_all = "lowercase")]
-#[serde(tag = "mode")]
-pub enum RunMode {
-    Sequencer {
-        capacity: usize,
-        debug_log_path: PathBuf,
-    },
-    #[serde(alias = "default")]
-    Default,
-}
-
-impl Default for RunMode {
-    fn default() -> Self {
-        Self::Default
-    }
-}
-
-impl Display for RunMode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            RunMode::Default => write!(f, "default"),
-            RunMode::Sequencer { .. } => write!(f, "sequencer"),
-        }
-    }
-}
-
-impl RunMode {
-    pub fn new(
-        mode_str: Option<&str>,
-        capacity: Option<usize>,
-        debug_log_path: Option<PathBuf>,
-    ) -> Result<Self> {
-        match mode_str.unwrap_or("default") {
-            "sequencer" => Ok(RunMode::Sequencer {
-                capacity: capacity.unwrap_or(1),
-                debug_log_path: debug_log_path.unwrap_or(
-                    NamedTempFile::new()
-                        .context("failed to create temporary debug log file")?
-                        .into_temp_path()
-                        .keep()
-                        .context("failed to convert temporary debug log file to path")?
-                        .to_path_buf(),
-                ),
-            }),
-            "default" => Ok(RunMode::Default),
-            v => Err(anyhow::anyhow!("invalid run mode '{v}'")),
-        }
     }
 }
 
@@ -271,7 +219,6 @@ pub fn openapi_json_raw() -> anyhow::Result<String> {
 mod test {
     use std::{
         path::PathBuf,
-        str::FromStr,
         sync::{atomic::AtomicU64, Arc},
         time::SystemTime,
     };
@@ -318,62 +265,6 @@ mod test {
         assert!(
             current_spec == generated_spec,
             "API doc regression detected. Run the following to view the modifications:\n\tcargo run --bin jstz-node -- spec -o crates/jstz_node/openapi_v1.json"
-        );
-    }
-
-    #[test]
-    fn default_runmode() {
-        assert_eq!(RunMode::default(), RunMode::Default);
-    }
-
-    #[test]
-    fn runmode_to_string() {
-        assert_eq!(RunMode::Default.to_string(), "default");
-        assert_eq!(
-            RunMode::Sequencer {
-                capacity: 1,
-                debug_log_path: PathBuf::new()
-            }
-            .to_string(),
-            "sequencer"
-        );
-    }
-
-    #[test]
-    fn runmode_new() {
-        assert_eq!(RunMode::new(None, None, None).unwrap(), RunMode::Default);
-        assert_eq!(
-            RunMode::new(Some("default"), None, None).unwrap(),
-            RunMode::Default
-        );
-
-        let mode = RunMode::new(Some("sequencer"), None, None).unwrap();
-        matches!(
-            mode,
-            RunMode::Sequencer {
-                capacity: 1,
-                debug_log_path: _
-            }
-        );
-
-        assert_eq!(
-            RunMode::new(
-                Some("sequencer"),
-                Some(123),
-                Some(PathBuf::from_str("/foo/bar").unwrap())
-            )
-            .unwrap(),
-            RunMode::Sequencer {
-                capacity: 123,
-                debug_log_path: PathBuf::from_str("/foo/bar").unwrap()
-            }
-        );
-
-        assert_eq!(
-            RunMode::new(Some("bad"), None, None)
-                .unwrap_err()
-                .to_string(),
-            "invalid run mode 'bad'"
         );
     }
 
