@@ -16,6 +16,7 @@ use services::{
     utils,
 };
 use std::{
+    fmt::Display,
     path::PathBuf,
     sync::{atomic::AtomicU64, Arc, RwLock},
     time::SystemTime,
@@ -80,13 +81,12 @@ impl Default for RunMode {
     }
 }
 
-impl ToString for RunMode {
-    fn to_string(&self) -> String {
+impl Display for RunMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            RunMode::Default => "default",
-            RunMode::Sequencer { .. } => "sequencer",
+            RunMode::Default => write!(f, "default"),
+            RunMode::Sequencer { .. } => write!(f, "sequencer"),
         }
-        .to_string()
     }
 }
 
@@ -173,7 +173,7 @@ pub async fn run(
                 runtime_db.clone(),
                 &injector,
                 rollup_preimages_dir.clone(),
-                Some(&debug_log_path),
+                Some(debug_log_path),
             )
             .context("failed to launch worker")?,
         ),
@@ -188,7 +188,7 @@ pub async fn run(
                     runtime_db.clone(),
                     &injector,
                     rollup_preimages_dir.clone(),
-                    Some(&debug_log_path),
+                    Some(debug_log_path),
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
