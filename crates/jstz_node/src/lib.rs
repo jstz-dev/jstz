@@ -135,7 +135,7 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         rollup_preimages_dir: config.rollup_preimages_dir.to_path_buf(),
         kernel_log_path: config.kernel_log_file.to_path_buf(),
         injector: config.injector,
-        mode: config.mode.try_into()?,
+        mode: config.mode,
     })
     .await
 }
