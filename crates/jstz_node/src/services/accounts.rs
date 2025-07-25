@@ -256,7 +256,7 @@ async fn get_kv_subkeys(
     let key = construct_storage_key(&address, &key);
     let value = match mode {
         RunMode::Default => rollup_client.get_subkeys(&key).await?,
-        RunMode::Sequencer => {
+        RunMode::Sequencer { .. } => {
             tokio::task::spawn_blocking(move || runtime_db.get_subkeys(&key))
                 .await
                 .context("failed to wait for db read task")?
@@ -332,7 +332,10 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+            },
         )
         .await;
         state
@@ -457,7 +460,10 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+            },
         )
         .await;
         state
@@ -508,7 +514,10 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+            },
         )
         .await;
         state
@@ -581,7 +590,10 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+            },
         )
         .await;
         state
@@ -643,7 +655,10 @@ mod tests {
             "",
             PathBuf::new(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+            },
         )
         .await;
         state
@@ -752,7 +767,10 @@ mod tests {
             "",
             PathBuf::new(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+            },
         )
         .await;
         for key in ["a", "a/b1", "a/b1/c", "a/b2", "a/b3", "b", "c/d"] {

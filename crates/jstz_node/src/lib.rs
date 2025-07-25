@@ -62,10 +62,14 @@ impl AppState {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum, PartialEq)]
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
+#[serde(tag = "mode")]
 pub enum RunMode {
-    Sequencer,
+    Sequencer {
+        capacity: usize,
+        debug_log_path: PathBuf,
+    },
     #[serde(alias = "default")]
     Default,
 }
@@ -73,6 +77,40 @@ pub enum RunMode {
 impl Default for RunMode {
     fn default() -> Self {
         Self::Default
+    }
+}
+
+impl ToString for RunMode {
+    fn to_string(&self) -> String {
+        match self {
+            RunMode::Default => "default",
+            RunMode::Sequencer { .. } => "sequencer",
+        }
+        .to_string()
+    }
+}
+
+impl RunMode {
+    pub fn new(
+        mode_str: Option<&str>,
+        capacity: Option<usize>,
+        debug_log_path: Option<PathBuf>,
+    ) -> Result<Self> {
+        match mode_str.unwrap_or("default") {
+            "sequencer" => Ok(RunMode::Sequencer {
+                capacity: capacity.unwrap_or(1),
+                debug_log_path: debug_log_path.unwrap_or(
+                    NamedTempFile::new()
+                        .context("failed to create temporary debug log file")?
+                        .into_temp_path()
+                        .keep()
+                        .context("failed to convert temporary debug log file to path")?
+                        .to_path_buf(),
+                ),
+            }),
+            "default" => Ok(RunMode::Default),
+            v => Err(anyhow::anyhow!("invalid run mode '{v}'")),
+        }
     }
 }
 
@@ -84,8 +122,6 @@ pub struct RunOptions {
     pub kernel_log_path: PathBuf,
     pub injector: KeyPair,
     pub mode: RunMode,
-    pub capacity: usize,
-    pub debug_log_path: PathBuf,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -99,9 +135,7 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         rollup_preimages_dir: config.rollup_preimages_dir.to_path_buf(),
         kernel_log_path: config.kernel_log_file.to_path_buf(),
         injector: config.injector,
-        mode: config.mode,
-        capacity: config.capacity,
-        debug_log_path: config.debug_log_file,
+        mode: config.mode.try_into()?,
     })
     .await
 }
@@ -115,12 +149,13 @@ pub async fn run(
         kernel_log_path,
         injector,
         mode,
-        capacity,
-        debug_log_path,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
-    let queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
+    let queue = Arc::new(RwLock::new(OperationQueue::new(match mode {
+        RunMode::Sequencer { capacity, .. } => capacity,
+        _ => 0,
+    })));
 
     // will make db_path configurable later
     let db_file = NamedTempFile::new()?;
@@ -130,7 +165,9 @@ pub async fn run(
     let runtime_db = sequencer::db::Db::init(Some(db_path))?;
     let worker = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => Some(
+        RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => Some(
             worker::spawn(
                 queue.clone(),
                 runtime_db.clone(),
@@ -141,7 +178,9 @@ pub async fn run(
             .context("failed to launch worker")?,
         ),
         #[cfg(test)]
-        RunMode::Sequencer => {
+        RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
             Some(
                 worker::spawn(
@@ -162,25 +201,25 @@ pub async fn run(
 
     let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => {
+        RunMode::Sequencer { .. } => {
             Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
         }
         #[cfg(test)]
-        RunMode::Sequencer => None,
+        RunMode::Sequencer { .. } => None,
         RunMode::Default => None,
     };
 
     let cancellation_token = CancellationToken::new();
     // LogsService expects the log file to exist at instantiation, so this needs to be called after
     // debug log file is created.
-    let (broadcaster, db, tail_file_handle) = LogsService::init(
-        match mode {
-            RunMode::Default => &kernel_log_path,
-            RunMode::Sequencer => &debug_log_path,
-        },
-        &cancellation_token,
-    )
-    .await?;
+    let log_file_path = match mode {
+        RunMode::Default => kernel_log_path,
+        RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => debug_log_path.clone(),
+    };
+    let (broadcaster, db, tail_file_handle) =
+        LogsService::init(&log_file_path, &cancellation_token).await?;
 
     let state = AppState {
         rollup_client,
@@ -232,6 +271,7 @@ pub fn openapi_json_raw() -> anyhow::Result<String> {
 mod test {
     use std::{
         path::PathBuf,
+        str::FromStr,
         sync::{atomic::AtomicU64, Arc},
         time::SystemTime,
     };
@@ -286,12 +326,62 @@ mod test {
         assert_eq!(RunMode::default(), RunMode::Default);
     }
 
+    #[test]
+    fn runmode_to_string() {
+        assert_eq!(RunMode::Default.to_string(), "default");
+        assert_eq!(
+            RunMode::Sequencer {
+                capacity: 1,
+                debug_log_path: PathBuf::new()
+            }
+            .to_string(),
+            "sequencer"
+        );
+    }
+
+    #[test]
+    fn runmode_new() {
+        assert_eq!(RunMode::new(None, None, None).unwrap(), RunMode::Default);
+        assert_eq!(
+            RunMode::new(Some("default"), None, None).unwrap(),
+            RunMode::Default
+        );
+
+        let mode = RunMode::new(Some("sequencer"), None, None).unwrap();
+        matches!(
+            mode,
+            RunMode::Sequencer {
+                capacity: 1,
+                debug_log_path: _
+            }
+        );
+
+        assert_eq!(
+            RunMode::new(
+                Some("sequencer"),
+                Some(123),
+                Some(PathBuf::from_str("/foo/bar").unwrap())
+            )
+            .unwrap(),
+            RunMode::Sequencer {
+                capacity: 123,
+                debug_log_path: PathBuf::from_str("/foo/bar").unwrap()
+            }
+        );
+
+        assert_eq!(
+            RunMode::new(Some("bad"), None, None)
+                .unwrap_err()
+                .to_string(),
+            "invalid run mode 'bad'"
+        );
+    }
+
     #[tokio::test]
     async fn test_run() {
         async fn check_mode(mode: RunMode, expected: &str) {
             let port = unused_port();
             let kernel_log_file = NamedTempFile::new().unwrap();
-            let debug_log_file = NamedTempFile::new().unwrap();
 
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
@@ -301,8 +391,6 @@ mod test {
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: default_injector(),
                 mode: mode.clone(),
-                capacity: 0,
-                debug_log_path: debug_log_file.path().to_path_buf(),
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -326,7 +414,14 @@ mod test {
 
         // Test without oracle key pair
         check_mode(RunMode::Default, "\"default\"").await;
-        check_mode(RunMode::Sequencer, "\"sequencer\"").await;
+        check_mode(
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+            },
+            "\"sequencer\"",
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -339,7 +434,6 @@ mod test {
         ) {
             let port = unused_port();
             let kernel_log_file = NamedTempFile::new().unwrap();
-            let debug_log_file = NamedTempFile::new().unwrap();
 
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
@@ -349,8 +443,6 @@ mod test {
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: default_injector(),
                 mode,
-                capacity: 0,
-                debug_log_path: debug_log_file.path().to_path_buf(),
             }));
 
             sleep(Duration::from_secs(1)).await;
@@ -364,7 +456,10 @@ mod test {
         run_test(
             preimages_dir.clone(),
             "sequencer-test-file".to_string(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+            },
             false,
         )
         .await;
