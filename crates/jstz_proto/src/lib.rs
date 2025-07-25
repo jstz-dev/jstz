@@ -1,8 +1,6 @@
 mod error;
 
 pub mod context;
-#[cfg(feature = "v2_runtime")]
-pub mod event;
 pub mod executor;
 pub mod logger;
 pub mod operation;

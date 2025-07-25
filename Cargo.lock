@@ -2831,6 +2831,7 @@ dependencies = [
  "tezos_data_encoding",
  "thiserror 1.0.67",
  "tokio",
+ "url",
  "utoipa",
 ]
 
@@ -2957,6 +2958,7 @@ dependencies = [
  "http 1.1.0",
  "hyper 1.6.0",
  "jstz_client",
+ "jstz_core",
  "jstz_crypto",
  "jstz_proto",
  "jstz_utils",
