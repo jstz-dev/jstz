@@ -87,11 +87,14 @@ predicates = "3.1.0"
 prettytable = "0.10.0"
 pretty_assertions = "1.4.1"
 proptest = "1.1"
+r2d2 = "0.8"
+r2d2_sqlite = "0.22"
 rand = "0.8"
 regex = "1"
 reqwest = { version = "0.11.24", features = ["json", "blocking","stream"] }
 reqwest-eventsource = "0.5.0"
 rexpect = "0.6.0"
+rusqlite = "0.29"
 rust_decimal = "1.37.1"
 rust-embed = { version = "8.5.0", features = ["interpolate-folder-path", "include-exclude"] }
 rustyline = "14.0.0"
@@ -105,7 +108,7 @@ serde_bytes = "0.11.17"
 signal-hook = "0.3.17"
 syntect = "5.2.0"
 tempfile = "3.10.0"
-thiserror = "1.0.56"
+thiserror = "1.0.69"
 tl = "0.7.7"
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-stream = "0.1.14"
@@ -196,6 +199,10 @@ default-features = false
 [workspace.dependencies.deno_console]
 git = "https://github.com/jstz-dev/deno"
 branch = "v2.1.10-jstz"
+
+[workspace.dependencies.octez-riscv]
+git = "https://github.com/tezos/riscv-pvm"
+rev = "0de5159bcd6a25cb32249b161de19d5a72e1272c"
 
 [patch.crates-io]
 boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
