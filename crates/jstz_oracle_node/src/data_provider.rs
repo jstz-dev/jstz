@@ -14,10 +14,10 @@ use log::{error, info};
 use reqwest::header::{HeaderMap as ReqwestHeaderMap, HeaderName, HeaderValue};
 use reqwest::Client;
 use reqwest::Method;
-use std::time::Duration;
+use std::{future::Future, time::Duration};
 use tokio::sync::broadcast::Receiver;
 use tokio::task::AbortHandle;
-use tokio_retry::{strategy::ExponentialBackoff, RetryIf};
+use tokio_retry2::{strategy::ExponentialBackoff, Retry, RetryError};
 
 #[allow(dead_code)]
 pub struct DataProvider {
@@ -135,17 +135,34 @@ async fn execute_http_request(
     })
 }
 
-async fn retry_async<F, Fut, T, E, C>(
-    backoff: impl Iterator<Item = Duration>,
-    op: F,
+pub async fn retry_async<F, Fut, T, E, C>(
+    backoff: impl IntoIterator<Item = Duration>,
+    mut op: F,
     should_retry: C,
 ) -> Result<T, E>
 where
     F: FnMut() -> Fut,
-    Fut: std::future::Future<Output = Result<T, E>>,
+    Fut: Future<Output = Result<T, E>>,
     C: Fn(&E) -> bool + Copy,
 {
-    RetryIf::spawn(backoff, op, should_retry).await
+    let action = || {
+        let fut = op();
+
+        async move {
+            match fut.await {
+                Ok(v) => Ok(v),
+                Err(e) => {
+                    if should_retry(&e) {
+                        Err(RetryError::transient(e))
+                    } else {
+                        Err(RetryError::permanent(e))
+                    }
+                }
+            }
+        }
+    };
+
+    Retry::spawn(backoff, action).await
 }
 
 async fn handle_request(
@@ -239,7 +256,7 @@ async fn inject_oracle_response(
         }
         false
     };
-    let nonce = RetryIf::spawn(
+    let nonce = retry_async(
         exponential_backoff(200, 6, Duration::from_secs(5)),
         || async {
             jstz_client
@@ -261,7 +278,7 @@ async fn inject_oracle_response(
 
     let signed_op = SignedOperation::new(signing_key.sign(op_hash.clone())?, op);
     // Post operation to node
-    RetryIf::spawn(
+    retry_async(
         ExponentialBackoff::from_millis(200)
             .factor(2)
             .max_delay(Duration::from_secs(5))
@@ -552,12 +569,12 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
 
         let nonce_path = "/accounts/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/nonce";
-        let _nonce_fail = server
+        let nonce_fail = server
             .mock("GET", nonce_path)
             .with_status(500)
             .expect(1)
             .create();
-        let _nonce_ok = server
+        let nonce_ok = server
             .mock("GET", nonce_path)
             .with_status(200)
             .with_header("content-type", "application/json")
@@ -565,18 +582,18 @@ mod tests {
             .expect(1)
             .create();
 
-        let _post_fail = server
+        let post_fail = server
             .mock("POST", "/operations")
             .with_status(500)
             .expect(1)
             .create();
-        let _post_ok = server
+        let post_ok = server
             .mock("POST", "/operations")
             .with_status(200)
             .expect(1)
             .create();
 
-        let _receipt_ok = server
+        let receipt_ok = server
             .mock("GET", "/operations/9b14cf6a10e07c8f4fb436a0e137e230a8fb5a2ea736316c9d428fa56d9c4414/receipt")
             .with_status(200)
             .with_header("content-type", "application/json")
@@ -614,11 +631,11 @@ mod tests {
         .await?;
 
         // Verify all mocks were called
-        _nonce_fail.assert();
-        _nonce_ok.assert();
-        _post_fail.assert();
-        _post_ok.assert();
-        _receipt_ok.assert();
+        nonce_fail.assert();
+        nonce_ok.assert();
+        post_fail.assert();
+        post_ok.assert();
+        receipt_ok.assert();
 
         Ok(())
     }
@@ -638,7 +655,7 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
 
         // 1st GET: delayed body ⇒ reqwest times out
-        let _slow = server
+        let slow = server
             .mock("GET", "/data")
             .with_status(200)
             // send the whole body ("later") as one chunk,
@@ -651,7 +668,7 @@ mod tests {
             .create();
 
         // 2nd GET: immediate success
-        let _fast = server
+        let fast = server
             .mock("GET", "/data")
             .with_status(200)
             .with_body("ok")
@@ -664,6 +681,11 @@ mod tests {
         let resp = super::get_oracle_response(&FAST_CLIENT, &req).await?;
         assert_eq!(resp.status, 200);
         assert_eq!(String::from_utf8(resp.body.to_vec())?, "ok");
+
+        // Verify all mocks were called
+        slow.assert();
+        fast.assert();
+
         Ok(())
     }
 
