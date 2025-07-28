@@ -1,5 +1,6 @@
 mod bin_encodable;
 pub mod error;
+pub mod event;
 pub mod future;
 pub mod host;
 pub mod iterators;
