@@ -9,7 +9,7 @@ pub(crate) static ORACLE_LINE_REGEX: Lazy<Regex> = Lazy::new(|| {
 });
 
 pub fn request_event_from_log_line(line: &str) -> Result<OracleRequest> {
-    jstz_proto::event::decode_line::<OracleRequest>(line).map_err(|e| anyhow!(e))
+    jstz_core::event::decode_line::<OracleRequest>(line).map_err(|e| anyhow!(e))
 }
 
 #[cfg(test)]
