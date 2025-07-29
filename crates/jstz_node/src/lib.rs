@@ -114,7 +114,9 @@ pub async fn run(
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer {
-            ref debug_log_path, ..
+            ref debug_log_path,
+            ref runtime_env,
+            ..
         } => Some(
             worker::spawn(
                 queue.clone(),
@@ -122,12 +124,15 @@ pub async fn run(
                 &injector,
                 rollup_preimages_dir.clone(),
                 Some(debug_log_path),
+                runtime_env.clone(),
             )
             .context("failed to launch worker")?,
         ),
         #[cfg(test)]
         RunMode::Sequencer {
-            ref debug_log_path, ..
+            ref debug_log_path,
+            ref runtime_env,
+            ..
         } => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
             Some(
@@ -137,6 +142,7 @@ pub async fn run(
                     &injector,
                     rollup_preimages_dir.clone(),
                     Some(debug_log_path),
+                    runtime_env.clone(),
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
@@ -144,16 +150,6 @@ pub async fn run(
                 .context("failed to launch worker")?,
             )
         }
-        RunMode::Default => None,
-    };
-
-    let _monitor: Option<Monitor> = match mode {
-        #[cfg(not(test))]
-        RunMode::Sequencer { .. } => {
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
-        }
-        #[cfg(test)]
-        RunMode::Sequencer { .. } => None,
         RunMode::Default => None,
     };
 

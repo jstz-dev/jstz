@@ -70,3 +70,9 @@ path = "src/main.rs"
 persistent-logging = []
 v2_runtime = ["jstz_proto/v2_runtime"]
 oracle = ["v2_runtime"]
+
+[dependencies.tezos_smart_rollup_old]
+git = "https://gitlab.com/tezos/tezos.git"
+package = "tezos-smart-rollup"
+rev = "8a0a8d363b085e8d0b5fd89736158dc6d0c0c04f"
+features = ["utils"]

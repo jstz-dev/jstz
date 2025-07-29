@@ -1,4 +1,10 @@
-use crate::sequencer::runtime::{init_host, process_message};
+use crate::{
+    config::RuntimeEnv,
+    sequencer::{
+        riscv_pvm::JstzPvm,
+        runtime::{init_host, process_message},
+    },
+};
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -13,6 +19,7 @@ use std::{
 use anyhow::Context;
 use jstz_utils::KeyPair;
 use log::warn;
+use tezos_crypto_rs::hash::SmartRollupHash;
 
 use super::{db::Db, inbox::parsing::ParsedInboxMessage, queue::OperationQueue};
 
@@ -46,8 +53,22 @@ pub fn spawn(
     injector: &KeyPair,
     preimage_dir: PathBuf,
     debug_log_path: Option<&Path>,
+    runtime_env: RuntimeEnv,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
+    if let RuntimeEnv::Riscv {
+        kernel_path,
+        rollup_address,
+    } = runtime_env
+    {
+        return spawn_riscv_worker(
+            queue,
+            preimage_dir,
+            debug_log_path,
+            kernel_path,
+            rollup_address,
+        );
+    }
     let (thread_kill_sig, rx) = channel();
     let mut host_rt =
         init_host(db, preimage_dir, injector).context("failed to init host")?;
@@ -177,13 +198,42 @@ fn run_event_loop(
     })
 }
 
-fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
+pub(crate) fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
     let current_sec = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
     // safety: this worker should be the only writer
     heartbeat.store(current_sec, std::sync::atomic::Ordering::Relaxed);
+}
+
+fn spawn_riscv_worker(
+    queue: Arc<RwLock<OperationQueue>>,
+    preimages_dir: PathBuf,
+    debug_log_path: Option<&Path>,
+    kernel_path: PathBuf,
+    rollup_address: SmartRollupHash,
+) -> anyhow::Result<Worker> {
+    let (thread_kill_sig, rx) = channel();
+    let heartbeat = Arc::new(AtomicU64::default());
+    let debug_log_path = debug_log_path.map(|v| v.to_path_buf());
+    Ok(Worker {
+        thread_kill_sig,
+        heartbeat: heartbeat.clone(),
+        inner: Some(spawn_thread(move || {
+            let mut pvm = JstzPvm::new(
+                queue,
+                kernel_path,
+                rollup_address,
+                0,
+                Some(preimages_dir.into_boxed_path()),
+                heartbeat.clone(),
+                debug_log_path,
+            )
+            .unwrap();
+            pvm.step_max(rx, std::ops::Bound::Unbounded);
+        })),
+    })
 }
 
 #[cfg(test)]
@@ -211,6 +261,7 @@ mod tests {
             &default_injector(),
             PathBuf::new(),
             None,
+            crate::config::RuntimeEnv::Native,
             move || {
                 *cp.lock().unwrap() += 1;
             },
@@ -254,6 +305,7 @@ mod tests {
             &default_injector(),
             PathBuf::new(),
             Some(log_file.path()),
+            crate::config::RuntimeEnv::Native,
             move || {},
         );
 

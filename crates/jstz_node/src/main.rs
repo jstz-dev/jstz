@@ -8,6 +8,7 @@ use jstz_node::{
     RunOptions,
 };
 use jstz_utils::KeyPair;
+use tezos_crypto_rs::hash::SmartRollupHash;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
@@ -61,6 +62,12 @@ struct Args {
     #[arg(long)]
     debug_log_path: Option<PathBuf>,
 
+    #[arg(long)]
+    rollup_address: Option<String>,
+
+    #[arg(long)]
+    riscv_kernel_path: Option<PathBuf>,
+
     /// Path to file containing injector key pair (format: "public_key:secret_key")
     #[arg(long)]
     injector_key_file: PathBuf,
@@ -68,7 +75,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    env_logger::init_from_env(Env::default().default_filter_or("info"));
+    env_logger::init_from_env(Env::default().default_filter_or("main"));
     match Command::parse() {
         Command::Run(args) => {
             let rollup_endpoint = args.rollup_endpoint.unwrap_or(format!(
@@ -80,6 +87,13 @@ async fn main() -> anyhow::Result<()> {
                 RunModeBuilder::new(args.mode).with_capacity(args.capacity)?;
             if let Some(path) = args.debug_log_path {
                 run_mode_builder = run_mode_builder.with_debug_log_path(path)?;
+            }
+            if let Some(path) = args.riscv_kernel_path {
+                run_mode_builder = run_mode_builder.with_riscv_kernel_path(path)?;
+            }
+            if let Some(v) = args.rollup_address {
+                run_mode_builder = run_mode_builder
+                    .with_rollup_address(SmartRollupHash::from_base58_check(&v)?)?;
             }
             jstz_node::run(RunOptions {
                 addr: args.addr,
