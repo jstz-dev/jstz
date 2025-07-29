@@ -1,0 +1,10 @@
+reading file "heaptrack.riscv-sandbox.zst" - please wait, this might take some time...
+Debuggee command was: riscv-sandbox run --timings --address sr1FXevDx86EyU1BBwhn94gtKvVPTNwoVxUC --input target/riscv64gc-unknown-linux-musl/release/kernel-executable
+finished reading file, now analyzing data:
+
+total runtime: 6.993000s.
+calls to allocation functions: 3521866 (503627/s)
+temporary memory allocations: 460306 (65823/s)
+peak heap memory consumption: 1.23G
+peak RSS (including heaptrack overhead): 18.60G
+total memory leaked: 7.92M

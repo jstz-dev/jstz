@@ -275,6 +275,12 @@
             };
           in
             crossPkgs.pkgsCross.riscv64;
+          heaptrackNoGui = pkgs.heaptrack.overrideAttrs (old: {
+            postInstall = ''
+              ${old.postInstall}
+              rm $out/bin/heaptrack_gui
+            '';
+          });
         in {
           packages =
             crates.packages
@@ -364,7 +370,11 @@
                 riscv64MuslPkgs.pkgsStatic.stdenv.cc
                 riscvSandbox
               ]
-              ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
+              ++ lib.optionals stdenv.isLinux [
+                pkg-config
+                openssl.dev
+                heaptrackNoGui
+              ];
           };
         }
       );
