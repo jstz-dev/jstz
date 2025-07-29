@@ -8,6 +8,18 @@ use jstz_utils::KeyPair;
 use octez::r#async::endpoint::Endpoint;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
+use tezos_crypto_rs::hash::SmartRollupHash;
+
+#[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
+#[serde(rename_all = "lowercase")]
+#[serde(tag = "type")]
+pub enum RuntimeEnv {
+    Native,
+    Riscv {
+        kernel_path: PathBuf,
+        rollup_address: SmartRollupHash,
+    },
+}
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -16,6 +28,7 @@ pub enum RunMode {
     Sequencer {
         capacity: usize,
         debug_log_path: PathBuf,
+        runtime_env: RuntimeEnv,
     },
     #[serde(alias = "default")]
     Default,
@@ -49,6 +62,8 @@ pub struct RunModeBuilder {
     mode: RunModeType,
     capacity: Option<usize>,
     debug_log_path: Option<PathBuf>,
+    riscv_kernel_path: Option<PathBuf>,
+    rollup_address: Option<SmartRollupHash>,
 }
 
 impl RunModeBuilder {
@@ -75,20 +90,56 @@ impl RunModeBuilder {
         anyhow::bail!("debug log path can only be set when run mode is 'sequencer'");
     }
 
+    pub fn with_riscv_kernel_path(mut self, path: PathBuf) -> anyhow::Result<Self> {
+        if let RunModeType::Sequencer = self.mode {
+            self.riscv_kernel_path.replace(path);
+            return Ok(self);
+        }
+        anyhow::bail!("riscv kernel path can only be set when run mode is 'sequencer'");
+    }
+
+    pub fn with_rollup_address(mut self, addr: SmartRollupHash) -> anyhow::Result<Self> {
+        if let RunModeType::Sequencer = self.mode {
+            self.rollup_address.replace(addr);
+            return Ok(self);
+        }
+        anyhow::bail!(
+            "smart rollup address can only be set when run mode is 'sequencer'"
+        );
+    }
+
     pub fn build(self) -> anyhow::Result<RunMode> {
         Ok(match self.mode {
             RunModeType::Default => RunMode::Default,
-            RunModeType::Sequencer => RunMode::Sequencer {
-                capacity: self.capacity.unwrap_or(1),
-                debug_log_path: self.debug_log_path.unwrap_or(
-                    NamedTempFile::new()
-                        .context("failed to create temporary debug log file")?
-                        .into_temp_path()
-                        .keep()
-                        .context("failed to convert temporary debug log file to path")?
-                        .to_path_buf(),
-                ),
-            },
+            RunModeType::Sequencer => {
+                let runtime_env = match (self.riscv_kernel_path, self.rollup_address) {
+                    (Some(p), Some(addr)) => RuntimeEnv::Riscv {
+                        kernel_path: p,
+                        rollup_address: addr,
+                    },
+                    (None, None) => RuntimeEnv::Native,
+                    (Some(_), None) => anyhow::bail!(
+                        "smart rollup address is not set when riscv kernel path is provided"
+                    ),
+                    (None, Some(_)) => anyhow::bail!(
+                        "riscv kernel path is not set when smart rollup address is provided"
+                    ),
+                };
+                RunMode::Sequencer {
+                    capacity: self.capacity.unwrap_or(1),
+                    debug_log_path: self.debug_log_path.unwrap_or(
+                        NamedTempFile::new()
+                            .context("failed to create temporary debug log file")?
+                            .into_temp_path()
+                            .keep()
+                            .context(
+                                "failed to convert temporary debug log file to path",
+                            )?
+                            .to_path_buf(),
+                    ),
+                    runtime_env,
+                }
+            }
         })
     }
 }
@@ -174,15 +225,35 @@ mod tests {
         assert_eq!(json["mode"], "default");
         assert_eq!(json["capacity"], serde_json::Value::Null);
         assert_eq!(json["debug_log_path"], serde_json::Value::Null);
+        assert_eq!(json["runtime_env"], serde_json::Value::Null);
 
         config.mode = RunMode::Sequencer {
             capacity: 123,
             debug_log_path: PathBuf::from_str("/debug/log").unwrap(),
+            runtime_env: RuntimeEnv::Native,
         };
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(json["mode"], "sequencer");
         assert_eq!(json["capacity"], 123);
         assert_eq!(json["debug_log_path"], "/debug/log");
+        assert_eq!(json["runtime_env"], serde_json::json!({"type": "native"}));
+
+        config.mode = RunMode::Sequencer {
+            capacity: 123,
+            debug_log_path: PathBuf::from_str("/debug/log").unwrap(),
+            runtime_env: RuntimeEnv::Riscv {
+                kernel_path: PathBuf::from_str("/riscv/kernel").unwrap(),
+                rollup_address: SmartRollupHash::from_base58_check(
+                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
+                )
+                .unwrap(),
+            },
+        };
+        let json = serde_json::to_value(&config).unwrap();
+        assert_eq!(
+            json["runtime_env"],
+            serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel", "rollup_address": "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao"})
+        );
     }
 
     #[test]
@@ -196,7 +267,8 @@ mod tests {
         assert_eq!(
             RunMode::Sequencer {
                 capacity: 1,
-                debug_log_path: PathBuf::new()
+                debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
             }
             .to_string(),
             "sequencer"
@@ -205,6 +277,9 @@ mod tests {
 
     #[test]
     fn runmode_builder() {
+        let rollup_address =
+            SmartRollupHash::from_base58_check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
         assert_eq!(
             RunModeBuilder::new(RunModeType::Default).build().unwrap(),
             RunMode::Default
@@ -223,13 +298,28 @@ mod tests {
                 .to_string(),
             "debug log path can only be set when run mode is 'sequencer'"
         );
+        assert_eq!(
+            RunModeBuilder::new(RunModeType::Default)
+                .with_rollup_address(rollup_address.clone())
+                .unwrap_err()
+                .to_string(),
+            "smart rollup address can only be set when run mode is 'sequencer'"
+        );
+        assert_eq!(
+            RunModeBuilder::new(RunModeType::Default)
+                .with_riscv_kernel_path(PathBuf::new())
+                .unwrap_err()
+                .to_string(),
+            "riscv kernel path can only be set when run mode is 'sequencer'"
+        );
 
         let mode = RunModeBuilder::new(RunModeType::Sequencer).build().unwrap();
         matches!(
             mode,
             RunMode::Sequencer {
                 capacity: 1,
-                debug_log_path: _
+                debug_log_path: _,
+                runtime_env: RuntimeEnv::Native
             }
         );
 
@@ -243,8 +333,43 @@ mod tests {
                 .unwrap(),
             RunMode::Sequencer {
                 capacity: 123,
-                debug_log_path: PathBuf::from_str("/foo/bar").unwrap()
+                debug_log_path: PathBuf::from_str("/foo/bar").unwrap(),
+                runtime_env: RuntimeEnv::Native,
             }
+        );
+
+        assert_eq!(
+            RunModeBuilder::new(RunModeType::Sequencer)
+                .with_rollup_address(rollup_address.clone())
+                .unwrap()
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "riscv kernel path is not set when smart rollup address is provided"
+        );
+        assert_eq!(
+            RunModeBuilder::new(RunModeType::Sequencer)
+                .with_riscv_kernel_path(PathBuf::from_str("/riscv/kernel").unwrap())
+                .unwrap()
+                .build()
+                .unwrap_err()
+                .to_string(),
+            "smart rollup address is not set when riscv kernel path is provided"
+        );
+        let mode = RunModeBuilder::new(RunModeType::Sequencer)
+            .with_riscv_kernel_path(PathBuf::from_str("/riscv/kernel").unwrap())
+            .unwrap()
+            .with_rollup_address(rollup_address.clone())
+            .unwrap()
+            .build()
+            .unwrap();
+        matches!(
+            mode,
+            RunMode::Sequencer {
+                capacity: _,
+                debug_log_path: _,
+                runtime_env: RuntimeEnv::Riscv { kernel_path, rollup_address }
+            } if kernel_path == PathBuf::from_str("/riscv/kernel").unwrap() && rollup_address == rollup_address
         );
     }
 }

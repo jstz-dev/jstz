@@ -293,6 +293,7 @@ mod tests {
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tower::ServiceExt;
 
+    use crate::config::RuntimeEnv;
     use crate::sequencer::inbox::parsing::{Message, ParsedInboxMessage};
     use crate::services::utils::StoreWrapper;
     use crate::{
@@ -507,6 +508,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
@@ -550,6 +552,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
@@ -599,6 +602,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;

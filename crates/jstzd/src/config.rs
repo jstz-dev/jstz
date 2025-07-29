@@ -389,7 +389,7 @@ mod tests {
 
     use super::{jstz_rollup_path, Config, JSTZ_ROLLUP_ADDRESS};
     use http::Uri;
-    use jstz_node::RunMode;
+    use jstz_node::{config::RuntimeEnv, RunMode};
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::OctezClientConfigBuilder,
@@ -848,7 +848,8 @@ mod tests {
             config.jstz_node_config().mode,
             RunMode::Sequencer {
                 capacity: 42,
-                debug_log_path: PathBuf::from_str("/debug/file").unwrap()
+                debug_log_path: PathBuf::from_str("/debug/file").unwrap(),
+                runtime_env: RuntimeEnv::Native,
             }
         );
     }
