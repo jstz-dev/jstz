@@ -30,5 +30,8 @@ tezos_crypto_rs.workspace = true
 tezos-smart-rollup-encoding.workspace = true
 tokio.workspace = true
 
+[dev-dependencies]
+mockito.workspace = true
+
 [features]
 disable-alpha = []

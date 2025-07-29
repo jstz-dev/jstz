@@ -3562,6 +3562,7 @@ dependencies = [
  "hex",
  "http 1.1.0",
  "jstz_crypto",
+ "mockito",
  "regex",
  "reqwest",
  "rust-embed",

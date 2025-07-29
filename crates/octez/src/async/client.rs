@@ -628,6 +628,13 @@ impl OctezClient {
         let output = self.spawn_and_wait_command(args).await?;
         Ok((parse_block_hash(&output)?, parse_operation_hash(&output)?))
     }
+
+    pub async fn resolve_contract(&self, alias: &str) -> Result<String> {
+        let args = ["show", "known", "contract", alias];
+        let output = self.spawn_and_wait_command(args).await?;
+
+        parse_regex("(KT1[1-9A-HJ-NP-Za-km-z]{33})", &output)
+    }
 }
 
 fn parse_regex(pattern_str: &str, output: &str) -> Result<String> {
@@ -665,10 +672,14 @@ fn parse_block_hash(output: &str) -> Result<BlockHash> {
 
 #[cfg(test)]
 mod test {
-    use crate::r#async::node_config::OctezNodeConfigBuilder;
+    use std::str::FromStr;
+
+    use crate::r#async::{node_config::OctezNodeConfigBuilder, protocol::Protocol};
 
     use super::*;
     use tempfile::{NamedTempFile, TempDir};
+    use tokio::io::AsyncWriteExt;
+
     #[test]
     fn builds_octez_client() {
         let endpoint = Endpoint::default();
@@ -1047,6 +1058,39 @@ mod test {
             )
             .unwrap(),
             serde_json::json!({ "base_dir": base_dir.to_string_lossy(), "binary_path": binary_path.to_string_lossy(), "disable_unsafe_disclaimer": false, "octez_node_endpoint": "http://localhost:8888", "log_file": log_file.to_string_lossy() })
+        );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn resolve_contract() {
+        // Mock octez node protocol endpoint that octez client relies on for reading basic info
+        let mut server = mockito::Server::new_async().await;
+        let protocol = Protocol::Alpha.hash();
+        server
+            .mock("GET", "/chains/main/blocks/head/protocols")
+            .with_body(
+                serde_json::json!({"protocol": protocol, "next_protocol": protocol})
+                    .to_string(),
+            )
+            .create();
+
+        // Mock octez client base dir with a `contracts` file that contains the preset contract
+        let data_dir = TempDir::new().unwrap();
+        let mut key_file = tokio::fs::File::create(data_dir.path().join("contracts"))
+            .await
+            .unwrap();
+        key_file.write_all(serde_json::json!([ { "name": "dummy-contract", "value": "KT1RrDLWqWTbR6VNR4quFyU5vupad55Cb1Ff" } ]).to_string().as_bytes()).await.unwrap();
+        key_file.flush().await.unwrap();
+
+        let client = OctezClient::new(
+            OctezClientConfigBuilder::new(Endpoint::from_str(&server.url()).unwrap())
+                .set_base_dir(data_dir.path().to_path_buf())
+                .build()
+                .unwrap(),
+        );
+        assert_eq!(
+            client.resolve_contract("dummy-contract").await.unwrap(),
+            "KT1RrDLWqWTbR6VNR4quFyU5vupad55Cb1Ff"
         );
     }
 }
