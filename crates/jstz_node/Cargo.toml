@@ -51,6 +51,7 @@ tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 thiserror.workspace = true
+tokio-retry2.workspace = true
 tokio-stream.workspace = true
 tokio-util.workspace = true
 tokio.workspace = true

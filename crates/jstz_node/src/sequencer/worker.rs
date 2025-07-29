@@ -16,7 +16,7 @@ use log::warn;
 
 use super::{db::Db, inbox::parsing::ParsedInboxMessage, queue::OperationQueue};
 
-#[cfg(feature = "v2_runtime")]
+#[cfg(feature = "oracle")]
 use super::inbox::parsing::LevelInfo;
 
 pub struct Worker {
@@ -114,7 +114,7 @@ pub fn spawn(
     })
 }
 
-#[cfg(feature = "v2_runtime")]
+#[cfg(feature = "oracle")]
 // See [jstz_kernel::riscv_kernel::run_event_loop]
 fn run_event_loop(
     tokio_rt: tokio::runtime::Runtime,
