@@ -155,7 +155,7 @@ async fn inject(
         RunMode::Default => {
             inject_rollup_message(encoded_operation, &rollup_client).await?;
         }
-        RunMode::Sequencer => {
+        RunMode::Sequencer { .. } => {
             insert_operation_queue(&queue, operation).await?;
         }
     }
@@ -504,7 +504,10 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+            },
         )
         .await;
         let queue = state.queue.clone();
@@ -544,7 +547,10 @@ mod tests {
             "",
             preimage_dir.path().to_path_buf(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+            },
         )
         .await;
         let queue = state.queue.clone();
@@ -590,7 +596,10 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+            },
         )
         .await;
         state
