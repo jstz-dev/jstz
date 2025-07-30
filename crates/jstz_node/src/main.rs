@@ -5,7 +5,6 @@ use clap::Parser;
 use env_logger::Env;
 use jstz_node::{RunMode, RunOptions};
 use jstz_utils::KeyPair;
-use tempfile::NamedTempFile;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
@@ -51,7 +50,7 @@ struct Args {
     preimages_dir: PathBuf,
 
     #[arg(long, default_value = DEFAULT_RUN_MODE)]
-    mode: RunMode,
+    mode: String,
 
     #[arg(long, default_value_t = DEFAULT_QUEUE_CAPACITY)]
     capacity: usize,
@@ -82,16 +81,11 @@ async fn main() -> anyhow::Result<()> {
                 kernel_log_path: args.kernel_log_path,
                 injector: parse_key_file(args.injector_key_file)
                     .context("failed to parse injector key file")?,
-                mode: args.mode,
-                capacity: args.capacity,
-                debug_log_path: args.debug_log_path.unwrap_or(
-                    NamedTempFile::new()
-                        .context("failed to create temporary debug log file")?
-                        .into_temp_path()
-                        .keep()
-                        .context("failed to convert temporary debug log file to path")?
-                        .to_path_buf(),
-                ),
+                mode: RunMode::new(
+                    Some(&args.mode),
+                    Some(args.capacity),
+                    args.debug_log_path,
+                )?,
             })
             .await
         }

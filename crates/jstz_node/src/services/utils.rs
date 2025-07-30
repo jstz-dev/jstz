@@ -6,7 +6,9 @@ use octez::OctezRollupClient;
 pub async fn get_mode(
     State(AppState { mode, .. }): State<AppState>,
 ) -> impl IntoResponse {
-    serde_json::to_string(&mode).unwrap().into_response()
+    serde_json::to_string(&mode.to_string())
+        .unwrap()
+        .into_response()
 }
 
 pub async fn worker_health(State(state): State<AppState>) -> impl IntoResponse {
@@ -25,7 +27,7 @@ impl StoreWrapper {
     pub fn new(mode: RunMode, rollup_client: OctezRollupClient, runtime_db: Db) -> Self {
         match mode {
             RunMode::Default => Self::Rollup(rollup_client),
-            RunMode::Sequencer => Self::Db(runtime_db),
+            RunMode::Sequencer { .. } => Self::Db(runtime_db),
         }
     }
 
@@ -116,7 +118,10 @@ pub(crate) mod tests {
         );
         matches!(store, StoreWrapper::Rollup(_));
         let store = StoreWrapper::new(
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+            },
             OctezRollupClient::new(String::new()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
