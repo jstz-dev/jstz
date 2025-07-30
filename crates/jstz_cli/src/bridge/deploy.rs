@@ -5,7 +5,7 @@ use crate::{
 use clap::{arg, Args};
 use jstz_proto::context::account::Addressable;
 use log::info;
-use std::path::PathBuf;
+use std::{path::PathBuf, str::FromStr};
 use tezos_crypto_rs::hash::ContractKt1Hash;
 
 use anyhow::Result;
@@ -108,9 +108,9 @@ impl DeployBridge {
         let client = cfg.octez_client(&network)?;
 
         // 1. Resolve addresses
-        let source = source.resolve_l1(&cfg, &network)?;
+        let source = source.resolve_l1(&cfg, &network).await?;
         let jstz_fa_token_address = jstz_fa_token.resolve(&cfg)?;
-        let fa_token_address = tezos_fa_token.resolve(&cfg, &network)?;
+        let fa_token_address = tezos_fa_token.resolve(&cfg, &network).await?;
         let fa_token_object = FaToken::from(&fa_token_address, fa_token_id);
 
         // 2. Deploy the FA ticketer
@@ -121,12 +121,16 @@ impl DeployBridge {
             format_ticket_content(ticket_id, ticket_content)?,
             total_ticket_supply
         );
-        let ticketer_address = client.originate_contract(
-            ticketer_name.as_str(),
-            &source.to_base58(),
-            FA_TICKETER,
-            &ticketer_storage,
-        )?;
+        let (ticketer_address, _) = client
+            .originate_contract(
+                ticketer_name.as_str(),
+                &source.to_base58(),
+                0.0,
+                &PathBuf::from_str(FA_TICKETER)?,
+                Some(&ticketer_storage),
+                Some(999.0),
+            )
+            .await?;
 
         info!(
             "FA Ticketer (alias: {}) deployed at address {}",
@@ -141,12 +145,16 @@ impl DeployBridge {
             ticketer_address,
             jstz_fa_token_address
         );
-        let bridge_address = client.originate_contract(
-            bridge_name.as_str(),
-            &source.to_base58(),
-            JSTZ_FA_BRIDGE,
-            &bridge_storage,
-        )?;
+        let (bridge_address, _) = client
+            .originate_contract(
+                bridge_name.as_str(),
+                &source.to_base58(),
+                0.0,
+                &PathBuf::from_str(JSTZ_FA_BRIDGE)?,
+                Some(&bridge_storage),
+                Some(999.0),
+            )
+            .await?;
 
         cfg.save_to_path(config_path)?;
 
@@ -155,6 +163,9 @@ impl DeployBridge {
             bridge_name, bridge_address
         );
 
-        Ok(ContractKt1Hash::from_base58_check(&bridge_address).unwrap())
+        Ok(
+            ContractKt1Hash::from_base58_check(&bridge_address.to_base58_check())
+                .unwrap(),
+        )
     }
 }

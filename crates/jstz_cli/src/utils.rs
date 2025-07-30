@@ -62,7 +62,7 @@ pub enum OriginatedOrAlias {
 }
 
 impl OriginatedOrAlias {
-    pub fn resolve(
+    pub async fn resolve(
         &self,
         cfg: &Config,
         network: &Option<NetworkName>,
@@ -71,7 +71,7 @@ impl OriginatedOrAlias {
             OriginatedOrAlias::Address(kt1) => Ok(kt1.clone()),
             OriginatedOrAlias::Alias(alias) => {
                 let address = cfg.octez_client(network)?
-                    .resolve_contract(alias).map_err(|_|user_error!(
+                    .resolve_contract(alias).await.map_err(|_|user_error!(
                         "Alias '{}' not found in octez-client. Please provide a valid address or alias.",
                         alias
                     ))?;

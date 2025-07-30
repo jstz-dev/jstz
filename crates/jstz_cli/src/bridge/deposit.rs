@@ -52,10 +52,12 @@ pub async fn exec(
             .call_contract(
                 &from,
                 NATIVE_BRIDGE_ADDRESS,
+                amount.deref().to_owned().try_into()?,
                 "deposit",
                 &format!("\"{}\"", &pkh),
-                amount.deref(),
+                Some(999.0),
             )
+            .await
             .is_err()
         {
             bail_user_error!("Failed to deposit XTZ. Please check whether the addresses and network are correct.");

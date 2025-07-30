@@ -5,7 +5,10 @@ use jstz_crypto::{
 };
 use jstz_proto::context::account::Address;
 use log::debug;
-use octez::OctezClient;
+use octez::r#async::{
+    client::{OctezClient, OctezClientConfigBuilder},
+    endpoint::Endpoint,
+};
 use serde::{Deserialize, Serialize};
 use serde_with::{DeserializeFromStr, SerializeDisplay};
 use std::{
@@ -180,7 +183,7 @@ impl AddressOrAlias {
         }
     }
 
-    pub fn resolve_l1(
+    pub async fn resolve_l1(
         &self,
         cfg: &Config,
         network: &Option<NetworkName>,
@@ -190,14 +193,15 @@ impl AddressOrAlias {
             AddressOrAlias::Alias(alias) => {
                 let alias_info = cfg
                     .octez_client(network)?
-                    .alias_info(alias)
-                    .map_err(|_|
+                    .show_address(alias, false).await
+                    .map_err(|e| {
+                        println!("{e:?}");
                         user_error!(
                         "Alias '{}' not found in octez-client. Please provide a valid address or alias.",
                         alias
-                    ))?;
+                    )})?;
 
-                let address = Address::from_base58(&alias_info.address)
+                let address = Address::from_base58(&alias_info.hash.to_string())
                     .map_err(|e| user_error!("{}", e))?;
 
                 Ok(address)
@@ -405,16 +409,19 @@ impl Config {
         network_name: &Option<NetworkName>,
     ) -> Result<OctezClient> {
         let network = self.network(network_name)?;
+        let mut builder = OctezClientConfigBuilder::new(Endpoint::from_str(
+            &network.octez_node_rpc_endpoint,
+        )?)
+        .set_disable_unsafe_disclaimer(true);
 
-        Ok(OctezClient {
-            octez_client_bin: self
-                .octez_path
-                .as_ref()
-                .map(|path| path.join("octez-client")),
-            octez_client_dir: self.octez_client_dir.clone(),
-            endpoint: network.octez_node_rpc_endpoint,
-            disable_disclaimer: true,
-        })
+        if let Some(p) = &self.octez_client_dir {
+            builder = builder.set_base_dir(p.clone());
+        }
+        if let Some(p) = &self.octez_path {
+            builder = builder.set_binary_path(p.join("octez-client"));
+        }
+
+        Ok(OctezClient::new(builder.build()?))
     }
 
     pub fn jstz_client(&self, network_name: &Option<NetworkName>) -> Result<JstzClient> {

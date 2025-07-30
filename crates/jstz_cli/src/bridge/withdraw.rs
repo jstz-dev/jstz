@@ -23,7 +23,7 @@ pub async fn exec(
         assert_sandbox_running(JSTZD_SERVER_BASE_URL).await?;
         sandbox_resolve_l1(to, JSTZD_SERVER_BASE_URL).await?
     } else {
-        to.resolve_l1(&cfg, &network)?
+        to.resolve_l1(&cfg, &network).await?
     };
 
     debug!("resolved `to` -> {}", &receiver.to_base58());
