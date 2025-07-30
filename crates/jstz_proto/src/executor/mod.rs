@@ -587,13 +587,16 @@ mod tests {
         let receipt =
             execute_operation(&mut host, &mut tx, signed_resp_op, &ticketer, &injector)
                 .await;
-        assert!(matches!(
-            receipt,
+        match receipt {
             Receipt {
                 result: ReceiptResult::Failed(s),
                 ..
+            } => {
+                assert_eq!(s, "Ed25519 error: signature error");
             }
-            if s == "Ed25519 error: signature error".to_string()
-        ));
+            v => {
+                panic!("bad: {v:?}")
+            }
+        }
     }
 }
