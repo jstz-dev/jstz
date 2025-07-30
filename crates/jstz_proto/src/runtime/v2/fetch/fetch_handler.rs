@@ -744,6 +744,7 @@ mod test {
     use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 
     use jstz_core::{
+        event,
         host::JsHostRuntime,
         kv::{Storage, Transaction},
     };
@@ -758,17 +759,14 @@ mod test {
     use url::Url;
 
     use super::ProtoFetchHandler;
+    use crate::runtime::v2::{
+        fetch::fetch_handler::process_and_dispatch_request, oracle::OracleRequest,
+        protocol_context::ProtocolContext,
+    };
     use crate::runtime::ParsedCode;
     use crate::{
         context::account::{Account, Address},
         tests::DebugLogSink,
-    };
-    use crate::{
-        event,
-        runtime::v2::{
-            fetch::fetch_handler::process_and_dispatch_request, oracle::OracleRequest,
-            protocol_context::ProtocolContext,
-        },
     };
     use crate::{
         runtime::v2::{

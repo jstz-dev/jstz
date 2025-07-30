@@ -1,14 +1,10 @@
-#![allow(unused)]
-use crate::runtime::v2::oracle::OracleRequest;
-use bincode::{Decode, Encode};
-use derive_more::From;
-use jstz_core::host::HostRuntime;
+use crate::host::HostRuntime;
 use nom::{bytes::complete::tag, InputTake};
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 use tezos_smart_rollup::prelude::debug_msg;
 
 /// Jstz Events
-pub trait Event: PartialEq + Serialize {
+pub trait Event: PartialEq + Serialize + DeserializeOwned {
     fn tag() -> &'static str;
 }
 
@@ -18,8 +14,8 @@ pub struct EventPublisher;
 
 impl EventPublisher {
     /// Jstz events are published as single line in the kernel debug log with the
-    /// schema "[JSTZ]<json payload>
-    pub(crate) fn publish_event<R, E: Event>(rt: &R, event: &E) -> Result<()>
+    /// schema "[Event::tag()]<json payload>\n"
+    pub fn publish_event<R, E: Event>(rt: &R, event: &E) -> Result<()>
     where
         R: HostRuntime,
     {
@@ -30,7 +26,7 @@ impl EventPublisher {
     }
 }
 
-pub fn decode_line<'de, E: Event + Deserialize<'de>>(input: &'de str) -> Result<E> {
+pub fn decode_line<E: Event>(input: &str) -> Result<E> {
     let input = input.trim();
     let str = parse_line::<E>(input)?;
     Ok(serde_json::from_str(str).map_err(DecodeError::from)?)
@@ -72,7 +68,7 @@ fn truncate(input: &str, truncate_len: usize) -> String {
     if input.len() > truncate_len {
         let remaining = input.len() - truncate_len;
         let substr = input.take(truncate_len);
-        format!("{}[{}..]", substr, remaining)
+        format!("{substr}[{remaining}..]")
     } else {
         input.to_string()
     }
@@ -106,21 +102,14 @@ impl nom::error::ParseError<&str> for NomError {
 #[cfg(test)]
 mod test {
 
-    use http::HeaderMap;
+    use crate::event::{decode_line, Event, EventPublisher, NomError};
+    use bincode::{Decode, Encode};
     use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
     use nom::error::ParseError;
-    use serde_json::json;
+    use serde::{Deserialize, Serialize};
     use std::{fmt::Display, str::FromStr};
     use tezos_smart_rollup_mock::MockHost;
     use url::Url;
-
-    use crate::{
-        event::{decode_line, DecodeError, Event, EventError, EventPublisher, NomError},
-        runtime::v2::{
-            fetch::http::{Body, Request},
-            oracle::OracleRequest,
-        },
-    };
 
     pub struct Sink(pub Vec<u8>);
 
@@ -140,6 +129,21 @@ mod test {
         }
     }
 
+    #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, Encode, Decode)]
+    pub struct MockEvent {
+        pub id: u64,
+        pub caller: PublicKeyHash,
+        pub gas_limit: u64,
+        #[bincode(with_serde)]
+        pub url: Url,
+    }
+
+    impl Event for MockEvent {
+        fn tag() -> &'static str {
+            "MOCK"
+        }
+    }
+
     #[test]
     fn test_publish_decode_roundtrip() {
         let mut sink = Sink(Vec::new());
@@ -149,41 +153,33 @@ mod test {
                 &mut sink.0,
             )
         });
-        let event = OracleRequest {
+        let event = MockEvent {
             id: 1,
             caller: PublicKeyHash::from_base58("tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb")
                 .unwrap(),
             gas_limit: 100,
-            timeout: 21,
-            request: Request {
-                method: "POST".into(),
-                url: Url::from_str("http://example.com/foo").unwrap(),
-                headers: vec![],
-                body: Some(Body::Vector(
-                    serde_json::to_vec(&json!({ "message": "hello"})).unwrap(),
-                )),
-            },
+            url: Url::from_str("http://example.com/foo").unwrap(),
         };
-        EventPublisher::publish_event(&mut host, &event);
+        EventPublisher::publish_event(&host, &event).unwrap();
         let head_line = sink.lines().first().unwrap().clone();
         assert_eq!(
             head_line,
-            r#"[ORACLE]{"id":1,"caller":"tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb","gas_limit":100,"timeout":21,"request":{"method":[80,79,83,84],"url":"http://example.com/foo","headers":[],"body":{"Vector":[123,34,109,101,115,115,97,103,101,34,58,34,104,101,108,108,111,34,125]}}}"#
+            r#"[MOCK]{"id":1,"caller":"tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb","gas_limit":100,"url":"http://example.com/foo"}"#
         );
-        let decoded = decode_line(&head_line).unwrap();
+        let decoded = decode_line::<MockEvent>(&head_line).unwrap();
         assert_eq!(event, decoded)
     }
 
     #[test]
     fn fails_decode_on_invalid_line() {
-        let decoded = decode_line::<OracleRequest>("invalid line").unwrap_err();
+        let decoded = decode_line::<MockEvent>("invalid line").unwrap_err();
         assert_eq!(
             decoded.to_string(),
             "Error while decoding event: Parsing Error: NomError(\"Nom decode failed: kind 'Tag' on input 'invalid line'\")"
         );
 
         let decoded =
-            decode_line::<OracleRequest>(r#"[ORACLE]{"message": "boom"}"#).unwrap_err();
+            decode_line::<MockEvent>(r#"[MOCK]{"message": "boom"}"#).unwrap_err();
         assert_eq!(
             decoded.to_string(),
             "Error while decoding event: missing field `id` at line 1 column 19"

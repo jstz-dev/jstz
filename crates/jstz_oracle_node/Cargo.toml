@@ -30,6 +30,7 @@ log.workspace = true
 bincode.workspace = true
 serde_bytes.workspace = true
 url.workspace = true
+jstz_core = { path = "../jstz_core" }
 jstz_utils = { path = "../jstz_utils" }
 jstz_proto = { path = "../jstz_proto"}
 jstz_crypto = { path = "../jstz_crypto" }

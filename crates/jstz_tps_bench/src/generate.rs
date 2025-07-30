@@ -22,7 +22,7 @@ use tezos_smart_rollup::inbox::ExternalMessageFrame;
 use tezos_smart_rollup::types::SmartRollupAddress;
 use tezos_smart_rollup::utils::inbox::file::{InboxFile, Message};
 
-const FA2: &str = include_str!("../../fa2.js");
+const FA2: &str = include_str!("../fa2.js");
 
 const DEFAULT_GAS_LIMIT: u32 = 100_000;
 

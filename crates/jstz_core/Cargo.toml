@@ -39,3 +39,4 @@ expect-test.workspace = true
 jstz_crypto = { path = "../jstz_crypto" } 
 tezos-smart-rollup-mock.workspace = true
 tokio.workspace = true
+url.workspace = true
