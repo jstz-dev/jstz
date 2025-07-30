@@ -202,6 +202,7 @@ git = "https://github.com/jstz-dev/deno"
 branch = "v2.1.10-jstz"
 
 [workspace.dependencies.octez-riscv]
+# Fork with some custom patches that expose APIs. Will be replaced once the changes are upstreamed.
 git = "https://github.com/huancheng-trili/riscv-pvm"
 rev = "6b530863daa11cb4e6ea0ae9202a73f44c0d2d48"
 
