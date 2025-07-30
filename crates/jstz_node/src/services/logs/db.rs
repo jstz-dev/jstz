@@ -3,7 +3,7 @@ use std::fs;
 
 use super::Line;
 use anyhow::{anyhow, Result};
-use jstz_api::js_log::LogLevel;
+use jstz_core::log_record::LogLevel;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::{context::account::Address, js_logger::LogRecord, logger::RequestEvent};
 use r2d2::{Pool, PooledConnection};
