@@ -14,11 +14,11 @@ use anyhow::Result;
 use regex::Regex;
 use tokio::sync::mpsc;
 
-use jstz_utils::tailed_file::TailedFile;
+use crate::tailed_file::TailedFile;
 use std::time::Duration;
 use tokio_util::sync::CancellationToken;
 
-pub struct FilteredLogStream {
+pub(crate) struct FilteredLogStream {
     rx: mpsc::Receiver<Result<String>>,
     cancel: CancellationToken,
 }
