@@ -1,5 +1,5 @@
 use crate::handle_message;
-use crate::inbox::read_message;
+use crate::inbox::{read_message, ParsedInboxMessage};
 use jstz_core::kv::Transaction;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
@@ -12,9 +12,15 @@ pub fn run(rt: &mut impl Runtime) {
         let mut tx = Transaction::default();
         tx.begin();
         if let Some(message) = read_message(rt, &ticketer) {
-            handle_message(rt, message, &ticketer, &mut tx, &injector)
-                .await
-                .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
+            let _ = rt.mark_for_reboot();
+            match message {
+                ParsedInboxMessage::JstzMessage(message) => {
+                    handle_message(rt, message, &ticketer, &mut tx, &injector)
+                        .await
+                        .unwrap_or_else(|err| debug_msg!(rt, "[🔴] {err:?}\n"));
+                }
+                ParsedInboxMessage::LevelInfo(_) => (),
+            }
         }
         if let Err(commit_error) = tx.commit(rt) {
             debug_msg!(rt, "Failed to commit transaction: {commit_error:?}\n");

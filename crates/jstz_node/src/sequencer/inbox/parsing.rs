@@ -7,7 +7,7 @@ use jstz_core::{host::WriteDebug, BinEncodable};
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use jstz_proto::operation::{
-    internal::{Deposit, FaDeposit},
+    internal::{Deposit, FaDeposit, InboxId},
     InternalOperation, SignedOperation,
 };
 use jstz_proto::{context::account::Address, Result};
@@ -65,7 +65,7 @@ const NATIVE_TICKET_CONTENT: MichelsonOption<MichelsonBytes> = MichelsonOption(N
 /// * `jstz_rollup_address` - The smart rollup address
 pub fn parse_inbox_message_hex(
     logger: &impl WriteDebug,
-    inbox_id: u32,
+    inbox_id: InboxId,
     inbox_msg: &str,
     ticketer: &ContractKt1Hash,
     jstz_rollup_address: &SmartRollupHash,
@@ -76,7 +76,7 @@ pub fn parse_inbox_message_hex(
 
 pub fn parse_inbox_message(
     logger: &impl WriteDebug,
-    inbox_id: u32,
+    inbox_id: InboxId,
     inbox_msg: &[u8],
     ticketer: &ContractKt1Hash,
     jstz_rollup_address: &SmartRollupHash,
@@ -178,7 +178,7 @@ fn read_transfer(
     logger: &impl WriteDebug,
     transfer: Transfer<RollupType>,
     ticketer: &ContractKt1Hash,
-    inbox_id: u32,
+    inbox_id: InboxId,
 ) -> Option<Message> {
     logger.write_debug("Internal message: transfer\n");
     match transfer.payload {
@@ -233,7 +233,7 @@ pub fn try_parse_contract(contract: &Contract) -> Result<Address> {
 }
 
 pub fn try_parse_fa_deposit(
-    inbox_id: u32,
+    inbox_id: InboxId,
     ticket: FA2_1Ticket,
     receiver: MichelsonContract,
     proxy_contract: Option<MichelsonContract>,
@@ -284,7 +284,7 @@ mod test {
     use jstz_core::host::WriteDebug;
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_proto::context::account::{Address, Addressable};
-    use jstz_proto::operation::internal::FaDeposit;
+    use jstz_proto::operation::internal::{FaDeposit, InboxId};
     use jstz_proto::operation::{Content, InternalOperation, Operation};
     use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
     use tezos_smart_rollup::michelson::ticket::{FA2_1Ticket, Ticket};
@@ -314,9 +314,17 @@ mod test {
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
         let run_function = "0100c3ea4c18195bcfac262dcb29e3d803ae74681739000000004000000000000000b084122920ce655297b86d29e0115ea7b05fe12a22044c8aeaee0fc506915e9a3d955995aec5095840b744deb77470d6d0388042f06f6264e1b1aeec371b100f00000000200000000000000073c58fbff04bb1bc965986ad626d2a233e630ea253d49e1714a0bc9610c1ef450200000000000000010000002c000000000000006a73747a3a2f2f4b543145573235576b5343616b6f686d436a58486363674d61325a5567564759634851372f03000000000000004745540000000000000000007064080000000000";
 
-        let message =
-            parse_inbox_message_hex(&MockLogger, 0, run_function, &ticketer, &jstz)
-                .expect("Failed to parse inbox message");
+        let message = parse_inbox_message_hex(
+            &MockLogger,
+            InboxId {
+                l1_level: 1,
+                l1_message_id: 1,
+            },
+            run_function,
+            &ticketer,
+            &jstz,
+        )
+        .expect("Failed to parse inbox message");
 
         let ParsedInboxMessage::JstzMessage(Message::External(signed)) = message else {
             panic!("Expected external message, got internal message");
@@ -337,10 +345,17 @@ mod test {
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
         let start_level = "0001";
 
-        assert!(
-            parse_inbox_message_hex(&MockLogger, 0, start_level, &ticketer, &jstz)
-                .is_some()
+        assert!(parse_inbox_message_hex(
+            &MockLogger,
+            InboxId {
+                l1_level: 1,
+                l1_message_id: 1
+            },
+            start_level,
+            &ticketer,
+            &jstz
         )
+        .is_some())
     }
 
     #[test]
@@ -349,8 +364,17 @@ mod test {
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
         let deposit = "0000050507070a000000160000c4ecf33f52c7b89168cfef8f350818fee1ad08e807070a000000160146d83d8ef8bce4d8c60a96170739c0269384075a00070707070000030600b0d40354267463f8cf2844e4d8b20a76f0471bcb2137fd0002298c03ed7d454a101eb7022bc95f7e5f41ac78c3ea4c18195bcfac262dcb29e3d803ae74681739";
 
-        let message = parse_inbox_message_hex(&MockLogger, 0, deposit, &ticketer, &jstz)
-            .expect("Failed to parse inbox message");
+        let message = parse_inbox_message_hex(
+            &MockLogger,
+            InboxId {
+                l1_level: 1,
+                l1_message_id: 1,
+            },
+            deposit,
+            &ticketer,
+            &jstz,
+        )
+        .expect("Failed to parse inbox message");
 
         let ParsedInboxMessage::JstzMessage(Message::Internal(transfer)) = message else {
             panic!("Expected external message, got internal message");
@@ -386,7 +410,10 @@ mod test {
         .unwrap();
         let receiver = jstz_pkh_to_michelson(&jstz_mock::account1());
         let proxy_contract = Some(jstz_sfh_to_michelson(&jstz_mock::sf_account1()));
-        let inbox_id = 41717;
+        let inbox_id = InboxId {
+            l1_level: 1,
+            l1_message_id: 41717,
+        };
         let ticket_hash = ticket.hash().unwrap();
 
         let fa_deposit = try_parse_fa_deposit(inbox_id, ticket, receiver, proxy_contract)
@@ -415,7 +442,10 @@ mod test {
         .unwrap();
         let receiver = jstz_pkh_to_michelson(&jstz_mock::account2());
         let proxy_contract = Some(jstz_pkh_to_michelson(&jstz_mock::account1()));
-        let inbox_id = 41717;
+        let inbox_id = InboxId {
+            l1_level: 1,
+            l1_message_id: 41717,
+        };
 
         let fa_deposit = try_parse_fa_deposit(inbox_id, ticket, receiver, proxy_contract);
         assert!(fa_deposit

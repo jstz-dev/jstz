@@ -1,6 +1,9 @@
 use jstz_core::{host::WriteDebug, BinEncodable};
 use jstz_proto::context::account::Address;
-use jstz_proto::operation::{internal::Deposit, InternalOperation, SignedOperation};
+use jstz_proto::operation::{
+    internal::{Deposit, InboxId},
+    InternalOperation, SignedOperation,
+};
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tezos_smart_rollup::inbox::InfoPerLevel;
@@ -20,7 +23,7 @@ use crate::parsing::try_parse_fa_deposit;
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = InternalOperation;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),
@@ -38,28 +41,26 @@ pub type RollupType = MichelsonOr<MichelsonNativeDeposit, MichelsonFaDeposit>;
 const NATIVE_TICKET_ID: u32 = 0_u32;
 const NATIVE_TICKET_CONTENT: MichelsonOption<MichelsonBytes> = MichelsonOption(None);
 
+// We reach None in 3 cases
+// 1. No more inputs
+// 2. Input targetting the wrong rollup
+// 3. Parsing failures
 pub fn read_message(
     rt: &mut impl Runtime,
     ticketer: &ContractKt1Hash,
-) -> Option<Message> {
+) -> Option<ParsedInboxMessage> {
     let input = rt.read_input().ok()??;
-    let _ = rt.mark_for_reboot();
     let jstz_rollup_address = rt.reveal_metadata().address();
-    match parse_inbox_message(
-        rt,
-        input.id,
-        input.as_ref(),
-        ticketer,
-        &jstz_rollup_address,
-    )? {
-        ParsedInboxMessage::JstzMessage(message) => Some(message),
-        _ => None,
-    }
+    let inbox_id = InboxId {
+        l1_level: input.level,
+        l1_message_id: input.id,
+    };
+    parse_inbox_message(rt, inbox_id, input.as_ref(), ticketer, &jstz_rollup_address)
 }
 
 pub fn parse_inbox_message(
     logger: &impl WriteDebug,
-    inbox_id: u32,
+    inbox_id: InboxId,
     inbox_msg: &[u8],
     ticketer: &ContractKt1Hash,
     jstz_rollup_address: &SmartRollupHash,
@@ -161,7 +162,7 @@ fn read_transfer(
     logger: &impl WriteDebug,
     transfer: Transfer<RollupType>,
     ticketer: &ContractKt1Hash,
-    inbox_id: u32,
+    inbox_id: InboxId,
 ) -> Option<Message> {
     logger.write_debug("Internal message: transfer\n");
     match transfer.payload {
@@ -203,12 +204,13 @@ fn read_external_message(
     Some(msg)
 }
 
-#[derive(derive_more::From)]
+#[derive(derive_more::From, Debug, PartialEq, Eq, Clone)]
 pub enum ParsedInboxMessage {
     JstzMessage(Message),
     LevelInfo(LevelInfo),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum LevelInfo {
     // Start of level
     Start,
@@ -229,6 +231,8 @@ mod test {
     };
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
     use tezos_smart_rollup::types::SmartRollupAddress;
+
+    use crate::inbox::ParsedInboxMessage;
 
     use super::{read_message, InternalMessage, Message};
 
@@ -254,11 +258,11 @@ mod test {
         let deposit = MockNativeDeposit::default();
         let ticketer = host.get_ticketer();
         host.add_internal_message(&deposit);
-        if let Message::Internal(InternalMessage::Deposit(internal::Deposit {
-            amount,
-            receiver,
-            ..
-        })) =
+        if let ParsedInboxMessage::JstzMessage(Message::Internal(
+            InternalMessage::Deposit(internal::Deposit {
+                amount, receiver, ..
+            }),
+        )) =
             read_message(host.rt(), &ticketer).expect("Expected message but non received")
         {
             assert_eq!(amount, 100);
@@ -314,12 +318,14 @@ mod test {
         let ticketer = host.get_ticketer();
         host.add_internal_message(&fa_deposit);
 
-        if let Message::Internal(InternalMessage::FaDeposit(internal::FaDeposit {
-            amount,
-            receiver,
-            proxy_smart_function,
-            ..
-        })) = read_message(host.rt(), &ticketer).expect("Expected FA message")
+        if let ParsedInboxMessage::JstzMessage(Message::Internal(
+            InternalMessage::FaDeposit(internal::FaDeposit {
+                amount,
+                receiver,
+                proxy_smart_function,
+                ..
+            }),
+        )) = read_message(host.rt(), &ticketer).expect("Expected FA message")
         {
             assert_eq!(300, amount);
             assert_eq!(fa_deposit.receiver.to_b58check(), receiver.to_base58());
