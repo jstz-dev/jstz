@@ -11,12 +11,14 @@ license-file.workspace = true
 description.workspace = true
 
 [dependencies]
+anyhow.workspace = true
 base64.workspace = true
 http.workspace = true
 bincode.workspace = true
 bip39.workspace = true
 regex.workspace = true
 serde_json.workspace = true
+jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
 tezos-smart-rollup = { workspace = true, features =  ["utils"] }
