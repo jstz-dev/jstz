@@ -2953,6 +2953,8 @@ dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
  "bytes",
+ "clap 4.5.20",
+ "env_logger",
  "futures",
  "futures-core",
  "futures-util",
