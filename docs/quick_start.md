@@ -231,27 +231,17 @@ The Jstz dev wallet supports only the Chrome web browser.
 
 :::
 
-1. Download the source code for the dev wallet:
+1. Download the [latest release](https://github.com/jstz-dev/dev-wallet/releases/latest) of the wallet and unpack it.
 
-   ```bash
-   git clone https://github.com/jstz-dev/dev-wallet.git
-   ```
+2. In Chrome, open the extensions page at `chrome://extensions`.
 
-1. Go into the repository, install the dependencies, and build the wallet:
+3. At the top right of the page, use the radio button to enable **Developer mode**.
 
-   ```bash
-   cd dev-wallet && pnpm i && pnpm build
-   ```
-
-1. In Chrome, open the extensions page at `chrome://extensions`.
-
-1. At the top right of the page, use the radio button to enable **Developer mode**.
-
-1. Click **Load unpacked**, select the `dist` folder of the `dev-wallet` repository, and then click **Select** to install the extension from the built files.
+4. Click **Load unpacked**, select the unpacked folder of the `dev-wallet`, and then click **Select** to install the extension from the built files.
 
    The Jstz dev wallet appears in the list of extensions in the browser.
 
-1. Create an account in the dev wallet by clicking the extension icon and then clicking **Generate account**.
+5. Create an account in the dev wallet by clicking the extension icon and then clicking **Generate account**.
 
 Now when you click the extension, it shows your account.
 This account is managed by the extension and is not linked to the account that you used to call the smart function on the command line.
