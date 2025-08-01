@@ -243,6 +243,8 @@ The Jstz dev wallet supports only the Chrome web browser.
 
 1. Create an account in the dev wallet by clicking the extension icon and then clicking **Generate account**.
 
+6. In the **Network** drop-down list, select `http://localhost:8933`, which is the address of the local sandbox.
+
 Now when you click the extension, it shows your account.
 This account is managed by the extension and is not linked to the account that you used to call the smart function on the command line.
 
@@ -255,10 +257,16 @@ This account is managed by the extension and is not linked to the account that y
 Smart functions can provide a secure, transparent backend for web applications.
 Follow these steps to run a sample web application that uses your smart function as a backend:
 
-1. On the same system as you are running the Jstz sandbox, build and run the `web-call-to-jstz` sample application from the `dev-wallet` repository:
+1. On the same system as you are running the Jstz sandbox, clone the `dev-wallet` repository:
 
    ```sh
-   cd examples/web-call-to-jstz
+   git clone https://github.com/jstz-dev/dev-wallet.git
+   ```
+
+1. Build and run the `web-call-to-jstz` sample application from the `dev-wallet` repository:
+
+   ```sh
+   cd dev-wallet/apps/examples/web-call-to-jstz
    pnpm i
    pnpm dev
    ```
