@@ -48,3 +48,5 @@ crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 # Heaptrack raw data
 *.zst
 
+*.log
+inbox.json
