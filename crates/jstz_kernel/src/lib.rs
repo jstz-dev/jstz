@@ -16,6 +16,9 @@ pub mod parsing;
 #[cfg(feature = "riscv_kernel")]
 pub mod riscv_kernel;
 
+#[cfg(feature = "riscv_wpt_test_kernel")]
+pub mod riscv_wpt_test_kernel;
+
 #[cfg(not(feature = "riscv_kernel"))]
 mod wasm_kernel;
 

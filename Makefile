@@ -79,6 +79,17 @@ riscv-pvm-kernel:
 		--release \
 		--target riscv64gc-unknown-linux-musl
 
+.PHONY: riscv-wpt-test-kernel
+riscv-wpt-test-kernel:
+	@unset NIX_LDFLAGS && RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a \
+		RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs \
+		cargo build \
+		-p jstz_kernel \
+		--no-default-features \
+		--features riscv_wpt_test_kernel \
+		--release \
+		--target riscv64gc-unknown-linux-musl
+
 .PHONY: test
 test: test-unit test-int
 
@@ -145,3 +156,7 @@ lint:
 .PHONY: run-manual-test
 run-manual-test: riscv-pvm-kernel
 	@riscv-sandbox run --timings --address sr1FXevDx86EyU1BBwhn94gtKvVPTNwoVxUC --inbox-file manual_test/inbox.json --input target/riscv64gc-unknown-linux-musl/release/kernel-executable
+
+.PHONY: run-riscv-wpt-test
+run-riscv-wpt-test: riscv-wpt-test-kernel
+	@riscv-sandbox run --timings --address sr1FXevDx86EyU1BBwhn94gtKvVPTNwoVxUC --inbox-file manual_test/inbox.json --input target/riscv64gc-unknown-linux-musl/release/wpt-test-kernel-executable
