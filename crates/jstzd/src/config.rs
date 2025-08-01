@@ -1,5 +1,5 @@
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::secret_key::SecretKey;
@@ -205,7 +205,7 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
 fn build_jstz_node_config(
     config: UserJstzNodeConfig,
     rollup_rpc_endpoint: &Endpoint,
-    kernel_debug_file_path: &PathBuf,
+    kernel_debug_file_path: &Path,
 ) -> Result<JstzNodeConfig> {
     let jstz_node_rpc_endpoint =
         Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
@@ -909,7 +909,7 @@ mod tests {
                 debug_log_path: PathBuf::from_str("/tmp/log").unwrap(),
                 runtime_env: RuntimeEnv::Riscv {
                     kernel_path: PathBuf::from_str("/riscv/kernel").unwrap(),
-                    rollup_address: rollup_address
+                    rollup_address,
                 },
             }
         );
