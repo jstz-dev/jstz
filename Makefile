@@ -14,7 +14,7 @@ endif
 JSTZD_KERNEL_PATH := crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 
 .PHONY: all
-all: build test build-v2 test-v2 check
+all: build-v2 test-v2 check
 
 .PHONY: build
 build: build-jstzd-kernel
