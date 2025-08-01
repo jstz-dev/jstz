@@ -3,7 +3,10 @@ use std::path::PathBuf;
 use anyhow::Context;
 use clap::Parser;
 use env_logger::Env;
-use jstz_node::{RunMode, RunOptions};
+use jstz_node::{
+    config::{RunModeBuilder, RunModeType},
+    RunOptions,
+};
 use jstz_utils::KeyPair;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
@@ -50,7 +53,7 @@ struct Args {
     preimages_dir: PathBuf,
 
     #[arg(long, default_value = DEFAULT_RUN_MODE)]
-    mode: String,
+    mode: RunModeType,
 
     #[arg(long, default_value_t = DEFAULT_QUEUE_CAPACITY)]
     capacity: usize,
@@ -73,6 +76,11 @@ async fn main() -> anyhow::Result<()> {
                 args.rollup_node_rpc_addr, args.rollup_node_rpc_port
             ));
 
+            let mut run_mode_builder =
+                RunModeBuilder::new(args.mode).with_capacity(args.capacity)?;
+            if let Some(path) = args.debug_log_path {
+                run_mode_builder = run_mode_builder.with_debug_log_path(path)?;
+            }
             jstz_node::run(RunOptions {
                 addr: args.addr,
                 port: args.port,
@@ -81,11 +89,7 @@ async fn main() -> anyhow::Result<()> {
                 kernel_log_path: args.kernel_log_path,
                 injector: parse_key_file(args.injector_key_file)
                     .context("failed to parse injector key file")?,
-                mode: RunMode::new(
-                    Some(&args.mode),
-                    Some(args.capacity),
-                    args.debug_log_path,
-                )?,
+                mode: run_mode_builder.build()?,
             })
             .await
         }
