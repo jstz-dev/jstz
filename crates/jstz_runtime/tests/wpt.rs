@@ -284,6 +284,9 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
         }
     }
 
+    //println!("source: {}", source);
+    //eprintln!("source: {}", source);
+
     let mut rt = init_runtime(&mut host, &mut tx);
 
     // Somehow each `execute_script` call has some strange side effect such that the global
@@ -496,9 +499,7 @@ async fn dump_stats(
     Ok(())
 }
 
-#[cfg_attr(feature = "skip-wpt", ignore)]
-#[tokio::test]
-async fn test_wpt() -> anyhow::Result<()> {
+pub async fn run_wpt_tests() -> anyhow::Result<()> {
     let mut filter = TestFilter::default();
     let deno_report = DenoReport::load(
         Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/deno_report.json"),
@@ -524,5 +525,12 @@ async fn test_wpt() -> anyhow::Result<()> {
     if let Ok(v) = std::env::var("STATS_PATH") {
         dump_stats(deno_report.stats(), report.stats(), &v).await?;
     }
+    Ok(())
+}
+
+#[cfg_attr(feature = "skip-wpt", ignore)]
+#[tokio::test]
+async fn test_wpt() -> anyhow::Result<()> {
+    run_wpt_tests().await?;
     Ok(())
 }
