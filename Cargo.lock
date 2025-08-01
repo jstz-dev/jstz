@@ -3062,11 +3062,13 @@ dependencies = [
 name = "jstz_tps_bench"
 version = "0.1.1-alpha.3"
 dependencies = [
+ "anyhow",
  "base64 0.21.7",
  "bincode 2.0.0-rc.3",
  "bip39",
  "clap 4.5.20",
  "http 1.1.0",
+ "jstz_core",
  "jstz_crypto",
  "jstz_proto",
  "regex",
