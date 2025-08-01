@@ -75,7 +75,7 @@ async fn get_account(
 }
 
 pub(crate) async fn get_account_nonce(
-    store: StoreWrapper,
+    store: &StoreWrapper,
     address: &str,
 ) -> ServiceResult<Option<Nonce>> {
     let key = construct_accounts_key(address);
@@ -110,7 +110,7 @@ async fn get_nonce(
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
     let store = StoreWrapper::new(mode, rollup_client, runtime_db);
-    let account_nonce = get_account_nonce(store, &address).await?;
+    let account_nonce = get_account_nonce(&store, &address).await?;
     match account_nonce {
         Some(nonce) => Ok(Json(nonce)),
         None => Err(ServiceError::NotFound)?,
@@ -421,7 +421,7 @@ mod tests {
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
-        assert!(super::get_account_nonce(store, user_account_hash)
+        assert!(super::get_account_nonce(&store, user_account_hash)
             .await
             .is_ok_and(|v| matches!(v.unwrap(), Nonce(42))));
 
@@ -430,7 +430,7 @@ mod tests {
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
-        assert!(super::get_account_nonce(store, smart_function_hash)
+        assert!(super::get_account_nonce(&store, smart_function_hash)
             .await
             .is_ok_and(|v| matches!(v.unwrap(), Nonce(50))));
 
@@ -439,7 +439,7 @@ mod tests {
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
-        assert!(super::get_account_nonce(store, "bad_hash")
+        assert!(super::get_account_nonce(&store, "bad_hash")
             .await
             .is_ok_and(|v| v.is_none()));
 

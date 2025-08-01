@@ -44,8 +44,8 @@ type HexEncodedOperationHash = String;
 // Given a large operation, encode it into preimages and store them in the rollup's preimages directory
 async fn prepare_rlp_operation(
     operation: &SignedOperation,
-    signer: KeyPair,
-    store: StoreWrapper,
+    signer: &KeyPair,
+    store: &StoreWrapper,
     rollup_preimages_dir: &path::Path,
 ) -> ServiceResult<SignedOperation> {
     let reveal_type = operation
@@ -79,7 +79,7 @@ async fn prepare_rlp_operation(
         .await?
         .unwrap_or_default();
     let rlp_operation = Operation {
-        public_key,
+        public_key: public_key.clone(),
         nonce,
         content: Content::new_reveal_large_payload(
             root_hash,
@@ -96,8 +96,8 @@ async fn prepare_rlp_operation(
 // Encode an operation. if the operation is too large, encode it into a reveal large payload operation
 async fn encode_operation(
     operation: SignedOperation,
-    injector: KeyPair,
-    store: StoreWrapper,
+    injector: &KeyPair,
+    store: &StoreWrapper,
     rollup_preimages_dir: &path::Path,
 ) -> ServiceResult<(SignedOperation, Vec<u8>)> {
     let encoded_op = operation
@@ -150,7 +150,7 @@ async fn inject(
 ) -> ServiceResult<()> {
     let store = StoreWrapper::new(mode.clone(), rollup_client.clone(), runtime_db);
     let (operation, encoded_operation) =
-        encode_operation(operation, injector, store, &rollup_preimages_dir).await?;
+        encode_operation(operation, &injector, &store, &rollup_preimages_dir).await?;
     match mode {
         RunMode::Default => {
             inject_rollup_message(encoded_operation, &rollup_client).await?;
@@ -374,7 +374,8 @@ mod tests {
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
         let store = StoreWrapper::Rollup(client);
-        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
+        let result =
+            encode_operation(operation, &key_pair, &store, temp_dir.path()).await;
         assert!(result.is_ok());
     }
 
@@ -401,7 +402,8 @@ mod tests {
         }));
         let key_pair = KeyPair(pk, sk);
         let store = StoreWrapper::Rollup(client);
-        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
+        let result =
+            encode_operation(operation, &key_pair, &store, temp_dir.path()).await;
         assert!(result.is_ok());
         let dir_size = get_dir_size(temp_dir.path());
         assert!(
@@ -422,7 +424,8 @@ mod tests {
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
         let store = StoreWrapper::Rollup(client);
-        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
+        let result =
+            encode_operation(operation, &key_pair, &store, temp_dir.path()).await;
         assert!(result.is_err());
     }
 
@@ -448,7 +451,8 @@ mod tests {
         let key_pair = KeyPair(pk, sk);
         let store = StoreWrapper::Rollup(client);
         let result =
-            encode_operation(operation, key_pair, store, Path::new("invalid path")).await;
+            encode_operation(operation, &key_pair, &store, Path::new("invalid path"))
+                .await;
         assert!(result.is_err_and(|e| {
             matches!(
                 e,
