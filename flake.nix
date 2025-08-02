@@ -206,8 +206,8 @@
           # preserve the hash compatability among case (in/)sensitive file systems
           riscvV8 = with pkgs; let
             tarball = fetchurl {
-              url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/9730f78b1d3fb8320441e3e91926fa09c67b1332/librusty_v8.tar.gz";
-              sha256 = "sha256-+XDNEhBzsCdxyZ/NIvOPX/4Lyi9tacB203Dxga/msSw=";
+              url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/63dcedfc7ba101a4bbf4ce9fd94bba8ff71f8824/librusty_v8.tar.gz";
+              sha256 = "sha256-Wi4guXiewq9zmAme5Oos31Gq4YJ5Oh2/yOxdm+NUPhM=";
             };
           in
             runCommand "fetch-riscv-v8" {} ''
