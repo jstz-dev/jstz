@@ -3,10 +3,13 @@
 //! This module provides a persistent transactional key-value store.
 
 use boa_gc::{Finalize, Trace};
+use serde::{Deserialize, Serialize};
+use serde_with::{base64::Base64, serde_as};
 use tezos_smart_rollup_host::runtime::ValueType;
 use tezos_smart_rollup_host::{path::Path, runtime::Runtime};
 
 use crate::error::Result;
+use crate::event::Event;
 
 pub mod outbox;
 pub mod transaction;
@@ -77,5 +80,69 @@ impl Storage {
             rt.store_delete(key)?;
         }
         Ok(())
+    }
+}
+
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum StorageUpdate {
+    /// Upsert a value at the given key.
+    Insert {
+        key: String,
+        #[serde_as(as = "Base64")]
+        value: Vec<u8>,
+    },
+    /// Remove the value at the given key.
+    Remove { key: String },
+}
+
+/// A storage updates event.
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct BatchStorageUpdate(Vec<StorageUpdate>);
+
+impl Event for BatchStorageUpdate {
+    fn tag() -> &'static str {
+        "BATCH_STORAGE_UPDATE"
+    }
+}
+
+impl BatchStorageUpdate {
+    pub fn new(size: usize) -> Self {
+        Self(Vec::with_capacity(size))
+    }
+
+    pub fn push_insert<K: Path, V: Value + ?Sized>(
+        &mut self,
+        key: &K,
+        value: &V,
+    ) -> Result<()> {
+        self.0.push(StorageUpdate::Insert {
+            key: key.to_string(),
+            value: value.encode()?,
+        });
+        Ok(())
+    }
+
+    pub fn push_remove<K: Path>(&mut self, key: &K) {
+        self.0.push(StorageUpdate::Remove {
+            key: key.to_string(),
+        });
+    }
+
+    pub fn into_vec(self) -> Vec<StorageUpdate> {
+        self.0
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+impl IntoIterator for BatchStorageUpdate {
+    type Item = StorageUpdate;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }

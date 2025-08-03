@@ -9,7 +9,7 @@ use std::{
 use parking_lot::{ArcMutexGuard, Mutex, RawMutex};
 
 use derive_more::{Deref, DerefMut};
-
+use tezos_smart_rollup::prelude::debug_msg;
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
 use super::{
@@ -19,7 +19,11 @@ use super::{
     value::{BoxedValue, Value},
     Storage,
 };
-use crate::error::{KvError, Result};
+use crate::{
+    error::{KvError, Result},
+    event::EventPublisher,
+    kv::BatchStorageUpdate,
+};
 
 /// A transaction is a 'lazy' snapshot of the persistent key-value store from
 /// the point in time when the transaction began. Modifications to new or old
@@ -363,19 +367,32 @@ impl InnerTransaction {
 
             prev_ctxt.outbox_queue.extend(curr_ctxt.outbox_queue);
         } else {
+            let size = curr_ctxt.remove_edits.len() + curr_ctxt.insert_edits.len();
+            let mut storage_updates = BatchStorageUpdate::new(size);
+
             for key in &curr_ctxt.remove_edits {
-                Storage::remove(rt, key)?
+                Storage::remove(rt, key)?;
+                storage_updates.push_remove(key);
             }
 
             for (key, value) in curr_ctxt.insert_edits {
-                Storage::insert(rt, &key, value.0.as_ref())?
+                let value = value.0.as_ref();
+                Storage::insert(rt, &key, value)?;
+                storage_updates.push_insert(&key, value)?;
             }
 
             flush(rt, &mut self.persistent_outbox, curr_ctxt.outbox_queue)?;
             self.snapshot_outbox_len = 0;
 
             // Update lookup map
-            self.lookup_map.clear()
+            self.lookup_map.clear();
+
+            if !storage_updates.is_empty() {
+                // Publish storage updates event.
+                if let Err(e) = EventPublisher::publish_event(rt, &storage_updates) {
+                    debug_msg!(rt, "Failed to publish storage update events: {e}");
+                }
+            }
         }
 
         Ok(())

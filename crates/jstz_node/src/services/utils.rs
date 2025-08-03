@@ -19,14 +19,15 @@ pub async fn worker_health(State(state): State<AppState>) -> impl IntoResponse {
 }
 
 pub enum StoreWrapper {
+    #[allow(dead_code)]
     Rollup(OctezRollupClient),
     Db(Db),
 }
 
 impl StoreWrapper {
-    pub fn new(mode: RunMode, rollup_client: OctezRollupClient, runtime_db: Db) -> Self {
+    pub fn new(mode: RunMode, _rollup_client: OctezRollupClient, runtime_db: Db) -> Self {
         match mode {
-            RunMode::Default => Self::Rollup(rollup_client),
+            RunMode::Default => Self::Db(runtime_db),
             RunMode::Sequencer { .. } => Self::Db(runtime_db),
         }
     }

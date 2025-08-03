@@ -170,6 +170,11 @@ impl Db {
         let conn = self.connection()?;
         exec_write(&conn, key, value)
     }
+
+    pub fn delete(&self, key: &str) -> Result<()> {
+        let conn = self.connection()?;
+        exec_delete_glob(&conn, key)
+    }
 }
 
 /// Reads a row using an existing database connection.

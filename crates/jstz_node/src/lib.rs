@@ -34,6 +34,8 @@ pub mod config;
 pub mod sequencer;
 pub use config::RunMode;
 
+use crate::services::storage_sync::StorageSync;
+
 #[derive(Clone)]
 pub struct AppState {
     pub rollup_client: OctezRollupClient,
@@ -166,6 +168,7 @@ pub async fn run(
             ref debug_log_path, ..
         } => debug_log_path.clone(),
     };
+    let _ = StorageSync::spawn(runtime_db.clone(), log_file_path.clone()).await?;
     let (broadcaster, db, tail_file_handle) =
         LogsService::init(&log_file_path, &cancellation_token).await?;
 
