@@ -2909,6 +2909,7 @@ dependencies = [
  "hex",
  "jstz_core",
  "jstz_crypto",
+ "jstz_kernel",
  "jstz_mock",
  "jstz_proto",
  "jstz_utils",
@@ -2969,6 +2970,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "tokio-retry2",
  "tokio-util",
  "url",
 ]
@@ -3076,11 +3078,20 @@ name = "jstz_utils"
 version = "0.1.1-alpha.3"
 dependencies = [
  "anyhow",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "jstz_core",
  "jstz_crypto",
+ "log",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
+ "tokio-util",
+ "url",
 ]
 
 [[package]]

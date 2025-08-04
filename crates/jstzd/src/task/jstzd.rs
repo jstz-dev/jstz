@@ -878,9 +878,10 @@ mod tests {
                     )
                     .unwrap(),
                 ),
-                jstz_node::RunMode::Default,
-                0,
-                &PathBuf::from("/log"),
+                jstz_node::RunMode::Sequencer {
+                    capacity: 1,
+                    debug_log_path: PathBuf::from("/log"),
+                },
             ),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(

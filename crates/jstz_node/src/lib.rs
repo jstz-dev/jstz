@@ -8,7 +8,6 @@ use octez::OctezRollupClient;
 #[cfg(not(test))]
 use sequencer::inbox;
 use sequencer::{inbox::Monitor, queue::OperationQueue, worker};
-use serde::{Deserialize, Serialize};
 use services::{
     accounts::AccountsService,
     logs::{broadcaster::Broadcaster, db::Db, LogsService},
@@ -33,6 +32,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 pub mod config;
 pub mod sequencer;
+pub use config::RunMode;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -62,20 +62,6 @@ impl AppState {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum RunMode {
-    Sequencer,
-    #[serde(alias = "default")]
-    Default,
-}
-
-impl Default for RunMode {
-    fn default() -> Self {
-        Self::Default
-    }
-}
-
 pub struct RunOptions {
     pub addr: String,
     pub port: u16,
@@ -84,8 +70,6 @@ pub struct RunOptions {
     pub kernel_log_path: PathBuf,
     pub injector: KeyPair,
     pub mode: RunMode,
-    pub capacity: usize,
-    pub debug_log_path: PathBuf,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -100,8 +84,6 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         kernel_log_path: config.kernel_log_file.to_path_buf(),
         injector: config.injector,
         mode: config.mode,
-        capacity: config.capacity,
-        debug_log_path: config.debug_log_file,
     })
     .await
 }
@@ -115,12 +97,13 @@ pub async fn run(
         kernel_log_path,
         injector,
         mode,
-        capacity,
-        debug_log_path,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
-    let queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
+    let queue = Arc::new(RwLock::new(OperationQueue::new(match mode {
+        RunMode::Sequencer { capacity, .. } => capacity,
+        _ => 0,
+    })));
 
     // will make db_path configurable later
     let db_file = NamedTempFile::new()?;
@@ -130,18 +113,22 @@ pub async fn run(
     let runtime_db = sequencer::db::Db::init(Some(db_path))?;
     let worker = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => Some(
+        RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => Some(
             worker::spawn(
                 queue.clone(),
                 runtime_db.clone(),
                 &injector,
                 rollup_preimages_dir.clone(),
-                Some(&debug_log_path),
+                Some(debug_log_path),
             )
             .context("failed to launch worker")?,
         ),
         #[cfg(test)]
-        RunMode::Sequencer => {
+        RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
             Some(
                 worker::spawn(
@@ -149,7 +136,7 @@ pub async fn run(
                     runtime_db.clone(),
                     &injector,
                     rollup_preimages_dir.clone(),
-                    Some(&debug_log_path),
+                    Some(debug_log_path),
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
@@ -162,25 +149,25 @@ pub async fn run(
 
     let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => {
+        RunMode::Sequencer { .. } => {
             Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
         }
         #[cfg(test)]
-        RunMode::Sequencer => None,
+        RunMode::Sequencer { .. } => None,
         RunMode::Default => None,
     };
 
     let cancellation_token = CancellationToken::new();
     // LogsService expects the log file to exist at instantiation, so this needs to be called after
     // debug log file is created.
-    let (broadcaster, db, tail_file_handle) = LogsService::init(
-        match mode {
-            RunMode::Default => &kernel_log_path,
-            RunMode::Sequencer => &debug_log_path,
-        },
-        &cancellation_token,
-    )
-    .await?;
+    let log_file_path = match mode {
+        RunMode::Default => kernel_log_path,
+        RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => debug_log_path.clone(),
+    };
+    let (broadcaster, db, tail_file_handle) =
+        LogsService::init(&log_file_path, &cancellation_token).await?;
 
     let state = AppState {
         rollup_client,
@@ -281,17 +268,11 @@ mod test {
         );
     }
 
-    #[test]
-    fn default_runmode() {
-        assert_eq!(RunMode::default(), RunMode::Default);
-    }
-
     #[tokio::test]
     async fn test_run() {
         async fn check_mode(mode: RunMode, expected: &str) {
             let port = unused_port();
             let kernel_log_file = NamedTempFile::new().unwrap();
-            let debug_log_file = NamedTempFile::new().unwrap();
 
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
@@ -301,8 +282,6 @@ mod test {
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: default_injector(),
                 mode: mode.clone(),
-                capacity: 0,
-                debug_log_path: debug_log_file.path().to_path_buf(),
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -326,7 +305,14 @@ mod test {
 
         // Test without oracle key pair
         check_mode(RunMode::Default, "\"default\"").await;
-        check_mode(RunMode::Sequencer, "\"sequencer\"").await;
+        check_mode(
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+            },
+            "\"sequencer\"",
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -339,7 +325,6 @@ mod test {
         ) {
             let port = unused_port();
             let kernel_log_file = NamedTempFile::new().unwrap();
-            let debug_log_file = NamedTempFile::new().unwrap();
 
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
@@ -349,8 +334,6 @@ mod test {
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: default_injector(),
                 mode,
-                capacity: 0,
-                debug_log_path: debug_log_file.path().to_path_buf(),
             }));
 
             sleep(Duration::from_secs(1)).await;
@@ -364,7 +347,10 @@ mod test {
         run_test(
             preimages_dir.clone(),
             "sequencer-test-file".to_string(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+            },
             false,
         )
         .await;
