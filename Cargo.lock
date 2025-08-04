@@ -3061,6 +3061,7 @@ dependencies = [
 name = "jstz_tps_bench"
 version = "0.1.1-alpha.3"
 dependencies = [
+ "anyhow",
  "base64 0.21.7",
  "bincode 2.0.0-rc.3",
  "bip39",
@@ -3072,6 +3073,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tezos-smart-rollup",
+ "tezos_crypto_rs",
  "tezos_data_encoding",
 ]
 
@@ -3094,6 +3096,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tezos-smart-rollup",
+ "tezos_crypto_rs",
  "tezos_data_encoding",
  "tokio",
  "tokio-util",
