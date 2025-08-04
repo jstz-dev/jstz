@@ -3,12 +3,16 @@ use std::{cell::RefCell, rc::Rc};
 
 use deno_core::*;
 use deno_error::{JsError, JsErrorBox};
-use deno_fetch_base::FetchHandler;
+use deno_fetch_base::{deno_fetch, FetchHandler};
 
 use crate::ext::NotSupported;
 
 #[allow(non_camel_case_types)]
 pub type jstz_fetch = deno_fetch_base::deno_fetch;
+
+pub trait FetchHandlerOptions: FetchHandler {
+    fn options() -> Self::Options;
+}
 
 const NOT_SUPPORTED_ERROR: NotSupported = NotSupported { name: "fetch" };
 
@@ -48,6 +52,14 @@ impl FetchHandler for NotSupportedFetch {
         Err(NOT_SUPPORTED_ERROR)
     }
 }
+
+impl FetchHandlerOptions for NotSupportedFetch {
+    fn options() -> Self::Options {}
+}
+
+pub trait FetchAPI: FetchHandler + FetchHandlerOptions {}
+
+impl<T: FetchHandler + FetchHandlerOptions> FetchAPI for T {}
 
 #[cfg(test)]
 mod test {

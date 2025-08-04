@@ -15,9 +15,9 @@ pub mod tests {
     };
     use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
 
-    use crate::sequencer::inbox::parsing::Message;
+    use jstz_kernel::inbox::Message;
 
-    use super::inbox::parsing::ParsedInboxMessage;
+    use jstz_kernel::inbox::ParsedInboxMessage;
 
     pub fn dummy_op() -> ParsedInboxMessage {
         let inner = SignedOperation::new(
