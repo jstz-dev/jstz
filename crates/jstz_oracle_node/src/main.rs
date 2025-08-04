@@ -6,6 +6,7 @@ use env_logger::Env;
 use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
 #[cfg(feature = "v2_runtime")]
 use jstz_oracle_node::node::OracleNode;
+use serde::Deserialize;
 
 const DEFAULT_JSTZ_NODE_ENDPOINT: &str = "http://127.0.0.1:8933";
 
@@ -26,14 +27,24 @@ struct Args {
     key_file: PathBuf,
 }
 
+#[derive(Debug, Deserialize)]
+struct RawKeyPair {
+    public_key: String,
+    secret_key: String,
+}
+
 fn parse_key_file(path: PathBuf) -> anyhow::Result<(PublicKey, SecretKey)> {
     let key_pair = std::fs::read_to_string(path).context("Failed to read key file")?;
-    let parts: Vec<&str> = key_pair.trim().split(':').collect();
-    if parts.len() != 2 {
-        anyhow::bail!("Key pair must be in format 'public_key:secret_key'");
-    }
-    let public_key = PublicKey::from_base58(parts[0]).context("Invalid public key")?;
-    let secret_key = SecretKey::from_base58(parts[1]).context("Invalid secret key")?;
+    let RawKeyPair {
+        public_key,
+        secret_key,
+    } = serde_json::from_str(&key_pair).map_err(|_| {
+        anyhow::anyhow!("Failed to parse key file. Key file must be JSON with 'public_key' and 'secret_key' fields")
+    })?;
+
+    let public_key = PublicKey::from_base58(&public_key).context("Invalid public key")?;
+    let secret_key = SecretKey::from_base58(&secret_key).context("Invalid secret key")?;
+
     Ok((public_key, secret_key))
 }
 
@@ -125,12 +136,17 @@ mod tests {
             super::parse_key_file(tmp_file.path().to_path_buf())
                 .unwrap_err()
                 .to_string(),
-            "Key pair must be in format 'public_key:secret_key'"
+            "Failed to parse key file. Key file must be JSON with 'public_key' and 'secret_key' fields"
         );
 
         tmp_file.rewind().unwrap();
         tmp_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ3:edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2")
+            .write_all(
+                br#"{
+  "public_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ3",
+  "secret_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
+}"#,
+            )
             .unwrap();
         tmp_file.flush().unwrap();
         assert_eq!(
@@ -142,19 +158,29 @@ mod tests {
 
         tmp_file.rewind().unwrap();
         tmp_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:a")
+            .write_all(
+                br#"{
+  "public_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
+  "secret_key": "a"
+}"#,
+            )
             .unwrap();
         tmp_file.flush().unwrap();
         assert_eq!(
             super::parse_key_file(tmp_file.path().to_path_buf())
                 .unwrap_err()
                 .to_string(),
-            "Invalid secret key"
+            "Failed to parse key file. Key file must be JSON with 'public_key' and 'secret_key' fields"
         );
 
         tmp_file.rewind().unwrap();
         tmp_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6\n")
+            .write_all(
+                br#"{
+  "public_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
+  "secret_key": "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
+}"#,
+            )
             .unwrap();
         tmp_file.flush().unwrap();
         let (public_key, secret_key) =
