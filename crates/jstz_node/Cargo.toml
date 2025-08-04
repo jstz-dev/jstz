@@ -75,3 +75,4 @@ path = "src/main.rs"
 persistent-logging = []
 v2_runtime = ["jstz_proto/v2_runtime"]
 oracle = ["v2_runtime"]
+inject_inbox = []
