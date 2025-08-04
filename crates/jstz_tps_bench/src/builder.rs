@@ -197,7 +197,7 @@ mod tests {
         builder
             .run_function(
                 &mut default_account(),
-                Uri::try_from(format!("jstz://foobar/transfer")).unwrap(),
+                Uri::try_from("jstz://foobar/transfer".to_string()).unwrap(),
                 Method::GET,
                 HeaderMap::new(),
                 None,
@@ -206,10 +206,10 @@ mod tests {
         assert_eq!(builder.messages.len(), 1);
         match builder.messages.first().unwrap() {
             Message::Raw(raw) => {
-                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(raw).unwrap();
                 match inbox_msg {
                     InboxMessage::External(b) => {
-                        let v = ExternalMessageFrame::parse(&b).unwrap();
+                        let v = ExternalMessageFrame::parse(b).unwrap();
                         match v {
                             ExternalMessageFrame::Targetted { address, contents } => {
                                 assert_eq!(address, rollup_address);
@@ -237,10 +237,10 @@ mod tests {
         assert_eq!(builder.messages.len(), 1);
         match builder.messages.first().unwrap() {
             Message::Raw(raw) => {
-                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(raw).unwrap();
                 match inbox_msg {
                     InboxMessage::External(b) => {
-                        let v = ExternalMessageFrame::parse(&b).unwrap();
+                        let v = ExternalMessageFrame::parse(b).unwrap();
                         match v {
                             ExternalMessageFrame::Targetted { address, contents } => {
                                 assert_eq!(address, rollup_address);
@@ -276,7 +276,7 @@ mod tests {
                 let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
                 match inbox_msg {
                     InboxMessage::External(b) => {
-                        let v = ExternalMessageFrame::parse(&b).unwrap();
+                        let v = ExternalMessageFrame::parse(b).unwrap();
                         match v {
                             ExternalMessageFrame::Targetted { address, contents } => {
                                 assert_eq!(address, rollup_address);
