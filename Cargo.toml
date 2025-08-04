@@ -108,7 +108,7 @@ serde_bytes = "0.11.17"
 signal-hook = "0.3.17"
 syntect = "5.2.0"
 tempfile = "3.10.0"
-thiserror = "1.0.56"
+thiserror = "1.0.69"
 tl = "0.7.7"
 tokio = { version = "1.36.0", features = ["full"] }
 tokio-retry2 = "0.5.7"
@@ -200,6 +200,11 @@ default-features = false
 [workspace.dependencies.deno_console]
 git = "https://github.com/jstz-dev/deno"
 branch = "v2.1.10-jstz"
+
+[workspace.dependencies.octez-riscv]
+# Fork with some custom patches that expose APIs. Will be replaced once the changes are upstreamed.
+git = "https://github.com/huancheng-trili/riscv-pvm"
+rev = "6b530863daa11cb4e6ea0ae9202a73f44c0d2d48"
 
 [patch.crates-io]
 boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }
