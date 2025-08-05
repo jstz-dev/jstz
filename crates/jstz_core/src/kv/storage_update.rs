@@ -1,0 +1,102 @@
+//! # KV Storage Update Event
+//!
+//! This module defines storage update events for the key-value store.
+//! These events are leaked to the kernel debug log, allowing other
+//! components (e.g., the sequencer) to observe and react to storage changes.
+
+use crate::error::Result;
+use crate::event::Event;
+use crate::kv::Value;
+use serde::{Deserialize, Serialize};
+use serde_with::{base64::Base64, serde_as};
+use tezos_smart_rollup_host::path::Path;
+
+#[serde_as]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub enum StorageUpdate {
+    /// Upsert a value at the given key.
+    Insert {
+        key: String,
+        #[serde_as(as = "Base64")]
+        value: Vec<u8>,
+    },
+    /// Remove the value at the given key.
+    Remove { key: String },
+}
+
+/// Storage update event.
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct BatchStorageUpdate(Vec<StorageUpdate>);
+
+impl Event for BatchStorageUpdate {
+    fn tag() -> &'static str {
+        "BATCH_STORAGE_UPDATE"
+    }
+}
+
+impl BatchStorageUpdate {
+    pub fn new(size: usize) -> Self {
+        Self(Vec::with_capacity(size))
+    }
+
+    pub fn push_insert<K: Path, V: Value + ?Sized>(
+        &mut self,
+        key: &K,
+        value: &V,
+    ) -> Result<()> {
+        self.0.push(StorageUpdate::Insert {
+            key: key.to_string(),
+            value: value.encode()?,
+        });
+        Ok(())
+    }
+
+    pub fn push_remove<K: Path>(&mut self, key: &K) {
+        self.0.push(StorageUpdate::Remove {
+            key: key.to_string(),
+        });
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bincode::{Decode, Encode};
+    use serde::{Deserialize, Serialize};
+    use tezos_smart_rollup_host::path::OwnedPath;
+
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Encode, Decode, Clone)]
+    struct DummyValue(u32);
+
+    #[test]
+    fn test_batch_storage_update_insert_and_remove() {
+        let mut batch = BatchStorageUpdate::new(2);
+        let key1 = OwnedPath::try_from("/key1".to_string()).unwrap();
+        let val1 = DummyValue(42);
+        batch.push_insert(&key1, &val1).unwrap();
+        batch.push_remove(&key1);
+
+        assert_eq!(batch.0.len(), 2);
+        match &batch.0[0] {
+            StorageUpdate::Insert { key, .. } => assert_eq!(key, "/key1"),
+            _ => panic!("Expected Insert variant"),
+        }
+        match &batch.0[1] {
+            StorageUpdate::Remove { key } => assert_eq!(key, "/key1"),
+            _ => panic!("Expected Remove variant"),
+        }
+    }
+
+    #[test]
+    fn test_batch_storage_update_is_empty() {
+        let mut batch = BatchStorageUpdate::new(1);
+        assert!(batch.is_empty());
+        let key = OwnedPath::try_from("/key".to_string()).unwrap();
+        batch.push_remove(&key);
+        assert!(!batch.is_empty());
+    }
+}
