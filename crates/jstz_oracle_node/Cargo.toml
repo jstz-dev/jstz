@@ -10,6 +10,10 @@ readme.workspace = true
 license-file.workspace = true
 description.workspace = true
 
+[[bin]]
+name = "jstz-oracle-node"
+path = "src/main.rs"
+
 [dependencies]
 anyhow.workspace = true
 futures.workspace = true
@@ -38,6 +42,8 @@ jstz_crypto = { path = "../jstz_crypto" }
 jstz_client = { path = "../jstz_client" }
 serde_json.workspace = true
 octez = { path = "../octez" }
+clap.workspace = true
+env_logger.workspace = true
 
 [dev-dependencies]
 mockito.workspace = true
