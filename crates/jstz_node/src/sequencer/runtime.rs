@@ -5,14 +5,13 @@ use jstz_core::kv::{Storage, Transaction};
 use jstz_crypto::{
     hash::Hash, public_key::PublicKey, smart_function_hash::SmartFunctionHash,
 };
+use jstz_kernel::inbox::Message;
 use jstz_proto::executor::{execute_internal_operation, execute_operation};
+use jstz_utils::KeyPair;
 use tezos_smart_rollup::{
     prelude::{debug_msg, Runtime},
     storage::path::RefPath,
 };
-
-use crate::sequencer::inbox::parsing::Message;
-use jstz_utils::KeyPair;
 
 use super::{db::Db, host::Host};
 

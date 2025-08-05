@@ -2831,6 +2831,7 @@ dependencies = [
  "tezos_data_encoding",
  "thiserror 1.0.67",
  "tokio",
+ "url",
  "utoipa",
 ]
 
@@ -2898,19 +2899,17 @@ dependencies = [
  "async-dropper-simple",
  "async-trait",
  "axum",
- "base64 0.21.7",
  "bincode 2.0.0-rc.3",
  "bytes",
  "clap 4.5.20",
  "derive_more",
  "dirs 3.0.2",
  "env_logger",
- "futures",
  "futures-util",
  "hex",
- "jstz_api",
  "jstz_core",
  "jstz_crypto",
+ "jstz_kernel",
  "jstz_mock",
  "jstz_proto",
  "jstz_utils",
@@ -2928,11 +2927,10 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tezos-smart-rollup",
- "tezos-smart-rollup-encoding",
  "tezos_crypto_rs",
  "tezos_data_encoding",
- "thiserror 1.0.67",
  "tokio",
+ "tokio-retry2",
  "tokio-stream",
  "tokio-util",
  "tower",
@@ -2950,12 +2948,15 @@ dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
  "bytes",
+ "clap 4.5.20",
+ "env_logger",
  "futures",
  "futures-core",
  "futures-util",
  "http 1.1.0",
  "hyper 1.6.0",
  "jstz_client",
+ "jstz_core",
  "jstz_crypto",
  "jstz_proto",
  "jstz_utils",
@@ -2971,6 +2972,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "tokio-retry2",
  "tokio-util",
  "url",
 ]
@@ -3062,20 +3064,14 @@ dependencies = [
  "base64 0.21.7",
  "bincode 2.0.0-rc.3",
  "bip39",
- "boa_gc",
  "clap 4.5.20",
- "hex",
  "http 1.1.0",
  "jstz_crypto",
- "jstz_kernel",
  "jstz_proto",
  "regex",
  "serde",
  "serde_json",
  "tezos-smart-rollup",
- "tezos-smart-rollup-core",
- "tezos-smart-rollup-host",
- "tezos_crypto_rs",
  "tezos_data_encoding",
 ]
 
@@ -3084,11 +3080,20 @@ name = "jstz_utils"
 version = "0.1.1-alpha.3"
 dependencies = [
  "anyhow",
+ "futures",
+ "futures-core",
+ "futures-util",
+ "jstz_core",
  "jstz_crypto",
+ "log",
+ "regex",
  "reqwest",
  "serde",
  "serde_json",
+ "tempfile",
  "tokio",
+ "tokio-util",
+ "url",
 ]
 
 [[package]]
@@ -5277,7 +5282,6 @@ version = "0.2.2"
 source = "git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c#0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 dependencies = [
  "hex",
- "serde_json",
  "tezos-smart-rollup-build-utils",
  "tezos-smart-rollup-core",
  "tezos-smart-rollup-debug",
@@ -5357,7 +5361,6 @@ dependencies = [
  "tezos-smart-rollup-host",
  "tezos-smart-rollup-mock",
  "tezos-smart-rollup-panic-hook",
- "tezos-smart-rollup-utils",
 ]
 
 [[package]]
@@ -5670,6 +5673,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbae76ab933c85776efabc971569dd6119c580d8f5d448769dec1764bf796ef2"
 dependencies = [
  "native-tls",
+ "tokio",
+]
+
+[[package]]
+name = "tokio-retry2"
+version = "0.5.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1264d076dd34560544a2799e40e457bd07c43d30f4a845686b031bcd8455c84f"
+dependencies = [
+ "pin-project",
  "tokio",
 ]
 

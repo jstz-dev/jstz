@@ -206,8 +206,8 @@
           # preserve the hash compatability among case (in/)sensitive file systems
           riscvV8 = with pkgs; let
             tarball = fetchurl {
-              url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/a79160903d4930b8a5cb70441af21bc77ca8191d/librusty_v8.tar.gz";
-              sha256 = "sha256-FORkogiYgyKZNibvQ7OH9lrSTwsx4Ed7rWgzPMIcP+w=";
+              url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/63dcedfc7ba101a4bbf4ce9fd94bba8ff71f8824/librusty_v8.tar.gz";
+              sha256 = "sha256-Wi4guXiewq9zmAme5Oos31Gq4YJ5Oh2/yOxdm+NUPhM=";
             };
           in
             runCommand "fetch-riscv-v8" {} ''
@@ -275,6 +275,12 @@
             };
           in
             crossPkgs.pkgsCross.riscv64;
+          heaptrackNoGui = pkgs.heaptrack.overrideAttrs (old: {
+            postInstall = ''
+              ${old.postInstall}
+              rm $out/bin/heaptrack_gui
+            '';
+          });
         in {
           packages =
             crates.packages
@@ -364,7 +370,11 @@
                 riscv64MuslPkgs.pkgsStatic.stdenv.cc
                 riscvSandbox
               ]
-              ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
+              ++ lib.optionals stdenv.isLinux [
+                pkg-config
+                openssl.dev
+                heaptrackNoGui
+              ];
           };
         }
       );

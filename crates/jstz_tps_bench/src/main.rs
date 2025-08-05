@@ -1,20 +1,13 @@
 // SPDX-FileCopyrightText: 2024 TriliTech <contact@trili.tech>
 //
 // SPDX-License-Identifier: MIT
-
-use std::error::Error;
 use std::path::Path;
 
 use clap::{Parser, Subcommand};
-use generate::{handle_generate, handle_generate_script};
-use results::handle_results;
-
-mod generate;
-mod results;
+use jstz_tps_bench::generate::{handle_generate, handle_generate_script};
+use jstz_tps_bench::results::handle_results;
 
 const DEFAULT_ROLLUP_ADDRESS: &str = "sr163Lv22CdE8QagCwf48PWDTquk6isQwv57";
-
-type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 #[derive(Debug, Parser)]
 #[command(long_about = None)]
@@ -54,7 +47,7 @@ enum Commands {
     },
 }
 
-fn main() -> Result<()> {
+fn main() -> jstz_tps_bench::Result<()> {
     match Cli::parse().command {
         Commands::Generate {
             address,

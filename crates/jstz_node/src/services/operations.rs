@@ -3,11 +3,11 @@ use std::path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::sequencer::inbox::parsing::Message;
-use crate::sequencer::inbox::parsing::ParsedInboxMessage;
 use crate::sequencer::queue::OperationQueue;
 use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
+use jstz_kernel::inbox::Message;
+use jstz_kernel::inbox::ParsedInboxMessage;
 
 use super::error::{ServiceError, ServiceResult};
 use super::utils::StoreWrapper;
@@ -294,7 +294,6 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::config::RuntimeEnv;
-    use crate::sequencer::inbox::parsing::{Message, ParsedInboxMessage};
     use crate::services::utils::StoreWrapper;
     use crate::{
         services::{
@@ -305,6 +304,8 @@ mod tests {
         utils::tests::{dummy_receipt, mock_app_state},
         RunMode,
     };
+    use jstz_kernel::inbox::Message;
+    use jstz_kernel::inbox::ParsedInboxMessage;
 
     use super::MAX_DIRECT_OPERATION_SIZE;
 

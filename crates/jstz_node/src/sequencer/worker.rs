@@ -14,10 +14,11 @@ use anyhow::Context;
 use jstz_utils::KeyPair;
 use log::warn;
 
-use super::{db::Db, inbox::parsing::ParsedInboxMessage, queue::OperationQueue};
+use super::{db::Db, queue::OperationQueue};
+use jstz_kernel::inbox::ParsedInboxMessage;
 
-#[cfg(feature = "v2_runtime")]
-use super::inbox::parsing::LevelInfo;
+#[cfg(feature = "oracle")]
+use jstz_kernel::inbox::LevelInfo;
 
 pub struct Worker {
     thread_kill_sig: Sender<()>,
@@ -114,7 +115,7 @@ pub fn spawn(
     })
 }
 
-#[cfg(feature = "v2_runtime")]
+#[cfg(feature = "oracle")]
 // See [jstz_kernel::riscv_kernel::run_event_loop]
 fn run_event_loop(
     tokio_rt: tokio::runtime::Runtime,
