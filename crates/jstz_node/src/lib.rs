@@ -230,7 +230,8 @@ mod test {
     use tokio::time::{sleep, Duration};
 
     use crate::{
-        run, services::utils::tests::mock_app_state, KeyPair, RunMode, RunOptions,
+        config::RuntimeEnv, run, services::utils::tests::mock_app_state, KeyPair,
+        RunMode, RunOptions,
     };
 
     pub fn default_injector() -> KeyPair {
@@ -309,6 +310,7 @@ mod test {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
             "\"sequencer\"",
         )
@@ -350,6 +352,7 @@ mod test {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
             false,
         )
