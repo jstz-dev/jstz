@@ -33,6 +33,7 @@ pub struct Account {
 pub struct InboxBuilder {
     messages: Vec<Message>,
     rollup_address: SmartRollupAddress,
+    next_account_id: usize,
 }
 
 impl InboxBuilder {
@@ -40,6 +41,7 @@ impl InboxBuilder {
         Self {
             rollup_address,
             messages: Vec::new(),
+            next_account_id: 0,
         }
     }
 
@@ -47,9 +49,9 @@ impl InboxBuilder {
         InboxFile(vec![self.messages])
     }
 
-    pub fn create_accounts(count: usize) -> crate::Result<Vec<Account>> {
+    pub fn create_accounts(&mut self, count: usize) -> crate::Result<Vec<Account>> {
         let mut accounts = vec![];
-        for i in 0..count {
+        for i in self.next_account_id..count + self.next_account_id {
             let (pk, sk) = keypair_from_mnemonic(MNEMONIC, &i.to_string())?;
             let account = Account {
                 address: Address::from_base58(&pk.hash())?,
@@ -59,6 +61,7 @@ impl InboxBuilder {
             };
             accounts.push(account);
         }
+        self.next_account_id += count;
         Ok(accounts)
     }
 
@@ -180,12 +183,19 @@ mod tests {
 
     #[test]
     fn create_accounts() {
-        let accounts = InboxBuilder::create_accounts(10).unwrap();
-        let addresses = accounts
-            .iter()
-            .map(|v| v.address.clone())
-            .collect::<HashSet<_>>();
+        let rollup_address =
+            SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
+        let mut builder = InboxBuilder::new(rollup_address);
+        let accounts = builder.create_accounts(10).unwrap();
+        let mut addresses = accounts.iter().map(|v| v.pk.hash()).collect::<HashSet<_>>();
         assert_eq!(addresses.len(), 10);
+
+        let accounts = builder.create_accounts(10).unwrap();
+        for account in accounts {
+            assert!(addresses.insert(account.pk.hash()));
+        }
+        assert_eq!(addresses.len(), 20);
     }
 
     #[test]
