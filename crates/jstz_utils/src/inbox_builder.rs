@@ -9,6 +9,7 @@ use jstz_proto::{
     operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
     runtime::ParsedCode,
 };
+use std::error::Error;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::{
     inbox::{ExternalMessageFrame, InboxMessage},
@@ -16,6 +17,7 @@ use tezos_smart_rollup::{
     types::SmartRollupAddress,
     utils::inbox::file::{InboxFile, Message},
 };
+pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 // tag + 20 byte address
 const EXTERNAL_FRAME_SIZE: usize = 21;
@@ -49,7 +51,7 @@ impl InboxBuilder {
         InboxFile(vec![self.messages])
     }
 
-    pub fn create_accounts(&mut self, count: usize) -> crate::Result<Vec<Account>> {
+    pub fn create_accounts(&mut self, count: usize) -> Result<Vec<Account>> {
         let mut accounts = vec![];
         for i in self.next_account_id..count + self.next_account_id {
             let (pk, sk) = keypair_from_mnemonic(MNEMONIC, &i.to_string())?;
@@ -73,7 +75,7 @@ impl InboxBuilder {
         &self,
         signer: &Account,
         content: Content,
-    ) -> crate::Result<Message> {
+    ) -> Result<Message> {
         let op = Operation {
             public_key: signer.pk.clone(),
             nonce: signer.nonce,
@@ -103,7 +105,7 @@ impl InboxBuilder {
         account: &mut Account,
         code: ParsedCode,
         account_credit: u64,
-    ) -> crate::Result<Address> {
+    ) -> Result<Address> {
         // TODO: JSTZ-849 somehow reuse the logic in proto
         let address = Address::SmartFunction(SmartFunctionHash::digest(
             format!("{}{}{}", &account.address, code, account.nonce.next()).as_bytes(),
@@ -128,7 +130,7 @@ impl InboxBuilder {
         method: Method,
         headers: HeaderMap,
         body: Option<Vec<u8>>,
-    ) -> crate::Result<()> {
+    ) -> Result<()> {
         let content = Content::RunFunction(RunFunction {
             uri,
             method,
@@ -164,7 +166,7 @@ mod tests {
         utils::inbox::file::Message,
     };
 
-    use crate::builder::InboxBuilder;
+    use super::InboxBuilder;
 
     fn default_account() -> super::Account {
         super::Account {
