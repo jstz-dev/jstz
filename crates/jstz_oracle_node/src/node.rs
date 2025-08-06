@@ -1,6 +1,7 @@
+use jstz_proto::runtime::v2::oracle::OracleRequest;
 #[cfg(feature = "v2_runtime")]
 use {
-    crate::{data_provider::DataProvider, relay::Relay, request::OracleRequest},
+    crate::{data_provider::DataProvider, relay::Relay},
     anyhow::Result,
     jstz_crypto::{public_key::PublicKey, secret_key::SecretKey},
     std::path::PathBuf,

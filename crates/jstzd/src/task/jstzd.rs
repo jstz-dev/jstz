@@ -713,7 +713,7 @@ mod tests {
     use std::path::PathBuf;
     use std::str::FromStr;
 
-    use jstz_node::config::JstzNodeConfig;
+    use jstz_node::config::{JstzNodeConfig, RuntimeEnv};
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::{Address, OctezClientConfigBuilder},
@@ -881,6 +881,7 @@ mod tests {
                 jstz_node::RunMode::Sequencer {
                     capacity: 1,
                     debug_log_path: PathBuf::from("/log"),
+                    runtime_env: RuntimeEnv::Native,
                 },
             ),
             ProtocolParameterBuilder::new()

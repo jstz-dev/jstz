@@ -144,6 +144,16 @@ mod test {
         }
     }
 
+    fn mock_event() -> MockEvent {
+        MockEvent {
+            id: 1,
+            caller: PublicKeyHash::from_base58("tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb")
+                .unwrap(),
+            gas_limit: 100,
+            url: Url::from_str("http://example.com/foo").unwrap(),
+        }
+    }
+
     #[test]
     fn test_publish_decode_roundtrip() {
         let mut sink = Sink(Vec::new());
@@ -153,13 +163,7 @@ mod test {
                 &mut sink.0,
             )
         });
-        let event = MockEvent {
-            id: 1,
-            caller: PublicKeyHash::from_base58("tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb")
-                .unwrap(),
-            gas_limit: 100,
-            url: Url::from_str("http://example.com/foo").unwrap(),
-        };
+        let event = mock_event();
         EventPublisher::publish_event(&host, &event).unwrap();
         let head_line = sink.lines().first().unwrap().clone();
         assert_eq!(
@@ -171,19 +175,35 @@ mod test {
     }
 
     #[test]
-    fn fails_decode_on_invalid_line() {
-        let decoded = decode_line::<MockEvent>("invalid line").unwrap_err();
-        assert_eq!(
-            decoded.to_string(),
-            "Error while decoding event: Parsing Error: NomError(\"Nom decode failed: kind 'Tag' on input 'invalid line'\")"
-        );
+    fn rejects_missing_field() {
+        let line = r#"[MOCK]{"message": "boom"}"#;
+        let err = decode_line::<MockEvent>(line).unwrap_err();
+        assert!(err.to_string().contains("missing field `id`"), "{err}");
+    }
 
-        let decoded =
-            decode_line::<MockEvent>(r#"[MOCK]{"message": "boom"}"#).unwrap_err();
-        assert_eq!(
-            decoded.to_string(),
-            "Error while decoding event: missing field `id` at line 1 column 19"
-        )
+    #[test]
+    fn rejects_missing_tag() {
+        let line = serde_json::to_string(&mock_event()).unwrap();
+        let err = decode_line::<MockEvent>(&line).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("Nom decode failed: kind 'Tag' on input '"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn rejects_garbage_json() {
+        let line = "[MOCK]{ this is not json }";
+        let err = decode_line::<MockEvent>(line).unwrap_err();
+        assert!(err.to_string().contains("key must be a string"), "{err}");
+    }
+
+    #[test]
+    fn rejects_unterminated_json() {
+        let line = "[MOCK]{\"id\":1";
+        let err = decode_line::<MockEvent>(line).unwrap_err();
+        assert!(err.to_string().contains("EOF while parsing"), "{err}");
     }
 
     #[test]

@@ -300,6 +300,7 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
+        config::RuntimeEnv,
         services::{accounts::AccountsService, Service},
         utils::tests::mock_app_state,
         RunMode,
@@ -335,6 +336,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
@@ -463,6 +465,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
@@ -517,6 +520,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
@@ -593,6 +597,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
@@ -658,6 +663,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
@@ -770,6 +776,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;

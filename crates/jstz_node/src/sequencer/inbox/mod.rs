@@ -9,8 +9,8 @@ use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use jstz_core::host::WriteDebug;
+use jstz_kernel::inbox::{parse_inbox_message_hex, ParsedInboxMessage};
 use log::{debug, error};
-use parsing::{parse_inbox_message_hex, ParsedInboxMessage};
 use std::future::Future;
 use std::time::Duration;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
@@ -21,7 +21,6 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 pub mod api;
-pub mod parsing;
 
 #[derive(Default)]
 pub struct Monitor {
@@ -178,8 +177,9 @@ async fn retry_fetch_block(rollup_endpoint: &str, block_level: u32) -> BlockResp
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sequencer::inbox::parsing::{LevelInfo, Message};
     use crate::sequencer::inbox::test_utils::{hash_of, make_mock_monitor_blocks_filter};
+    use jstz_kernel::inbox::LevelInfo;
+    use jstz_kernel::inbox::Message;
     use std::time::Duration;
     use std::{
         future::Future,
@@ -341,9 +341,10 @@ mod tests {
 
 #[cfg(test)]
 pub(crate) mod test_utils {
-    use super::{api::BlockResponse, parsing::Message, *};
+    use super::{api::BlockResponse, *};
     use bytes::Bytes;
     use futures_util::stream;
+    use jstz_kernel::inbox::Message;
     use std::{convert::Infallible, time::Duration};
     use tokio::time::sleep;
     use warp::{hyper::Body, Filter};
