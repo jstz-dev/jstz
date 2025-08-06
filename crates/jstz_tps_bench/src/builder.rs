@@ -104,6 +104,7 @@ impl InboxBuilder {
         code: ParsedCode,
         account_credit: u64,
     ) -> crate::Result<Address> {
+        // TODO: JSTZ-849 somehow reuse the logic in proto
         let address = Address::SmartFunction(SmartFunctionHash::digest(
             format!("{}{}{}", &account.address, code, account.nonce.next()).as_bytes(),
         )?);
