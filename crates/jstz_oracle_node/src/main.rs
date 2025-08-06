@@ -3,10 +3,9 @@ use std::path::PathBuf;
 use anyhow::Context;
 use clap::Parser;
 use env_logger::Env;
-use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
 #[cfg(feature = "v2_runtime")]
 use jstz_oracle_node::node::OracleNode;
-use serde::Deserialize;
+use jstz_utils::key_pair::{parse_key_file, KeyPair};
 
 const DEFAULT_JSTZ_NODE_ENDPOINT: &str = "http://127.0.0.1:8933";
 
@@ -27,27 +26,6 @@ struct Args {
     key_file: PathBuf,
 }
 
-#[derive(Debug, Deserialize)]
-struct RawKeyPair {
-    public_key: String,
-    secret_key: String,
-}
-
-fn parse_key_file(path: PathBuf) -> anyhow::Result<(PublicKey, SecretKey)> {
-    let key_pair = std::fs::read_to_string(path).context("Failed to read key file")?;
-    let RawKeyPair {
-        public_key,
-        secret_key,
-    } = serde_json::from_str(&key_pair).map_err(|_| {
-        anyhow::anyhow!("Failed to parse key file. Key file must be JSON with 'public_key' and 'secret_key' fields")
-    })?;
-
-    let public_key = PublicKey::from_base58(&public_key).context("Invalid public key")?;
-    let secret_key = SecretKey::from_base58(&secret_key).context("Invalid secret key")?;
-
-    Ok((public_key, secret_key))
-}
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     env_logger::init_from_env(Env::default().default_filter_or("info"));
@@ -66,7 +44,7 @@ async fn main() -> anyhow::Result<()> {
         .context("Failed to canonicalize log path")?;
 
     // Parse key file
-    let (public_key, _secret_key) =
+    let KeyPair(public_key, _secret_key) =
         parse_key_file(args.key_file).context("failed to parse key file")?;
 
     log::info!("Starting JSTZ Oracle Node");
@@ -106,98 +84,5 @@ async fn main() -> anyhow::Result<()> {
     #[cfg(not(feature = "v2_runtime"))]
     {
         anyhow::bail!("Oracle node is not supported in this runtime");
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use std::{
-        io::{Seek, Write},
-        path::PathBuf,
-        str::FromStr,
-    };
-
-    use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
-    use tempfile::NamedTempFile;
-
-    #[test]
-    fn parse_key_file() {
-        assert_eq!(
-            super::parse_key_file(PathBuf::from_str("/foo/bar").unwrap())
-                .unwrap_err()
-                .to_string(),
-            "Failed to read key file"
-        );
-
-        let mut tmp_file = NamedTempFile::new().unwrap();
-        tmp_file.write_all(b"a:b:c").unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf())
-                .unwrap_err()
-                .to_string(),
-            "Failed to parse key file. Key file must be JSON with 'public_key' and 'secret_key' fields"
-        );
-
-        tmp_file.rewind().unwrap();
-        tmp_file
-            .write_all(
-                br#"{
-  "public_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ3",
-  "secret_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
-}"#,
-            )
-            .unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf())
-                .unwrap_err()
-                .to_string(),
-            "Invalid public key"
-        );
-
-        tmp_file.rewind().unwrap();
-        tmp_file
-            .write_all(
-                br#"{
-  "public_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
-  "secret_key": "a"
-}"#,
-            )
-            .unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf())
-                .unwrap_err()
-                .to_string(),
-            "Failed to parse key file. Key file must be JSON with 'public_key' and 'secret_key' fields"
-        );
-
-        tmp_file.rewind().unwrap();
-        tmp_file
-            .write_all(
-                br#"{
-  "public_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
-  "secret_key": "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
-}"#,
-            )
-            .unwrap();
-        tmp_file.flush().unwrap();
-        let (public_key, secret_key) =
-            super::parse_key_file(tmp_file.path().to_path_buf()).unwrap();
-        assert_eq!(
-            public_key,
-            PublicKey::from_base58(
-                "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
-            )
-            .unwrap()
-        );
-        assert_eq!(
-            secret_key,
-            SecretKey::from_base58(
-                "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
-            )
-            .unwrap()
-        );
     }
 }
