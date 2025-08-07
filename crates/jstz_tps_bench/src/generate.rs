@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-use std::error::Error;
 use std::path::Path;
 
 use base64::{engine::general_purpose::URL_SAFE, Engine};
@@ -13,11 +12,9 @@ use serde::{Serialize, Serializer};
 use tezos_smart_rollup::types::SmartRollupAddress;
 use tezos_smart_rollup::utils::inbox::file::InboxFile;
 
-use crate::builder::{Account, InboxBuilder};
+use jstz_utils::inbox_builder::{Account, InboxBuilder, Result};
 
 const FA2: &str = include_str!("../fa2.js");
-
-type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
 /// Generate the requested 'FA2 transfers', writing to `./inbox.json`.
 ///
@@ -56,8 +53,8 @@ fn generate_inbox(rollup_addr: &str, transfers: usize) -> Result<InboxFile> {
         return Err("--transfers must be greater than zero".into());
     }
 
-    let mut builder = crate::builder::InboxBuilder::new(rollup_addr);
-    let mut accounts = crate::builder::InboxBuilder::create_accounts(accounts)?;
+    let mut builder = InboxBuilder::new(rollup_addr);
+    let mut accounts = builder.create_accounts(accounts)?;
 
     let code: ParsedCode = FA2.to_string().try_into()?;
     let fa2_address = builder.deploy_function(&mut accounts[0], code, 0)?;
