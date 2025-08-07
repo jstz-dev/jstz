@@ -31,9 +31,9 @@ fn main() -> jstz_tps_bench::Result<()> {
     let ticketer_addr = ContractKt1Hash::from_base58_check(&args.ticketer_address)
         .context("failed to parse ticketer address")?;
     let mut builder = InboxBuilder::new(rollup_addr, Some(ticketer_addr));
-    let mut accounts = builder.create_accounts(2)?;
+    let accounts = builder.create_accounts(2)?;
 
-    builder.deposit_from_l1(&mut accounts[0], 1000000)?;
+    builder.deposit_from_l1(&accounts[0], 1000000)?;
 
     let inbox = builder.build();
     inbox.save(&args.inbox_file)

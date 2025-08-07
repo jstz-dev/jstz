@@ -29,7 +29,7 @@ const EXTERNAL_FRAME_SIZE: usize = 21;
 const DEFAULT_GAS_LIMIT: u32 = 100_000;
 const MNEMONIC: &str =
     "donate kidney style loyal nose core inflict cup symptom speed giant polar";
-type RollupType = MichelsonOr<
+type DepositInboxMsgPayloadType = MichelsonOr<
     MichelsonPair<MichelsonContract, FA2_1Ticket>,
     MichelsonPair<
         MichelsonContract,
@@ -170,18 +170,19 @@ impl InboxBuilder {
     ) -> Result<()> {
         match &self.ticketer_address {
             Some(ticketer) => {
-                let payload: RollupType = MichelsonOr::Left(MichelsonPair(
-                    MichelsonContract(Contract::Implicit(
-                        PublicKeyHash::from_b58check(&account.address.to_string())
-                            .unwrap(),
-                    )),
-                    Ticket::new(
-                        Contract::Originated(ticketer.clone()),
-                        MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
-                        amount_mutez,
-                    )
-                    .unwrap(),
-                ));
+                let payload: DepositInboxMsgPayloadType =
+                    MichelsonOr::Left(MichelsonPair(
+                        MichelsonContract(Contract::Implicit(
+                            PublicKeyHash::from_b58check(&account.address.to_string())
+                                .unwrap(),
+                        )),
+                        Ticket::new(
+                            Contract::Originated(ticketer.clone()),
+                            MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                            amount_mutez,
+                        )
+                        .unwrap(),
+                    ));
                 let msg =
                     InboxMessage::Internal(InternalInboxMessage::Transfer(Transfer {
                         sender: ticketer.clone(),
@@ -223,7 +224,7 @@ mod tests {
         utils::inbox::file::Message,
     };
 
-    use super::{InboxBuilder, RollupType};
+    use super::{DepositInboxMsgPayloadType, InboxBuilder};
 
     fn default_account() -> super::Account {
         super::Account {
@@ -390,7 +391,8 @@ mod tests {
         assert_eq!(builder.messages.len(), 1);
         match builder.messages.first().unwrap() {
             Message::Raw(raw) => {
-                let (_, inbox_msg) = InboxMessage::<RollupType>::parse(&raw).unwrap();
+                let (_, inbox_msg) =
+                    InboxMessage::<DepositInboxMsgPayloadType>::parse(raw).unwrap();
                 match inbox_msg {
                     InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
                         assert_eq!(transfer.destination, builder.rollup_address);
