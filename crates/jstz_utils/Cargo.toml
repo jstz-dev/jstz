@@ -32,3 +32,6 @@ tokio-util.workspace = true
 futures-util.workspace = true
 tempfile.workspace = true
 url.workspace = true
+
+[features]
+v2_runtime = ["jstz_proto/v2_runtime"]
