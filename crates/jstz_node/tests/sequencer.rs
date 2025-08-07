@@ -60,8 +60,13 @@ async fn run_sequencer() {
     let log_file = NamedTempFile::new().unwrap();
     let mut injector_file = NamedTempFile::new().unwrap();
     injector_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6\n")
-            .unwrap();
+        .write_all(
+            br#"{
+            "public_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
+            "secret_key": "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
+}"#,
+        )
+        .unwrap();
     injector_file.flush().unwrap();
     let port = unused_port();
     let base_uri = format!("http://127.0.0.1:{port}");

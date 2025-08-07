@@ -7,7 +7,7 @@ use jstz_node::{
     config::{RunModeBuilder, RunModeType},
     RunOptions,
 };
-use jstz_utils::KeyPair;
+use jstz_utils::key_pair::parse_key_file;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
@@ -101,94 +101,5 @@ async fn main() -> anyhow::Result<()> {
             }
             Ok(())
         }
-    }
-}
-
-fn parse_key_file(path: PathBuf) -> anyhow::Result<KeyPair> {
-    let key_pair = std::fs::read_to_string(path).context("Failed to read key file")?;
-    let parts: Vec<&str> = key_pair.trim().split(':').collect();
-    if parts.len() != 2 {
-        anyhow::bail!("Key pair must be in format 'public_key:secret_key'");
-    }
-    let public_key = jstz_crypto::public_key::PublicKey::from_base58(parts[0])
-        .context("Invalid public key")?;
-    let secret_key = jstz_crypto::secret_key::SecretKey::from_base58(parts[1])
-        .context("Invalid secret key")?;
-    Ok(KeyPair(public_key, secret_key))
-}
-
-#[cfg(test)]
-mod tests {
-    use std::{
-        io::{Seek, Write},
-        path::PathBuf,
-        str::FromStr,
-    };
-
-    use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
-    use jstz_utils::KeyPair;
-    use tempfile::NamedTempFile;
-
-    #[test]
-    fn parse_key_file() {
-        assert_eq!(
-            super::parse_key_file(PathBuf::from_str("/foo/bar").unwrap())
-                .unwrap_err()
-                .to_string(),
-            "Failed to read key file"
-        );
-
-        let mut tmp_file = NamedTempFile::new().unwrap();
-        tmp_file.write_all(b"a:b:c").unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf())
-                .unwrap_err()
-                .to_string(),
-            "Key pair must be in format 'public_key:secret_key'"
-        );
-
-        tmp_file.rewind().unwrap();
-        tmp_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ3:edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2")
-            .unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf())
-                .unwrap_err()
-                .to_string(),
-            "Invalid public key"
-        );
-
-        tmp_file.rewind().unwrap();
-        tmp_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:a")
-            .unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf())
-                .unwrap_err()
-                .to_string(),
-            "Invalid secret key"
-        );
-
-        tmp_file.rewind().unwrap();
-        tmp_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6\n")
-            .unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf()).unwrap(),
-            KeyPair(
-                PublicKey::from_base58(
-                    "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
-                )
-                .unwrap(),
-                SecretKey::from_base58(
-                    "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
-                )
-                .unwrap()
-            )
-        );
     }
 }
