@@ -6,10 +6,8 @@ use jstz_crypto::{
     signature::Signature,
     smart_function_hash::{Kt1Hash, SmartFunctionHash},
 };
-use jstz_node::sequencer::{
-    inbox::{api::BlockResponse, parsing::RollupType},
-    runtime::JSTZ_ROLLUP_ADDRESS,
-};
+use jstz_kernel::inbox::RollupType;
+use jstz_node::sequencer::{inbox::api::BlockResponse, runtime::JSTZ_ROLLUP_ADDRESS};
 use jstz_proto::{
     context::account::{Address, Nonce},
     executor::fa_deposit::FaDepositReceipt,

@@ -14,10 +14,11 @@ use anyhow::Context;
 use jstz_utils::KeyPair;
 use log::warn;
 
-use super::{db::Db, inbox::parsing::ParsedInboxMessage, queue::OperationQueue};
+use super::{db::Db, queue::OperationQueue};
+use jstz_kernel::inbox::ParsedInboxMessage;
 
 #[cfg(feature = "oracle")]
-use super::inbox::parsing::LevelInfo;
+use jstz_kernel::inbox::LevelInfo;
 
 pub struct Worker {
     thread_kill_sig: Sender<()>,

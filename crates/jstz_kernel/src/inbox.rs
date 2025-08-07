@@ -20,7 +20,7 @@ use crate::parsing::try_parse_fa_deposit;
 pub type ExternalMessage = SignedOperation;
 pub type InternalMessage = InternalOperation;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum Message {
     External(ExternalMessage),
     Internal(InternalMessage),
@@ -55,6 +55,34 @@ pub fn read_message(
         ParsedInboxMessage::JstzMessage(message) => Some(message),
         _ => None,
     }
+}
+
+/// Parse a hex-encoded L1 inbox input message into a jstz operation.
+///
+/// Every L1 inbox message contains at least 3 internal messages:
+/// 1. StartOfLevel - Marks the beginning of a new L1 level
+/// 2. InfoPerLevel - Contains information about the previous L1 block
+/// 3. EndOfLevel - Marks the end of the current L1 level
+///
+/// The function returns None in the following cases:
+/// - If the message is not targeting the provided `jstz_rollup_address`
+/// - For native deposit transfers, if the ticket doesn't come from the provided `ticketer`
+///
+/// # Arguments
+/// * `logger` - Debug logger for tracing message processing
+/// * `inbox_id` - The message index in the rollup inbox
+/// * `inbox_msg` - The hex-encoded inbox message content
+/// * `ticketer` - The L1 ticketer used by the bridge contract for the native deposit
+/// * `jstz_rollup_address` - The smart rollup address
+pub fn parse_inbox_message_hex(
+    logger: &impl WriteDebug,
+    inbox_id: u32,
+    inbox_msg: &str,
+    ticketer: &ContractKt1Hash,
+    jstz_rollup_address: &SmartRollupHash,
+) -> Option<ParsedInboxMessage> {
+    let inbox_msg = hex::decode(inbox_msg).ok()?;
+    parse_inbox_message(logger, inbox_id, &inbox_msg, ticketer, jstz_rollup_address)
 }
 
 pub fn parse_inbox_message(
@@ -203,12 +231,13 @@ fn read_external_message(
     Some(msg)
 }
 
-#[derive(derive_more::From)]
+#[derive(Debug, Clone, derive_more::From)]
 pub enum ParsedInboxMessage {
     JstzMessage(Message),
     LevelInfo(LevelInfo),
 }
 
+#[derive(Debug, Clone)]
 pub enum LevelInfo {
     // Start of level
     Start,
