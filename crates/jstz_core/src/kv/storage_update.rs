@@ -4,11 +4,12 @@
 //! These events are leaked to the kernel debug log, allowing other
 //! components (e.g., the sequencer) to observe and react to storage changes.
 
-use crate::error::Result;
 use crate::event::Event;
 use crate::kv::Value;
+use crate::{error::Result, event::EventPublish};
 use serde::{Deserialize, Serialize};
 use serde_with::{base64::Base64, serde_as};
+use tezos_smart_rollup::host::Runtime;
 use tezos_smart_rollup_host::path::Path;
 
 #[serde_as]
@@ -57,8 +58,20 @@ impl BatchStorageUpdate {
         });
     }
 
-    pub fn is_empty(&self) -> bool {
+    fn is_empty(&self) -> bool {
         self.0.is_empty()
+    }
+
+    /// Publishes the event if it is not empty.
+    /// Returns `Ok(())` if the event is empty or was published successfully.
+    pub fn publish_event<R>(self, rt: &R) -> crate::event::Result<()>
+    where
+        R: Runtime,
+    {
+        if self.is_empty() {
+            return Ok(());
+        }
+        <Self as EventPublish>::publish_event(self, rt)
     }
 }
 
@@ -98,5 +111,43 @@ mod tests {
         let key = OwnedPath::try_from("/key".to_string()).unwrap();
         batch.push_remove(&key);
         assert!(!batch.is_empty());
+    }
+
+    #[test]
+    fn test_publish_event() {
+        use crate::event::test::Sink;
+        use tezos_smart_rollup_mock::MockHost;
+
+        let mut sink = Sink(Vec::new());
+        let mut host = MockHost::default();
+        host.set_debug_handler(unsafe {
+            std::mem::transmute::<&mut std::vec::Vec<u8>, &'static mut Vec<u8>>(
+                &mut sink.0,
+            )
+        });
+
+        // Non-empty batch should be published
+        let key = OwnedPath::try_from("/key".to_string()).unwrap();
+        let val = DummyValue(123);
+        let mut batch = BatchStorageUpdate::new(1);
+        batch.push_insert(&key, &val).unwrap();
+        batch.publish_event(&host).unwrap();
+        let lines = sink.lines();
+        assert!(
+            lines
+                .iter()
+                .any(|l| l.starts_with("[BATCH_STORAGE_UPDATE]")),
+            "Event not published"
+        );
+
+        // Empty batch should not be published
+        let empty_batch = BatchStorageUpdate::new(0);
+        let prev_len: usize = sink.lines().len();
+        empty_batch.publish_event(&host).unwrap();
+        let after_len = sink.lines().len();
+        assert_eq!(
+            prev_len, after_len,
+            "No event should be published for empty batch"
+        );
     }
 }
