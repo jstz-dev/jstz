@@ -1,5 +1,6 @@
 pub mod event_stream;
 pub mod filtered_log_stream;
+pub mod inbox_builder;
 pub mod key_pair;
 pub mod tailed_file;
 pub use key_pair::KeyPair;
