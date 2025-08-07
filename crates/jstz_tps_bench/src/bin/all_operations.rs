@@ -1,6 +1,8 @@
 use std::path::Path;
 
 use anyhow::Context;
+use http::{HeaderMap, Method, Uri};
+use jstz_proto::runtime::ParsedCode;
 use jstz_utils::inbox_builder::InboxBuilder;
 
 use clap::Parser;
@@ -32,9 +34,58 @@ fn main() -> jstz_tps_bench::Result<()> {
     let ticketer_addr = ContractKt1Hash::from_base58_check(&args.ticketer_address)
         .context("failed to parse ticketer address")?;
     let mut builder = InboxBuilder::new(rollup_addr, Some(ticketer_addr));
-    let accounts = builder.create_accounts(2)?;
+    let mut accounts = builder.create_accounts(2)?;
 
     builder.deposit_from_l1(&accounts[0], 1000000)?;
+
+    let small_function_addr = builder.deploy_function(
+        &mut accounts[0],
+        ParsedCode(
+            r#"
+export default (request) => {
+    const transferred_amount = request.headers.get("X-JSTZ-AMOUNT");
+    console.log("small function transferred amount", transferred_amount);
+    return new Response(null, {
+        headers: {
+            "X-JSTZ-TRANSFER": `${transferred_amount / 2}`,
+        },
+    });
+};"#
+            .to_string(),
+        ),
+        0,
+    )?;
+    // large smart function
+    let large_function_addr = builder.deploy_function(
+        &mut accounts[0],
+        ParsedCode(format!(
+            r#"
+export default async (request) => {{
+    const transferred_amount = request.headers.get("X-JSTZ-AMOUNT");
+    let long_string = "{}";
+    console.log("large function transferred amount", transferred_amount);
+    const call_request = new Request("jstz://{}/", {{
+        headers: {{
+            "X-JSTZ-TRANSFER": `${{transferred_amount}}`,
+        }},
+    }});
+    return await fetch(call_request);
+}};"#,
+            "a".repeat(4096),
+            small_function_addr,
+        )),
+        0,
+    )?;
+    builder.run_function(
+        &mut accounts[0],
+        Uri::try_from(format!("jstz://{large_function_addr}/"))?,
+        Method::GET,
+        HeaderMap::from_iter([(
+            "X-JSTZ-TRANSFER".parse().unwrap(),
+            "500000".parse().unwrap(),
+        )]),
+        None,
+    )?;
 
     let inbox = builder.build();
     inbox.save(&args.inbox_file)
