@@ -18,6 +18,7 @@ const DEFAULT_JSTZ_NODE_ADDR: &str = "127.0.0.1";
 const DEFAULT_JSTZ_NODE_PORT: u16 = 8933;
 const DEFAULT_RUN_MODE: &str = "default";
 const DEFAULT_QUEUE_CAPACITY: usize = 1024;
+const DEFAULT_STORAGE_SYNC: bool = false;
 
 #[derive(Debug, Parser)]
 enum Command {
@@ -64,6 +65,9 @@ struct Args {
     /// Path to file containing injector key pair (format: "public_key:secret_key")
     #[arg(long)]
     injector_key_file: PathBuf,
+
+    #[arg(long, default_value_t = DEFAULT_STORAGE_SYNC)]
+    storage_sync: bool,
 }
 
 #[tokio::main]
@@ -90,6 +94,7 @@ async fn main() -> anyhow::Result<()> {
                 injector: parse_key_file(args.injector_key_file)
                     .context("failed to parse injector key file")?,
                 mode: run_mode_builder.build()?,
+                storage_sync: args.storage_sync,
             })
             .await
         }

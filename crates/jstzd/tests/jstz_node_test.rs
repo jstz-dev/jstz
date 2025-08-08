@@ -29,6 +29,7 @@ async fn jstz_node_test() {
             .unwrap(),
         ),
         jstz_node::RunMode::Default,
+        false,
     );
     let mut jstz_node = jstzd::task::jstz_node::JstzNode::spawn(jstz_node_config)
         .await

@@ -883,6 +883,7 @@ mod tests {
                     debug_log_path: PathBuf::from("/log"),
                     runtime_env: RuntimeEnv::Native,
                 },
+                false,
             ),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(

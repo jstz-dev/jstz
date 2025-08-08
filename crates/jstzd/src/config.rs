@@ -62,6 +62,7 @@ struct UserJstzNodeConfig {
     mode: Option<RunModeType>,
     capacity: Option<usize>,
     debug_log_file: Option<PathBuf>,
+    storage_sync: Option<bool>,
 }
 
 #[derive(Deserialize, Default)]
@@ -196,6 +197,7 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
         &kernel_debug_file_path,
         injector.clone(),
         run_mode_builder.build()?,
+        config.jstz_node.storage_sync.unwrap_or(false),
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
@@ -475,7 +477,8 @@ mod tests {
             UserJstzNodeConfig {
                 mode: None,
                 capacity: None,
-                debug_log_file: None
+                debug_log_file: None,
+                storage_sync: None,
             }
         )
     }
@@ -622,7 +625,8 @@ mod tests {
             "jstz_node": {
                 "mode": "sequencer",
                 "capacity": 42,
-                "debug_log_file": "/tmp/log"
+                "debug_log_file": "/tmp/log",
+                "storage_sync": true
             }
         }))
         .unwrap();
@@ -631,7 +635,8 @@ mod tests {
             UserJstzNodeConfig {
                 mode: Some(jstz_node::config::RunModeType::Sequencer),
                 capacity: Some(42),
-                debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap())
+                debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap()),
+                storage_sync: Some(true),
             }
         );
 
@@ -645,7 +650,8 @@ mod tests {
             UserJstzNodeConfig {
                 mode: None,
                 capacity: None,
-                debug_log_file: None
+                debug_log_file: None,
+                storage_sync: None,
             }
         );
     }
@@ -797,7 +803,8 @@ mod tests {
             "jstz_node": {
                 "mode": "sequencer",
                 "capacity": 42,
-                "debug_log_file": "/debug/file"
+                "debug_log_file": "/debug/file",
+                "storage_sync": false
             }
         }))
         .unwrap();
