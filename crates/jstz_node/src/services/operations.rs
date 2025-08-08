@@ -9,7 +9,7 @@ use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
 #[cfg(feature = "inject_inbox")]
-use jstz_kernel::inbox::parsing::parse_inbox_message_hex;
+use jstz_kernel::inbox::parse_inbox_message_hex;
 use jstz_kernel::inbox::Message;
 use jstz_kernel::inbox::ParsedInboxMessage;
 
