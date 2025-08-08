@@ -154,18 +154,6 @@ nav.navbar {
   transition: color 0.3s;
 }
 
-/* Fixes because the carets aren't showing up for some reason */
-.menu__list > .theme-doc-sidebar-item-category {
-  padding-bottom: 25px;
-}
-.menu__list
-  > .theme-doc-sidebar-item-category
-  .menu__list-item-collapsible
-  .menu__link {
-  font-weight: bold;
-}
-/* End fixes */
-
 .menu__link:hover,
 .menu__link:focus {
   color: #0d61ff !important;
