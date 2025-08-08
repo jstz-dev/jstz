@@ -8,7 +8,9 @@ use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::types::SmartRollupAddress;
 
 #[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
+#[command(
+    about = "Generates inbox messages for most of the operations available in Jstz."
+)]
 struct Args {
     /// Target rollup address.
     #[arg(long)]
@@ -23,7 +25,6 @@ struct Args {
     inbox_file: Box<Path>,
 }
 
-/// Generates inbox messages for most of the operations available in Jstz.
 fn main() -> jstz_tps_bench::Result<()> {
     let args = Args::parse();
     let rollup_addr = SmartRollupAddress::from_b58check(&args.rollup_address)
