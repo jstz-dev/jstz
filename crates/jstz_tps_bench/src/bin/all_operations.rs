@@ -1,9 +1,18 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::Context;
 use http::{HeaderMap, Method, Uri};
-use jstz_proto::runtime::ParsedCode;
-use jstz_utils::inbox_builder::InboxBuilder;
+use jstz_proto::{
+    context::account::{Address, Nonce},
+    runtime::{
+        v2::fetch::http::{Body, Response},
+        ParsedCode,
+    },
+};
+use jstz_utils::{
+    inbox_builder::{Account, InboxBuilder},
+    key_pair::{parse_key_file, KeyPair},
+};
 
 use clap::Parser;
 use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -23,6 +32,10 @@ struct Args {
     /// Path to the output inbox file.
     #[arg(long, default_value = "inbox.json")]
     inbox_file: Box<Path>,
+
+    /// Public-private key pair representing the oracle response signer.
+    #[arg(long)]
+    oracle_key_file: Option<PathBuf>,
 }
 
 /// Generates inbox messages for most of the operations available in Jstz.
@@ -32,7 +45,21 @@ fn main() -> jstz_tps_bench::Result<()> {
         .context("failed to parse rollup address")?;
     let ticketer_addr = ContractKt1Hash::from_base58_check(&args.ticketer_address)
         .context("failed to parse ticketer address")?;
-    let mut builder = InboxBuilder::new(rollup_addr, Some(ticketer_addr));
+    let oracle_signer = match args.oracle_key_file {
+        Some(path) => {
+            let KeyPair(pk, sk) = parse_key_file(path)?;
+            Some(Account {
+                // FIXME: nonce needs to start from 1 because currently oracle signer is also
+                // injector and there is one large payload operation before the oracle call.
+                nonce: Nonce(1),
+                address: Address::from_base58(&pk.hash())?,
+                sk,
+                pk,
+            })
+        }
+        None => None,
+    };
+    let mut builder = InboxBuilder::new(rollup_addr, Some(ticketer_addr), oracle_signer);
     let mut accounts = builder.create_accounts(2)?;
 
     builder.deposit_from_l1(&accounts[0], 1000000)?;
@@ -85,6 +112,38 @@ export default async (request) => {{
         )]),
         None,
     )?;
+
+    // oracle
+    let oracle_function_addr = builder.deploy_function(
+        &mut accounts[0],
+        ParsedCode(
+            r#"
+export default async (request) => {
+    const call_request = new Request("http://foo.bar/");
+    const response = await fetch(call_request);
+    console.log("oracle response status:", response.status);
+    return response;
+};"#
+            .to_string(),
+        ),
+        0,
+    )?;
+    builder.run_function(
+        &mut accounts[0],
+        Uri::try_from(format!("jstz://{oracle_function_addr}/"))?,
+        Method::GET,
+        HeaderMap::default(),
+        None,
+    )?;
+
+    builder.create_oracle_response(Response {
+        status: 204,
+        status_text: String::default(),
+        headers: vec![],
+        body: Body::zero_capacity(),
+    })?;
+
+    builder.bump_level()?;
 
     let receiver = accounts[0].address.clone();
     builder.withdraw(&mut accounts[0], &receiver, 1)?;
