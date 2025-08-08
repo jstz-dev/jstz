@@ -1,5 +1,6 @@
 pub mod event_stream;
 pub mod filtered_log_stream;
+#[cfg(feature = "inbox_builder")]
 pub mod inbox_builder;
 pub mod key_pair;
 pub mod tailed_file;
