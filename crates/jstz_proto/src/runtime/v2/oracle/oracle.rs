@@ -4,7 +4,7 @@ use futures::{
     channel::oneshot::{channel, Receiver, Sender},
     future::UnwrapOrElse,
 };
-use jstz_core::event::{EventError, EventPublisher};
+use jstz_core::event::{EventError, EventPublish};
 use jstz_core::{
     host::HostRuntime,
     kv::{Storage, Transaction},
@@ -107,7 +107,7 @@ impl Oracle {
         OracleRequestStorage::insert(rt, &oracle_request);
         self.active_requests
             .insert(request_id, RequestMetadata { sender, timeout });
-        EventPublisher::publish_event(rt, &oracle_request)?;
+        oracle_request.publish_event(rt)?;
         Ok(rx)
     }
 
