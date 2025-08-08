@@ -389,10 +389,10 @@ mod tests {
         );
         builder.deposit_from_l1(&account, 1).unwrap();
         assert_eq!(builder.messages.len(), 1);
-        match builder.messages.first().unwrap() {
+        match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
                 let (_, inbox_msg) =
-                    InboxMessage::<DepositInboxMsgPayloadType>::parse(raw).unwrap();
+                    InboxMessage::<DepositInboxMsgPayloadType>::parse(&raw).unwrap();
                 match inbox_msg {
                     InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
                         assert_eq!(transfer.destination, builder.rollup_address);
