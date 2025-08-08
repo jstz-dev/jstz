@@ -36,3 +36,4 @@ path = "src/main.rs"
 [[bin]]
 name = "all_operations"
 path = "src/bin/all_operations.rs"
+required-features = ["v2_runtime"]
