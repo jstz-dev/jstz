@@ -76,6 +76,7 @@ pub(crate) mod tests {
     use tower::util::ServiceExt;
 
     use crate::{
+        config::RuntimeEnv,
         sequencer::queue::OperationQueue,
         services::{logs::broadcaster::Broadcaster, utils::StoreWrapper},
         test::default_injector,
@@ -124,6 +125,7 @@ pub(crate) mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
             },
             OctezRollupClient::new(String::new()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),

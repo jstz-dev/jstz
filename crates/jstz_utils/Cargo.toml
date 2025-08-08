@@ -12,8 +12,26 @@ description = "Utility functions"
 
 [dependencies]
 anyhow.workspace = true
+futures.workspace = true
+futures-core.workspace = true
+http.workspace = true
+jstz_core   = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
+jstz_proto = { path = "../jstz_proto" }
+log.workspace = true
 reqwest.workspace = true
+regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+tezos-smart-rollup = { workspace = true, features =  ["utils"] }
+tezos_data_encoding.workspace = true
 tokio.workspace = true
+tokio-util.workspace = true
+
+[dev-dependencies]
+futures-util.workspace = true
+tempfile.workspace = true
+url.workspace = true
+
+[features]
+v2_runtime = ["jstz_proto/v2_runtime"]

@@ -13,6 +13,7 @@ use deno_core::{
 use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
 use futures::FutureExt;
 use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_runtime::runtime::AsyncEntered;
 use std::future::Future;
 use std::pin::Pin;
 use std::{cell::RefCell, rc::Rc};
@@ -24,7 +25,9 @@ use jstz_runtime::sys::{
     FromV8, Headers as JsHeaders, Request as JsRequest, RequestInit as JsRequestInit,
     Response as JsResponse, ToV8,
 };
-use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
+use jstz_runtime::{
+    FetchHandlerOptions, JstzRuntime, JstzRuntimeOptions, RuntimeContext,
+};
 use url::Url;
 
 use crate::context::account::{Account, Address, AddressKind, Addressable};
@@ -111,6 +114,12 @@ impl FetchHandler for ProtoFetchHandler {
         Err(FetchError::NotSupported(
             "custom_client op is not supported",
         ))
+    }
+}
+
+impl FetchHandlerOptions for ProtoFetchHandler {
+    fn options() -> Self::Options {
+        ()
     }
 }
 
@@ -478,10 +487,9 @@ async fn load_and_run(
     let module_loader = StaticModuleLoader::with(specifier.clone(), script);
     let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
         module_loader: Rc::new(module_loader),
-        fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
+        fetch: ProtoFetchHandler,
         protocol: Some(proto),
         extensions: vec![ledger::jstz_ledger::init_ops_and_esm()],
-        ..Default::default()
     });
     runtime.set_state(source);
 
@@ -506,9 +514,13 @@ async fn load_and_run(
     let args = [request];
     let id = runtime.execute_main_module(&specifier).await?;
     let result = runtime.call_default_handler(id, &args).await?;
-    let response = convert_js_to_response(&mut runtime, result)
+    let response = {
+        AsyncEntered::new(&mut runtime, |runtime| {
+            convert_js_to_response(runtime, result)
+        })
         .await
-        .map_err(|_| FetchError::InvalidResponseType)?;
+        .map_err(|_| FetchError::InvalidResponseType)?
+    };
     Ok(response)
 }
 
@@ -1760,9 +1772,9 @@ mod test {
         let module_loader = StaticModuleLoader::with(specifier.clone(), code);
         let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
             protocol,
-            fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
+            fetch: ProtoFetchHandler,
             module_loader: Rc::new(module_loader),
-            ..Default::default()
+            extensions: vec![],
         });
         runtime.set_state(SourceAddress::try_from(source).unwrap());
         let id = runtime.execute_main_module(&specifier).await.unwrap();
