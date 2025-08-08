@@ -3,7 +3,6 @@ use std::path::PathBuf;
 
 use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::secret_key::SecretKey;
-use jstz_node::RunMode;
 #[cfg(feature = "oracle")]
 use jstz_oracle_node::OracleNodeConfig;
 use jstz_utils::KeyPair;
@@ -17,7 +16,7 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use http::Uri;
-use jstz_node::config::JstzNodeConfig;
+use jstz_node::config::{JstzNodeConfig, RunModeBuilder, RunModeType};
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{
     BootstrapContract, BootstrapSmartRollup, ProtocolParameter, SmartRollupPvmKind,
@@ -60,7 +59,7 @@ struct BootstrapRollupFile;
 // A subset of JstzNodeConfig that is exposed to users.
 #[derive(Deserialize, Default, PartialEq, Debug)]
 struct UserJstzNodeConfig {
-    mode: Option<String>,
+    mode: Option<RunModeType>,
     capacity: Option<usize>,
     debug_log_file: Option<PathBuf>,
 }
@@ -182,17 +181,21 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
         Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
     let injector = find_injector_account(builtin_bootstrap_accounts()?)
         .context("failed to retrieve injector account")?;
+    let mut run_mode_builder =
+        RunModeBuilder::new(config.jstz_node.mode.unwrap_or_default());
+    if let Some(v) = config.jstz_node.capacity {
+        run_mode_builder = run_mode_builder.with_capacity(v)?;
+    }
+    if let Some(path) = config.jstz_node.debug_log_file {
+        run_mode_builder = run_mode_builder.with_debug_log_path(path)?;
+    }
     let jstz_node_config = JstzNodeConfig::new(
         &jstz_node_rpc_endpoint,
         &octez_rollup_config.rpc_endpoint,
         &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
         injector.clone(),
-        RunMode::new(
-            config.jstz_node.mode.as_deref(),
-            config.jstz_node.capacity,
-            config.jstz_node.debug_log_file,
-        )?,
+        run_mode_builder.build()?,
     );
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
@@ -386,7 +389,7 @@ mod tests {
 
     use super::{jstz_rollup_path, Config, JSTZ_ROLLUP_ADDRESS};
     use http::Uri;
-    use jstz_node::RunMode;
+    use jstz_node::{config::RuntimeEnv, RunMode};
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::OctezClientConfigBuilder,
@@ -626,7 +629,7 @@ mod tests {
         assert_eq!(
             config.jstz_node,
             UserJstzNodeConfig {
-                mode: Some("sequencer".to_string()),
+                mode: Some(jstz_node::config::RunModeType::Sequencer),
                 capacity: Some(42),
                 debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap())
             }
@@ -845,7 +848,8 @@ mod tests {
             config.jstz_node_config().mode,
             RunMode::Sequencer {
                 capacity: 42,
-                debug_log_path: PathBuf::from_str("/debug/file").unwrap()
+                debug_log_path: PathBuf::from_str("/debug/file").unwrap(),
+                runtime_env: RuntimeEnv::Native,
             }
         );
     }

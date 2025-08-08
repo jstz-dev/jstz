@@ -3,15 +3,15 @@ use std::path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-#[cfg(feature = "inject_inbox")]
-use crate::sequencer::inbox::parsing::parse_inbox_message_hex;
-use crate::sequencer::inbox::parsing::Message;
-use crate::sequencer::inbox::parsing::ParsedInboxMessage;
 use crate::sequencer::queue::OperationQueue;
 #[cfg(feature = "inject_inbox")]
 use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
+#[cfg(feature = "inject_inbox")]
+use jstz_kernel::inbox::parsing::parse_inbox_message_hex;
+use jstz_kernel::inbox::Message;
+use jstz_kernel::inbox::ParsedInboxMessage;
 
 use super::error::{ServiceError, ServiceResult};
 use super::utils::StoreWrapper;
@@ -367,7 +367,7 @@ mod tests {
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tower::ServiceExt;
 
-    use crate::sequencer::inbox::parsing::{Message, ParsedInboxMessage};
+    use crate::config::RuntimeEnv;
     use crate::services::utils::StoreWrapper;
     use crate::{
         services::{
@@ -378,6 +378,8 @@ mod tests {
         utils::tests::{dummy_receipt, mock_app_state},
         RunMode,
     };
+    use jstz_kernel::inbox::Message;
+    use jstz_kernel::inbox::ParsedInboxMessage;
 
     use super::MAX_DIRECT_OPERATION_SIZE;
 
@@ -585,6 +587,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
@@ -628,6 +631,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
@@ -677,6 +681,7 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
         )
         .await;
