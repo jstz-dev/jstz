@@ -115,7 +115,7 @@ impl nom::error::ParseError<&str> for NomError {
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
 
     use crate::event::{decode_line, Event, EventPublish, NomError};
     use bincode::{Decode, Encode};

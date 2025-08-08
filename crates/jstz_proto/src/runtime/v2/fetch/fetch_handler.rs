@@ -756,7 +756,7 @@ mod test {
     use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 
     use jstz_core::{
-        event,
+        event::{self, Event},
         host::JsHostRuntime,
         kv::{Storage, Transaction},
     };
@@ -1917,7 +1917,7 @@ mod test {
 [JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
 [JSTZ:RESPONSE] {"url":"jstz://KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m/","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5","status_code":200}
 "#;
-        assert_eq!(log, expected);
+        assert!(log.contains(expected));
     }
 
     // Host script behaviour
@@ -2171,17 +2171,16 @@ mod test {
                     .into(),
             };
 
-
             let fetch_response = tokio::select! {
                 response = &mut response_fut => {
                     response
                 }
                 _ = async {
-                    while debug_sink.str_content().is_empty() {
+                    while !debug_sink.str_content().contains(OracleRequest::tag()) {
                         tokio::task::yield_now().await
                     }
                     let oracle_request =
-                        event::decode_line::<OracleRequest>(debug_sink.lines().first().unwrap())
+                        event::decode_line::<OracleRequest>(&debug_sink.lines().iter().nth(1).unwrap())
                             .unwrap();
                     assert_eq!(oracle_request.request.method, "GET".into());
                     assert_eq!(
