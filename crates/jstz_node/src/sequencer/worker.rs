@@ -231,6 +231,7 @@ fn spawn_riscv_worker(
                 debug_log_path,
             )
             .unwrap();
+            println!("RISCV PVM launched");
             pvm.step_max(rx, std::ops::Bound::Unbounded);
         })),
     })

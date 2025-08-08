@@ -1,3 +1,4 @@
+use jstz_proto::operation::InternalOperation;
 use log::warn;
 use octez_riscv::{
     machine_state::block_cache::{block, DefaultCacheConfig},
@@ -6,10 +7,18 @@ use octez_riscv::{
     state_backend::owned_backend::Owned,
     stepper::{pvm::reveals::RevealRequestResponseMap, StepperStatus},
 };
-use tezos_crypto_rs::hash::SmartRollupHash;
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tezos_data_encoding::enc::BinWriter;
-use tezos_smart_rollup::inbox::InboxMessage;
-use tezos_smart_rollup::{inbox::ExternalMessageFrame, types::SmartRollupAddress};
+use tezos_smart_rollup::{
+    inbox::InboxMessage,
+    michelson::{MichelsonContract, MichelsonOr, MichelsonPair, MichelsonUnit},
+    types::Contract,
+};
+use tezos_smart_rollup::{
+    inbox::{ExternalMessageFrame, InternalInboxMessage, Transfer},
+    michelson::{ticket::Ticket, MichelsonNat, MichelsonOption},
+    types::{PublicKeyHash, SmartRollupAddress},
+};
 
 use std::{
     io::{stdout, Write},
@@ -19,7 +28,7 @@ use std::{
 };
 
 use crate::sequencer::{
-    inbox::parsing::{Message as JstzMessage, ParsedInboxMessage, RollupType},
+    inbox::parsing::{LevelInfo, Message as JstzMessage, ParsedInboxMessage, RollupType},
     queue::OperationQueue,
     worker::write_heartbeat,
 };
@@ -108,27 +117,114 @@ impl JstzPvm {
                     }
                 };
                 match v {
-                    Some(ParsedInboxMessage::JstzMessage(JstzMessage::External(
-                        signed_op,
-                    ))) => {
-                        let bytes =
-                            bincode::encode_to_vec(&signed_op, bincode::config::legacy())
+                    Some(m) => {
+                        let payload = match m {
+                            ParsedInboxMessage::JstzMessage(JstzMessage::External(
+                                signed_op,
+                            )) => {
+                                let bytes = bincode::encode_to_vec(
+                                    &signed_op,
+                                    bincode::config::legacy(),
+                                )
                                 .unwrap();
-                        let mut external = Vec::with_capacity(bytes.len() + 21);
+                                let mut external = Vec::with_capacity(bytes.len() + 21);
 
-                        let frame = ExternalMessageFrame::Targetted {
-                            contents: bytes,
-                            address: SmartRollupAddress::new(self.rollup_address.clone()),
+                                let frame = ExternalMessageFrame::Targetted {
+                                    contents: bytes,
+                                    address: SmartRollupAddress::new(
+                                        self.rollup_address.clone(),
+                                    ),
+                                };
+
+                                frame.bin_write(&mut external).unwrap();
+
+                                let message =
+                                    InboxMessage::External::<RollupType>(&external);
+                                let mut result = Vec::new();
+                                message
+                                    .serialize(&mut result)
+                                    .expect("serialization of message failed");
+                                result
+                            }
+                            ParsedInboxMessage::JstzMessage(JstzMessage::Internal(
+                                InternalOperation::Deposit(d),
+                            )) => {
+                                let payload: RollupType =
+                                    MichelsonOr::Left(MichelsonPair(
+                                        MichelsonContract(Contract::Implicit(
+                                            PublicKeyHash::from_b58check(
+                                                &d.receiver.to_string(),
+                                            )
+                                            .unwrap(),
+                                        )),
+                                        Ticket::new(
+                                            Contract::Originated(ContractKt1Hash::from_base58_check("KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ").unwrap()),
+                                            MichelsonPair(
+                                                MichelsonNat::from(0),
+                                                MichelsonOption(None),
+                                            ),
+                                            d.amount,
+                                        )
+                                        .unwrap(),
+                                    ));
+                                let msg = InboxMessage::Internal(
+                                    InternalInboxMessage::Transfer(Transfer {
+                                        sender: ContractKt1Hash::from_base58_check(
+                                            "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
+                                        )
+                                        .unwrap(),
+                                        // any user address is okay here since L1 is not really involved
+                                        source: PublicKeyHash::from_b58check(
+                                            "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
+                                        )
+                                        .unwrap(),
+                                        destination: SmartRollupAddress::from_b58check(
+                                            "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+                                        )
+                                        .unwrap(),
+                                        payload,
+                                    }),
+                                );
+                                let mut bytes = Vec::new();
+                                msg.serialize(&mut bytes).unwrap();
+                                bytes
+                            }
+                            ParsedInboxMessage::LevelInfo(LevelInfo::Start) => {
+                                let msg = InboxMessage::Internal(
+                                    InternalInboxMessage::<MichelsonUnit>::StartOfLevel,
+                                );
+                                let mut bytes = Vec::new();
+                                msg.serialize(&mut bytes).unwrap();
+                                bytes
+                            }
+                            ParsedInboxMessage::LevelInfo(LevelInfo::End) => {
+                                let msg = InboxMessage::Internal(
+                                    InternalInboxMessage::<MichelsonUnit>::EndOfLevel,
+                                );
+                                let mut bytes = Vec::new();
+                                msg.serialize(&mut bytes).unwrap();
+                                bytes
+                            }
+                            ParsedInboxMessage::LevelInfo(LevelInfo::Info(i)) => {
+                                let msg = InboxMessage::Internal(InternalInboxMessage::<
+                                    MichelsonUnit,
+                                >::InfoPerLevel(
+                                    i
+                                ));
+                                let mut bytes = Vec::new();
+                                msg.serialize(&mut bytes).unwrap();
+                                bytes
+                            }
+                            v => {
+                                return StepperStatus::Exited {
+                                    steps: 0,
+                                    success: false,
+                                    status: format!("Unknown message {v:?}"),
+                                }
+                            }
                         };
 
-                        frame.bin_write(&mut external).unwrap();
-
-                        let message = InboxMessage::External::<RollupType>(&external);
-                        let mut result = Vec::new();
-                        message
-                            .serialize(&mut result)
-                            .expect("serialization of message failed");
-                        let success = self.pvm.provide_inbox_message(0, 0, &result);
+                        let success = self.pvm.provide_inbox_message(0, 0, &payload);
 
                         if success {
                             StepperStatus::Running { steps: 1 }
@@ -144,11 +240,6 @@ impl JstzPvm {
                         steps: 0,
                         success: true,
                         status: "No new message".to_owned(),
-                    },
-                    v => StepperStatus::Exited {
-                        steps: 0,
-                        success: false,
-                        status: format!("Unknown message {v:?}"),
                     },
                 }
             }
