@@ -64,6 +64,8 @@ struct UserJstzNodeConfig {
     debug_log_file: Option<PathBuf>,
     riscv_kernel_path: Option<PathBuf>,
     rollup_address: Option<SmartRollupHash>,
+    #[serde(default)]
+    storage_sync: bool,
 }
 
 #[derive(Deserialize, Default)]
@@ -231,6 +233,7 @@ fn build_jstz_node_config(
         kernel_debug_file_path,
         injector.clone(),
         run_mode_builder.build()?,
+        config.storage_sync,
     ))
 }
 
@@ -497,7 +500,8 @@ mod tests {
                 capacity: None,
                 debug_log_file: None,
                 riscv_kernel_path: None,
-                rollup_address: None
+                rollup_address: None,
+                storage_sync: false,
             }
         )
     }
@@ -646,7 +650,8 @@ mod tests {
                 "capacity": 42,
                 "debug_log_file": "/tmp/log",
                 "riscv_kernel_path": "/riscv/kernel",
-                "rollup_address": "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK"
+                "rollup_address": "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+                "storage_sync": true
             }
         }))
         .unwrap();
@@ -662,7 +667,8 @@ mod tests {
                         "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK"
                     )
                     .unwrap()
-                )
+                ),
+                storage_sync: true,
             }
         );
 
@@ -678,7 +684,8 @@ mod tests {
                 capacity: None,
                 debug_log_file: None,
                 riscv_kernel_path: None,
-                rollup_address: None
+                rollup_address: None,
+                storage_sync: false,
             }
         );
     }
@@ -830,7 +837,8 @@ mod tests {
             "jstz_node": {
                 "mode": "sequencer",
                 "capacity": 42,
-                "debug_log_file": "/debug/file"
+                "debug_log_file": "/debug/file",
+                "storage_sync": false
             }
         }))
         .unwrap();
@@ -898,6 +906,7 @@ mod tests {
             debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap()),
             riscv_kernel_path: Some(PathBuf::from_str("/riscv/kernel").unwrap()),
             rollup_address: Some(rollup_address.clone()),
+            storage_sync: false,
         };
         let jstz_node_config =
             super::build_jstz_node_config(config, &Endpoint::default(), &PathBuf::new())

@@ -195,6 +195,7 @@ async fn create_jstzd_server(
             .unwrap(),
         ),
         jstz_node::RunMode::Default,
+        false,
     );
     let config = JstzdConfig::new(
         octez_node_config,
