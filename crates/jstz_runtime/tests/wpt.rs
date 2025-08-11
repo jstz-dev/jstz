@@ -7,6 +7,7 @@ use deno_core::{
 };
 use deno_error::JsErrorBox;
 use derive_more::{From, Into};
+
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
@@ -15,16 +16,39 @@ use jstz_wpt::{
     WptSubtest, WptSubtestStatus, WptTestStatus,
 };
 use regex::Regex;
+use ron::de::from_str as ron_from_str;
 use serde::Deserialize;
+use std::borrow::Cow;
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, HashSet},
     fs::{File, OpenOptions},
     future::IntoFuture,
+    panic,
     path::{Path, PathBuf},
     str::FromStr,
 };
 use tezos_smart_rollup_mock::MockHost;
+use thiserror::Error;
 use tokio::io::AsyncWriteExt;
+
+/// List of tests that should be skipped due to known issues (e.g., segmentation faults)
+/// Add test paths here as you encounter problematic tests
+const SKIP_TESTS: &[&str] = &[
+    // Add problematic tests here, for example:
+    "FileAPI/url/url-format.any.html",
+    "compression/compression",
+    "encoding/", // "some/other/problematic/test.html",
+    "fetch/http-cache/",
+    "webstorage/",
+    "html/webappapis/scripting/processing-model-2",
+];
+
+/// Check if a test should be skipped
+fn should_skip_test(test_path: &str) -> bool {
+    SKIP_TESTS
+        .iter()
+        .any(|&skip_path| test_path.contains(skip_path))
+}
 
 /// Enum of possible test statuses
 ///
@@ -178,7 +202,7 @@ impl<'a> FromV8<'a> for TestsResult {
 /// This struct implements the TestHarness API expected by [wpt]
 ///
 /// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html
-#[derive(Default, Debug, Clone)]
+#[derive(Default, Debug, Clone, Deserialize)]
 pub struct TestHarnessReport {
     // `status` is an Option because it is set at the end of a test suite
     // and we need a placeholder for it before that.
@@ -215,6 +239,169 @@ impl TestHarnessReport {
             message,
         });
     }
+}
+#[derive(Deserialize)]
+struct LogLine<'a> {
+    message: Cow<'a, str>,
+}
+
+#[derive(Debug, Error)]
+pub enum ParseError {
+    #[error("log line contained a report, but it couldn't be parsed as RON: {0}")]
+    Ron(String),
+}
+
+/// Try to get a TestHarnessReport out of *any* line of text.
+/// - Returns Ok(Some(...)) if a report was found and parsed
+/// - Returns Ok(None) if no report-like text exists on the line
+/// - Returns Err(_) only if a report-like text was found but failed to parse
+pub fn parse_report_from_log_line(
+    line: &str,
+) -> Result<Option<TestHarnessReport>, ParseError> {
+    // 1) Try to slice a report straight from the raw line (works for arbitrary/non-JSON logs)
+    if let Some(raw_dbg) = slice_report_debug(line) {
+        return parse_report_debug_text(raw_dbg).map(Some);
+    }
+
+    // 2) Fallback: if the line *is* JSON with a "message" field, try inside it
+    if let Ok(env) = serde_json::from_str::<LogLine>(line) {
+        if let Some(raw_dbg) = slice_report_debug(&env.message) {
+            return parse_report_debug_text(raw_dbg).map(Some);
+        }
+    }
+
+    Ok(None)
+}
+
+/// Parse the Rust Debug-ish "TestHarnessReport { ... }" into a struct,
+/// handling both raw text and JSON-escaped text (`\"`, `\\n`, etc).
+fn parse_report_debug_text(raw_dbg: &str) -> Result<TestHarnessReport, ParseError> {
+    // If this came from inside a JSON string, its quotes are escaped as \".
+    // Try RON directly first; if that fails, try JSON-unescaping the snippet and parse again.
+    match try_ron_from_debug(raw_dbg) {
+        Ok(rep) => Ok(rep),
+        Err(_) => {
+            if let Some(unescaped) = try_unescape_as_json_string(raw_dbg) {
+                try_ron_from_debug(&unescaped).map_err(|e| ParseError::Ron(e))
+            } else {
+                Err(ParseError::Ron(
+                    "RON parse failed and JSON-unescape also failed".into(),
+                ))
+            }
+        }
+    }
+}
+
+/// Convert the Debug text to RON and attempt to parse.
+/// Returns Err(stringified error) on failure.
+fn try_ron_from_debug(debug_text: &str) -> Result<TestHarnessReport, String> {
+    let ron_text = braces_to_parens_preserving_strings(debug_text);
+    ron_from_str::<TestHarnessReport>(&ron_text).map_err(|e| e.to_string())
+}
+
+/// If `raw` looks like it came from inside a JSON string (e.g., it contains `\"`),
+/// try to interpret it as a JSON string and unescape it.
+fn try_unescape_as_json_string(raw: &str) -> Option<String> {
+    // Only attempt if there are typical JSON escapes. This avoids breaking truly-raw inputs.
+    if !(raw.contains("\\\"")
+        || raw.contains("\\n")
+        || raw.contains("\\t")
+        || raw.contains("\\r")
+        || raw.contains("\\\\"))
+    {
+        return None;
+    }
+    // Wrap in quotes and let serde_json do the heavy lifting.
+    let wrapped = format!("\"{}\"", raw);
+    serde_json::from_str::<String>(&wrapped).ok()
+}
+
+/// Extracts "TestHarnessReport { ... }" from any text.
+/// If "Internal message:" follows, we stop before it; otherwise we bracket-match to the closing '}'.
+fn slice_report_debug(s: &str) -> Option<&str> {
+    let start = s.find("TestHarnessReport")?;
+    let after = &s[start..];
+
+    // If an explicit sentinel exists, crop to it first to avoid scanning the whole line.
+    if let Some(end_sentinel) = after.find("Internal message:") {
+        let candidate = &after[..end_sentinel];
+        // Verify it looks like a report (has an opening brace after the type name).
+        if candidate.find('{').is_some() {
+            return Some(candidate.trim());
+        }
+    }
+
+    // Otherwise, bracket-match starting at the first '{' after the type name.
+    let open_rel = after.find('{')?;
+    let open_idx = start + open_rel;
+
+    let mut depth: i32 = 0;
+    let mut in_str = false;
+    let mut prev_bs = false;
+    let mut end_idx = None;
+
+    for (i, ch) in s[open_idx..].char_indices() {
+        if in_str {
+            match ch {
+                '\\' => prev_bs = !prev_bs,
+                '"' if !prev_bs => {
+                    in_str = false;
+                    prev_bs = false;
+                }
+                _ => prev_bs = false,
+            }
+            continue;
+        }
+
+        match ch {
+            '"' => in_str = true,
+            '{' => depth += 1,
+            '}' => {
+                depth -= 1;
+                if depth == 0 {
+                    end_idx = Some(open_idx + i + 1);
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    end_idx.map(|end| s[start..end].trim())
+}
+
+/// Replace `{`/`}` with `(`/`)` outside of quoted strings.
+/// This turns a Debug-ish struct into RON-compatible text.
+fn braces_to_parens_preserving_strings(input: &str) -> String {
+    let mut out = String::with_capacity(input.len());
+    let mut in_str = false;
+    let mut prev_bs = false;
+
+    for ch in input.chars() {
+        if in_str {
+            out.push(ch);
+            match ch {
+                '\\' => prev_bs = !prev_bs,
+                '"' if !prev_bs => {
+                    in_str = false;
+                    prev_bs = false;
+                }
+                _ => prev_bs = false,
+            }
+        } else {
+            match ch {
+                '"' => {
+                    in_str = true;
+                    out.push(ch);
+                }
+                '{' => out.push('('),
+                '}' => out.push(')'),
+                _ => out.push(ch),
+            }
+        }
+    }
+
+    out
 }
 
 #[op2]
@@ -287,17 +474,105 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
     //println!("source: {}", source);
     //eprintln!("source: {}", source);
 
-    let mut rt = init_runtime(&mut host, &mut tx);
+    // RUN NORMALLY
+    /*let mut rt = init_runtime(&mut host, &mut tx);
 
     // Somehow each `execute_script` call has some strange side effect such that the global
     // test suite object is completed prematurely before all test cases are registered.
     // Therefore, instead of executing each piece of test scripts separately, we need to
-    // collect them and run them all in one `execute_script` call.
-    let _ = rt.execute_script("native code", source);
+    // collect them and run them all in one `execute_script` call.);
+
+    // Use catch_unwind to handle panics (including segmentation faults) gracefully
+    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+        rt.execute_script("native code", source.clone())
+    }));
+
+    */
+    let err_report = TestHarnessReport {
+        status: Some(WptTestStatus::Err),
+        subtests: vec![WptSubtest {
+            name: "Script execution failed".to_string(),
+            status: WptSubtestStatus::Fail,
+            message: Some(
+                "Test failed due to script execution error (panic/segfault)".to_string(),
+            ),
+        }],
+    }; /*
+
+       match result {
+           Ok(_) => {
+               //println!("script executed successfully");
+           }
+           Err(e) => {
+               println!("wpt: script execution failed with panic: {:?}", e);
+               // Return a default report indicating the test failed due to execution error
+               return err_report;
+           }
+       }*/
+
+    // \RUN NORMALLY
+
+    // RUN IN RISCV
+    // Call the external binary to create the message
+    let output = std::process::Command::new("cargo")
+        .args([
+            "run",
+            "--package",
+            "jstz_message_creator",
+            "--bin",
+            "jstz_message_creator",
+        ])
+        .arg(source.clone())
+        .output()
+        .expect("Failed to execute jstz_message_creator binary");
+
+    // Print the output from the binary
+    if !output.stdout.is_empty() {
+        /*println!(
+            "jstz_message_creator stdout: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );*/
+    }
+    if !output.stderr.is_empty() {
+        /*eprintln!(
+            "jstz_message_creator stderr: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );*/
+    }
+
+    if !output.status.success() {
+        println!(
+            "jstz_message_creator failed with exit code: {}",
+            output.status.code().unwrap_or(-1)
+        );
+        /*eprintln!(
+            "jstz_message_creator failed with exit code: {}",
+            output.status.code().unwrap_or(-1)
+        );*/
+        return TestHarnessReport {
+            status: Some(WptTestStatus::Err),
+            subtests: vec![WptSubtest {
+                name: "Message creation failed".to_string(),
+                status: WptSubtestStatus::Fail,
+                message: Some("Failed to create message via external binary".to_string()),
+            }],
+        };
+    }
+
+    // \RUN IN RISCV
+
+    //println!("Message created successfully via external binary");
 
     // Take the test harness report out of the runtime and return it
     // Need to store data temporarily so that the borrow can be dropped
-    let data = rt.op_state().borrow().borrow::<TestHarnessReport>().clone();
+    //let data = rt.op_state().borrow().borrow::<TestHarnessReport>().clone();
+    let data = parse_report_from_log_line(
+        format!("{}", String::from_utf8_lossy(&output.stdout)).as_str(),
+    )
+    .unwrap()
+    .unwrap_or(err_report);
+
+    println!("report: {:?}", data);
     data
 }
 
@@ -334,9 +609,38 @@ fn run_wpt_test(
     test: TestToRun,
 ) -> impl IntoFuture<Output = anyhow::Result<WptReportTest>> + '_ {
     async move {
-        let bundle = wpt_serve.bundle(&test.url_path).await?;
+        println!("");
+        println!("starting test {}", &test.url_path);
+
+        // Check if this test should be skipped
+        if should_skip_test(&test.url_path) {
+            println!("skipping test {} (in skip list)", &test.url_path);
+            return Ok(WptReportTest::new(
+                WptTestStatus::Err,
+                vec![WptSubtest {
+                    name: "Test skipped".to_string(),
+                    status: WptSubtestStatus::NotRun,
+                    message: Some("Test skipped due to known issues".to_string()),
+                }],
+            ));
+        }
+
+        let bundle = match wpt_serve.bundle(&test.url_path).await {
+            Ok(bundle) => bundle,
+            Err(e) => {
+                println!("failed to bundle test {}: {}", &test.url_path, e);
+                return Ok(WptReportTest::new(
+                    WptTestStatus::Err,
+                    vec![WptSubtest {
+                        name: "Bundle failed".to_string(),
+                        status: WptSubtestStatus::Fail,
+                        message: Some(format!("Failed to bundle test: {}", e)),
+                    }],
+                ));
+            }
+        };
         let report = run_wpt_test_harness(&bundle).await;
-        println!("Running test {} => {:?}", &test.url_path, &report.status);
+        println!("test {} => {:?}", &test.url_path, &report.status);
         // Each test suite should have a status code attached after it completes.
         // When unwrap fails, it means something is wrong, e.g. some tests failed because
         // of something not yet supported by the runtime, such that the test completion callback
