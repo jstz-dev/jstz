@@ -61,7 +61,7 @@ struct Args {
     #[arg(long)]
     debug_log_path: Option<PathBuf>,
 
-    /// Path to file containing injector key pair (format: "public_key:secret_key")
+    /// Path to file containing injector key pair (format: {"public_key":...,"secret_key":...})
     #[arg(long)]
     injector_key_file: PathBuf,
 }
