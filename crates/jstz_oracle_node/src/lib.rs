@@ -6,10 +6,8 @@ use jstz_utils::KeyPair;
 use octez::r#async::endpoint::Endpoint;
 use serde::Serialize;
 mod data_provider;
-mod filtered_log_stream;
 pub mod node;
 pub mod relay;
-pub mod request;
 
 #[derive(Clone, Serialize)]
 pub struct OracleNodeConfig {

@@ -162,11 +162,6 @@ async fn create_jstzd_server(
         .expect("Failed to build baker config");
     let kernel_debug_file = FileWrapper::default();
     let kernel_debug_file_path = kernel_debug_file.path();
-    let debug_log_path = NamedTempFile::new()
-        .unwrap()
-        .into_temp_path()
-        .keep()
-        .unwrap();
     let preimages_dir = TempDir::new().unwrap();
     let preimages_dir_path = preimages_dir.path().to_path_buf();
     let rollup_config = OctezRollupConfigBuilder::new(
@@ -200,8 +195,6 @@ async fn create_jstzd_server(
             .unwrap(),
         ),
         jstz_node::RunMode::Default,
-        0,
-        &debug_log_path,
     );
     let config = JstzdConfig::new(
         octez_node_config,

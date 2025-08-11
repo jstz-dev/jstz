@@ -17,15 +17,15 @@ bincode.workspace = true
 bip39.workspace = true
 regex.workspace = true
 serde_json.workspace = true
-jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
+jstz_utils = { path = "../jstz_utils" }
 tezos-smart-rollup = { workspace = true, features =  ["utils"] }
 tezos_data_encoding.workspace = true
 serde.workspace = true
 clap.workspace = true
 
 [features]
-v2_runtime = ["jstz_proto/v2_runtime"]
+v2_runtime = ["jstz_proto/v2_runtime", "jstz_utils/v2_runtime"]
 
 [[bin]]
 name = "bench"

@@ -75,7 +75,7 @@ async fn get_account(
 }
 
 pub(crate) async fn get_account_nonce(
-    store: StoreWrapper,
+    store: &StoreWrapper,
     address: &str,
 ) -> ServiceResult<Option<Nonce>> {
     let key = construct_accounts_key(address);
@@ -110,7 +110,7 @@ async fn get_nonce(
     Path(address): Path<String>,
 ) -> ServiceResult<Json<Nonce>> {
     let store = StoreWrapper::new(mode, rollup_client, runtime_db);
-    let account_nonce = get_account_nonce(store, &address).await?;
+    let account_nonce = get_account_nonce(&store, &address).await?;
     match account_nonce {
         Some(nonce) => Ok(Json(nonce)),
         None => Err(ServiceError::NotFound)?,
@@ -256,7 +256,7 @@ async fn get_kv_subkeys(
     let key = construct_storage_key(&address, &key);
     let value = match mode {
         RunMode::Default => rollup_client.get_subkeys(&key).await?,
-        RunMode::Sequencer => {
+        RunMode::Sequencer { .. } => {
             tokio::task::spawn_blocking(move || runtime_db.get_subkeys(&key))
                 .await
                 .context("failed to wait for db read task")?
@@ -300,6 +300,7 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::{
+        config::RuntimeEnv,
         services::{accounts::AccountsService, Service},
         utils::tests::mock_app_state,
         RunMode,
@@ -332,7 +333,11 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
+            },
         )
         .await;
         state
@@ -418,7 +423,7 @@ mod tests {
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
-        assert!(super::get_account_nonce(store, user_account_hash)
+        assert!(super::get_account_nonce(&store, user_account_hash)
             .await
             .is_ok_and(|v| matches!(v.unwrap(), Nonce(42))));
 
@@ -427,7 +432,7 @@ mod tests {
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
-        assert!(super::get_account_nonce(store, smart_function_hash)
+        assert!(super::get_account_nonce(&store, smart_function_hash)
             .await
             .is_ok_and(|v| matches!(v.unwrap(), Nonce(50))));
 
@@ -436,7 +441,7 @@ mod tests {
             OctezRollupClient::new(server.url()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
-        assert!(super::get_account_nonce(store, "bad_hash")
+        assert!(super::get_account_nonce(&store, "bad_hash")
             .await
             .is_ok_and(|v| v.is_none()));
 
@@ -457,7 +462,11 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
+            },
         )
         .await;
         state
@@ -508,7 +517,11 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
+            },
         )
         .await;
         state
@@ -581,7 +594,11 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
+            },
         )
         .await;
         state
@@ -643,7 +660,11 @@ mod tests {
             "",
             PathBuf::new(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
+            },
         )
         .await;
         state
@@ -752,7 +773,11 @@ mod tests {
             "",
             PathBuf::new(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
+            },
         )
         .await;
         for key in ["a", "a/b1", "a/b1/c", "a/b2", "a/b3", "b", "c/d"] {

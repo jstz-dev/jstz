@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{sequencer::db::Db, services::AppState, RunMode};
 use anyhow::Context;
 use axum::{extract::State, http::StatusCode, response::IntoResponse};
@@ -6,7 +8,9 @@ use octez::OctezRollupClient;
 pub async fn get_mode(
     State(AppState { mode, .. }): State<AppState>,
 ) -> impl IntoResponse {
-    serde_json::to_string(&mode).unwrap().into_response()
+    serde_json::to_string(&mode.to_string())
+        .unwrap()
+        .into_response()
 }
 
 pub async fn worker_health(State(state): State<AppState>) -> impl IntoResponse {
@@ -18,22 +22,23 @@ pub async fn worker_health(State(state): State<AppState>) -> impl IntoResponse {
 
 pub enum StoreWrapper {
     Rollup(OctezRollupClient),
-    Db(Db),
+    Db(Arc<Db>),
 }
 
 impl StoreWrapper {
     pub fn new(mode: RunMode, rollup_client: OctezRollupClient, runtime_db: Db) -> Self {
         match mode {
             RunMode::Default => Self::Rollup(rollup_client),
-            RunMode::Sequencer => Self::Db(runtime_db),
+            RunMode::Sequencer { .. } => Self::Db(Arc::new(runtime_db)),
         }
     }
 
-    pub async fn get_value(self, key: String) -> anyhow::Result<Option<Vec<u8>>> {
+    pub async fn get_value(&self, key: String) -> anyhow::Result<Option<Vec<u8>>> {
         Ok(match self {
             Self::Rollup(rollup_client) => rollup_client.get_value(&key).await?,
             Self::Db(db) => {
-                match tokio::task::spawn_blocking(move || db.read_key(&key))
+                let copy = db.clone();
+                match tokio::task::spawn_blocking(move || copy.read_key(&key))
                     .await
                     .context("failed to wait for db read task")??
                 {
@@ -71,6 +76,7 @@ pub(crate) mod tests {
     use tower::util::ServiceExt;
 
     use crate::{
+        config::RuntimeEnv,
         sequencer::queue::OperationQueue,
         services::{logs::broadcaster::Broadcaster, utils::StoreWrapper},
         test::default_injector,
@@ -116,7 +122,11 @@ pub(crate) mod tests {
         );
         matches!(store, StoreWrapper::Rollup(_));
         let store = StoreWrapper::new(
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
+            },
             OctezRollupClient::new(String::new()),
             crate::sequencer::db::Db::init(Some("")).unwrap(),
         );
@@ -195,8 +205,10 @@ pub(crate) mod tests {
             .write("/jstz_receipt/bad_value", "nonsense")
             .unwrap();
 
+        let db = Arc::new(runtime_db);
+
         // good value
-        let store = StoreWrapper::Db(runtime_db.clone());
+        let store = StoreWrapper::Db(db.clone());
         let bytes = store
             .get_value(format!("/jstz_receipt/{op_hash}"))
             .await
@@ -211,7 +223,7 @@ pub(crate) mod tests {
         ));
 
         // bad value
-        let error_message = StoreWrapper::Db(runtime_db.clone())
+        let error_message = StoreWrapper::Db(db.clone())
             .get_value("/jstz_receipt/bad_value".to_string())
             .await
             .unwrap_err()
@@ -219,7 +231,7 @@ pub(crate) mod tests {
         assert_eq!(error_message, "failed to decode value string");
 
         // non-existent path
-        assert!(StoreWrapper::Db(runtime_db.clone())
+        assert!(StoreWrapper::Db(db.clone())
             .get_value("/jstz_receipt/bad_hash".to_string())
             .await
             .expect("should get result from store")

@@ -103,7 +103,7 @@ serde = { version = "1.0.196", features = ["derive", "rc"] }
 serde-big-array = "0.5.1"
 serde-wasm-bindgen = "0.6.5"
 serde_json = "1.0.107"
-serde_with = { version = "3.6.1", features = ["macros"] }
+serde_with = { version = "3.6.1", features = ["macros", "base64"] }
 serde_bytes = "0.11.17"
 signal-hook = "0.3.17"
 syntect = "5.2.0"

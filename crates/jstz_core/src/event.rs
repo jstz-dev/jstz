@@ -4,32 +4,47 @@ use serde::{de::DeserializeOwned, Serialize};
 use tezos_smart_rollup::prelude::debug_msg;
 
 /// Jstz Events
-pub trait Event: PartialEq + Serialize + DeserializeOwned {
+pub trait Event: PartialEq + StringEncodable {
     fn tag() -> &'static str;
 }
 
-/// Responsible for publishing events to the kernel debug log
-#[derive(Debug, Default)]
-pub struct EventPublisher;
+/// A trait to encode to string and decode from string symmetrically.
+pub trait StringEncodable: Sized {
+    fn to_string(&self) -> Result<String>;
+    fn from_str(s: &str) -> Result<Self>;
+}
 
-impl EventPublisher {
+impl<T: Serialize + DeserializeOwned> StringEncodable for T {
+    fn to_string(&self) -> Result<String> {
+        Ok(serde_json::to_string(self).map_err(EncodeError::from)?)
+    }
+
+    fn from_str(s: &str) -> Result<Self> {
+        Ok(serde_json::from_str(s).map_err(DecodeError::from)?)
+    }
+}
+
+/// Responsible for publishing events to the kernel debug log
+pub trait EventPublish: Event {
     /// Jstz events are published as single line in the kernel debug log with the
-    /// schema "[Event::tag()]<json payload>\n"
-    pub fn publish_event<R, E: Event>(rt: &R, event: &E) -> Result<()>
+    /// schema "[Event::tag()]<payload>\n"
+    fn publish_event<R>(self, rt: &R) -> Result<()>
     where
         R: HostRuntime,
     {
-        let json = serde_json::to_string(event).map_err(EncodeError::from)?;
-        let prefix = E::tag();
-        debug_msg!(rt, "[{prefix}]{json}\n");
+        let payload = self.to_string()?;
+        let prefix = <Self as Event>::tag();
+        debug_msg!(rt, "[{prefix}]{payload}\n");
         Ok(())
     }
 }
 
+impl<E: Event> EventPublish for E {}
+
 pub fn decode_line<E: Event>(input: &str) -> Result<E> {
     let input = input.trim();
     let str = parse_line::<E>(input)?;
-    Ok(serde_json::from_str(str).map_err(DecodeError::from)?)
+    E::from_str(str)
 }
 
 fn parse_line<E: Event>(input: &str) -> std::result::Result<&str, DecodeError> {
@@ -102,7 +117,7 @@ impl nom::error::ParseError<&str> for NomError {
 #[cfg(test)]
 mod test {
 
-    use crate::event::{decode_line, Event, EventPublisher, NomError};
+    use crate::event::{decode_line, Event, EventPublish, NomError};
     use bincode::{Decode, Encode};
     use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
     use nom::error::ParseError;
@@ -144,6 +159,16 @@ mod test {
         }
     }
 
+    fn mock_event() -> MockEvent {
+        MockEvent {
+            id: 1,
+            caller: PublicKeyHash::from_base58("tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb")
+                .unwrap(),
+            gas_limit: 100,
+            url: Url::from_str("http://example.com/foo").unwrap(),
+        }
+    }
+
     #[test]
     fn test_publish_decode_roundtrip() {
         let mut sink = Sink(Vec::new());
@@ -153,14 +178,8 @@ mod test {
                 &mut sink.0,
             )
         });
-        let event = MockEvent {
-            id: 1,
-            caller: PublicKeyHash::from_base58("tz1XSYefkGnDLgkUPUmda57jk1QD6kqk2VDb")
-                .unwrap(),
-            gas_limit: 100,
-            url: Url::from_str("http://example.com/foo").unwrap(),
-        };
-        EventPublisher::publish_event(&host, &event).unwrap();
+        let event = mock_event();
+        event.clone().publish_event(&host).unwrap();
         let head_line = sink.lines().first().unwrap().clone();
         assert_eq!(
             head_line,
@@ -171,19 +190,35 @@ mod test {
     }
 
     #[test]
-    fn fails_decode_on_invalid_line() {
-        let decoded = decode_line::<MockEvent>("invalid line").unwrap_err();
-        assert_eq!(
-            decoded.to_string(),
-            "Error while decoding event: Parsing Error: NomError(\"Nom decode failed: kind 'Tag' on input 'invalid line'\")"
-        );
+    fn rejects_missing_field() {
+        let line = r#"[MOCK]{"message": "boom"}"#;
+        let err = decode_line::<MockEvent>(line).unwrap_err();
+        assert!(err.to_string().contains("missing field `id`"), "{err}");
+    }
 
-        let decoded =
-            decode_line::<MockEvent>(r#"[MOCK]{"message": "boom"}"#).unwrap_err();
-        assert_eq!(
-            decoded.to_string(),
-            "Error while decoding event: missing field `id` at line 1 column 19"
-        )
+    #[test]
+    fn rejects_missing_tag() {
+        let line = serde_json::to_string(&mock_event()).unwrap();
+        let err = decode_line::<MockEvent>(&line).unwrap_err();
+        assert!(
+            err.to_string()
+                .contains("Nom decode failed: kind 'Tag' on input '"),
+            "{err}"
+        );
+    }
+
+    #[test]
+    fn rejects_garbage_json() {
+        let line = "[MOCK]{ this is not json }";
+        let err = decode_line::<MockEvent>(line).unwrap_err();
+        assert!(err.to_string().contains("key must be a string"), "{err}");
+    }
+
+    #[test]
+    fn rejects_unterminated_json() {
+        let line = "[MOCK]{\"id\":1";
+        let err = decode_line::<MockEvent>(line).unwrap_err();
+        assert!(err.to_string().contains("EOF while parsing"), "{err}");
     }
 
     #[test]
