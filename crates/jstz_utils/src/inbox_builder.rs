@@ -174,15 +174,16 @@ impl InboxBuilder {
                     MichelsonOr::Left(MichelsonPair(
                         MichelsonContract(Contract::Implicit(
                             PublicKeyHash::from_b58check(&account.address.to_string())
-                                .unwrap(),
+                                .expect("serialised address should be parsable"),
                         )),
                         Ticket::new(
                             Contract::Originated(ticketer.clone()),
                             MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
                             amount_mutez,
                         )
-                        .unwrap(),
+                        .expect("ticket creation from ticketer should work"),
                     ));
+
                 let msg =
                     InboxMessage::Internal(InternalInboxMessage::Transfer(Transfer {
                         sender: ticketer.clone(),
@@ -190,7 +191,7 @@ impl InboxBuilder {
                         source: PublicKeyHash::from_b58check(
                             "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
                         )
-                        .unwrap(),
+                        .expect("the constant source address should be parsable"),
                         destination: self.rollup_address.clone(),
                         payload,
                     }));
