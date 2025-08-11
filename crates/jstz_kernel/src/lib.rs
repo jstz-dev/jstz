@@ -72,9 +72,12 @@ pub async fn handle_message(
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
-    #[cfg(not(feature = "riscv_kernel"))]
+    #[cfg(not(any(feature = "riscv_kernel", feature = "riscv_wpt_test_kernel")))]
     wasm_kernel::run(rt);
 
     #[cfg(feature = "riscv_kernel")]
     riscv_kernel::run(rt);
+
+    #[cfg(feature = "riscv_wpt_test_kernel")]
+    riscv_wpt_test_kernel::entry(rt);
 }
