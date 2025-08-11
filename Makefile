@@ -159,4 +159,4 @@ run-manual-test: riscv-pvm-kernel
 
 .PHONY: run-riscv-wpt-test
 run-riscv-wpt-test: riscv-wpt-test-kernel
-	@riscv-sandbox run --timings --address sr1FXevDx86EyU1BBwhn94gtKvVPTNwoVxUC --inbox-file manual_test/inbox.json --input target/riscv64gc-unknown-linux-musl/release/wpt-test-kernel-executable
+	@riscv-sandbox run --timings --address sr1FXevDx86EyU1BBwhn94gtKvVPTNwoVxUC --inbox-file manual_test/inbox.json --input target/riscv64gc-unknown-linux-musl/release/wpt-test-kernel-executable 

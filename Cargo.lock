@@ -464,6 +464,9 @@ name = "bitflags"
 version = "2.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b048fb63fd8b5923fc5aa7b340d8e156aec7ec02f0c78fa8a6ddc2613f6f71de"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "bitvec"
@@ -3159,6 +3162,13 @@ version = "0.1.1-alpha.4"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
+ "deno_console",
+ "deno_core",
+ "deno_error",
+ "deno_fetch_base",
+ "deno_url",
+ "deno_web",
+ "deno_webidl",
  "derive_more",
  "futures",
  "hex",
@@ -3170,12 +3180,32 @@ dependencies = [
  "jstz_runtime",
  "jstz_utils",
  "num-traits",
+ "regex",
  "serde",
  "serde_json",
  "tezos-smart-rollup",
  "tezos_crypto_rs 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tezos_data_encoding 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
+ "tezos-smart-rollup-mock",
  "tokio",
+]
+
+[[package]]
+name = "jstz_message_creator"
+version = "0.1.1-alpha.3"
+dependencies = [
+ "anyhow",
+ "bincode 2.0.0-rc.3",
+ "hex",
+ "jstz_core",
+ "jstz_crypto",
+ "jstz_node",
+ "jstz_proto",
+ "serde_json",
+ "tezos-smart-rollup",
+ "tezos_crypto_rs",
+ "tezos_data_encoding",
+>>>>>>> 377ac953 (feat(wpt): ricv test kernel setup)
 ]
 
 [[package]]
@@ -3340,6 +3370,7 @@ dependencies = [
  "parking_lot",
  "pin-project",
  "regex",
+ "ron",
  "serde",
  "serde_json",
  "tezos-smart-rollup",
@@ -4888,6 +4919,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "ron"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b91f7eff05f748767f183df4320a63d6936e9c6107d97c9e6bdd9784f4289c94"
+dependencies = [
+ "base64 0.21.7",
+ "bitflags 2.6.0",
+ "serde",
+ "serde_derive",
 ]
 
 [[package]]
