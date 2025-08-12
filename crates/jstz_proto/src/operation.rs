@@ -279,6 +279,8 @@ pub mod internal {
         pub amount: Amount,
         // Receiver address
         pub receiver: Address,
+        /// Source of the deposit message
+        pub source: Address,
     }
 
     #[derive(Debug, PartialEq, Eq, Clone)]
@@ -294,6 +296,8 @@ pub mod internal {
         pub proxy_smart_function: Option<Address>,
         // Ticket hash
         pub ticket_hash: TicketHash,
+        /// Source of the deposit message
+        pub source: Address,
     }
 
     impl FaDeposit {
@@ -302,6 +306,7 @@ pub mod internal {
                 "receiver": self.receiver,
                 "amount": self.amount,
                 "ticketHash": self.ticket_hash.to_string(),
+                "source": self.source,
             })
         }
 

@@ -263,6 +263,7 @@ mod tests {
             inbox_id: 1,
             amount: 10,
             receiver,
+            source: Address::User(jstz_mock::account1()),
         }));
 
         let dst_account_path =
@@ -319,6 +320,7 @@ mod tests {
         let fa_deposit_op = Message::Internal(InternalOperation::FaDeposit(FaDeposit {
             inbox_id: 1,
             amount: 10,
+            source: Address::User(jstz_mock::account1()),
             receiver,
             proxy_smart_function: None,
             ticket_hash: TicketHash::try_from(

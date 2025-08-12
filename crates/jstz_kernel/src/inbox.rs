@@ -192,6 +192,13 @@ fn read_transfer(
     inbox_id: u32,
 ) -> Option<Message> {
     logger.write_debug("Internal message: transfer\n");
+    let source = match Address::from_base58(&transfer.source.to_b58check()) {
+        Ok(addr) => addr,
+        Err(e) => {
+            logger.write_debug(&format!("Failed to parse transfer source: {e:?}\n"));
+            return None;
+        }
+    };
     match transfer.payload {
         MichelsonOr::Left(tez_ticket) => {
             let ticket = tez_ticket.1;
@@ -204,6 +211,7 @@ fn read_transfer(
                     inbox_id,
                     amount,
                     receiver,
+                    source,
                 };
                 logger.write_debug(format!("Deposit: {content:?}\n").as_str());
                 Some(Message::Internal(InternalMessage::Deposit(content)))
@@ -216,7 +224,7 @@ fn read_transfer(
             let receiver = fa_ticket.0;
             let proxy = fa_ticket.1 .0 .0;
             let fa_deposit =
-                try_parse_fa_deposit(inbox_id, ticket, receiver, proxy).ok()?;
+                try_parse_fa_deposit(inbox_id, ticket, source, receiver, proxy).ok()?;
             Some(Message::Internal(InternalMessage::FaDeposit(fa_deposit)))
         }
     }
@@ -286,12 +294,14 @@ mod test {
         if let Message::Internal(InternalMessage::Deposit(internal::Deposit {
             amount,
             receiver,
+            source,
             ..
         })) =
             read_message(host.rt(), &ticketer).expect("Expected message but non received")
         {
             assert_eq!(amount, 100);
-            assert_eq!(receiver.to_base58(), deposit.receiver.to_b58check())
+            assert_eq!(receiver.to_base58(), deposit.receiver.to_b58check());
+            assert_eq!(source.to_base58(), deposit.source.to_b58check());
         } else {
             panic!("Expected deposit message")
         }
@@ -347,11 +357,13 @@ mod test {
             amount,
             receiver,
             proxy_smart_function,
+            source,
             ..
         })) = read_message(host.rt(), &ticketer).expect("Expected FA message")
         {
             assert_eq!(300, amount);
             assert_eq!(fa_deposit.receiver.to_b58check(), receiver.to_base58());
+            assert_eq!(fa_deposit.source.to_b58check(), source.to_base58());
             assert_eq!(
                 Some(
                     SmartFunctionHash::from_base58(jstz_mock::host::MOCK_PROXY).unwrap()
