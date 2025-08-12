@@ -19,7 +19,7 @@ pub mod riscv_kernel;
 #[cfg(feature = "riscv_wpt_test_kernel")]
 pub mod riscv_wpt_test_kernel;
 
-#[cfg(not(feature = "riscv_kernel"))]
+#[cfg(not(any(feature = "riscv_kernel", feature = "riscv_wpt_test_kernel")))]
 mod wasm_kernel;
 
 pub const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
