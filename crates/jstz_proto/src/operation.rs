@@ -279,8 +279,8 @@ pub mod internal {
         pub amount: Amount,
         // Receiver address
         pub receiver: Address,
-        /// Source of the deposit message
-        pub source: Address,
+        /// Source of the deposit message. Must be a user address
+        pub source: PublicKeyHash,
     }
 
     #[derive(Debug, PartialEq, Eq, Clone)]
@@ -296,8 +296,8 @@ pub mod internal {
         pub proxy_smart_function: Option<Address>,
         // Ticket hash
         pub ticket_hash: TicketHash,
-        /// Source of the deposit message
-        pub source: Address,
+        /// Source of the deposit message. Must be a user address
+        pub source: PublicKeyHash,
     }
 
     impl FaDeposit {
@@ -386,6 +386,7 @@ mod test {
     use http::{HeaderMap, Method, Uri};
     use jstz_core::reveal_data::PreimageHash;
     use jstz_core::{kv::Transaction, BinEncodable};
+    use jstz_crypto::hash::Hash;
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
     use jstz_mock::host::JstzMockHost;
     #[cfg(feature = "v2_runtime")]
@@ -654,7 +655,8 @@ mod test {
         let d = FaDeposit {
             inbox_id: 1,
             amount: 10,
-            source: Address::from_base58("tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h").unwrap(),
+            source: PublicKeyHash::from_base58("tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h")
+                .unwrap(),
             receiver: Address::from_base58("tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg")
                 .unwrap(),
             proxy_smart_function: None,

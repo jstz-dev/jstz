@@ -1,4 +1,6 @@
 use jstz_core::{host::WriteDebug, BinEncodable};
+use jstz_crypto::hash::Hash;
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::context::account::Address;
 use jstz_proto::operation::{internal::Deposit, InternalOperation, SignedOperation};
 use num_traits::ToPrimitive;
@@ -192,7 +194,7 @@ fn read_transfer(
     inbox_id: u32,
 ) -> Option<Message> {
     logger.write_debug("Internal message: transfer\n");
-    let source = match Address::from_base58(&transfer.source.to_b58check()) {
+    let source = match PublicKeyHash::from_base58(&transfer.source.to_b58check()) {
         Ok(addr) => addr,
         Err(e) => {
             logger.write_debug(&format!("Failed to parse transfer source: {e:?}\n"));
@@ -301,7 +303,10 @@ mod test {
         {
             assert_eq!(amount, 100);
             assert_eq!(receiver.to_base58(), deposit.receiver.to_b58check());
-            assert_eq!(source.to_base58(), deposit.source.to_b58check());
+            assert_eq!(
+                Addressable::to_base58(&source),
+                deposit.source.to_b58check()
+            );
         } else {
             panic!("Expected deposit message")
         }
@@ -363,7 +368,10 @@ mod test {
         {
             assert_eq!(300, amount);
             assert_eq!(fa_deposit.receiver.to_b58check(), receiver.to_base58());
-            assert_eq!(fa_deposit.source.to_b58check(), source.to_base58());
+            assert_eq!(
+                fa_deposit.source.to_b58check(),
+                Addressable::to_base58(&source),
+            );
             assert_eq!(
                 Some(
                     SmartFunctionHash::from_base58(jstz_mock::host::MOCK_PROXY).unwrap()
