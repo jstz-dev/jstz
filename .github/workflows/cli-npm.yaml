@@ -38,7 +38,7 @@ jobs:
         shell: sh
         run: apk add make musl-dev libcrypto3 openssl-dev clang gcc musl-dev libstdc++ libffi-dev g++ openssl-libs-static bash curl
         # curl and bash are required by dtolnay/rust-toolchain
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@1.82.0
         with:
           targets: wasm32-unknown-unknown
@@ -86,7 +86,7 @@ jobs:
         shell: sh
         run: apk add make musl-dev libcrypto3 openssl-dev clang gcc musl-dev libstdc++ libffi-dev g++ openssl-libs-static bash curl
         # curl and bash are required by dtolnay/rust-toolchain
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: dtolnay/rust-toolchain@1.82.0
         with:
           targets: wasm32-unknown-unknown

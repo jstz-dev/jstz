@@ -83,7 +83,7 @@ jobs:
     outputs:
       tag: ${{ fromJson(steps.meta.outputs.json).tags[0] }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Download digests
         uses: actions/download-artifact@v5
         with:

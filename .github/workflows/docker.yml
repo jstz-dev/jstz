@@ -46,7 +46,7 @@ jobs:
     name: Build (Kernel)
     runs-on: [x86_64, linux, nix]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: nix --version
       - name: Format
         run: nix --accept-flake-config fmt -- --fail-on-change

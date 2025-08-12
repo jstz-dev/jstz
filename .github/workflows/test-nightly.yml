@@ -14,7 +14,7 @@ jobs:
     steps:
       - name: Setup
         run: apt update && apt install -y git curl python3.11 pkg-config libssl-dev
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           submodules: recursive
       - name: Run
@@ -33,7 +33,7 @@ jobs:
     name: Benchmark RISCV kernel
     runs-on: [large, nix]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build kernel
         run: nix --accept-flake-config --log-format raw -L develop --command make riscv-pvm-kernel
       - name: Run

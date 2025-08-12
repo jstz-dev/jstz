@@ -43,7 +43,7 @@ jobs:
     needs: [set-ref]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ needs.set-ref.outputs.target_ref }}
           fetch-depth: 0 # Not needed if lastUpdated is not enabled
