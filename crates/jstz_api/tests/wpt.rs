@@ -9,6 +9,8 @@ use boa_engine::{
 use boa_gc::{Finalize, Trace};
 use derive_more::{From, Into};
 use jstz_core::{host_defined, Api, Runtime};
+use jstz_runtime::wpt::{TestHarnessReport, TestResult, TestsResult};
+use jstz_runtime::wpt::{WptSubtest, WptSubtestStatus, WptTestStatus};
 use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptReportTest, WptServe, WptSubtest,
     WptSubtestStatus, WptTestStatus,

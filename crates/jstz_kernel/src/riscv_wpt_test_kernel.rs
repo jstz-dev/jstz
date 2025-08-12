@@ -1,25 +1,18 @@
 #![cfg(feature = "riscv_wpt_test_kernel")]
-use tezos_smart_rollup::{entrypoint, host::Runtime, prelude::debug_msg};
+
+use tezos_smart_rollup::{host::Runtime, prelude::debug_msg};
 
 use crate::inbox::*;
 use deno_core::{
-    ascii_str, extension, Extension, ExtensionFileSource, ExtensionFileSourceCode,
-};
-use deno_core::{
-    convert::Smi,
     op2,
     v8::{self},
-    FromV8, OpState,
+    OpState,
 };
 use deno_error::JsErrorBox;
-use derive_more::{From, Into};
-use jstz_core::{host::HostRuntime, kv::Transaction, BinEncodable};
+use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use jstz_runtime::runtime::JstzPermissions;
 use jstz_runtime::wpt::{TestHarnessReport, TestResult, TestsResult};
 use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
-use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_crypto_rs::hash::SmartRollupHash;
 use tezos_smart_rollup_mock::MockHost;
@@ -63,11 +56,11 @@ deno_core::extension!(
 fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntime {
     // -------------- BlobStore --------------
     // Required by deno_web for createObjectURL().
-    let blob_store = Arc::new(BlobStore::default());
+    let _blob_store = Arc::new(BlobStore::default());
 
     // Optional "location" of the global scope.
     // Many runtimes pass something like "file:///main.js".
-    let maybe_location = Url::parse("file:///").ok();
+    let _maybe_location = Url::parse("file:///").ok();
 
     let address =
         SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton").unwrap();
@@ -94,29 +87,20 @@ fn read_message(
     rt: &mut impl Runtime,
     ticketer: &ContractKt1Hash,
 ) -> Option<ParsedInboxMessage> {
-    //debug_msg!(rt, "reading message from inbox\n");
-    //let input = rt.read_input().ok()??;
     let input = match rt.read_input() {
         Ok(input) => match input {
-            Some(input) => {
-                //debug_msg!(rt, "input: {:?}\n", input);
-                input
-            }
+            Some(input) => input,
             None => {
-                //debug_msg!(rt, "no input found\n");
                 return None;
             }
         },
-        Err(e) => {
-            //debug_msg!(rt, "error reading input: {:?}\n", e);
+        Err(_e) => {
             return None;
         }
     };
-    //let jstz_rollup_address = rt.reveal_metadata().address();
     let jstz_rollup_address =
         SmartRollupHash::from_base58_check("sr1BxufbqiHt3dn6ahV6eZk9xBD6XV1fYowr")
             .unwrap();
-    //debug_msg!(rt, "parsed inbox message\n");
     parse_inbox_message(rt, input.id, input.as_ref(), ticketer, &jstz_rollup_address)
 }
 
@@ -169,18 +153,10 @@ pub fn entry(rt: &mut impl Runtime) {
                             }
                         }
                     }
-                    ParsedInboxMessage::LevelInfo(level_info_type) => {
-                        /*debug_msg!(
-                            rt,
-                            "LevelInfo message found, continuing to next message\n"
-                        );*/
+                    ParsedInboxMessage::LevelInfo(_level_info_type) => {
                         // Continue reading next message
                     }
                     _ => {
-                        /*debug_msg!(
-                            rt,
-                            "Some other message found, continuing to next message\n"
-                        );*/
                         // Continue reading next message
                     }
                 }

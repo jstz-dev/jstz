@@ -40,13 +40,13 @@ tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup-mock.workspace = true
 regex.workspace = true
-deno_error.workspace = true
-deno_core.workspace = true
-deno_webidl.workspace = true
-deno_web.workspace = true
-deno_url.workspace = true
-deno_fetch_base.workspace = true
-deno_console.workspace = true
+deno_error = {workspace = true, optional = true }
+deno_core = {workspace = true, optional = true }
+deno_webidl = {workspace = true, optional = true }
+deno_web = {workspace = true, optional = true }
+deno_url = {workspace = true, optional = true }
+deno_fetch_base = {workspace = true, optional = true}
+deno_console = {workspace = true, optional = true}
 anyhow.workspace = true
 
 [dev-dependencies]
@@ -61,4 +61,4 @@ tokio.workspace = true
 [features]
 v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
 riscv_kernel = ["v2_runtime", "dep:tokio", "dep:jstz_runtime", "tezos-smart-rollup/experimental-host-in-memory-store"]
-riscv_wpt_test_kernel = ["v2_runtime", "dep:tokio", "dep:jstz_runtime", "tezos-smart-rollup/experimental-host-in-memory-store"]
+riscv_wpt_test_kernel = ["v2_runtime", "dep:tokio", "dep:jstz_runtime", "tezos-smart-rollup/experimental-host-in-memory-store", "dep:deno_core", "dep:deno_error","dep:deno_webidl", "dep:deno_fetch_base", "dep:deno_web", "dep:deno_url", "dep:deno_console"]
