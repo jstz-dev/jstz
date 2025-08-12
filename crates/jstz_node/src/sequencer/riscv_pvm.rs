@@ -125,13 +125,19 @@ impl JstzPvm {
         mut step_bounds: Bound<usize>,
     ) -> StepperStatus {
         let mut total_steps = 0usize;
+        // `container` wraps around the actual operation and is supposed to be consumed only once.
         let mut container = Some(encoded_operation);
 
+        // The loop keeps running step_max_once until the PVM is ready to process the message.
+        // This is necessary because the PVM does other things from time to time, especially
+        // at the very beginning of launching. We need to wait here until the PVM says it's
+        // ready to handle messages. `StepperStatus::Exited` is the exact signal returned when
+        // the PVM starts to idle. The message is then passed to the PVM and it will do its job.
+        // When `StepperStatus::Exited` is returned again, we know that the PVM has finished
+        // processing the message and we can wrap up this execution.
         loop {
             write_heartbeat(&self.heartbeat);
-            let v = self.step_max_once(step_bounds);
-            println!("{v:?}");
-            match v {
+            match self.step_max_once(step_bounds) {
                 StepperStatus::Running { steps } => {
                     total_steps = total_steps.saturating_add(steps);
                     step_bounds = bound_saturating_sub(step_bounds, steps);
@@ -194,12 +200,14 @@ mod tests {
 
     use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
     use jstz_kernel::inbox::encode_parsed_inbox_message;
+    use tempfile::TempDir;
     use tezos_crypto_rs::hash::SmartRollupHash;
     use tezos_smart_rollup::types::SmartRollupAddress;
 
     use crate::sequencer::tests::dummy_op;
 
     #[test]
+    #[ignore = "PVM consumes too much memory and therefore this cannot be part of CI"]
     fn create_pvm() {
         let ticketer =
             SmartFunctionHash::from_base58("KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ")
@@ -207,14 +215,15 @@ mod tests {
         let rollup_address =
             SmartRollupHash::from_base58_check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
+        let tmp_dir = TempDir::new().unwrap();
 
         let mut pvm = super::JstzPvm::new(
-            PathBuf::from_str("/Users/huanchengchang/code/jstz/target/riscv64gc-unknown-linux-musl/release/kernel-executable").unwrap(),
+            PathBuf::from_str("<path to riscv kernel>").unwrap(),
             &rollup_address,
             0,
-            Some(PathBuf::from_str("/tmp/t").unwrap().into_boxed_path()),
+            Some(tmp_dir.path().to_path_buf().into_boxed_path()),
             Default::default(),
-            Default::default()
+            Default::default(),
         )
         .unwrap();
 
