@@ -25,6 +25,7 @@ parking_lot.workspace = true
 serde.workspace = true
 serde-big-array.workspace = true
 serde_json.workspace = true
+serde_with.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup-host.workspace = true

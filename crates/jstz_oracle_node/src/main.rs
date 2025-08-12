@@ -21,7 +21,7 @@ struct Args {
     #[arg(long, default_value = DEFAULT_JSTZ_NODE_ENDPOINT)]
     node_endpoint: String,
 
-    /// Path to file containing key pair (format: "public_key:secret_key")
+    /// Path to file containing key pair (format: {"public_key": ..., "secret_key": ...})
     #[arg(long)]
     key_file: PathBuf,
 }

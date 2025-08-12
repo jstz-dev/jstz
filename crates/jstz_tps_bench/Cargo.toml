@@ -19,7 +19,7 @@ bip39.workspace = true
 regex.workspace = true
 serde_json.workspace = true
 jstz_proto = { path = "../jstz_proto" }
-jstz_utils = { path = "../jstz_utils" }
+jstz_utils = { path = "../jstz_utils", features = ["inbox_builder"] }
 tezos-smart-rollup = { workspace = true, features =  ["utils"] }
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true

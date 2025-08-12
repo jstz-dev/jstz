@@ -4,32 +4,47 @@ use serde::{de::DeserializeOwned, Serialize};
 use tezos_smart_rollup::prelude::debug_msg;
 
 /// Jstz Events
-pub trait Event: PartialEq + Serialize + DeserializeOwned {
+pub trait Event: PartialEq + StringEncodable {
     fn tag() -> &'static str;
 }
 
-/// Responsible for publishing events to the kernel debug log
-#[derive(Debug, Default)]
-pub struct EventPublisher;
+/// A trait to encode to string and decode from string symmetrically.
+pub trait StringEncodable: Sized {
+    fn to_string(&self) -> Result<String>;
+    fn from_str(s: &str) -> Result<Self>;
+}
 
-impl EventPublisher {
+impl<T: Serialize + DeserializeOwned> StringEncodable for T {
+    fn to_string(&self) -> Result<String> {
+        Ok(serde_json::to_string(self).map_err(EncodeError::from)?)
+    }
+
+    fn from_str(s: &str) -> Result<Self> {
+        Ok(serde_json::from_str(s).map_err(DecodeError::from)?)
+    }
+}
+
+/// Responsible for publishing events to the kernel debug log
+pub trait EventPublish: Event {
     /// Jstz events are published as single line in the kernel debug log with the
-    /// schema "[Event::tag()]<json payload>\n"
-    pub fn publish_event<R, E: Event>(rt: &R, event: &E) -> Result<()>
+    /// schema "[Event::tag()]<payload>\n"
+    fn publish_event<R>(self, rt: &R) -> Result<()>
     where
         R: HostRuntime,
     {
-        let json = serde_json::to_string(event).map_err(EncodeError::from)?;
-        let prefix = E::tag();
-        debug_msg!(rt, "[{prefix}]{json}\n");
+        let payload = self.to_string()?;
+        let prefix = <Self as Event>::tag();
+        debug_msg!(rt, "[{prefix}]{payload}\n");
         Ok(())
     }
 }
 
+impl<E: Event> EventPublish for E {}
+
 pub fn decode_line<E: Event>(input: &str) -> Result<E> {
     let input = input.trim();
     let str = parse_line::<E>(input)?;
-    Ok(serde_json::from_str(str).map_err(DecodeError::from)?)
+    E::from_str(str)
 }
 
 fn parse_line<E: Event>(input: &str) -> std::result::Result<&str, DecodeError> {
@@ -100,9 +115,9 @@ impl nom::error::ParseError<&str> for NomError {
 }
 
 #[cfg(test)]
-mod test {
+pub(crate) mod test {
 
-    use crate::event::{decode_line, Event, EventPublisher, NomError};
+    use crate::event::{decode_line, Event, EventPublish, NomError};
     use bincode::{Decode, Encode};
     use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
     use nom::error::ParseError;
@@ -164,7 +179,7 @@ mod test {
             )
         });
         let event = mock_event();
-        EventPublisher::publish_event(&host, &event).unwrap();
+        event.clone().publish_event(&host).unwrap();
         let head_line = sink.lines().first().unwrap().clone();
         assert_eq!(
             head_line,
