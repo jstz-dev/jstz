@@ -61,4 +61,4 @@ tokio.workspace = true
 [features]
 v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
 riscv_kernel = ["v2_runtime", "dep:tokio", "dep:jstz_runtime", "tezos-smart-rollup/experimental-host-in-memory-store"]
-riscv_wpt_test_kernel = ["v2_runtime", "dep:tokio", "dep:jstz_runtime", "tezos-smart-rollup/experimental-host-in-memory-store", "dep:deno_core", "dep:deno_error","dep:deno_webidl", "dep:deno_fetch_base", "dep:deno_web", "dep:deno_url", "dep:deno_console"]
+riscv_wpt_test_kernel = ["v2_runtime", "dep:tokio", "dep:jstz_runtime", "tezos-smart-rollup/experimental-host-in-memory-store", "dep:deno_core", "dep:deno_error","dep:deno_webidl", "dep:deno_fetch_base", "dep:deno_web", "dep:deno_url", "dep:deno_console", "jstz_runtime/wpt"]

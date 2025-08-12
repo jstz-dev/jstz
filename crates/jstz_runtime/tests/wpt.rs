@@ -1,15 +1,20 @@
 use anyhow::Context;
 use deno_core::{
-    convert::Smi,
     op2,
     v8::{self},
-    FromV8, OpState,
+    OpState,
 };
 use deno_error::JsErrorBox;
-use derive_more::{From, Into};
+
+#[path = "report_parser.rs"]
+mod report_parser;
+use report_parser::parse_report_from_log_line;
 
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+use jstz_runtime::wpt::init_runtime;
+use jstz_runtime::wpt::test_completion_callback;
+use jstz_runtime::wpt::test_result_callback;
 use jstz_runtime::wpt::{
     LogLine, ParseError, TestHarnessReport, TestResult, TestsResult, WptSubtest,
     WptSubtestStatus, WptTestStatus,
@@ -21,237 +26,30 @@ use jstz_wpt::{
 use regex::Regex;
 use ron::de::from_str as ron_from_str;
 use serde::Deserialize;
-use std::borrow::Cow;
 use std::{
-    collections::{BTreeMap, HashSet},
+    collections::BTreeMap,
     fs::{File, OpenOptions},
     future::IntoFuture,
-    panic,
     path::{Path, PathBuf},
     str::FromStr,
 };
 use tezos_smart_rollup_mock::MockHost;
-use thiserror::Error;
 use tokio::io::AsyncWriteExt;
 
-/// List of tests that should be skipped due to known issues (e.g., segmentation faults)
-/// Add test paths here as you encounter problematic tests
+/// List of test prefixes that should be skipped due to known issues
 const SKIP_TESTS: &[&str] = &[
-    // Add problematic tests here, for example:
     "FileAPI/url/url-format.any.html",
     "compression/compression",
-    "encoding/", // "some/other/problematic/test.html",
+    "encoding/",
     "fetch/http-cache/",
     "webstorage/",
     "html/webappapis/scripting/processing-model-2",
 ];
 
-/// Check if a test should be skipped
 fn should_skip_test(test_path: &str) -> bool {
     SKIP_TESTS
         .iter()
         .any(|&skip_path| test_path.contains(skip_path))
-}
-
-/// Try to get a TestHarnessReport out of *any* line of text.
-/// - Returns Ok(Some(...)) if a report was found and parsed
-/// - Returns Ok(None) if no report-like text exists on the line
-/// - Returns Err(_) only if a report-like text was found but failed to parse
-pub fn parse_report_from_log_line(
-    line: &str,
-) -> Result<Option<TestHarnessReport>, ParseError> {
-    // 1) Try to slice a report straight from the raw line (works for arbitrary/non-JSON logs)
-    if let Some(raw_dbg) = slice_report_debug(line) {
-        return parse_report_debug_text(raw_dbg).map(Some);
-    }
-
-    // 2) Fallback: if the line *is* JSON with a "message" field, try inside it
-    if let Ok(env) = serde_json::from_str::<LogLine>(line) {
-        if let Some(raw_dbg) = slice_report_debug(&env.message) {
-            return parse_report_debug_text(raw_dbg).map(Some);
-        }
-    }
-
-    Ok(None)
-}
-
-/// Parse the Rust Debug-ish "TestHarnessReport { ... }" into a struct,
-/// handling both raw text and JSON-escaped text (`\"`, `\\n`, etc).
-fn parse_report_debug_text(raw_dbg: &str) -> Result<TestHarnessReport, ParseError> {
-    // If this came from inside a JSON string, its quotes are escaped as \".
-    // Try RON directly first; if that fails, try JSON-unescaping the snippet and parse again.
-    match try_ron_from_debug(raw_dbg) {
-        Ok(rep) => Ok(rep),
-        Err(_) => {
-            if let Some(unescaped) = try_unescape_as_json_string(raw_dbg) {
-                try_ron_from_debug(&unescaped).map_err(|e| ParseError::Ron(e))
-            } else {
-                Err(ParseError::Ron(
-                    "RON parse failed and JSON-unescape also failed".into(),
-                ))
-            }
-        }
-    }
-}
-
-/// Convert the Debug text to RON and attempt to parse.
-/// Returns Err(stringified error) on failure.
-fn try_ron_from_debug(debug_text: &str) -> Result<TestHarnessReport, String> {
-    let ron_text = braces_to_parens_preserving_strings(debug_text);
-    ron_from_str::<TestHarnessReport>(&ron_text).map_err(|e| e.to_string())
-}
-
-/// If `raw` looks like it came from inside a JSON string (e.g., it contains `\"`),
-/// try to interpret it as a JSON string and unescape it.
-fn try_unescape_as_json_string(raw: &str) -> Option<String> {
-    // Only attempt if there are typical JSON escapes. This avoids breaking truly-raw inputs.
-    if !(raw.contains("\\\"")
-        || raw.contains("\\n")
-        || raw.contains("\\t")
-        || raw.contains("\\r")
-        || raw.contains("\\\\"))
-    {
-        return None;
-    }
-    // Wrap in quotes and let serde_json do the heavy lifting.
-    let wrapped = format!("\"{}\"", raw);
-    serde_json::from_str::<String>(&wrapped).ok()
-}
-
-/// Extracts "TestHarnessReport { ... }" from any text.
-/// If "Internal message:" follows, we stop before it; otherwise we bracket-match to the closing '}'.
-fn slice_report_debug(s: &str) -> Option<&str> {
-    let start = s.find("TestHarnessReport")?;
-    let after = &s[start..];
-
-    // If an explicit sentinel exists, crop to it first to avoid scanning the whole line.
-    if let Some(end_sentinel) = after.find("Internal message:") {
-        let candidate = &after[..end_sentinel];
-        // Verify it looks like a report (has an opening brace after the type name).
-        if candidate.find('{').is_some() {
-            return Some(candidate.trim());
-        }
-    }
-
-    // Otherwise, bracket-match starting at the first '{' after the type name.
-    let open_rel = after.find('{')?;
-    let open_idx = start + open_rel;
-
-    let mut depth: i32 = 0;
-    let mut in_str = false;
-    let mut prev_bs = false;
-    let mut end_idx = None;
-
-    for (i, ch) in s[open_idx..].char_indices() {
-        if in_str {
-            match ch {
-                '\\' => prev_bs = !prev_bs,
-                '"' if !prev_bs => {
-                    in_str = false;
-                    prev_bs = false;
-                }
-                _ => prev_bs = false,
-            }
-            continue;
-        }
-
-        match ch {
-            '"' => in_str = true,
-            '{' => depth += 1,
-            '}' => {
-                depth -= 1;
-                if depth == 0 {
-                    end_idx = Some(open_idx + i + 1);
-                    break;
-                }
-            }
-            _ => {}
-        }
-    }
-
-    end_idx.map(|end| s[start..end].trim())
-}
-
-/// Replace `{`/`}` with `(`/`)` outside of quoted strings.
-/// This turns a Debug-ish struct into RON-compatible text.
-fn braces_to_parens_preserving_strings(input: &str) -> String {
-    let mut out = String::with_capacity(input.len());
-    let mut in_str = false;
-    let mut prev_bs = false;
-
-    for ch in input.chars() {
-        if in_str {
-            out.push(ch);
-            match ch {
-                '\\' => prev_bs = !prev_bs,
-                '"' if !prev_bs => {
-                    in_str = false;
-                    prev_bs = false;
-                }
-                _ => prev_bs = false,
-            }
-        } else {
-            match ch {
-                '"' => {
-                    in_str = true;
-                    out.push(ch);
-                }
-                '{' => out.push('('),
-                '}' => out.push(')'),
-                _ => out.push(ch),
-            }
-        }
-    }
-
-    out
-}
-
-#[op2]
-pub fn test_result_callback(op_state: &mut OpState, #[from_v8] result: TestResult) {
-    let report: &mut TestHarnessReport = op_state.borrow_mut::<TestHarnessReport>();
-    report.add_test_result(result);
-}
-
-#[op2]
-pub fn test_completion_callback(
-    op_state: &mut OpState,
-    _tests: &v8::Value,
-    #[from_v8] result: TestsResult,
-    _records: &v8::Value,
-) -> Result<(), JsErrorBox> {
-    let report: &mut TestHarnessReport = op_state.borrow_mut::<TestHarnessReport>();
-    report
-        .set_harness_result(result)
-        .map_err(|e| JsErrorBox::generic(e.to_string()))
-}
-
-deno_core::extension!(
-    test_harness_api,
-    ops = [test_completion_callback, test_result_callback],
-    esm_entry_point = "ext:test_harness_api/test_harness_api.js",
-    esm = [dir "tests", "test_harness_api.js"],
-);
-
-fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntime {
-    let address =
-        SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton").unwrap();
-
-    let mut options = JstzRuntimeOptions::default();
-    options
-        .extensions
-        .push(test_harness_api::init_ops_and_esm());
-
-    let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
-        protocol: Some(RuntimeContext::new(host, tx, address, String::new())),
-        extensions: vec![test_harness_api::init_ops_and_esm()],
-        ..Default::default()
-    });
-
-    let op_state = runtime.op_state();
-    // Insert a blank report to be filled in by test cases
-    op_state.borrow_mut().put(TestHarnessReport::default());
-
-    runtime
 }
 
 pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
