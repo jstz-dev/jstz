@@ -2,6 +2,7 @@ pub mod db;
 mod host;
 pub mod inbox;
 pub mod queue;
+mod riscv_pvm;
 pub mod runtime;
 pub mod worker;
 
