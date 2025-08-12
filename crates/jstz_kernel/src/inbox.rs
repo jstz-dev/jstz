@@ -1,6 +1,6 @@
+use std::error::Error;
+
 use jstz_core::{host::WriteDebug, BinEncodable};
-use jstz_crypto::hash::Hash;
-use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::context::account::Address;
 use jstz_proto::operation::{
     internal::{Deposit, InboxId},
@@ -8,11 +8,14 @@ use jstz_proto::operation::{
 };
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
+use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::InfoPerLevel;
-use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
+use tezos_smart_rollup::michelson::ticket::{FA2_1Ticket, Ticket};
 use tezos_smart_rollup::michelson::{
     MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
+    MichelsonUnit,
 };
+use tezos_smart_rollup::types::SmartRollupAddress;
 pub use tezos_smart_rollup::{
     inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage, Transfer},
     michelson::MichelsonPair,
@@ -40,6 +43,8 @@ pub type MichelsonFaDeposit = MichelsonPair<
 
 pub type RollupType = MichelsonOr<MichelsonNativeDeposit, MichelsonFaDeposit>;
 
+// tag + 20 byte address
+const EXTERNAL_FRAME_SIZE: usize = 21;
 const NATIVE_TICKET_ID: u32 = 0_u32;
 const NATIVE_TICKET_CONTENT: MichelsonOption<MichelsonBytes> = MichelsonOption(None);
 
@@ -195,7 +200,7 @@ fn read_transfer(
     inbox_id: InboxId,
 ) -> Option<Message> {
     logger.write_debug("Internal message: transfer\n");
-    let source = match PublicKeyHash::from_base58(&transfer.source.to_b58check()) {
+    let source = match (&transfer.source).try_into() {
         Ok(addr) => addr,
         Err(e) => {
             logger.write_debug(&format!("Failed to parse transfer source: {e:?}\n"));
@@ -256,23 +261,156 @@ pub enum LevelInfo {
     End,
 }
 
+fn encode_internal_message(
+    message: &InternalMessage,
+    ticketer_addr: &ContractKt1Hash,
+    rollup_addr: &SmartRollupAddress,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    fn receiver_to_michelson(receiver: &Address) -> MichelsonContract {
+        MichelsonContract(match receiver {
+            Address::SmartFunction(h) => Contract::Originated(h.clone().into()),
+            Address::User(h) => Contract::Implicit(h.into()),
+        })
+    }
+    fn proxy_function_to_michelson(
+        proxy_smart_function: &Option<Address>,
+    ) -> Result<MichelsonOption<MichelsonContract>, Box<dyn Error>> {
+        match proxy_smart_function {
+            Some(Address::SmartFunction(h)) => Ok(MichelsonOption(Some(
+                MichelsonContract(Contract::Originated(h.clone().into())),
+            ))),
+            Some(Address::User(_)) => {
+                Err(Box::new(jstz_proto::Error::AddressTypeMismatch))
+            }
+            None => Ok(MichelsonOption(None)),
+        }
+    }
+
+    let (source, payload) = match message {
+        InternalOperation::Deposit(d) => {
+            let receiver = receiver_to_michelson(&d.receiver);
+
+            (
+                &d.source,
+                MichelsonOr::Left(MichelsonPair(
+                    receiver,
+                    Ticket::new(
+                        Contract::Originated(ticketer_addr.clone()),
+                        MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                        d.amount,
+                    )?,
+                )),
+            )
+        }
+        InternalOperation::FaDeposit(d) => {
+            let proxy_function = proxy_function_to_michelson(&d.proxy_smart_function)?;
+            let receiver = receiver_to_michelson(&d.receiver);
+
+            (
+                &d.source,
+                MichelsonOr::Right(MichelsonPair(
+                    receiver,
+                    MichelsonPair(
+                        proxy_function,
+                        Ticket::new(
+                            Contract::Originated(ticketer_addr.clone()),
+                            MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                            d.amount,
+                        )?,
+                    ),
+                )),
+            )
+        }
+    };
+
+    let msg =
+        InboxMessage::Internal(InternalInboxMessage::Transfer::<RollupType>(Transfer {
+            sender: ticketer_addr.clone(),
+            source: source.into(),
+            destination: rollup_addr.clone(),
+            payload,
+        }));
+
+    let mut bytes = Vec::new();
+    msg.serialize(&mut bytes)?;
+    Ok(bytes)
+}
+
+/// Encode parsed inbox messages back to raw inbox messages.
+pub fn encode_parsed_inbox_message(
+    message: &ParsedInboxMessage,
+    ticketer_addr: &ContractKt1Hash,
+    rollup_addr: &SmartRollupAddress,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    match message {
+        ParsedInboxMessage::LevelInfo(info) => {
+            let msg = InboxMessage::Internal(match info {
+                LevelInfo::Start => InternalInboxMessage::<MichelsonUnit>::StartOfLevel,
+                LevelInfo::End => InternalInboxMessage::<MichelsonUnit>::EndOfLevel,
+                LevelInfo::Info(i) => InternalInboxMessage::InfoPerLevel(i.clone()),
+            });
+            let mut bytes = Vec::new();
+            msg.serialize(&mut bytes)?;
+            Ok(bytes)
+        }
+        ParsedInboxMessage::JstzMessage(m) => match m {
+            Message::Internal(op) => {
+                encode_internal_message(op, ticketer_addr, rollup_addr)
+            }
+            Message::External(signed_op) => {
+                let bytes = signed_op.encode()?;
+                let mut external = Vec::with_capacity(bytes.len() + EXTERNAL_FRAME_SIZE);
+
+                let frame = ExternalMessageFrame::Targetted {
+                    contents: bytes,
+                    address: rollup_addr.clone(),
+                };
+
+                frame.bin_write(&mut external)?;
+
+                let message = InboxMessage::External::<RollupType>(&external);
+                let mut buf = Vec::new();
+                message.serialize(&mut buf)?;
+                Ok(buf)
+            }
+        },
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+    use jstz_core::host::WriteDebug;
+    use jstz_crypto::{
+        hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
+        secret_key::SecretKey, smart_function_hash::SmartFunctionHash,
+    };
     use jstz_mock::{
         host::JstzMockHost,
         message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
     };
     use jstz_proto::{
-        context::account::{Address, Addressable},
-        operation::internal,
+        context::account::{Address, Addressable, Nonce},
+        operation::{
+            internal::{self, Deposit, FaDeposit, InboxId},
+            Content, DeployFunction, InternalOperation, Operation, SignedOperation,
+        },
+        runtime::ParsedCode,
     };
-    use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
-    use tezos_smart_rollup::types::SmartRollupAddress;
+    use tezos_crypto_rs::hash::{BlockHash, ContractKt1Hash, HashTrait};
+    use tezos_smart_rollup::{
+        inbox::InfoPerLevel,
+        michelson::ticket::TicketHash,
+        types::{SmartRollupAddress, Timestamp},
+    };
 
-    use crate::inbox::ParsedInboxMessage;
+    use crate::inbox::{LevelInfo, ParsedInboxMessage};
 
     use super::{read_message, InternalMessage, Message};
+
+    struct DummyLogger;
+    impl WriteDebug for DummyLogger {
+        fn write_debug(&self, _msg: &str) {}
+    }
 
     #[test]
     fn read_message_ignored_on_different_smart_rollup_address() {
@@ -392,6 +530,223 @@ mod test {
             );
         } else {
             panic!("Expected deposit message")
+        }
+    }
+
+    #[test]
+    fn encode_fa_deposit_bad_proxy_function() {
+        let ticketer_addr =
+            ContractKt1Hash::from_base58_check("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
+                .unwrap();
+        let rollup_addr =
+            SmartRollupAddress::from_b58check("sr1JVr8SmBYRRFq38HZGM7nJUa9VcfwxGSXc")
+                .unwrap();
+        let user_addr =
+            Address::from_base58("tz1ficxJFv7MUtsCimF8bmT9SYPDok52ySg6").unwrap();
+        let op = InternalOperation::FaDeposit(FaDeposit {
+            inbox_id: InboxId {
+                l1_level: 0,
+                l1_message_id: 0,
+            },
+            amount: 1,
+            receiver: user_addr.clone(),
+            proxy_smart_function: Some(user_addr),
+            ticket_hash: TicketHash::try_from(
+                "27cb5f11317f1934190a052652d38368d69cf850ac6eb383e15630b5ea3ef01c"
+                    .to_string(),
+            )
+            .unwrap(),
+            source: PublicKeyHash::from_base58("tz1QLLppfQ534PCDWvhY2BLPqkwYe9JxkP3H")
+                .unwrap(),
+        });
+
+        assert_eq!(
+            super::encode_internal_message(&op, &ticketer_addr, &rollup_addr)
+                .unwrap_err()
+                .to_string(),
+            "AddressTypeMismatch"
+        )
+    }
+
+    #[test]
+    fn encode_internal_message_round_trip() {
+        let ticketer_addr =
+            ContractKt1Hash::from_base58_check("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
+                .unwrap();
+        let rollup_addr =
+            SmartRollupAddress::from_b58check("sr1JVr8SmBYRRFq38HZGM7nJUa9VcfwxGSXc")
+                .unwrap();
+        let source =
+            PublicKeyHash::from_base58("tz1QLLppfQ534PCDWvhY2BLPqkwYe9JxkP3H").unwrap();
+
+        for receiver in [
+            Address::from_base58("tz1ficxJFv7MUtsCimF8bmT9SYPDok52ySg6").unwrap(),
+            Address::from_base58("KT1WSFFotGccKa4WZ5PNQGT3EgsRutzLMD4z").unwrap(),
+        ] {
+            let messages = [(
+                InternalOperation::Deposit(Deposit {
+                    inbox_id: InboxId {
+                        l1_level: 0,
+                        l1_message_id: 0
+                    },
+                    amount: 1,
+                    receiver: receiver.clone(),
+                    source: source.clone(),
+                }),
+                "deposit",
+            ),
+            (
+                InternalOperation::FaDeposit(FaDeposit {
+                    inbox_id: InboxId {
+                        l1_level: 0,
+                        l1_message_id: 0
+                    },
+                    amount: 1,
+                    receiver: receiver.clone(),
+                    proxy_smart_function: Some(
+                        Address::from_base58("KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV")
+                            .unwrap(),
+                    ),
+                    ticket_hash: TicketHash::try_from("27cb5f11317f1934190a052652d38368d69cf850ac6eb383e15630b5ea3ef01c".to_string()).unwrap(),
+                    source: source.clone(),
+                }),
+                "FA deposit",
+            )];
+
+            for (msg, case_name) in messages {
+                let encoded_msg =
+                    super::encode_internal_message(&msg, &ticketer_addr, &rollup_addr)
+                        .expect(&format!("failed: {case_name} with {receiver:?}"));
+                assert_eq!(
+                    super::parse_inbox_message(
+                        &DummyLogger,
+                        InboxId {
+                            l1_level: 0,
+                            l1_message_id: 0
+                        },
+                        &encoded_msg,
+                        &ticketer_addr,
+                        rollup_addr.hash()
+                    ),
+                    Some(ParsedInboxMessage::JstzMessage(Message::Internal(msg))),
+                    "failed: {case_name} with {receiver:?}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn encode_parsed_inbox_message_round_trip() {
+        let ticketer_addr =
+            ContractKt1Hash::from_base58_check("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
+                .unwrap();
+        let rollup_addr =
+            SmartRollupAddress::from_b58check("sr1JVr8SmBYRRFq38HZGM7nJUa9VcfwxGSXc")
+                .unwrap();
+        let source =
+            PublicKeyHash::from_base58("tz1QLLppfQ534PCDWvhY2BLPqkwYe9JxkP3H").unwrap();
+
+        let op = Operation {
+            public_key: PublicKey::from_base58(
+                "edpktpymWssZNE88hDVzXYKTFVidwXnkS9bQKrf1wGEz3koYgFeErn",
+            )
+            .unwrap(),
+            nonce: Nonce(0),
+            content: Content::DeployFunction(DeployFunction {
+                function_code: ParsedCode("code".to_string()),
+                account_credit: 0,
+            }),
+        };
+        let hash = op.hash();
+        let signed_op = SignedOperation::new(
+            SecretKey::from_base58(
+                "edsk4WrVheGeqg1VuQkpybAkyqec8si4hhXM6nzxgYgMsNd7V1gvq6",
+            )
+            .unwrap()
+            .sign(hash)
+            .unwrap(),
+            op,
+        );
+
+        for (msg, case_name) in [
+            (
+                ParsedInboxMessage::LevelInfo(LevelInfo::Start),
+                "internal message - level start",
+            ),
+            (
+                ParsedInboxMessage::LevelInfo(LevelInfo::End),
+                "internal message - level end",
+            ),
+            (
+                ParsedInboxMessage::LevelInfo(LevelInfo::Info(InfoPerLevel {
+                    predecessor: BlockHash::from_base58_check(
+                        "BMMyZpdHVvorQvXdhqs5JhEujXvssHVEtBRnhorm36oSssUcGDz",
+                    )
+                    .unwrap(),
+                    predecessor_timestamp: Timestamp::from(1),
+                })),
+                "internal message - level info",
+            ),
+            (
+                ParsedInboxMessage::JstzMessage(Message::Internal(
+                    InternalOperation::Deposit(Deposit {
+                        inbox_id: InboxId {
+                        l1_level: 0,
+                        l1_message_id: 0
+                    },
+                        amount: 1,
+                        receiver: Address::from_base58(
+                            "tz1ficxJFv7MUtsCimF8bmT9SYPDok52ySg6",
+                        )
+                        .unwrap(),
+                        source: source.clone(),
+                    }),
+                )),
+                "jstz message - deposit",
+            ),
+            (
+                ParsedInboxMessage::JstzMessage(Message::Internal(
+                    InternalOperation::FaDeposit(FaDeposit {
+                        inbox_id: InboxId {
+                        l1_level: 0,
+                        l1_message_id: 0
+                    },
+                        amount: 1,
+                        receiver: Address::from_base58(
+                            "tz1ficxJFv7MUtsCimF8bmT9SYPDok52ySg6",
+                        )
+                        .unwrap(),
+                        proxy_smart_function: Some(
+                            Address::from_base58("KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV")
+                                .unwrap(),
+                        ),
+                        ticket_hash: TicketHash::try_from("27cb5f11317f1934190a052652d38368d69cf850ac6eb383e15630b5ea3ef01c".to_string()).unwrap(),
+                        source: source.clone(),
+                    }),
+                )),
+                "jstz message - FA deposit",
+            ),
+            (
+                ParsedInboxMessage::JstzMessage(Message::External(signed_op)),
+                "jstz message - external operation",
+            ),
+        ] {
+            let encoded_msg =
+                super::encode_parsed_inbox_message(&msg, &ticketer_addr, &rollup_addr).expect(&format!("failed: {case_name}"));
+            assert_eq!(
+                super::parse_inbox_message(
+                    &DummyLogger,
+                    InboxId {
+                        l1_level: 0,
+                        l1_message_id: 0
+                    },
+                    &encoded_msg,
+                    &ticketer_addr,
+                    rollup_addr.hash()
+                ),
+                Some(msg),
+                "failed: {case_name}"
+            );
         }
     }
 }
