@@ -45,6 +45,8 @@ pub struct AppState {
     pub queue: Arc<RwLock<OperationQueue>>,
     pub runtime_db: sequencer::db::Db,
     worker_heartbeat: Arc<AtomicU64>,
+    #[allow(dead_code)]
+    storage_sync: bool,
 }
 
 impl AppState {
@@ -70,6 +72,7 @@ pub struct RunOptions {
     pub kernel_log_path: PathBuf,
     pub injector: KeyPair,
     pub mode: RunMode,
+    pub storage_sync: bool,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -84,12 +87,14 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         kernel_log_path: config.kernel_log_file.to_path_buf(),
         injector: config.injector,
         mode: config.mode,
+        storage_sync: config.storage_sync,
     })
     .await
 }
 
-pub async fn run(
-    RunOptions {
+pub async fn run(options: RunOptions) -> Result<()> {
+    validate_run_options(&options)?;
+    let RunOptions {
         addr,
         port,
         rollup_endpoint,
@@ -97,8 +102,8 @@ pub async fn run(
         kernel_log_path,
         injector,
         mode,
-    }: RunOptions,
-) -> Result<()> {
+        storage_sync,
+    } = options;
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
     let queue = Arc::new(RwLock::new(OperationQueue::new(match mode {
         RunMode::Sequencer { capacity, .. } => capacity,
@@ -166,6 +171,7 @@ pub async fn run(
             ref debug_log_path, ..
         } => debug_log_path.clone(),
     };
+
     let (broadcaster, db, tail_file_handle) =
         LogsService::init(&log_file_path, &cancellation_token).await?;
 
@@ -179,6 +185,7 @@ pub async fn run(
         queue,
         runtime_db,
         worker_heartbeat: worker.as_ref().map(|w| w.heartbeat()).unwrap_or_default(),
+        storage_sync,
     };
 
     let cors = CorsLayer::new()
@@ -213,6 +220,15 @@ pub fn openapi_json_raw() -> anyhow::Result<String> {
     let mut doc = router().split_for_parts().1;
     modify(&mut doc);
     Ok(doc.to_pretty_json()?)
+}
+
+fn validate_run_options(options: &RunOptions) -> Result<()> {
+    if options.storage_sync && matches!(options.mode, RunMode::Sequencer { .. }) {
+        return Err(anyhow::anyhow!(
+            "storage sync is only supported for default mode"
+        ));
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -283,6 +299,7 @@ mod test {
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: default_injector(),
                 mode: mode.clone(),
+                storage_sync: false,
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -336,6 +353,7 @@ mod test {
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: default_injector(),
                 mode,
+                storage_sync: false,
             }));
 
             sleep(Duration::from_secs(1)).await;
@@ -390,5 +408,32 @@ mod test {
         state.worker_heartbeat = Arc::new(AtomicU64::new(now - 5));
         // heartbeat is recent enough
         assert!(state.is_worker_healthy());
+    }
+
+    #[tokio::test]
+    async fn storage_sync_not_supported_for_sequencer() {
+        let port = unused_port();
+        let kernel_log_file = NamedTempFile::new().unwrap();
+        let mode = RunMode::Sequencer {
+            capacity: 0,
+            debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+            runtime_env: RuntimeEnv::Native,
+        };
+
+        let h = run(RunOptions {
+            addr: "0.0.0.0".to_string(),
+            port,
+            rollup_endpoint: "0.0.0.0:5678".to_string(),
+            rollup_preimages_dir: TempDir::new().unwrap().into_path(),
+            kernel_log_path: kernel_log_file.path().to_path_buf(),
+            injector: default_injector(),
+            mode: mode.clone(),
+            storage_sync: true,
+        })
+        .await;
+
+        assert!(h.is_err_and(|e| e
+            .to_string()
+            .contains("storage sync is only supported for default mode")));
     }
 }
