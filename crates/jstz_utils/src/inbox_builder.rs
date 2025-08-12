@@ -16,8 +16,8 @@ use tezos_smart_rollup::{
     inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage, Transfer},
     michelson::{
         ticket::{FA2_1Ticket, Ticket},
-        MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr, MichelsonPair,
-        MichelsonUnit,
+        Michelson, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
+        MichelsonPair, MichelsonUnit,
     },
     types::{Contract, PublicKeyHash, SmartRollupAddress},
     utils::inbox::file::{InboxFile, Message},
@@ -29,6 +29,7 @@ const EXTERNAL_FRAME_SIZE: usize = 21;
 const DEFAULT_GAS_LIMIT: u32 = 100_000;
 const MNEMONIC: &str =
     "donate kidney style loyal nose core inflict cup symptom speed giant polar";
+// FIXME: JSTZ-854
 type DepositInboxMsgPayloadType = MichelsonOr<
     MichelsonPair<MichelsonContract, FA2_1Ticket>,
     MichelsonPair<
@@ -117,6 +118,16 @@ impl InboxBuilder {
         Ok(Message::Raw(bytes))
     }
 
+    fn generate_internal_messge<T: Michelson>(
+        &self,
+        m: InternalInboxMessage<T>,
+    ) -> Result<Message> {
+        let msg = InboxMessage::Internal(m);
+        let mut bytes = Vec::new();
+        msg.serialize(&mut bytes)?;
+        Ok(Message::Raw(bytes))
+    }
+
     pub fn deploy_function(
         &mut self,
         account: &mut Account,
@@ -163,6 +174,25 @@ impl InboxBuilder {
         Ok(())
     }
 
+    fn deposit_payload(
+        ticketer: &ContractKt1Hash,
+        account: &Account,
+        amount_mutez: u64,
+    ) -> DepositInboxMsgPayloadType {
+        MichelsonOr::Left(MichelsonPair(
+            MichelsonContract(Contract::Implicit(
+                PublicKeyHash::from_b58check(&account.address.to_string())
+                    .expect("serialised address should be parsable"),
+            )),
+            Ticket::new(
+                Contract::Originated(ticketer.clone()),
+                MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                amount_mutez,
+            )
+            .expect("ticket creation from ticketer should work"),
+        ))
+    }
+
     pub fn deposit_from_l1(
         &mut self,
         account: &Account,
@@ -170,22 +200,8 @@ impl InboxBuilder {
     ) -> Result<()> {
         match &self.ticketer_address {
             Some(ticketer) => {
-                let payload: DepositInboxMsgPayloadType =
-                    MichelsonOr::Left(MichelsonPair(
-                        MichelsonContract(Contract::Implicit(
-                            PublicKeyHash::from_b58check(&account.address.to_string())
-                                .expect("serialised address should be parsable"),
-                        )),
-                        Ticket::new(
-                            Contract::Originated(ticketer.clone()),
-                            MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
-                            amount_mutez,
-                        )
-                        .expect("ticket creation from ticketer should work"),
-                    ));
-
-                let msg =
-                    InboxMessage::Internal(InternalInboxMessage::Transfer(Transfer {
+                let message = self.generate_internal_messge(
+                    InternalInboxMessage::Transfer(Transfer {
                         sender: ticketer.clone(),
                         // any user address is okay here since L1 is not really involved
                         source: PublicKeyHash::from_b58check(
@@ -193,11 +209,10 @@ impl InboxBuilder {
                         )
                         .expect("the constant source address should be parsable"),
                         destination: self.rollup_address.clone(),
-                        payload,
-                    }));
-                let mut bytes = Vec::new();
-                msg.serialize(&mut bytes)?;
-                self.messages.push(Message::Raw(bytes));
+                        payload: Self::deposit_payload(ticketer, account, amount_mutez),
+                    }),
+                )?;
+                self.messages.push(message);
                 Ok(())
             }
             None => Err("ticketer address is not provided".into()),
@@ -356,6 +371,29 @@ mod tests {
                                 assert_eq!(op.content, content);
                             }
                         }
+                    }
+                    _ => panic!("should be external message"),
+                }
+            }
+            _ => panic!("should be raw message"),
+        }
+    }
+
+    #[test]
+    fn generate_internal_messge() {
+        let rollup_address =
+            SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
+        let builder = InboxBuilder::new(rollup_address.clone(), None);
+        let message = builder
+            .generate_internal_messge(InternalInboxMessage::<MichelsonUnit>::StartOfLevel)
+            .unwrap();
+        match message {
+            Message::Raw(raw) => {
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
+                match inbox_msg {
+                    InboxMessage::Internal(m) => {
+                        matches!(m, InternalInboxMessage::StartOfLevel);
                     }
                     _ => panic!("should be external message"),
                 }

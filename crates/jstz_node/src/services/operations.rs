@@ -4,8 +4,12 @@ use std::sync::Arc;
 use std::sync::RwLock;
 
 use crate::sequencer::queue::OperationQueue;
+#[cfg(feature = "inject_inbox")]
+use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
+#[cfg(feature = "inject_inbox")]
+use jstz_kernel::inbox::parse_inbox_message_hex;
 use jstz_kernel::inbox::Message;
 use jstz_kernel::inbox::ParsedInboxMessage;
 
@@ -14,17 +18,23 @@ use super::utils::StoreWrapper;
 use super::{AppState, Service};
 use anyhow::anyhow;
 use anyhow::Context;
+#[cfg(feature = "inject_inbox")]
+use axum::routing::post;
 use axum::{
     extract::{Path, State},
     Json,
 };
 
+#[cfg(feature = "inject_inbox")]
+use jstz_core::host::WriteDebug;
 use jstz_core::reveal_data::{PreimageHash, RevealData, MAX_REVEAL_SIZE};
 use jstz_core::BinEncodable;
 use jstz_proto::operation::{Content, Operation, SignedOperation};
 use jstz_proto::receipt::Receipt;
 use jstz_utils::KeyPair;
 use octez::OctezRollupClient;
+#[cfg(feature = "inject_inbox")]
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
 
@@ -44,8 +54,8 @@ type HexEncodedOperationHash = String;
 // Given a large operation, encode it into preimages and store them in the rollup's preimages directory
 async fn prepare_rlp_operation(
     operation: &SignedOperation,
-    signer: KeyPair,
-    store: StoreWrapper,
+    signer: &KeyPair,
+    store: &StoreWrapper,
     rollup_preimages_dir: &path::Path,
 ) -> ServiceResult<SignedOperation> {
     let reveal_type = operation
@@ -79,7 +89,7 @@ async fn prepare_rlp_operation(
         .await?
         .unwrap_or_default();
     let rlp_operation = Operation {
-        public_key,
+        public_key: public_key.clone(),
         nonce,
         content: Content::new_reveal_large_payload(
             root_hash,
@@ -96,8 +106,8 @@ async fn prepare_rlp_operation(
 // Encode an operation. if the operation is too large, encode it into a reveal large payload operation
 async fn encode_operation(
     operation: SignedOperation,
-    injector: KeyPair,
-    store: StoreWrapper,
+    injector: &KeyPair,
+    store: &StoreWrapper,
     rollup_preimages_dir: &path::Path,
 ) -> ServiceResult<(SignedOperation, Vec<u8>)> {
     let encoded_op = operation
@@ -150,13 +160,17 @@ async fn inject(
 ) -> ServiceResult<()> {
     let store = StoreWrapper::new(mode.clone(), rollup_client.clone(), runtime_db);
     let (operation, encoded_operation) =
-        encode_operation(operation, injector, store, &rollup_preimages_dir).await?;
+        encode_operation(operation, &injector, &store, &rollup_preimages_dir).await?;
     match mode {
         RunMode::Default => {
             inject_rollup_message(encoded_operation, &rollup_client).await?;
         }
         RunMode::Sequencer { .. } => {
-            insert_operation_queue(&queue, operation).await?;
+            insert_operation_queue(
+                &queue,
+                ParsedInboxMessage::JstzMessage(Message::External(operation)),
+            )
+            .await?;
         }
     }
     Ok(())
@@ -178,7 +192,7 @@ async fn inject_rollup_message(
 
 async fn insert_operation_queue(
     queue: &Arc<RwLock<OperationQueue>>,
-    operation: SignedOperation,
+    message: ParsedInboxMessage,
 ) -> ServiceResult<()> {
     queue
         .write()
@@ -187,11 +201,68 @@ async fn insert_operation_queue(
                 "failed to insert operation to the queue: {e}"
             ))
         })?
-        .insert(ParsedInboxMessage::JstzMessage(Message::External(
-            operation,
-        )))
+        .insert(message)
         .map_err(|e| ServiceError::ServiceUnavailable(Some(e)))?;
     Ok(())
+}
+
+#[cfg(feature = "inject_inbox")]
+struct DummyLogger;
+
+#[cfg(feature = "inject_inbox")]
+impl WriteDebug for DummyLogger {
+    fn write_debug(&self, _msg: &str) {}
+}
+
+#[cfg(feature = "inject_inbox")]
+async fn inject_inbox_messages(
+    State(AppState {
+        rollup_client,
+        rollup_preimages_dir,
+        injector,
+        mode,
+        queue,
+        runtime_db,
+        ..
+    }): State<AppState>,
+    Json(inbox_msg_strings): Json<Vec<Vec<String>>>,
+) -> ServiceResult<()> {
+    match mode {
+        RunMode::Sequencer { .. } => {
+            let store =
+                StoreWrapper::new(mode.clone(), rollup_client.clone(), runtime_db);
+            let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
+            let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+            let mut ops = vec![];
+            for s in inbox_msg_strings.iter().flatten() {
+                match parse_inbox_message_hex(&DummyLogger, 0, &s, &ticketer, &jstz) {
+                    Some(op) => ops.push(op),
+                    None => {
+                        return Err(ServiceError::BadRequest(
+                            "invalid inbox message string".to_string(),
+                        ))
+                    }
+                }
+            }
+            for op in ops {
+                let op = match op {
+                    ParsedInboxMessage::JstzMessage(Message::External(m)) => {
+                        let (op, _) =
+                            encode_operation(m, &injector, &store, &rollup_preimages_dir)
+                                .await?;
+                        ParsedInboxMessage::JstzMessage(Message::External(op))
+                    }
+                    _ => op,
+                };
+                insert_operation_queue(&queue, op).await?;
+            }
+            Ok(())
+        }
+        _ => Err(ServiceError::BadRequest(
+            "injecting inbox messages directly is only available in sequencer mode"
+                .to_string(),
+        )),
+    }
 }
 
 /// Get the receipt of an operation
@@ -254,6 +325,9 @@ impl Service for OperationsService {
             .routes(routes!(inject))
             .routes(routes!(receipt))
             .routes(routes!(hash_operation));
+
+        #[cfg(feature = "inject_inbox")]
+        let routes = routes.route("/inbox", post(inject_inbox_messages));
 
         OpenApiRouter::new().nest("/operations", routes)
     }
@@ -376,7 +450,8 @@ mod tests {
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
         let store = StoreWrapper::Rollup(client);
-        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
+        let result =
+            encode_operation(operation, &key_pair, &store, temp_dir.path()).await;
         assert!(result.is_ok());
     }
 
@@ -403,7 +478,8 @@ mod tests {
         }));
         let key_pair = KeyPair(pk, sk);
         let store = StoreWrapper::Rollup(client);
-        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
+        let result =
+            encode_operation(operation, &key_pair, &store, temp_dir.path()).await;
         assert!(result.is_ok());
         let dir_size = get_dir_size(temp_dir.path());
         assert!(
@@ -424,7 +500,8 @@ mod tests {
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
         let store = StoreWrapper::Rollup(client);
-        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
+        let result =
+            encode_operation(operation, &key_pair, &store, temp_dir.path()).await;
         assert!(result.is_err());
     }
 
@@ -450,7 +527,8 @@ mod tests {
         let key_pair = KeyPair(pk, sk);
         let store = StoreWrapper::Rollup(client);
         let result =
-            encode_operation(operation, key_pair, store, Path::new("invalid path")).await;
+            encode_operation(operation, &key_pair, &store, Path::new("invalid path"))
+                .await;
         assert!(result.is_err_and(|e| {
             matches!(
                 e,
