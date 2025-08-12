@@ -51,6 +51,7 @@ mod test {
             inbox_id: 1,
             amount: 20,
             receiver: Address::User(receiver.clone()),
+            source: Address::User(receiver.clone()),
         };
         tx.begin();
         let receipt = execute(&mut host, &mut tx, deposit);
