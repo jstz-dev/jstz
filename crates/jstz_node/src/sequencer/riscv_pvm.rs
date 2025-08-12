@@ -38,7 +38,7 @@ impl PvmHooks for DebugLogHook {
 }
 
 impl JstzPvm {
-    /// Create a new PVM stepper.
+    /// Create a PVM that runs Jstz RISCV kernel.
     pub fn new(
         kernel_path: PathBuf,
         rollup_address: &SmartRollupHash,
@@ -76,8 +76,7 @@ impl JstzPvm {
         })
     }
 
-    /// Non-continuing variant of [`Stepper::step_max`]
-    pub fn step_max_once(&mut self, steps: Bound<usize>) -> StepperStatus {
+    fn step_max_once(&mut self, steps: Bound<usize>) -> StepperStatus {
         match self.pvm.status() {
             PvmStatus::Evaluating => {
                 let steps = self.pvm.eval_max(&mut self.hooks, steps);
@@ -87,7 +86,7 @@ impl JstzPvm {
             PvmStatus::WaitingForInput => StepperStatus::Exited {
                 steps: 0,
                 success: true,
-                status: "No new message".to_owned(),
+                status: "Finished processing everything at hand".to_owned(),
             },
 
             PvmStatus::WaitingForReveal => {
