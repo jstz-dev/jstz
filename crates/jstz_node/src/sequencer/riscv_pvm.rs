@@ -1,5 +1,3 @@
-use jstz_proto::operation::InternalOperation;
-use log::warn;
 use octez_riscv::{
     machine_state::block_cache::{block, DefaultCacheConfig},
     program::Program,
@@ -7,30 +5,16 @@ use octez_riscv::{
     state_backend::owned_backend::Owned,
     stepper::{pvm::reveals::RevealRequestResponseMap, StepperStatus},
 };
-use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
-use tezos_data_encoding::enc::BinWriter;
-use tezos_smart_rollup::{
-    inbox::InboxMessage,
-    michelson::{MichelsonContract, MichelsonOr, MichelsonPair, MichelsonUnit},
-    types::Contract,
-};
-use tezos_smart_rollup::{
-    inbox::{ExternalMessageFrame, InternalInboxMessage, Transfer},
-    michelson::{ticket::Ticket, MichelsonNat, MichelsonOption},
-    types::{PublicKeyHash, SmartRollupAddress},
-};
+use tezos_crypto_rs::hash::SmartRollupHash;
 
-use jstz_kernel::inbox::{
-    LevelInfo, Message as JstzMessage, ParsedInboxMessage, RollupType,
-};
 use std::{
     io::{stdout, Write},
     ops::Bound,
     path::{Path, PathBuf},
-    sync::{atomic::AtomicU64, mpsc::TryRecvError, Arc, RwLock},
+    sync::{atomic::AtomicU64, Arc},
 };
 
-use crate::sequencer::{queue::OperationQueue, worker::write_heartbeat};
+use crate::sequencer::worker::write_heartbeat;
 
 type MemoryConfig = octez_riscv::machine_state::memory::M32G;
 type BlockImplInner = block::Jitted<block::OutlineCompiler<MemoryConfig>, MemoryConfig>;
@@ -38,10 +22,8 @@ type BlockImplInner = block::Jitted<block::OutlineCompiler<MemoryConfig>, Memory
 pub struct JstzPvm {
     pvm: Pvm<MemoryConfig, DefaultCacheConfig, BlockImplInner, Owned>,
     hooks: DebugLogHook,
-    rollup_address: SmartRollupHash,
     _origination_level: u32,
     reveal_request_response_map: RevealRequestResponseMap,
-    queue: Arc<RwLock<OperationQueue>>,
     heartbeat: Arc<AtomicU64>,
 }
 
@@ -58,9 +40,8 @@ impl PvmHooks for DebugLogHook {
 impl JstzPvm {
     /// Create a new PVM stepper.
     pub fn new(
-        queue: Arc<RwLock<OperationQueue>>,
         kernel_path: PathBuf,
-        rollup_address: SmartRollupHash,
+        rollup_address: &SmartRollupHash,
         origination_level: u32,
         preimages_dir: Option<Box<Path>>,
         heartbeat: Arc<AtomicU64>,
@@ -88,9 +69,7 @@ impl JstzPvm {
 
         Ok(Self {
             pvm,
-            queue,
             hooks,
-            rollup_address,
             _origination_level: origination_level,
             reveal_request_response_map,
             heartbeat,
@@ -105,143 +84,11 @@ impl JstzPvm {
                 StepperStatus::Running { steps }
             }
 
-            PvmStatus::WaitingForInput => {
-                let v = {
-                    match self.queue.write() {
-                        Ok(mut q) => q.pop(),
-                        Err(e) => {
-                            warn!("worker failed to read from queue: {e:?}");
-                            None
-                        }
-                    }
-                };
-                match v {
-                    Some(m) => {
-                        let payload = match m {
-                            ParsedInboxMessage::JstzMessage(JstzMessage::External(
-                                signed_op,
-                            )) => {
-                                let bytes = bincode::encode_to_vec(
-                                    &signed_op,
-                                    bincode::config::legacy(),
-                                )
-                                .unwrap();
-                                let mut external = Vec::with_capacity(bytes.len() + 21);
-
-                                let frame = ExternalMessageFrame::Targetted {
-                                    contents: bytes,
-                                    address: SmartRollupAddress::new(
-                                        self.rollup_address.clone(),
-                                    ),
-                                };
-
-                                frame.bin_write(&mut external).unwrap();
-
-                                let message =
-                                    InboxMessage::External::<RollupType>(&external);
-                                let mut result = Vec::new();
-                                message
-                                    .serialize(&mut result)
-                                    .expect("serialization of message failed");
-                                result
-                            }
-                            ParsedInboxMessage::JstzMessage(JstzMessage::Internal(
-                                InternalOperation::Deposit(d),
-                            )) => {
-                                let payload: RollupType =
-                                    MichelsonOr::Left(MichelsonPair(
-                                        MichelsonContract(Contract::Implicit(
-                                            PublicKeyHash::from_b58check(
-                                                &d.receiver.to_string(),
-                                            )
-                                            .unwrap(),
-                                        )),
-                                        Ticket::new(
-                                            Contract::Originated(ContractKt1Hash::from_base58_check("KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ").unwrap()),
-                                            MichelsonPair(
-                                                MichelsonNat::from(0),
-                                                MichelsonOption(None),
-                                            ),
-                                            d.amount,
-                                        )
-                                        .unwrap(),
-                                    ));
-                                let msg = InboxMessage::Internal(
-                                    InternalInboxMessage::Transfer(Transfer {
-                                        sender: ContractKt1Hash::from_base58_check(
-                                            "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
-                                        )
-                                        .unwrap(),
-                                        // any user address is okay here since L1 is not really involved
-                                        source: PublicKeyHash::from_b58check(
-                                            "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
-                                        )
-                                        .unwrap(),
-                                        destination: SmartRollupAddress::from_b58check(
-                                            "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
-                                        )
-                                        .unwrap(),
-                                        payload,
-                                    }),
-                                );
-                                let mut bytes = Vec::new();
-                                msg.serialize(&mut bytes).unwrap();
-                                bytes
-                            }
-                            ParsedInboxMessage::LevelInfo(LevelInfo::Start) => {
-                                let msg = InboxMessage::Internal(
-                                    InternalInboxMessage::<MichelsonUnit>::StartOfLevel,
-                                );
-                                let mut bytes = Vec::new();
-                                msg.serialize(&mut bytes).unwrap();
-                                bytes
-                            }
-                            ParsedInboxMessage::LevelInfo(LevelInfo::End) => {
-                                let msg = InboxMessage::Internal(
-                                    InternalInboxMessage::<MichelsonUnit>::EndOfLevel,
-                                );
-                                let mut bytes = Vec::new();
-                                msg.serialize(&mut bytes).unwrap();
-                                bytes
-                            }
-                            ParsedInboxMessage::LevelInfo(LevelInfo::Info(i)) => {
-                                let msg = InboxMessage::Internal(InternalInboxMessage::<
-                                    MichelsonUnit,
-                                >::InfoPerLevel(
-                                    i
-                                ));
-                                let mut bytes = Vec::new();
-                                msg.serialize(&mut bytes).unwrap();
-                                bytes
-                            }
-                            v => {
-                                return StepperStatus::Exited {
-                                    steps: 0,
-                                    success: false,
-                                    status: format!("Unknown message {v:?}"),
-                                }
-                            }
-                        };
-
-                        let success = self.pvm.provide_inbox_message(0, 0, &payload);
-
-                        if success {
-                            StepperStatus::Running { steps: 1 }
-                        } else {
-                            StepperStatus::Errored {
-                                steps: 0,
-                                cause: "PVM was waiting for input".to_owned(),
-                                message: "Providing input did not succeed".to_owned(),
-                            }
-                        }
-                    }
-                    None => StepperStatus::Exited {
-                        steps: 0,
-                        success: true,
-                        status: "No new message".to_owned(),
-                    },
-                }
-            }
+            PvmStatus::WaitingForInput => StepperStatus::Exited {
+                steps: 0,
+                success: true,
+                status: "No new message".to_owned(),
+            },
 
             PvmStatus::WaitingForReveal => {
                 let reveal_request = self.pvm.reveal_request();
@@ -272,16 +119,19 @@ impl JstzPvm {
         }
     }
 
-    pub fn step_max(
+    pub fn execute_operation(
         &mut self,
-        rx: std::sync::mpsc::Receiver<()>,
+        encoded_operation: Vec<u8>,
         mut step_bounds: Bound<usize>,
     ) -> StepperStatus {
         let mut total_steps = 0usize;
+        let mut container = Some(encoded_operation);
 
         loop {
             write_heartbeat(&self.heartbeat);
-            match self.step_max_once(step_bounds) {
+            let v = self.step_max_once(step_bounds);
+            println!("{v:?}");
+            match v {
                 StepperStatus::Running { steps } => {
                     total_steps = total_steps.saturating_add(steps);
                     step_bounds = bound_saturating_sub(step_bounds, steps);
@@ -290,19 +140,27 @@ impl JstzPvm {
                 StepperStatus::Exited {
                     steps,
                     success,
-                    status: _,
+                    status,
                 } => {
                     total_steps = total_steps.saturating_add(steps);
-                    std::thread::sleep(std::time::Duration::from_millis(100));
-                    match rx.try_recv() {
-                        Ok(_) | Err(TryRecvError::Disconnected) => {
+                    match container.take() {
+                        Some(payload) => {
+                            let success = self.pvm.provide_inbox_message(0, 0, &payload);
+                            if !success {
+                                return StepperStatus::Errored {
+                                    steps: 0,
+                                    cause: "PVM was waiting for input".to_owned(),
+                                    message: "Providing input did not succeed".to_owned(),
+                                };
+                            }
+                        }
+                        _ => {
                             break StepperStatus::Exited {
                                 steps: total_steps,
                                 success,
-                                status: "terminated by kill signal".to_owned(),
+                                status,
                             };
                         }
-                        Err(TryRecvError::Empty) => {}
                     }
                 }
 
@@ -332,36 +190,43 @@ fn bound_saturating_sub(bound: Bound<usize>, shift: usize) -> Bound<usize> {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        path::PathBuf,
-        str::FromStr,
-        sync::{mpsc::channel, Arc, RwLock},
-    };
+    use std::{path::PathBuf, str::FromStr};
 
+    use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+    use jstz_kernel::inbox::encode_parsed_inbox_message;
     use tezos_crypto_rs::hash::SmartRollupHash;
+    use tezos_smart_rollup::types::SmartRollupAddress;
 
-    use crate::sequencer::{queue::OperationQueue, tests::dummy_op};
+    use crate::sequencer::tests::dummy_op;
 
     #[test]
     fn create_pvm() {
-        let mut q = OperationQueue::new(5);
-        q.insert(dummy_op()).unwrap();
-        q.insert(dummy_op()).unwrap();
-        q.insert(dummy_op()).unwrap();
-        let q = Arc::new(RwLock::new(q));
+        let ticketer =
+            SmartFunctionHash::from_base58("KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ")
+                .expect("msg");
+        let rollup_address =
+            SmartRollupHash::from_base58_check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
 
         let mut pvm = super::JstzPvm::new(
-            q.clone(),
             PathBuf::from_str("/Users/huanchengchang/code/jstz/target/riscv64gc-unknown-linux-musl/release/kernel-executable").unwrap(),
-            SmartRollupHash::from_base58_check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
-                .unwrap(),
-                0,
+            &rollup_address,
+            0,
             Some(PathBuf::from_str("/tmp/t").unwrap().into_boxed_path()),
             Default::default(),
             Default::default()
         )
         .unwrap();
-        let (_, rx) = channel();
-        pvm.step_max(rx, std::ops::Bound::Unbounded);
+
+        let message = encode_parsed_inbox_message(
+            &dummy_op(),
+            &ticketer,
+            &SmartRollupAddress::new(rollup_address),
+        )
+        .unwrap();
+        println!(
+            "final {:?}",
+            pvm.execute_operation(message, std::ops::Bound::Unbounded)
+        );
     }
 }

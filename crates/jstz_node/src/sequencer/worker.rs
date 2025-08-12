@@ -2,7 +2,7 @@ use crate::{
     config::RuntimeEnv,
     sequencer::{
         riscv_pvm::JstzPvm,
-        runtime::{init_host, process_message},
+        runtime::{init_host, process_message, TICKETER},
     },
 };
 use std::{
@@ -17,12 +17,14 @@ use std::{
 };
 
 use anyhow::Context;
+use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use jstz_utils::KeyPair;
 use log::warn;
 use tezos_crypto_rs::hash::SmartRollupHash;
+use tezos_smart_rollup::types::SmartRollupAddress;
 
 use super::{db::Db, queue::OperationQueue};
-use jstz_kernel::inbox::ParsedInboxMessage;
+use jstz_kernel::inbox::{encode_parsed_inbox_message, ParsedInboxMessage};
 
 #[cfg(feature = "oracle")]
 use jstz_kernel::inbox::LevelInfo;
@@ -222,10 +224,10 @@ fn spawn_riscv_worker(
         thread_kill_sig,
         heartbeat: heartbeat.clone(),
         inner: Some(spawn_thread(move || {
+            let ticketer = SmartFunctionHash::from_base58(TICKETER).unwrap();
             let mut pvm = JstzPvm::new(
-                queue,
                 kernel_path,
-                rollup_address,
+                &rollup_address,
                 0,
                 Some(preimages_dir.into_boxed_path()),
                 heartbeat.clone(),
@@ -233,7 +235,42 @@ fn spawn_riscv_worker(
             )
             .unwrap();
             println!("RISCV PVM launched");
-            pvm.step_max(rx, std::ops::Bound::Unbounded);
+            let rollup_addr = SmartRollupAddress::new(rollup_address);
+
+            loop {
+                let v = {
+                    match queue.write() {
+                        Ok(mut q) => q.pop(),
+                        Err(e) => {
+                            warn!("worker failed to read from queue: {e:?}");
+                            None
+                        }
+                    }
+                };
+                match v {
+                    Some(m) => {
+                        match encode_parsed_inbox_message(&m, &ticketer, &rollup_addr) {
+                            Ok(message) => {
+                                pvm.execute_operation(
+                                    message,
+                                    std::ops::Bound::Unbounded,
+                                );
+                            }
+                            Err(e) => {
+                                warn!("worker failed to encode inbox message: {e:?}");
+                            }
+                        };
+                    }
+                    _ => std::thread::sleep(std::time::Duration::from_millis(100)),
+                };
+
+                match rx.try_recv() {
+                    Ok(_) | Err(TryRecvError::Disconnected) => {
+                        break;
+                    }
+                    Err(TryRecvError::Empty) => {}
+                }
+            }
         })),
     })
 }
