@@ -51,7 +51,7 @@ mod test {
             inbox_id: 1,
             amount: 20,
             receiver: Address::User(receiver.clone()),
-            source: jstz_mock::account1().try_into().unwrap(),
+            source: jstz_mock::account1(),
         };
         tx.begin();
         let receipt = execute(&mut host, &mut tx, deposit);
