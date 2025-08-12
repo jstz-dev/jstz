@@ -110,6 +110,7 @@ pub(crate) mod tests {
             queue: Arc::new(RwLock::new(OperationQueue::new(1))),
             runtime_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),
             worker_heartbeat: Arc::default(),
+            storage_sync: false,
         }
     }
 
