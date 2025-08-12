@@ -379,7 +379,8 @@ pub mod openapi {
 mod test {
     use super::{Content, DeployFunction, RevealLargePayload, RevealType, RunFunction};
     use super::{Operation, SignedOperation};
-    use crate::context::account::{Account, Nonce};
+    use crate::context::account::{Account, Address, Nonce};
+    use crate::operation::internal::FaDeposit;
     use crate::operation::OperationHash;
     use crate::runtime::ParsedCode;
     use http::{HeaderMap, Method, Uri};
@@ -390,6 +391,7 @@ mod test {
     #[cfg(feature = "v2_runtime")]
     use jstz_utils::{test_util::alice_keys, KeyPair};
     use serde_json::json;
+    use tezos_smart_rollup::michelson::ticket::TicketHash;
 
     fn run_function_content() -> Content {
         let body = r#""value":1""#.to_string().into_bytes();
@@ -645,5 +647,33 @@ mod test {
         let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
 
         assert_eq!(signed_op, decoded)
+    }
+
+    #[test]
+    fn fa_deposit_json() {
+        let d = FaDeposit {
+            inbox_id: 1,
+            amount: 10,
+            source: Address::from_base58("tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h").unwrap(),
+            receiver: Address::from_base58("tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg")
+                .unwrap(),
+            proxy_smart_function: None,
+            ticket_hash: TicketHash::try_from(
+                "0000000000000000000000000000000000000000000000000000000000000000"
+                    .to_string(),
+            )
+            .unwrap(),
+        };
+
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&d.to_http_body().unwrap())
+                .unwrap(),
+            serde_json::json!({
+                "receiver": "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
+                "amount": 10,
+                "ticketHash": "0000000000000000000000000000000000000000000000000000000000000000",
+                "source": "tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h",
+            })
+        );
     }
 }
