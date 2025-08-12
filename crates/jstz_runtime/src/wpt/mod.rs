@@ -1,4 +1,6 @@
-use anyhow::Context;
+#![cfg(feature = "wpt")]
+
+use crate::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 use deno_core::{
     convert::Smi,
     op2,
@@ -7,23 +9,11 @@ use deno_core::{
 };
 use deno_error::JsErrorBox;
 use derive_more::{From, Into};
-
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use regex::Regex;
-use ron::de::from_str as ron_from_str;
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::{
-    collections::{BTreeMap, HashSet},
-    fs::{File, OpenOptions},
-    future::IntoFuture,
-    panic,
-    path::{Path, PathBuf},
-    str::FromStr,
-};
 use thiserror::Error;
-use tokio::io::AsyncWriteExt;
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub enum WptTestStatus {
@@ -268,13 +258,51 @@ impl TestHarnessReport {
         });
     }
 }
-#[derive(Deserialize)]
-pub struct LogLine<'a> {
-    pub message: Cow<'a, str>,
+
+#[op2]
+pub fn test_result_callback(op_state: &mut OpState, #[from_v8] result: TestResult) {
+    let report: &mut TestHarnessReport = op_state.borrow_mut::<TestHarnessReport>();
+    report.add_test_result(result);
 }
 
-#[derive(Debug, Error)]
-pub enum ParseError {
-    #[error("log line contained a report, but it couldn't be parsed as RON: {0}")]
-    Ron(String),
+#[op2]
+pub fn test_completion_callback(
+    op_state: &mut OpState,
+    _tests: &v8::Value,
+    #[from_v8] result: TestsResult,
+    _records: &v8::Value,
+) -> Result<(), JsErrorBox> {
+    let report: &mut TestHarnessReport = op_state.borrow_mut::<TestHarnessReport>();
+    report
+        .set_harness_result(result)
+        .map_err(|e| JsErrorBox::generic(e.to_string()))
+}
+
+deno_core::extension!(
+    test_harness_api,
+    ops = [test_completion_callback, test_result_callback],
+    esm_entry_point = "ext:test_harness_api/test_harness_api.js",
+    esm = [dir "tests", "test_harness_api.js"],
+);
+
+pub fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntime {
+    let address =
+        SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton").unwrap();
+
+    let mut options = JstzRuntimeOptions::default();
+    options
+        .extensions
+        .push(test_harness_api::init_ops_and_esm());
+
+    let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
+        protocol: Some(RuntimeContext::new(host, tx, address, String::new())),
+        extensions: vec![test_harness_api::init_ops_and_esm()],
+        ..Default::default()
+    });
+
+    let op_state = runtime.op_state();
+    // Insert a blank report to be filled in by test cases
+    op_state.borrow_mut().put(TestHarnessReport::default());
+
+    runtime
 }

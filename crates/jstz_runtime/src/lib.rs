@@ -5,6 +5,7 @@ pub use ext::jstz_kv::kv::*;
 pub mod runtime;
 pub mod sys;
 
+#[cfg(feature = "wpt")]
 pub mod wpt;
 
 pub use ext::*;

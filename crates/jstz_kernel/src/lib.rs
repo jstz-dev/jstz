@@ -25,6 +25,7 @@ mod wasm_kernel;
 pub const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
 pub const INJECTOR: RefPath = RefPath::assert_from(b"/injector");
 
+#[allow(unused)]
 pub(crate) fn read_ticketer(rt: &impl Runtime) -> SmartFunctionHash {
     Storage::get(rt, &TICKETER)
         .ok()
@@ -32,6 +33,7 @@ pub(crate) fn read_ticketer(rt: &impl Runtime) -> SmartFunctionHash {
         .expect("Ticketer not found")
 }
 
+#[allow(unused)]
 pub(crate) fn read_injector(rt: &impl Runtime) -> PublicKey {
     Storage::get(rt, &INJECTOR)
         .ok()
