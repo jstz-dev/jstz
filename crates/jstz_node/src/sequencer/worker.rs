@@ -1,4 +1,11 @@
-use crate::sequencer::runtime::{init_host, process_message};
+use crate::{
+    config::RuntimeEnv,
+    sequencer::{
+        queue::WrappedOperation,
+        riscv_pvm::JstzPvm,
+        runtime::{init_host, process_message},
+    },
+};
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -12,10 +19,12 @@ use std::{
 
 use anyhow::Context;
 use jstz_utils::KeyPair;
-use log::warn;
+use log::{info, warn};
+use tezos_crypto_rs::hash::SmartRollupHash;
+use tezos_smart_rollup::types::SmartRollupAddress;
 
 use super::{db::Db, queue::OperationQueue};
-use jstz_kernel::inbox::ParsedInboxMessage;
+use jstz_kernel::inbox::{encode_signed_operation, ParsedInboxMessage};
 
 #[cfg(feature = "oracle")]
 use jstz_kernel::inbox::LevelInfo;
@@ -47,8 +56,23 @@ pub fn spawn(
     injector: &KeyPair,
     preimage_dir: PathBuf,
     debug_log_path: Option<&Path>,
+    runtime_env: RuntimeEnv,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
+    if let RuntimeEnv::Riscv {
+        kernel_path,
+        rollup_address,
+    } = runtime_env
+    {
+        return spawn_riscv_worker(
+            queue,
+            preimage_dir,
+            debug_log_path,
+            kernel_path,
+            rollup_address,
+        );
+    }
+
     let (thread_kill_sig, rx) = channel();
     let mut host_rt =
         init_host(db, preimage_dir, injector).context("failed to init host")?;
@@ -187,13 +211,86 @@ fn run_event_loop(
     })
 }
 
-fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
+pub(crate) fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
     let current_sec = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
     // safety: this worker should be the only writer
     heartbeat.store(current_sec, std::sync::atomic::Ordering::Relaxed);
+}
+
+fn spawn_riscv_worker(
+    queue: Arc<RwLock<OperationQueue>>,
+    preimages_dir: PathBuf,
+    debug_log_path: Option<&Path>,
+    kernel_path: PathBuf,
+    rollup_address: SmartRollupHash,
+) -> anyhow::Result<Worker> {
+    let (thread_kill_sig, rx) = channel();
+    let heartbeat = Arc::new(AtomicU64::default());
+    let debug_log_path = debug_log_path.map(|v| v.to_path_buf());
+    Ok(Worker {
+        thread_kill_sig,
+        heartbeat: heartbeat.clone(),
+        inner: Some(spawn_thread(move || {
+            let mut pvm = JstzPvm::new(
+                kernel_path,
+                &rollup_address,
+                0,
+                Some(preimages_dir.into_boxed_path()),
+                heartbeat.clone(),
+                debug_log_path,
+            )
+            .unwrap();
+            info!("RISCV PVM launched");
+            let rollup_addr = SmartRollupAddress::new(rollup_address);
+
+            loop {
+                let v = {
+                    match queue.write() {
+                        Ok(mut q) => q.pop(),
+                        Err(e) => {
+                            warn!("worker failed to read from queue: {e:?}");
+                            None
+                        }
+                    }
+                };
+                match v {
+                    Some(m) => {
+                        let encoded_message = match m {
+                            WrappedOperation::FromInbox {
+                                original_inbox_message,
+                                ..
+                            } => hex::decode(original_inbox_message).context("worker failed to decode original inbox message"),
+                            WrappedOperation::FromNode(signed_op) => {
+                                encode_signed_operation(&signed_op, &rollup_addr).map_err(|e| anyhow::anyhow!("worker failed to encode inbox message: {e:?}"))
+                            }
+                        };
+                        match encoded_message {
+                            Ok(message) => {
+                                pvm.execute_operation(
+                                    message,
+                                    std::ops::Bound::Unbounded,
+                                );
+                            }
+                            Err(e) => {
+                                warn!("{e:?}");
+                            }
+                        };
+                    }
+                    _ => std::thread::sleep(std::time::Duration::from_millis(100)),
+                };
+
+                match rx.try_recv() {
+                    Ok(_) | Err(TryRecvError::Disconnected) => {
+                        break;
+                    }
+                    Err(TryRecvError::Empty) => {}
+                }
+            }
+        })),
+    })
 }
 
 #[cfg(test)]
@@ -221,6 +318,7 @@ mod tests {
             &default_injector(),
             PathBuf::new(),
             None,
+            crate::config::RuntimeEnv::Native,
             move || {
                 *cp.lock().unwrap() += 1;
             },
@@ -264,6 +362,7 @@ mod tests {
             &default_injector(),
             PathBuf::new(),
             Some(log_file.path()),
+            crate::config::RuntimeEnv::Native,
             move || {},
         );
 

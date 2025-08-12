@@ -115,7 +115,9 @@ pub async fn run(
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer {
-            ref debug_log_path, ..
+            ref debug_log_path,
+            ref runtime_env,
+            ..
         } => Some(
             worker::spawn(
                 queue.clone(),
@@ -123,12 +125,15 @@ pub async fn run(
                 &injector,
                 rollup_preimages_dir.clone(),
                 Some(debug_log_path),
+                runtime_env.clone(),
             )
             .context("failed to launch worker")?,
         ),
         #[cfg(test)]
         RunMode::Sequencer {
-            ref debug_log_path, ..
+            ref debug_log_path,
+            ref runtime_env,
+            ..
         } => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
             Some(
@@ -138,6 +143,7 @@ pub async fn run(
                     &injector,
                     rollup_preimages_dir.clone(),
                     Some(debug_log_path),
+                    runtime_env.clone(),
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
@@ -145,16 +151,6 @@ pub async fn run(
                 .context("failed to launch worker")?,
             )
         }
-        RunMode::Default => None,
-    };
-
-    let _monitor: Option<Monitor> = match mode {
-        #[cfg(not(test))]
-        RunMode::Sequencer { .. } => {
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
-        }
-        #[cfg(test)]
-        RunMode::Sequencer { .. } => None,
         RunMode::Default => None,
     };
 
@@ -172,8 +168,8 @@ pub async fn run(
     let (storage_sync_db, _storage_sync_db_file) = temp_db()?;
     let storage_sync_handle = match storage_sync {
         true => Some(storage_sync::spawn(
-            storage_sync_db.clone(),
-            kernel_log_path.clone(),
+            runtime_db.clone(),
+            log_file_path,
             #[cfg(test)]
             || {},
         )?),

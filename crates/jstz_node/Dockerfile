@@ -16,8 +16,9 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /jstz_build/target/release/jstz-node /usr/bin/jstz-node
+COPY --from=builder /jstz_build/run.sh /run.sh
+COPY --from=builder /jstz_build/crates/jstz_node/kernel-executable /jstz_build/riscv_kernel
 
 ENV RUST_BACKTRACE=1
-ENV RUST_LOG=debug
 
-ENTRYPOINT ["/usr/bin/jstz-node"]
+ENTRYPOINT ["sh", "/run.sh"]
