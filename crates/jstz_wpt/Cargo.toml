@@ -26,6 +26,7 @@ serde_json.workspace = true
 tl.workspace = true
 tokio.workspace = true
 url.workspace = true
+jstz_runtime = {path = "../jstz_runtime"}
 
 [[bin]]
 name = "jstz-wpt"
