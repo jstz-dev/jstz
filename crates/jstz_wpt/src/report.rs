@@ -1,6 +1,7 @@
 use std::collections::{btree_map::Entry, BTreeMap};
 
 use anyhow::Result;
+use jstz_runtime::wpt::{WptSubtest, WptSubtestStatus, WptTestStatus};
 use serde::{Deserialize, Serialize};
 
 #[derive(Default, Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
@@ -144,30 +145,6 @@ pub struct WptReportTest {
     pub metrics: WptMetrics,
 }
 
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
-pub enum WptSubtestStatus {
-    Pass = 0,
-    Fail = 1,
-    Timeout = 2,
-    NotRun = 3,
-    PreconditionFailed = 4,
-}
-
-impl TryFrom<u8> for WptSubtestStatus {
-    type Error = ();
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Self::Pass),
-            1 => Ok(Self::Fail),
-            2 => Ok(Self::Timeout),
-            3 => Ok(Self::NotRun),
-            4 => Ok(Self::PreconditionFailed),
-            _ => Err(()),
-        }
-    }
-}
-
 impl WptReportTest {
     pub fn new(status: WptTestStatus, subtests: Vec<WptSubtest>) -> Self {
         let mut metrics = WptMetrics::default();
@@ -184,35 +161,6 @@ impl WptReportTest {
             subtests,
             status,
             metrics,
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Deserialize, Serialize, Clone)]
-pub struct WptSubtest {
-    pub name: String,
-    pub status: WptSubtestStatus,
-    pub message: Option<String>,
-}
-
-#[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
-pub enum WptTestStatus {
-    Ok = 0,
-    Err = 1,
-    Timeout = 2,
-    PreconditionFailed = 3,
-}
-
-impl TryFrom<u8> for WptTestStatus {
-    type Error = ();
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Self::Ok),
-            1 => Ok(Self::Err),
-            2 => Ok(Self::Timeout),
-            3 => Ok(Self::PreconditionFailed),
-            _ => Err(()),
         }
     }
 }
