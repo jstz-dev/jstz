@@ -29,6 +29,7 @@ const EXTERNAL_FRAME_SIZE: usize = 21;
 const DEFAULT_GAS_LIMIT: u32 = 100_000;
 const MNEMONIC: &str =
     "donate kidney style loyal nose core inflict cup symptom speed giant polar";
+// FIXME: JSTZ-854
 type DepositInboxMsgPayloadType = MichelsonOr<
     MichelsonPair<MichelsonContract, FA2_1Ticket>,
     MichelsonPair<
@@ -173,6 +174,25 @@ impl InboxBuilder {
         Ok(())
     }
 
+    fn deposit_payload(
+        ticketer: &ContractKt1Hash,
+        account: &Account,
+        amount_mutez: u64,
+    ) -> DepositInboxMsgPayloadType {
+        MichelsonOr::Left(MichelsonPair(
+            MichelsonContract(Contract::Implicit(
+                PublicKeyHash::from_b58check(&account.address.to_string())
+                    .expect("serialised address should be parsable"),
+            )),
+            Ticket::new(
+                Contract::Originated(ticketer.clone()),
+                MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                amount_mutez,
+            )
+            .expect("ticket creation from ticketer should work"),
+        ))
+    }
+
     pub fn deposit_from_l1(
         &mut self,
         account: &Account,
@@ -180,20 +200,6 @@ impl InboxBuilder {
     ) -> Result<()> {
         match &self.ticketer_address {
             Some(ticketer) => {
-                let payload: DepositInboxMsgPayloadType =
-                    MichelsonOr::Left(MichelsonPair(
-                        MichelsonContract(Contract::Implicit(
-                            PublicKeyHash::from_b58check(&account.address.to_string())
-                                .expect("serialised address should be parsable"),
-                        )),
-                        Ticket::new(
-                            Contract::Originated(ticketer.clone()),
-                            MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
-                            amount_mutez,
-                        )
-                        .expect("ticket creation from ticketer should work"),
-                    ));
-
                 let message = self.generate_internal_messge(
                     InternalInboxMessage::Transfer(Transfer {
                         sender: ticketer.clone(),
@@ -203,7 +209,7 @@ impl InboxBuilder {
                         )
                         .expect("the constant source address should be parsable"),
                         destination: self.rollup_address.clone(),
-                        payload,
+                        payload: Self::deposit_payload(ticketer, account, amount_mutez),
                     }),
                 )?;
                 self.messages.push(message);
