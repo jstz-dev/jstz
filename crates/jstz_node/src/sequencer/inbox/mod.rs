@@ -10,6 +10,7 @@ use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use jstz_core::host::WriteDebug;
 use jstz_kernel::inbox::{parse_inbox_message_hex, ParsedInboxMessage};
+use jstz_proto::operation::internal::InboxId;
 use log::{debug, error};
 use std::future::Future;
 use std::time::Duration;
@@ -81,7 +82,7 @@ pub async fn spawn_monitor<
                                 continue;
                             }
                             let block_content = retry_fetch_block(&rollup_endpoint, block.level).await;
-                            process_inbox_messages(block_content, queue.clone(), &ticketer, &jstz).await;
+                            process_inbox_messages(block.level, block_content, queue.clone(), &ticketer, &jstz).await;
                         }
                         _ => {
                             //TODO: handle the case when the stream ended/errored
@@ -103,12 +104,13 @@ pub async fn spawn_monitor<
 
 /// Process the inbox messages of the given block and push them into the queue.
 async fn process_inbox_messages(
+    block_level: u32,
     block_content: BlockResponse,
     queue: Arc<RwLock<OperationQueue>>,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
 ) {
-    let mut ops = parse_inbox_messages(block_content, ticketer, jstz);
+    let mut ops = parse_inbox_messages(block_level, block_content, ticketer, jstz);
     while let Some(op) = ops.pop() {
         loop {
             let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
@@ -122,6 +124,7 @@ async fn process_inbox_messages(
 
 /// parse the inbox messages into jstz operations of the given block
 fn parse_inbox_messages(
+    block_level: u32,
     block: BlockResponse,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
@@ -130,8 +133,17 @@ fn parse_inbox_messages(
         .messages
         .iter()
         .enumerate()
-        .filter_map(|(inbox_id, inbox_msg)| {
-            parse_inbox_message_hex(&Logger, inbox_id as u32, inbox_msg, ticketer, jstz)
+        .filter_map(|(l1_message_id, inbox_msg)| {
+            parse_inbox_message_hex(
+                &Logger,
+                InboxId {
+                    l1_level: block_level,
+                    l1_message_id: l1_message_id as u32,
+                },
+                inbox_msg,
+                ticketer,
+                jstz,
+            )
         })
         .collect()
 }
@@ -255,7 +267,7 @@ mod tests {
         let block_content = BlockResponse {
             messages: vec![String::from("0001"), String::from(op)],
         };
-        let msgs = parse_inbox_messages(block_content, &ticketer, &jstz);
+        let msgs = parse_inbox_messages(1, block_content, &ticketer, &jstz);
         assert_eq!(msgs.len(), 2);
         assert!(matches!(
             &msgs[0],
@@ -285,7 +297,8 @@ mod tests {
         let handle = tokio::spawn(async move {
             let ticketer = ticketer;
             let jstz = jstz;
-            process_inbox_messages(block_content, queue.clone(), &ticketer, &jstz).await;
+            process_inbox_messages(1, block_content, queue.clone(), &ticketer, &jstz)
+                .await;
         });
 
         tokio::time::sleep(Duration::from_millis(10)).await;

@@ -99,7 +99,7 @@ mod tests {
         context::account::{Account, Address, Nonce, UserAccount},
         executor::fa_deposit::FaDepositReceipt,
         operation::{
-            internal::{Deposit, FaDeposit},
+            internal::{Deposit, FaDeposit, InboxId},
             Content, DeployFunction, InternalOperation, Operation, RevealLargePayload,
             RunFunction, SignedOperation,
         },
@@ -259,11 +259,16 @@ mod tests {
         let receiver =
             Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
 
-        let deposit_op = Message::Internal(InternalOperation::Deposit(Deposit {
-            inbox_id: 1,
+        let deposit = Deposit {
+            inbox_id: InboxId {
+                l1_level: 1,
+                l1_message_id: 1,
+            },
             amount: 10,
             receiver,
-        }));
+        };
+        let op_hash = deposit.hash();
+        let deposit_op = Message::Internal(InternalOperation::Deposit(deposit));
 
         let dst_account_path =
             RefPath::assert_from(b"/jstz_account/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx");
@@ -285,7 +290,13 @@ mod tests {
 
         // Execute the deposit
         super::process_message(&mut h, deposit_op).await.unwrap();
-        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/270c07945707b0a86fdbd6930e7bb3cae8978a3bcfb6659e8062ef39ec58c32a")).unwrap()).unwrap();
+        let v = Receipt::decode(
+            &h.store_read_all(&RefPath::assert_from(
+                format!("/jstz_receipt/{op_hash}").as_bytes(),
+            ))
+            .unwrap(),
+        )
+        .unwrap();
         assert!(matches!(
             v.result,
             ReceiptResult::Success(ReceiptContent::Deposit(DepositReceipt {
@@ -316,8 +327,11 @@ mod tests {
         let receiver =
             Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
 
-        let fa_deposit_op = Message::Internal(InternalOperation::FaDeposit(FaDeposit {
-            inbox_id: 1,
+        let fa_deposit = FaDeposit {
+            inbox_id: InboxId {
+                l1_level: 1,
+                l1_message_id: 1,
+            },
             amount: 10,
             receiver,
             proxy_smart_function: None,
@@ -326,11 +340,20 @@ mod tests {
                     .to_string(),
             )
             .unwrap(),
-        }));
+        };
+        let op_hash = fa_deposit.hash();
+        let fa_deposit_op = Message::Internal(InternalOperation::FaDeposit(fa_deposit));
 
         // Execute the deposit
         super::process_message(&mut h, fa_deposit_op).await.unwrap();
-        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/270c07945707b0a86fdbd6930e7bb3cae8978a3bcfb6659e8062ef39ec58c32a")).unwrap()).unwrap();
+        let v = Receipt::decode(
+            &h.store_read_all(&RefPath::assert_from(
+                format!("/jstz_receipt/{op_hash}").as_bytes(),
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+
         assert!(matches!(
             v.result,
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {

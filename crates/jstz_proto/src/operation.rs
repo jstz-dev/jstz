@@ -270,22 +270,48 @@ pub mod internal {
 
     use super::*;
 
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+    pub struct InboxId {
+        // L1 inbox message level
+        pub l1_level: u32,
+        // Unique id of inbox message (per level)
+        pub l1_message_id: u32,
+    }
+
+    impl InboxId {
+        pub fn to_bytes(&self) -> [u8; 8] {
+            let mut buf = [0u8; 8];
+            buf[..4].copy_from_slice(&self.l1_level.to_be_bytes());
+            buf[4..].copy_from_slice(&self.l1_message_id.to_be_bytes());
+            buf
+        }
+
+        pub fn hash(&self) -> OperationHash {
+            let seed = self.to_bytes();
+            Blake2b::from(seed.as_slice())
+        }
+    }
+
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
     pub struct Deposit {
-        // Inbox message id is unique to each message and
-        // suitable as a nonce
-        pub inbox_id: u32,
+        // Inbox message id
+        pub inbox_id: InboxId,
         // Amount to deposit
         pub amount: Amount,
         // Receiver address
         pub receiver: Address,
     }
 
+    impl Deposit {
+        pub fn hash(&self) -> OperationHash {
+            self.inbox_id.hash()
+        }
+    }
+
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct FaDeposit {
-        // Inbox message id is unique to each message and
-        // suitable as a nonce
-        pub inbox_id: u32,
+        // Inbox message id
+        pub inbox_id: InboxId,
         // Amount to deposit
         pub amount: Amount,
         // Final deposit receiver address
@@ -311,8 +337,7 @@ pub mod internal {
         }
 
         pub fn hash(&self) -> OperationHash {
-            let seed = self.inbox_id.to_be_bytes();
-            Blake2b::from(seed.as_slice())
+            self.inbox_id.hash()
         }
     }
 }

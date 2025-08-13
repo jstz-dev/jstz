@@ -11,7 +11,10 @@ use jstz_node::sequencer::{inbox::api::BlockResponse, runtime::JSTZ_ROLLUP_ADDRE
 use jstz_proto::{
     context::account::{Address, Nonce},
     executor::fa_deposit::FaDepositReceipt,
-    operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
+    operation::{
+        internal::InboxId, Content, DeployFunction, Operation, RunFunction,
+        SignedOperation,
+    },
     receipt::{
         DeployFunctionReceipt, DepositReceipt, Receipt, ReceiptContent, ReceiptResult,
         RunFunctionReceipt,
@@ -340,15 +343,35 @@ fn mock_deploy_op() -> SignedOperation {
 /// mock deposit op to transfer 30000 mutez to tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9
 fn mock_deposit_op() -> (&'static str, &'static str) {
     let op = "0000050507070a000000160000c4ecf33f52c7b89168cfef8f350818fee1ad08e807070a000000160146d83d8ef8bce4d8c60a96170739c0269384075a00070707070000030600b0d40354267463f8cf2844e4d8b20a76f0471bcb2137fd0002298c03ed7d454a101eb7022bc95f7e5f41ac78c3ea4c18195bcfac262dcb29e3d803ae74681739";
-    let op_hash = "d236fca2b92ca42da90327820d7fe73c8ad22ea13cd8d761adc6e98822195c77";
+    let op_hash = "09952d767f9ebf76b0edd3f837596b71f3b8193f13be4cbfb09e5eec691bbde3";
     (op_hash, op)
+}
+
+#[test]
+fn mock_deposit_op_hash_matches_actual_hash() {
+    let (op_hash, _) = mock_deposit_op();
+    let inbox_id = InboxId {
+        l1_level: 123,
+        l1_message_id: 3,
+    };
+    assert_eq!(inbox_id.hash().to_string(), op_hash);
 }
 
 /// mock fa deposit op to transfer 1000 FA token to `tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN`
 fn mock_deposit_fa_op() -> (&'static str, &'static str) {
     let op = "0000050807070a000000160000e7670f32038107a59a2b9cfefae36ea21f5aa63c070705090a0000001601238f371da359b757db57238e9f27f3c48234defa0007070a0000001601207905b1a5abdace0a6b5bff0d71a467d5b85cf500070707070001030600a80f9424c685d3f69801ff6e3f2cfb74b250f00988e100e7670f32038107a59a2b9cfefae36ea21f5aa63cc3ea4c18195bcfac262dcb29e3d803ae74681739";
-    let op_hash = "34461635d31fd734cee1f20839218ffef78785d536b348b04204510012a8cbd2";
+    let op_hash = "89873bc722b5a0744657ed0bd6251f30989bea2059a52d080308c1d21923b053";
     (op_hash, op)
+}
+
+#[test]
+fn mock_fa_deposit_op_hash_matches_actual_hash() {
+    let (op_hash, _) = mock_deposit_fa_op();
+    let inbox_id = InboxId {
+        l1_level: 123,
+        l1_message_id: 4,
+    };
+    assert_eq!(inbox_id.hash().to_string(), op_hash);
 }
 
 async fn check_worker_health(client: &Client, base_uri: &str) {

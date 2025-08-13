@@ -1,5 +1,4 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::hash::Blake2b;
 
 use crate::{
     context::account::Account,
@@ -12,17 +11,14 @@ pub fn execute(
     tx: &mut Transaction,
     deposit: Deposit,
 ) -> Receipt {
-    let Deposit {
-        amount, receiver, ..
-    } = deposit;
+    let hash = deposit.hash();
+    let result = Account::add_balance(hrt, tx, &deposit.receiver, deposit.amount);
 
-    let result = Account::add_balance(hrt, tx, &receiver, amount);
-    let hash = Blake2b::from(deposit.inbox_id.to_be_bytes().as_slice());
     Receipt::new(
         hash,
         result.map(|updated_balance| {
             crate::receipt::ReceiptContent::Deposit(DepositReceipt {
-                account: receiver,
+                account: deposit.receiver,
                 updated_balance,
             })
         }),
@@ -36,7 +32,7 @@ mod test {
 
     use crate::{
         context::account::Address,
-        operation::internal::Deposit,
+        operation::internal::{Deposit, InboxId},
         receipt::{DepositReceipt, ReceiptContent, ReceiptResult},
     };
 
@@ -48,7 +44,10 @@ mod test {
         let mut tx = Transaction::default();
         let receiver = jstz_mock::account1();
         let deposit = Deposit {
-            inbox_id: 1,
+            inbox_id: InboxId {
+                l1_level: 1,
+                l1_message_id: 1,
+            },
             amount: 20,
             receiver: Address::User(receiver.clone()),
         };
@@ -61,7 +60,7 @@ mod test {
                 updated_balance,
             })) if account == Address::User(receiver) && updated_balance == 20
         ));
-        let raw_json_payload = r#"{"hash":[39,12,7,148,87,7,176,168,111,219,214,147,14,123,179,202,232,151,138,59,207,182,101,158,128,98,239,57,236,88,195,42],"result":{"_type":"Success","inner":{"_type":"Deposit","account":"tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx","updatedBalance":20}}}"#;
+        let raw_json_payload = r#"{"hash":[206,213,136,201,149,142,122,49,150,82,57,204,46,196,114,184,123,37,238,1,24,101,217,191,25,104,254,193,105,5,238,188],"result":{"_type":"Success","inner":{"_type":"Deposit","account":"tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx","updatedBalance":20}}}"#;
         assert_eq!(raw_json_payload, serde_json::to_string(&receipt).unwrap());
     }
 }
