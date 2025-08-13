@@ -62,6 +62,7 @@ utoipa-scalar.workspace = true
 assert_cmd.workspace = true
 pretty_assertions.workspace = true
 warp.workspace = true
+http.workspace = true
 jstz_mock = { path = "../jstz_mock" }
 
 [[bin]]

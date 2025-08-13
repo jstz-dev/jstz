@@ -1,9 +1,7 @@
 use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use bytes::Bytes;
 use jstz_crypto::{
-    public_key::PublicKey,
     public_key_hash::PublicKeyHash,
-    signature::Signature,
     smart_function_hash::{Kt1Hash, SmartFunctionHash},
 };
 use jstz_kernel::inbox::RollupType;
@@ -20,6 +18,7 @@ use jstz_proto::{
         RunFunctionReceipt,
     },
     runtime::ParsedCode,
+    HttpBody,
 };
 use jstz_utils::{test_util::alice_keys, KeyPair};
 use octez::unused_port;
@@ -29,7 +28,6 @@ use std::{
     process::{Child, Command},
 };
 use tempfile::{NamedTempFile, TempDir};
-use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
 use tokio_stream::StreamExt;
 
 use futures_util::stream;
@@ -120,21 +118,15 @@ async fn check_mode(client: &Client, base_uri: &str) {
 
 fn raw_operation(nonce: u64, content: Content) -> Operation {
     Operation {
-        public_key: PublicKey::Ed25519(
-            PublicKeyEd25519::from_base58_check(
-                "edpkuXD2CqRpWoTT8p4exrMPQYR2NqsYH3jTMeJMijHdgQqkMkzvnz",
-            )
-            .unwrap()
-            .into(),
-        ),
+        public_key: jstz_mock::pk1(),
         nonce: Nonce(nonce),
         content,
     }
 }
 
-fn signed_operation(sig_str: &str, raw_operation: Operation) -> SignedOperation {
+fn signed_operation(raw_operation: Operation) -> SignedOperation {
     SignedOperation::new(
-        Signature::Ed25519(Ed25519Signature::from_base58_check(sig_str).unwrap().into()),
+        jstz_mock::sk1().sign(raw_operation.hash()).unwrap(),
         raw_operation,
     )
 }
@@ -144,7 +136,6 @@ async fn submit_operation(
     base_uri: &str,
     operation: Operation,
     expected_hash: &str,
-    sig_str: &str,
 ) -> Receipt {
     let hash = client
         .post(format!("{base_uri}/operations/hash"))
@@ -159,7 +150,7 @@ async fn submit_operation(
 
     assert_eq!(&hash, expected_hash);
 
-    let signed_deploy_op = signed_operation(sig_str, operation);
+    let signed_deploy_op = signed_operation(operation);
     assert_eq!(
         client
             .post(format!("{base_uri}/operations"))
@@ -193,13 +184,19 @@ async fn poll_receipt(client: &Client, base_uri: &str, hash: &str) -> Receipt {
 async fn deploy_function(client: &Client, base_uri: &str) {
     let deploy_op = raw_operation(0, Content::DeployFunction(DeployFunction {function_code: ParsedCode::try_from(format!("const handler = async () => {{ const s = \"{}\"; console.log(\"debug message here\"); return new Response(\"this is a big function\"); }}; export default handler;\n", "a".repeat(8000))).unwrap(), account_credit: 0}));
 
-    let receipt = submit_operation(client, base_uri, deploy_op, "1d67b9aec56ec1ee843feaf87486d11f9c80404c707862f053b91d842972faa4", "edsigu2E4TvDw4dDCF2hzjjEvDF5tMpP1hM3UPof2DfPCoESvXRkNcDKNYrymcoKVG9gqxbobFnoJhf7JWqmzfYe4Upa1wHRff1").await;
+    let receipt = submit_operation(
+        client,
+        base_uri,
+        deploy_op,
+        "931008aa770c77c72df2e7417832773030d65e113faa8836637b953932736fd3",
+    )
+    .await;
 
     assert!(matches!(
         receipt.result,
         ReceiptResult::Success(ReceiptContent::DeployFunction(
             DeployFunctionReceipt { address: SmartFunctionHash(Kt1Hash(addr)) }
-        )) if addr.to_base58_check() == "KT1CTTMXwcpLV3FtPupxfwZ6bTSLAPaoB6sd"
+        )) if addr.to_base58_check() == "KT1Lk9dy6cfWTQdB89rFK6P3tPDmfGdRmHee"
     ));
 }
 
@@ -207,15 +204,21 @@ async fn call_function(client: &Client, base_uri: &str) {
     let call_op = raw_operation(
         1,
         Content::RunFunction(RunFunction {
-            uri: Uri::from_static("jstz://KT1CTTMXwcpLV3FtPupxfwZ6bTSLAPaoB6sd/"),
+            uri: Uri::from_static("jstz://KT1Lk9dy6cfWTQdB89rFK6P3tPDmfGdRmHee/"),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 550000,
         }),
     );
 
-    let receipt = submit_operation(client, base_uri, call_op, "2b0ac1f923e4e83226611e3befe81f664729475f2b6e546f1c7d6e2a69b6cd12", "edsigtx7PoXqmF2vuxfXkEwTwEm7xCYT516pXqRjZZSfmvZyjNtpGfVu6Jwq41k9ZZarv9JcFK5y2tugpm8rKo17VAgB49GnTRQ").await;
+    let receipt = submit_operation(
+        client,
+        base_uri,
+        call_op,
+        "6c2858adb620f889949fa34bb2e13ba81f610e6707abb84b0242f6898470bccc",
+    )
+    .await;
 
     assert!(matches!(
         receipt.result,
@@ -392,7 +395,7 @@ async fn call_function_and_stream_logs(base_uri: &str) {
     });
 
     let res = reqwest::get(format!(
-        "{base_uri}/logs/KT1CTTMXwcpLV3FtPupxfwZ6bTSLAPaoB6sd/stream"
+        "{base_uri}/logs/KT1Lk9dy6cfWTQdB89rFK6P3tPDmfGdRmHee/stream"
     ))
     .await
     .unwrap();
@@ -403,7 +406,7 @@ async fn call_function_and_stream_logs(base_uri: &str) {
         if let Some(Ok(b)) = body.next().await {
             let s = String::from_utf8(b.to_vec()).unwrap().replace("data: ", "");
             if let Ok(serde_json::Value::Object(m)) = serde_json::from_str(&s) {
-                if m["text"].as_str().is_some_and(|v| v.contains("debug message here")) && m["requestId"] == serde_json::json!("2b0ac1f923e4e83226611e3befe81f664729475f2b6e546f1c7d6e2a69b6cd12") {
+                if m["text"].as_str().is_some_and(|v| v.contains("debug message here")) && m["requestId"] == serde_json::json!("6c2858adb620f889949fa34bb2e13ba81f610e6707abb84b0242f6898470bccc") {
                     found_message = true;
                     break;
                 }

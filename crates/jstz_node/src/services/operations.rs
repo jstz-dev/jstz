@@ -355,6 +355,7 @@ mod tests {
     };
     use jstz_proto::operation::{RevealLargePayload, RevealType};
     use jstz_proto::receipt::{ReceiptContent, ReceiptResult};
+    use jstz_proto::HttpBody;
     use jstz_proto::{
         context::account::{Amount, Nonce},
         operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
@@ -565,7 +566,7 @@ mod tests {
                     uri: Uri::from_static("http://http://"),
                     method: Method::HEAD,
                     headers: HeaderMap::new(),
-                    body: None,
+                    body: HttpBody::empty(),
                     gas_limit: 0,
                 }),
             )))
@@ -600,7 +601,7 @@ mod tests {
             uri: Uri::from_static("http://http://"),
             method: Method::HEAD,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 0,
         }));
         let res = router
