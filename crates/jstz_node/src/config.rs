@@ -160,6 +160,8 @@ pub struct JstzNodeConfig {
     #[serde(flatten)]
     /// The mode in which the rollup node will run.
     pub mode: RunMode,
+    /// When enabled, the node will sync storage updates to the database from the kernel_log_file.
+    pub storage_sync: bool,
 }
 
 impl JstzNodeConfig {
@@ -175,6 +177,7 @@ impl JstzNodeConfig {
         kernel_log_file: &Path,
         injector: KeyPair,
         mode: RunMode,
+        storage_sync: bool,
     ) -> Self {
         Self {
             endpoint: endpoint.clone(),
@@ -183,6 +186,7 @@ impl JstzNodeConfig {
             kernel_log_file: kernel_log_file.to_path_buf(),
             injector,
             mode,
+            storage_sync,
         }
     }
 }
@@ -213,6 +217,7 @@ mod tests {
                 .unwrap(),
             ),
             RunMode::Default,
+            true,
         );
 
         let json = serde_json::to_value(&config).unwrap();
@@ -226,6 +231,7 @@ mod tests {
         assert_eq!(json["capacity"], serde_json::Value::Null);
         assert_eq!(json["debug_log_path"], serde_json::Value::Null);
         assert_eq!(json["runtime_env"], serde_json::Value::Null);
+        assert_eq!(json["storage_sync"], true);
 
         config.mode = RunMode::Sequencer {
             capacity: 123,

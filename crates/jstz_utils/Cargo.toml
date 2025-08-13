@@ -24,6 +24,7 @@ regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup = { workspace = true, features =  ["utils"], optional = true }
+tezos_crypto_rs.workspace = true
 tezos_data_encoding = { workspace = true, optional = true }
 tokio.workspace = true
 tokio-util.workspace = true
