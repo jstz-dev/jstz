@@ -403,7 +403,9 @@ async fn dump_stats(
     Ok(())
 }
 
-pub async fn run_wpt_tests() -> anyhow::Result<()> {
+#[cfg_attr(feature = "skip-wpt", ignore)]
+#[tokio::test]
+async fn test_wpt() -> anyhow::Result<()> {
     let mut filter = TestFilter::default();
     let deno_report = DenoReport::load(
         Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/deno_report.json"),
@@ -429,12 +431,5 @@ pub async fn run_wpt_tests() -> anyhow::Result<()> {
     if let Ok(v) = std::env::var("STATS_PATH") {
         dump_stats(deno_report.stats(), report.stats(), &v).await?;
     }
-    Ok(())
-}
-
-#[cfg_attr(feature = "skip-wpt", ignore)]
-#[tokio::test]
-async fn test_wpt() -> anyhow::Result<()> {
-    run_wpt_tests().await?;
     Ok(())
 }
