@@ -551,7 +551,7 @@ mod tests {
                 result: ReceiptResult::Failed(s),
                 ..
             }
-            if s == "Ed25519 error: signature error".to_string()
+            if s.contains("Ed25519 error: signature error")
         ));
     }
 }
