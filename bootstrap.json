@@ -1,0 +1,26 @@
+[
+  [
+    "activator",
+    "edpkvAr42DiunBrGuJ1oc3ht48qxmVNgnWawWU4aYo73Z8MAjZZavP",
+    "unencrypted:edsk3PEhsLHcWv9BkwxH2FJQFX8CRNdokNMbn39mXuiU6Mppx97aUH",
+    1
+  ],
+  [
+    "injector",
+    "edpkugafcvKtquMxtd41gYohsKUedDZM9fKziyzxQXUUYMNBttavw9",
+    "unencrypted:edsk2uNKX68gFvwqANUDMbuJ1viQQbBnqJovqP7LTSQTtirbBEdBZy",
+    100000000000
+  ],
+  [
+    "rollup_operator",
+    "edpkuoDmQerv3HFwuJ9GHczw63JP8RNW4RUdBSG6AUQ6LZ9pk7X1ZC",
+    "unencrypted:edsk3eMKGVczXtYgJzkbvY5fNEhyT45R5MMMFZN4vjA2QjvPvYuqwU",
+    100000000000
+  ],
+  [
+    "bootstrap1",
+    "edpkv3mrPCQfenkT8X2k641ERS2TLQ6EhrG4NeWKSwMzt6Vw3TNdJT",
+    "unencrypted:edsk4CAPErUiF6gC52VrGFk2geSzykENhBWHKi1JYKuHZT54rVbvgG",
+    1000000000000000
+  ]
+]
