@@ -210,7 +210,7 @@ mod tests {
     fn create_pvm() {
         let ticketer =
             SmartFunctionHash::from_base58("KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ")
-                .expect("msg");
+                .unwrap();
         let rollup_address =
             SmartRollupHash::from_base58_check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
