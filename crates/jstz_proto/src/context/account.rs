@@ -12,7 +12,10 @@ use crate::{
 use bincode::{Decode, Encode};
 use boa_gc::{empty_trace, Finalize, Trace};
 use derive_more::From;
-use jstz_core::kv::transaction::{Guarded, GuardedMut};
+use jstz_core::kv::{
+    transaction::{Guarded, GuardedMut},
+    Storage,
+};
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
@@ -231,6 +234,42 @@ impl Account {
                 Self::SmartFunction(SmartFunctionAccount::default())
             }
         }
+    }
+
+    fn storage_get(hrt: &impl HostRuntime, addr: &impl Addressable) -> Result<Self> {
+        let account_entry = Storage::get(hrt, &Self::path(addr)?)?;
+        Ok(account_entry.unwrap_or(Self::default_account(addr)))
+    }
+
+    fn storage_insert(
+        &self,
+        hrt: &mut impl HostRuntime,
+        addr: &impl Addressable,
+    ) -> Result<()> {
+        Ok(Storage::insert(hrt, &Self::path(addr)?, self)?)
+    }
+
+    pub fn storage_get_nonce(
+        hrt: &impl HostRuntime,
+        addr: &impl Addressable,
+    ) -> Result<Nonce> {
+        match Self::storage_get(hrt, addr)? {
+            Account::User(user) => Ok(user.nonce),
+            Account::SmartFunction(sf) => Ok(sf.nonce),
+        }
+    }
+
+    pub fn storage_set_nonce(
+        hrt: &mut impl HostRuntime,
+        addr: &impl Addressable,
+        nonce: Nonce,
+    ) -> Result<()> {
+        let mut account = Self::storage_get(hrt, addr)?;
+        match &mut account {
+            Account::User(user) => user.nonce = nonce,
+            Account::SmartFunction(sf) => sf.nonce = nonce,
+        }
+        account.storage_insert(hrt, addr)
     }
 
     fn get_mut<'a>(
