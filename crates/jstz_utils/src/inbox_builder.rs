@@ -237,7 +237,7 @@ impl InboxBuilder {
             uri,
             Method::POST,
             HeaderMap::default(),
-            Some(json_data),
+            HttpBody(Some(json_data)),
         )
     }
 }
