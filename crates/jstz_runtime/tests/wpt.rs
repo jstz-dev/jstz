@@ -129,7 +129,7 @@ fn run_wpt_test_harness_in_riscv_sandbox(source: String) -> TestHarnessReport {
     )
     .unwrap()
     .unwrap_or(err_report);
-    return data;
+    data
 }
 
 pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
@@ -168,7 +168,7 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
         // Take the test harness report out of the runtime and return it
         // Need to store data temporarily so that the borrow can be dropped
         let data = rt.op_state().borrow().borrow::<TestHarnessReport>().clone();
-        return data;
+        data
     }
 
     #[cfg(feature = "wpt-in-riscv")]
@@ -232,7 +232,7 @@ fn run_wpt_test(
                     vec![WptSubtest {
                         name: "Bundle failed".to_string(),
                         status: WptSubtestStatus::Fail,
-                        message: Some(format!("Failed to bundle test: {}", e)),
+                        message: Some(format!("Failed to bundle test: {e}")),
                     }],
                 ));
             }
