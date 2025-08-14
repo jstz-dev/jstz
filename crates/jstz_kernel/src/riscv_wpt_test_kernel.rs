@@ -5,6 +5,7 @@ use tezos_smart_rollup::{host::Runtime, prelude::debug_msg};
 use crate::inbox::*;
 use jstz_core::kv::Transaction;
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+use jstz_proto::operation::internal::InboxId;
 use jstz_proto::operation::{Content, Operation};
 use jstz_runtime::wpt::{init_runtime, TestHarnessReport};
 use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -29,7 +30,11 @@ fn read_message(
     let jstz_rollup_address =
         SmartRollupHash::from_base58_check("sr1BxufbqiHt3dn6ahV6eZk9xBD6XV1fYowr")
             .unwrap();
-    parse_inbox_message(rt, input.id, input.as_ref(), ticketer, &jstz_rollup_address)
+    let inbox_id = InboxId {
+        l1_level: input.level,
+        l1_message_id: input.id,
+    };
+    parse_inbox_message(rt, inbox_id, input.as_ref(), ticketer, &jstz_rollup_address)
 }
 
 pub fn entry(rt: &mut impl Runtime) {
