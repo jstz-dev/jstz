@@ -37,6 +37,7 @@ mod test {
         executor::smart_function,
         operation::RunFunction,
         runtime::ParsedCode,
+        HttpBody,
     };
 
     #[cfg(not(feature = "v2_runtime"))]
@@ -96,7 +97,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -224,7 +225,7 @@ mod test {
                 .unwrap(),
             method: Method::GET,
             headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -266,7 +267,7 @@ mod test {
             uri: format!("jstz://{}/", &destination).try_into().unwrap(),
             method: Method::GET,
             headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -337,7 +338,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: invalid_headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let result = execute(
@@ -405,7 +406,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: Default::default(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let result = execute(
@@ -493,7 +494,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let result = execute(
@@ -560,7 +561,7 @@ mod test {
             uri: format!("jstz://{smart_function}/").try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -635,7 +636,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function2).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
@@ -701,7 +702,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function2).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
@@ -768,7 +769,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -829,7 +830,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -913,7 +914,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1001,7 +1002,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1091,7 +1092,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1187,7 +1188,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1298,7 +1299,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1427,7 +1428,7 @@ mod test {
                 .unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1512,7 +1513,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());

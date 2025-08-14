@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::Context;
 use http::{HeaderMap, Method, Uri};
-use jstz_proto::runtime::ParsedCode;
+use jstz_proto::{runtime::ParsedCode, HttpBody};
 use jstz_utils::inbox_builder::InboxBuilder;
 
 use clap::Parser;
@@ -38,6 +38,7 @@ fn main() -> jstz_tps_bench::Result<()> {
 
     builder.deposit_from_l1(&accounts[0], 1000000)?;
 
+    // a regular smart function that refunds half of the amount received.
     let small_function_addr = builder.deploy_function(
         &mut accounts[0],
         ParsedCode(
@@ -55,7 +56,8 @@ export default (request) => {
         ),
         0,
     )?;
-    // large smart function
+
+    // a large smart function that calls the refund smart function with the full amount received.
     let large_function_addr = builder.deploy_function(
         &mut accounts[0],
         ParsedCode(format!(
@@ -76,6 +78,8 @@ export default async (request) => {{
         )),
         0,
     )?;
+
+    // run the large smart function with 0.5 tez
     builder.run_function(
         &mut accounts[0],
         Uri::try_from(format!("jstz://{large_function_addr}/"))?,
@@ -84,7 +88,7 @@ export default async (request) => {{
             "X-JSTZ-TRANSFER".parse().unwrap(),
             "500000".parse().unwrap(),
         )]),
-        None,
+        HttpBody::empty(),
     )?;
 
     let receiver = accounts[0].address.clone();

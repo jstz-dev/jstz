@@ -178,6 +178,7 @@ mod test {
             fa_deposit::{FaDeposit, FaDepositReceipt},
             smart_function,
         },
+        operation::internal::InboxId,
         receipt::{Receipt, ReceiptContent, ReceiptResult},
     };
     use jstz_core::kv::Transaction;
@@ -186,7 +187,10 @@ mod test {
 
     fn mock_fa_deposit(proxy: Option<SmartFunctionHash>) -> FaDeposit {
         FaDeposit {
-            inbox_id: 34,
+            inbox_id: InboxId {
+                l1_level: 1,
+                l1_message_id: 34,
+            },
             amount: 42,
             receiver: Address::User(jstz_mock::account2()),
             proxy_smart_function: proxy.map(Address::SmartFunction),
