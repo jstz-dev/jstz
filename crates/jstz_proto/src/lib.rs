@@ -7,7 +7,11 @@ pub mod operation;
 pub mod receipt;
 pub mod storage;
 
+use derive_more::{Deref, DerefMut};
 pub use error::{Error, Result};
+use serde::{Deserialize, Serialize};
+use serde_with::{base64::Base64, serde_as};
+use utoipa::ToSchema;
 
 pub mod runtime;
 
@@ -15,7 +19,86 @@ pub mod runtime;
 /// https://linear.app/tezos/issue/JSTZ-617/
 pub type BlockLevel = u64;
 pub type Gas = u64;
-pub type HttpBody = Option<Vec<u8>>;
+
+#[serde_as]
+#[derive(
+    Debug,
+    Default,
+    Clone,
+    PartialEq,
+    Eq,
+    Deref,
+    DerefMut,
+    Serialize,
+    Deserialize,
+    ToSchema,
+)]
+#[schema(
+    title = "HTTP Body" , 
+    value_type = Option<String>,
+    description = "A HTTP body, which can be empty or contain data. Encoded as a base64 string."
+)]
+pub struct HttpBody(#[serde_as(as = "Option<Base64>")] pub Option<Vec<u8>>);
+
+impl HttpBody {
+    pub fn is_empty(&self) -> bool {
+        self.0.is_none()
+    }
+
+    pub fn unwrap(self) -> Vec<u8> {
+        self.0.unwrap()
+    }
+
+    pub fn expect(self, msg: &str) -> Vec<u8> {
+        self.0.expect(msg)
+    }
+
+    pub fn empty() -> Self {
+        Self(None)
+    }
+
+    pub fn from_bytes(bytes: Vec<u8>) -> Self {
+        Self(Some(bytes))
+    }
+
+    pub fn from_string(s: String) -> Self {
+        Self(Some(s.into_bytes()))
+    }
+
+    pub fn from_json(json: serde_json::Value) -> Self {
+        Self(Some(serde_json::to_string(&json).unwrap().into_bytes()))
+    }
+}
+
+impl From<HttpBody> for Option<Vec<u8>> {
+    fn from(body: HttpBody) -> Self {
+        body.0
+    }
+}
+
+impl From<Option<Vec<u8>>> for HttpBody {
+    fn from(bytes: Option<Vec<u8>>) -> Self {
+        Self(bytes)
+    }
+}
+
+impl From<String> for HttpBody {
+    fn from(s: String) -> Self {
+        Self::from_string(s)
+    }
+}
+
+impl From<Vec<u8>> for HttpBody {
+    fn from(bytes: Vec<u8>) -> Self {
+        Self::from_bytes(bytes)
+    }
+}
+
+impl From<serde_json::Value> for HttpBody {
+    fn from(json: serde_json::Value) -> Self {
+        Self::from_json(json)
+    }
+}
 
 #[cfg(test)]
 pub mod tests {

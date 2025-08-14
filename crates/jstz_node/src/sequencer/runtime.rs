@@ -92,14 +92,13 @@ mod tests {
         hash::Hash,
         public_key::PublicKey,
         secret_key::SecretKey,
-        signature::Signature,
         smart_function_hash::{Kt1Hash, SmartFunctionHash},
     };
     use jstz_proto::{
         context::account::{Account, Address, Nonce, UserAccount},
         executor::fa_deposit::FaDepositReceipt,
         operation::{
-            internal::{Deposit, FaDeposit},
+            internal::{Deposit, FaDeposit, InboxId},
             Content, DeployFunction, InternalOperation, Operation, RevealLargePayload,
             RunFunction, SignedOperation,
         },
@@ -108,9 +107,9 @@ mod tests {
             ReceiptResult, RunFunctionReceipt,
         },
         runtime::ParsedCode,
+        HttpBody,
     };
     use tempfile::{NamedTempFile, TempDir};
-    use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
     use tezos_smart_rollup::{
         michelson::ticket::TicketHash,
         storage::path::{OwnedPath, RefPath},
@@ -118,26 +117,13 @@ mod tests {
 
     use crate::{sequencer::db::Db, test::default_injector};
 
-    fn dummy_op(
-        sig_str: &str,
-        public_key_str: &str,
-        nonce: u64,
-        content: Content,
-    ) -> SignedOperation {
-        SignedOperation::new(
-            Signature::Ed25519(
-                Ed25519Signature::from_base58_check(sig_str).unwrap().into(),
-            ),
-            Operation {
-                public_key: PublicKey::Ed25519(
-                    PublicKeyEd25519::from_base58_check(public_key_str)
-                        .unwrap()
-                        .into(),
-                ),
-                nonce: Nonce(nonce),
-                content,
-            },
-        )
+    fn dummy_op(nonce: u64, content: Content) -> SignedOperation {
+        let operation = Operation {
+            public_key: jstz_mock::pk1(),
+            nonce: Nonce(nonce),
+            content,
+        };
+        SignedOperation::new(jstz_mock::sk1().sign(operation.hash()).unwrap(), operation)
     }
 
     #[test]
@@ -178,20 +164,33 @@ mod tests {
 
         // This smart function has about 8k characters. The runtime is okay with it and simply
         // stores it in the data store, though this would not work with a rollup.
-        let public_key = "edpkuXD2CqRpWoTT8p4exrMPQYR2NqsYH3jTMeJMijHdgQqkMkzvnz";
-        let deploy_op = dummy_op("edsigtk8TSJBNphqsn9uD2tgMbNj9YhsgCMrJmhQQd6EKo8X6viVpZqinN7MnEjwh9EcYTV8NKr3LVEoSfjsTat58mxeemYnyTg", public_key, 0, Content::DeployFunction(DeployFunction {function_code: ParsedCode::try_from(format!("const handler = async () => {{ const s = \"{}\"; const myHeaders = new Headers();  myHeaders.append(\"X-JSTZ-TRANSFER\", \"1\"); return await fetch(new Request(\"jstz://tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/\", {{ headers: myHeaders }})); }}; export default handler;", "a".repeat(8000))).unwrap(), account_credit: 1}));
+        let deploy_op = dummy_op( 0, Content::DeployFunction(DeployFunction {function_code: ParsedCode::try_from(format!("const handler = async () => {{ const s = \"{}\"; const myHeaders = new Headers();  myHeaders.append(\"X-JSTZ-TRANSFER\", \"1\"); return await fetch(new Request(\"jstz://tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/\", {{ headers: myHeaders }})); }}; export default handler;", "a".repeat(8000))).unwrap(), account_credit: 1}));
 
-        let call_op = dummy_op("edsigtkEeUaGxH983imqMYvWZpm24pkoMK7cnrmNWFnCefEWLfVwzjZYnvFauBh8cfww9f2UN67kEve8NDUpQ1D9u9QWsUnXaAh", public_key, 1, Content::RunFunction(RunFunction { uri: Uri::from_static("jstz://KT1CDAkLMEHKNs2VbVZeSdxYx3wWN5auGARR/"), method: Method::GET, headers: HeaderMap::new(), body: None, gas_limit: 550000 }));
+        let call_op = dummy_op(
+            1,
+            Content::RunFunction(RunFunction {
+                uri: Uri::from_static("jstz://KT1WjrJgoaEDHF2RmhhnpjjiwBkt4nA2MiMo/"),
+                method: Method::GET,
+                headers: HeaderMap::new(),
+                body: HttpBody::empty(),
+                gas_limit: 550000,
+            }),
+        );
+
+        let src_account_address = jstz_mock::pkh1();
+        let dst_account_address = "tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx";
 
         let dst_account_path =
-            RefPath::assert_from(b"/jstz_account/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx");
+            OwnedPath::try_from(format!("/jstz_account/{dst_account_address}")).unwrap();
 
         // The destination account should not exist yet
         assert!(h.store_has(&dst_account_path).unwrap().is_none());
 
         // Initialise account that deploys the function
         h.store_write_all(
-            &RefPath::assert_from(b"/jstz_account/tz1S9rEt3fkYReDdqMPrcGHarAFnaeGBqDeK"),
+            &RefPath::assert_from(
+                format!("/jstz_account/{src_account_address}").as_bytes(),
+            ),
             &Account::User(UserAccount {
                 amount: 1000000,
                 nonce: Nonce(0),
@@ -202,22 +201,36 @@ mod tests {
         .unwrap();
 
         // Deploy smart function
+        let deploy_op_hash = deploy_op.hash();
         super::process_message(&mut h, Message::External(deploy_op))
             .await
             .unwrap();
-        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/843a8438af97d97e134ae10bdcf10b5a6bcbf8c7d4912e65bacf1be26a5a73c3")).unwrap()).unwrap();
+        let v = Receipt::decode(
+            &h.store_read_all(&RefPath::assert_from(
+                format!("/jstz_receipt/{deploy_op_hash}").as_bytes(),
+            ))
+            .unwrap(),
+        )
+        .unwrap();
         assert!(matches!(
             v.result,
             ReceiptResult::Success(ReceiptContent::DeployFunction(
                 DeployFunctionReceipt { address: SmartFunctionHash(Kt1Hash(addr)) }
-            )) if addr.to_base58_check() == "KT1CDAkLMEHKNs2VbVZeSdxYx3wWN5auGARR"
+            )) if addr.to_base58_check() == "KT1WjrJgoaEDHF2RmhhnpjjiwBkt4nA2MiMo"
         ));
 
         // Call smart function
+        let call_op_hash = call_op.hash();
         super::process_message(&mut h, Message::External(call_op))
             .await
             .unwrap();
-        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/9b15976cc8162fe39458739de340a1a95c59a9bcff73bd3c83402fad6352396e")).unwrap()).unwrap();
+        let v = Receipt::decode(
+            &h.store_read_all(&RefPath::assert_from(
+                format!("/jstz_receipt/{call_op_hash}").as_bytes(),
+            ))
+            .unwrap(),
+        )
+        .unwrap();
         assert!(matches!(
             v.result,
             ReceiptResult::Success(ReceiptContent::RunFunction(RunFunctionReceipt {
@@ -245,7 +258,7 @@ mod tests {
             .read_to_string(&mut buf)
             .unwrap();
         assert!(
-            buf.contains("Smart function deployed: KT1CDAkLMEHKNs2VbVZeSdxYx3wWN5auGARR")
+            buf.contains("Smart function deployed: KT1WjrJgoaEDHF2RmhhnpjjiwBkt4nA2MiMo")
         );
     }
 
@@ -259,11 +272,16 @@ mod tests {
         let receiver =
             Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
 
-        let deposit_op = Message::Internal(InternalOperation::Deposit(Deposit {
-            inbox_id: 1,
+        let deposit = Deposit {
+            inbox_id: InboxId {
+                l1_level: 1,
+                l1_message_id: 1,
+            },
             amount: 10,
             receiver,
-        }));
+        };
+        let op_hash = deposit.hash();
+        let deposit_op = Message::Internal(InternalOperation::Deposit(deposit));
 
         let dst_account_path =
             RefPath::assert_from(b"/jstz_account/tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx");
@@ -285,7 +303,13 @@ mod tests {
 
         // Execute the deposit
         super::process_message(&mut h, deposit_op).await.unwrap();
-        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/270c07945707b0a86fdbd6930e7bb3cae8978a3bcfb6659e8062ef39ec58c32a")).unwrap()).unwrap();
+        let v = Receipt::decode(
+            &h.store_read_all(&RefPath::assert_from(
+                format!("/jstz_receipt/{op_hash}").as_bytes(),
+            ))
+            .unwrap(),
+        )
+        .unwrap();
         assert!(matches!(
             v.result,
             ReceiptResult::Success(ReceiptContent::Deposit(DepositReceipt {
@@ -316,8 +340,11 @@ mod tests {
         let receiver =
             Address::from_base58("tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx").unwrap();
 
-        let fa_deposit_op = Message::Internal(InternalOperation::FaDeposit(FaDeposit {
-            inbox_id: 1,
+        let fa_deposit = FaDeposit {
+            inbox_id: InboxId {
+                l1_level: 1,
+                l1_message_id: 1,
+            },
             amount: 10,
             receiver,
             proxy_smart_function: None,
@@ -326,11 +353,20 @@ mod tests {
                     .to_string(),
             )
             .unwrap(),
-        }));
+        };
+        let op_hash = fa_deposit.hash();
+        let fa_deposit_op = Message::Internal(InternalOperation::FaDeposit(fa_deposit));
 
         // Execute the deposit
         super::process_message(&mut h, fa_deposit_op).await.unwrap();
-        let v = Receipt::decode(&h.store_read_all(&RefPath::assert_from(b"/jstz_receipt/270c07945707b0a86fdbd6930e7bb3cae8978a3bcfb6659e8062ef39ec58c32a")).unwrap()).unwrap();
+        let v = Receipt::decode(
+            &h.store_read_all(&RefPath::assert_from(
+                format!("/jstz_receipt/{op_hash}").as_bytes(),
+            ))
+            .unwrap(),
+        )
+        .unwrap();
+
         assert!(matches!(
             v.result,
             ReceiptResult::Success(ReceiptContent::FaDeposit(FaDepositReceipt {
@@ -428,7 +464,7 @@ mod tests {
                 uri: Uri::from_static("jstz://KT1FTckranMJ2on3TDufWqJumzSyRUd1tQf2/"),
                 method: Method::GET,
                 headers: HeaderMap::new(),
-                body: None,
+                body: HttpBody::empty(),
                 gas_limit: 550000,
             }),
         };
