@@ -26,10 +26,17 @@ pub enum StoreWrapper {
 }
 
 impl StoreWrapper {
-    pub fn new(mode: RunMode, rollup_client: OctezRollupClient, runtime_db: Db) -> Self {
-        match mode {
-            RunMode::Default => Self::Rollup(rollup_client),
-            RunMode::Sequencer { .. } => Self::Db(Arc::new(runtime_db)),
+    pub fn new(
+        mode: RunMode,
+        storage_sync: bool,
+        rollup_client: OctezRollupClient,
+        runtime_db: Db,
+        storage_sync_db: Db,
+    ) -> Self {
+        match (mode, storage_sync) {
+            (RunMode::Default, false) => Self::Rollup(rollup_client),
+            (RunMode::Default, true) => Self::Db(Arc::new(storage_sync_db)),
+            (RunMode::Sequencer { .. }, _) => Self::Db(Arc::new(runtime_db)),
         }
     }
 
@@ -79,6 +86,7 @@ pub(crate) mod tests {
         config::RuntimeEnv,
         sequencer::queue::OperationQueue,
         services::{logs::broadcaster::Broadcaster, utils::StoreWrapper},
+        temp_db,
         test::default_injector,
         AppState, RunMode,
     };
@@ -97,7 +105,7 @@ pub(crate) mod tests {
     pub(crate) async fn mock_app_state(
         rollup_endpoint: &str,
         rollup_preimages_dir: PathBuf,
-        db_path: &str,
+        runtime_db_path: &str,
         mode: RunMode,
     ) -> AppState {
         AppState {
@@ -108,29 +116,83 @@ pub(crate) mod tests {
             injector: default_injector(),
             mode,
             queue: Arc::new(RwLock::new(OperationQueue::new(1))),
-            runtime_db: crate::sequencer::db::Db::init(Some(db_path)).unwrap(),
+            runtime_db: crate::sequencer::db::Db::init(Some(runtime_db_path)).unwrap(),
             worker_heartbeat: Arc::default(),
+            storage_sync: false,
+            storage_sync_db: crate::sequencer::db::Db::init(Some("")).unwrap(),
         }
     }
 
-    #[test]
-    fn store_wrapper_new() {
+    #[tokio::test]
+    async fn store_wrapper_new() {
+        let (runtime_db, _runtime_db_file) = temp_db().unwrap();
+        runtime_db
+            .write("/test", &hex::encode("runtime").to_string())
+            .unwrap();
+        let (storage_sync_db, _storage_sync_db_file) = temp_db().unwrap();
+        storage_sync_db
+            .write("/test", &hex::encode("storage_sync").to_string())
+            .unwrap();
+
+        // mode: default, storage_sync: false -> rollup client
         let store = StoreWrapper::new(
             RunMode::Default,
+            false,
             OctezRollupClient::new(String::new()),
-            crate::sequencer::db::Db::init(Some("")).unwrap(),
+            runtime_db.clone(),
+            storage_sync_db.clone(),
         );
         matches!(store, StoreWrapper::Rollup(_));
+
+        // mode: default, storage_sync: true -> storage sync db
+        let store = StoreWrapper::new(
+            RunMode::Default,
+            true,
+            OctezRollupClient::new(String::new()),
+            runtime_db.clone(),
+            storage_sync_db.clone(),
+        );
+        matches!(store, StoreWrapper::Db(_));
+        assert_eq!(
+            store.get_value("/test".to_string()).await.unwrap(),
+            Some(b"storage_sync".to_vec())
+        );
+
+        // mode: sequencer, storage_sync: false -> runtime db
         let store = StoreWrapper::new(
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
             },
+            false,
             OctezRollupClient::new(String::new()),
-            crate::sequencer::db::Db::init(Some("")).unwrap(),
+            runtime_db.clone(),
+            storage_sync_db.clone(),
         );
         matches!(store, StoreWrapper::Db(_));
+        assert_eq!(
+            store.get_value("/test".to_string()).await.unwrap(),
+            Some(b"runtime".to_vec())
+        );
+
+        // mode: sequencer, storage_sync: true -> runtime db
+        let store = StoreWrapper::new(
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: PathBuf::new(),
+                runtime_env: RuntimeEnv::Native,
+            },
+            false,
+            OctezRollupClient::new(String::new()),
+            runtime_db.clone(),
+            storage_sync_db.clone(),
+        );
+        matches!(store, StoreWrapper::Db(_));
+        assert_eq!(
+            store.get_value("/test".to_string()).await.unwrap(),
+            Some(b"runtime".to_vec())
+        );
     }
 
     #[tokio::test]

@@ -8,6 +8,7 @@ use base64::{engine::general_purpose::URL_SAFE, Engine};
 use http::{HeaderMap, Method, Uri};
 use jstz_proto::context::account::{Address, Addressable};
 use jstz_proto::runtime::ParsedCode;
+use jstz_proto::HttpBody;
 use serde::{Serialize, Serializer};
 use tezos_smart_rollup::types::SmartRollupAddress;
 use tezos_smart_rollup::utils::inbox::file::InboxFile;
@@ -53,7 +54,7 @@ fn generate_inbox(rollup_addr: &str, transfers: usize) -> Result<InboxFile> {
         return Err("--transfers must be greater than zero".into());
     }
 
-    let mut builder = InboxBuilder::new(rollup_addr);
+    let mut builder = InboxBuilder::new(rollup_addr, None);
     let mut accounts = builder.create_accounts(accounts)?;
 
     let code: ParsedCode = FA2.to_string().try_into()?;
@@ -132,13 +133,13 @@ fn transfer(
                 transfers: &[&transfer],
             }];
 
-            let body = serde_json::ser::to_vec(&transfer)?;
+            let body = HttpBody::from_json(serde_json::to_value(&transfer)?);
             builder.run_function(
                 account,
                 Uri::try_from(format!("jstz://{fa2_address}/transfer"))?,
                 Method::POST,
                 HeaderMap::default(),
-                Some(body),
+                body,
             )?;
         }
     }
@@ -167,7 +168,7 @@ fn check_balance(
             Uri::try_from(format!("jstz://{fa2_address}/balance_of?requests={query}"))?,
             Method::GET,
             HeaderMap::default(),
-            None,
+            HttpBody::empty(),
         )?;
     }
     Ok(())
@@ -189,13 +190,13 @@ fn batch_mint(
         })
         .collect();
 
-    let body = serde_json::ser::to_vec(&mints)?;
+    let body = HttpBody::from_json(serde_json::to_value(&mints)?);
     builder.run_function(
         &mut accounts[0],
         Uri::try_from(format!("jstz://{fa2_address}/mint_new"))?,
         Method::POST,
         HeaderMap::default(),
-        Some(body),
+        body,
     )
 }
 

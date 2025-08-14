@@ -8,13 +8,19 @@ use jstz_proto::{
     context::account::{Address, Nonce},
     operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
     runtime::ParsedCode,
+    HttpBody,
 };
 use std::error::Error;
+use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::{
-    inbox::{ExternalMessageFrame, InboxMessage},
-    michelson::MichelsonUnit,
-    types::SmartRollupAddress,
+    inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage, Transfer},
+    michelson::{
+        ticket::{FA2_1Ticket, Ticket},
+        Michelson, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
+        MichelsonPair, MichelsonUnit,
+    },
+    types::{Contract, PublicKeyHash, SmartRollupAddress},
     utils::inbox::file::{InboxFile, Message},
 };
 pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
@@ -24,6 +30,14 @@ const EXTERNAL_FRAME_SIZE: usize = 21;
 const DEFAULT_GAS_LIMIT: u32 = 100_000;
 const MNEMONIC: &str =
     "donate kidney style loyal nose core inflict cup symptom speed giant polar";
+// FIXME: JSTZ-854
+type DepositInboxMsgPayloadType = MichelsonOr<
+    MichelsonPair<MichelsonContract, FA2_1Ticket>,
+    MichelsonPair<
+        MichelsonContract,
+        MichelsonPair<MichelsonOption<MichelsonContract>, FA2_1Ticket>,
+    >,
+>;
 
 pub struct Account {
     nonce: Nonce,
@@ -36,14 +50,19 @@ pub struct InboxBuilder {
     messages: Vec<Message>,
     rollup_address: SmartRollupAddress,
     next_account_id: usize,
+    ticketer_address: Option<ContractKt1Hash>,
 }
 
 impl InboxBuilder {
-    pub fn new(rollup_address: SmartRollupAddress) -> Self {
+    pub fn new(
+        rollup_address: SmartRollupAddress,
+        ticketer_address: Option<ContractKt1Hash>,
+    ) -> Self {
         Self {
             rollup_address,
             messages: Vec::new(),
             next_account_id: 0,
+            ticketer_address,
         }
     }
 
@@ -100,6 +119,16 @@ impl InboxBuilder {
         Ok(Message::Raw(bytes))
     }
 
+    fn generate_internal_messge<T: Michelson>(
+        &self,
+        m: InternalInboxMessage<T>,
+    ) -> Result<Message> {
+        let msg = InboxMessage::Internal(m);
+        let mut bytes = Vec::new();
+        msg.serialize(&mut bytes)?;
+        Ok(Message::Raw(bytes))
+    }
+
     pub fn deploy_function(
         &mut self,
         account: &mut Account,
@@ -129,7 +158,7 @@ impl InboxBuilder {
         uri: Uri,
         method: Method,
         headers: HeaderMap,
-        body: Option<Vec<u8>>,
+        body: HttpBody,
     ) -> Result<()> {
         let content = Content::RunFunction(RunFunction {
             uri,
@@ -145,6 +174,51 @@ impl InboxBuilder {
 
         Ok(())
     }
+
+    fn deposit_payload(
+        ticketer: &ContractKt1Hash,
+        account: &Account,
+        amount_mutez: u64,
+    ) -> DepositInboxMsgPayloadType {
+        MichelsonOr::Left(MichelsonPair(
+            MichelsonContract(Contract::Implicit(
+                PublicKeyHash::from_b58check(&account.address.to_string())
+                    .expect("serialised address should be parsable"),
+            )),
+            Ticket::new(
+                Contract::Originated(ticketer.clone()),
+                MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                amount_mutez,
+            )
+            .expect("ticket creation from ticketer should work"),
+        ))
+    }
+
+    pub fn deposit_from_l1(
+        &mut self,
+        account: &Account,
+        amount_mutez: u64,
+    ) -> Result<()> {
+        match &self.ticketer_address {
+            Some(ticketer) => {
+                let message = self.generate_internal_messge(
+                    InternalInboxMessage::Transfer(Transfer {
+                        sender: ticketer.clone(),
+                        // any user address is okay here since L1 is not really involved
+                        source: PublicKeyHash::from_b58check(
+                            "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
+                        )
+                        .expect("the constant source address should be parsable"),
+                        destination: self.rollup_address.clone(),
+                        payload: Self::deposit_payload(ticketer, account, amount_mutez),
+                    }),
+                )?;
+                self.messages.push(message);
+                Ok(())
+            }
+            None => Err("ticketer address is not provided".into()),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -158,15 +232,17 @@ mod tests {
         context::account::{Address, Nonce},
         operation::{Content, DeployFunction, SignedOperation},
         runtime::ParsedCode,
+        HttpBody,
     };
+    use tezos_crypto_rs::hash::ContractKt1Hash;
     use tezos_smart_rollup::{
-        inbox::{ExternalMessageFrame, InboxMessage},
-        michelson::MichelsonUnit,
+        inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage},
+        michelson::{MichelsonOr, MichelsonUnit},
         types::SmartRollupAddress,
         utils::inbox::file::Message,
     };
 
-    use super::InboxBuilder;
+    use super::{DepositInboxMsgPayloadType, InboxBuilder};
 
     fn default_account() -> super::Account {
         super::Account {
@@ -189,7 +265,7 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let mut builder = InboxBuilder::new(rollup_address);
+        let mut builder = InboxBuilder::new(rollup_address, None);
         let accounts = builder.create_accounts(10).unwrap();
         let mut addresses = accounts.iter().map(|v| v.pk.hash()).collect::<HashSet<_>>();
         assert_eq!(addresses.len(), 10);
@@ -206,14 +282,14 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let mut builder = InboxBuilder::new(rollup_address.clone());
+        let mut builder = InboxBuilder::new(rollup_address.clone(), None);
         builder
             .run_function(
                 &mut default_account(),
                 Uri::try_from("jstz://foobar/transfer".to_string()).unwrap(),
                 Method::GET,
                 HeaderMap::new(),
-                None,
+                HttpBody::empty(),
             )
             .unwrap();
         assert_eq!(builder.messages.len(), 1);
@@ -243,7 +319,7 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let mut builder = InboxBuilder::new(rollup_address.clone());
+        let mut builder = InboxBuilder::new(rollup_address.clone(), None);
         builder
             .deploy_function(&mut default_account(), ParsedCode("code".to_string()), 123)
             .unwrap();
@@ -279,7 +355,7 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let builder = InboxBuilder::new(rollup_address.clone());
+        let builder = InboxBuilder::new(rollup_address.clone(), None);
         let message = builder
             .generate_external_message(&default_account(), content.clone())
             .unwrap();
@@ -299,6 +375,72 @@ mod tests {
                         }
                     }
                     _ => panic!("should be external message"),
+                }
+            }
+            _ => panic!("should be raw message"),
+        }
+    }
+
+    #[test]
+    fn generate_internal_messge() {
+        let rollup_address =
+            SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
+        let builder = InboxBuilder::new(rollup_address.clone(), None);
+        let message = builder
+            .generate_internal_messge(InternalInboxMessage::<MichelsonUnit>::StartOfLevel)
+            .unwrap();
+        match message {
+            Message::Raw(raw) => {
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
+                match inbox_msg {
+                    InboxMessage::Internal(m) => {
+                        matches!(m, InternalInboxMessage::StartOfLevel);
+                    }
+                    _ => panic!("should be external message"),
+                }
+            }
+            _ => panic!("should be raw message"),
+        }
+    }
+
+    #[test]
+    fn deposit_from_l1() {
+        let rollup_address =
+            SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
+        let mut builder = InboxBuilder::new(rollup_address.clone(), None);
+        let account = builder.create_accounts(1).unwrap().pop().unwrap();
+        assert_eq!(
+            builder
+                .deposit_from_l1(&account, 1)
+                .unwrap_err()
+                .to_string(),
+            "ticketer address is not provided"
+        );
+
+        let mut builder = InboxBuilder::new(
+            rollup_address.clone(),
+            Some(
+                ContractKt1Hash::from_base58_check(
+                    "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5",
+                )
+                .unwrap(),
+            ),
+        );
+        builder.deposit_from_l1(&account, 1).unwrap();
+        assert_eq!(builder.messages.len(), 1);
+        match builder.messages.pop().unwrap() {
+            Message::Raw(raw) => {
+                let (_, inbox_msg) =
+                    InboxMessage::<DepositInboxMsgPayloadType>::parse(&raw).unwrap();
+                match inbox_msg {
+                    InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
+                        assert_eq!(transfer.destination, builder.rollup_address);
+                        assert_eq!(transfer.sender, builder.ticketer_address.unwrap());
+                        assert!(matches!(transfer.payload, MichelsonOr::Left(_)));
+                    }
+                    _ => panic!("should be internal message"),
                 }
             }
             _ => panic!("should be raw message"),

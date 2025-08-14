@@ -14,7 +14,7 @@ use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
 use crate::{
     handle_message,
-    inbox::{self, LevelInfo, ParsedInboxMessage},
+    inbox::{read_message, LevelInfo, ParsedInboxMessage},
     read_injector, read_ticketer, INJECTOR, TICKETER,
 };
 
@@ -98,25 +98,6 @@ async fn run_event_loop(rt: &mut impl Runtime) {
         tokio::task::yield_now().await;
         tokio::task::yield_now().await;
     }
-}
-
-// We reach None in 3 cases
-// 1. No more inputs
-// 2. Input targetting the wrong rollup
-// 3. Parsing failures
-fn read_message(
-    rt: &mut impl Runtime,
-    ticketer: &ContractKt1Hash,
-) -> Option<ParsedInboxMessage> {
-    let input = rt.read_input().ok()??;
-    let jstz_rollup_address = rt.reveal_metadata().address();
-    inbox::parse_inbox_message(
-        rt,
-        input.id,
-        input.as_ref(),
-        ticketer,
-        &jstz_rollup_address,
-    )
 }
 
 #[cfg(test)]

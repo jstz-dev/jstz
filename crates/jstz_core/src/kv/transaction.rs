@@ -9,7 +9,7 @@ use std::{
 use parking_lot::{ArcMutexGuard, Mutex, RawMutex};
 
 use derive_more::{Deref, DerefMut};
-
+use tezos_smart_rollup::prelude::debug_msg;
 use tezos_smart_rollup_host::{path::OwnedPath, runtime::Runtime};
 
 use super::{
@@ -19,7 +19,10 @@ use super::{
     value::{BoxedValue, Value},
     Storage,
 };
-use crate::error::{KvError, Result};
+use crate::{
+    error::{KvError, Result},
+    kv::storage_update::BatchStorageUpdate,
+};
 
 /// A transaction is a 'lazy' snapshot of the persistent key-value store from
 /// the point in time when the transaction began. Modifications to new or old
@@ -57,8 +60,6 @@ pub type Key = OwnedPath;
 // This allows O(log n) lookups, and O(log n) commits / rollbacks (amortized by # of inserts / removals).
 #[derive(Debug, Default, Deref, DerefMut)]
 struct LookupMap(BTreeMap<Key, Vec<usize>>);
-
-pub type PendingChangesFilter = dyn Fn(&Key) -> bool;
 
 #[derive(Debug, Default)]
 pub struct InnerTransaction {
@@ -202,27 +203,6 @@ impl InnerTransaction {
         self.lookup_map.update(key, self.current_snapshot_idx())
     }
 
-    /// Check if the transaction has any pending changes in any snapshots
-    pub fn has_pending_changes(
-        &self,
-        insert_filter: Option<&PendingChangesFilter>,
-    ) -> bool {
-        for snapshot in &self.stack {
-            let has_insert_edits = snapshot.insert_edits.iter().any(|(key, _value)| {
-                if let Some(filter_fn) = insert_filter {
-                    filter_fn(key)
-                } else {
-                    true
-                }
-            });
-            let has_remove_edits = !snapshot.remove_edits.is_empty();
-            if has_insert_edits || has_remove_edits {
-                return true;
-            }
-        }
-        false
-    }
-
     /// Return the current snapshot
     fn current_snapshot(&mut self) -> Result<&mut Snapshot> {
         Ok(self
@@ -341,6 +321,9 @@ impl InnerTransaction {
     }
 
     /// Commit a transaction.
+    ///
+    /// Publishes storage update event for the final commit.
+    /// If the transaction has no changes, no event is published.
     fn commit(&mut self, rt: &mut impl Runtime) -> Result<()> {
         let curr_ctxt = self.stack.pop().ok_or(KvError::TransactionStackEmpty)?;
 
@@ -363,12 +346,23 @@ impl InnerTransaction {
 
             prev_ctxt.outbox_queue.extend(curr_ctxt.outbox_queue);
         } else {
+            let mut storage_updates = BatchStorageUpdate::new(
+                curr_ctxt.remove_edits.len() + curr_ctxt.insert_edits.len(),
+            );
+
             for key in &curr_ctxt.remove_edits {
-                Storage::remove(rt, key)?
+                Storage::remove(rt, key)?;
+                storage_updates.push_remove(key);
             }
 
             for (key, value) in curr_ctxt.insert_edits {
-                Storage::insert(rt, &key, value.0.as_ref())?
+                let value = value.0.as_ref();
+                Storage::insert(rt, &key, value)?;
+                storage_updates.push_insert(&key, value)?;
+            }
+
+            if let Err(e) = storage_updates.publish_event(rt) {
+                debug_msg!(rt, "Failed to publish storage update events: {e}");
             }
 
             flush(rt, &mut self.persistent_outbox, curr_ctxt.outbox_queue)?;
@@ -1147,6 +1141,7 @@ mod test {
 
 #[cfg(test)]
 mod tests {
+    use crate::event::test::Sink;
     use bincode::{Decode, Encode};
     use serde::{Deserialize, Serialize};
     use tezos_smart_rollup_mock::MockHost;
@@ -1225,5 +1220,51 @@ mod tests {
                 source: crate::error::KvError::LockPoisoned
             })
         ));
+    }
+
+    #[test]
+    fn storage_update_event_is_published_on_final_commit() {
+        let mut sink = Sink(Vec::new());
+        let mut hrt = MockHost::default();
+        let tx = Transaction::default();
+        hrt.set_debug_handler(unsafe {
+            std::mem::transmute::<&mut std::vec::Vec<u8>, &'static mut Vec<u8>>(
+                &mut sink.0,
+            )
+        });
+        // Begin tx1 and insert /key1
+        tx.begin();
+        tx.insert(OwnedPath::try_from("/key1".to_string()).unwrap(), 42)
+            .unwrap();
+        // Begin tx2 and remove /key2
+        tx.begin();
+        tx.remove(OwnedPath::try_from("/key2".to_string()).unwrap())
+            .unwrap();
+        // Committing tx2 does not publish any events
+        tx.commit(&mut hrt).unwrap();
+        assert!(sink.lines().first().unwrap().is_empty());
+        // Final commit should publish the event
+        tx.commit(&mut hrt).unwrap();
+        assert_eq!(
+            sink.lines().first().unwrap(),
+            r#"[BATCH_STORAGE_UPDATE][{"Remove":{"key":"/key2"}},{"Insert":{"key":"/key1","value":"KgAAAA=="}}]"#
+        );
+    }
+
+    #[test]
+    fn storage_update_event_is_not_published_when_there_are_no_kv_changes() {
+        let mut sink = Sink(Vec::new());
+        let mut hrt = MockHost::default();
+        let tx = Transaction::default();
+        hrt.set_debug_handler(unsafe {
+            std::mem::transmute::<&mut std::vec::Vec<u8>, &'static mut Vec<u8>>(
+                &mut sink.0,
+            )
+        });
+        // Begin tx1
+        tx.begin();
+        // Commit tx1 does not publish any events
+        tx.commit(&mut hrt).unwrap();
+        assert!(sink.lines().first().unwrap().is_empty());
     }
 }

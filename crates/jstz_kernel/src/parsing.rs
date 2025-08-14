@@ -1,6 +1,6 @@
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
-use jstz_proto::operation::internal::FaDeposit;
+use jstz_proto::operation::internal::{FaDeposit, InboxId};
 use jstz_proto::{context::account::Address, Result};
 use num_traits::ToPrimitive;
 use tezos_smart_rollup::michelson::{ticket::FA2_1Ticket, MichelsonContract};
@@ -19,7 +19,7 @@ pub fn try_parse_contract(contract: &Contract) -> Result<Address> {
 }
 
 pub fn try_parse_fa_deposit(
-    inbox_id: u32,
+    inbox_id: InboxId,
     ticket: FA2_1Ticket,
     source: PublicKeyHash,
     receiver: MichelsonContract,
@@ -59,7 +59,7 @@ mod test {
     use jstz_crypto::smart_function_hash::SmartFunctionHash;
     use jstz_proto::{
         context::account::{Address, Addressable},
-        operation::internal::FaDeposit,
+        operation::internal::{FaDeposit, InboxId},
     };
     use tezos_smart_rollup::{
         michelson::{
@@ -96,7 +96,10 @@ mod test {
         .unwrap();
         let receiver = jstz_pkh_to_michelson(&jstz_mock::account1());
         let proxy_contract = Some(jstz_sfh_to_michelson(&jstz_mock::sf_account1()));
-        let inbox_id = 41717;
+        let inbox_id = InboxId {
+            l1_level: 1,
+            l1_message_id: 41717,
+        };
         let ticket_hash = ticket.hash().unwrap();
         let source = jstz_mock::account1();
 
@@ -133,7 +136,10 @@ mod test {
         .unwrap();
         let receiver = jstz_pkh_to_michelson(&jstz_mock::account2());
         let proxy_contract = Some(jstz_pkh_to_michelson(&jstz_mock::account1()));
-        let inbox_id = 41717;
+        let inbox_id = InboxId {
+            l1_level: 1,
+            l1_message_id: 41717,
+        };
         let source = jstz_mock::account1();
 
         let fa_deposit =

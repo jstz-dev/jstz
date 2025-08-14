@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::Context;
+use clap::ArgAction;
 use clap::Parser;
 use env_logger::Env;
 use jstz_node::{
@@ -62,7 +63,7 @@ struct Args {
     #[arg(long)]
     debug_log_path: Option<PathBuf>,
 
-    /// Path to file containing injector key pair (format: "public_key:secret_key")
+    /// Path to file containing injector key pair (format: {"public_key": ..., "secret_key": ...})
     #[arg(long)]
     injector_key_file: PathBuf,
 
@@ -71,6 +72,9 @@ struct Args {
 
     #[arg(long)]
     riscv_kernel_path: Option<PathBuf>,
+
+    #[arg(long, action = ArgAction::SetTrue)]
+    storage_sync: bool,
 }
 
 #[tokio::main]
@@ -104,6 +108,7 @@ async fn main() -> anyhow::Result<()> {
                 injector: parse_key_file(args.injector_key_file)
                     .context("failed to parse injector key file")?,
                 mode: run_mode_builder.build()?,
+                storage_sync: args.storage_sync,
             })
             .await
         }

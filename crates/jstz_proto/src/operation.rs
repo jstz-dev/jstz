@@ -145,7 +145,6 @@ pub struct RunFunction {
     #[serde(with = "http_serde::header_map")]
     #[schema(schema_with = openapi::request_headers)]
     pub headers: HeaderMap,
-    #[schema(schema_with = openapi::http_body_schema)]
     pub body: HttpBody,
     /// Maximum amount of gas that is allowed for the execution of this operation
     pub gas_limit: usize,
@@ -270,11 +269,32 @@ pub mod internal {
 
     use super::*;
 
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+    pub struct InboxId {
+        // L1 inbox message level
+        pub l1_level: u32,
+        // Unique id of inbox message (per level)
+        pub l1_message_id: u32,
+    }
+
+    impl InboxId {
+        pub fn to_bytes(&self) -> [u8; 8] {
+            let mut buf = [0u8; 8];
+            buf[..4].copy_from_slice(&self.l1_level.to_be_bytes());
+            buf[4..].copy_from_slice(&self.l1_message_id.to_be_bytes());
+            buf
+        }
+
+        pub fn hash(&self) -> OperationHash {
+            let seed = self.to_bytes();
+            Blake2b::from(seed.as_slice())
+        }
+    }
+
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
     pub struct Deposit {
-        // Inbox message id is unique to each message and
-        // suitable as a nonce
-        pub inbox_id: u32,
+        // Inbox message id
+        pub inbox_id: InboxId,
         // Amount to deposit
         pub amount: Amount,
         // Receiver address
@@ -283,11 +303,16 @@ pub mod internal {
         pub source: PublicKeyHash,
     }
 
+    impl Deposit {
+        pub fn hash(&self) -> OperationHash {
+            self.inbox_id.hash()
+        }
+    }
+
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct FaDeposit {
-        // Inbox message id is unique to each message and
-        // suitable as a nonce
-        pub inbox_id: u32,
+        // Inbox message id
+        pub inbox_id: InboxId,
         // Amount to deposit
         pub amount: Amount,
         // Final deposit receiver address
@@ -311,13 +336,11 @@ pub mod internal {
         }
 
         pub fn to_http_body(&self) -> HttpBody {
-            let body = self.json();
-            Some(String::as_bytes(&body.to_string()).to_vec())
+            self.json().into()
         }
 
         pub fn hash(&self) -> OperationHash {
-            let seed = self.inbox_id.to_be_bytes();
-            Blake2b::from(seed.as_slice())
+            self.inbox_id.hash()
         }
     }
 }
@@ -330,17 +353,11 @@ pub enum InternalOperation {
 
 pub mod openapi {
     use utoipa::{
-        openapi::{
-            schema::AdditionalProperties, Array, Object, ObjectBuilder, RefOr, Schema,
-        },
+        openapi::{schema::AdditionalProperties, Object, ObjectBuilder, RefOr, Schema},
         schema,
     };
 
     use crate::executor::smart_function::{X_JSTZ_AMOUNT, X_JSTZ_TRANSFER};
-
-    pub fn http_body_schema() -> Array {
-        schema!(Option<Vec<u8>>).build()
-    }
 
     fn http_headers(
         properties: Vec<(impl Into<String>, impl Into<RefOr<Schema>>)>,
@@ -383,6 +400,7 @@ mod test {
     use crate::operation::internal::FaDeposit;
     use crate::operation::OperationHash;
     use crate::runtime::ParsedCode;
+    use crate::HttpBody;
     use http::{HeaderMap, Method, Uri};
     use jstz_core::reveal_data::PreimageHash;
     use jstz_core::{kv::Transaction, BinEncodable};
@@ -395,7 +413,7 @@ mod test {
     use tezos_smart_rollup::michelson::ticket::TicketHash;
 
     fn run_function_content() -> Content {
-        let body = r#""value":1""#.to_string().into_bytes();
+        let body = HttpBody::from_string(r#"{"value":1"}"#.to_string());
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
                 "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
@@ -403,7 +421,7 @@ mod test {
             .unwrap(),
             method: Method::POST,
             headers: HeaderMap::new(),
-            body: Some(body),
+            body,
             gas_limit: 10000,
         })
     }
@@ -432,7 +450,7 @@ mod test {
             json,
             json!({
                 "_type":"RunFunction",
-                "body":[34,118,97,108,117,101,34,58,49,34],
+                "body":"eyJ2YWx1ZSI6MSJ9",
                 "gasLimit":10000,
                 "headers":{},
                 "method":"POST",

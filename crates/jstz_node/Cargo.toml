@@ -62,6 +62,7 @@ utoipa-scalar.workspace = true
 assert_cmd.workspace = true
 pretty_assertions.workspace = true
 warp.workspace = true
+http.workspace = true
 jstz_mock = { path = "../jstz_mock" }
 
 [[bin]]
@@ -70,6 +71,6 @@ path = "src/main.rs"
 
 [features]
 persistent-logging = []
-v2_runtime = ["jstz_proto/v2_runtime"]
+v2_runtime = ["jstz_proto/v2_runtime", "jstz_kernel/v2_runtime"]
 oracle = ["v2_runtime"]
 inject_inbox = []
