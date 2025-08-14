@@ -154,11 +154,19 @@ async fn inject(
         mode,
         queue,
         runtime_db,
+        storage_sync,
+        storage_sync_db,
         ..
     }): State<AppState>,
     Json(operation): Json<SignedOperation>,
 ) -> ServiceResult<()> {
-    let store = StoreWrapper::new(mode.clone(), rollup_client.clone(), runtime_db);
+    let store = StoreWrapper::new(
+        mode.clone(),
+        storage_sync,
+        rollup_client.clone(),
+        runtime_db,
+        storage_sync_db,
+    );
     let (operation, encoded_operation) =
         encode_operation(operation, &injector, &store, &rollup_preimages_dir).await?;
     match mode {
@@ -284,13 +292,21 @@ async fn receipt(
         rollup_client,
         mode,
         runtime_db,
+        storage_sync,
+        storage_sync_db,
         ..
     }): State<AppState>,
     Path(hash): Path<String>,
 ) -> ServiceResult<Json<Receipt>> {
     let key = format!("/jstz_receipt/{hash}");
 
-    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let store = StoreWrapper::new(
+        mode,
+        storage_sync,
+        rollup_client,
+        runtime_db,
+        storage_sync_db,
+    );
     let value = store.get_value(key).await?;
 
     let receipt = match value {

@@ -45,8 +45,8 @@ pub struct AppState {
     pub queue: Arc<RwLock<OperationQueue>>,
     pub runtime_db: sequencer::db::Db,
     worker_heartbeat: Arc<AtomicU64>,
-    #[allow(dead_code)]
     storage_sync: bool,
+    storage_sync_db: sequencer::db::Db,
 }
 
 impl AppState {
@@ -111,11 +111,7 @@ pub async fn run(options: RunOptions) -> Result<()> {
     })));
 
     // will make db_path configurable later
-    let db_file = NamedTempFile::new()?;
-    let db_path = db_file.path().to_str().ok_or(anyhow::anyhow!(
-        "failed to convert temp db file path to str"
-    ))?;
-    let runtime_db = sequencer::db::Db::init(Some(db_path))?;
+    let (runtime_db, _runtime_db_file) = temp_db()?;
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer {
@@ -175,6 +171,7 @@ pub async fn run(options: RunOptions) -> Result<()> {
     let (broadcaster, db, tail_file_handle) =
         LogsService::init(&log_file_path, &cancellation_token).await?;
 
+    let (storage_sync_db, _storage_sync_db_file) = temp_db()?;
     let state = AppState {
         rollup_client,
         rollup_preimages_dir,
@@ -186,6 +183,7 @@ pub async fn run(options: RunOptions) -> Result<()> {
         runtime_db,
         worker_heartbeat: worker.as_ref().map(|w| w.heartbeat()).unwrap_or_default(),
         storage_sync,
+        storage_sync_db,
     };
 
     let cors = CorsLayer::new()
@@ -203,6 +201,14 @@ pub async fn run(options: RunOptions) -> Result<()> {
     cancellation_token.cancel();
     tail_file_handle.await.unwrap()?;
     Ok(())
+}
+
+fn temp_db() -> Result<(sequencer::db::Db, NamedTempFile)> {
+    let db_file = NamedTempFile::new()?;
+    let db_path = db_file.path().to_str().ok_or(anyhow::anyhow!(
+        "failed to convert temp db file path to str"
+    ))?;
+    Ok((sequencer::db::Db::init(Some(db_path))?, db_file))
 }
 
 fn router() -> OpenApiRouter<AppState> {
