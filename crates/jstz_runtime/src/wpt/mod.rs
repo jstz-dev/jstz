@@ -1,5 +1,3 @@
-#![cfg(feature = "wpt")]
-
 use crate::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 use deno_core::{
     convert::Smi,
