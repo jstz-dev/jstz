@@ -91,6 +91,9 @@ export default async (request) => {{
         HttpBody::empty(),
     )?;
 
+    let receiver = accounts[0].address.clone();
+    builder.withdraw(&mut accounts[0], &receiver, 1)?;
+
     let inbox = builder.build();
     inbox.save(&args.inbox_file)
 }
