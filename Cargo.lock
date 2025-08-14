@@ -3184,9 +3184,9 @@ dependencies = [
  "serde",
  "serde_json",
  "tezos-smart-rollup",
+ "tezos-smart-rollup-mock 0.2.2 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tezos_crypto_rs 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tezos_data_encoding 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
- "tezos-smart-rollup-mock",
  "tokio",
 ]
 
@@ -3201,11 +3201,11 @@ dependencies = [
  "jstz_crypto",
  "jstz_node",
  "jstz_proto",
+ "jstz_utils",
  "serde_json",
  "tezos-smart-rollup",
- "tezos_crypto_rs",
- "tezos_data_encoding",
->>>>>>> 377ac953 (feat(wpt): ricv test kernel setup)
+ "tezos_crypto_rs 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
+ "tezos_data_encoding 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
 ]
 
 [[package]]
