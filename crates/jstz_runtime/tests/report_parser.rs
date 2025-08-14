@@ -1,5 +1,9 @@
+#![cfg(feature = "wpt-in-riscv")]
 use jstz_runtime::wpt::TestHarnessReport;
 use ron::de::from_str as ron_from_str;
+use serde::Deserialize;
+use std::borrow::Cow;
+use thiserror::Error;
 
 #[derive(Deserialize)]
 pub struct LogLine<'a> {

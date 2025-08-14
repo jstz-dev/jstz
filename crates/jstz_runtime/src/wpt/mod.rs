@@ -12,8 +12,6 @@ use derive_more::{From, Into};
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
 use serde::{Deserialize, Serialize};
-use std::borrow::Cow;
-use thiserror::Error;
 
 #[derive(Debug, PartialEq, Eq, Serialize, Deserialize, Clone)]
 pub enum WptTestStatus {

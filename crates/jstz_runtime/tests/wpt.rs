@@ -1,31 +1,22 @@
 use anyhow::Context;
-use deno_core::{
-    op2,
-    v8::{self},
-    OpState,
-};
-use deno_error::JsErrorBox;
 
 #[path = "report_parser.rs"]
 mod report_parser;
+#[cfg(feature = "wpt-in-riscv")]
 use report_parser::parse_report_from_log_line;
 
-use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+#[cfg(not(feature = "wpt-in-riscv"))]
+use jstz_core::kv::Transaction;
+#[cfg(not(feature = "wpt-in-riscv"))]
 use jstz_runtime::wpt::init_runtime;
-use jstz_runtime::wpt::test_completion_callback;
-use jstz_runtime::wpt::test_result_callback;
-use jstz_runtime::wpt::{
-    LogLine, ParseError, TestHarnessReport, TestResult, TestsResult, WptSubtest,
-    WptSubtestStatus, WptTestStatus,
-};
-use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
+use jstz_runtime::wpt::{TestHarnessReport, WptSubtest, WptSubtestStatus, WptTestStatus};
 use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReportTest, WptServe,
 };
 use regex::Regex;
-use ron::de::from_str as ron_from_str;
 use serde::Deserialize;
+#[cfg(not(feature = "wpt-in-riscv"))]
+use std::panic;
 use std::{
     collections::BTreeMap,
     fs::{File, OpenOptions},
@@ -53,8 +44,6 @@ fn should_skip_test(test_path: &str) -> bool {
 }
 
 pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
-    let mut tx = Transaction::default();
-    tx.begin();
     let mut host = MockHost::default();
     host.set_debug_handler(std::io::empty());
 
@@ -71,109 +60,76 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
         }
     }
 
-    //println!("source: {}", source);
-    //eprintln!("source: {}", source);
+    #[cfg(not(feature = "wpt-in-riscv"))]
+    {
+        let mut tx = Transaction::default();
+        tx.begin();
+        let mut rt = init_runtime(&mut host, &mut tx);
 
-    // RUN NORMALLY
-    /*let mut rt = init_runtime(&mut host, &mut tx);
+        // Somehow each `execute_script` call has some strange side effect such that the global
+        // test suite object is completed prematurely before all test cases are registered.
+        // Therefore, instead of executing each piece of test scripts separately, we need to
+        // collect them and run them all in one `execute_script` call.
 
-    // Somehow each `execute_script` call has some strange side effect such that the global
-    // test suite object is completed prematurely before all test cases are registered.
-    // Therefore, instead of executing each piece of test scripts separately, we need to
-    // collect them and run them all in one `execute_script` call.);
+        // Use catch_unwind to handle panics (including segmentation faults) gracefully
+        let _ = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+            rt.execute_script("native code", source.clone())
+        }));
 
-    // Use catch_unwind to handle panics (including segmentation faults) gracefully
-    let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-        rt.execute_script("native code", source.clone())
-    }));
-
-    */
-    let err_report = TestHarnessReport {
-        status: Some(WptTestStatus::Err),
-        subtests: vec![WptSubtest {
-            name: "Script execution failed".to_string(),
-            status: WptSubtestStatus::Fail,
-            message: Some(
-                "Test failed due to script execution error (panic/segfault)".to_string(),
-            ),
-        }],
-    }; /*
-
-       match result {
-           Ok(_) => {
-               //println!("script executed successfully");
-           }
-           Err(e) => {
-               println!("wpt: script execution failed with panic: {:?}", e);
-               // Return a default report indicating the test failed due to execution error
-               return err_report;
-           }
-       }*/
-
-    // \RUN NORMALLY
-
-    // RUN IN RISCV
-    // Call the external binary to create the message
-    let output = std::process::Command::new("cargo")
-        .args([
-            "run",
-            "--package",
-            "jstz_message_creator",
-            "--bin",
-            "jstz_message_creator",
-        ])
-        .arg(source.clone())
-        .output()
-        .expect("Failed to execute jstz_message_creator binary");
-
-    // Print the output from the binary
-    if !output.stdout.is_empty() {
-        /*println!(
-            "jstz_message_creator stdout: {}",
-            String::from_utf8_lossy(&output.stdout)
-        );*/
-    }
-    if !output.stderr.is_empty() {
-        /*eprintln!(
-            "jstz_message_creator stderr: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );*/
+        // Take the test harness report out of the runtime and return it
+        // Need to store data temporarily so that the borrow can be dropped
+        let data = rt.op_state().borrow().borrow::<TestHarnessReport>().clone();
+        return data;
     }
 
-    if !output.status.success() {
-        println!(
-            "jstz_message_creator failed with exit code: {}",
-            output.status.code().unwrap_or(-1)
-        );
-        /*eprintln!(
-            "jstz_message_creator failed with exit code: {}",
-            output.status.code().unwrap_or(-1)
-        );*/
-        return TestHarnessReport {
+    #[cfg(feature = "wpt-in-riscv")]
+    {
+        // Call the external binary to create the message
+        let output = std::process::Command::new("cargo")
+            .args([
+                "run",
+                "--package",
+                "jstz_message_creator",
+                "--bin",
+                "jstz_message_creator",
+            ])
+            .arg(source.clone())
+            .output()
+            .expect("Failed to execute message creator binary");
+
+        if !output.status.success() {
+            println!(
+                "Failed to create message via external binary with exit code: {}",
+                output.status.code().unwrap_or(-1)
+            );
+            return TestHarnessReport {
+                status: Some(WptTestStatus::Err),
+                subtests: vec![WptSubtest {
+                    name: "Message creation failed".to_string(),
+                    status: WptSubtestStatus::Fail,
+                    message: Some(
+                        "Failed to create message via external binary".to_string(),
+                    ),
+                }],
+            };
+        }
+
+        let err_report = TestHarnessReport {
             status: Some(WptTestStatus::Err),
             subtests: vec![WptSubtest {
-                name: "Message creation failed".to_string(),
+                name: "Script execution failed".to_string(),
                 status: WptSubtestStatus::Fail,
-                message: Some("Failed to create message via external binary".to_string()),
+                message: Some("Test failed due to script execution error".to_string()),
             }],
         };
+
+        let data = parse_report_from_log_line(
+            format!("{}", String::from_utf8_lossy(&output.stdout)).as_str(),
+        )
+        .unwrap()
+        .unwrap_or(err_report);
+        return data;
     }
-
-    // \RUN IN RISCV
-
-    //println!("Message created successfully via external binary");
-
-    // Take the test harness report out of the runtime and return it
-    // Need to store data temporarily so that the borrow can be dropped
-    //let data = rt.op_state().borrow().borrow::<TestHarnessReport>().clone();
-    let data = parse_report_from_log_line(
-        format!("{}", String::from_utf8_lossy(&output.stdout)).as_str(),
-    )
-    .unwrap()
-    .unwrap_or(err_report);
-
-    println!("report: {:?}", data);
-    data
 }
 
 fn process_subtests(url_path: &str, mut substests: Vec<WptSubtest>) -> Vec<WptSubtest> {
@@ -209,9 +165,6 @@ fn run_wpt_test(
     test: TestToRun,
 ) -> impl IntoFuture<Output = anyhow::Result<WptReportTest>> + '_ {
     async move {
-        println!("");
-        println!("starting test {}", &test.url_path);
-
         // Check if this test should be skipped
         if should_skip_test(&test.url_path) {
             println!("skipping test {} (in skip list)", &test.url_path);
@@ -240,7 +193,7 @@ fn run_wpt_test(
             }
         };
         let report = run_wpt_test_harness(&bundle).await;
-        println!("test {} => {:?}", &test.url_path, &report.status);
+        println!("Run test {} => {:?}", &test.url_path, &report.status);
         // Each test suite should have a status code attached after it completes.
         // When unwrap fails, it means something is wrong, e.g. some tests failed because
         // of something not yet supported by the runtime, such that the test completion callback

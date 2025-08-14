@@ -48,4 +48,5 @@ tezos-smart-rollup-mock.workspace = true
 [features]
 wpt = []
 skip-wpt = []
+wpt-in-riscv = []
 kernel = []
