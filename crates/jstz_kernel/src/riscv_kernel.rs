@@ -9,7 +9,6 @@ use jstz_crypto::{
 };
 use jstz_proto::runtime::{ProtocolContext, PROTOCOL_CONTEXT};
 use jstz_runtime::JstzRuntime;
-use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
 use crate::{
@@ -104,10 +103,7 @@ async fn run_event_loop(rt: &mut impl Runtime) {
 mod test {
 
     use jstz_core::kv::Transaction;
-    use jstz_crypto::{
-        hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
-        secret_key::SecretKey,
-    };
+    use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
     use jstz_mock::{
         host::{JstzMockHost, MOCK_SOURCE},
         message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
@@ -120,6 +116,7 @@ mod test {
         executor::smart_function,
         operation::{DeployFunction, Operation, RunFunction, SignedOperation},
         runtime::ParsedCode,
+        HttpBody,
     };
     use jstz_utils::{
         test_util::{alice_keys, bob_keys},
@@ -171,7 +168,7 @@ mod test {
                 uri: format!("jstz://{}", alice_pk.hash()).parse()?,
                 method: http::Method::GET,
                 headers: http::HeaderMap::new(),
-                body: None,
+                body: HttpBody::empty(),
                 gas_limit: 0,
             };
             set_transfer_header(&mut run_fn, 30);
@@ -218,7 +215,7 @@ mod test {
                 uri: "jstz://KT1EPRuE9JnmkJFw58W39hBoiCmX14XtMgGd".parse()?,
                 method: http::Method::GET,
                 headers: http::HeaderMap::new(),
-                body: None,
+                body: HttpBody::empty(),
                 gas_limit: 0,
             };
             set_transfer_header(&mut run_fn, 10);

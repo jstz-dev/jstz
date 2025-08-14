@@ -14,7 +14,7 @@ endif
 JSTZD_KERNEL_PATH := crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 
 .PHONY: all
-all: build-v2 test-v2 check
+all: build-v2 test-v2 test-riscv-kernel check
 
 .PHONY: build
 build: build-jstzd-kernel
@@ -109,6 +109,10 @@ test-int-v2:
 #        the glob pattern is used to match all integration tests
 # --exclude excludes the jstz_api wpt test
 	@cargo nextest run --test "*" --workspace --exclude "jstz_api" --features v2_runtime,skip-wpt,skip-rollup-tests
+
+.PHONY: test-riscv-kernel
+test-riscv-kernel:
+	@cargo nextest run -p jstz_kernel --features riscv_kernel
 
 .PHONY: cov
 cov:
