@@ -6,7 +6,6 @@ members = [
   "crates/jstz_client",
   "crates/jstz_core",
   "crates/jstz_crypto",
-  "crates/jstz_message_creator",
   "crates/jstz_runtime",
   "crates/jstz_kernel",
   "crates/jstz_mock",

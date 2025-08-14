@@ -43,6 +43,95 @@ fn should_skip_test(test_path: &str) -> bool {
         .any(|&skip_path| test_path.contains(skip_path))
 }
 
+#[cfg(feature = "wpt-in-riscv")]
+fn run_wpt_test_harness_in_riscv_sandbox(source: String) -> TestHarnessReport {
+    use jstz_proto::runtime::ParsedCode;
+    use jstz_utils::inbox_builder::InboxBuilder;
+    use tezos_smart_rollup::types::SmartRollupAddress;
+
+    // Build inbox message using the same logic as the former external binary
+    let mut inbox_builder = InboxBuilder::new(
+        SmartRollupAddress::from_b58check("sr1BxufbqiHt3dn6ahV6eZk9xBD6XV1fYowr")
+            .unwrap(),
+        None,
+    );
+
+    let chunk_size = 2000usize;
+    let mut account = inbox_builder.create_accounts(1).unwrap().remove(0);
+
+    for chunk in source.chars().collect::<Vec<_>>().chunks(chunk_size) {
+        let chunk_str: String = chunk.iter().collect();
+        inbox_builder
+            .deploy_function(
+                &mut account,
+                unsafe { ParsedCode::new_unchecked(chunk_str) },
+                1_000_000,
+            )
+            .unwrap();
+    }
+
+    inbox_builder
+        .deploy_function(
+            &mut account,
+            unsafe { ParsedCode::new_unchecked("STOP".to_string()) },
+            1_000_000,
+        )
+        .unwrap();
+
+    let temp_file = std::env::temp_dir().join("jstz_inbox_message.json");
+    let inbox_file = inbox_builder.build();
+    inbox_file.save(temp_file.as_path()).unwrap();
+
+    let kernel_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
+        "../../target/riscv64gc-unknown-linux-musl/release/wpt-test-kernel-executable",
+    );
+
+    let output = std::process::Command::new("riscv-sandbox")
+        .args(&[
+            "run",
+            "--timings",
+            "--address",
+            "sr1FXevDx86EyU1BBwhn94gtKvVPTNwoVxUC",
+            "--inbox-file",
+            temp_file.to_str().unwrap(),
+            "--input",
+            kernel_path.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute riscv-sandbox");
+
+    if !output.status.success() {
+        println!(
+            "riscv-sandbox failed with exit code: {}",
+            output.status.code().unwrap_or(-1)
+        );
+        return TestHarnessReport {
+            status: Some(WptTestStatus::Err),
+            subtests: vec![WptSubtest {
+                name: "Message creation failed".to_string(),
+                status: WptSubtestStatus::Fail,
+                message: Some("Failed to create message or execute sandbox".to_string()),
+            }],
+        };
+    }
+
+    let err_report = TestHarnessReport {
+        status: Some(WptTestStatus::Err),
+        subtests: vec![WptSubtest {
+            name: "Script execution failed".to_string(),
+            status: WptSubtestStatus::Fail,
+            message: Some("Test failed due to script execution error".to_string()),
+        }],
+    };
+
+    let data = parse_report_from_log_line(
+        format!("{}", String::from_utf8_lossy(&output.stdout)).as_str(),
+    )
+    .unwrap()
+    .unwrap_or(err_report);
+    return data;
+}
+
 pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
     let mut host = MockHost::default();
     host.set_debug_handler(std::io::empty());
@@ -84,51 +173,7 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
 
     #[cfg(feature = "wpt-in-riscv")]
     {
-        // Call the external binary to create the message
-        let output = std::process::Command::new("cargo")
-            .args([
-                "run",
-                "--package",
-                "jstz_message_creator",
-                "--bin",
-                "jstz_message_creator",
-            ])
-            .arg(source.clone())
-            .output()
-            .expect("Failed to execute message creator binary");
-
-        if !output.status.success() {
-            println!(
-                "Failed to create message via external binary with exit code: {}",
-                output.status.code().unwrap_or(-1)
-            );
-            return TestHarnessReport {
-                status: Some(WptTestStatus::Err),
-                subtests: vec![WptSubtest {
-                    name: "Message creation failed".to_string(),
-                    status: WptSubtestStatus::Fail,
-                    message: Some(
-                        "Failed to create message via external binary".to_string(),
-                    ),
-                }],
-            };
-        }
-
-        let err_report = TestHarnessReport {
-            status: Some(WptTestStatus::Err),
-            subtests: vec![WptSubtest {
-                name: "Script execution failed".to_string(),
-                status: WptSubtestStatus::Fail,
-                message: Some("Test failed due to script execution error".to_string()),
-            }],
-        };
-
-        let data = parse_report_from_log_line(
-            format!("{}", String::from_utf8_lossy(&output.stdout)).as_str(),
-        )
-        .unwrap()
-        .unwrap_or(err_report);
-        return data;
+        run_wpt_test_harness_in_riscv_sandbox(source)
     }
 }
 

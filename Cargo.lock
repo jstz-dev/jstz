@@ -3191,24 +3191,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "jstz_message_creator"
-version = "0.1.1-alpha.3"
-dependencies = [
- "anyhow",
- "bincode 2.0.0-rc.3",
- "hex",
- "jstz_core",
- "jstz_crypto",
- "jstz_node",
- "jstz_proto",
- "jstz_utils",
- "serde_json",
- "tezos-smart-rollup",
- "tezos_crypto_rs 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
- "tezos_data_encoding 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
-]
-
-[[package]]
 name = "jstz_mock"
 version = "0.1.1-alpha.4"
 dependencies = [
@@ -3365,6 +3347,7 @@ dependencies = [
  "derive_more",
  "jstz_core",
  "jstz_crypto",
+ "jstz_proto",
  "jstz_utils",
  "jstz_wpt",
  "parking_lot",

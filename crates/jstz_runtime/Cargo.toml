@@ -39,7 +39,8 @@ regex.workspace = true
 [dev-dependencies]
 derive_more.workspace = true
 jstz_wpt = { path = "../jstz_wpt" }
-jstz_utils = { path = "../jstz_utils" }
+jstz_utils = { path = "../jstz_utils", features = ["inbox_builder"] }
+jstz_proto = { path = "../jstz_proto", default-features = false }
 serde_json.workspace = true
 tokio.workspace = true
 url.workspace = true
