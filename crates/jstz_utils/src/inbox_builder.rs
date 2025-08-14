@@ -291,7 +291,7 @@ impl InboxBuilder {
         self.messages.push(self.generate_internal_messge(
             InternalInboxMessage::<MichelsonUnit>::StartOfLevel,
         )?);
-        self.next_level = self.next_level + 1;
+        self.next_level += 1;
         Ok(())
     }
 }
@@ -533,6 +533,7 @@ mod tests {
                 )
                 .unwrap(),
             ),
+            #[cfg(feature = "v2_runtime")]
             None,
         );
         builder.deposit_from_l1(&account, 1).unwrap();
