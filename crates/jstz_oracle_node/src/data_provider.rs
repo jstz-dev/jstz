@@ -10,14 +10,15 @@ use jstz_proto::runtime::v2::fetch::http::{
     convert_header_map, Body, Request as HttpRequest, Response,
 };
 use jstz_proto::runtime::v2::oracle::request::OracleRequest;
+use jstz_utils::retry::{exponential_backoff, retry_async};
 use log::{error, info};
 use reqwest::header::{HeaderMap as ReqwestHeaderMap, HeaderName, HeaderValue};
 use reqwest::Client;
 use reqwest::Method;
-use std::{future::Future, time::Duration};
+use std::time::Duration;
 use tokio::sync::broadcast::Receiver;
 use tokio::task::AbortHandle;
-use tokio_retry2::{strategy::ExponentialBackoff, Retry, RetryError};
+use tokio_retry2::strategy::ExponentialBackoff;
 
 #[allow(dead_code)]
 pub struct DataProvider {
@@ -73,17 +74,6 @@ fn extract_status_code(msg: &str) -> Option<u16> {
         .and_then(|code_str| code_str.parse::<u16>().ok())
 }
 
-pub fn exponential_backoff(
-    base: u64,
-    max_attempts: usize,
-    max_delay: Duration,
-) -> impl Iterator<Item = Duration> {
-    ExponentialBackoff::from_millis(base)
-        .factor(2)
-        .max_delay(max_delay)
-        .take(max_attempts)
-}
-
 async fn execute_http_request(
     client: &reqwest::Client,
     method: &Method,
@@ -133,36 +123,6 @@ async fn execute_http_request(
         headers,
         body,
     })
-}
-
-pub async fn retry_async<F, Fut, T, E, C>(
-    backoff: impl IntoIterator<Item = Duration>,
-    mut op: F,
-    should_retry: C,
-) -> Result<T, E>
-where
-    F: FnMut() -> Fut,
-    Fut: Future<Output = Result<T, E>>,
-    C: Fn(&E) -> bool + Copy,
-{
-    let action = || {
-        let fut = op();
-
-        async move {
-            match fut.await {
-                Ok(v) => Ok(v),
-                Err(e) => {
-                    if should_retry(&e) {
-                        Err(RetryError::transient(e))
-                    } else {
-                        Err(RetryError::permanent(e))
-                    }
-                }
-            }
-        }
-    };
-
-    Retry::spawn(backoff, action).await
 }
 
 async fn handle_request(

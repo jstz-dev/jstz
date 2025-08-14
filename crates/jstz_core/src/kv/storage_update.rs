@@ -13,7 +13,7 @@ use tezos_smart_rollup::host::Runtime;
 use tezos_smart_rollup_host::path::Path;
 
 #[serde_as]
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum StorageUpdate {
     /// Upsert a value at the given key.
     Insert {
@@ -26,7 +26,7 @@ pub enum StorageUpdate {
 }
 
 /// Storage update event.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub struct BatchStorageUpdate(Vec<StorageUpdate>);
 
 impl Event for BatchStorageUpdate {
@@ -72,6 +72,14 @@ impl BatchStorageUpdate {
             return Ok(());
         }
         <Self as EventPublish>::publish_event(self, rt)
+    }
+}
+
+impl IntoIterator for BatchStorageUpdate {
+    type Item = StorageUpdate;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
