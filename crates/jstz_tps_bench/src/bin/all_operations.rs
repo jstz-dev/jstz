@@ -2,7 +2,7 @@ use std::path::Path;
 
 use anyhow::Context;
 use http::{HeaderMap, Method, Uri};
-use jstz_proto::runtime::ParsedCode;
+use jstz_proto::{runtime::ParsedCode, HttpBody};
 use jstz_utils::inbox_builder::InboxBuilder;
 
 use clap::Parser;
@@ -88,7 +88,7 @@ export default async (request) => {{
             "X-JSTZ-TRANSFER".parse().unwrap(),
             "500000".parse().unwrap(),
         )]),
-        None,
+        HttpBody::empty(),
     )?;
 
     let inbox = builder.build();
