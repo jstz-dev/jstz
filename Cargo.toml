@@ -8,6 +8,7 @@ members = [
   "crates/jstz_crypto",
   "crates/jstz_runtime",
   "crates/jstz_kernel",
+  "crates/jstz_kv",
   "crates/jstz_mock",
   "crates/jstz_node",
   "crates/jstz_oracle_node",
@@ -17,7 +18,7 @@ members = [
   "crates/jstz_utils",
   "crates/jstz_wpt",
   "crates/jstzd",
-  "crates/octez",
+  "crates/octez", 
 ]
 
 [workspace.package]

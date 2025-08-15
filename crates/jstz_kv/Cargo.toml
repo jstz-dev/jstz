@@ -1,0 +1,19 @@
+[package]
+name = "jstz_kv"
+edition.workspace = true
+version.workspace = true
+authors.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description.workspace = true
+
+[dependencies]
+pin-project.workspace = true
+tokio.workspace = true
+tokio-util.workspace = true
+
+[dev-dependencies]
+futures.workspace = true
