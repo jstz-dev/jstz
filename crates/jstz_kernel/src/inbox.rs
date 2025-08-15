@@ -616,7 +616,9 @@ mod test {
             for (msg, case_name) in messages {
                 let encoded_msg =
                     super::encode_internal_message(&msg, &ticketer_addr, &rollup_addr)
-                        .expect(&format!("failed: {case_name} with {receiver:?}"));
+                        .unwrap_or_else(|e| {
+                            panic!("failed: {case_name} with {receiver:?}: {e:?}")
+                        });
                 assert_eq!(
                     super::parse_inbox_message(
                         &DummyLogger,
@@ -732,7 +734,7 @@ mod test {
             ),
         ] {
             let encoded_msg =
-                super::encode_parsed_inbox_message(&msg, &ticketer_addr, &rollup_addr).expect(&format!("failed: {case_name}"));
+                super::encode_parsed_inbox_message(&msg, &ticketer_addr, &rollup_addr).unwrap_or_else(|e| panic!("failed: {case_name}: {e:?}"));
             assert_eq!(
                 super::parse_inbox_message(
                     &DummyLogger,
