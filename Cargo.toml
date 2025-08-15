@@ -124,6 +124,7 @@ utoipa-scalar = { version = "0.2.0", features = ["axum"] }
 warp = "0.3.7"
 wasm-bindgen = "0.2.92"
 futures-core = "0.3.31"
+ron = "0.8"
 
 [workspace.dependencies.deno_fetch_base]
 git = "https://github.com/jstz-dev/deno"
@@ -142,6 +143,7 @@ features = [
   "data-encoding",
   "storage",
   "proto-alpha",
+  "utils",
 ]
 
 [workspace.dependencies.tezos-smart-rollup-host]
