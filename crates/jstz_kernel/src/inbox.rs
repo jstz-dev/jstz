@@ -578,40 +578,56 @@ mod test {
                 .unwrap();
         let source =
             PublicKeyHash::from_base58("tz1QLLppfQ534PCDWvhY2BLPqkwYe9JxkP3H").unwrap();
+        let ticket_hash = TicketHash::try_from(
+            "27cb5f11317f1934190a052652d38368d69cf850ac6eb383e15630b5ea3ef01c"
+                .to_string(),
+        )
+        .unwrap();
+        let inbox_id = InboxId {
+            l1_level: 0,
+            l1_message_id: 0,
+        };
 
         for receiver in [
             Address::from_base58("tz1ficxJFv7MUtsCimF8bmT9SYPDok52ySg6").unwrap(),
             Address::from_base58("KT1WSFFotGccKa4WZ5PNQGT3EgsRutzLMD4z").unwrap(),
         ] {
-            let messages = [(
-                InternalOperation::Deposit(Deposit {
-                    inbox_id: InboxId {
-                        l1_level: 0,
-                        l1_message_id: 0
-                    },
-                    amount: 1,
-                    receiver: receiver.clone(),
-                    source: source.clone(),
-                }),
-                "deposit",
-            ),
-            (
-                InternalOperation::FaDeposit(FaDeposit {
-                    inbox_id: InboxId {
-                        l1_level: 0,
-                        l1_message_id: 0
-                    },
-                    amount: 1,
-                    receiver: receiver.clone(),
-                    proxy_smart_function: Some(
-                        Address::from_base58("KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV")
-                            .unwrap(),
-                    ),
-                    ticket_hash: TicketHash::try_from("27cb5f11317f1934190a052652d38368d69cf850ac6eb383e15630b5ea3ef01c".to_string()).unwrap(),
-                    source: source.clone(),
-                }),
-                "FA deposit",
-            )];
+            let messages = [
+                (
+                    InternalOperation::Deposit(Deposit {
+                        inbox_id: inbox_id.clone(),
+                        amount: 1,
+                        receiver: receiver.clone(),
+                        source: source.clone(),
+                    }),
+                    "deposit",
+                ),
+                (
+                    InternalOperation::FaDeposit(FaDeposit {
+                        inbox_id: inbox_id.clone(),
+                        amount: 1,
+                        receiver: receiver.clone(),
+                        proxy_smart_function: None,
+                        ticket_hash: ticket_hash.clone(),
+                        source: source.clone(),
+                    }),
+                    "FA deposit - no proxy function",
+                ),
+                (
+                    InternalOperation::FaDeposit(FaDeposit {
+                        inbox_id: inbox_id.clone(),
+                        amount: 1,
+                        receiver: receiver.clone(),
+                        proxy_smart_function: Some(
+                            Address::from_base58("KT1QgfSE4C1dX9UqrPAXjUaFQ36F9eB4nNkV")
+                                .unwrap(),
+                        ),
+                        ticket_hash: ticket_hash.clone(),
+                        source: source.clone(),
+                    }),
+                    "FA deposit",
+                ),
+            ];
 
             for (msg, case_name) in messages {
                 let encoded_msg =
@@ -622,10 +638,7 @@ mod test {
                 assert_eq!(
                     super::parse_inbox_message(
                         &DummyLogger,
-                        InboxId {
-                            l1_level: 0,
-                            l1_message_id: 0
-                        },
+                        inbox_id.clone(),
                         &encoded_msg,
                         &ticketer_addr,
                         rollup_addr.hash()
