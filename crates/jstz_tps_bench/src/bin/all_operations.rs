@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::Context;
 use http::{HeaderMap, Method, Uri};
@@ -38,7 +38,7 @@ struct Args {
 
     /// Public-private key pair representing the oracle response signer. (format: {"public_key": ..., "secret_key": ...})
     #[arg(long)]
-    oracle_key_file: Option<PathBuf>,
+    oracle_key_file: Option<Box<Path>>,
 }
 
 fn main() -> jstz_tps_bench::Result<()> {
@@ -49,7 +49,7 @@ fn main() -> jstz_tps_bench::Result<()> {
         .context("failed to parse ticketer address")?;
     let oracle_signer = match args.oracle_key_file {
         Some(path) => {
-            let KeyPair(pk, sk) = parse_key_file(path)?;
+            let KeyPair(pk, sk) = parse_key_file(path.to_path_buf())?;
             Some(Account {
                 // FIXME: nonce needs to start from 1 because currently the oracle signer is also
                 // the injector and there is one large payload operation before the oracle call,
