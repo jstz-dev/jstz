@@ -231,19 +231,36 @@ async fn inject_inbox_messages(
         mode,
         queue,
         runtime_db,
+        storage_sync_db,
+        storage_sync,
         ..
     }): State<AppState>,
     Json(inbox_msg_strings): Json<Vec<Vec<String>>>,
 ) -> ServiceResult<()> {
     match mode {
         RunMode::Sequencer { .. } => {
-            let store =
-                StoreWrapper::new(mode.clone(), rollup_client.clone(), runtime_db);
+            let store = StoreWrapper::new(
+                mode.clone(),
+                storage_sync,
+                rollup_client.clone(),
+                runtime_db,
+                storage_sync_db,
+            );
             let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
             let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
             let mut ops = vec![];
             for s in inbox_msg_strings.iter().flatten() {
-                match parse_inbox_message_hex(&DummyLogger, 0, &s, &ticketer, &jstz) {
+                match parse_inbox_message_hex(
+                    &DummyLogger,
+                    // ID does not matter here for now
+                    jstz_proto::operation::internal::InboxId {
+                        l1_level: 0,
+                        l1_message_id: 0u32,
+                    },
+                    &s,
+                    &ticketer,
+                    &jstz,
+                ) {
                     Some(op) => ops.push(op),
                     None => {
                         return Err(ServiceError::BadRequest(
