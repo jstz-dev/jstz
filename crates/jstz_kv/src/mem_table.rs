@@ -15,7 +15,7 @@ use crate::wound_wait_mutex::{ArcWoundWaitMutexGuard, LockError, WoundWaitMutex}
 /// protecting the corresponding values in the KV store.
 #[derive(Debug)]
 pub struct MemTable<Id: Ord, K, V> {
-    mutexes: Mutex<HashMap<K, Arc<WoundWaitMutex<Id, V>>>>,
+    mutexes: Mutex<HashMap<K, Arc<WoundWaitMutex<Id, Option<V>>>>>,
 }
 
 impl<Id: Ord, K, V> Default for MemTable<Id, K, V> {
@@ -35,13 +35,13 @@ impl<Id: Ord, K, V> MemTable<Id, K, V> {
     /// Gets the mutex for the given key.
     ///
     /// If no mutex exists, creates a new one using `V::default()`.
-    fn get_or_insert_mutex(&self, key: K) -> Arc<WoundWaitMutex<Id, V>>
+    fn get_or_insert_mutex(&self, key: K) -> Arc<WoundWaitMutex<Id, Option<V>>>
     where
         K: Hash + Eq,
-        V: Default,
     {
         // TODO(https://linear.app/tezos/issue/JSTZ-886):
-        // Instead of using `V::default()`, we should provide a way to fetch the value from persistent storage.
+        // Instead of using `Option<V>::default()`, we should provide a way to fetch
+        // the value from persistent storage.
 
         // SAFETY: We exclusively own the mutex, so we know it cannot be poisoned.
         let mut mutexes = self.mutexes.lock().expect("Mutex cannot be poisoned");
@@ -55,10 +55,9 @@ impl<Id: Ord, K, V> MemTable<Id, K, V> {
         key: K,
         transaction_id: Id,
         cancellation_token: CancellationToken,
-    ) -> Result<ArcWoundWaitMutexGuard<Id, V>, LockError>
+    ) -> Result<ArcWoundWaitMutexGuard<Id, Option<V>>, LockError>
     where
         K: Hash + Eq,
-        V: Default,
         Id: Clone,
     {
         let mutex = self.get_or_insert_mutex(key);

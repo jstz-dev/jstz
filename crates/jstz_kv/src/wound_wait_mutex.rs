@@ -16,7 +16,7 @@
 use std::{
     cell::UnsafeCell,
     collections::BinaryHeap,
-    fmt::Debug,
+    fmt::{self, Debug},
     future::Future,
     marker::PhantomData,
     ops::{Deref, DerefMut},
@@ -61,12 +61,37 @@ pub enum TryLockError {
     Cancelled,
 }
 
+impl fmt::Display for TryLockError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            TryLockError::LockHeld => write!(f, "Lock held by other transaction"),
+            TryLockError::Cancelled => {
+                write!(f, "Current transaction is cancelled, cannot acquire lock")
+            }
+        }
+    }
+}
+
+impl std::error::Error for TryLockError {}
+
 /// Error returned from the [`RawWoundWaitMutex::lock`] function.
 #[derive(Debug, PartialEq, Eq)]
 pub enum LockError {
     /// The transaction was cancelled before acquiring the lock.
     Cancelled,
 }
+
+impl fmt::Display for LockError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LockError::Cancelled => {
+                write!(f, "Current transaction is cancelled, cannot acquire lock")
+            }
+        }
+    }
+}
+
+impl std::error::Error for LockError {}
 
 /// Represents the current holder of the wound-wait mutex.
 ///
@@ -462,6 +487,15 @@ impl<Id: Ord, T> Deref for ArcWoundWaitMutexGuard<Id, T> {
 impl<Id: Ord, T> DerefMut for ArcWoundWaitMutexGuard<Id, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         unsafe { &mut *self.mutex.data.get() }
+    }
+}
+
+impl<Id: Ord, T> Clone for ArcWoundWaitMutexGuard<Id, T> {
+    fn clone(&self) -> Self {
+        Self {
+            mutex: self.mutex.clone(),
+            _marker: PhantomData,
+        }
     }
 }
 
