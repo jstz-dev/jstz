@@ -394,13 +394,13 @@ mod test {
     use super::{Content, DeployFunction, RevealLargePayload, RevealType, RunFunction};
     use super::{Operation, SignedOperation};
     use crate::context::account::{Account, Address, Nonce};
-    use crate::operation::internal::FaDeposit;
+    use crate::operation::internal::{FaDeposit, InboxId};
     use crate::operation::OperationHash;
     use crate::runtime::ParsedCode;
     use crate::HttpBody;
     use http::{HeaderMap, Method, Uri};
     use jstz_core::reveal_data::PreimageHash;
-    use jstz_core::{kv::Transaction, BinEncodable};
+    use jstz_core::BinEncodable;
     use jstz_crypto::hash::Hash;
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
     use jstz_mock::host::JstzMockHost;
@@ -664,7 +664,10 @@ mod test {
     #[test]
     fn fa_deposit_json() {
         let d = FaDeposit {
-            inbox_id: 1,
+            inbox_id: InboxId {
+                l1_message_id: 0,
+                l1_level: 0,
+            },
             amount: 10,
             source: PublicKeyHash::from_base58("tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h")
                 .unwrap(),
