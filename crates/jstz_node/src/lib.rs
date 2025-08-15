@@ -25,6 +25,7 @@ use tower_http::cors::{Any, CorsLayer};
 
 mod api_doc;
 mod services;
+pub mod storage_sync;
 use services::Service;
 use tokio_util::sync::CancellationToken;
 use utoipa::OpenApi;

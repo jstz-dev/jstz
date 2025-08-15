@@ -3403,6 +3403,7 @@ dependencies = [
  "tezos_crypto_rs 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tezos_data_encoding 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tokio",
+ "tokio-retry2",
  "tokio-util",
  "url",
 ]

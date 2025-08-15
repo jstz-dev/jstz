@@ -77,30 +77,19 @@ impl futures_core::Stream for FilteredLogStream {
 
 #[cfg(test)]
 mod tests {
+    use crate::test_util::append_async;
+
     use super::*;
     use futures_util::StreamExt;
     use std::{io::Write, time::Duration};
     use tempfile::NamedTempFile;
-    use tokio::{fs::OpenOptions, io::AsyncWriteExt, time::timeout};
+    use tokio::time::timeout;
 
     const PATTERN: &str = r#"^\[ORACLE\]\s+\d+\s+.*"#;
 
     fn append_sync(file: &mut NamedTempFile, line: &str) -> anyhow::Result<()> {
         writeln!(file.as_file_mut(), "{line}")?;
         file.as_file_mut().sync_all()?;
-        Ok(())
-    }
-
-    async fn append_async(
-        path: PathBuf,
-        line: String,
-        delay_ms: u64,
-    ) -> anyhow::Result<()> {
-        tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-        let mut file = OpenOptions::new().append(true).open(&path).await?;
-        file.write_all(line.as_bytes()).await?;
-        file.write_all(b"\n").await?;
-        file.sync_all().await?;
         Ok(())
     }
 
