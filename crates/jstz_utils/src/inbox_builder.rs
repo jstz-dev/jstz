@@ -219,6 +219,27 @@ impl InboxBuilder {
             None => Err("ticketer address is not provided".into()),
         }
     }
+
+    pub fn withdraw(
+        &mut self,
+        account: &mut Account,
+        receiver: &Address,
+        amount_mutez: u64,
+    ) -> Result<()> {
+        let uri = Uri::from_static("jstz://jstz/withdraw");
+        let withdraw = jstz_proto::executor::withdraw::Withdrawal {
+            amount: amount_mutez,
+            receiver: receiver.clone(),
+        };
+        let json_data = serde_json::to_vec(&withdraw)?;
+        self.run_function(
+            account,
+            uri,
+            Method::POST,
+            HeaderMap::default(),
+            HttpBody(Some(json_data)),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -230,7 +251,8 @@ mod tests {
     use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
     use jstz_proto::{
         context::account::{Address, Nonce},
-        operation::{Content, DeployFunction, SignedOperation},
+        executor::withdraw::Withdrawal,
+        operation::{Content, DeployFunction, RunFunction, SignedOperation},
         runtime::ParsedCode,
         HttpBody,
     };
@@ -441,6 +463,65 @@ mod tests {
                         assert!(matches!(transfer.payload, MichelsonOr::Left(_)));
                     }
                     _ => panic!("should be internal message"),
+                }
+            }
+            _ => panic!("should be raw message"),
+        }
+    }
+
+    #[test]
+    fn withdraw() {
+        let rollup_address =
+            SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
+        let mut builder = InboxBuilder::new(rollup_address.clone(), None);
+        let mut accounts = builder.create_accounts(2).unwrap();
+        let mut account = accounts.pop().unwrap();
+        let receiver = accounts.pop().unwrap();
+        builder
+            .withdraw(&mut account, &receiver.address, 10000)
+            .unwrap();
+        assert_eq!(builder.messages.len(), 1);
+        match builder.messages.pop().unwrap() {
+            Message::Raw(raw) => {
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
+                match inbox_msg {
+                    InboxMessage::External(b) => {
+                        let v = ExternalMessageFrame::parse(b).unwrap();
+                        match v {
+                            ExternalMessageFrame::Targetted { address, contents } => {
+                                assert_eq!(address, rollup_address);
+                                let op = SignedOperation::decode(contents).unwrap();
+                                match op.content() {
+                                    Content::RunFunction(RunFunction {
+                                        uri,
+                                        method,
+                                        headers: _,
+                                        body,
+                                        gas_limit: _,
+                                    }) => {
+                                        assert_eq!(
+                                            uri.to_string(),
+                                            "jstz://jstz/withdraw"
+                                        );
+                                        assert_eq!(method, Method::POST);
+                                        let withdrawal: Withdrawal =
+                                            serde_json::from_slice(
+                                                body.as_ref().unwrap(),
+                                            )
+                                            .unwrap();
+                                        assert_eq!(
+                                            &withdrawal.receiver,
+                                            &receiver.address
+                                        );
+                                        assert_eq!(withdrawal.amount, 10000);
+                                    }
+                                    _ => panic!("should be run function"),
+                                }
+                            }
+                        }
+                    }
+                    _ => panic!("should be external message"),
                 }
             }
             _ => panic!("should be raw message"),

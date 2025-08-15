@@ -12,7 +12,7 @@ use http::{HeaderMap, Method, Uri};
 #[cfg(feature = "v2_runtime")]
 use crate::runtime::v2::oracle::request::RequestId;
 
-use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
+use jstz_core::{host::HostRuntime, reveal_data::PreimageHash};
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
     signature::Signature,
@@ -53,15 +53,12 @@ impl Operation {
 
     /// Verify the nonce of the operation
     /// Returns the operation's
-    pub fn verify_nonce(
-        &self,
-        rt: &impl HostRuntime,
-        tx: &mut Transaction,
-    ) -> Result<()> {
-        let mut next_nonce = Account::nonce(rt, tx, &self.source())?;
+    pub fn verify_nonce(&self, rt: &mut impl HostRuntime) -> Result<()> {
+        let expected_nonce = Account::storage_get_nonce(rt, &self.source())?;
 
-        if self.nonce == *next_nonce {
-            next_nonce.increment();
+        if self.nonce == expected_nonce {
+            Account::storage_set_nonce(rt, &self.source(), expected_nonce.next())?;
+
             Ok(())
         } else {
             Err(Error::InvalidNonce)
@@ -493,19 +490,16 @@ mod test {
         assert_eq!(deploy_function, bin_decoded);
     }
 
-    fn mock_hrt_tx_with_nonces<'a>(
+    fn mock_hrt_with_nonces<'a>(
         nonces: impl IntoIterator<Item = &'a (PublicKeyHash, Nonce)>,
-    ) -> (JstzMockHost, Transaction) {
+    ) -> JstzMockHost {
         let mut hrt = JstzMockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
 
         for (address, nonce) in nonces {
-            let mut stored_nonce = Account::nonce(hrt.rt(), &mut tx, address).unwrap();
-            *stored_nonce = *nonce;
+            Account::storage_set_nonce(hrt.rt(), address, *nonce).unwrap();
         }
 
-        (hrt, tx)
+        hrt
     }
 
     fn dummy_operation(public_key: PublicKey, nonce: Nonce) -> Operation {
@@ -519,35 +513,34 @@ mod test {
     #[test]
     fn test_verify_nonce_checks_and_increments_nonce() {
         let nonce = Nonce(42);
-        let (mut hrt, mut tx) = mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), nonce)]);
+        let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), nonce)]);
 
         let operation = dummy_operation(jstz_mock::pk1(), nonce);
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_ok());
+        assert!(operation.verify_nonce(hrt.rt()).is_ok());
 
         let updated_nonce =
-            Account::nonce(hrt.rt(), &mut tx, &jstz_mock::pkh1()).unwrap();
-        assert_eq!(*updated_nonce, nonce.next());
+            Account::storage_get_nonce(hrt.rt(), &jstz_mock::pkh1()).unwrap();
+        assert_eq!(updated_nonce, nonce.next());
     }
 
     #[test]
     fn test_verify_nonce_incorrect() {
-        let (mut hrt, mut tx) =
-            mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), Nonce(1337))]);
+        let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), Nonce(1337))]);
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(42));
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_err());
+        assert!(operation.verify_nonce(hrt.rt()).is_err());
     }
 
     #[test]
     fn test_verify_nonce_prevents_replay() {
-        let (mut hrt, mut tx) = mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), Nonce(7))]);
+        let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), Nonce(7))]);
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(7));
 
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_ok());
+        assert!(operation.verify_nonce(hrt.rt()).is_ok());
 
         // Replaying the operation fails
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_err());
+        assert!(operation.verify_nonce(hrt.rt()).is_err());
     }
 
     #[test]
