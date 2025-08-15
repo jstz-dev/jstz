@@ -176,7 +176,7 @@ impl From<&PublicKeyHash> for tezos_crypto_rs::public_key_hash::PublicKeyHash {
 
 #[cfg(test)]
 mod test {
-    use crate::hash::Hash;
+    use crate::{hash::Hash, public_key_hash::Tz1};
     use std::str::FromStr;
 
     use tezos_crypto_rs::hash::{
@@ -283,8 +283,8 @@ mod test {
         )
         .unwrap();
         assert_eq!(
-            PublicKeyHash::try_from(&h).unwrap().to_string(),
-            h.to_b58check()
+            PublicKeyHash::try_from(&h).unwrap(),
+            PublicKeyHash::Tz1(Tz1(ContractTz1Hash::from_base58_check(TZ1).unwrap()))
         );
 
         let h = tezos_crypto_rs::public_key_hash::PublicKeyHash::from_b58check(
@@ -299,12 +299,26 @@ mod test {
 
     #[test]
     fn to_tezos_crypto_rs() {
-        for k in [TZ1, TZ2, TZ3] {
-            let h = PublicKeyHash::from_base58(k).unwrap();
-            assert_eq!(
-                tezos_crypto_rs::public_key_hash::PublicKeyHash::from(&h).to_b58check(),
-                h.to_base58()
-            );
-        }
+        let h = PublicKeyHash::from_base58(TZ1).unwrap();
+        assert_eq!(
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::from(&h),
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::Ed25519(
+                ContractTz1Hash::from_base58_check(TZ1).unwrap()
+            )
+        );
+        let h = PublicKeyHash::from_base58(TZ2).unwrap();
+        assert_eq!(
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::from(&h),
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::Secp256k1(
+                ContractTz2Hash::from_base58_check(TZ2).unwrap()
+            )
+        );
+        let h = PublicKeyHash::from_base58(TZ3).unwrap();
+        assert_eq!(
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::from(&h),
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::P256(
+                ContractTz3Hash::from_base58_check(TZ3).unwrap()
+            )
+        );
     }
 }
