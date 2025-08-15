@@ -50,6 +50,7 @@ mod test {
             },
             amount: 20,
             receiver: Address::User(receiver.clone()),
+            source: jstz_mock::account1(),
         };
         tx.begin();
         let receipt = execute(&mut host, &mut tx, deposit);
