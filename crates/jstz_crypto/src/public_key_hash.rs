@@ -299,11 +299,12 @@ mod test {
 
     #[test]
     fn to_tezos_crypto_rs() {
-        let h =
-            PublicKeyHash::from_base58("tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU").unwrap();
-        assert_eq!(
-            tezos_crypto_rs::public_key_hash::PublicKeyHash::from(&h).to_b58check(),
-            h.to_base58()
-        );
+        for k in [TZ1, TZ2, TZ3] {
+            let h = PublicKeyHash::from_base58(k).unwrap();
+            assert_eq!(
+                tezos_crypto_rs::public_key_hash::PublicKeyHash::from(&h).to_b58check(),
+                h.to_base58()
+            );
+        }
     }
 }
