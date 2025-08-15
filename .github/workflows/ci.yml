@@ -59,9 +59,10 @@ jobs:
         with:
           submodules: recursive
       - name: Build RISCV WPT kernel
-        run: make riscv-wpt-test-kernel
+        run: nix --accept-flake-config --log-format raw -L develop -j auto --command make riscv-wpt-test-kernel
       - name: Run
         run: |
+          nix --accept-flake-config --log-format raw -L develop -j auto --command sh -c '
           ln -s /usr/bin/python3.11 /usr/bin/python3
           cd crates/jstz_wpt/wpt && python3 wpt make-hosts-file >> /etc/hosts
           python3 wpt serve &
@@ -71,6 +72,7 @@ jobs:
           while read line; do
             echo "$line" >> $GITHUB_STEP_SUMMARY
           done < $(pwd)/out.txt
+          '
 
   build-docs:
     name: Build Documentation
