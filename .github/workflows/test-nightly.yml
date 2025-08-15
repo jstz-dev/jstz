@@ -36,10 +36,12 @@ jobs:
       image: rust:1.82-slim
     steps:
       - name: Setup
-        run: apt update && apt install -y git curl python3.11 pkg-config libssl-dev
+        run: apt update && apt install -y git curl python3.11 pkg-config libssl-dev make
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Build RISCV WPT kernel
+        run: make riscv-wpt-test-kernel
       - name: Run
         run: |
           ln -s /usr/bin/python3.11 /usr/bin/python3
