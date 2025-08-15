@@ -595,7 +595,7 @@ mod test {
             let messages = [
                 (
                     InternalOperation::Deposit(Deposit {
-                        inbox_id: inbox_id.clone(),
+                        inbox_id,
                         amount: 1,
                         receiver: receiver.clone(),
                         source: source.clone(),
@@ -604,7 +604,7 @@ mod test {
                 ),
                 (
                     InternalOperation::FaDeposit(FaDeposit {
-                        inbox_id: inbox_id.clone(),
+                        inbox_id,
                         amount: 1,
                         receiver: receiver.clone(),
                         proxy_smart_function: None,
@@ -615,7 +615,7 @@ mod test {
                 ),
                 (
                     InternalOperation::FaDeposit(FaDeposit {
-                        inbox_id: inbox_id.clone(),
+                        inbox_id,
                         amount: 1,
                         receiver: receiver.clone(),
                         proxy_smart_function: Some(
@@ -638,7 +638,7 @@ mod test {
                 assert_eq!(
                     super::parse_inbox_message(
                         &DummyLogger,
-                        inbox_id.clone(),
+                        inbox_id,
                         &encoded_msg,
                         &ticketer_addr,
                         rollup_addr.hash()
@@ -660,6 +660,10 @@ mod test {
                 .unwrap();
         let source =
             PublicKeyHash::from_base58("tz1QLLppfQ534PCDWvhY2BLPqkwYe9JxkP3H").unwrap();
+        let inbox_id = InboxId {
+            l1_level: 0,
+            l1_message_id: 0,
+        };
 
         let op = Operation {
             public_key: PublicKey::from_base58(
@@ -705,10 +709,7 @@ mod test {
             (
                 ParsedInboxMessage::JstzMessage(Message::Internal(
                     InternalOperation::Deposit(Deposit {
-                        inbox_id: InboxId {
-                        l1_level: 0,
-                        l1_message_id: 0
-                    },
+                        inbox_id,
                         amount: 1,
                         receiver: Address::from_base58(
                             "tz1ficxJFv7MUtsCimF8bmT9SYPDok52ySg6",
@@ -722,10 +723,7 @@ mod test {
             (
                 ParsedInboxMessage::JstzMessage(Message::Internal(
                     InternalOperation::FaDeposit(FaDeposit {
-                        inbox_id: InboxId {
-                        l1_level: 0,
-                        l1_message_id: 0
-                    },
+                        inbox_id,
                         amount: 1,
                         receiver: Address::from_base58(
                             "tz1ficxJFv7MUtsCimF8bmT9SYPDok52ySg6",
@@ -751,10 +749,7 @@ mod test {
             assert_eq!(
                 super::parse_inbox_message(
                     &DummyLogger,
-                    InboxId {
-                        l1_level: 0,
-                        l1_message_id: 0
-                    },
+                    inbox_id,
                     &encoded_msg,
                     &ticketer_addr,
                     rollup_addr.hash()
