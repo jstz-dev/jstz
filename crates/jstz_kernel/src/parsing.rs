@@ -21,6 +21,7 @@ pub fn try_parse_contract(contract: &Contract) -> Result<Address> {
 pub fn try_parse_fa_deposit(
     inbox_id: InboxId,
     ticket: FA2_1Ticket,
+    source: PublicKeyHash,
     receiver: MichelsonContract,
     proxy_contract: Option<MichelsonContract>,
 ) -> Result<FaDeposit> {
@@ -45,6 +46,7 @@ pub fn try_parse_fa_deposit(
     Ok(FaDeposit {
         inbox_id,
         amount,
+        source,
         receiver,
         proxy_smart_function,
         ticket_hash,
@@ -99,12 +101,20 @@ mod test {
             l1_message_id: 41717,
         };
         let ticket_hash = ticket.hash().unwrap();
+        let source = jstz_mock::account1();
 
-        let fa_deposit = try_parse_fa_deposit(inbox_id, ticket, receiver, proxy_contract)
-            .expect("Failed to parse michelson fa deposit");
+        let fa_deposit = try_parse_fa_deposit(
+            inbox_id,
+            ticket,
+            source.clone(),
+            receiver,
+            proxy_contract,
+        )
+        .expect("Failed to parse michelson fa deposit");
         let expected = FaDeposit {
             inbox_id,
             amount,
+            source,
             receiver: Address::User(jstz_mock::account1()),
             proxy_smart_function: Some(Address::SmartFunction(jstz_mock::sf_account1())),
             ticket_hash,
@@ -130,8 +140,10 @@ mod test {
             l1_level: 1,
             l1_message_id: 41717,
         };
+        let source = jstz_mock::account1();
 
-        let fa_deposit = try_parse_fa_deposit(inbox_id, ticket, receiver, proxy_contract);
+        let fa_deposit =
+            try_parse_fa_deposit(inbox_id, ticket, source, receiver, proxy_contract);
         assert!(fa_deposit
             .is_err_and(|e| { matches!(e, jstz_proto::Error::AddressTypeMismatch) }));
     }

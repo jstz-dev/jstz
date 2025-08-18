@@ -18,7 +18,7 @@ use tezos_smart_rollup::{
 use tezos_smart_rollup_mock::{MockHost, TransferMetadata};
 
 // L1 Ticketer contract
-pub const NATIVE_TICKETER: &str = "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5";
+pub const NATIVE_TICKETER: &str = "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ";
 // Large payload injector
 pub const INJECTOR: &str = "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav";
 // Account that initiated the deposit on L1

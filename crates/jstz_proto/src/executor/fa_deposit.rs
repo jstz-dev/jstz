@@ -195,6 +195,7 @@ mod test {
             receiver: Address::User(jstz_mock::account2()),
             proxy_smart_function: proxy.map(Address::SmartFunction),
             ticket_hash: jstz_mock::ticket_hash1(),
+            source: jstz_mock::account2(),
         }
     }
 

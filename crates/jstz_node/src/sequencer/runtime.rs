@@ -279,6 +279,7 @@ mod tests {
             },
             amount: 10,
             receiver,
+            source: jstz_mock::account1(),
         };
         let op_hash = deposit.hash();
         let deposit_op = Message::Internal(InternalOperation::Deposit(deposit));
@@ -346,6 +347,7 @@ mod tests {
                 l1_message_id: 1,
             },
             amount: 10,
+            source: jstz_mock::account1(),
             receiver,
             proxy_smart_function: None,
             ticket_hash: TicketHash::try_from(
