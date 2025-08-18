@@ -10,6 +10,7 @@ use jstz_proto::context::account::{Address, Addressable};
 use jstz_proto::runtime::ParsedCode;
 use jstz_proto::HttpBody;
 use serde::{Serialize, Serializer};
+use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_smart_rollup::types::SmartRollupAddress;
 use tezos_smart_rollup::utils::inbox::file::InboxFile;
 
@@ -56,7 +57,9 @@ fn generate_inbox(rollup_addr: &str, transfers: usize) -> Result<InboxFile> {
 
     let mut builder = InboxBuilder::new(
         rollup_addr,
-        None,
+        // ticketer does not matter as it is not used for now
+        ContractKt1Hash::from_base58_check("KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ")
+            .unwrap(),
         #[cfg(feature = "v2_runtime")]
         None,
     );

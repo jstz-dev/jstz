@@ -62,7 +62,7 @@ fn main() -> jstz_tps_bench::Result<()> {
         }
         None => None,
     };
-    let mut builder = InboxBuilder::new(rollup_addr, Some(ticketer_addr), oracle_signer);
+    let mut builder = InboxBuilder::new(rollup_addr, ticketer_addr, oracle_signer);
     let mut accounts = builder.create_accounts(2)?;
 
     builder.deposit_from_l1(&accounts[0], 1000000)?;

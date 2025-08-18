@@ -1,12 +1,16 @@
 use http::{HeaderMap, Method, Uri};
-use jstz_core::BinEncodable;
 use jstz_crypto::{
-    hash::Hash, keypair_from_mnemonic, public_key::PublicKey, secret_key::SecretKey,
+    hash::Hash, keypair_from_mnemonic, public_key::PublicKey,
+    public_key_hash::PublicKeyHash, secret_key::SecretKey,
     smart_function_hash::SmartFunctionHash,
 };
+use jstz_kernel::inbox::{encode_parsed_inbox_message, LevelInfo, ParsedInboxMessage};
 use jstz_proto::{
     context::account::{Address, Nonce},
-    operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
+    operation::{
+        internal::{Deposit, InboxId},
+        Content, DeployFunction, Operation, RunFunction, SignedOperation,
+    },
     runtime::ParsedCode,
     HttpBody,
 };
@@ -14,32 +18,15 @@ use jstz_proto::{
 use jstz_proto::{operation::OracleResponse, runtime::v2::fetch::http::Response};
 use std::error::Error;
 use tezos_crypto_rs::hash::ContractKt1Hash;
-use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::{
-    inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage, Transfer},
-    michelson::{
-        ticket::{FA2_1Ticket, Ticket},
-        Michelson, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
-        MichelsonPair, MichelsonUnit,
-    },
-    types::{Contract, PublicKeyHash, SmartRollupAddress},
+    types::SmartRollupAddress,
     utils::inbox::file::{InboxFile, Message},
 };
 pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
 
-// tag + 20 byte address
-const EXTERNAL_FRAME_SIZE: usize = 21;
 const DEFAULT_GAS_LIMIT: u32 = 100_000;
 const MNEMONIC: &str =
     "donate kidney style loyal nose core inflict cup symptom speed giant polar";
-// FIXME: JSTZ-854
-type DepositInboxMsgPayloadType = MichelsonOr<
-    MichelsonPair<MichelsonContract, FA2_1Ticket>,
-    MichelsonPair<
-        MichelsonContract,
-        MichelsonPair<MichelsonOption<MichelsonContract>, FA2_1Ticket>,
-    >,
->;
 
 pub struct Account {
     pub nonce: Nonce,
@@ -52,7 +39,7 @@ pub struct InboxBuilder {
     messages: Vec<Message>,
     rollup_address: SmartRollupAddress,
     next_account_id: usize,
-    ticketer_address: Option<ContractKt1Hash>,
+    ticketer_address: ContractKt1Hash,
     next_level: u64,
     #[cfg(feature = "v2_runtime")]
     next_oracle_request_id: u64,
@@ -63,7 +50,7 @@ pub struct InboxBuilder {
 impl InboxBuilder {
     pub fn new(
         rollup_address: SmartRollupAddress,
-        ticketer_address: Option<ContractKt1Hash>,
+        ticketer_address: ContractKt1Hash,
         #[cfg(feature = "v2_runtime")] oracle_signer: Option<Account>,
     ) -> Self {
         let mut builder = Self {
@@ -119,28 +106,13 @@ impl InboxBuilder {
         let hash = op.hash();
         let signed_op = SignedOperation::new(signer.sk.sign(hash)?, op);
 
-        let bytes = signed_op.encode()?;
-        let mut external = Vec::with_capacity(bytes.len() + EXTERNAL_FRAME_SIZE);
-
-        let frame = ExternalMessageFrame::Targetted {
-            contents: bytes,
-            address: self.rollup_address.clone(),
-        };
-        frame.bin_write(&mut external)?;
-
-        let inbox_message = InboxMessage::External::<MichelsonUnit>(&external);
-        let mut bytes = Vec::new();
-        inbox_message.serialize(&mut bytes)?;
-        Ok(Message::Raw(bytes))
-    }
-
-    fn generate_internal_messge<T: Michelson>(
-        &self,
-        m: InternalInboxMessage<T>,
-    ) -> Result<Message> {
-        let msg = InboxMessage::Internal(m);
-        let mut bytes = Vec::new();
-        msg.serialize(&mut bytes)?;
+        let bytes = encode_parsed_inbox_message(
+            &ParsedInboxMessage::JstzMessage(jstz_kernel::inbox::Message::External(
+                signed_op,
+            )),
+            &self.ticketer_address,
+            &self.rollup_address,
+        )?;
         Ok(Message::Raw(bytes))
     }
 
@@ -190,49 +162,32 @@ impl InboxBuilder {
         Ok(())
     }
 
-    fn deposit_payload(
-        ticketer: &ContractKt1Hash,
-        account: &Account,
-        amount_mutez: u64,
-    ) -> DepositInboxMsgPayloadType {
-        MichelsonOr::Left(MichelsonPair(
-            MichelsonContract(Contract::Implicit(
-                PublicKeyHash::from_b58check(&account.address.to_string())
-                    .expect("serialised address should be parsable"),
-            )),
-            Ticket::new(
-                Contract::Originated(ticketer.clone()),
-                MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
-                amount_mutez,
-            )
-            .expect("ticket creation from ticketer should work"),
-        ))
-    }
-
     pub fn deposit_from_l1(
         &mut self,
         account: &Account,
         amount_mutez: u64,
     ) -> Result<()> {
-        match &self.ticketer_address {
-            Some(ticketer) => {
-                let message = self.generate_internal_messge(
-                    InternalInboxMessage::Transfer(Transfer {
-                        sender: ticketer.clone(),
-                        // any user address is okay here since L1 is not really involved
-                        source: PublicKeyHash::from_b58check(
-                            "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
-                        )
-                        .expect("the constant source address should be parsable"),
-                        destination: self.rollup_address.clone(),
-                        payload: Self::deposit_payload(ticketer, account, amount_mutez),
-                    }),
-                )?;
-                self.messages.push(message);
-                Ok(())
-            }
-            None => Err("ticketer address is not provided".into()),
-        }
+        let bytes = encode_parsed_inbox_message(
+            &ParsedInboxMessage::JstzMessage(jstz_kernel::inbox::Message::Internal(
+                jstz_proto::operation::InternalOperation::Deposit(Deposit {
+                    inbox_id: InboxId {
+                        l1_level: (self.next_level - 1) as u32,
+                        // message id does not matter for now
+                        l1_message_id: 0,
+                    },
+                    amount: amount_mutez,
+                    receiver: account.address.clone(),
+                    source: PublicKeyHash::from_base58(
+                        "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
+                    )
+                    .expect("the constant source address should be parsable"),
+                }),
+            )),
+            &self.ticketer_address,
+            &self.rollup_address,
+        )?;
+        self.messages.push(Message::Raw(bytes));
+        Ok(())
     }
 
     pub fn withdraw(
@@ -283,14 +238,18 @@ impl InboxBuilder {
 
     pub fn bump_level(&mut self) -> Result<()> {
         if self.next_level > 0 {
-            self.messages.push(self.generate_internal_messge(
-                InternalInboxMessage::<MichelsonUnit>::EndOfLevel,
-            )?);
+            self.messages.push(Message::Raw(encode_parsed_inbox_message(
+                &ParsedInboxMessage::LevelInfo(LevelInfo::End),
+                &self.ticketer_address,
+                &self.rollup_address,
+            )?));
         }
 
-        self.messages.push(self.generate_internal_messge(
-            InternalInboxMessage::<MichelsonUnit>::StartOfLevel,
-        )?);
+        self.messages.push(Message::Raw(encode_parsed_inbox_message(
+            &ParsedInboxMessage::LevelInfo(LevelInfo::Start),
+            &self.ticketer_address,
+            &self.rollup_address,
+        )?));
         self.next_level += 1;
         Ok(())
     }
@@ -303,6 +262,7 @@ mod tests {
     use http::{HeaderMap, Method, Uri};
     use jstz_core::BinEncodable;
     use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+    use jstz_kernel::inbox::RollupType;
     use jstz_proto::{
         context::account::{Address, Nonce},
         executor::withdraw::Withdrawal,
@@ -318,7 +278,7 @@ mod tests {
         utils::inbox::file::Message,
     };
 
-    use super::{DepositInboxMsgPayloadType, InboxBuilder};
+    use super::InboxBuilder;
 
     fn default_account() -> super::Account {
         super::Account {
@@ -336,6 +296,11 @@ mod tests {
         }
     }
 
+    fn ticketer() -> ContractKt1Hash {
+        ContractKt1Hash::from_base58_check("KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5")
+            .unwrap()
+    }
+
     #[test]
     fn create_accounts() {
         let rollup_address =
@@ -343,7 +308,7 @@ mod tests {
                 .unwrap();
         let mut builder = InboxBuilder::new(
             rollup_address,
-            None,
+            ticketer(),
             #[cfg(feature = "v2_runtime")]
             None,
         );
@@ -365,7 +330,7 @@ mod tests {
                 .unwrap();
         let mut builder = InboxBuilder::new(
             rollup_address.clone(),
-            None,
+            ticketer(),
             #[cfg(feature = "v2_runtime")]
             None,
         );
@@ -407,7 +372,7 @@ mod tests {
                 .unwrap();
         let mut builder = InboxBuilder::new(
             rollup_address.clone(),
-            None,
+            ticketer(),
             #[cfg(feature = "v2_runtime")]
             None,
         );
@@ -448,7 +413,7 @@ mod tests {
                 .unwrap();
         let builder = InboxBuilder::new(
             rollup_address.clone(),
-            None,
+            ticketer(),
             #[cfg(feature = "v2_runtime")]
             None,
         );
@@ -478,74 +443,27 @@ mod tests {
     }
 
     #[test]
-    fn generate_internal_messge() {
-        let rollup_address =
-            SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
-                .unwrap();
-        let builder = InboxBuilder::new(
-            rollup_address.clone(),
-            None,
-            #[cfg(feature = "v2_runtime")]
-            None,
-        );
-        let message = builder
-            .generate_internal_messge(InternalInboxMessage::<MichelsonUnit>::StartOfLevel)
-            .unwrap();
-        match message {
-            Message::Raw(raw) => {
-                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
-                match inbox_msg {
-                    InboxMessage::Internal(m) => {
-                        matches!(m, InternalInboxMessage::StartOfLevel);
-                    }
-                    _ => panic!("should be external message"),
-                }
-            }
-            _ => panic!("should be raw message"),
-        }
-    }
-
-    #[test]
     fn deposit_from_l1() {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
         let mut builder = InboxBuilder::new(
             rollup_address.clone(),
-            None,
+            ticketer(),
             #[cfg(feature = "v2_runtime")]
             None,
         );
         let account = builder.create_accounts(1).unwrap().pop().unwrap();
-        assert_eq!(
-            builder
-                .deposit_from_l1(&account, 1)
-                .unwrap_err()
-                .to_string(),
-            "ticketer address is not provided"
-        );
 
-        let mut builder = InboxBuilder::new(
-            rollup_address.clone(),
-            Some(
-                ContractKt1Hash::from_base58_check(
-                    "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5",
-                )
-                .unwrap(),
-            ),
-            #[cfg(feature = "v2_runtime")]
-            None,
-        );
         builder.deposit_from_l1(&account, 1).unwrap();
         assert_eq!(builder.messages.len(), 2);
         match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
-                let (_, inbox_msg) =
-                    InboxMessage::<DepositInboxMsgPayloadType>::parse(&raw).unwrap();
+                let (_, inbox_msg) = InboxMessage::<RollupType>::parse(&raw).unwrap();
                 match inbox_msg {
                     InboxMessage::Internal(InternalInboxMessage::Transfer(transfer)) => {
                         assert_eq!(transfer.destination, builder.rollup_address);
-                        assert_eq!(transfer.sender, builder.ticketer_address.unwrap());
+                        assert_eq!(transfer.sender, builder.ticketer_address);
                         assert!(matches!(transfer.payload, MichelsonOr::Left(_)));
                     }
                     _ => panic!("should be internal message"),
@@ -562,7 +480,7 @@ mod tests {
                 .unwrap();
         let mut builder = InboxBuilder::new(
             rollup_address.clone(),
-            None,
+            ticketer(),
             #[cfg(feature = "v2_runtime")]
             None,
         );
@@ -633,7 +551,7 @@ mod tests {
             headers: vec![],
             body: Body::zero_capacity(),
         };
-        let mut builder = InboxBuilder::new(rollup_address.clone(), None, None);
+        let mut builder = InboxBuilder::new(rollup_address.clone(), ticketer(), None);
         assert_eq!(
             builder
                 .create_oracle_response(response.clone())
@@ -642,8 +560,11 @@ mod tests {
             "cannot build oracle response: oracle signer is not provided"
         );
 
-        let mut builder =
-            InboxBuilder::new(rollup_address.clone(), None, Some(default_account()));
+        let mut builder = InboxBuilder::new(
+            rollup_address.clone(),
+            ticketer(),
+            Some(default_account()),
+        );
         builder.create_oracle_response(response).unwrap();
         assert_eq!(builder.messages.len(), 2);
         match builder.messages.pop().unwrap() {
@@ -681,12 +602,7 @@ mod tests {
                 .unwrap();
         let mut builder = InboxBuilder::new(
             rollup_address,
-            Some(
-                ContractKt1Hash::from_base58_check(
-                    "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5",
-                )
-                .unwrap(),
-            ),
+            ticketer(),
             #[cfg(feature = "v2_runtime")]
             None,
         );
