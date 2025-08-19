@@ -4,6 +4,7 @@ use anyhow::Result;
 use futures_util::StreamExt;
 use jstz_proto::runtime::v2::oracle::OracleRequest;
 use jstz_utils::event_stream::EventStream;
+use jstz_utils::test_util::append_async;
 use tokio::sync::broadcast;
 use tokio::task::AbortHandle;
 
@@ -78,15 +79,6 @@ mod tests {
         io::AsyncWriteExt,
         time::{sleep, timeout},
     };
-
-    async fn append_async(path: PathBuf, line: String, delay_ms: u64) -> Result<()> {
-        sleep(Duration::from_millis(delay_ms)).await;
-        let mut file = OpenOptions::new().append(true).open(&path).await?;
-        file.write_all(line.as_bytes()).await?;
-        file.write_all(b"\n").await?;
-        file.sync_all().await?;
-        Ok(())
-    }
 
     async fn next_event(
         rx: &mut broadcast::Receiver<OracleRequest>,
