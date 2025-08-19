@@ -240,7 +240,7 @@ The Jstz dev wallet supports only the Chrome web browser.
 1. Go into the repository, install the dependencies, and build the wallet:
 
    ```bash
-   cd dev-wallet && pnpm i && pnpm build
+   cd dev-wallet && git submodule update --init && pnpm i && pnpm build
    ```
 
 1. In Chrome, open the extensions page at `chrome://extensions`.

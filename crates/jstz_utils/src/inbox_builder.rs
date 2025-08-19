@@ -10,6 +10,8 @@ use jstz_proto::{
     runtime::ParsedCode,
     HttpBody,
 };
+#[cfg(feature = "v2_runtime")]
+use jstz_proto::{operation::OracleResponse, runtime::v2::fetch::http::Response};
 use std::error::Error;
 use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_data_encoding::enc::BinWriter;
@@ -40,9 +42,9 @@ type DepositInboxMsgPayloadType = MichelsonOr<
 >;
 
 pub struct Account {
-    nonce: Nonce,
-    sk: SecretKey,
-    pk: PublicKey,
+    pub nonce: Nonce,
+    pub sk: SecretKey,
+    pub pk: PublicKey,
     pub address: Address,
 }
 
@@ -51,19 +53,32 @@ pub struct InboxBuilder {
     rollup_address: SmartRollupAddress,
     next_account_id: usize,
     ticketer_address: Option<ContractKt1Hash>,
+    next_level: u64,
+    #[cfg(feature = "v2_runtime")]
+    next_oracle_request_id: u64,
+    #[cfg(feature = "v2_runtime")]
+    oracle_signer: Option<Account>,
 }
 
 impl InboxBuilder {
     pub fn new(
         rollup_address: SmartRollupAddress,
         ticketer_address: Option<ContractKt1Hash>,
+        #[cfg(feature = "v2_runtime")] oracle_signer: Option<Account>,
     ) -> Self {
-        Self {
+        let mut builder = Self {
             rollup_address,
             messages: Vec::new(),
             next_account_id: 0,
             ticketer_address,
-        }
+            next_level: 0,
+            #[cfg(feature = "v2_runtime")]
+            next_oracle_request_id: 0,
+            #[cfg(feature = "v2_runtime")]
+            oracle_signer,
+        };
+        builder.bump_level().expect("should set up level 0");
+        builder
     }
 
     pub fn build(self) -> InboxFile {
@@ -240,6 +255,45 @@ impl InboxBuilder {
             HttpBody(Some(json_data)),
         )
     }
+
+    #[cfg(feature = "v2_runtime")]
+    pub fn create_oracle_response(&mut self, response: Response) -> Result<()> {
+        if self.oracle_signer.is_none() {
+            return Err(
+                "cannot build oracle response: oracle signer is not provided".into(),
+            );
+        }
+
+        let signer = self.oracle_signer.as_ref().unwrap();
+        let oracle_response = OracleResponse {
+            request_id: self.next_oracle_request_id,
+            response,
+        };
+        let message = self.generate_external_message(
+            signer,
+            Content::OracleResponse(oracle_response),
+        )?;
+        self.messages.push(message);
+
+        let signer = self.oracle_signer.as_mut().unwrap();
+        signer.nonce = signer.nonce.next();
+        self.next_oracle_request_id += 1;
+        Ok(())
+    }
+
+    pub fn bump_level(&mut self) -> Result<()> {
+        if self.next_level > 0 {
+            self.messages.push(self.generate_internal_messge(
+                InternalInboxMessage::<MichelsonUnit>::EndOfLevel,
+            )?);
+        }
+
+        self.messages.push(self.generate_internal_messge(
+            InternalInboxMessage::<MichelsonUnit>::StartOfLevel,
+        )?);
+        self.next_level += 1;
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -287,7 +341,12 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let mut builder = InboxBuilder::new(rollup_address, None);
+        let mut builder = InboxBuilder::new(
+            rollup_address,
+            None,
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
         let accounts = builder.create_accounts(10).unwrap();
         let mut addresses = accounts.iter().map(|v| v.pk.hash()).collect::<HashSet<_>>();
         assert_eq!(addresses.len(), 10);
@@ -304,7 +363,12 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let mut builder = InboxBuilder::new(rollup_address.clone(), None);
+        let mut builder = InboxBuilder::new(
+            rollup_address.clone(),
+            None,
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
         builder
             .run_function(
                 &mut default_account(),
@@ -314,10 +378,10 @@ mod tests {
                 HttpBody::empty(),
             )
             .unwrap();
-        assert_eq!(builder.messages.len(), 1);
-        match builder.messages.first().unwrap() {
+        assert_eq!(builder.messages.len(), 2);
+        match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
-                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(raw).unwrap();
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
                 match inbox_msg {
                     InboxMessage::External(b) => {
                         let v = ExternalMessageFrame::parse(b).unwrap();
@@ -341,14 +405,19 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let mut builder = InboxBuilder::new(rollup_address.clone(), None);
+        let mut builder = InboxBuilder::new(
+            rollup_address.clone(),
+            None,
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
         builder
             .deploy_function(&mut default_account(), ParsedCode("code".to_string()), 123)
             .unwrap();
-        assert_eq!(builder.messages.len(), 1);
-        match builder.messages.first().unwrap() {
+        assert_eq!(builder.messages.len(), 2);
+        match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
-                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(raw).unwrap();
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
                 match inbox_msg {
                     InboxMessage::External(b) => {
                         let v = ExternalMessageFrame::parse(b).unwrap();
@@ -377,7 +446,12 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let builder = InboxBuilder::new(rollup_address.clone(), None);
+        let builder = InboxBuilder::new(
+            rollup_address.clone(),
+            None,
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
         let message = builder
             .generate_external_message(&default_account(), content.clone())
             .unwrap();
@@ -408,7 +482,12 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let builder = InboxBuilder::new(rollup_address.clone(), None);
+        let builder = InboxBuilder::new(
+            rollup_address.clone(),
+            None,
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
         let message = builder
             .generate_internal_messge(InternalInboxMessage::<MichelsonUnit>::StartOfLevel)
             .unwrap();
@@ -431,7 +510,12 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let mut builder = InboxBuilder::new(rollup_address.clone(), None);
+        let mut builder = InboxBuilder::new(
+            rollup_address.clone(),
+            None,
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
         let account = builder.create_accounts(1).unwrap().pop().unwrap();
         assert_eq!(
             builder
@@ -449,9 +533,11 @@ mod tests {
                 )
                 .unwrap(),
             ),
+            #[cfg(feature = "v2_runtime")]
+            None,
         );
         builder.deposit_from_l1(&account, 1).unwrap();
-        assert_eq!(builder.messages.len(), 1);
+        assert_eq!(builder.messages.len(), 2);
         match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
                 let (_, inbox_msg) =
@@ -474,14 +560,19 @@ mod tests {
         let rollup_address =
             SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
-        let mut builder = InboxBuilder::new(rollup_address.clone(), None);
+        let mut builder = InboxBuilder::new(
+            rollup_address.clone(),
+            None,
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
         let mut accounts = builder.create_accounts(2).unwrap();
         let mut account = accounts.pop().unwrap();
         let receiver = accounts.pop().unwrap();
         builder
             .withdraw(&mut account, &receiver.address, 10000)
             .unwrap();
-        assert_eq!(builder.messages.len(), 1);
+        assert_eq!(builder.messages.len(), 2);
         match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
                 let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
@@ -523,6 +614,116 @@ mod tests {
                     }
                     _ => panic!("should be external message"),
                 }
+            }
+            _ => panic!("should be raw message"),
+        }
+    }
+
+    #[cfg(feature = "v2_runtime")]
+    #[test]
+    fn create_oracle_response() {
+        use jstz_proto::runtime::v2::fetch::http::{Body, Response};
+
+        let rollup_address =
+            SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
+        let response = Response {
+            status: 400,
+            status_text: "foobar".to_string(),
+            headers: vec![],
+            body: Body::zero_capacity(),
+        };
+        let mut builder = InboxBuilder::new(rollup_address.clone(), None, None);
+        assert_eq!(
+            builder
+                .create_oracle_response(response.clone())
+                .unwrap_err()
+                .to_string(),
+            "cannot build oracle response: oracle signer is not provided"
+        );
+
+        let mut builder =
+            InboxBuilder::new(rollup_address.clone(), None, Some(default_account()));
+        builder.create_oracle_response(response).unwrap();
+        assert_eq!(builder.messages.len(), 2);
+        match builder.messages.pop().unwrap() {
+            Message::Raw(raw) => {
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
+                match inbox_msg {
+                    InboxMessage::External(b) => {
+                        let v = ExternalMessageFrame::parse(b).unwrap();
+                        match v {
+                            ExternalMessageFrame::Targetted { address, contents } => {
+                                assert_eq!(address, rollup_address);
+                                let op = SignedOperation::decode(contents).unwrap();
+                                match op.content() {
+                                    Content::OracleResponse(res) => {
+                                        assert_eq!(res.request_id, 0);
+                                        assert_eq!(res.response.status_text, "foobar");
+                                        assert_eq!(res.response.status, 400);
+                                    }
+                                    _ => panic!("should be oracle response"),
+                                };
+                            }
+                        }
+                    }
+                    _ => panic!("should be external message"),
+                }
+            }
+            _ => panic!("should be raw message"),
+        }
+    }
+
+    #[test]
+    fn bump_level() {
+        let rollup_address =
+            SmartRollupAddress::from_b58check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
+                .unwrap();
+        let mut builder = InboxBuilder::new(
+            rollup_address,
+            Some(
+                ContractKt1Hash::from_base58_check(
+                    "KT1TxqZ8QtKvLu3V3JH7Gx58n7Co8pgtpQU5",
+                )
+                .unwrap(),
+            ),
+            #[cfg(feature = "v2_runtime")]
+            None,
+        );
+        // 1 message: start of level 0
+        assert_eq!(builder.messages.len(), 1);
+        match builder.messages.pop().unwrap() {
+            Message::Raw(raw) => {
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
+                matches!(
+                    inbox_msg,
+                    InboxMessage::Internal(InternalInboxMessage::StartOfLevel)
+                );
+            }
+            _ => panic!("should be raw message"),
+        }
+
+        // there should be one end of level message for level 0 and
+        // one start of level message for level 1
+        builder.bump_level().unwrap();
+        assert_eq!(builder.messages.len(), 2);
+        match builder.messages.first().unwrap() {
+            Message::Raw(raw) => {
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(raw).unwrap();
+                matches!(
+                    inbox_msg,
+                    InboxMessage::Internal(InternalInboxMessage::EndOfLevel)
+                );
+            }
+            _ => panic!("should be raw message"),
+        }
+        match builder.messages.last().unwrap() {
+            Message::Raw(raw) => {
+                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(raw).unwrap();
+                matches!(
+                    inbox_msg,
+                    InboxMessage::Internal(InternalInboxMessage::StartOfLevel)
+                );
             }
             _ => panic!("should be raw message"),
         }

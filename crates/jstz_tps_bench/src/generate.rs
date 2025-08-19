@@ -54,7 +54,12 @@ fn generate_inbox(rollup_addr: &str, transfers: usize) -> Result<InboxFile> {
         return Err("--transfers must be greater than zero".into());
     }
 
-    let mut builder = InboxBuilder::new(rollup_addr, None);
+    let mut builder = InboxBuilder::new(
+        rollup_addr,
+        None,
+        #[cfg(feature = "v2_runtime")]
+        None,
+    );
     let mut accounts = builder.create_accounts(accounts)?;
 
     let code: ParsedCode = FA2.to_string().try_into()?;
