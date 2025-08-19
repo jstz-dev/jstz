@@ -296,7 +296,10 @@ fn encode_internal_message(
                     receiver,
                     Ticket::new(
                         Contract::Originated(ticketer_addr.clone()),
-                        MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                        MichelsonPair(
+                            MichelsonNat::from(NATIVE_TICKET_ID),
+                            NATIVE_TICKET_CONTENT,
+                        ),
                         d.amount,
                     )?,
                 )),
@@ -314,7 +317,10 @@ fn encode_internal_message(
                         proxy_function,
                         Ticket::new(
                             Contract::Originated(ticketer_addr.clone()),
-                            MichelsonPair(MichelsonNat::from(0), MichelsonOption(None)),
+                            MichelsonPair(
+                                MichelsonNat::from(NATIVE_TICKET_ID),
+                                NATIVE_TICKET_CONTENT,
+                            ),
                             d.amount,
                         )?,
                     ),
