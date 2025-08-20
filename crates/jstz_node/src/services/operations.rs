@@ -270,7 +270,6 @@ async fn handle_inbox_message(
 ) -> ServiceResult<Vec<ParsedInboxMessage>> {
     use crate::sequencer::inbox::{api::BlockResponse, parse_inbox_messages};
     use crate::sequencer::queue::ParsedInboxMessage;
-    use jstz_kernel::inbox::{InboxMessage, RollupType};
     use tezos_smart_rollup::types::SmartRollupAddress;
 
     let mut parsed_messages = vec![];
@@ -291,25 +290,17 @@ async fn handle_inbox_message(
             } => {
                 let message = match message {
                     InnerParsedMessage::JstzMessage(Message::External(m)) => {
-                        let (op, encoded_op) =
+                        use jstz_kernel::inbox::encode_signed_operation;
+
+                        let (op, _) =
                             encode_operation(m, &injector, &store, &rollup_preimages_dir)
                                 .await?;
 
-                        // TODO: replace this with the helper function that converts operations to
-                        // inbox messages
-                        let mut external = Vec::new();
-                        let frame = ExternalMessageFrame::Targetted {
-                            contents: encoded_op,
-                            address: SmartRollupAddress::new(jstz_rollup_address.clone()),
-                        };
-                        frame
-                            .bin_write(&mut external)
-                            .context("failed to encode operation")?;
-                        let message = InboxMessage::External::<RollupType>(&external);
-                        let mut buf = Vec::new();
-                        message
-                            .serialize(&mut buf)
-                            .context("failed to encode operation")?;
+                        let buf = encode_signed_operation(
+                            &op,
+                            &SmartRollupAddress::new(jstz_rollup_address.clone()),
+                        )
+                        .map_err(|e| ServiceError::FromAnyhow(anyhow::anyhow!("{e}")))?;
 
                         ParsedInboxMessage::FromInbox {
                             message: InnerParsedMessage::JstzMessage(Message::External(
