@@ -1,6 +1,26 @@
 use std::collections::VecDeque;
 
-use jstz_kernel::inbox::ParsedInboxMessage;
+use jstz_kernel::inbox::ParsedInboxMessage as InnerParsedMessage;
+
+/// A wrapper for the actual parsed inbox messages. The original inbox message is attached for
+/// messages coming from the rollup inbox.
+#[derive(Clone)]
+pub enum ParsedInboxMessage {
+    FromInbox {
+        message: InnerParsedMessage,
+        original_inbox_message: String,
+    },
+    FromNode(InnerParsedMessage),
+}
+
+impl ParsedInboxMessage {
+    pub fn message(self) -> InnerParsedMessage {
+        match self {
+            ParsedInboxMessage::FromInbox { message, .. } => message,
+            ParsedInboxMessage::FromNode(v) => v,
+        }
+    }
+}
 
 pub struct OperationQueue {
     capacity: usize,
@@ -51,7 +71,10 @@ impl OperationQueue {
 #[cfg(test)]
 mod tests {
     use super::OperationQueue;
-    use crate::sequencer::tests::dummy_op;
+    use crate::sequencer::{
+        queue::ParsedInboxMessage,
+        tests::{dummy_op, dummy_signed_op},
+    };
 
     #[test]
     fn new_queue() {
@@ -97,5 +120,34 @@ mod tests {
         assert!(q.pop().is_none());
         q.insert(dummy_op()).unwrap();
         assert!(q.pop().is_some());
+    }
+
+    #[test]
+    fn parsed_inbox_message() {
+        let message = ParsedInboxMessage::FromInbox {
+            message: jstz_kernel::inbox::ParsedInboxMessage::LevelInfo(
+                jstz_kernel::inbox::LevelInfo::End,
+            ),
+            original_inbox_message: "0002".to_string(),
+        };
+        assert_eq!(
+            message.message(),
+            jstz_kernel::inbox::ParsedInboxMessage::LevelInfo(
+                jstz_kernel::inbox::LevelInfo::End,
+            )
+        );
+
+        let inner = dummy_signed_op();
+        let message = ParsedInboxMessage::FromNode(
+            jstz_kernel::inbox::ParsedInboxMessage::JstzMessage(
+                jstz_kernel::inbox::Message::External(inner.clone()),
+            ),
+        );
+        assert_eq!(
+            message.message(),
+            jstz_kernel::inbox::ParsedInboxMessage::JstzMessage(
+                jstz_kernel::inbox::Message::External(inner),
+            )
+        );
     }
 }
