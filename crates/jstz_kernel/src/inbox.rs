@@ -1,6 +1,8 @@
 use std::error::Error;
 
 use jstz_core::{host::WriteDebug, BinEncodable};
+use jstz_crypto::hash::Hash;
+use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_proto::context::account::Address;
 use jstz_proto::operation::{
     internal::{Deposit, InboxId},
@@ -199,7 +201,7 @@ fn read_transfer(
     inbox_id: InboxId,
 ) -> Option<Message> {
     logger.write_debug("Internal message: transfer\n");
-    let source = match (&transfer.source).try_into() {
+    let source = match PublicKeyHash::from_base58(&transfer.source.to_b58check()) {
         Ok(addr) => addr,
         Err(e) => {
             logger.write_debug(&format!("Failed to parse transfer source: {e:?}\n"));

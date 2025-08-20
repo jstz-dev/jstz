@@ -270,6 +270,7 @@ async fn handle_inbox_message(
 ) -> ServiceResult<Vec<ParsedInboxMessage>> {
     use crate::sequencer::inbox::{api::BlockResponse, parse_inbox_messages};
     use crate::sequencer::queue::ParsedInboxMessage;
+    use jstz_kernel::inbox::encode_signed_operation;
     use tezos_smart_rollup::types::SmartRollupAddress;
 
     let mut parsed_messages = vec![];
@@ -290,8 +291,6 @@ async fn handle_inbox_message(
             } => {
                 let message = match message {
                     InnerParsedMessage::JstzMessage(Message::External(m)) => {
-                        use jstz_kernel::inbox::encode_signed_operation;
-
                         let (op, _) =
                             encode_operation(m, &injector, &store, &rollup_preimages_dir)
                                 .await?;
