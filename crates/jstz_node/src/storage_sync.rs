@@ -1,21 +1,40 @@
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 use std::thread;
 use std::{path::PathBuf, time::Duration};
 
 use crate::sequencer::{self, db::Db};
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 use futures_util::StreamExt;
 use jstz_core::kv::storage_update::{BatchStorageUpdate, StorageUpdate};
 use jstz_utils::event_stream::EventStream;
 use jstz_utils::retry::{exponential_backoff, retry_async};
 use log::{error, warn};
-use tokio::sync::oneshot::{self, Sender};
+use tokio::sync::oneshot::{self, Receiver, Sender};
 
+/// A handle to a long-running background worker that consumes an event stream and
+/// applies storage updates to the database.
+///
+/// When this handle is dropped, it sends a shutdown signal to the worker and waits for the thread to terminate.  
+/// Awaiting the handle resolves only if the worker dies on its own (e.g. DB error, stream failure).  
+/// It is not a way to shut the worker down.
+///
 pub struct StorageSync {
-    kill_sig: Option<Sender<()>>,
-    handle: Option<thread::JoinHandle<()>>,
+    inner: Option<thread::JoinHandle<()>>,
+    kill_tx: Option<Sender<()>>,
+    death_rx: Receiver<()>,
 }
 
-/// Spawns a new storage sync thread.
+impl Future for StorageSync {
+    type Output = ();
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = Pin::new(&mut self.get_mut().death_rx);
+        this.poll(cx).map(|_| ())
+    }
+}
+
+/// Spawns a new storage sync worker.
 /// The thread will read the event stream file and apply the storage updates to the database.
 ///
 /// # Arguments
@@ -27,13 +46,17 @@ pub fn spawn(
     log_path: PathBuf,
     #[cfg(test)] on_kill: impl FnOnce() + Send + 'static,
 ) -> Result<StorageSync> {
-    let (kill_sig, mut rx) = oneshot::channel();
+    let (kill_tx, mut kill_rx) = oneshot::channel();
+    let (death_tx, death_rx) = oneshot::channel();
     let tokio_rt = tokio::runtime::Builder::new_current_thread()
         .enable_time()
         .build()
         .context("failed to build tokio runtime")?;
 
     let handle = thread::spawn(move || {
+        let _notify_death = scopeguard::guard(death_tx, |tx| {
+            let _ = tx.send(());
+        });
         tokio_rt.block_on(async move {
                 let mut stream =
                     match EventStream::<BatchStorageUpdate>::from_file(log_path).await {
@@ -43,10 +66,9 @@ pub fn spawn(
                             return;
                         }
                     };
-
                     loop {
                         tokio::select! {
-                            _ = &mut rx => {
+                            _ = &mut kill_rx => {
                                 #[cfg(test)]
                                 on_kill();
                                 break;
@@ -55,16 +77,16 @@ pub fn spawn(
                                 match next_item {
                                     Some(Ok(updates)) => {
                                         if let Err(e) = apply_batch_tx_with_retry(&db, updates).await {
-                                            error!("storage_sync: db error, aborting: {e}");
+                                            error!("db error, aborting: {e}");
                                             break;
                                         }
                                     }
                                     Some(Err(e)) => {
-                                        error!("storage_sync: event stream error, aborting: {e}");
+                                        error!("event stream error, aborting: {e}");
                                         break;
                                     }
                                     None => {
-                                        warn!("storage_sync: stream ended, aborting");
+                                        warn!("stream ended, aborting");
                                         break;
                                     }
                                 }
@@ -74,18 +96,28 @@ pub fn spawn(
             });
     });
     Ok(StorageSync {
-        kill_sig: Some(kill_sig),
-        handle: Some(handle),
+        kill_tx: Some(kill_tx),
+        death_rx,
+        inner: Some(handle),
     })
 }
 
 impl Drop for StorageSync {
     fn drop(&mut self) {
-        if let Some(kill_sig) = self.kill_sig.take() {
+        if let Some(kill_sig) = self.kill_tx.take() {
             let _ = kill_sig.send(());
         }
-        if let Some(handle) = self.handle.take() {
+        if let Some(handle) = self.inner.take() {
             let _ = handle.join();
+        }
+    }
+}
+
+#[cfg(test)]
+impl StorageSync {
+    pub fn kill(&mut self) {
+        if let Some(kill_sig) = self.kill_tx.take() {
+            let _ = kill_sig.send(());
         }
     }
 }
@@ -125,7 +157,7 @@ fn apply_batch_tx(db: &Db, updates: BatchStorageUpdate) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::temp_db;
     use anyhow::Result;
@@ -164,7 +196,7 @@ mod tests {
         event
     }
 
-    fn make_line<T: Event + Serialize>(event: &T) -> String {
+    pub(crate) fn make_line<T: Event + Serialize>(event: &T) -> String {
         format!("[{}] {}", T::tag(), serde_json::to_string(event).unwrap())
     }
 
@@ -315,5 +347,23 @@ mod tests {
         // Drop the storage_sync to trigger shutdown
         drop(storage_sync);
         assert_eq!(*v.lock().unwrap(), 1);
+    }
+
+    #[tokio::test]
+    async fn await_resolves_when_worker_exits() -> Result<()> {
+        let tmp = NamedTempFile::new()?;
+        let file_path = tmp.path().to_path_buf();
+        let (db, _db_file) = temp_db().unwrap();
+        let storage_sync = spawn(db.clone(), file_path.clone(), || {}).unwrap();
+        // Does not resolve while the worker is running
+        let res = tokio::time::timeout(Duration::from_secs(1), storage_sync).await;
+        assert!(res.is_err(), "Worker unexpectedly exited");
+
+        let mut storage_sync = spawn(db, file_path, || {}).unwrap();
+        storage_sync.kill();
+        // The worker should exit and .await should resolve
+        let res = tokio::time::timeout(Duration::from_secs(1), storage_sync).await;
+        assert!(res.is_ok(), "Worker did not exit");
+        Ok(())
     }
 }
