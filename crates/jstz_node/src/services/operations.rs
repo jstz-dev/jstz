@@ -266,17 +266,19 @@ async fn handle_inbox_message(
 ) -> ServiceResult<WrappedOperation> {
     use crate::sequencer::inbox::Logger;
     use crate::sequencer::queue::WrappedOperation;
-    use jstz_kernel::inbox::{parse_inbox_message_hex, InboxMessage, RollupType};
+    use jstz_kernel::inbox::{
+        parse_inbox_message_hex, InboxMessage, Message, ParsedInboxMessage, RollupType,
+    };
     use jstz_proto::operation::internal::InboxId;
     use tezos_smart_rollup::types::SmartRollupAddress;
 
     let message = parse_inbox_message_hex(
         &Logger,
+        // inbox ID does not matter here for now
         InboxId {
             l1_level: 0,
             l1_message_id: 0,
         },
-        // block level does not matter here for now
         &inbox_msg_string,
         ticketer,
         jstz_rollup_address,
