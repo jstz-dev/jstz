@@ -1,3 +1,8 @@
+//! Web Platform Tests (WPT) extension for the JSTZ runtime.
+//!
+//! Provides test status enums, result and report structures, runtime operations and integration
+//! for running WPT tests within the JSTZ kernel.
+
 use crate::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 use deno_core::{
     convert::Smi,

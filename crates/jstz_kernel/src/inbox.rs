@@ -151,7 +151,7 @@ pub fn parse_inbox_message(
                             Some(msg) => Some(Message::External(msg)),
                             None => {
                                 logger.write_debug(&format!(
-                                    "Failed to parse the external message: {contents:?}"
+                                    "Failed to parse the external message: {contents:?}\n"
                                 ));
                                 None
                             }
