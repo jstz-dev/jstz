@@ -16,7 +16,7 @@ pub enum ParseError {
     Ron(String),
 }
 
-/// Try to get a TestHarnessReport out of any line of the giventext
+/// Try to get a TestHarnessReport out of any line of the given text
 pub fn parse_report_from_log_line(
     line: &str,
 ) -> Result<Option<TestHarnessReport>, ParseError> {

@@ -49,14 +49,14 @@ fn run_wpt_test_harness_in_riscv_sandbox(source: String) -> TestHarnessReport {
     use jstz_utils::inbox_builder::InboxBuilder;
     use tezos_smart_rollup::types::SmartRollupAddress;
 
-    // Build inbox message using the same logic as the former external binary
+    // Build inbox messages by chunking the source code and wrapping each chunk in a deploy function operation
     let mut inbox_builder = InboxBuilder::new(
         SmartRollupAddress::from_b58check("sr1BxufbqiHt3dn6ahV6eZk9xBD6XV1fYowr")
             .unwrap(),
         None,
     );
 
-    let chunk_size = 2000usize;
+    let chunk_size = 3800usize;
     let mut account = inbox_builder.create_accounts(1).unwrap().remove(0);
 
     for chunk in source.chars().collect::<Vec<_>>().chunks(chunk_size) {
@@ -162,7 +162,7 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
 
         // Use catch_unwind to handle panics (including segmentation faults) gracefully
         let _ = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-            rt.execute_script("native code", source.clone())
+            let _ = rt.execute_script("native code", source.clone());
         }));
 
         // Take the test harness report out of the runtime and return it

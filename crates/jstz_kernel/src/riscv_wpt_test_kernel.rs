@@ -12,6 +12,8 @@ use tezos_crypto_rs::hash::ContractKt1Hash;
 use tezos_crypto_rs::hash::SmartRollupHash;
 use tezos_smart_rollup_mock::MockHost;
 
+const DEFAULT_TICKETER_ADDRESS: &str = "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton";
+
 fn read_message(
     rt: &mut impl Runtime,
     ticketer: &ContractKt1Hash,
@@ -40,36 +42,26 @@ fn read_message(
 pub fn entry(rt: &mut impl Runtime) {
     let mut tx = Transaction::default();
     tx.begin();
-    let mut host = MockHost::default();
-    host.set_debug_handler(std::io::empty());
-    let ticketer =
-        SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton").unwrap();
+    let ticketer = SmartFunctionHash::from_base58(DEFAULT_TICKETER_ADDRESS).unwrap(); // As we have no deposit operation, ticketer isn't actually used
 
     let mut source = String::new();
 
-    loop {
-        match read_message(rt, &ticketer) {
-            Some(message) => match message {
-                ParsedInboxMessage::JstzMessage(Message::External(signed_operation)) => {
-                    let operation: Operation = signed_operation.into();
-                    match operation.content {
-                        Content::DeployFunction(deploy_function) => {
-                            if deploy_function.function_code.to_string() == "STOP" {
-                                break;
-                            }
-                            source += &deploy_function.function_code.to_string();
-                        }
-                        _ => {}
-                    }
+    while let Some(message) = read_message(rt, &ticketer) {
+        if let ParsedInboxMessage::JstzMessage(Message::External(signed_operation)) =
+            message
+        {
+            let operation: Operation = signed_operation.into();
+            if let Content::DeployFunction(deploy_function) = operation.content {
+                if deploy_function.function_code.to_string() == "STOP" {
+                    break;
                 }
-                _ => {}
-            },
-            None => {
-                break;
+                source += &deploy_function.function_code.to_string();
             }
         }
     }
 
+    let mut host = MockHost::default();
+    host.set_debug_handler(std::io::empty());
     let mut js_rt = init_runtime(&mut host, &mut tx);
 
     let result = js_rt.execute_script("native code", source);
