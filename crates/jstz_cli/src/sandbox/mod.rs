@@ -2,6 +2,8 @@ mod consts;
 mod container;
 mod jstzd;
 
+use std::path::PathBuf;
+
 use crate::config::Config;
 use crate::error::{bail, bail_user_error};
 use anyhow::Result;
@@ -10,7 +12,7 @@ pub use consts::*;
 use container::*;
 
 const SANDBOX_CONTAINER_NAME: &str = "jstz-sandbox";
-const SANDBOX_IMAGE: &str = "ghcr.io/jstz-dev/jstz/jstzd:0.1.1-alpha.3";
+const SANDBOX_IMAGE: &str = "ghcr.io/jstz-dev/jstz/jstzd:0.1.1-alpha.4";
 
 pub async fn assert_sandbox_running(sandbox_base_url: &str) -> Result<()> {
     match jstzd::is_jstzd_running(sandbox_base_url).await {
@@ -34,6 +36,9 @@ pub enum Command {
         /// Detach the process to run in the background.
         #[clap(long, short, default_value = "false")]
         detach: bool,
+        /// Path to jstzd config. Ignored in `container` mode
+        #[clap(long = "config")]
+        jstzd_config: Option<PathBuf>,
     },
     /// 🛑 Stops the sandbox.
     Stop,
@@ -42,10 +47,17 @@ pub enum Command {
         /// Detach the process to run in the background.
         #[clap(long, short, default_value = "false")]
         detach: bool,
+        /// Path to jstzd config. Ignored in `container` mode
+        #[clap(long = "config")]
+        jstzd_config: Option<PathBuf>,
     },
 }
 
-pub async fn start(detach: bool, use_container: bool) -> Result<()> {
+pub async fn start(
+    detach: bool,
+    use_container: bool,
+    jstzd_config: Option<PathBuf>,
+) -> Result<()> {
     let mut cfg = Config::load().await?;
 
     match use_container {
@@ -53,7 +65,7 @@ pub async fn start(detach: bool, use_container: bool) -> Result<()> {
             start_container(SANDBOX_CONTAINER_NAME, SANDBOX_IMAGE, detach, &mut cfg)
                 .await?
         }
-        _ => jstzd::main(detach, &mut cfg).await?,
+        _ => jstzd::main(detach, &mut cfg, jstzd_config).await?,
     };
     Ok(())
 }
@@ -69,21 +81,31 @@ pub async fn stop(use_container: bool) -> Result<bool> {
     }
 }
 
-pub async fn restart(detach: bool, use_container: bool) -> Result<()> {
+pub async fn restart(
+    detach: bool,
+    use_container: bool,
+    jstzd_config: Option<PathBuf>,
+) -> Result<()> {
     if !stop(use_container).await? {
         return Ok(());
     }
-    start(detach, use_container).await
+    start(detach, use_container, jstzd_config).await
 }
 
 pub async fn exec(use_container: bool, command: Command) -> Result<()> {
     match command {
-        Command::Start { detach } => start(detach, use_container).await,
+        Command::Start {
+            detach,
+            jstzd_config,
+        } => start(detach, use_container, jstzd_config).await,
         Command::Stop => {
             stop(use_container).await?;
             Ok(())
         }
-        Command::Restart { detach } => restart(detach, use_container).await,
+        Command::Restart {
+            detach,
+            jstzd_config,
+        } => restart(detach, use_container, jstzd_config).await,
     }
 }
 
