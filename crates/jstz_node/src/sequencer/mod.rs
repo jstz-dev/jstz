@@ -15,11 +15,7 @@ pub mod tests {
     };
     use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
 
-    use jstz_kernel::inbox::Message;
-
-    use jstz_kernel::inbox::ParsedInboxMessage as InnerParsedMessage;
-
-    use crate::sequencer::queue::ParsedInboxMessage;
+    use crate::sequencer::queue::WrappedOperation;
 
     pub fn dummy_signed_op() -> SignedOperation {
         SignedOperation::new(
@@ -41,9 +37,7 @@ pub mod tests {
         )
     }
 
-    pub fn dummy_op() -> ParsedInboxMessage {
-        ParsedInboxMessage::FromNode(InnerParsedMessage::JstzMessage(Message::External(
-            dummy_signed_op(),
-        )))
+    pub fn dummy_op() -> WrappedOperation {
+        WrappedOperation::FromNode(dummy_signed_op())
     }
 }

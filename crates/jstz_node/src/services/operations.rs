@@ -3,13 +3,11 @@ use std::path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::sequencer::queue::{OperationQueue, ParsedInboxMessage};
+use crate::sequencer::queue::{OperationQueue, WrappedOperation};
 #[cfg(feature = "inject_inbox")]
 use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
-use jstz_kernel::inbox::Message;
-use jstz_kernel::inbox::ParsedInboxMessage as InnerParsedMessage;
 
 use super::error::{ServiceError, ServiceResult};
 use super::utils::StoreWrapper;
@@ -170,13 +168,7 @@ async fn inject(
             inject_rollup_message(encoded_operation, &rollup_client).await?;
         }
         RunMode::Sequencer { .. } => {
-            insert_operation_queue(
-                &queue,
-                ParsedInboxMessage::FromNode(InnerParsedMessage::JstzMessage(
-                    Message::External(operation),
-                )),
-            )
-            .await?;
+            insert_operation_queue(&queue, WrappedOperation::FromNode(operation)).await?;
         }
     }
     Ok(())
@@ -198,7 +190,7 @@ async fn inject_rollup_message(
 
 async fn insert_operation_queue(
     queue: &Arc<RwLock<OperationQueue>>,
-    message: ParsedInboxMessage,
+    message: WrappedOperation,
 ) -> ServiceResult<()> {
     queue
         .write()
@@ -238,15 +230,19 @@ async fn inject_inbox_messages(
             );
             let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
             let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
-            let ops = handle_inbox_message(
-                inbox_msg_strings.into_iter().flatten().collect(),
-                &store,
-                &injector,
-                &rollup_preimages_dir,
-                &ticketer,
-                &jstz,
-            )
-            .await?;
+            let mut ops = vec![];
+            for msg in inbox_msg_strings.into_iter().flatten() {
+                let parsed = handle_inbox_message(
+                    msg,
+                    &store,
+                    &injector,
+                    &rollup_preimages_dir,
+                    &ticketer,
+                    &jstz,
+                )
+                .await?;
+                ops.push(parsed);
+            }
             for op in ops {
                 insert_operation_queue(&queue, op).await?;
             }
@@ -261,79 +257,65 @@ async fn inject_inbox_messages(
 
 #[cfg(feature = "inject_inbox")]
 async fn handle_inbox_message(
-    inbox_msg_strings: Vec<String>,
+    inbox_msg_string: String,
     store: &StoreWrapper,
     injector: &KeyPair,
     rollup_preimages_dir: &path::Path,
     ticketer: &ContractKt1Hash,
     jstz_rollup_address: &SmartRollupHash,
-) -> ServiceResult<Vec<ParsedInboxMessage>> {
-    use crate::sequencer::inbox::{api::BlockResponse, parse_inbox_messages};
-    use crate::sequencer::queue::ParsedInboxMessage;
-    use jstz_kernel::inbox::{InboxMessage, RollupType};
+) -> ServiceResult<WrappedOperation> {
+    use crate::sequencer::inbox::Logger;
+    use crate::sequencer::queue::WrappedOperation;
+    use jstz_kernel::inbox::{parse_inbox_message_hex, InboxMessage, RollupType};
+    use jstz_proto::operation::internal::InboxId;
     use tezos_smart_rollup::types::SmartRollupAddress;
 
-    let mut parsed_messages = vec![];
-    for op in parse_inbox_messages(
-        // block level does not matter here for now
-        0,
-        BlockResponse {
-            messages: inbox_msg_strings,
+    let message = parse_inbox_message_hex(
+        &Logger,
+        InboxId {
+            l1_level: 0,
+            l1_message_id: 0,
         },
+        // block level does not matter here for now
+        &inbox_msg_string,
         ticketer,
         jstz_rollup_address,
-    ) {
-        // parse_inbox_messages does not deal with large payload and thus it needs to be handled here
-        match op {
-            ParsedInboxMessage::FromInbox {
-                message,
-                original_inbox_message,
-            } => {
-                let message = match message {
-                    InnerParsedMessage::JstzMessage(Message::External(m)) => {
-                        let (op, encoded_op) =
-                            encode_operation(m, &injector, &store, &rollup_preimages_dir)
-                                .await?;
+    )
+    .ok_or(ServiceError::FromAnyhow(anyhow::anyhow!(
+        "failed to parse injected inbox message"
+    )))?;
+    // parse_inbox_messages does not deal with large payload and thus it needs to be handled here
+    Ok(match message {
+        ParsedInboxMessage::JstzMessage(Message::External(m)) => {
+            let (op, encoded_op) =
+                encode_operation(m, &injector, &store, &rollup_preimages_dir).await?;
 
-                        // TODO: replace this with the helper function that converts operations to
-                        // inbox messages
-                        let mut external = Vec::new();
-                        let frame = ExternalMessageFrame::Targetted {
-                            contents: encoded_op,
-                            address: SmartRollupAddress::new(jstz_rollup_address.clone()),
-                        };
-                        frame
-                            .bin_write(&mut external)
-                            .context("failed to encode operation")?;
-                        let message = InboxMessage::External::<RollupType>(&external);
-                        let mut buf = Vec::new();
-                        message
-                            .serialize(&mut buf)
-                            .context("failed to encode operation")?;
+            // TODO: replace this with the helper function that converts operations to
+            // inbox messages
+            let mut external = Vec::new();
+            let frame = ExternalMessageFrame::Targetted {
+                contents: encoded_op,
+                address: SmartRollupAddress::new(jstz_rollup_address.clone()),
+            };
+            frame
+                .bin_write(&mut external)
+                .context("failed to encode operation")?;
+            let message = InboxMessage::External::<RollupType>(&external);
+            let mut buf = Vec::new();
+            message
+                .serialize(&mut buf)
+                .context("failed to encode operation")?;
 
-                        ParsedInboxMessage::FromInbox {
-                            message: InnerParsedMessage::JstzMessage(Message::External(
-                                op,
-                            )),
-                            original_inbox_message: hex::encode(buf),
-                        }
-                    }
-                    _ => ParsedInboxMessage::FromInbox {
-                        message,
-                        original_inbox_message,
-                    },
-                };
-                parsed_messages.push(message);
+            WrappedOperation::FromInbox {
+                message: ParsedInboxMessage::JstzMessage(Message::External(op)),
+                original_inbox_message: hex::encode(buf),
             }
-            ParsedInboxMessage::FromNode(_) => {
-                // should be unreachable
-                return Err(ServiceError::FromAnyhow(anyhow::anyhow!(
-                    "unexpected FromNode message"
-                )));
-            }
-        };
-    }
-    Ok(parsed_messages)
+        }
+        _ => WrappedOperation::FromInbox {
+            message,
+            original_inbox_message: inbox_msg_string,
+        },
+    })
 }
 
 /// Get the receipt of an operation
@@ -448,7 +430,7 @@ mod tests {
     use tower::ServiceExt;
 
     use crate::config::RuntimeEnv;
-    use crate::sequencer::queue::ParsedInboxMessage;
+    use crate::sequencer::queue::WrappedOperation;
     use crate::services::utils::StoreWrapper;
     use crate::{
         services::{
@@ -459,8 +441,6 @@ mod tests {
         utils::tests::{dummy_receipt, mock_app_state},
         RunMode,
     };
-    use jstz_kernel::inbox::Message;
-    use jstz_kernel::inbox::ParsedInboxMessage as InnerParsedMessage;
 
     use super::MAX_DIRECT_OPERATION_SIZE;
 
@@ -733,9 +713,7 @@ mod tests {
         assert_eq!(res.status(), 200);
         assert_eq!(queue.read().unwrap().len(), 1);
         let injected_op = match queue.write().unwrap().pop().unwrap() {
-            ParsedInboxMessage::FromNode(InnerParsedMessage::JstzMessage(
-                Message::External(op),
-            )) => op,
+            WrappedOperation::FromNode(op) => op,
             _ => panic!("invalid message type"),
         };
         let inner = injected_op.verify_ref().unwrap();

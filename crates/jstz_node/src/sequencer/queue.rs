@@ -1,30 +1,33 @@
 use std::collections::VecDeque;
 
-use jstz_kernel::inbox::ParsedInboxMessage as InnerParsedMessage;
+use jstz_kernel::inbox::ParsedInboxMessage;
+use jstz_proto::operation::SignedOperation;
 
-/// A wrapper for the actual parsed inbox messages. The original inbox message is attached for
-/// messages coming from the rollup inbox.
+/// A wrapper for the actual parsed operations. The original inbox message is attached for
+/// operations coming from the rollup inbox.
 #[derive(Clone)]
-pub enum ParsedInboxMessage {
+pub enum WrappedOperation {
     FromInbox {
-        message: InnerParsedMessage,
+        message: ParsedInboxMessage,
         original_inbox_message: String,
     },
-    FromNode(InnerParsedMessage),
+    FromNode(SignedOperation),
 }
 
-impl ParsedInboxMessage {
-    pub fn message(self) -> InnerParsedMessage {
+impl WrappedOperation {
+    pub fn to_message(self) -> ParsedInboxMessage {
         match self {
-            ParsedInboxMessage::FromInbox { message, .. } => message,
-            ParsedInboxMessage::FromNode(v) => v,
+            WrappedOperation::FromInbox { message, .. } => message,
+            WrappedOperation::FromNode(v) => {
+                ParsedInboxMessage::JstzMessage(jstz_kernel::inbox::Message::External(v))
+            }
         }
     }
 }
 
 pub struct OperationQueue {
     capacity: usize,
-    queue: VecDeque<ParsedInboxMessage>,
+    queue: VecDeque<WrappedOperation>,
 }
 
 impl OperationQueue {
@@ -35,7 +38,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn insert(&mut self, op: ParsedInboxMessage) -> anyhow::Result<()> {
+    pub fn insert(&mut self, op: WrappedOperation) -> anyhow::Result<()> {
         if self.is_full() {
             anyhow::bail!("queue is full")
         } else {
@@ -44,7 +47,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn insert_ref(&mut self, op: &ParsedInboxMessage) -> anyhow::Result<()> {
+    pub fn insert_ref(&mut self, op: &WrappedOperation) -> anyhow::Result<()> {
         if self.is_full() {
             anyhow::bail!("queue is full")
         } else {
@@ -53,7 +56,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn pop(&mut self) -> Option<ParsedInboxMessage> {
+    pub fn pop(&mut self) -> Option<WrappedOperation> {
         self.queue.pop_front()
     }
 
@@ -72,7 +75,7 @@ impl OperationQueue {
 mod tests {
     use super::OperationQueue;
     use crate::sequencer::{
-        queue::ParsedInboxMessage,
+        queue::WrappedOperation,
         tests::{dummy_op, dummy_signed_op},
     };
 
@@ -123,28 +126,24 @@ mod tests {
     }
 
     #[test]
-    fn parsed_inbox_message() {
-        let message = ParsedInboxMessage::FromInbox {
+    fn wrapped_operation_to_message() {
+        let op = WrappedOperation::FromInbox {
             message: jstz_kernel::inbox::ParsedInboxMessage::LevelInfo(
                 jstz_kernel::inbox::LevelInfo::End,
             ),
             original_inbox_message: "0002".to_string(),
         };
         assert_eq!(
-            message.message(),
+            op.to_message(),
             jstz_kernel::inbox::ParsedInboxMessage::LevelInfo(
                 jstz_kernel::inbox::LevelInfo::End,
             )
         );
 
         let inner = dummy_signed_op();
-        let message = ParsedInboxMessage::FromNode(
-            jstz_kernel::inbox::ParsedInboxMessage::JstzMessage(
-                jstz_kernel::inbox::Message::External(inner.clone()),
-            ),
-        );
+        let op = WrappedOperation::FromNode(inner.clone());
         assert_eq!(
-            message.message(),
+            op.to_message(),
             jstz_kernel::inbox::ParsedInboxMessage::JstzMessage(
                 jstz_kernel::inbox::Message::External(inner),
             )
