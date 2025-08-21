@@ -290,7 +290,7 @@ async fn handle_inbox_message(
     Ok(match message {
         ParsedInboxMessage::JstzMessage(Message::External(m)) => {
             let (op, encoded_op) =
-                encode_operation(m, &injector, &store, &rollup_preimages_dir).await?;
+                encode_operation(m, injector, store, rollup_preimages_dir).await?;
 
             // TODO: replace this with the helper function that converts operations to
             // inbox messages
