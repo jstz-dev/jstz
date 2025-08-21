@@ -42,6 +42,7 @@ r2d2.workspace = true
 r2d2_sqlite.workspace = true
 reqwest.workspace = true
 rusqlite.workspace = true
+scopeguard.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true

@@ -3226,6 +3226,7 @@ dependencies = [
  "r2d2_sqlite",
  "reqwest",
  "rusqlite",
+ "scopeguard",
  "serde",
  "serde_json",
  "tempfile",
