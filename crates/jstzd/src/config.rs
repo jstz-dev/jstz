@@ -197,7 +197,10 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
             octez_client_config,
             octez_rollup_config,
             #[cfg(feature = "oracle")]
-            build_oracle_config(Some(injector.clone()), &jstz_node_config),
+            build_oracle_config(
+                Some(jstz_node_config.injector.clone()),
+                &jstz_node_config,
+            ),
             jstz_node_config,
             protocol_params,
         ),
@@ -285,8 +288,10 @@ fn build_oracle_config(
         key_pair,
         jstz_node_endpoint: jstz_node_config.endpoint.clone(),
         log_path: match &jstz_node_config.mode {
-            RunMode::Default => jstz_node_config.kernel_log_file.clone(),
-            RunMode::Sequencer { debug_log_path, .. } => debug_log_path.clone(),
+            jstz_node::RunMode::Default => jstz_node_config.kernel_log_file.clone(),
+            jstz_node::RunMode::Sequencer { debug_log_path, .. } => {
+                debug_log_path.clone()
+            }
         },
     }
 }
