@@ -1255,6 +1255,7 @@ mod tests {
                 &PathBuf::from("/kernel/debug"),
                 keys.clone(),
                 jstz_node::RunMode::Default,
+                true,
             ),
         );
         assert_eq!(config.log_path.to_str().unwrap(), "/kernel/debug");
@@ -1270,7 +1271,9 @@ mod tests {
                 jstz_node::RunMode::Sequencer {
                     capacity: 0,
                     debug_log_path: PathBuf::from("/jstz_node/debug"),
+                    runtime_env: RuntimeEnv::Native,
                 },
+                true,
             ),
         );
         assert_eq!(config.log_path.to_str().unwrap(), "/jstz_node/debug");

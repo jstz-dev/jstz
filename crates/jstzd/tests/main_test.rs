@@ -124,7 +124,7 @@ fn test_oracle_config_from_file() {
     // Create a config file with oracle key pair
     let config_json = format!(
         r#"{{
-            "server_port": {},
+            "server_port": {port},
             "jstz_node": {{
                 "endpoint": "http://localhost:8932",
                 "rollup_endpoint": "http://localhost:8933",
@@ -135,8 +135,7 @@ fn test_oracle_config_from_file() {
                 "debug_log_file": "/tmp/debug.log",
                 "oracle_key_pair": ["edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi", "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM"]
             }}
-        }}"#,
-        port
+        }}"#
     );
 
     tmp_file.write_all(config_json.as_bytes()).unwrap();
