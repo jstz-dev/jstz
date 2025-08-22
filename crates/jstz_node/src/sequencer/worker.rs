@@ -94,7 +94,8 @@ pub fn spawn(
 
                     match v {
                         Some(op) => {
-                            if let ParsedInboxMessage::JstzMessage(message) = op.message()
+                            if let ParsedInboxMessage::JstzMessage(message) =
+                                op.to_message()
                             {
                                 if let Err(e) =
                                     process_message(&mut host_rt, message).await
@@ -147,7 +148,7 @@ fn run_event_loop(
             };
 
             match v {
-                Some(wrapper) => match wrapper.message() {
+                Some(wrapper) => match wrapper.to_message() {
                     ParsedInboxMessage::JstzMessage(op) => {
                         let mut hrt = host.clone();
                         local_set.spawn_local(async move {

@@ -2,7 +2,7 @@
 #![allow(unreachable_code)]
 use std::sync::{Arc, RwLock};
 
-use crate::sequencer::queue::{OperationQueue, ParsedInboxMessage};
+use crate::sequencer::queue::{OperationQueue, WrappedOperation};
 use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use anyhow::Result;
 use api::BlockResponse;
@@ -45,7 +45,7 @@ impl AsyncDrop for Monitor {
     }
 }
 
-struct Logger;
+pub struct Logger;
 impl WriteDebug for Logger {
     fn write_debug(&self, msg: &str) {
         debug!("{msg}");
@@ -123,12 +123,12 @@ async fn process_inbox_messages(
 }
 
 /// parse the inbox messages into jstz operations of the given block
-pub(crate) fn parse_inbox_messages(
+fn parse_inbox_messages(
     block_level: u32,
     block: BlockResponse,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
-) -> Vec<ParsedInboxMessage> {
+) -> Vec<WrappedOperation> {
     block
         .messages
         .iter()
@@ -144,7 +144,7 @@ pub(crate) fn parse_inbox_messages(
                 ticketer,
                 jstz,
             )
-            .map(|op| ParsedInboxMessage::FromInbox {
+            .map(|op| WrappedOperation::FromInbox {
                 message: op,
                 original_inbox_message: inbox_msg.clone(),
             })
@@ -196,7 +196,7 @@ mod tests {
     use crate::sequencer::inbox::test_utils::{hash_of, make_mock_monitor_blocks_filter};
     use jstz_kernel::inbox::LevelInfo;
     use jstz_kernel::inbox::Message;
-    use jstz_kernel::inbox::ParsedInboxMessage as InnerParsedMessage;
+    use jstz_kernel::inbox::ParsedInboxMessage;
     use std::time::Duration;
     use std::{
         future::Future,
@@ -277,13 +277,13 @@ mod tests {
         assert_eq!(msgs.len(), 2);
         assert!(matches!(
             &msgs[0],
-            ParsedInboxMessage::FromInbox{
-                message: InnerParsedMessage::LevelInfo(LevelInfo::Start),
+            WrappedOperation::FromInbox{
+                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
                 original_inbox_message
             } if original_inbox_message == &raw_messages[0]
         ));
-        assert!(matches!(&msgs[1], ParsedInboxMessage::FromInbox{
-                message: InnerParsedMessage::JstzMessage(Message::External(op)),
+        assert!(matches!(&msgs[1], WrappedOperation::FromInbox{
+                message: ParsedInboxMessage::JstzMessage(Message::External(op)),
                 original_inbox_message } if op.hash().to_string() == op_hash
                 && original_inbox_message == &raw_messages[1]));
     }
@@ -319,8 +319,8 @@ mod tests {
         let op = q.write().unwrap().pop().unwrap();
         assert!(matches!(
             sol,
-            ParsedInboxMessage::FromInbox{
-                message: InnerParsedMessage::LevelInfo(LevelInfo::Start),
+            WrappedOperation::FromInbox{
+                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
                 original_inbox_message
             } if original_inbox_message == "0001"
         ));
@@ -371,27 +371,27 @@ pub(crate) mod test_utils {
     use bytes::Bytes;
     use futures_util::stream;
     use jstz_kernel::inbox::Message;
-    use jstz_kernel::inbox::ParsedInboxMessage as InnerParsedMessage;
+    use jstz_kernel::inbox::ParsedInboxMessage;
     use std::{convert::Infallible, time::Duration};
     use tokio::time::sleep;
     use warp::{hyper::Body, Filter};
 
-    pub(crate) fn hash_of(op: &ParsedInboxMessage) -> String {
+    pub(crate) fn hash_of(op: &WrappedOperation) -> String {
         let message = match op {
-            ParsedInboxMessage::FromInbox {
+            WrappedOperation::FromInbox {
                 message,
                 original_inbox_message,
             } => message,
-            ParsedInboxMessage::FromNode(v) => v,
+            WrappedOperation::FromNode(v) => return v.hash().to_string(),
         };
         match message {
-            InnerParsedMessage::JstzMessage(Message::External(op)) => {
+            ParsedInboxMessage::JstzMessage(Message::External(op)) => {
                 op.hash().to_string()
             }
-            InnerParsedMessage::JstzMessage(_) => {
+            ParsedInboxMessage::JstzMessage(_) => {
                 panic!("no hash for internal operation");
             }
-            InnerParsedMessage::LevelInfo(_) => {
+            ParsedInboxMessage::LevelInfo(_) => {
                 panic!("no hash for level info messages");
             }
         }
