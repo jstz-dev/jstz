@@ -3341,6 +3341,7 @@ dependencies = [
  "jstz_kernel",
  "jstz_proto",
  "jstz_runtime",
+ "serde_json",
  "tezos-smart-rollup",
  "tezos-smart-rollup-mock 0.2.2 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tezos_crypto_rs 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",

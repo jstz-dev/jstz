@@ -87,7 +87,7 @@ fn run_wpt_test_harness_in_riscv_sandbox(source: String) -> TestHarnessReport {
     );
 
     let output = std::process::Command::new("riscv-sandbox")
-        .args(&[
+        .args([
             "run",
             "--timings",
             "--address",
