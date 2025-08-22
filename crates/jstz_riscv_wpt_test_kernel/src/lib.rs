@@ -1,10 +1,8 @@
-#![cfg(feature = "riscv_wpt_test_kernel")]
+use tezos_smart_rollup::{entrypoint, host::Runtime, prelude::debug_msg};
 
-use tezos_smart_rollup::{host::Runtime, prelude::debug_msg};
-
-use crate::inbox::*;
 use jstz_core::kv::Transaction;
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+use jstz_kernel::inbox::*;
 use jstz_proto::operation::internal::InboxId;
 use jstz_proto::operation::{Content, Operation};
 use jstz_runtime::wpt::{init_runtime, TestHarnessReport};
@@ -39,7 +37,7 @@ fn read_message(
     parse_inbox_message(rt, inbox_id, input.as_ref(), ticketer, &jstz_rollup_address)
 }
 
-pub fn entry(rt: &mut impl Runtime) {
+pub fn run(rt: &mut impl Runtime) {
     let mut tx = Transaction::default();
     tx.begin();
     let ticketer = SmartFunctionHash::from_base58(DEFAULT_TICKETER_ADDRESS).unwrap(); // As we have no deposit operation, ticketer isn't actually used
@@ -85,4 +83,10 @@ pub fn entry(rt: &mut impl Runtime) {
         .borrow::<TestHarnessReport>()
         .clone();
     debug_msg!(rt, "{}", format!("Test harness report: {:?}", data));
+}
+
+// kernel entry
+#[entrypoint::main]
+pub fn entry(rt: &mut impl Runtime) {
+    run(rt);
 }

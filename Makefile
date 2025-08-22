@@ -84,9 +84,8 @@ riscv-wpt-test-kernel:
 	@unset NIX_LDFLAGS && RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a \
 		RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs \
 		cargo build \
-		-p jstz_kernel \
-		--no-default-features \
-		--features riscv_wpt_test_kernel \
+		-p jstz_riscv_wpt_test_kernel \
+		--features wpt_test_kernel \
 		--release \
 		--target riscv64gc-unknown-linux-musl
 

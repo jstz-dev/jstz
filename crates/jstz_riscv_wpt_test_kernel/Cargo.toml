@@ -1,0 +1,41 @@
+[package]
+name = "jstz_riscv_wpt_test_kernel"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description.workspace = true
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "wpt-test-kernel-executable"
+path = "src/executable.rs"
+required-features = ["wpt_test_kernel"]
+
+
+
+[dependencies]
+jstz_core = { path = "../jstz_core" }
+jstz_crypto = { path = "../jstz_crypto" }
+jstz_proto = { path = "../jstz_proto" }
+jstz_runtime = { path = "../jstz_runtime", features = ["wpt"] }
+jstz_kernel = { path = "../jstz_kernel" }
+tezos-smart-rollup.workspace = true
+tezos_crypto_rs.workspace = true
+tezos-smart-rollup-mock.workspace = true
+deno_core.workspace = true
+deno_error.workspace = true
+deno_webidl.workspace = true
+deno_fetch_base.workspace = true
+deno_web.workspace = true
+deno_url.workspace = true
+deno_console.workspace = true
+
+[features]
+wpt_test_kernel = [] 

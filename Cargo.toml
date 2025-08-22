@@ -12,6 +12,7 @@ members = [
   "crates/jstz_node",
   "crates/jstz_oracle_node",
   "crates/jstz_proto",
+  "crates/jstz_riscv_wpt_test_kernel",
   "crates/jstz_sdk",
   "crates/jstz_tps_bench",
   "crates/jstz_utils",

@@ -16,10 +16,7 @@ pub mod parsing;
 #[cfg(feature = "riscv_kernel")]
 pub mod riscv_kernel;
 
-#[cfg(feature = "riscv_wpt_test_kernel")]
-pub mod riscv_wpt_test_kernel;
-
-#[cfg(not(any(feature = "riscv_kernel", feature = "riscv_wpt_test_kernel")))]
+#[cfg(not(any(feature = "riscv_kernel")))]
 mod wasm_kernel;
 
 pub const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
@@ -74,12 +71,9 @@ pub async fn handle_message(
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
-    #[cfg(not(any(feature = "riscv_kernel", feature = "riscv_wpt_test_kernel")))]
+    #[cfg(not(any(feature = "riscv_kernel")))]
     wasm_kernel::run(rt);
 
     #[cfg(feature = "riscv_kernel")]
     riscv_kernel::run(rt);
-
-    #[cfg(feature = "riscv_wpt_test_kernel")]
-    riscv_wpt_test_kernel::entry(rt);
 }
