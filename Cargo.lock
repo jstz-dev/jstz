@@ -3358,6 +3358,7 @@ dependencies = [
  "jstz_crypto",
  "jstz_proto",
  "serde-wasm-bindgen",
+ "serde_json",
  "wasm-bindgen",
 ]
 

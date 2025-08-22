@@ -1,9 +1,7 @@
 import * as jstz from "jstz_sdk";
 
-// FIXME: https://linear.app/tezos/issue/JSTZ-287/publish-client-lib-to-jstz-dev-scope
-// Change to import from "@jstz-dev/client" when published to scope
-import { Jstz as JstzClient } from "@zcabter/jstz-client";
-import JstzType from "@zcabter/jstz-client";
+import { Jstz as JstzClient } from "@jstz-dev/jstz-client";
+import JstzType from "@jstz-dev/jstz-client";
 
 export type Address = string;
 
@@ -61,19 +59,18 @@ export class Jstz {
     const nonce = await this.getNonce(user.address);
     const content: JstzType.Operation.DeployFunction = {
       _type: "DeployFunction",
-      function_code: functionCode,
-      account_credit: initialBalance,
+      functionCode: functionCode,
+      accountCredit: initialBalance,
     };
 
     const operation = {
-      source: user.address,
+      publicKey: user.publicKey,
       nonce,
       content,
     };
     const signature = signOperation(user, operation);
     const request = {
-      public_key: user.publicKey,
-      signature: signature,
+      signature,
       inner: operation,
     };
     const receipt = await this.client.operations.injectAndPoll(request);
@@ -87,15 +84,15 @@ export class Jstz {
     const nonce = await this.getNonce(user.address);
     const content: JstzType.Operation.RunFunction = {
       _type: "RunFunction",
-      body: request.body ? Array.from(request.body) : null,
-      gas_limit: request.gasLimit ?? 1000,
+      body: request.body ? Buffer.from(request.body).toString("base64") : null,
+      gasLimit: request.gasLimit ?? 1000,
       headers: request.headers ?? {},
       method: request.method ?? "GET",
       uri: request.uri,
     };
 
     const operation = {
-      source: user.address,
+      publicKey: user.publicKey,
       nonce,
       content,
     };
@@ -103,7 +100,6 @@ export class Jstz {
     const signature = signOperation(user, operation);
 
     const receipt = await this.client.operations.injectAndPoll({
-      public_key: user.publicKey,
       signature: signature,
       inner: operation,
     });
