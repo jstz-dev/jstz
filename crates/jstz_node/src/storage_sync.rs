@@ -157,7 +157,7 @@ fn apply_batch_tx(db: &Db, updates: BatchStorageUpdate) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::temp_db;
     use anyhow::Result;
@@ -196,7 +196,7 @@ mod tests {
         event
     }
 
-    fn make_line<T: Event + Serialize>(event: &T) -> String {
+    pub(crate) fn make_line<T: Event + Serialize>(event: &T) -> String {
         format!("[{}] {}", T::tag(), serde_json::to_string(event).unwrap())
     }
 
