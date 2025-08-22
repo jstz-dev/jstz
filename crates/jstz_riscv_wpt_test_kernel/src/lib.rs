@@ -82,7 +82,12 @@ pub fn run(rt: &mut impl Runtime) {
         .borrow()
         .borrow::<TestHarnessReport>()
         .clone();
-    debug_msg!(rt, "{}", format!("Test harness report: {:?}", data));
+
+    debug_msg!(
+        rt,
+        "Test harness report: <REPORT_START>{}<REPORT_END> \n",
+        serde_json::to_string(&data).unwrap()
+    );
 }
 
 // kernel entry

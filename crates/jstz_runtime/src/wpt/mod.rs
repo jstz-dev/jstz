@@ -221,7 +221,7 @@ impl<'a> FromV8<'a> for TestsResult {
 /// This struct implements the TestHarness API expected by [wpt]
 ///
 /// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html
-#[derive(Default, Debug, Clone, Deserialize)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize)]
 pub struct TestHarnessReport {
     // `status` is an Option because it is set at the end of a test suite
     // and we need a placeholder for it before that.
