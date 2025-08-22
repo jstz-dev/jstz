@@ -93,9 +93,15 @@ pub fn spawn(
                     };
 
                     match v {
-                        Some(ParsedInboxMessage::JstzMessage(op)) => {
-                            if let Err(e) = process_message(&mut host_rt, op).await {
-                                warn!("error processing message: {e:?}");
+                        Some(op) => {
+                            if let ParsedInboxMessage::JstzMessage(message) =
+                                op.to_message()
+                            {
+                                if let Err(e) =
+                                    process_message(&mut host_rt, message).await
+                                {
+                                    warn!("error processing message: {e:?}");
+                                }
                             }
                         }
                         _ => tokio::time::sleep(Duration::from_millis(100)).await,
@@ -142,27 +148,30 @@ fn run_event_loop(
             };
 
             match v {
-                Some(ParsedInboxMessage::JstzMessage(op)) => {
-                    let mut hrt = host.clone();
-                    local_set.spawn_local(async move {
-                        if let Err(e) = process_message(&mut hrt, op).await {
-                            warn!("error processing message: {e:?}");
-                        }
-                    });
-                    tokio::task::yield_now().await;
-                    tokio::task::yield_now().await;
-                }
-                Some(ParsedInboxMessage::LevelInfo(LevelInfo::Start)) => {
-                    let mut hrt = host.clone();
-                    let ctx = jstz_proto::runtime::PROTOCOL_CONTEXT
-                        .get()
-                        .expect("Protocol context should be initialized");
-                    ctx.increment_level();
-                    let oracle_ctx = ctx.oracle();
-                    let mut oracle = oracle_ctx.lock();
-                    oracle.gc_timeout_requests(&mut hrt);
-                    tokio::task::yield_now().await;
-                }
+                Some(wrapper) => match wrapper.to_message() {
+                    ParsedInboxMessage::JstzMessage(op) => {
+                        let mut hrt = host.clone();
+                        local_set.spawn_local(async move {
+                            if let Err(e) = process_message(&mut hrt, op).await {
+                                warn!("error processing message: {e:?}");
+                            }
+                        });
+                        tokio::task::yield_now().await;
+                        tokio::task::yield_now().await;
+                    }
+                    ParsedInboxMessage::LevelInfo(LevelInfo::Start) => {
+                        let mut hrt = host.clone();
+                        let ctx = jstz_proto::runtime::PROTOCOL_CONTEXT
+                            .get()
+                            .expect("Protocol context should be initialized");
+                        ctx.increment_level();
+                        let oracle_ctx = ctx.oracle();
+                        let mut oracle = oracle_ctx.lock();
+                        oracle.gc_timeout_requests(&mut hrt);
+                        tokio::task::yield_now().await;
+                    }
+                    _ => (),
+                },
                 _ => tokio::time::sleep(Duration::from_millis(100)).await,
             };
 

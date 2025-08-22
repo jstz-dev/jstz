@@ -2,14 +2,14 @@
 #![allow(unreachable_code)]
 use std::sync::{Arc, RwLock};
 
-use crate::sequencer::queue::OperationQueue;
+use crate::sequencer::queue::{OperationQueue, WrappedOperation};
 use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use anyhow::Result;
 use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use jstz_core::host::WriteDebug;
-use jstz_kernel::inbox::{parse_inbox_message_hex, ParsedInboxMessage};
+use jstz_kernel::inbox::parse_inbox_message_hex;
 use jstz_proto::operation::internal::InboxId;
 use log::{debug, error};
 use std::future::Future;
@@ -45,7 +45,7 @@ impl AsyncDrop for Monitor {
     }
 }
 
-struct Logger;
+pub struct Logger;
 impl WriteDebug for Logger {
     fn write_debug(&self, msg: &str) {
         debug!("{msg}");
@@ -128,7 +128,7 @@ fn parse_inbox_messages(
     block: BlockResponse,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
-) -> Vec<ParsedInboxMessage> {
+) -> Vec<WrappedOperation> {
     block
         .messages
         .iter()
@@ -144,6 +144,10 @@ fn parse_inbox_messages(
                 ticketer,
                 jstz,
             )
+            .map(|op| WrappedOperation::FromInbox {
+                message: op,
+                original_inbox_message: inbox_msg.clone(),
+            })
         })
         .collect()
 }
@@ -192,6 +196,7 @@ mod tests {
     use crate::sequencer::inbox::test_utils::{hash_of, make_mock_monitor_blocks_filter};
     use jstz_kernel::inbox::LevelInfo;
     use jstz_kernel::inbox::Message;
+    use jstz_kernel::inbox::ParsedInboxMessage;
     use std::time::Duration;
     use std::{
         future::Future,
@@ -264,18 +269,23 @@ mod tests {
         let q = Arc::new(RwLock::new(OperationQueue::new(2)));
         let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+        let raw_messages = vec![String::from("0001"), String::from(op)];
         let block_content = BlockResponse {
-            messages: vec![String::from("0001"), String::from(op)],
+            messages: raw_messages.clone(),
         };
         let msgs = parse_inbox_messages(1, block_content, &ticketer, &jstz);
         assert_eq!(msgs.len(), 2);
         assert!(matches!(
             &msgs[0],
-            ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+            WrappedOperation::FromInbox{
+                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
+                original_inbox_message
+            } if original_inbox_message == &raw_messages[0]
         ));
-        assert!(
-            matches!(&msgs[1], ParsedInboxMessage::JstzMessage(Message::External(op)) if op.hash().to_string() == op_hash)
-        );
+        assert!(matches!(&msgs[1], WrappedOperation::FromInbox{
+                message: ParsedInboxMessage::JstzMessage(Message::External(op)),
+                original_inbox_message } if op.hash().to_string() == op_hash
+                && original_inbox_message == &raw_messages[1]));
     }
 
     #[tokio::test]
@@ -309,7 +319,10 @@ mod tests {
         let op = q.write().unwrap().pop().unwrap();
         assert!(matches!(
             sol,
-            ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+            WrappedOperation::FromInbox{
+                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
+                original_inbox_message
+            } if original_inbox_message == "0001"
         ));
         assert_eq!(hash_of(&op), op_hash);
         assert_eq!(q.read().unwrap().len(), 0);
@@ -358,12 +371,20 @@ pub(crate) mod test_utils {
     use bytes::Bytes;
     use futures_util::stream;
     use jstz_kernel::inbox::Message;
+    use jstz_kernel::inbox::ParsedInboxMessage;
     use std::{convert::Infallible, time::Duration};
     use tokio::time::sleep;
     use warp::{hyper::Body, Filter};
 
-    pub(crate) fn hash_of(op: &ParsedInboxMessage) -> String {
-        match op {
+    pub(crate) fn hash_of(op: &WrappedOperation) -> String {
+        let message = match op {
+            WrappedOperation::FromInbox {
+                message,
+                original_inbox_message,
+            } => message,
+            WrappedOperation::FromNode(v) => return v.hash().to_string(),
+        };
+        match message {
             ParsedInboxMessage::JstzMessage(Message::External(op)) => {
                 op.hash().to_string()
             }

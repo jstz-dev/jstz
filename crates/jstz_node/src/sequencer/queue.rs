@@ -1,10 +1,33 @@
 use std::collections::VecDeque;
 
 use jstz_kernel::inbox::ParsedInboxMessage;
+use jstz_proto::operation::SignedOperation;
+
+/// A wrapper for the actual parsed operations. The original inbox message is attached for
+/// operations coming from the rollup inbox.
+#[derive(Clone)]
+pub enum WrappedOperation {
+    FromInbox {
+        message: ParsedInboxMessage,
+        original_inbox_message: String,
+    },
+    FromNode(SignedOperation),
+}
+
+impl WrappedOperation {
+    pub fn to_message(self) -> ParsedInboxMessage {
+        match self {
+            WrappedOperation::FromInbox { message, .. } => message,
+            WrappedOperation::FromNode(v) => {
+                ParsedInboxMessage::JstzMessage(jstz_kernel::inbox::Message::External(v))
+            }
+        }
+    }
+}
 
 pub struct OperationQueue {
     capacity: usize,
-    queue: VecDeque<ParsedInboxMessage>,
+    queue: VecDeque<WrappedOperation>,
 }
 
 impl OperationQueue {
@@ -15,7 +38,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn insert(&mut self, op: ParsedInboxMessage) -> anyhow::Result<()> {
+    pub fn insert(&mut self, op: WrappedOperation) -> anyhow::Result<()> {
         if self.is_full() {
             anyhow::bail!("queue is full")
         } else {
@@ -24,7 +47,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn insert_ref(&mut self, op: &ParsedInboxMessage) -> anyhow::Result<()> {
+    pub fn insert_ref(&mut self, op: &WrappedOperation) -> anyhow::Result<()> {
         if self.is_full() {
             anyhow::bail!("queue is full")
         } else {
@@ -33,7 +56,7 @@ impl OperationQueue {
         }
     }
 
-    pub fn pop(&mut self) -> Option<ParsedInboxMessage> {
+    pub fn pop(&mut self) -> Option<WrappedOperation> {
         self.queue.pop_front()
     }
 
@@ -51,7 +74,10 @@ impl OperationQueue {
 #[cfg(test)]
 mod tests {
     use super::OperationQueue;
-    use crate::sequencer::tests::dummy_op;
+    use crate::sequencer::{
+        queue::WrappedOperation,
+        tests::{dummy_op, dummy_signed_op},
+    };
 
     #[test]
     fn new_queue() {
@@ -97,5 +123,30 @@ mod tests {
         assert!(q.pop().is_none());
         q.insert(dummy_op()).unwrap();
         assert!(q.pop().is_some());
+    }
+
+    #[test]
+    fn wrapped_operation_to_message() {
+        let op = WrappedOperation::FromInbox {
+            message: jstz_kernel::inbox::ParsedInboxMessage::LevelInfo(
+                jstz_kernel::inbox::LevelInfo::End,
+            ),
+            original_inbox_message: "0002".to_string(),
+        };
+        assert_eq!(
+            op.to_message(),
+            jstz_kernel::inbox::ParsedInboxMessage::LevelInfo(
+                jstz_kernel::inbox::LevelInfo::End,
+            )
+        );
+
+        let inner = dummy_signed_op();
+        let op = WrappedOperation::FromNode(inner.clone());
+        assert_eq!(
+            op.to_message(),
+            jstz_kernel::inbox::ParsedInboxMessage::JstzMessage(
+                jstz_kernel::inbox::Message::External(inner),
+            )
+        );
     }
 }
