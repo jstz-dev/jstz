@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use anyhow::Context;
 use in_container::in_container;
 use log::info;
@@ -48,9 +50,23 @@ async fn shutdown_jstzd(jstzd_server_base_url: &str) -> Result<()> {
     Ok(())
 }
 
-async fn run_jstzd(jstzd_server_base_url: &str) -> Result<Child> {
-    let child = Command::new("jstzd")
-        .args(["run"])
+async fn run_jstzd(
+    jstzd_server_base_url: &str,
+    jstzd_config: Option<PathBuf>,
+) -> Result<Child> {
+    let additional_args = match jstzd_config {
+        Some(p) => vec![p.canonicalize()?],
+        None => vec![],
+    };
+    let mut args = vec!["run"];
+    args.append(
+        &mut additional_args
+            .iter()
+            .map(|x| x.to_str().expect("Invalid jstzd config path"))
+            .collect(),
+    );
+    let mut child = Command::new("jstzd")
+        .args(args.as_slice())
         .spawn()
         .context("failed to run jstzd")?;
 
@@ -58,9 +74,32 @@ async fn run_jstzd(jstzd_server_base_url: &str) -> Result<Child> {
         is_jstzd_running(jstzd_server_base_url)
             .await
             .unwrap_or_default()
-    })
-    .await;
-    if !jstzd_running {
+    });
+
+    let succesful = tokio::select! {
+    child_result = child.wait() => {
+        match child_result {
+            Err(e) => {
+                bail_user_error!("{}", e);
+            },
+            Ok(exit_status) =>
+                if exit_status.success() {
+                    // If we exited successfully, then the child process was
+                    // correctly spawned, so wait for for `jstzd_running`
+                    std::future::pending::<bool>().await
+                }
+                else {
+                    false
+                }
+            }
+
+    }
+    retry_result = jstzd_running => {
+            retry_result
+        }
+    };
+
+    if !succesful {
         bail_user_error!("jstzd did not turn healthy in time")
     }
     Ok(child)
@@ -97,7 +136,11 @@ pub async fn stop_sandbox(restart: bool, cfg: &mut Config) -> Result<()> {
     _stop_sandbox(JSTZD_SERVER_BASE_URL, restart, cfg).await
 }
 
-pub async fn main(detach: bool, cfg: &mut Config) -> Result<()> {
+pub async fn main(
+    detach: bool,
+    cfg: &mut Config,
+    jstzd_config: Option<PathBuf>,
+) -> Result<()> {
     let jstzd_server_base_url = JSTZD_SERVER_BASE_URL;
     if let Ok(true) = is_jstzd_running(jstzd_server_base_url).await {
         bail_user_error!("The sandbox is already running!");
@@ -107,7 +150,7 @@ pub async fn main(detach: bool, cfg: &mut Config) -> Result<()> {
         bail_user_error!("Detaching from the terminal is not supported in this environment. Please run `jstz sandbox start` without the `--detach` flag.");
     }
 
-    let mut c = run_jstzd(jstzd_server_base_url)
+    let mut c = run_jstzd(jstzd_server_base_url, jstzd_config)
         .await
         .context("Sandbox did not launch successfully")?;
     cfg.reload().await?;
