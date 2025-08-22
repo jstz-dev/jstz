@@ -162,7 +162,7 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
 
         // Use catch_unwind to handle panics (including segmentation faults) gracefully
         let _ = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-            let _ = rt.execute_script("native code", source.clone());
+            rt.execute_script("native code", source.clone())
         }));
 
         // Take the test harness report out of the runtime and return it

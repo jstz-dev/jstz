@@ -3163,13 +3163,6 @@ version = "0.1.1-alpha.4"
 dependencies = [
  "anyhow",
  "bincode 2.0.0-rc.3",
- "deno_console",
- "deno_core",
- "deno_error",
- "deno_fetch_base",
- "deno_url",
- "deno_web",
- "deno_webidl",
  "derive_more",
  "futures",
  "hex",
@@ -3330,6 +3323,27 @@ dependencies = [
  "tokio",
  "url",
  "utoipa",
+]
+
+[[package]]
+name = "jstz_riscv_wpt_test_kernel"
+version = "0.1.1-alpha.3"
+dependencies = [
+ "deno_console",
+ "deno_core",
+ "deno_error",
+ "deno_fetch_base",
+ "deno_url",
+ "deno_web",
+ "deno_webidl",
+ "jstz_core",
+ "jstz_crypto",
+ "jstz_kernel",
+ "jstz_proto",
+ "jstz_runtime",
+ "tezos-smart-rollup",
+ "tezos-smart-rollup-mock 0.2.2 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
+ "tezos_crypto_rs 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
 ]
 
 [[package]]
