@@ -11,12 +11,13 @@ use rust_embed::Embed;
 use tempfile::NamedTempFile;
 
 use crate::task::jstzd::JstzdConfig;
+use crate::user_config::UserJstzNodeConfig;
 use crate::{
     jstz_rollup_path, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS,
 };
 use anyhow::{Context, Result};
 use http::Uri;
-use jstz_node::config::{JstzNodeConfig, RunModeBuilder, RunModeType};
+use jstz_node::config::{JstzNodeConfig, RunModeBuilder};
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{
     BootstrapContract, BootstrapSmartRollup, ProtocolParameter, SmartRollupPvmKind,
@@ -55,18 +56,6 @@ pub struct BootstrapAccountFile;
 #[folder = "$CARGO_MANIFEST_DIR/resources/jstz_rollup"]
 #[include = "*.json"]
 struct BootstrapRollupFile;
-
-// A subset of JstzNodeConfig that is exposed to users.
-#[derive(Deserialize, Default, PartialEq, Debug, Clone)]
-struct UserJstzNodeConfig {
-    mode: Option<RunModeType>,
-    capacity: Option<usize>,
-    debug_log_file: Option<PathBuf>,
-    riscv_kernel_path: Option<PathBuf>,
-    rollup_address: Option<SmartRollupHash>,
-    #[serde(default)]
-    storage_sync: bool,
-}
 
 #[derive(Deserialize, Default)]
 pub struct Config {
@@ -197,7 +186,10 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
             octez_client_config,
             octez_rollup_config,
             #[cfg(feature = "oracle")]
-            build_oracle_config(Some(injector.clone()), &jstz_node_config),
+            build_oracle_config(
+                Some(jstz_node_config.injector.clone()),
+                &jstz_node_config,
+            ),
             jstz_node_config,
             protocol_params,
         ),
@@ -285,8 +277,10 @@ fn build_oracle_config(
         key_pair,
         jstz_node_endpoint: jstz_node_config.endpoint.clone(),
         log_path: match &jstz_node_config.mode {
-            RunMode::Default => jstz_node_config.kernel_log_file.clone(),
-            RunMode::Sequencer { debug_log_path, .. } => debug_log_path.clone(),
+            jstz_node::RunMode::Default => jstz_node_config.kernel_log_file.clone(),
+            jstz_node::RunMode::Sequencer { debug_log_path, .. } => {
+                debug_log_path.clone()
+            }
         },
     }
 }
@@ -492,21 +486,6 @@ mod tests {
     }
 
     #[test]
-    fn user_jstz_node_config() {
-        assert_eq!(
-            UserJstzNodeConfig::default(),
-            UserJstzNodeConfig {
-                mode: None,
-                capacity: None,
-                debug_log_file: None,
-                riscv_kernel_path: None,
-                rollup_address: None,
-                storage_sync: false,
-            }
-        )
-    }
-
-    #[test]
     fn deserialize_config_default() {
         let config = serde_json::from_value::<Config>(serde_json::json!({})).unwrap();
         assert_eq!(config.octez_baker, OctezBakerConfigBuilder::default());
@@ -669,6 +648,7 @@ mod tests {
                     .unwrap()
                 ),
                 storage_sync: true,
+                skipped: false,
             }
         );
 
@@ -686,6 +666,7 @@ mod tests {
                 riscv_kernel_path: None,
                 rollup_address: None,
                 storage_sync: false,
+                skipped: false,
             }
         );
     }
@@ -907,6 +888,7 @@ mod tests {
             riscv_kernel_path: Some(PathBuf::from_str("/riscv/kernel").unwrap()),
             rollup_address: Some(rollup_address.clone()),
             storage_sync: false,
+            skipped: false,
         };
         let jstz_node_config =
             super::build_jstz_node_config(config, &Endpoint::default(), &PathBuf::new())
@@ -1250,6 +1232,7 @@ mod tests {
                 &PathBuf::from("/kernel/debug"),
                 keys.clone(),
                 jstz_node::RunMode::Default,
+                true,
             ),
         );
         assert_eq!(config.log_path.to_str().unwrap(), "/kernel/debug");
@@ -1265,7 +1248,9 @@ mod tests {
                 jstz_node::RunMode::Sequencer {
                     capacity: 0,
                     debug_log_path: PathBuf::from("/jstz_node/debug"),
+                    runtime_env: RuntimeEnv::Native,
                 },
+                true,
             ),
         );
         assert_eq!(config.log_path.to_str().unwrap(), "/jstz_node/debug");
