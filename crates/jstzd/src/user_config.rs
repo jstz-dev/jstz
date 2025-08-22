@@ -21,7 +21,10 @@ pub(crate) struct UserJstzNodeConfig {
 
 #[cfg(test)]
 mod tests {
+    use std::{path::PathBuf, str::FromStr};
+
     use jstz_node::config::RunModeType;
+    use tezos_crypto_rs::hash::SmartRollupHash;
 
     use super::UserJstzNodeConfig;
 
@@ -43,20 +46,36 @@ mod tests {
 
     #[test]
     fn deserialise_user_jstz_node_config() {
-        let s = r#"{"mode": "sequencer", "capacity": 10}"#;
+        let s = r#"{
+            "skipped": true,
+            "mode": "sequencer",
+            "capacity": 42,
+            "debug_log_file": "/tmp/log",
+            "riscv_kernel_path": "/riscv/kernel",
+            "rollup_address": "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+            "storage_sync": true
+        }"#;
         let config = serde_json::from_str::<UserJstzNodeConfig>(s).unwrap();
         let expected = UserJstzNodeConfig {
             skipped: false,
             mode: Some(RunModeType::Sequencer),
-            capacity: Some(10),
-            ..Default::default()
+            capacity: Some(42),
+            debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap()),
+            riscv_kernel_path: Some(PathBuf::from_str("/riscv/kernel").unwrap()),
+            rollup_address: Some(
+                SmartRollupHash::from_base58_check(
+                    "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+                )
+                .unwrap(),
+            ),
+            storage_sync: true,
         };
         assert_eq!(config, expected);
 
-        let s = r#"{"skipped": true, "mode": "sequencer", "capacity": 10}"#;
+        let s = r#"{"skipped": false, "mode": "sequencer", "capacity": 10}"#;
         let config = serde_json::from_str::<UserJstzNodeConfig>(s).unwrap();
         let expected = UserJstzNodeConfig {
-            skipped: true,
+            skipped: false,
             mode: Some(RunModeType::Sequencer),
             capacity: Some(10),
             ..Default::default()

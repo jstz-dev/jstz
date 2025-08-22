@@ -627,10 +627,6 @@ mod tests {
             "jstz_node": {
                 "mode": "sequencer",
                 "capacity": 42,
-                "debug_log_file": "/tmp/log",
-                "riscv_kernel_path": "/riscv/kernel",
-                "rollup_address": "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
-                "storage_sync": true
             }
         }))
         .unwrap();
@@ -639,16 +635,7 @@ mod tests {
             UserJstzNodeConfig {
                 mode: Some(jstz_node::config::RunModeType::Sequencer),
                 capacity: Some(42),
-                debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap()),
-                riscv_kernel_path: Some(PathBuf::from_str("/riscv/kernel").unwrap()),
-                rollup_address: Some(
-                    SmartRollupHash::from_base58_check(
-                        "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK"
-                    )
-                    .unwrap()
-                ),
-                storage_sync: true,
-                skipped: false,
+                ..Default::default()
             }
         );
 
@@ -657,18 +644,7 @@ mod tests {
             "jstz_node": {}
         }))
         .unwrap();
-        assert_eq!(
-            config.jstz_node,
-            UserJstzNodeConfig {
-                mode: None,
-                capacity: None,
-                debug_log_file: None,
-                riscv_kernel_path: None,
-                rollup_address: None,
-                storage_sync: false,
-                skipped: false,
-            }
-        );
+        assert_eq!(config.jstz_node, UserJstzNodeConfig::default());
     }
 
     #[test]
