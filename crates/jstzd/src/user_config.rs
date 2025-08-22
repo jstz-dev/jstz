@@ -42,7 +42,7 @@ mod tests {
     }
 
     #[test]
-    fn deserialise_jstz_node_config_wrapper() {
+    fn deserialise_user_jstz_node_config() {
         let s = r#"{"mode": "sequencer", "capacity": 10}"#;
         let config = serde_json::from_str::<UserJstzNodeConfig>(s).unwrap();
         let expected = UserJstzNodeConfig {
@@ -62,22 +62,5 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(config, expected);
-
-        let s = r#"{"skipped": true}"#;
-        let config = serde_json::from_str::<UserJstzNodeConfig>(s).unwrap();
-        let expected = UserJstzNodeConfig {
-            skipped: true,
-            ..Default::default()
-        };
-        assert_eq!(config, expected);
-
-        let s = r#"{"skipped": true, "config": {"mode": "sequencer", "capacity": 10}}"#;
-        let err = serde_json::from_str::<UserJstzNodeConfig>(s)
-            .unwrap_err()
-            .to_string();
-        assert!(
-            err.contains("unknown field `config`"),
-            "error string '{err}' does not contain the expected string"
-        );
     }
 }
