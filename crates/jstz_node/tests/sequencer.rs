@@ -32,10 +32,8 @@ use tokio_stream::StreamExt;
 
 use futures_util::stream;
 use inbox_utils::*;
-use jstz_core::BinEncodable;
 use std::convert::Infallible;
-use tezos_data_encoding::enc::BinWriter;
-use tezos_smart_rollup::inbox::{ExternalMessageFrame, InboxMessage};
+use tezos_smart_rollup::inbox::InboxMessage;
 use tezos_smart_rollup::types::SmartRollupAddress;
 use tokio::{
     task::{self, JoinHandle},
@@ -423,6 +421,7 @@ async fn call_function_and_stream_logs(base_uri: &str) {
 #[cfg(test)]
 pub mod inbox_utils {
     use super::*;
+    use jstz_kernel::inbox::encode_signed_operation;
     use tezos_crypto_rs::hash::{BlockHash, HashTrait};
     use tezos_smart_rollup::{
         inbox::{InfoPerLevel, InternalInboxMessage},
@@ -454,17 +453,12 @@ pub mod inbox_utils {
 
     // Returns the hex-encoded serialized external message for a given SignedOperation.
     pub fn hex_external_message(op: SignedOperation) -> String {
-        let message = op.encode().unwrap();
-        let external_message = ExternalMessageFrame::Targetted {
-            address: SmartRollupAddress::from_b58check(JSTZ_ROLLUP_ADDRESS).unwrap(),
-            contents: message,
-        };
-        let mut payload = Vec::new();
-        external_message
-            .bin_write(&mut payload)
-            .expect("serialization of external payload failed");
-        let external_message = InboxMessage::External::<RollupType>(&payload);
-        inbox_message_to_hex(external_message)
+        let bytes = encode_signed_operation(
+            &op,
+            &SmartRollupAddress::from_b58check(JSTZ_ROLLUP_ADDRESS).unwrap(),
+        )
+        .unwrap();
+        hex::encode(bytes)
     }
 
     fn info_per_level() -> InfoPerLevel {

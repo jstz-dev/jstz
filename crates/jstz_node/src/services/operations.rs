@@ -267,7 +267,7 @@ async fn handle_inbox_message(
     use crate::sequencer::inbox::Logger;
     use crate::sequencer::queue::WrappedOperation;
     use jstz_kernel::inbox::{
-        parse_inbox_message_hex, InboxMessage, Message, ParsedInboxMessage, RollupType,
+        encode_signed_operation, parse_inbox_message_hex, Message, ParsedInboxMessage,
     };
     use jstz_proto::operation::internal::InboxId;
     use tezos_smart_rollup::types::SmartRollupAddress;
@@ -289,24 +289,14 @@ async fn handle_inbox_message(
     // parse_inbox_messages does not deal with large payload and thus it needs to be handled here
     Ok(match message {
         ParsedInboxMessage::JstzMessage(Message::External(m)) => {
-            let (op, encoded_op) =
+            let (op, _) =
                 encode_operation(m, injector, store, rollup_preimages_dir).await?;
 
-            // TODO: replace this with the helper function that converts operations to
-            // inbox messages
-            let mut external = Vec::new();
-            let frame = ExternalMessageFrame::Targetted {
-                contents: encoded_op,
-                address: SmartRollupAddress::new(jstz_rollup_address.clone()),
-            };
-            frame
-                .bin_write(&mut external)
-                .context("failed to encode operation")?;
-            let message = InboxMessage::External::<RollupType>(&external);
-            let mut buf = Vec::new();
-            message
-                .serialize(&mut buf)
-                .context("failed to encode operation")?;
+            let buf = encode_signed_operation(
+                &op,
+                &SmartRollupAddress::new(jstz_rollup_address.clone()),
+            )
+            .map_err(|e| ServiceError::FromAnyhow(anyhow::anyhow!("{e}")))?;
 
             WrappedOperation::FromInbox {
                 message: ParsedInboxMessage::JstzMessage(Message::External(op)),
