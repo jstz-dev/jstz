@@ -57,7 +57,7 @@ mod tests {
         }"#;
         let config = serde_json::from_str::<UserJstzNodeConfig>(s).unwrap();
         let expected = UserJstzNodeConfig {
-            skipped: false,
+            skipped: true,
             mode: Some(RunModeType::Sequencer),
             capacity: Some(42),
             debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap()),
