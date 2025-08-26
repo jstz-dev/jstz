@@ -3,6 +3,7 @@ pub mod filtered_log_stream;
 #[cfg(feature = "inbox_builder")]
 pub mod inbox_builder;
 pub mod key_pair;
+pub mod retry;
 pub mod tailed_file;
 pub use key_pair::KeyPair;
 
@@ -28,6 +29,9 @@ where
 pub mod test_util {
     use crate::key_pair::KeyPair;
     use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+    use std::{path::PathBuf, time::Duration};
+    use tokio::fs::OpenOptions;
+    use tokio::io::AsyncWriteExt;
 
     // Global tokio instance to prevent races among v2 runtime tests
     pub static TOKIO: std::sync::LazyLock<tokio::runtime::Runtime> =
@@ -64,6 +68,19 @@ pub mod test_util {
         )
         .unwrap();
         KeyPair(bob_pk, bob_sk)
+    }
+
+    pub async fn append_async(
+        path: PathBuf,
+        line: String,
+        delay_ms: u64,
+    ) -> anyhow::Result<()> {
+        tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+        let mut file = OpenOptions::new().append(true).open(&path).await?;
+        file.write_all(line.as_bytes()).await?;
+        file.write_all(b"\n").await?;
+        file.sync_all().await?;
+        Ok(())
     }
 }
 

@@ -27,6 +27,7 @@ tezos-smart-rollup = { workspace = true, features =  ["utils"], optional = true 
 tezos_crypto_rs.workspace = true
 tezos_data_encoding = { workspace = true, optional = true }
 tokio.workspace = true
+tokio-retry2.workspace = true
 tokio-util.workspace = true
 
 [dev-dependencies]
