@@ -65,12 +65,12 @@ impl<'a, E: Event + Unpin> Stream for EventStream<'a, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_util::append_async;
     use futures_util::StreamExt;
-
     use serde::{Deserialize, Serialize};
     use std::{str::FromStr, time::Duration};
     use tempfile::NamedTempFile;
-    use tokio::{fs::OpenOptions, io::AsyncWriteExt, time::timeout};
+    use tokio::time::timeout;
     use url::Url;
 
     #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -90,19 +90,6 @@ mod tests {
             id,
             url: Url::from_str("http://example.com/foo").unwrap(),
         }
-    }
-
-    async fn append_async(
-        path: PathBuf,
-        line: String,
-        delay_ms: u64,
-    ) -> anyhow::Result<()> {
-        tokio::time::sleep(Duration::from_millis(delay_ms)).await;
-        let mut file = OpenOptions::new().append(true).open(&path).await?;
-        file.write_all(line.as_bytes()).await?;
-        file.write_all(b"\n").await?;
-        file.sync_all().await?;
-        Ok(())
     }
 
     fn make_line(req: &MockEvent) -> String {
