@@ -126,8 +126,13 @@ impl StorageSync {
 /// Applies a batch of storage updates with exponential backoff.
 /// The retry is limited to 6 attempts with a maximum delay of 8 seconds.
 async fn apply_batch_tx_with_retry(db: &Db, updates: BatchStorageUpdate) -> Result<()> {
+    #[cfg(test)]
+    let attempts = 0;
+    #[cfg(not(test))]
+    let attempts = 6;
+
     retry_async(
-        exponential_backoff(50, 6, Duration::from_secs(8)),
+        exponential_backoff(50, attempts, Duration::from_secs(8)),
         || async { apply_batch_tx(db, updates.clone()) },
         |_| true,
     )
@@ -145,6 +150,10 @@ fn apply_batch_tx(db: &Db, updates: BatchStorageUpdate) -> Result<()> {
                 sequencer::db::exec_write(&tx, key, &hex::encode(value))
             }
             StorageUpdate::Remove { ref key } => {
+                #[cfg(test)]
+                if key == tests::KILL_KEY {
+                    return Err(anyhow::anyhow!("received test kill signal"));
+                }
                 sequencer::db::exec_delete(&tx, key).map(|_| ())
             }
         };
@@ -158,7 +167,7 @@ fn apply_batch_tx(db: &Db, updates: BatchStorageUpdate) -> Result<()> {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
     use crate::temp_db;
     use anyhow::Result;
@@ -174,6 +183,8 @@ mod tests {
         task::yield_now,
         time::{sleep, timeout},
     };
+
+    pub(crate) const KILL_KEY: &str = "/KILL";
 
     #[derive(Debug, Serialize, Deserialize, PartialEq, Encode, Decode, Clone)]
     struct DummyValue(u32);
@@ -197,7 +208,7 @@ mod tests {
         event
     }
 
-    fn make_line<T: Event + Serialize>(event: &T) -> String {
+    pub(crate) fn make_line<T: Event + Serialize>(event: &T) -> String {
         format!("[{}] {}", T::tag(), serde_json::to_string(event).unwrap())
     }
 
