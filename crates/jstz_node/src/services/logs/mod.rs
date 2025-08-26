@@ -94,24 +94,27 @@ pub enum Line {
     Js(LogRecord),
 }
 
-pub struct LogsService;
+pub struct LogsService {
+    cancellation_token: CancellationToken,
+    inner: JoinHandle<std::io::Result<()>>,
+}
 
 impl LogsService {
     // Initalise the LogService by spawning a future that reads and broadcasts the file
     pub async fn init(
         path: &std::path::Path,
-        cancellation_token: &CancellationToken,
-    ) -> anyhow::Result<(Arc<Broadcaster>, Db, JoinHandle<std::io::Result<()>>)> {
+    ) -> anyhow::Result<(Arc<Broadcaster>, Db, Self)> {
         // Create a broadcaster for streaming logs.
         let broadcaster = Broadcaster::new();
 
         // Create a connection with the sqlite database.
         let db = Db::init().await?;
 
+        let cancellation_token = CancellationToken::new();
         let file = TailedFile::init(path).await?;
         // Spawn a future that reads from the log file.
         // The line is broadcast to client / flushed to storage.
-        let tail_file_handle = Self::tail_file(
+        let inner = Self::tail_file(
             file,
             broadcaster.clone(),
             db.clone(),
@@ -119,7 +122,19 @@ impl LogsService {
         )
         .await;
 
-        Ok((broadcaster, db, tail_file_handle))
+        Ok((
+            broadcaster,
+            db,
+            Self {
+                cancellation_token,
+                inner,
+            },
+        ))
+    }
+
+    pub async fn shutdown(self) -> std::io::Result<()> {
+        self.cancellation_token.cancel();
+        self.inner.await?
     }
 
     /// Spawn a future that tails log file.
@@ -300,5 +315,29 @@ impl Service for LogsService {
             .routes(routes!(persistent_logs_by_request_id));
 
         OpenApiRouter::new().nest("/logs", router)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::Duration;
+    use tempfile::NamedTempFile;
+    use tokio::time::timeout;
+
+    #[tokio::test]
+    async fn logs_service_shuts_down() {
+        // Create a temporary file to use as the log file
+        let tmp = NamedTempFile::new().unwrap();
+        let path = tmp.path();
+
+        // Initialize the LogsService
+        let (_broadcaster, _db, logs_service) = LogsService::init(path).await.unwrap();
+
+        // Shutdown the service and ensure it completes without error
+        // Use a timeout to avoid hanging if shutdown does not complete
+        let result = timeout(Duration::from_secs(2), logs_service.shutdown()).await;
+        assert!(result.is_ok(), "shutdown did not complete in time");
+        assert!(result.unwrap().is_ok(), "shutdown returned an error");
     }
 }

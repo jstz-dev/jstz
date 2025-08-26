@@ -27,7 +27,6 @@ mod api_doc;
 mod services;
 pub mod storage_sync;
 use services::Service;
-use tokio_util::sync::CancellationToken;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
@@ -159,7 +158,6 @@ pub async fn run(options: RunOptions) -> Result<()> {
         RunMode::Default => None,
     };
 
-    let cancellation_token = CancellationToken::new();
     // LogsService expects the log file to exist at instantiation, so this needs to be called after
     // debug log file is created.
     let log_file_path = match mode {
@@ -169,8 +167,7 @@ pub async fn run(options: RunOptions) -> Result<()> {
         } => debug_log_path.clone(),
     };
 
-    let (broadcaster, db, tail_file_handle) =
-        LogsService::init(&log_file_path, &cancellation_token).await?;
+    let (broadcaster, db, log_service_handle) = LogsService::init(&log_file_path).await?;
 
     let (storage_sync_db, _storage_sync_db_file) = temp_db()?;
     let state = AppState {
@@ -199,8 +196,7 @@ pub async fn run(options: RunOptions) -> Result<()> {
     let listener = TcpListener::bind(format!("{addr}:{port}")).await?;
     axum::serve(listener, router).await?;
 
-    cancellation_token.cancel();
-    tail_file_handle.await.unwrap()?;
+    log_service_handle.shutdown().await?;
     Ok(())
 }
 
