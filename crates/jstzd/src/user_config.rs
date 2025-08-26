@@ -19,12 +19,22 @@ pub(crate) struct UserJstzNodeConfig {
     pub storage_sync: bool,
 }
 
+/// Oracle node config for jstzd.
+#[derive(Deserialize, Default, Clone)]
+pub(crate) struct UserOracleNodeConfig {
+    #[serde(default)]
+    /// Flag indicating if oracle node should not be launched.
+    pub skipped: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use std::{path::PathBuf, str::FromStr};
 
     use jstz_node::config::RunModeType;
     use tezos_crypto_rs::hash::SmartRollupHash;
+
+    use crate::user_config::UserOracleNodeConfig;
 
     use super::UserJstzNodeConfig;
 
@@ -81,5 +91,16 @@ mod tests {
             ..Default::default()
         };
         assert_eq!(config, expected);
+    }
+
+    #[test]
+    fn deserialise_user_octez_node_config() {
+        let s = r#"{"skipped": true}"#;
+        let config = serde_json::from_str::<UserOracleNodeConfig>(s).unwrap();
+        assert!(config.skipped);
+
+        let s = r#"{}"#;
+        let config = serde_json::from_str::<UserOracleNodeConfig>(s).unwrap();
+        assert!(!config.skipped);
     }
 }
