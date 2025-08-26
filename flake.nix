@@ -38,7 +38,7 @@
 
     octezPackages = {
       inputs.nixpkgs.follows = "nixpkgs";
-      url = "gitlab:tezos/tezos/octez-v22.0-rc1";
+      url = "gitlab:tezos/tezos/octez-v23.0";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.opam-nix-integration.follows = "opam-nix-integration";
@@ -115,7 +115,13 @@
               # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
               # but does for Linux.
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                ${vendorDeps {dir = "src/rust_deps";}}
+                ${vendorDeps {
+                  dir = "src/rust_deps";
+                  gitDepHashes = {
+                    "octez-riscv-0.0.0" = "sha256-7TxDp0gltdoAC1Yhbb/roPbHBZYirlgcBaFROtYJYWw=";
+                    "tezos-smart-rollup-build-utils-0.2.2" = "sha256-Z6Z3Jti5J4YzDKdsaZ5i/YdaSTctbPGmj5nMlOG7RuA=";
+                  };
+                }}
                 ${vendorDeps {dir = "src/rustzcash_deps";}}
               '';
 
@@ -130,8 +136,7 @@
               octez-client
               octez-node
               octez-smart-rollup-node
-              octez-smart-rollup-wasm-debugger
-              octez-baker-PsQuebec
+              octez-baker-PtSeouLo
               octez-baker-PsRiotum
               octez-baker-alpha
             '';
