@@ -34,6 +34,8 @@ pub mod config;
 pub mod sequencer;
 pub use config::RunMode;
 
+use crate::config::RuntimeEnv;
+
 #[derive(Clone)]
 pub struct AppState {
     pub rollup_client: OctezRollupClient,
@@ -248,9 +250,17 @@ pub fn openapi_json_raw() -> anyhow::Result<String> {
 }
 
 fn validate_run_options(options: &RunOptions) -> Result<()> {
-    if options.storage_sync && matches!(options.mode, RunMode::Sequencer { .. }) {
+    if options.storage_sync
+        && matches!(
+            options.mode,
+            RunMode::Sequencer {
+                runtime_env: RuntimeEnv::Native,
+                ..
+            }
+        )
+    {
         return Err(anyhow::anyhow!(
-            "storage sync is only supported for default mode"
+            "storage sync not supported for sequencer mode with native runtime"
         ));
     }
     Ok(())
@@ -449,7 +459,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn storage_sync_not_supported_for_sequencer() {
+    async fn storage_sync_not_supported_for_sequencer_with_native_runtime() {
         let port = unused_port();
         let kernel_log_file = NamedTempFile::new().unwrap();
         let mode = RunMode::Sequencer {
@@ -470,9 +480,9 @@ mod test {
         })
         .await;
 
-        assert!(h.is_err_and(|e| e
-            .to_string()
-            .contains("storage sync is only supported for default mode")));
+        assert!(h.is_err_and(|e| e.to_string().contains(
+            "storage sync not supported for sequencer mode with native runtime"
+        )));
     }
 
     // Make a storage update that sets the balance of the `addr` to `amount`
