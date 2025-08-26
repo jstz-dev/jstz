@@ -18,8 +18,6 @@ name = "wpt-test-kernel-executable"
 path = "src/executable.rs"
 required-features = ["wpt_test_kernel"]
 
-
-
 [dependencies]
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }

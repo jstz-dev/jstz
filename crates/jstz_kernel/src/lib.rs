@@ -16,13 +16,12 @@ pub mod parsing;
 #[cfg(feature = "riscv_kernel")]
 pub mod riscv_kernel;
 
-#[cfg(not(any(feature = "riscv_kernel")))]
+#[cfg(not(feature = "riscv_kernel"))]
 mod wasm_kernel;
 
 pub const TICKETER: RefPath = RefPath::assert_from(b"/ticketer");
 pub const INJECTOR: RefPath = RefPath::assert_from(b"/injector");
 
-#[allow(unused)]
 pub(crate) fn read_ticketer(rt: &impl Runtime) -> SmartFunctionHash {
     Storage::get(rt, &TICKETER)
         .ok()
@@ -30,7 +29,6 @@ pub(crate) fn read_ticketer(rt: &impl Runtime) -> SmartFunctionHash {
         .expect("Ticketer not found")
 }
 
-#[allow(unused)]
 pub(crate) fn read_injector(rt: &impl Runtime) -> PublicKey {
     Storage::get(rt, &INJECTOR)
         .ok()
@@ -71,7 +69,7 @@ pub async fn handle_message(
 // kernel entry
 #[entrypoint::main]
 pub fn entry(rt: &mut impl Runtime) {
-    #[cfg(not(any(feature = "riscv_kernel")))]
+    #[cfg(not(feature = "riscv_kernel"))]
     wasm_kernel::run(rt);
 
     #[cfg(feature = "riscv_kernel")]

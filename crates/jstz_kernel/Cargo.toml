@@ -18,8 +18,6 @@ name = "kernel-executable"
 path = "src/executable.rs"
 required-features = ["riscv_kernel"]
 
-
-
 [dependencies]
 bincode.workspace = true
 derive_more = { workspace = true, features = ["from"] }
@@ -37,7 +35,6 @@ tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup-mock.workspace = true
 regex.workspace = true
-
 anyhow.workspace = true
 
 [dev-dependencies]
@@ -47,7 +44,6 @@ jstz_utils = { path = "../jstz_utils" }
 http.workspace = true
 serde_json.workspace = true
 tokio.workspace = true
-
 
 [features]
 v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
