@@ -3327,7 +3327,7 @@ dependencies = [
 
 [[package]]
 name = "jstz_riscv_wpt_test_kernel"
-version = "0.1.1-alpha.3"
+version = "0.1.1-alpha.4"
 dependencies = [
  "deno_console",
  "deno_core",

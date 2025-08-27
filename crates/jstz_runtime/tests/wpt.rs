@@ -54,6 +54,8 @@ fn run_wpt_test_harness_in_riscv_sandbox(source: String) -> TestHarnessReport {
         SmartRollupAddress::from_b58check("sr1BxufbqiHt3dn6ahV6eZk9xBD6XV1fYowr")
             .unwrap(),
         None,
+        #[cfg(feature = "v2_runtime")]
+        None,
     );
 
     let chunk_size = 3800usize;
