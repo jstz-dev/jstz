@@ -161,7 +161,7 @@ pub async fn run(options: RunOptions) -> Result<()> {
     // LogsService expects the log file to exist at instantiation, so this needs to be called after
     // debug log file is created.
     let log_file_path = match mode {
-        RunMode::Default => kernel_log_path,
+        RunMode::Default => kernel_log_path.clone(),
         RunMode::Sequencer {
             ref debug_log_path, ..
         } => debug_log_path.clone(),
@@ -170,6 +170,16 @@ pub async fn run(options: RunOptions) -> Result<()> {
     let (broadcaster, db, log_service_handle) = LogsService::init(&log_file_path).await?;
 
     let (storage_sync_db, _storage_sync_db_file) = temp_db()?;
+    let storage_sync_handle = match storage_sync {
+        true => Some(storage_sync::spawn(
+            storage_sync_db.clone(),
+            kernel_log_path.clone(),
+            #[cfg(test)]
+            || {},
+        )?),
+        false => None,
+    };
+
     let state = AppState {
         rollup_client,
         rollup_preimages_dir,
@@ -194,7 +204,19 @@ pub async fn run(options: RunOptions) -> Result<()> {
     let router = router.merge(Scalar::with_url("/scalar", openapi));
 
     let listener = TcpListener::bind(format!("{addr}:{port}")).await?;
-    axum::serve(listener, router).await?;
+
+    match storage_sync_handle {
+        Some(storage_sync_handle) => {
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            axum::serve(listener, router)
+                .with_graceful_shutdown(async {
+                    let _ = tx.send(storage_sync_handle.await);
+                })
+                .await?;
+            rx.await??;
+        }
+        None => axum::serve(listener, router).await?,
+    }
 
     log_service_handle.shutdown().await?;
     Ok(())
@@ -242,15 +264,28 @@ mod test {
         time::SystemTime,
     };
 
-    use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+    use jstz_core::{event::StringEncodable, kv::storage_update::BatchStorageUpdate};
+    use jstz_crypto::{
+        hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
+        secret_key::SecretKey,
+    };
+    use jstz_proto::context::account::{Account, Nonce, UserAccount};
+    use jstz_utils::test_util::append_async;
     use octez::unused_port;
     use pretty_assertions::assert_eq;
     use tempfile::{NamedTempFile, TempDir};
-    use tokio::time::{sleep, Duration};
+    use tezos_smart_rollup::storage::path::OwnedPath;
+    use tokio::{
+        task::yield_now,
+        time::{sleep, timeout, Duration},
+    };
 
     use crate::{
-        config::RuntimeEnv, run, services::utils::tests::mock_app_state, KeyPair,
-        RunMode, RunOptions,
+        config::RuntimeEnv,
+        run,
+        services::utils::tests::mock_app_state,
+        storage_sync::tests::{make_line, KILL_KEY},
+        KeyPair, RunMode, RunOptions,
     };
 
     pub fn default_injector() -> KeyPair {
@@ -438,5 +473,137 @@ mod test {
         assert!(h.is_err_and(|e| e
             .to_string()
             .contains("storage sync is only supported for default mode")));
+    }
+
+    // Make a storage update that sets the balance of the `addr` to `amount`
+    fn sets_balance(addr: PublicKeyHash, amount: u64) -> BatchStorageUpdate {
+        let mut updates = BatchStorageUpdate::new(1);
+        let key =
+            OwnedPath::try_from(format!("/jstz_account/{}", addr.to_base58())).unwrap();
+        let val = Account::User(UserAccount {
+            amount,
+            nonce: Nonce(0),
+        });
+        updates.push_insert(&key, &val).unwrap();
+        updates
+    }
+
+    // Make a storage update that kills the storage sync for testing
+    fn kills_storage_sync() -> BatchStorageUpdate {
+        let mut updates = BatchStorageUpdate::new(1);
+        let key = OwnedPath::try_from(KILL_KEY.to_string()).unwrap();
+        updates.push_remove(&key);
+        updates
+    }
+
+    fn start_server_with_storage_sync(
+        port: u16,
+        kernel_log_file: &NamedTempFile,
+        mode: RunMode,
+    ) -> tokio::task::JoinHandle<Result<(), anyhow::Error>> {
+        tokio::spawn(run(RunOptions {
+            addr: "0.0.0.0".to_string(),
+            port,
+            rollup_endpoint: "".to_string(),
+            rollup_preimages_dir: TempDir::new().unwrap().into_path(),
+            kernel_log_path: kernel_log_file.path().to_path_buf(),
+            injector: default_injector(),
+            mode,
+            storage_sync: true,
+        }))
+    }
+
+    #[tokio::test]
+    async fn storage_sync_spawn() -> anyhow::Result<()> {
+        let port = unused_port();
+        let kernel_log_file = NamedTempFile::new().unwrap();
+        let addr =
+            PublicKeyHash::from_base58("tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9").unwrap();
+        let amount = 10_000_000;
+
+        let _server: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
+            start_server_with_storage_sync(port, &kernel_log_file, RunMode::Default);
+
+        // wait for the server to start
+        sleep(Duration::from_secs(1)).await;
+
+        let storage_updates = sets_balance(addr.clone(), amount);
+        // write a storage update that deposits the `amount` to the `addr`
+        let writer = tokio::spawn(append_async(
+            kernel_log_file.path().to_path_buf(),
+            make_line(&storage_updates),
+            25,
+        ));
+
+        // Check that the storage update is applied to the database
+        timeout(Duration::from_secs(1), async {
+            loop {
+                let b = reqwest::get(format!(
+                    "http://0.0.0.0:{port}/accounts/{addr}/balance"
+                ))
+                .await
+                .ok();
+                if let Some(b) = b {
+                    if b.status().is_success() {
+                        let balance = b.text().await.unwrap();
+                        assert_eq!(u64::from_str(&balance).unwrap(), amount);
+                        break;
+                    }
+                }
+                yield_now().await;
+            }
+        })
+        .await
+        .expect("should update balance");
+        writer.await??;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn server_dies_when_storage_sync_dies() -> anyhow::Result<()> {
+        let port = unused_port();
+        let kernel_log_file = NamedTempFile::new().unwrap();
+        PublicKeyHash::from_base58("tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9").unwrap();
+
+        let server: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
+            start_server_with_storage_sync(port, &kernel_log_file, RunMode::Default);
+
+        // wait for the server to start
+        sleep(Duration::from_secs(2)).await;
+
+        // check health
+        let health_endpoint = format!("http://0.0.0.0:{port}/health");
+        let res = reqwest::get(health_endpoint.clone()).await?;
+        let status = res.status();
+        assert!(status.is_success());
+
+        // write a storage update that kills the storage sync
+        let writer = tokio::spawn(append_async(
+            kernel_log_file.path().to_path_buf(),
+            make_line(&kills_storage_sync()),
+            25,
+        ));
+
+        // Wait for the server to shutdown.
+        sleep(Duration::from_secs(2)).await;
+
+        // server dies after storage sync dies - should get a connection error
+        timeout(Duration::from_secs(2), async {
+            loop {
+                if let Err(e) = &reqwest::get(health_endpoint.clone()).await {
+                    assert!(e.is_connect(), "Expected connection error, got: {e:?}");
+                    break;
+                }
+                yield_now().await;
+            }
+        })
+        .await?;
+        writer.await??;
+
+        // server propagates the error from storage sync
+        assert!(server
+            .await?
+            .is_err_and(|e| e.to_string().contains("received test kill signal")));
+        Ok(())
     }
 }
