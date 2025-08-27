@@ -19,6 +19,7 @@ pub(crate) struct UserJstzNodeConfig {
     pub storage_sync: bool,
 }
 
+#[cfg(feature = "oracle")]
 /// Oracle node config for jstzd.
 #[derive(Deserialize, Default, Clone)]
 pub(crate) struct UserOracleNodeConfig {
@@ -34,7 +35,8 @@ mod tests {
     use jstz_node::config::RunModeType;
     use tezos_crypto_rs::hash::SmartRollupHash;
 
-    use crate::user_config::UserOracleNodeConfig;
+    #[cfg(feature = "oracle")]
+    use super::UserOracleNodeConfig;
 
     use super::UserJstzNodeConfig;
 
@@ -93,6 +95,7 @@ mod tests {
         assert_eq!(config, expected);
     }
 
+    #[cfg(feature = "oracle")]
     #[test]
     fn deserialise_user_octez_node_config() {
         let s = r#"{"skipped": true}"#;
