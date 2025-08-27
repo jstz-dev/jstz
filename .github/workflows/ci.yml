@@ -68,7 +68,6 @@ jobs:
         run: |
           nix --accept-flake-config --log-format raw -L develop -j auto --command sh -c '
           cd crates/jstz_runtime
-          export PATH="$PATH:$(nix --accept-flake-config --log-format raw -L develop -j auto --command which riscv-sandbox | xargs dirname)"
           STATS_PATH=$(pwd)/out.txt cargo test --features wpt-in-riscv --test wpt -- --nocapture
           '
       - name: Collect and display test results
