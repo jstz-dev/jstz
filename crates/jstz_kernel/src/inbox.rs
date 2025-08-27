@@ -140,16 +140,19 @@ pub fn parse_inbox_message(
                 ExternalMessageFrame::Targetted { address, contents } => {
                     let message = if jstz_rollup_address != address.hash() {
                         logger.write_debug(
-                            "External message ignored because of different smart rollup address",
+                            &format!(
+                                "External message ignored because of different smart rollup address: {:?} != {:?}",
+                                jstz_rollup_address, address.hash()
+                            ),
                         );
                         None
                     } else {
                         match read_external_message(logger, contents) {
                             Some(msg) => Some(Message::External(msg)),
                             None => {
-                                logger.write_debug(
-                                    "Failed to parse the external message\n",
-                                );
+                                logger.write_debug(&format!(
+                                    "Failed to parse the external message: {contents:?}\n"
+                                ));
                                 None
                             }
                         }
