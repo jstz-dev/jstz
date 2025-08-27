@@ -8,15 +8,13 @@ on:
 jobs:
   wpt_riscv:
     name: Web Platform Test (RISC-V)
-    runs-on: [macOS, ARM64]
+    runs-on: [x86_64, linux, nix]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
       - name: Build RISCV WPT kernel
         run: nix --accept-flake-config --log-format raw -L develop -j auto --command make riscv-wpt-test-kernel
-      - name: Setup Python environment
-        run: ln -s /usr/bin/python3.11 /usr/bin/python3
       - name: Setup WPT test server
         run: |
           cd crates/jstz_wpt/wpt && python3 wpt make-hosts-file >> /etc/hosts
