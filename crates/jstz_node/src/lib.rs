@@ -34,8 +34,6 @@ pub mod config;
 pub mod sequencer;
 pub use config::RunMode;
 
-use crate::config::RuntimeEnv;
-
 #[derive(Clone)]
 pub struct AppState {
     pub rollup_client: OctezRollupClient,
@@ -94,9 +92,8 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
     .await
 }
 
-pub async fn run(options: RunOptions) -> Result<()> {
-    validate_run_options(&options)?;
-    let RunOptions {
+pub async fn run(
+    RunOptions {
         addr,
         port,
         rollup_endpoint,
@@ -105,7 +102,8 @@ pub async fn run(options: RunOptions) -> Result<()> {
         injector,
         mode,
         storage_sync,
-    } = options;
+    }: RunOptions,
+) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
     let queue = Arc::new(RwLock::new(OperationQueue::new(match mode {
         RunMode::Sequencer { capacity, .. } => capacity,
@@ -247,23 +245,6 @@ pub fn openapi_json_raw() -> anyhow::Result<String> {
     let mut doc = router().split_for_parts().1;
     modify(&mut doc);
     Ok(doc.to_pretty_json()?)
-}
-
-fn validate_run_options(options: &RunOptions) -> Result<()> {
-    if options.storage_sync
-        && matches!(
-            options.mode,
-            RunMode::Sequencer {
-                runtime_env: RuntimeEnv::Native,
-                ..
-            }
-        )
-    {
-        return Err(anyhow::anyhow!(
-            "storage sync not supported for sequencer mode with native runtime"
-        ));
-    }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -456,33 +437,6 @@ mod test {
         state.worker_heartbeat = Arc::new(AtomicU64::new(now - 5));
         // heartbeat is recent enough
         assert!(state.is_worker_healthy());
-    }
-
-    #[tokio::test]
-    async fn storage_sync_not_supported_for_sequencer_with_native_runtime() {
-        let port = unused_port();
-        let kernel_log_file = NamedTempFile::new().unwrap();
-        let mode = RunMode::Sequencer {
-            capacity: 0,
-            debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
-            runtime_env: RuntimeEnv::Native,
-        };
-
-        let h = run(RunOptions {
-            addr: "0.0.0.0".to_string(),
-            port,
-            rollup_endpoint: "0.0.0.0:5678".to_string(),
-            rollup_preimages_dir: TempDir::new().unwrap().into_path(),
-            kernel_log_path: kernel_log_file.path().to_path_buf(),
-            injector: default_injector(),
-            mode: mode.clone(),
-            storage_sync: true,
-        })
-        .await;
-
-        assert!(h.is_err_and(|e| e.to_string().contains(
-            "storage sync not supported for sequencer mode with native runtime"
-        )));
     }
 
     // Make a storage update that sets the balance of the `addr` to `amount`
