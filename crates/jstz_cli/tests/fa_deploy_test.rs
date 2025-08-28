@@ -195,7 +195,11 @@ fn build_config_from_jstzd(jstzd_config: &JstzdConfig) -> Config {
                     .octez_node_config()
                     .rpc_endpoint
                     .to_string(),
-                jstz_node_endpoint: jstzd_config.jstz_node_config().endpoint.to_string(),
+                jstz_node_endpoint: jstzd_config
+                    .jstz_node_config()
+                    .unwrap()
+                    .endpoint
+                    .to_string(),
             },
         )]
         .into_iter()

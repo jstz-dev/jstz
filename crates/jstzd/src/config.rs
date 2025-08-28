@@ -170,6 +170,7 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
         .build()
         .unwrap();
 
+    let skip_jstz_node = config.jstz_node.skipped;
     let jstz_node_config = build_jstz_node_config(
         config.jstz_node,
         &octez_rollup_config.rpc_endpoint,
@@ -190,7 +191,10 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
                 Some(jstz_node_config.injector.clone()),
                 &jstz_node_config,
             ),
-            jstz_node_config,
+            match skip_jstz_node {
+                true => None,
+                false => Some(jstz_node_config),
+            },
             protocol_params,
         ),
     ))
@@ -838,18 +842,36 @@ mod tests {
             jstz_rollup_path::kernel_installer_path()
         );
 
+        let jstz_node_config = config.jstz_node_config().unwrap();
         assert_eq!(
-            config.jstz_node_config().rollup_endpoint,
+            jstz_node_config.rollup_endpoint,
             config.octez_rollup_config().rpc_endpoint
         );
         assert_eq!(
-            config.jstz_node_config().mode,
+            jstz_node_config.mode,
             RunMode::Sequencer {
                 capacity: 42,
                 debug_log_path: PathBuf::from_str("/debug/file").unwrap(),
                 runtime_env: RuntimeEnv::Native,
             }
         );
+    }
+
+    #[tokio::test]
+    async fn build_config_skip_jstz_node() {
+        let mut tmp_file = NamedTempFile::new().unwrap();
+        let content = serde_json::to_string(&serde_json::json!({
+            "jstz_node": { "skipped": true }
+        }))
+        .unwrap();
+        tmp_file.write_all(content.as_bytes()).unwrap();
+
+        let (_, config) = super::build_config_from_path(&Some(
+            tmp_file.path().to_str().unwrap().to_owned(),
+        ))
+        .await
+        .unwrap();
+        assert!(config.jstz_node_config().is_none());
     }
 
     #[test]
