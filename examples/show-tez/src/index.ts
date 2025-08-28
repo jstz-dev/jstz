@@ -7,9 +7,6 @@ import untildify from "untildify";
 
 import * as signer from "jstz_sdk";
 
-const encoder = new TextEncoder();
-const decoder = new TextDecoder("utf-8");
-
 // Accept a smart function address and message and put together a request
 function buildRequest(
   functionAddress: string,
@@ -17,13 +14,11 @@ function buildRequest(
 ): JstzType.Operation.RunFunction {
   return {
     _type: "RunFunction",
-    body: Array.from(
-      encoder.encode(
-        JSON.stringify({
-          message: message,
-        }),
-      ),
-    ),
+    body: Buffer.from(
+      JSON.stringify({
+        message: message,
+      }),
+    ).toString("base64"),
     gasLimit: 55000,
     headers: {},
     method: "POST",
@@ -122,7 +117,10 @@ async function main() {
         } = await response;
         waitingForReceipt = false;
         if (body) {
-          console.log("🤖:", JSON.parse(decoder.decode(new Uint8Array(body))));
+          console.log(
+            "🤖:",
+            JSON.parse(Buffer.from(body, "base64").toString()),
+          );
         }
       }
     } catch (error) {

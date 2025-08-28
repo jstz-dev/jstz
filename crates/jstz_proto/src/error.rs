@@ -59,7 +59,7 @@ impl From<Error> for JsError {
         match value {
             Error::CoreError { source } => source.into(),
             Error::CryptoError { source } => JsNativeError::eval()
-                .with_message(format!("CryptoError: {}", source))
+                .with_message(format!("CryptoError: {source}"))
                 .into(),
             Error::BalanceOverflow => {
                 JsNativeError::eval().with_message("BalanceOverflow").into()
@@ -95,16 +95,16 @@ impl From<Error> for JsError {
                 JsNativeError::eval().with_message("UnsupportedPath").into()
             }
             Error::TicketTableError { source } => JsNativeError::eval()
-                .with_message(format!("TicketTableError: {}", source))
+                .with_message(format!("TicketTableError: {source}"))
                 .into(),
             Error::FaDepositError { source } => JsNativeError::eval()
-                .with_message(format!("FaDepositError: {}", source))
+                .with_message(format!("FaDepositError: {source}"))
                 .into(),
             Error::FaWithdrawError { source } => JsNativeError::eval()
-                .with_message(format!("FaWithdrawError: {}", source))
+                .with_message(format!("FaWithdrawError: {source}"))
                 .into(),
             Error::TicketHashError(inner) => JsNativeError::eval()
-                .with_message(format!("{}", inner))
+                .with_message(format!("{inner}"))
                 .into(),
             Error::TicketAmountTooLarge => JsNativeError::eval()
                 .with_message("TicketAmountTooLarge")
@@ -172,5 +172,37 @@ impl From<tezos_smart_rollup::storage::path::PathError> for Error {
         Error::CoreError {
             source: jstz_core::Error::PathError { source },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use boa_engine::{JsError, JsNativeError};
+    use tezos_smart_rollup::storage::path::PathError;
+
+    #[test]
+    fn from_js_native_error_for_error() {
+        let js_native_error = JsNativeError::eval().with_message("dummy");
+        let error: Error = js_native_error.into();
+        assert!(matches!(error, Error::CoreError { .. }));
+    }
+
+    #[test]
+    fn from_js_error_for_error() {
+        let js_native_error = JsNativeError::eval().with_message("dummy");
+        let js_error: JsError = js_native_error.into();
+        let error: Error = js_error.into();
+        assert!(
+            matches!(error, Error::CoreError { source } if matches!(source, jstz_core::Error::JsError { .. }))
+        );
+    }
+
+    #[test]
+    fn from_path_error_for_error() {
+        let error: Error = PathError::PathEmpty.into();
+        assert!(
+            matches!(error, Error::CoreError { source } if matches!(source, jstz_core::Error::PathError { .. }))
+        );
     }
 }

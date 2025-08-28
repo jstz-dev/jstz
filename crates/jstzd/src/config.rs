@@ -1,21 +1,25 @@
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use jstz_crypto::public_key::PublicKey;
 use jstz_crypto::secret_key::SecretKey;
-use jstz_node::RunMode;
+#[cfg(feature = "oracle")]
+use jstz_oracle_node::OracleNodeConfig;
+use jstz_utils::KeyPair;
 use octez::r#async::node_config::{OctezNodeHistoryMode, OctezNodeRunOptionsBuilder};
 use rust_embed::Embed;
 use tempfile::NamedTempFile;
 
 use crate::task::jstzd::JstzdConfig;
+use crate::user_config::UserJstzNodeConfig;
+#[cfg(feature = "oracle")]
+use crate::user_config::UserOracleNodeConfig;
 use crate::{
     jstz_rollup_path, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS,
 };
 use anyhow::{Context, Result};
 use http::Uri;
-use jstz_node::config::JstzNodeConfig;
-use jstz_node::config::KeyPair;
+use jstz_node::config::{JstzNodeConfig, RunModeBuilder};
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{
     BootstrapContract, BootstrapSmartRollup, ProtocolParameter, SmartRollupPvmKind,
@@ -55,18 +59,6 @@ pub struct BootstrapAccountFile;
 #[include = "*.json"]
 struct BootstrapRollupFile;
 
-// A subset of JstzNodeConfig that is exposed to users.
-#[derive(Deserialize, Default, PartialEq, Debug)]
-struct UserJstzNodeConfig {
-    #[serde(default)]
-    mode: RunMode,
-    #[serde(default)]
-    capacity: usize,
-    debug_log_file: Option<PathBuf>,
-    #[cfg(feature = "blueprint")]
-    blueprint_db_file: Option<PathBuf>,
-}
-
 #[derive(Deserialize, Default)]
 pub struct Config {
     server_port: Option<u16>,
@@ -79,6 +71,9 @@ pub struct Config {
     octez_rollup: Option<OctezRollupConfigBuilder>,
     #[serde(default)]
     jstz_node: UserJstzNodeConfig,
+    #[cfg(feature = "oracle")]
+    #[serde(default)]
+    oracle_node: UserOracleNodeConfig,
     #[serde(default)]
     protocol: ProtocolParameterBuilder,
 }
@@ -180,36 +175,22 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
         .build()
         .unwrap();
 
-    let jstz_node_rpc_endpoint =
-        Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
-    let injector = find_injector_account(builtin_bootstrap_accounts()?)
-        .context("failed to retrieve injector account")?;
-    let jstz_node_config = JstzNodeConfig::new(
-        &jstz_node_rpc_endpoint,
+    let skip_jstz_node = config.jstz_node.skipped;
+    let jstz_node_config = build_jstz_node_config(
+        config.jstz_node,
         &octez_rollup_config.rpc_endpoint,
-        &jstz_rollup_path::preimages_path(),
         &kernel_debug_file_path,
-        injector.clone(),
-        config.jstz_node.mode,
-        config.jstz_node.capacity,
-        &config.jstz_node.debug_log_file.unwrap_or(
-            NamedTempFile::new()
-                .context("failed to create jstz node debug file path")?
-                .into_temp_path()
-                .keep()
-                .context("failed to keep jstz node debug file path")?,
-        ),
-        #[cfg(feature = "blueprint")]
-        &config.jstz_node.blueprint_db_file.unwrap_or(
-            NamedTempFile::new()
-                .context("failed to create jstz node blueprint db path")?
-                .into_temp_path()
-                .keep()
-                .context("failed to keep jstz node blueprint db path")?,
-        ),
-        #[cfg(feature = "v2_runtime")]
-        Some(injector),
-    );
+    )
+    .context("failed to build jstz node config")?;
+
+    #[cfg(feature = "oracle")]
+    let oracle_node_config = match config.oracle_node.skipped {
+        true => None,
+        false => Some(build_oracle_config(
+            Some(jstz_node_config.injector.clone()),
+            &jstz_node_config,
+        )),
+    };
 
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
     Ok((
@@ -219,8 +200,54 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
             baker_config,
             octez_client_config,
             octez_rollup_config,
-            jstz_node_config,
+            #[cfg(feature = "oracle")]
+            oracle_node_config,
+            match skip_jstz_node {
+                true => None,
+                false => Some(jstz_node_config),
+            },
             protocol_params,
+        ),
+    ))
+}
+
+fn build_jstz_node_config(
+    config: UserJstzNodeConfig,
+    rollup_rpc_endpoint: &Endpoint,
+    kernel_debug_file_path: &Path,
+) -> Result<JstzNodeConfig> {
+    let jstz_node_rpc_endpoint =
+        Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
+    let injector = find_injector_account(builtin_bootstrap_accounts()?)
+        .context("failed to retrieve injector account")?;
+    let mut run_mode_builder = RunModeBuilder::new(config.mode.unwrap_or_default());
+    if let Some(v) = config.capacity {
+        run_mode_builder = run_mode_builder.with_capacity(v)?;
+    }
+    if let Some(path) = config.debug_log_file {
+        run_mode_builder = run_mode_builder.with_debug_log_path(path)?;
+    }
+    if let Some(path) = config.riscv_kernel_path {
+        run_mode_builder = run_mode_builder.with_riscv_kernel_path(path)?;
+    }
+    if let Some(v) = config.rollup_address {
+        run_mode_builder = run_mode_builder.with_rollup_address(v)?;
+    }
+    Ok(JstzNodeConfig::new(
+        &jstz_node_rpc_endpoint,
+        rollup_rpc_endpoint,
+        &jstz_rollup_path::preimages_path(),
+        kernel_debug_file_path,
+        injector.clone(),
+        run_mode_builder.build()?,
+        config.storage_sync,
+        #[cfg(feature = "blueprint")]
+        &config.blueprint_db_file.unwrap_or(
+            NamedTempFile::new()
+                .context("failed to create jstz node blueprint db path")?
+                .into_temp_path()
+                .keep()
+                .context("failed to keep jstz node blueprint db path")?,
         ),
     ))
 }
@@ -262,6 +289,23 @@ fn find_injector_account(
         }
     }
     anyhow::bail!("cannot find injector account")
+}
+
+#[cfg(feature = "oracle")]
+fn build_oracle_config(
+    key_pair: Option<KeyPair>,
+    jstz_node_config: &JstzNodeConfig,
+) -> OracleNodeConfig {
+    OracleNodeConfig {
+        key_pair,
+        jstz_node_endpoint: jstz_node_config.endpoint.clone(),
+        log_path: match &jstz_node_config.mode {
+            jstz_node::RunMode::Default => jstz_node_config.kernel_log_file.clone(),
+            jstz_node::RunMode::Sequencer { debug_log_path, .. } => {
+                debug_log_path.clone()
+            }
+        },
+    }
 }
 
 // Create a sandbox config file that informs octez node about the activator account.
@@ -385,7 +429,7 @@ mod tests {
 
     use super::{jstz_rollup_path, Config, JSTZ_ROLLUP_ADDRESS};
     use http::Uri;
-    use jstz_node::RunMode;
+    use jstz_node::{config::RuntimeEnv, RunMode};
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::OctezClientConfigBuilder,
@@ -397,10 +441,10 @@ mod tests {
             BootstrapAccount, BootstrapContract, BootstrapSmartRollup, Protocol,
             ProtocolConstants, ProtocolParameterBuilder, SmartRollupPvmKind,
         },
-        rollup::RollupDataDir,
+        rollup::{HistoryMode, RollupDataDir},
     };
     use tempfile::{tempdir, NamedTempFile};
-    use tezos_crypto_rs::hash::ContractKt1Hash;
+    use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
     use tokio::io::AsyncReadExt;
 
     async fn read_param_file(path: &PathBuf) -> serde_json::Value {
@@ -462,18 +506,6 @@ mod tests {
             config.octez_client,
             Some(OctezClientConfigBuilder::new(Endpoint::localhost(8888)))
         );
-    }
-
-    #[test]
-    fn user_jstz_node_config() {
-        assert_eq!(
-            UserJstzNodeConfig::default(),
-            UserJstzNodeConfig {
-                mode: RunMode::Default,
-                capacity: 0,
-                debug_log_file: None
-            }
-        )
     }
 
     #[test]
@@ -618,16 +650,15 @@ mod tests {
             "jstz_node": {
                 "mode": "sequencer",
                 "capacity": 42,
-                "debug_log_file": "/tmp/log"
             }
         }))
         .unwrap();
         assert_eq!(
             config.jstz_node,
             UserJstzNodeConfig {
-                mode: RunMode::Sequencer,
-                capacity: 42,
-                debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap())
+                mode: Some(jstz_node::config::RunModeType::Sequencer),
+                capacity: Some(42),
+                ..Default::default()
             }
         );
 
@@ -636,14 +667,7 @@ mod tests {
             "jstz_node": {}
         }))
         .unwrap();
-        assert_eq!(
-            config.jstz_node,
-            UserJstzNodeConfig {
-                mode: RunMode::Default,
-                capacity: 0,
-                debug_log_file: None
-            }
-        );
+        assert_eq!(config.jstz_node, UserJstzNodeConfig::default());
     }
 
     #[test]
@@ -670,7 +694,8 @@ mod tests {
         let mut tmp_file = NamedTempFile::new().unwrap();
         let content = serde_json::to_string(&serde_json::json!({
             "octez_rollup": {
-                "rpc_endpoint": "http://0.0.0.0:18741"
+                "rpc_endpoint": "http://0.0.0.0:18741",
+                "history_mode": "archive"
             }
         }))
         .unwrap();
@@ -699,6 +724,10 @@ mod tests {
         assert_eq!(
             config.octez_rollup_config().operator,
             super::ROLLUP_OPERATOR_ACCOUNT_ALIAS
+        );
+        assert_eq!(
+            config.octez_rollup_config().history_mode,
+            HistoryMode::Archive
         );
     }
 
@@ -788,7 +817,8 @@ mod tests {
             "jstz_node": {
                 "mode": "sequencer",
                 "capacity": 42,
-                "debug_log_file": "/debug/file"
+                "debug_log_file": "/debug/file",
+                "storage_sync": false
             }
         }))
         .unwrap();
@@ -831,16 +861,82 @@ mod tests {
             jstz_rollup_path::kernel_installer_path()
         );
 
+        let jstz_node_config = config.jstz_node_config().unwrap();
         assert_eq!(
-            config.jstz_node_config().rollup_endpoint,
+            jstz_node_config.rollup_endpoint,
             config.octez_rollup_config().rpc_endpoint
         );
-        assert_eq!(config.jstz_node_config().mode, RunMode::Sequencer);
-        assert_eq!(config.jstz_node_config().capacity, 42);
         assert_eq!(
-            config.jstz_node_config().debug_log_file,
-            PathBuf::from_str("/debug/file").unwrap()
+            jstz_node_config.mode,
+            RunMode::Sequencer {
+                capacity: 42,
+                debug_log_path: PathBuf::from_str("/debug/file").unwrap(),
+                runtime_env: RuntimeEnv::Native,
+            }
         );
+    }
+
+    #[tokio::test]
+    async fn build_config_skip_nodes() {
+        let mut tmp_file = NamedTempFile::new().unwrap();
+        let content = serde_json::to_string(&serde_json::json!({
+            "jstz_node": { "skipped": true },
+            "oracle_node": { "skipped": true },
+        }))
+        .unwrap();
+        tmp_file.write_all(content.as_bytes()).unwrap();
+
+        let (_, config) = super::build_config_from_path(&Some(
+            tmp_file.path().to_str().unwrap().to_owned(),
+        ))
+        .await
+        .unwrap();
+        assert!(config.jstz_node_config().is_none());
+        #[cfg(feature = "oracle")]
+        assert!(config.oracle_node_config().is_none());
+    }
+
+    #[test]
+    fn build_jstz_node_config() {
+        let rollup_address =
+            SmartRollupHash::from_base58_check("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK")
+                .unwrap();
+        let config = UserJstzNodeConfig {
+            mode: Some(jstz_node::config::RunModeType::Sequencer),
+            capacity: Some(42),
+            debug_log_file: Some(PathBuf::from_str("/tmp/log").unwrap()),
+            riscv_kernel_path: Some(PathBuf::from_str("/riscv/kernel").unwrap()),
+            rollup_address: Some(rollup_address.clone()),
+            storage_sync: false,
+            skipped: false,
+            #[cfg(feature = "blueprint")]
+            blueprint_db_file: None,
+        };
+        let jstz_node_config =
+            super::build_jstz_node_config(config, &Endpoint::default(), &PathBuf::new())
+                .unwrap();
+        assert_eq!(
+            jstz_node_config.mode,
+            RunMode::Sequencer {
+                capacity: 42,
+                debug_log_path: PathBuf::from_str("/tmp/log").unwrap(),
+                runtime_env: RuntimeEnv::Riscv {
+                    kernel_path: PathBuf::from_str("/riscv/kernel").unwrap(),
+                    rollup_address,
+                },
+            }
+        );
+
+        let bad_config = UserJstzNodeConfig {
+            riscv_kernel_path: Some(PathBuf::new()),
+            ..Default::default()
+        };
+        assert!(super::build_jstz_node_config(
+            bad_config,
+            &Endpoint::default(),
+            &PathBuf::new(),
+        )
+        .is_err());
     }
 
     #[tokio::test]
@@ -1134,5 +1230,55 @@ mod tests {
             keys.1.to_base58(),
             "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
         );
+    }
+
+    #[cfg(feature = "oracle")]
+    #[test]
+    fn build_oracle_config() {
+        let keys = jstz_utils::KeyPair(
+            jstz_crypto::public_key::PublicKey::from_base58(
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+            )
+            .unwrap(),
+            jstz_crypto::secret_key::SecretKey::from_base58(
+                "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+            )
+            .unwrap(),
+        );
+        let config = super::build_oracle_config(
+            Some(keys.clone()),
+            &jstz_node::config::JstzNodeConfig::new(
+                &Endpoint::default(),
+                &Endpoint::default(),
+                &PathBuf::from("/foo/bar"),
+                &PathBuf::from("/kernel/debug"),
+                keys.clone(),
+                jstz_node::RunMode::Default,
+                true,
+                #[cfg(feature = "blueprint")]
+                &NamedTempFile::new().unwrap().into_temp_path().to_path_buf(),
+            ),
+        );
+        assert_eq!(config.log_path.to_str().unwrap(), "/kernel/debug");
+
+        let config = super::build_oracle_config(
+            Some(keys.clone()),
+            &jstz_node::config::JstzNodeConfig::new(
+                &Endpoint::default(),
+                &Endpoint::default(),
+                &PathBuf::from("/foo/bar"),
+                &PathBuf::from("/kernel/debug"),
+                keys.clone(),
+                jstz_node::RunMode::Sequencer {
+                    capacity: 0,
+                    debug_log_path: PathBuf::from("/jstz_node/debug"),
+                    runtime_env: RuntimeEnv::Native,
+                },
+                true,
+                #[cfg(feature = "blueprint")]
+                &NamedTempFile::new().unwrap().into_temp_path().to_path_buf(),
+            ),
+        );
+        assert_eq!(config.log_path.to_str().unwrap(), "/jstz_node/debug");
     }
 }

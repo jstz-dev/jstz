@@ -449,13 +449,13 @@ async fn set_up_parameters_for_outbox_message(
     let kernel = String::from_utf8(
         tokio::fs::read(&installer_path)
             .await
-            .unwrap_or_else(|e| panic!("failed to read installer file: {:?}", e)),
+            .unwrap_or_else(|e| panic!("failed to read installer file: {e:?}")),
     )
     .unwrap();
     let contract_json = serde_json::from_slice(
         &tokio::fs::read(&contract_path)
             .await
-            .unwrap_or_else(|e| panic!("failed to read contract file: {:?}", e)),
+            .unwrap_or_else(|e| panic!("failed to read contract file: {e:?}")),
     )
     .unwrap();
     let params = ProtocolParameterBuilder::new()

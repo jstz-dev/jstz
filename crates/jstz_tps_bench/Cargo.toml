@@ -11,33 +11,29 @@ license-file.workspace = true
 description.workspace = true
 
 [dependencies]
+anyhow.workspace = true
 base64.workspace = true
-boa_gc.workspace = true
 http.workspace = true
 bincode.workspace = true
 bip39.workspace = true
 regex.workspace = true
 serde_json.workspace = true
-jstz_kernel = { path = "../jstz_kernel" }
-jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
+jstz_utils = { path = "../jstz_utils", features = ["inbox_builder"] }
 tezos-smart-rollup = { workspace = true, features =  ["utils"] }
-tezos-smart-rollup-core.workspace = true
-tezos-smart-rollup-host.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 serde.workspace = true
-hex.workspace = true
 clap.workspace = true
 
 [features]
-default = ["tezos-smart-rollup/utils", "tezos-smart-rollup/extra"]
-static-inbox = ["tezos-smart-rollup/native-kernel"]
+v2_runtime = ["jstz_proto/v2_runtime", "jstz_utils/v2_runtime"]
 
 [[bin]]
 name = "bench"
-path = "src/bench/main.rs"
+path = "src/main.rs"
 
 [[bin]]
-name = "kernel"
-path = "src/kernel/main.rs"
+name = "all_operations"
+path = "src/bin/all_operations.rs"
+required-features = ["v2_runtime"]

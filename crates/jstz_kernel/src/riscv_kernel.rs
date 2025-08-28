@@ -1,15 +1,24 @@
 use std::sync::Arc;
 
-use jstz_core::{host::JsHostRuntime, kv::Transaction};
+use jstz_core::{
+    host::JsHostRuntime,
+    kv::{Storage, Transaction},
+};
+use jstz_crypto::{
+    hash::Hash, public_key::PublicKey, smart_function_hash::SmartFunctionHash,
+};
 use jstz_proto::runtime::{ProtocolContext, PROTOCOL_CONTEXT};
-use tezos_crypto_rs::hash::ContractKt1Hash;
+use jstz_runtime::JstzRuntime;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
 use crate::{
     handle_message,
-    inbox::{self, LevelInfo, ParsedInboxMessage},
-    read_injector, read_ticketer,
+    inbox::{read_message, LevelInfo, ParsedInboxMessage},
+    read_injector, read_ticketer, INJECTOR, TICKETER,
 };
+
+const TICKETER_PK: &str = std::env!("TICKETER");
+const INJECTOR_PKH: &str = std::env!("INJECTOR");
 
 /// Runs the event loop within LocalSet which maintains a task FIFO queue. This is
 /// desirable because there is an expectation within blockchains to process operations
@@ -19,6 +28,13 @@ use crate::{
 /// Additionally, LocalSet supports support `!Send` futures which is currently required
 /// by [`JsHostRuntime`]
 pub fn run(rt: &mut impl Runtime) {
+    // Set up ticketer and injector
+    let ticketer = SmartFunctionHash::from_base58(TICKETER_PK).unwrap();
+    Storage::insert(rt, &TICKETER, &ticketer).unwrap();
+
+    let injector = PublicKey::from_base58(INJECTOR_PKH).unwrap();
+    Storage::insert(rt, &INJECTOR, &injector).unwrap();
+
     let tokio_runtime = match tokio::runtime::Builder::new_current_thread().build() {
         Ok(runtime) => runtime,
         Err(e) => {
@@ -26,6 +42,7 @@ pub fn run(rt: &mut impl Runtime) {
             return;
         }
     };
+    let _ = JstzRuntime::new(Default::default());
     let local_set = tokio::task::LocalSet::new();
     local_set.block_on(&tokio_runtime, run_event_loop(rt))
 }
@@ -82,33 +99,11 @@ async fn run_event_loop(rt: &mut impl Runtime) {
     }
 }
 
-// We reach None in 3 cases
-// 1. No more inputs
-// 2. Input targetting the wrong rollup
-// 3. Parsing failures
-fn read_message(
-    rt: &mut impl Runtime,
-    ticketer: &ContractKt1Hash,
-) -> Option<ParsedInboxMessage> {
-    let input = rt.read_input().ok()??;
-    let jstz_rollup_address = rt.reveal_metadata().address();
-    inbox::parse_inbox_message(
-        rt,
-        input.id,
-        input.as_ref(),
-        ticketer,
-        &jstz_rollup_address,
-    )
-}
-
 #[cfg(test)]
 mod test {
 
     use jstz_core::kv::Transaction;
-    use jstz_crypto::{
-        hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
-        secret_key::SecretKey,
-    };
+    use jstz_crypto::{hash::Hash, public_key_hash::PublicKeyHash};
     use jstz_mock::{
         host::{JstzMockHost, MOCK_SOURCE},
         message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
@@ -121,6 +116,11 @@ mod test {
         executor::smart_function,
         operation::{DeployFunction, Operation, RunFunction, SignedOperation},
         runtime::ParsedCode,
+        HttpBody,
+    };
+    use jstz_utils::{
+        test_util::{alice_keys, bob_keys},
+        KeyPair,
     };
     use tezos_smart_rollup::types::{
         Contract as L1Address, PublicKeyHash as L1PublicKeyHash,
@@ -151,19 +151,9 @@ mod test {
     fn scenario_1() -> Result<(), anyhow::Error> {
         let mut host = JstzMockHost::new(false);
         // host.set_debug_handler(std::io::stdout());
-        let bob_sk = SecretKey::from_base58(
-            "edsk3eA4FyZDnDSC2pzEh4kwnaLLknvdikvRuXZAV4T4pWMVd6GUyS",
-        )?;
-        let bob_pk = PublicKey::from_base58(
-            "edpkusQcxu7Zv33x1p54p62UgzcawjBRSdEFJbPKEtjQ1h1TaFV3U5",
-        )?;
+        let KeyPair(bob_pk, bob_sk) = bob_keys();
 
-        let alice_sk = SecretKey::from_base58(
-            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
-        )?;
-        let alice_pk = PublicKey::from_base58(
-            "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
-        )?;
+        let KeyPair(alice_pk, alice_sk) = alice_keys();
 
         // 100 mutez deposited into bob's account
         let op1 = MockNativeDeposit::new(
@@ -178,7 +168,7 @@ mod test {
                 uri: format!("jstz://{}", alice_pk.hash()).parse()?,
                 method: http::Method::GET,
                 headers: http::HeaderMap::new(),
-                body: None,
+                body: HttpBody::empty(),
                 gas_limit: 0,
             };
             set_transfer_header(&mut run_fn, 30);
@@ -225,7 +215,7 @@ mod test {
                 uri: "jstz://KT1EPRuE9JnmkJFw58W39hBoiCmX14XtMgGd".parse()?,
                 method: http::Method::GET,
                 headers: http::HeaderMap::new(),
-                body: None,
+                body: HttpBody::empty(),
                 gas_limit: 0,
             };
             set_transfer_header(&mut run_fn, 10);

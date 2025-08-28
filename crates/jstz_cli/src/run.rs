@@ -126,9 +126,9 @@ pub async fn exec_transfer(
     let cfg = Config::load().await?;
     let to = AddressOrAlias::resolve_or_use_current_user(Some(to), &cfg)?;
     let url = match &to {
-        Address::User(_) => format!("jstz://{}", to),
+        Address::User(_) => format!("jstz://{to}"),
         // for sf address, ignore the function execution and just transfer the amount
-        Address::SmartFunction(_) => format!("jstz://{}{}", to, NOOP_PATH),
+        Address::SmartFunction(_) => format!("jstz://{to}{NOOP_PATH}"),
     };
     let args = RunArgs::new(url, "POST".to_string(), gas_limit);
     exec(
@@ -197,7 +197,9 @@ pub async fn exec(args: RunArgs) -> Result<()> {
 
     debug!("Method: {:?}", method);
 
-    let body = read_file_or_input_or_piped(args.json_data)?.map(String::into_bytes);
+    let body = read_file_or_input_or_piped(args.json_data)?
+        .map(String::into_bytes)
+        .into();
 
     debug!("Body: {:?}", body);
 
@@ -280,7 +282,7 @@ pub async fn exec(args: RunArgs) -> Result<()> {
         info!("\n")
     }
 
-    if let Some(body) = body {
+    if let Some(body) = body.0 {
         let json = serde_json::from_slice::<Value>(&body)
             .and_then(|s| serde_json::to_string_pretty(&s));
         if json.is_ok() {
@@ -305,7 +307,7 @@ fn validate_scheme(url: &Uri) -> Result<()> {
     match url.scheme_str() {
         Some("jstz") => Ok(()),
         Some(invalid_scheme) => bail!(format!(
-            "Unsupport scheme '{invalid_scheme}'. {supported_scheme_msg}"
+            "Unsupported scheme '{invalid_scheme}'. {supported_scheme_msg}"
         )),
         None => bail!(format!("Missing scheme. {supported_scheme_msg}")),
     }

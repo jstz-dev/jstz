@@ -6,14 +6,7 @@ const sidebars = {
       type: "category",
       collapsed: false,
       label: "Getting Started",
-      items: [
-        "installation",
-        "quick_start",
-        "cli",
-        "sandbox",
-        "transfer",
-        "examples",
-      ],
+      items: ["installation", "quick_start", "cli", "sandbox", "examples"],
     },
 
     {
@@ -25,6 +18,7 @@ const sidebars = {
         "architecture/bridge",
         "architecture/accounts",
         "architecture/networks",
+        "architecture/oracle",
       ],
     },
 
@@ -39,6 +33,7 @@ const sidebars = {
         "functions/requests",
         "functions/data_storage",
         "functions/calling",
+        "functions/apis",
         "functions/tokens",
         "functions/errors",
       ],

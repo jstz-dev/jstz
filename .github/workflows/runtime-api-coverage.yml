@@ -1,0 +1,101 @@
+name: Runtime API coverage
+
+on:
+  workflow_call:
+    inputs:
+      dest_repo:
+        description: Destination repository (owner/repo_name) where the report will be deployed.
+        type: string
+      dest_branch:
+        description: Name of the branch in the destination repository where the report will be deployed.
+        type: string
+      build_ref:
+        description: Ref that triggered the build. If not provided, the SHA of the commit that triggered the build will be used.
+        type: string
+      deploy_report:
+        description: Flag indicating if the report should be deployed.
+        type: boolean
+    secrets:
+      repo_token:
+        description: API token that gives access to manage the destination repository.
+
+jobs:
+  runtime_api_coverage:
+    name: Runtime API coverage
+    runs-on: ubuntu-latest
+    container:
+      image: rust:1.82-slim
+    steps:
+      - name: Setup
+        run: apt update && apt install -y git curl pkg-config libssl-dev
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.build_ref }}
+      - name: Run
+        id: run
+        shell: bash
+        run: |
+          cd crates/jstz_runtime
+          bash ./tests/api_coverage/setup.sh || exit $?
+          OUTPUT_PATH=./output.json cargo test --test api_coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: report
+          path: crates/jstz_runtime/output.json
+          retention-days: 1
+
+  push_api_coverage_report:
+    name: Push runtime API coverage report
+    if: ${{ inputs.deploy_report }}
+    needs: runtime_api_coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check input values
+        run: |
+          if [ -z "${{ inputs.dest_repo }}" ]; then
+              echo "dest_repo is unset or set to the empty string"
+              exit 1
+          fi
+          if [ -z "${{ inputs.dest_branch }}" ]; then
+              echo "dest_branch is unset or set to the empty string"
+              exit 1
+          fi
+      - name: Download report
+        uses: actions/download-artifact@v5
+        with:
+          name: report
+          path: report
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          repository: ${{ inputs.dest_repo }}
+          # This is the branch that the report will be pushed to in the destination repo
+          ref: ${{ inputs.dest_branch }}
+          # This token should have write access to the content of the destination repository
+          token: ${{ secrets.repo_token }}
+          path: dest_repo
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: dest_repo/package.json
+      - name: Push to destination repo
+        run: |
+          set -eo pipefail
+
+          mv $GITHUB_WORKSPACE/report/output.json $GITHUB_WORKSPACE/dest_repo/data/jstz.json
+          cd $GITHUB_WORKSPACE/dest_repo
+          build_ref=${{ inputs.build_ref }}
+          short_sha=$(echo ${GITHUB_SHA} | cut -c1-7)
+          cat report/src/data/versionMap.json |  jq ". | with_entries(if .key == \"jstz\" then .value = \"${build_ref:-$short_sha}\" else . end)" > /tmp/tmp.json && mv /tmp/tmp.json report/src/data/versionMap.json || exit $?
+
+          if [[ ! `git status --porcelain` ]]; then
+            echo "No change in coverage"
+            exit 0
+          fi
+
+          pnpm install --frozen-lockfile && pnpm generate:timestamp && pnpm run generate:table || exit $?
+
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+          git add .
+          git commit -m "Report built from ${{ github.sha }}"
+          git push origin ${{ inputs.dest_branch }}

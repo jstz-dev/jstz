@@ -80,7 +80,7 @@ impl HostScript {
             .map_err(|e| {
                 JsError::from_native(
                     JsNativeError::typ()
-                        .with_message(format!("Invalid transfer amount: {}", e)),
+                        .with_message(format!("Invalid transfer amount: {e}")),
                 )
             })?;
 
@@ -120,7 +120,7 @@ impl HostScript {
                 .map_err(|e| {
                     JsError::from_native(
                         JsNativeError::eval()
-                            .with_message(format!("Transfer failed: {}", e)),
+                            .with_message(format!("Transfer failed: {e}")),
                     )
                 })
         })?;
@@ -136,7 +136,7 @@ fn run_function_from_request(
     let uri = Uri::try_from(request_deref.url().clone().to_string()).map_err(|_| {
         JsError::from_native(JsNativeError::error().with_message("Invalid host"))
     })?;
-    let body = request_deref.body().clone().to_http_body();
+    let body = request_deref.body().clone().to_http_body().into();
     let headers = request_deref.headers().deref_mut().to_http_headers();
     Ok(RunFunction {
         uri,
@@ -170,7 +170,7 @@ mod test {
             .map_err(|e| {
                 JsError::from_native(
                     JsNativeError::error()
-                        .with_message(format!("Failed to create request: {}", e)),
+                        .with_message(format!("Failed to create request: {e}")),
                 )
             })?;
 
@@ -181,13 +181,13 @@ mod test {
                 HeaderName::from_str(&key).map_err(|e| {
                     JsError::from_native(
                         JsNativeError::error()
-                            .with_message(format!("Invalid header name: {}", e)),
+                            .with_message(format!("Invalid header name: {e}")),
                     )
                 })?,
                 HeaderValue::from_str(&value).map_err(|e| {
                     JsError::from_native(
                         JsNativeError::error()
-                            .with_message(format!("Invalid header value: {}", e)),
+                            .with_message(format!("Invalid header value: {e}")),
                     )
                 })?,
             );

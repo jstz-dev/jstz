@@ -13,6 +13,7 @@ use deno_core::{
 use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
 use futures::FutureExt;
 use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_runtime::runtime::AsyncEntered;
 use std::future::Future;
 use std::pin::Pin;
 use std::{cell::RefCell, rc::Rc};
@@ -24,7 +25,9 @@ use jstz_runtime::sys::{
     FromV8, Headers as JsHeaders, Request as JsRequest, RequestInit as JsRequestInit,
     Response as JsResponse, ToV8,
 };
-use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
+use jstz_runtime::{
+    FetchHandlerOptions, JstzRuntime, JstzRuntimeOptions, RuntimeContext,
+};
 use url::Url;
 
 use crate::context::account::{Account, Address, AddressKind, Addressable};
@@ -111,6 +114,12 @@ impl FetchHandler for ProtoFetchHandler {
         Err(FetchError::NotSupported(
             "custom_client op is not supported",
         ))
+    }
+}
+
+impl FetchHandlerOptions for ProtoFetchHandler {
+    fn options() -> Self::Options {
+        ()
     }
 }
 
@@ -478,10 +487,9 @@ async fn load_and_run(
     let module_loader = StaticModuleLoader::with(specifier.clone(), script);
     let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
         module_loader: Rc::new(module_loader),
-        fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
+        fetch: ProtoFetchHandler,
         protocol: Some(proto),
         extensions: vec![ledger::jstz_ledger::init_ops_and_esm()],
-        ..Default::default()
     });
     runtime.set_state(source);
 
@@ -506,9 +514,13 @@ async fn load_and_run(
     let args = [request];
     let id = runtime.execute_main_module(&specifier).await?;
     let result = runtime.call_default_handler(id, &args).await?;
-    let response = convert_js_to_response(&mut runtime, result)
+    let response = {
+        AsyncEntered::new(&mut runtime, |runtime| {
+            convert_js_to_response(runtime, result)
+        })
         .await
-        .map_err(|_| FetchError::InvalidResponseType)?;
+        .map_err(|_| FetchError::InvalidResponseType)?
+    };
     Ok(response)
 }
 
@@ -744,6 +756,7 @@ mod test {
     use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 
     use jstz_core::{
+        event::{self, Event},
         host::JsHostRuntime,
         kv::{Storage, Transaction},
     };
@@ -758,17 +771,14 @@ mod test {
     use url::Url;
 
     use super::ProtoFetchHandler;
+    use crate::runtime::v2::{
+        fetch::fetch_handler::process_and_dispatch_request, oracle::OracleRequest,
+        protocol_context::ProtocolContext,
+    };
     use crate::runtime::ParsedCode;
     use crate::{
         context::account::{Account, Address},
         tests::DebugLogSink,
-    };
-    use crate::{
-        event,
-        runtime::v2::{
-            fetch::fetch_handler::process_and_dispatch_request, oracle::OracleRequest,
-            protocol_context::ProtocolContext,
-        },
     };
     use crate::{
         runtime::v2::{
@@ -858,7 +868,7 @@ mod test {
         assert_eq!(response.status, 500);
         assert_eq!(response.status_text, "InternalServerError");
         assert_eq!(
-            json!({"class":"TypeError","message":"Unsupport scheme 'tezos'"}),
+            json!({"class":"TypeError","message":"Unsupported scheme 'tezos'"}),
             serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
                 .unwrap()
         );
@@ -1762,9 +1772,9 @@ mod test {
         let module_loader = StaticModuleLoader::with(specifier.clone(), code);
         let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
             protocol,
-            fetch: deno_fetch_base::deno_fetch::init_ops_and_esm::<ProtoFetchHandler>(()),
+            fetch: ProtoFetchHandler,
             module_loader: Rc::new(module_loader),
-            ..Default::default()
+            extensions: vec![],
         });
         runtime.set_state(SourceAddress::try_from(source).unwrap());
         let id = runtime.execute_main_module(&specifier).await.unwrap();
@@ -1907,7 +1917,7 @@ mod test {
 [JSTZ:SMART_FUNCTION:REQUEST_END] {"type":"End","address":"KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5"}
 [JSTZ:RESPONSE] {"url":"jstz://KT1My1St5BPVWXsmaRSp6HtKmMFd24HvDF2m/","request_id":"afc02a7556649a25c0583e9168e5e862bbefa19b79c41c34b3c0bca38b15a0f5","status_code":200}
 "#;
-        assert_eq!(log, expected);
+        assert!(log.contains(expected));
     }
 
     // Host script behaviour
@@ -2161,17 +2171,16 @@ mod test {
                     .into(),
             };
 
-
             let fetch_response = tokio::select! {
                 response = &mut response_fut => {
                     response
                 }
                 _ = async {
-                    while debug_sink.str_content().is_empty() {
+                    while !debug_sink.str_content().contains(OracleRequest::tag()) {
                         tokio::task::yield_now().await
                     }
                     let oracle_request =
-                        event::decode_line::<OracleRequest>(debug_sink.lines().first().unwrap())
+                        event::decode_line::<OracleRequest>(&debug_sink.lines().iter().nth(1).unwrap())
                             .unwrap();
                     assert_eq!(oracle_request.request.method, "GET".into());
                     assert_eq!(

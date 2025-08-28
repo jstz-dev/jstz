@@ -52,7 +52,7 @@ async fn execute_operation_inner(
                 &reveal.root_hash,
             )?;
             signed_op.verify()?;
-            signed_op.verify_nonce(hrt, tx)?;
+            signed_op.verify_nonce(hrt)?;
             let revealed_op: Operation = signed_op.into();
             if reveal.reveal_type == revealed_op.content().try_into()? {
                 return execute_operation_inner(
@@ -116,7 +116,7 @@ pub async fn execute_operation(
 ) -> Receipt {
     let validity = signed_operation
         .verify()
-        .and_then(|_| signed_operation.verify_nonce(hrt, tx));
+        .and_then(|_| signed_operation.verify_nonce(hrt));
     let op = signed_operation.into();
     let op_hash = resolve_operation_hash(&op);
     let result = match validity {
@@ -148,23 +148,84 @@ mod tests {
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
     };
+    #[cfg(feature = "v2_runtime")]
+    use jstz_utils::{test_util::alice_keys, KeyPair};
     use operation::RevealType;
     use tezos_crypto_rs::hash::HashTrait;
     use tezos_smart_rollup_mock::MockHost;
 
     use super::*;
     #[cfg(feature = "v2_runtime")]
-    use crate::runtime::{
-        v2::fetch::http::{Body, Request, Response},
-        ProtocolContext,
-    };
+    use crate::runtime::v2::fetch::http::Request;
     use crate::{
         context::account::Nonce,
         operation::{Content, DeployFunction, RevealLargePayload, RunFunction},
         receipt::{ReceiptContent, ReceiptResult},
+        HttpBody,
     };
 
     use crate::runtime::ParsedCode;
+    #[cfg(feature = "v2_runtime")]
+    mod response_test_utils {
+        use super::*;
+        use crate::operation::OracleResponse;
+        use crate::runtime::{
+            v2::fetch::http::{Body, Response},
+            ProtocolContext,
+        };
+
+        pub fn host_and_tx() -> (MockHost, Transaction) {
+            let mut host = MockHost::default();
+            ProtocolContext::init_global(&mut host, 0).unwrap();
+            let tx = Transaction::default();
+            tx.begin();
+            (host, tx)
+        }
+
+        pub fn oracle_keys() -> (PublicKey, SecretKey) {
+            (
+                PublicKey::from_base58(
+                    "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+                )
+                .unwrap(),
+                SecretKey::from_base58(
+                    "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+                )
+                .unwrap(),
+            )
+        }
+
+        pub fn empty_ok_response() -> Response {
+            Response {
+                status: 200,
+                status_text: "OK".into(),
+                headers: Vec::new(),
+                body: Body::zero_capacity(),
+            }
+        }
+
+        pub fn signed_oracle_response_op(
+            request_id: u64,
+            resp: Response,
+            pk: &PublicKey,
+            sk: &SecretKey,
+        ) -> SignedOperation {
+            let response_op = Operation {
+                public_key: pk.clone(),
+                nonce: 0.into(),
+                content: OracleResponse {
+                    request_id,
+                    response: resp,
+                }
+                .into(),
+            };
+            SignedOperation::new(sk.sign(response_op.hash()).unwrap(), response_op)
+        }
+
+        pub fn dummy_ticketer() -> ContractKt1Hash {
+            ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap()
+        }
+    }
 
     fn bootstrap1() -> (PublicKeyHash, PublicKey, SecretKey) {
         (
@@ -195,7 +256,7 @@ mod tests {
     }
 
     fn run_function_content() -> Content {
-        let body = vec![0];
+        let body = HttpBody::from_bytes(vec![0]);
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
                 "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
@@ -203,7 +264,7 @@ mod tests {
             .unwrap(),
             method: Method::POST,
             headers: HeaderMap::new(),
-            body: Some(body),
+            body,
             gas_limit: 10000,
         })
     }
@@ -347,7 +408,7 @@ mod tests {
                 .unwrap(),
                 method: Method::GET,
                 headers: HeaderMap::new(),
-                body: None,
+                body: HttpBody::empty(),
                 gas_limit: 10000,
             }),
             pk1.clone(),
@@ -365,7 +426,7 @@ mod tests {
                 assert_eq!(r.status_code, 500);
                 assert_eq!(
                     String::from_utf8(r.body.unwrap()).unwrap(),
-                    "{\"class\":\"TypeError\",\"message\":\"Unsupport scheme 'tezos'\"}"
+                    "{\"class\":\"TypeError\",\"message\":\"Unsupported scheme 'tezos'\"}"
                 );
             } else {
                 unreachable!()
@@ -380,11 +441,9 @@ mod tests {
     #[cfg(feature = "v2_runtime")]
     #[tokio::test]
     async fn operation_response_successful() {
-        let mut host = MockHost::default();
-        ProtocolContext::init_global(&mut host, 0).unwrap();
+        use response_test_utils as utils;
 
-        let mut tx = Transaction::default();
-        tx.begin();
+        let (mut host, mut tx) = utils::host_and_tx();
         let caller = PublicKeyHash::digest(&[0u8; 20]).unwrap();
         let request = Request {
             method: "GET".into(),
@@ -400,40 +459,13 @@ mod tests {
                 .unwrap()
         };
 
-        let oracle_pk = PublicKey::from_base58(
-            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-        )
-        .unwrap();
+        let (oracle_pk, oracle_sk) = utils::oracle_keys();
+        let resp = utils::empty_ok_response();
+        let signed_resp_op =
+            utils::signed_oracle_response_op(0, resp.clone(), &oracle_pk, &oracle_sk);
 
-        let oracle_sk = SecretKey::from_base58(
-            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
-        )
-        .unwrap();
-        let resp = Response {
-            status: 200,
-            status_text: "OK".into(),
-            headers: Vec::new(),
-            body: Body::zero_capacity(),
-        };
-        let response_op = Operation {
-            public_key: oracle_pk,
-            nonce: 0.into(),
-            content: OracleResponse {
-                request_id: 0,
-                response: resp.clone(),
-            }
-            .into(),
-        };
-        let signed_resp_op = SignedOperation::new(
-            oracle_sk.sign(response_op.hash()).unwrap(),
-            response_op.clone(),
-        );
-
-        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let injector = PublicKey::from_base58(
-            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-        )
-        .unwrap();
+        let ticketer = utils::dummy_ticketer();
+        let injector = oracle_pk.clone();
         let receipt =
             execute_operation(&mut host, &mut tx, signed_resp_op, &ticketer, &injector)
                 .await;
@@ -445,45 +477,16 @@ mod tests {
     #[cfg(feature = "v2_runtime")]
     #[tokio::test]
     async fn operation_response_invalid_request_id() {
-        let mut host = MockHost::default();
-        ProtocolContext::init_global(&mut host, 0).unwrap();
+        use response_test_utils as utils;
 
-        let mut tx = Transaction::default();
-        tx.begin();
-        let oracle_pk = PublicKey::from_base58(
-            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-        )
-        .unwrap();
+        let (mut host, mut tx) = utils::host_and_tx();
+        let (oracle_pk, oracle_sk) = utils::oracle_keys();
+        let resp = utils::empty_ok_response();
+        let signed_resp_op =
+            utils::signed_oracle_response_op(21, resp.clone(), &oracle_pk, &oracle_sk);
 
-        let oracle_sk = SecretKey::from_base58(
-            "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
-        )
-        .unwrap();
-        let resp = Response {
-            status: 200,
-            status_text: "OK".into(),
-            headers: Vec::new(),
-            body: Body::zero_capacity(),
-        };
-        let response_op = Operation {
-            public_key: oracle_pk,
-            nonce: 0.into(),
-            content: OracleResponse {
-                request_id: 21,
-                response: resp.clone(),
-            }
-            .into(),
-        };
-        let signed_resp_op = SignedOperation::new(
-            oracle_sk.sign(response_op.hash()).unwrap(),
-            response_op.clone(),
-        );
-
-        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let injector = PublicKey::from_base58(
-            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-        )
-        .unwrap();
+        let ticketer = utils::dummy_ticketer();
+        let injector = oracle_pk.clone();
         let receipt =
             execute_operation(&mut host, &mut tx, signed_resp_op, &ticketer, &injector)
                 .await;
@@ -500,42 +503,18 @@ mod tests {
     #[cfg(feature = "v2_runtime")]
     #[tokio::test]
     async fn operation_response_invalid_pk() {
-        let mut host = MockHost::default();
-        ProtocolContext::init_global(&mut host, 0).unwrap();
-        let mut tx = Transaction::default();
-        tx.begin();
-        let invalid_sk = SecretKey::from_base58(
-            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
-        )
-        .unwrap();
-        let resp = Response {
-            status: 200,
-            status_text: "OK".into(),
-            headers: Vec::new(),
-            body: Body::zero_capacity(),
-        };
-        let response_op = Operation {
-            public_key: PublicKey::from_base58(
-                "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
-            )
-            .unwrap(),
-            nonce: 0.into(),
-            content: OracleResponse {
-                request_id: 0,
-                response: resp.clone(),
-            }
-            .into(),
-        };
-        let signed_resp_op = SignedOperation::new(
-            invalid_sk.sign(response_op.hash()).unwrap(),
-            response_op.clone(),
-        );
+        use response_test_utils as utils;
 
-        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let injector = PublicKey::from_base58(
-            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-        )
-        .unwrap();
+        let (mut host, mut tx) = utils::host_and_tx();
+
+        let KeyPair(invalid_pk, invalid_sk) = alice_keys();
+
+        let resp = utils::empty_ok_response();
+        let signed_resp_op =
+            utils::signed_oracle_response_op(0, resp.clone(), &invalid_pk, &invalid_sk);
+
+        let ticketer = utils::dummy_ticketer();
+        let injector = utils::oracle_keys().0; // valid oracle pk
         let receipt =
             execute_operation(&mut host, &mut tx, signed_resp_op, &ticketer, &injector)
                 .await;
@@ -552,45 +531,18 @@ mod tests {
     #[cfg(feature = "v2_runtime")]
     #[tokio::test]
     async fn operation_response_invalid_signature() {
-        let mut host = MockHost::default();
-        ProtocolContext::init_global(&mut host, 0).unwrap();
+        use response_test_utils as utils;
 
-        let mut tx = Transaction::default();
-        tx.begin();
-        let oracle_pk = PublicKey::from_base58(
-            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-        )
-        .unwrap();
+        let (mut host, mut tx) = utils::host_and_tx();
 
-        let invalid_sk = SecretKey::from_base58(
-            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
-        )
-        .unwrap();
-        let resp = Response {
-            status: 200,
-            status_text: "OK".into(),
-            headers: Vec::new(),
-            body: Body::zero_capacity(),
-        };
-        let response_op = Operation {
-            public_key: oracle_pk,
-            nonce: 0.into(),
-            content: OracleResponse {
-                request_id: 0,
-                response: resp.clone(),
-            }
-            .into(),
-        };
-        let signed_resp_op = SignedOperation::new(
-            invalid_sk.sign(response_op.hash()).unwrap(),
-            response_op.clone(),
-        );
+        let (oracle_pk, _oracle_sk) = utils::oracle_keys();
+        let KeyPair(_, invalid_sk) = alice_keys();
+        let resp = utils::empty_ok_response();
+        let signed_resp_op =
+            utils::signed_oracle_response_op(0, resp.clone(), &oracle_pk, &invalid_sk);
 
-        let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
-        let injector = PublicKey::from_base58(
-            "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
-        )
-        .unwrap();
+        let ticketer = utils::dummy_ticketer();
+        let injector = oracle_pk.clone();
         let receipt =
             execute_operation(&mut host, &mut tx, signed_resp_op, &ticketer, &injector)
                 .await;
@@ -600,7 +552,7 @@ mod tests {
                 result: ReceiptResult::Failed(s),
                 ..
             }
-            if s == "Ed25519 error: signature error".to_string()
+            if s.contains("Ed25519 error: signature error")
         ));
     }
 }

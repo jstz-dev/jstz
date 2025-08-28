@@ -12,7 +12,7 @@ members = [
   "crates/jstz_node",
   "crates/jstz_oracle_node",
   "crates/jstz_proto",
-  "crates/jstz_rollup",
+  "crates/jstz_riscv_wpt_test_kernel",
   "crates/jstz_sdk",
   "crates/jstz_tps_bench",
   "crates/jstz_utils",
@@ -23,7 +23,7 @@ members = [
 
 [workspace.package]
 edition = "2021"
-version = "0.1.1-alpha.3"
+version = "0.1.1-alpha.4"
 authors = ["TriliTech <contact@trili.tech>"]
 repository = "https://github.com/jstz-dev/jstz"
 homepage = "https://github.com/jstz-dev/jstz"
@@ -33,7 +33,6 @@ license-file = "LICENSE"
 description = "JavaScript server runtime for Tezos Smart Rollups"
 
 [workspace.dependencies]
-ansi_term = "0.12.1"
 anyhow = "1.0.82"
 assert_cmd = "2.0.14"
 async-dropper-simple = { version = "0.2.6", features = ["tokio"] }
@@ -45,15 +44,12 @@ bip39 = { version = "2.1.0", features = ["rand"] }
 boa_engine = { version = "0.19.0", features = ["fuzz"] }
 boa_gc = "0.19.0"
 bollard = "0.16.1"
-bs58 = "0.5"
 bytes = "1.4.0"
 chrono = { version = "0.4.34", default-features = false, features = ["std"] }
 clap = { version = "^4.4", features = ["derive"] }
 clap_complete = "4.4.10"
 console = "0.15.8"
-crossterm = "0.27"
 ctrlc = "3.4.2"
-daemonize = "0.5.0"
 deno_core = "0.336.0"
 deno_error = "0.5.5"
 deno_url = "0.190.0"
@@ -92,11 +88,14 @@ predicates = "3.1.0"
 prettytable = "0.10.0"
 pretty_assertions = "1.4.1"
 proptest = "1.1"
+r2d2 = "0.8"
+r2d2_sqlite = "0.22"
 rand = "0.8"
 regex = "1"
 reqwest = { version = "0.11.24", features = ["json", "blocking","stream"] }
 reqwest-eventsource = "0.5.0"
 rexpect = "0.6.0"
+rusqlite = "0.29"
 rust_decimal = "1.37.1"
 rust-embed = { version = "8.5.0", features = ["interpolate-folder-path", "include-exclude"] }
 rustyline = "14.0.0"
@@ -105,18 +104,15 @@ serde = { version = "1.0.196", features = ["derive", "rc"] }
 serde-big-array = "0.5.1"
 serde-wasm-bindgen = "0.6.5"
 serde_json = "1.0.107"
-serde_with = { version = "3.6.1", features = ["macros"] }
-serde_yaml = "0.9"
+serde_with = { version = "3.6.1", features = ["macros", "base64"] }
 serde_bytes = "0.11.17"
-sha2 = "0.10"
 signal-hook = "0.3.17"
-simplelog = "0.11"
-spinners = "4.1.1"
 syntect = "5.2.0"
 tempfile = "3.10.0"
-thiserror = "1.0.56"
+thiserror = "1.0.69"
 tl = "0.7.7"
 tokio = { version = "1.36.0", features = ["full"] }
+tokio-retry2 = "0.5.7"
 tokio-stream = "0.1.14"
 tokio-util = "0.7.10"
 tower = "0.5.2"
@@ -129,6 +125,7 @@ utoipa-scalar = { version = "0.2.0", features = ["axum"] }
 warp = "0.3.7"
 wasm-bindgen = "0.2.92"
 futures-core = "0.3.31"
+ron = "0.8"
 
 [workspace.dependencies.deno_fetch_base]
 git = "https://github.com/jstz-dev/deno"
@@ -147,6 +144,7 @@ features = [
   "data-encoding",
   "storage",
   "proto-alpha",
+  "utils",
 ]
 
 [workspace.dependencies.tezos-smart-rollup-host]
@@ -205,6 +203,11 @@ default-features = false
 [workspace.dependencies.deno_console]
 git = "https://github.com/jstz-dev/deno"
 branch = "v2.1.10-jstz"
+
+[workspace.dependencies.octez-riscv]
+# Fork with some custom patches that expose APIs. Will be replaced once the changes are upstreamed.
+git = "https://github.com/huancheng-trili/riscv-pvm"
+rev = "6b530863daa11cb4e6ea0ae9202a73f44c0d2d48"
 
 [patch.crates-io]
 boa_ast = { git = "https://github.com/trilitech/boa.git", branch = "ajob410@fix/remove-wasm-bindgen-from-time" }

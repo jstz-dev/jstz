@@ -33,7 +33,7 @@ Follow these steps to use it:
 5. Ask the smart function for tez in an impolite way by running this command:
 
    ```sh
-   jstz run jstz://<GET_TEZ>/ --data '{"message":"Give me tez now."}' -n dev
+   jstz run jstz://<GET_TEZ>/ --data '{"message":"Give me tez now."}' --method POST -n dev
    ```
 
    The smart function returns the message "Sorry, I only fulfill polite requests."
@@ -41,7 +41,7 @@ Follow these steps to use it:
 6. Ask the smart function politely by running this command, which includes the word "please" in the message:
 
    ```sh
-   jstz run jstz://<GET_TEZ>/ --data '{"message":"Please, give me some tez."}' -n dev
+   jstz run jstz://<GET_TEZ>/ --data '{"message":"Please, give me some tez."}' --method POST -n dev
    ```
 
    The function returns the message "Thank you for your polite request. You received 1 tez!"

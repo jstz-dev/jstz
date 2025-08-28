@@ -49,8 +49,8 @@ impl FromStr for AddressOrAlias {
 impl fmt::Display for AddressOrAlias {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Address(address) => write!(f, "{}", address),
-            Self::Alias(alias) => write!(f, "{}", alias),
+            Self::Address(address) => write!(f, "{address}"),
+            Self::Alias(alias) => write!(f, "{alias}"),
         }
     }
 }

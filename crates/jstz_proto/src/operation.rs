@@ -12,9 +12,11 @@ use http::{HeaderMap, Method, Uri};
 #[cfg(feature = "v2_runtime")]
 use crate::runtime::v2::oracle::request::RequestId;
 
-use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
+use jstz_core::{host::HostRuntime, reveal_data::PreimageHash};
 use jstz_crypto::{
-    hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
+    hash::{Blake2b, Hash},
+    public_key::PublicKey,
+    public_key_hash::PublicKeyHash,
     signature::Signature,
 };
 use serde::{Deserialize, Serialize};
@@ -53,15 +55,12 @@ impl Operation {
 
     /// Verify the nonce of the operation
     /// Returns the operation's
-    pub fn verify_nonce(
-        &self,
-        rt: &impl HostRuntime,
-        tx: &mut Transaction,
-    ) -> Result<()> {
-        let mut next_nonce = Account::nonce(rt, tx, &self.source())?;
+    pub fn verify_nonce(&self, rt: &mut impl HostRuntime) -> Result<()> {
+        let expected_nonce = Account::storage_get_nonce(rt, &self.source())?;
 
-        if self.nonce == *next_nonce {
-            next_nonce.increment();
+        if self.nonce == expected_nonce {
+            Account::storage_set_nonce(rt, &self.source(), expected_nonce.next())?;
+
             Ok(())
         } else {
             Err(Error::InvalidNonce)
@@ -81,8 +80,7 @@ impl Operation {
                 function_code,
                 account_credit,
             }) => Blake2b::from(
-                format!("{}{}{}{}", public_key, nonce, function_code, account_credit)
-                    .as_bytes(),
+                format!("{public_key}{nonce}{function_code}{account_credit}").as_bytes(),
             ),
             Content::RunFunction(RunFunction {
                 uri,
@@ -91,22 +89,15 @@ impl Operation {
                 body,
                 ..
             }) => Blake2b::from(
-                format!(
-                    "{}{}{}{}{:?}{:?}",
-                    public_key, nonce, uri, method, headers, body
-                )
-                .as_bytes(),
+                format!("{public_key}{nonce}{uri}{method}{headers:?}{body:?}").as_bytes(),
             ),
             Content::RevealLargePayload(RevealLargePayload {
                 root_hash,
                 reveal_type,
                 original_op_hash,
             }) => Blake2b::from(
-                format!(
-                    "{}{}{}{}{}",
-                    public_key, nonce, root_hash, reveal_type, original_op_hash,
-                )
-                .as_bytes(),
+                format!("{public_key}{nonce}{root_hash}{reveal_type}{original_op_hash}",)
+                    .as_bytes(),
             ),
             #[cfg(feature = "v2_runtime")]
             Content::OracleResponse(OracleResponse {
@@ -153,7 +144,6 @@ pub struct RunFunction {
     #[serde(with = "http_serde::header_map")]
     #[schema(schema_with = openapi::request_headers)]
     pub headers: HeaderMap,
-    #[schema(schema_with = openapi::http_body_schema)]
     pub body: HttpBody,
     /// Maximum amount of gas that is allowed for the execution of this operation
     pub gas_limit: usize,
@@ -283,22 +273,50 @@ pub mod internal {
 
     use super::*;
 
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+    pub struct InboxId {
+        // L1 inbox message level
+        pub l1_level: u32,
+        // Unique id of inbox message (per level)
+        pub l1_message_id: u32,
+    }
+
+    impl InboxId {
+        pub fn to_bytes(&self) -> [u8; 8] {
+            let mut buf = [0u8; 8];
+            buf[..4].copy_from_slice(&self.l1_level.to_be_bytes());
+            buf[4..].copy_from_slice(&self.l1_message_id.to_be_bytes());
+            buf
+        }
+
+        pub fn hash(&self) -> OperationHash {
+            let seed = self.to_bytes();
+            Blake2b::from(seed.as_slice())
+        }
+    }
+
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
     pub struct Deposit {
-        // Inbox message id is unique to each message and
-        // suitable as a nonce
-        pub inbox_id: u32,
+        // Inbox message id
+        pub inbox_id: InboxId,
         // Amount to deposit
         pub amount: Amount,
         // Receiver address
         pub receiver: Address,
+        /// Source of the deposit message. Must be a user address
+        pub source: PublicKeyHash,
+    }
+
+    impl Deposit {
+        pub fn hash(&self) -> OperationHash {
+            self.inbox_id.hash()
+        }
     }
 
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct FaDeposit {
-        // Inbox message id is unique to each message and
-        // suitable as a nonce
-        pub inbox_id: u32,
+        // Inbox message id
+        pub inbox_id: InboxId,
         // Amount to deposit
         pub amount: Amount,
         // Final deposit receiver address
@@ -307,6 +325,8 @@ pub mod internal {
         pub proxy_smart_function: Option<Address>,
         // Ticket hash
         pub ticket_hash: TicketHash,
+        /// Source of the deposit message. Must be a user address
+        pub source: PublicKeyHash,
     }
 
     impl FaDeposit {
@@ -315,17 +335,16 @@ pub mod internal {
                 "receiver": self.receiver,
                 "amount": self.amount,
                 "ticketHash": self.ticket_hash.to_string(),
+                "source": self.source,
             })
         }
 
         pub fn to_http_body(&self) -> HttpBody {
-            let body = self.json();
-            Some(String::as_bytes(&body.to_string()).to_vec())
+            self.json().into()
         }
 
         pub fn hash(&self) -> OperationHash {
-            let seed = self.inbox_id.to_be_bytes();
-            Blake2b::from(seed.as_slice())
+            self.inbox_id.hash()
         }
     }
 
@@ -345,6 +364,7 @@ pub mod internal {
                 )?;
             }
             s.serialize_entry("ticket_hash", &self.ticket_hash.to_string())?;
+            s.serialize_entry("source", &self.source)?;
             s.end()
         }
     }
@@ -389,12 +409,19 @@ pub mod internal {
                     None => None,
                 };
             Ok(FaDeposit {
-                inbox_id: body
-                    .get("inbox_id")
-                    .ok_or(A::Error::custom("inbox_id is missing"))?
-                    .as_u64()
-                    .ok_or(A::Error::custom("inbox_id is not u64"))?
-                    as u32,
+                source: PublicKeyHash::from_base58(
+                    body.get("source")
+                        .ok_or(A::Error::custom("source is missing"))?
+                        .as_str()
+                        .ok_or(A::Error::custom("source is not string"))?,
+                )
+                .map_err(|e| A::Error::custom(format!("cannot parse source: {e:?}")))?,
+                inbox_id: serde_json::from_value(
+                    body.get("inbox_id")
+                        .ok_or(A::Error::custom("inbox_id is missing"))?
+                        .clone(),
+                )
+                .map_err(|e| A::Error::custom(format!("cannot parse inbox id: {e:?}")))?,
                 amount: body
                     .get("amount")
                     .ok_or(A::Error::custom("amount is missing"))?
@@ -444,17 +471,11 @@ pub enum InternalOperation {
 
 pub mod openapi {
     use utoipa::{
-        openapi::{
-            schema::AdditionalProperties, Array, Object, ObjectBuilder, RefOr, Schema,
-        },
+        openapi::{schema::AdditionalProperties, Object, ObjectBuilder, RefOr, Schema},
         schema,
     };
 
     use crate::executor::smart_function::{X_JSTZ_AMOUNT, X_JSTZ_TRANSFER};
-
-    pub fn http_body_schema() -> Array {
-        schema!(Option<Vec<u8>>).build()
-    }
 
     fn http_headers(
         properties: Vec<(impl Into<String>, impl Into<RefOr<Schema>>)>,
@@ -493,18 +514,24 @@ pub mod openapi {
 mod test {
     use super::{Content, DeployFunction, RevealLargePayload, RevealType, RunFunction};
     use super::{Operation, SignedOperation};
-    use crate::context::account::{Account, Nonce};
+    use crate::context::account::{Account, Address, Nonce};
+    use crate::operation::internal::{FaDeposit, InboxId};
     use crate::operation::OperationHash;
     use crate::runtime::ParsedCode;
+    use crate::HttpBody;
     use http::{HeaderMap, Method, Uri};
     use jstz_core::reveal_data::PreimageHash;
-    use jstz_core::{kv::Transaction, BinEncodable};
+    use jstz_core::BinEncodable;
+    use jstz_crypto::hash::Hash;
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
     use jstz_mock::host::JstzMockHost;
+    #[cfg(feature = "v2_runtime")]
+    use jstz_utils::{test_util::alice_keys, KeyPair};
     use serde_json::json;
+    use tezos_smart_rollup::michelson::ticket::TicketHash;
 
     fn run_function_content() -> Content {
-        let body = r#""value":1""#.to_string().into_bytes();
+        let body = HttpBody::from_string(r#"{"value":1"}"#.to_string());
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
                 "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
@@ -512,7 +539,7 @@ mod test {
             .unwrap(),
             method: Method::POST,
             headers: HeaderMap::new(),
-            body: Some(body),
+            body,
             gas_limit: 10000,
         })
     }
@@ -541,7 +568,7 @@ mod test {
             json,
             json!({
                 "_type":"RunFunction",
-                "body":[34,118,97,108,117,101,34,58,49,34],
+                "body":"eyJ2YWx1ZSI6MSJ9",
                 "gasLimit":10000,
                 "headers":{},
                 "method":"POST",
@@ -584,19 +611,16 @@ mod test {
         assert_eq!(deploy_function, bin_decoded);
     }
 
-    fn mock_hrt_tx_with_nonces<'a>(
+    fn mock_hrt_with_nonces<'a>(
         nonces: impl IntoIterator<Item = &'a (PublicKeyHash, Nonce)>,
-    ) -> (JstzMockHost, Transaction) {
+    ) -> JstzMockHost {
         let mut hrt = JstzMockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
 
         for (address, nonce) in nonces {
-            let mut stored_nonce = Account::nonce(hrt.rt(), &mut tx, address).unwrap();
-            *stored_nonce = *nonce;
+            Account::storage_set_nonce(hrt.rt(), address, *nonce).unwrap();
         }
 
-        (hrt, tx)
+        hrt
     }
 
     fn dummy_operation(public_key: PublicKey, nonce: Nonce) -> Operation {
@@ -610,35 +634,34 @@ mod test {
     #[test]
     fn test_verify_nonce_checks_and_increments_nonce() {
         let nonce = Nonce(42);
-        let (mut hrt, mut tx) = mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), nonce)]);
+        let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), nonce)]);
 
         let operation = dummy_operation(jstz_mock::pk1(), nonce);
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_ok());
+        assert!(operation.verify_nonce(hrt.rt()).is_ok());
 
         let updated_nonce =
-            Account::nonce(hrt.rt(), &mut tx, &jstz_mock::pkh1()).unwrap();
-        assert_eq!(*updated_nonce, nonce.next());
+            Account::storage_get_nonce(hrt.rt(), &jstz_mock::pkh1()).unwrap();
+        assert_eq!(updated_nonce, nonce.next());
     }
 
     #[test]
     fn test_verify_nonce_incorrect() {
-        let (mut hrt, mut tx) =
-            mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), Nonce(1337))]);
+        let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), Nonce(1337))]);
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(42));
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_err());
+        assert!(operation.verify_nonce(hrt.rt()).is_err());
     }
 
     #[test]
     fn test_verify_nonce_prevents_replay() {
-        let (mut hrt, mut tx) = mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), Nonce(7))]);
+        let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), Nonce(7))]);
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(7));
 
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_ok());
+        assert!(operation.verify_nonce(hrt.rt()).is_ok());
 
         // Replaying the operation fails
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_err());
+        assert!(operation.verify_nonce(hrt.rt()).is_err());
     }
 
     #[test]
@@ -725,7 +748,6 @@ mod test {
     #[test]
     fn test_oracle_response_signed_operation_json_round_trip() {
         use http::HeaderValue;
-        use jstz_crypto::secret_key::SecretKey;
 
         use crate::runtime::v2::fetch::http::{convert_header_map, Response};
 
@@ -734,13 +756,10 @@ mod test {
         header_map.append("test1", HeaderValue::from_str("value1").unwrap());
         header_map.append("test2", HeaderValue::from_str("value2").unwrap());
         header_map.append("test2", HeaderValue::from_str("value3").unwrap());
-
+        let KeyPair(alice_pk, alice_sk) = alice_keys();
         let headers = convert_header_map(header_map);
         let op = Operation {
-            public_key: PublicKey::from_base58(
-                "edpkurYYUEb4yixA3oxKdvstG8H86SpKKUGmadHS6Ju2mM1Mz1w5or",
-            )
-            .unwrap(),
+            public_key: alice_pk,
             nonce: 21943045950.into(),
             content: Content::OracleResponse(OracleResponse {
                 request_id: 284958,
@@ -752,12 +771,7 @@ mod test {
                 },
             }),
         };
-        let signature = SecretKey::from_base58(
-            "edsk38mmuJeEfSYGiwLE1qHr16BPYKMT5Gg1mULT7dNUtg3ti4De3a",
-        )
-        .unwrap()
-        .sign(op.hash())
-        .unwrap();
+        let signature = alice_sk.sign(op.hash()).unwrap();
         let signed_op = SignedOperation {
             signature,
             inner: op,
@@ -766,5 +780,37 @@ mod test {
         let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
 
         assert_eq!(signed_op, decoded)
+    }
+
+    #[test]
+    fn fa_deposit_json() {
+        let d = FaDeposit {
+            inbox_id: InboxId {
+                l1_message_id: 0,
+                l1_level: 0,
+            },
+            amount: 10,
+            source: PublicKeyHash::from_base58("tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h")
+                .unwrap(),
+            receiver: Address::from_base58("tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg")
+                .unwrap(),
+            proxy_smart_function: None,
+            ticket_hash: TicketHash::try_from(
+                "0000000000000000000000000000000000000000000000000000000000000000"
+                    .to_string(),
+            )
+            .unwrap(),
+        };
+
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&d.to_http_body().unwrap())
+                .unwrap(),
+            serde_json::json!({
+                "receiver": "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
+                "amount": 10,
+                "ticketHash": "0000000000000000000000000000000000000000000000000000000000000000",
+                "source": "tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h",
+            })
+        );
     }
 }

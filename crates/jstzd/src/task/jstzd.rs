@@ -3,6 +3,8 @@ use crate::config::{
     ROLLUP_OPERATOR_ACCOUNT_ALIAS,
 };
 
+#[cfg(feature = "oracle")]
+use super::oracle_node::OracleNode;
 use super::{
     child_wrapper::Shared,
     jstz_node::JstzNode,
@@ -24,6 +26,8 @@ use axum::{
 use indicatif::{ProgressBar, ProgressStyle};
 use jstz_crypto::public_key::PublicKey;
 use jstz_node::config::JstzNodeConfig;
+#[cfg(feature = "oracle")]
+use jstz_oracle_node::OracleNodeConfig;
 use octez::r#async::{
     baker::OctezBakerConfig,
     client::{Address, OctezClient, OctezClientConfig},
@@ -60,7 +64,9 @@ struct Jstzd {
     octez_node: Shared<OctezNode>,
     baker: Shared<OctezBaker>,
     rollup: Shared<OctezRollup>,
-    jstz_node: Shared<JstzNode>,
+    jstz_node: Option<Shared<JstzNode>>,
+    #[cfg(feature = "oracle")]
+    oracle_node: Option<Shared<OracleNode>>,
 }
 
 #[derive(Clone, Serialize)]
@@ -74,7 +80,10 @@ pub struct JstzdConfig {
     #[serde(rename(serialize = "octez_rollup"))]
     octez_rollup_config: OctezRollupConfig,
     #[serde(rename(serialize = "jstz_node"))]
-    jstz_node_config: JstzNodeConfig,
+    jstz_node_config: Option<JstzNodeConfig>,
+    #[cfg(feature = "oracle")]
+    #[serde(rename(serialize = "oracle_node"))]
+    oracle_node_config: Option<OracleNodeConfig>,
     #[serde(skip_serializing)]
     protocol_params: ProtocolParameter,
 }
@@ -85,7 +94,8 @@ impl JstzdConfig {
         baker_config: OctezBakerConfig,
         octez_client_config: OctezClientConfig,
         octez_rollup_config: OctezRollupConfig,
-        jstz_node_config: JstzNodeConfig,
+        #[cfg(feature = "oracle")] oracle_node_config: Option<OracleNodeConfig>,
+        jstz_node_config: Option<JstzNodeConfig>,
         protocol_params: ProtocolParameter,
     ) -> Self {
         Self {
@@ -94,6 +104,8 @@ impl JstzdConfig {
             octez_client_config,
             octez_rollup_config,
             jstz_node_config,
+            #[cfg(feature = "oracle")]
+            oracle_node_config,
             protocol_params,
         }
     }
@@ -114,12 +126,17 @@ impl JstzdConfig {
         &self.octez_rollup_config
     }
 
-    pub fn jstz_node_config(&self) -> &JstzNodeConfig {
-        &self.jstz_node_config
+    pub fn jstz_node_config(&self) -> Option<&JstzNodeConfig> {
+        self.jstz_node_config.as_ref()
     }
 
     pub fn protocol_params(&self) -> &ProtocolParameter {
         &self.protocol_params
+    }
+
+    #[cfg(feature = "oracle")]
+    pub fn oracle_node_config(&self) -> Option<&OracleNodeConfig> {
+        self.oracle_node_config.as_ref()
     }
 }
 
@@ -148,25 +165,45 @@ impl Task for Jstzd {
         Self::wait_for_block_level(&config.octez_node_config.rpc_endpoint, 3).await?;
         let rollup = OctezRollup::spawn(config.octez_rollup_config.clone()).await?;
         Self::wait_for_rollup(&rollup).await?;
-        let jstz_node = JstzNode::spawn(config.jstz_node_config.clone()).await?;
+        let jstz_node = match config.jstz_node_config {
+            Some(config) => Some(JstzNode::spawn(config.clone()).await?.into_shared()),
+            None => None,
+        };
+        #[cfg(feature = "oracle")]
+        let oracle_node = match config.oracle_node_config {
+            Some(config) => Some(OracleNode::spawn(config.clone()).await?.into_shared()),
+            None => None,
+        };
         Ok(Self {
             octez_node: octez_node.into_shared(),
             baker: baker.into_shared(),
             rollup: rollup.into_shared(),
-            jstz_node: jstz_node.into_shared(),
+            jstz_node,
+            #[cfg(feature = "oracle")]
+            oracle_node,
         })
     }
 
     async fn kill(&mut self) -> Result<()> {
-        let results = futures::future::join_all([
-            self.octez_node.write().await.kill(),
-            self.baker.write().await.kill(),
-            self.rollup.write().await.kill(),
-            self.jstz_node.write().await.kill(),
-        ])
-        .await;
-
         let mut err = vec![];
+        let mut results = vec![];
+        if let Some(n) = self.jstz_node.take() {
+            results.push(n.write().await.kill().await);
+        };
+        #[cfg(feature = "oracle")]
+        if let Some(n) = self.oracle_node.take() {
+            results.push(n.write().await.kill().await);
+        }
+
+        results.append(
+            &mut futures::future::join_all([
+                self.octez_node.write().await.kill(),
+                self.baker.write().await.kill(),
+                self.rollup.write().await.kill(),
+            ])
+            .await,
+        );
+
         for result in results {
             if let Err(e) = result {
                 err.push(e);
@@ -187,16 +224,26 @@ impl Task for Jstzd {
 
 impl Jstzd {
     async fn health_check_inner(&self) -> (Result<bool>, Vec<Result<bool>>) {
-        let check_results = futures::future::join_all([
-            self.octez_node.read().await.health_check(),
-            self.baker.read().await.health_check(),
-            self.rollup.read().await.health_check(),
-            self.jstz_node.read().await.health_check(),
-        ])
-        .await;
-
         let mut healthy = true;
         let mut err = vec![];
+        let mut check_results = vec![];
+        if let Some(n) = &self.jstz_node {
+            check_results.push(n.read().await.health_check().await);
+        }
+        #[cfg(feature = "oracle")]
+        if let Some(n) = &self.oracle_node {
+            check_results.push(n.read().await.health_check().await);
+        }
+
+        check_results.append(
+            &mut futures::future::join_all([
+                self.octez_node.read().await.health_check(),
+                self.baker.read().await.health_check(),
+                self.rollup.read().await.health_check(),
+            ])
+            .await,
+        );
+
         for result in &check_results {
             match result {
                 Err(e) => err.push(e),
@@ -406,13 +453,10 @@ impl JstzdServer {
 
     pub async fn jstz_node_healthy(&self) -> bool {
         match &self.inner.state.read().await.jstzd {
-            Some(v) => v
-                .jstz_node
-                .read()
-                .await
-                .health_check()
-                .await
-                .unwrap_or(false),
+            Some(v) => match &v.jstz_node {
+                Some(n) => n.read().await.health_check().await.unwrap_or(false),
+                None => true,
+            },
             None => false,
         }
     }
@@ -545,7 +589,7 @@ fn print_bootstrap_accounts<'a>(
         format
     });
 
-    Ok(writeln!(writer, "{}", table)?)
+    Ok(writeln!(writer, "{table}")?)
 }
 
 async fn health_check(state: &ServerState) -> bool {
@@ -564,7 +608,7 @@ async fn health_check(state: &ServerState) -> bool {
 async fn shutdown(state: &mut ServerState) -> Result<()> {
     if let Some(mut jstzd) = state.jstzd.take() {
         if let Err(e) = jstzd.kill().await {
-            eprintln!("failed to shutdown jstzd: {:?}", e);
+            eprintln!("failed to shutdown jstzd: {e:?}");
             state.jstzd.replace(jstzd);
             return Err(e);
         };
@@ -680,13 +724,15 @@ async fn call_contract_handler(
 mod tests {
     use axum::{body::to_bytes, response::IntoResponse};
     use indicatif::ProgressBar;
-    #[cfg(feature = "v2_runtime")]
     use jstz_crypto::secret_key::SecretKey;
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
+    #[cfg(feature = "oracle")]
+    use jstz_oracle_node::OracleNodeConfig;
+    use jstz_utils::KeyPair;
     use std::path::PathBuf;
     use std::str::FromStr;
 
-    use jstz_node::config::{JstzNodeConfig, KeyPair};
+    use jstz_node::config::{JstzNodeConfig, RuntimeEnv};
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::{Address, OctezClientConfigBuilder},
@@ -821,17 +867,9 @@ mod tests {
             )
             .build()
             .unwrap(),
-            JstzNodeConfig::new(
-                &Endpoint::default(),
-                &Endpoint::default(),
-                &PathBuf::from("/foo"),
-                &PathBuf::from("/foo"),
-                KeyPair::default(),
-                jstz_node::RunMode::Default,
-                0,
-                &PathBuf::from("/log"),
-                #[cfg(feature = "v2_runtime")]
-                Some(KeyPair(
+            #[cfg(feature = "oracle")]
+            Some(OracleNodeConfig {
+                key_pair: Some(KeyPair(
                     PublicKey::from_base58(
                         "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
                     )
@@ -841,7 +879,33 @@ mod tests {
                     )
                     .unwrap(),
                 )),
-            ),
+                jstz_node_endpoint: Endpoint::default(),
+                log_path: PathBuf::from_str("/log/path").unwrap(),
+            }),
+            Some(JstzNodeConfig::new(
+                &Endpoint::default(),
+                &Endpoint::default(),
+                &PathBuf::from("/foo"),
+                &PathBuf::from("/foo"),
+                KeyPair(
+                    PublicKey::from_base58(
+                        "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+                    )
+                    .unwrap(),
+                    SecretKey::from_base58(
+                        "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+                    )
+                    .unwrap(),
+                ),
+                jstz_node::RunMode::Sequencer {
+                    capacity: 1,
+                    debug_log_path: PathBuf::from("/log"),
+                    runtime_env: RuntimeEnv::Native,
+                },
+                false,
+                #[cfg(feature = "blueprint")]
+                &PathBuf::from("/blueprint"),
+            )),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(
                     "edpkubRfnPoa6ts5vBdTB5syvjeK2AyEF3kyhG4Sx7F9pU3biku4wv",
@@ -862,6 +926,8 @@ mod tests {
                 "octez_client",
                 "octez_node",
                 "octez_rollup",
+                #[cfg(feature = "oracle")]
+                "oracle_node",
             ]
         );
     }

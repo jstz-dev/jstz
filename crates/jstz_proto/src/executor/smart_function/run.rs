@@ -29,17 +29,21 @@ mod test {
     use jstz_core::kv::Transaction;
     use jstz_crypto::{hash::Blake2b, smart_function_hash::SmartFunctionHash};
     use jstz_mock::host::JstzMockHost;
-    use serde_json::json;
+
     use tezos_smart_rollup_mock::MockHost;
 
     use crate::{
-        context::{
-            account::{Account, Address},
-            ticket_table::TicketTable,
-        },
-        executor::smart_function::{self, deploy::deploy_smart_function},
+        context::account::{Account, Address},
+        executor::smart_function,
         operation::RunFunction,
         runtime::ParsedCode,
+        HttpBody,
+    };
+
+    #[cfg(not(feature = "v2_runtime"))]
+    use {
+        crate::context::ticket_table::TicketTable,
+        crate::executor::smart_function::deploy::deploy_smart_function, serde_json::json,
     };
 
     #[tokio::test]
@@ -93,7 +97,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -168,9 +172,10 @@ mod test {
         assert_eq!(balance_after, balance_before);
     }
 
-    #[tokio::test]
-    #[cfg_attr(feature = "v2_runtime", ignore = "v2 fetch does not support noop path")]
     // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
+    // v2 fetch does not support noop path
+    #[cfg(not(feature = "v2_runtime"))]
+    #[tokio::test]
     async fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
@@ -220,7 +225,7 @@ mod test {
                 .unwrap(),
             method: Method::GET,
             headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -262,7 +267,7 @@ mod test {
             uri: format!("jstz://{}/", &destination).try_into().unwrap(),
             method: Method::GET,
             headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -288,12 +293,10 @@ mod test {
         assert!(result.status_code.is_server_error());
     }
 
-    #[tokio::test]
-    #[cfg_attr(
-        feature = "v2_runtime",
-        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
-    )]
     // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
+    // v2 runtime fetch ignores invalid headers instead of failing. It should fail
+    #[cfg(not(feature = "v2_runtime"))]
+    #[tokio::test]
     async fn invalid_request_should_fail() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
@@ -335,7 +338,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: invalid_headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let result = execute(
@@ -358,12 +361,9 @@ mod test {
         assert!(call_failed);
     }
 
-    #[tokio::test]
-    #[cfg_attr(
-        feature = "v2_runtime",
-        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
-    )]
     // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
+    #[cfg(not(feature = "v2_runtime"))]
+    #[tokio::test]
     async fn invalid_response_should_fail() {
         let source = Address::User(jstz_mock::account1());
         // 1. Deploy the smart function
@@ -406,7 +406,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: Default::default(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let result = execute(
@@ -494,7 +494,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers,
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let result = execute(
@@ -519,12 +519,10 @@ mod test {
         assert_eq!(balance_after, 0);
     }
 
-    #[tokio::test]
-    #[cfg_attr(
-        feature = "v2_runtime",
-        ignore = "v2 runtime does not support HostScript withdrawals yet"
-    )]
     // TODO: https://linear.app/tezos/issue/JSTZ-655/support-hostscript-fa-withdraw-in-v2
+    // v2 runtime does not support HostScript withdrawals yet
+    #[cfg(not(feature = "v2_runtime"))]
+    #[tokio::test]
     async fn host_script_withdraw_from_smart_function_succeeds() {
         let mut mock_host = JstzMockHost::default();
         let host = mock_host.rt();
@@ -560,10 +558,10 @@ mod test {
 
         tx.begin();
         let run_function = RunFunction {
-            uri: format!("jstz://{}/", smart_function).try_into().unwrap(),
+            uri: format!("jstz://{smart_function}/").try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -638,7 +636,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function2).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
@@ -657,9 +655,10 @@ mod test {
         assert_eq!(source_after - source_before, transfer_amount);
     }
 
-    #[tokio::test]
-    #[cfg_attr(feature = "v2_runtime", ignore = "v2 fetch does not support noop path")]
     // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
+    // v2 fetch does not support noop path
+    #[cfg(not(feature = "v2_runtime"))]
+    #[tokio::test]
     async fn transfer_xtz_from_smart_function_succeeds_with_noop() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
@@ -703,7 +702,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function2).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash2 = Blake2b::from(b"fake_op_hash2".as_ref());
@@ -770,7 +769,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -831,7 +830,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -915,7 +914,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -937,12 +936,10 @@ mod test {
         assert_eq!(balance_before_source + refund_amount, balance_after_source);
     }
 
-    #[tokio::test]
-    #[cfg_attr(
-        feature = "v2_runtime",
-        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
-    )]
     // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
+    // v2 runtime fetch ignores invalid headers instead of failing. It should fail
+    #[cfg(not(feature = "v2_runtime"))]
+    #[tokio::test]
     async fn propagating_smart_function_refund_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
@@ -1005,7 +1002,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1095,7 +1092,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1119,12 +1116,10 @@ mod test {
         assert_eq!(balance_before_source, balance_after_source);
     }
 
-    #[tokio::test]
-    #[cfg_attr(
-        feature = "v2_runtime",
-        ignore = "v2 runtime fetch ignores invalid headers instead of failing. It should fail"
-    )]
     // TODO: https://linear.app/tezos/issue/JSTZ-656/v2-fetch-should-fail-no-invalid-headers
+    // v2 runtime fetch ignores invalid headers instead of failing. It should fail
+    #[cfg(not(feature = "v2_runtime"))]
+    #[tokio::test]
     async fn returning_invalid_request_amount_fails() {
         let source = Address::User(jstz_mock::account2());
         let mut jstz_mock_host = JstzMockHost::default();
@@ -1193,7 +1188,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1304,7 +1299,7 @@ mod test {
             uri: format!("jstz://{}/", &caller_sf).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1351,12 +1346,10 @@ mod test {
         assert_eq!(balance_before, balance_after);
     }
 
-    #[tokio::test]
-    #[cfg_attr(
-        feature = "v2_runtime",
-        ignore = "v2 runtime does not support HostScript withdrawals yet"
-    )]
     // TODO: https://linear.app/tezos/issue/JSTZ-655/support-hostscript-fa-withdraw-in-v2
+    // v2 runtime does not support HostScript withdrawals yet
+    #[cfg(not(feature = "v2_runtime"))]
+    #[tokio::test]
     async fn host_script_fa_withdraw_from_smart_function_succeeds() {
         let receiver = Address::User(jstz_mock::account1());
         let source = Address::User(jstz_mock::account2());
@@ -1367,7 +1360,7 @@ mod test {
         let ticket_id = 1234;
         let ticket_content = b"random ticket content".to_vec();
         let json_ticket_content = json!(&ticket_content);
-        assert_eq!("[114,97,110,100,111,109,32,116,105,99,107,101,116,32,99,111,110,116,101,110,116]", format!("{}", json_ticket_content));
+        assert_eq!("[114,97,110,100,111,109,32,116,105,99,107,101,116,32,99,111,110,116,101,110,116]", format!("{json_ticket_content}"));
         let ticket =
             jstz_mock::parse_ticket(ticketer, 1, (ticket_id, Some(ticket_content)));
         let ticket_hash = ticket.hash().unwrap();
@@ -1435,7 +1428,7 @@ mod test {
                 .unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
@@ -1520,7 +1513,7 @@ mod test {
             uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 1000,
         };
         let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());

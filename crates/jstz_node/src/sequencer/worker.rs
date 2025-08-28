@@ -1,9 +1,6 @@
 #[cfg(feature = "blueprint")]
 use crate::sequencer::db::BlueprintDb;
-use crate::{
-    config::KeyPair,
-    sequencer::runtime::{init_host, process_message},
-};
+use crate::sequencer::runtime::{init_host, process_message};
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -16,12 +13,14 @@ use std::{
 };
 
 use anyhow::Context;
+use jstz_utils::KeyPair;
 use log::warn;
 
-use super::{db::Db, inbox::parsing::ParsedInboxMessage, queue::OperationQueue};
+use super::{db::Db, queue::OperationQueue};
+use jstz_kernel::inbox::ParsedInboxMessage;
 
-#[cfg(feature = "v2_runtime")]
-use super::inbox::parsing::LevelInfo;
+#[cfg(feature = "oracle")]
+use jstz_kernel::inbox::LevelInfo;
 
 pub struct Worker {
     thread_kill_sig: Sender<()>,
@@ -99,13 +98,19 @@ pub fn spawn(
                     };
 
                     match v {
-                        Some(ParsedInboxMessage::JstzMessage(op)) => {
-                            #[cfg(feature = "blueprint")]
-                            if let Err(e) = blueprint_db.write(&op) {
-                                warn!("error writing blueprint: {e:?}");
-                            };
-                            if let Err(e) = process_message(&mut host_rt, op).await {
-                                warn!("error processing message: {e:?}");
+                        Some(op) => {
+                            if let ParsedInboxMessage::JstzMessage(message) =
+                                op.to_message()
+                            {
+                                #[cfg(feature = "blueprint")]
+                                if let Err(e) = blueprint_db.write(&message) {
+                                    warn!("error writing blueprint: {e:?}");
+                                };
+                                if let Err(e) =
+                                    process_message(&mut host_rt, message).await
+                                {
+                                    warn!("error processing message: {e:?}");
+                                }
                             }
                         }
                         _ => tokio::time::sleep(Duration::from_millis(100)).await,
@@ -125,7 +130,7 @@ pub fn spawn(
     })
 }
 
-#[cfg(feature = "v2_runtime")]
+#[cfg(feature = "oracle")]
 // See [jstz_kernel::riscv_kernel::run_event_loop]
 fn run_event_loop(
     tokio_rt: tokio::runtime::Runtime,
@@ -153,31 +158,34 @@ fn run_event_loop(
             };
 
             match v {
-                Some(ParsedInboxMessage::JstzMessage(op)) => {
-                    let mut hrt = host.clone();
-                    #[cfg(feature = "blueprint")]
-                    if let Err(e) = blueprint_db.write(&op) {
-                        warn!("error writing blueprint: {e:?}");
-                    };
-                    local_set.spawn_local(async move {
-                        if let Err(e) = process_message(&mut hrt, op).await {
-                            warn!("error processing message: {e:?}");
-                        }
-                    });
-                    tokio::task::yield_now().await;
-                    tokio::task::yield_now().await;
-                }
-                Some(ParsedInboxMessage::LevelInfo(LevelInfo::Start)) => {
-                    let mut hrt = host.clone();
-                    let ctx = jstz_proto::runtime::PROTOCOL_CONTEXT
-                        .get()
-                        .expect("Protocol context should be initialized");
-                    ctx.increment_level();
-                    let oracle_ctx = ctx.oracle();
-                    let mut oracle = oracle_ctx.lock();
-                    oracle.gc_timeout_requests(&mut hrt);
-                    tokio::task::yield_now().await;
-                }
+                Some(wrapper) => match wrapper.to_message() {
+                    ParsedInboxMessage::JstzMessage(op) => {
+                        let mut hrt = host.clone();
+                        #[cfg(feature = "blueprint")]
+                        if let Err(e) = blueprint_db.write(&op) {
+                            warn!("error writing blueprint: {e:?}");
+                        };
+                        local_set.spawn_local(async move {
+                            if let Err(e) = process_message(&mut hrt, op).await {
+                                warn!("error processing message: {e:?}");
+                            }
+                        });
+                        tokio::task::yield_now().await;
+                        tokio::task::yield_now().await;
+                    }
+                    ParsedInboxMessage::LevelInfo(LevelInfo::Start) => {
+                        let mut hrt = host.clone();
+                        let ctx = jstz_proto::runtime::PROTOCOL_CONTEXT
+                            .get()
+                            .expect("Protocol context should be initialized");
+                        ctx.increment_level();
+                        let oracle_ctx = ctx.oracle();
+                        let mut oracle = oracle_ctx.lock();
+                        oracle.gc_timeout_requests(&mut hrt);
+                        tokio::task::yield_now().await;
+                    }
+                    _ => (),
+                },
                 _ => tokio::time::sleep(Duration::from_millis(100)).await,
             };
 
@@ -214,7 +222,7 @@ mod tests {
     };
 
     use crate::sequencer::{db::Db, queue::OperationQueue, tests::dummy_op};
-    use crate::{config::KeyPair, sequencer::inbox::test_utils::hash_of};
+    use crate::{sequencer::inbox::test_utils::hash_of, test::default_injector};
     use tempfile::NamedTempFile;
 
     #[test]
@@ -225,7 +233,7 @@ mod tests {
         let worker = super::spawn(
             q,
             Db::init(Some("")).unwrap(),
-            &KeyPair::default(),
+            &default_injector(),
             PathBuf::new(),
             None,
             move || {
@@ -268,7 +276,7 @@ mod tests {
         let _worker = super::spawn(
             wrapper.clone(),
             cp,
-            &KeyPair::default(),
+            &default_injector(),
             PathBuf::new(),
             Some(log_file.path()),
             move || {},

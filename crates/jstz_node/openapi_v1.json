@@ -11,7 +11,7 @@
       "name": "MIT",
       "url": "https://github.com/jstz-dev/jstz/blob/main/LICENSE"
     },
-    "version": "0.1.1-alpha.3"
+    "version": "0.1.1-alpha.4"
   },
   "paths": {
     "/accounts/{address}": {
@@ -677,6 +677,11 @@
           }
         ]
       },
+      "HttpBody": {
+        "type": ["string", "null"],
+        "title": "HTTP Body",
+        "description": "A HTTP body, which can be empty or contain data. Encoded as a base64 string."
+      },
       "Kt1Hash": {
         "type": "string",
         "title": "KT1",
@@ -954,12 +959,7 @@
         "required": ["uri", "method", "headers", "body", "gasLimit"],
         "properties": {
           "body": {
-            "type": ["array", "null"],
-            "items": {
-              "type": "integer",
-              "format": "int32",
-              "minimum": 0
-            }
+            "$ref": "#/components/schemas/HttpBody"
           },
           "gasLimit": {
             "type": "integer",
@@ -999,12 +999,7 @@
         "required": ["body", "statusCode", "headers"],
         "properties": {
           "body": {
-            "type": ["array", "null"],
-            "items": {
-              "type": "integer",
-              "format": "int32",
-              "minimum": 0
-            }
+            "$ref": "#/components/schemas/HttpBody"
           },
           "headers": {
             "type": "object",

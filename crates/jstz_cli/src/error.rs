@@ -19,7 +19,7 @@ pub type Error = anyhow::Error;
 
 pub fn print(err: &Error) {
     if let Some(user_error) = err.downcast_ref::<UserError>() {
-        eprintln!("{} {}", ErrorPrefix, user_error);
+        eprintln!("{ErrorPrefix} {user_error}");
     } else {
         eprintln!(
             "{} {}\n\nIf you think this is a bug then please create an issue at {}.",
