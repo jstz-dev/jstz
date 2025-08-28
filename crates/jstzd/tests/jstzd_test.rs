@@ -203,11 +203,11 @@ async fn create_jstzd_server(
         octez_client_config.clone(),
         rollup_config.clone(),
         #[cfg(feature = "oracle")]
-        OracleNodeConfig {
+        Some(OracleNodeConfig {
             key_pair: oracle_key_pair,
             log_path: kernel_debug_file_path.clone(),
             jstz_node_endpoint: jstz_node_rpc_endpoint.to_owned(),
-        },
+        }),
         Some(jstz_node_config),
         protocol_params,
     );
@@ -418,6 +418,7 @@ async fn jstzd_with_oracle_key_pair_test() {
 
     let KeyPair(cfg_pk, cfg_sk) = config
         .oracle_node_config()
+        .unwrap()
         .key_pair
         .as_ref()
         .expect("oracle key pair missing");

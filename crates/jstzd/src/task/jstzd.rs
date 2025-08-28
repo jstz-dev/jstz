@@ -66,7 +66,7 @@ struct Jstzd {
     rollup: Shared<OctezRollup>,
     jstz_node: Option<Shared<JstzNode>>,
     #[cfg(feature = "oracle")]
-    oracle_node: Shared<OracleNode>,
+    oracle_node: Option<Shared<OracleNode>>,
 }
 
 #[derive(Clone, Serialize)]
@@ -83,7 +83,7 @@ pub struct JstzdConfig {
     jstz_node_config: Option<JstzNodeConfig>,
     #[cfg(feature = "oracle")]
     #[serde(rename(serialize = "oracle_node"))]
-    oracle_node_config: OracleNodeConfig,
+    oracle_node_config: Option<OracleNodeConfig>,
     #[serde(skip_serializing)]
     protocol_params: ProtocolParameter,
 }
@@ -94,7 +94,7 @@ impl JstzdConfig {
         baker_config: OctezBakerConfig,
         octez_client_config: OctezClientConfig,
         octez_rollup_config: OctezRollupConfig,
-        #[cfg(feature = "oracle")] oracle_node_config: OracleNodeConfig,
+        #[cfg(feature = "oracle")] oracle_node_config: Option<OracleNodeConfig>,
         jstz_node_config: Option<JstzNodeConfig>,
         protocol_params: ProtocolParameter,
     ) -> Self {
@@ -135,8 +135,8 @@ impl JstzdConfig {
     }
 
     #[cfg(feature = "oracle")]
-    pub fn oracle_node_config(&self) -> &OracleNodeConfig {
-        &self.oracle_node_config
+    pub fn oracle_node_config(&self) -> Option<&OracleNodeConfig> {
+        self.oracle_node_config.as_ref()
     }
 }
 
@@ -170,14 +170,17 @@ impl Task for Jstzd {
             None => None,
         };
         #[cfg(feature = "oracle")]
-        let oracle_node = OracleNode::spawn(config.oracle_node_config.clone()).await?;
+        let oracle_node = match config.oracle_node_config {
+            Some(config) => Some(OracleNode::spawn(config.clone()).await?.into_shared()),
+            None => None,
+        };
         Ok(Self {
             octez_node: octez_node.into_shared(),
             baker: baker.into_shared(),
             rollup: rollup.into_shared(),
             jstz_node,
             #[cfg(feature = "oracle")]
-            oracle_node: oracle_node.into_shared(),
+            oracle_node,
         })
     }
 
@@ -187,14 +190,16 @@ impl Task for Jstzd {
         if let Some(n) = self.jstz_node.take() {
             results.push(n.write().await.kill().await);
         };
+        #[cfg(feature = "oracle")]
+        if let Some(n) = self.oracle_node.take() {
+            results.push(n.write().await.kill().await);
+        }
 
         results.append(
             &mut futures::future::join_all([
                 self.octez_node.write().await.kill(),
                 self.baker.write().await.kill(),
                 self.rollup.write().await.kill(),
-                #[cfg(feature = "oracle")]
-                self.oracle_node.write().await.kill(),
             ])
             .await,
         );
@@ -225,14 +230,16 @@ impl Jstzd {
         if let Some(n) = &self.jstz_node {
             check_results.push(n.read().await.health_check().await);
         }
+        #[cfg(feature = "oracle")]
+        if let Some(n) = &self.oracle_node {
+            check_results.push(n.read().await.health_check().await);
+        }
 
         check_results.append(
             &mut futures::future::join_all([
                 self.octez_node.read().await.health_check(),
                 self.baker.read().await.health_check(),
                 self.rollup.read().await.health_check(),
-                #[cfg(feature = "oracle")]
-                self.oracle_node.read().await.health_check(),
             ])
             .await,
         );
@@ -861,7 +868,7 @@ mod tests {
             .build()
             .unwrap(),
             #[cfg(feature = "oracle")]
-            OracleNodeConfig {
+            Some(OracleNodeConfig {
                 key_pair: Some(KeyPair(
                     PublicKey::from_base58(
                         "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
@@ -874,7 +881,7 @@ mod tests {
                 )),
                 jstz_node_endpoint: Endpoint::default(),
                 log_path: PathBuf::from_str("/log/path").unwrap(),
-            },
+            }),
             Some(JstzNodeConfig::new(
                 &Endpoint::default(),
                 &Endpoint::default(),
