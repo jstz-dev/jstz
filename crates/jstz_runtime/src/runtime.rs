@@ -382,7 +382,7 @@ impl RuntimeContext {
     }
 }
 
-struct JstzPermissions;
+pub struct JstzPermissions;
 
 impl TimersPermission for JstzPermissions {
     fn allow_hrtime(&mut self) -> bool {
