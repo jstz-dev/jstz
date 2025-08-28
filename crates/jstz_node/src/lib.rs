@@ -20,7 +20,7 @@ use std::{
     time::SystemTime,
 };
 use tempfile::NamedTempFile;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, task::JoinSet};
 use tower_http::cors::{Any, CorsLayer};
 
 mod api_doc;
@@ -33,6 +33,8 @@ use utoipa_scalar::{Scalar, Servable};
 pub mod config;
 pub mod sequencer;
 pub use config::RunMode;
+
+use crate::config::RuntimeEnv;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -166,14 +168,27 @@ pub async fn run(
     let (broadcaster, db, log_service_handle) = LogsService::init(&log_file_path).await?;
 
     let (storage_sync_db, _storage_sync_db_file) = temp_db()?;
-    let storage_sync_handle = match storage_sync {
-        true => Some(storage_sync::spawn(
-            runtime_db.clone(),
+    let mut storage_sync_handles = JoinSet::new();
+    if storage_sync {
+        storage_sync_handles.spawn_local(storage_sync::spawn(
+            storage_sync_db.clone(),
             log_file_path,
             #[cfg(test)]
             || {},
-        )?),
-        false => None,
+        )?);
+    };
+    if let RunMode::Sequencer {
+        debug_log_path,
+        runtime_env: RuntimeEnv::Riscv { .. },
+        ..
+    } = &mode
+    {
+        storage_sync_handles.spawn_local(storage_sync::spawn(
+            runtime_db.clone(),
+            debug_log_path.to_owned(),
+            #[cfg(test)]
+            || {},
+        )?);
     };
 
     let state = AppState {
@@ -201,18 +216,23 @@ pub async fn run(
 
     let listener = TcpListener::bind(format!("{addr}:{port}")).await?;
 
-    match storage_sync_handle {
-        Some(storage_sync_handle) => {
+    match storage_sync_handles.is_empty() {
+        false => {
             let (tx, rx) = tokio::sync::oneshot::channel();
             axum::serve(listener, router)
-                .with_graceful_shutdown(async {
-                    let _ = tx.send(storage_sync_handle.await);
+                .with_graceful_shutdown(async move {
+                    let _ = tx.send(tokio::select! {
+                        Some(t) = storage_sync_handles.join_next() => match t {
+                            Ok(v) => v,
+                            Err(e) => Err(e.into())
+                        }
+                    });
                 })
                 .await?;
             rx.await??;
         }
-        None => axum::serve(listener, router).await?,
-    }
+        true => axum::serve(listener, router).await?,
+    };
 
     log_service_handle.shutdown().await?;
     Ok(())
