@@ -58,7 +58,7 @@ pub enum Protocol {
     #[cfg(not(feature = "disable-alpha"))]
     Alpha,
     Rio,
-    Quebec,
+    Seoul,
 }
 
 impl FromStr for Protocol {
@@ -72,8 +72,8 @@ impl FromStr for Protocol {
             "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK" => Ok(Protocol::Alpha),
             "rio" => Ok(Protocol::Rio),
             "PsRiotumaAMotcRoDWW1bysEhQy2n1M5fy8JgRp8jjRfHGmfeA7" => Ok(Protocol::Rio),
-            "quebec" => Ok(Protocol::Quebec),
-            "PsQuebecnLByd3JwTiGadoG4nGWi3HYiLXUjkibeFV8dCFeVMUg" => Ok(Protocol::Quebec),
+            "seoul" => Ok(Protocol::Seoul),
+            "PtSeouLouXkxhg39oWzjxDWaCydNfR3RxCUrNe4Q9Ro8BTehcbh" => Ok(Protocol::Seoul),
             _ => Err(anyhow::anyhow!("unknown protocol '{}'", s)),
         }
     }
@@ -85,7 +85,11 @@ impl Default for Protocol {
         return Self::Alpha;
 
         #[cfg(feature = "disable-alpha")]
-        Self::Rio
+        // FIX(https://linear.app/tezos/issue/JSTZ-897/bump-octez-to-v23)
+        // This will fail if `disable-alpha` is activated within our dev environment
+        // because octezv22 is still used in dev environment. `disable-alpha` is only
+        // used when building image which will contain octev23
+        Self::Seoul
     }
 }
 
@@ -101,7 +105,7 @@ impl Protocol {
             #[cfg(not(feature = "disable-alpha"))]
             Protocol::Alpha => "ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK",
             Protocol::Rio => "PsRiotumaAMotcRoDWW1bysEhQy2n1M5fy8JgRp8jjRfHGmfeA7",
-            Protocol::Quebec => "PsQuebecnLByd3JwTiGadoG4nGWi3HYiLXUjkibeFV8dCFeVMUg",
+            Protocol::Seoul => "PtSeouLouXkxhg39oWzjxDWaCydNfR3RxCUrNe4Q9Ro8BTehcbh",
         }
     }
 
@@ -777,8 +781,8 @@ mod tests {
             "\"PsRiotumaAMotcRoDWW1bysEhQy2n1M5fy8JgRp8jjRfHGmfeA7\""
         );
         assert_eq!(
-            serde_json::to_string(&Protocol::Quebec).unwrap(),
-            "\"PsQuebecnLByd3JwTiGadoG4nGWi3HYiLXUjkibeFV8dCFeVMUg\""
+            serde_json::to_string(&Protocol::Seoul).unwrap(),
+            "\"PtSeouLouXkxhg39oWzjxDWaCydNfR3RxCUrNe4Q9Ro8BTehcbh\""
         );
     }
 
@@ -821,15 +825,15 @@ mod tests {
             Protocol::Rio
         );
         assert_eq!(
-            serde_json::from_str::<Protocol>("\"quebec\"").unwrap(),
-            Protocol::Quebec
+            serde_json::from_str::<Protocol>("\"seoul\"").unwrap(),
+            Protocol::Seoul
         );
         assert_eq!(
             serde_json::from_str::<Protocol>(
-                "\"PsQuebecnLByd3JwTiGadoG4nGWi3HYiLXUjkibeFV8dCFeVMUg\""
+                "\"PtSeouLouXkxhg39oWzjxDWaCydNfR3RxCUrNe4Q9Ro8BTehcbh\""
             )
             .unwrap(),
-            Protocol::Quebec
+            Protocol::Seoul
         );
         assert!(serde_json::from_str::<Protocol>("\"foobar\"")
             .unwrap_err()
