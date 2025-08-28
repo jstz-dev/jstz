@@ -26,7 +26,7 @@ impl FromStr for BakerBinaryPath {
             #[cfg(not(feature = "disable-alpha"))]
             "octez-baker-alpha" => BakerBinaryPath::Env(Protocol::Alpha),
             "octez-baker-PsRiotum" => BakerBinaryPath::Env(Protocol::Rio),
-            "octez-baker-PsQuebec" => BakerBinaryPath::Env(Protocol::Quebec),
+            "octez-baker-PtSeouLo" => BakerBinaryPath::Env(Protocol::Seoul),
             _ => BakerBinaryPath::Custom(PathBuf::from_str(s)?),
         })
     }
@@ -40,8 +40,8 @@ impl Display for BakerBinaryPath {
             BakerBinaryPath::Env(Protocol::Rio) => {
                 write!(f, "octez-baker-PsRiotum")
             }
-            BakerBinaryPath::Env(Protocol::Quebec) => {
-                write!(f, "octez-baker-PsQuebec")
+            BakerBinaryPath::Env(Protocol::Seoul) => {
+                write!(f, "octez-baker-PtSeouLo")
             }
             BakerBinaryPath::Custom(path) => write!(f, "{}", path.to_string_lossy()),
         }

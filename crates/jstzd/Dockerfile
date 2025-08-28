@@ -1,6 +1,6 @@
-ARG OCTEZ_VERSION=22.1
+ARG OCTEZ_VERSION=23.0
 ARG FEATURES="build-image,oracle"
-FROM rust:1.82.0-slim-bookworm AS builder
+FROM rust:1.86.0-slim-bookworm AS builder
 RUN apt update && apt install -y curl pkg-config libssl-dev libsqlite3-dev
 
 WORKDIR /jstz_build
