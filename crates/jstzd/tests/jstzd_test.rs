@@ -208,7 +208,7 @@ async fn create_jstzd_server(
             log_path: kernel_debug_file_path.clone(),
             jstz_node_endpoint: jstz_node_rpc_endpoint.to_owned(),
         },
-        jstz_node_config,
+        Some(jstz_node_config),
         protocol_params,
     );
     (JstzdServer::new(config.clone(), jstzd_port), config)
