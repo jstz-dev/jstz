@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use jstz_core::{host::WriteDebug, BinEncodable};
 use jstz_crypto::hash::Hash;
 use jstz_crypto::public_key_hash::PublicKeyHash;
@@ -8,11 +10,13 @@ use jstz_proto::operation::{
 };
 use num_traits::ToPrimitive;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
+use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::InfoPerLevel;
 use tezos_smart_rollup::michelson::ticket::FA2_1Ticket;
 use tezos_smart_rollup::michelson::{
     MichelsonBytes, MichelsonContract, MichelsonNat, MichelsonOption, MichelsonOr,
 };
+use tezos_smart_rollup::types::SmartRollupAddress;
 pub use tezos_smart_rollup::{
     inbox::{ExternalMessageFrame, InboxMessage, InternalInboxMessage, Transfer},
     michelson::MichelsonPair,
@@ -40,6 +44,8 @@ pub type MichelsonFaDeposit = MichelsonPair<
 
 pub type RollupType = MichelsonOr<MichelsonNativeDeposit, MichelsonFaDeposit>;
 
+// tag + 20 byte address
+const EXTERNAL_FRAME_SIZE: usize = 21;
 const NATIVE_TICKET_ID: u32 = 0_u32;
 const NATIVE_TICKET_CONTENT: MichelsonOption<MichelsonBytes> = MichelsonOption(None);
 
@@ -134,16 +140,19 @@ pub fn parse_inbox_message(
                 ExternalMessageFrame::Targetted { address, contents } => {
                     let message = if jstz_rollup_address != address.hash() {
                         logger.write_debug(
-                            "External message ignored because of different smart rollup address",
+                            &format!(
+                                "External message ignored because of different smart rollup address: {:?} != {:?}",
+                                jstz_rollup_address, address.hash()
+                            ),
                         );
                         None
                     } else {
                         match read_external_message(logger, contents) {
                             Some(msg) => Some(Message::External(msg)),
                             None => {
-                                logger.write_debug(
-                                    "Failed to parse the external message\n",
-                                );
+                                logger.write_debug(&format!(
+                                    "Failed to parse the external message: {contents:?}\n"
+                                ));
                                 None
                             }
                         }
@@ -256,16 +265,45 @@ pub enum LevelInfo {
     End,
 }
 
+/// Encode signed operations (parsed external messages) back to raw inbox messages.
+pub fn encode_signed_operation(
+    signed_op: &SignedOperation,
+    rollup_addr: &SmartRollupAddress,
+) -> Result<Vec<u8>, Box<dyn Error>> {
+    let bytes = signed_op.encode()?;
+    let mut external = Vec::with_capacity(bytes.len() + EXTERNAL_FRAME_SIZE);
+
+    let frame = ExternalMessageFrame::Targetted {
+        contents: bytes,
+        address: rollup_addr.clone(),
+    };
+
+    frame.bin_write(&mut external)?;
+
+    let message = InboxMessage::External::<RollupType>(&external);
+    let mut buf = Vec::new();
+    message.serialize(&mut buf)?;
+    Ok(buf)
+}
+
 #[cfg(test)]
 mod test {
-    use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+    use jstz_core::host::WriteDebug;
+    use jstz_crypto::{
+        hash::Hash, public_key::PublicKey, secret_key::SecretKey,
+        smart_function_hash::SmartFunctionHash,
+    };
     use jstz_mock::{
         host::JstzMockHost,
         message::{fa_deposit::MockFaDeposit, native_deposit::MockNativeDeposit},
     };
     use jstz_proto::{
-        context::account::{Address, Addressable},
-        operation::internal,
+        context::account::{Address, Addressable, Nonce},
+        operation::{
+            internal::{self, InboxId},
+            Content, DeployFunction, Operation, SignedOperation,
+        },
+        runtime::ParsedCode,
     };
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
     use tezos_smart_rollup::types::SmartRollupAddress;
@@ -273,6 +311,11 @@ mod test {
     use crate::inbox::ParsedInboxMessage;
 
     use super::{read_message, InternalMessage, Message};
+
+    struct DummyLogger;
+    impl WriteDebug for DummyLogger {
+        fn write_debug(&self, _msg: &str) {}
+    }
 
     #[test]
     fn read_message_ignored_on_different_smart_rollup_address() {
@@ -393,5 +436,55 @@ mod test {
         } else {
             panic!("Expected deposit message")
         }
+    }
+
+    #[test]
+    fn encode_signed_operation_round_trip() {
+        let ticketer_addr =
+            ContractKt1Hash::from_base58_check("KT1RycYvM4EVs6BAXWEsGXaAaRqiMP53KT4w")
+                .unwrap();
+        let rollup_addr =
+            SmartRollupAddress::from_b58check("sr1JVr8SmBYRRFq38HZGM7nJUa9VcfwxGSXc")
+                .unwrap();
+
+        let op = Operation {
+            public_key: PublicKey::from_base58(
+                "edpktpymWssZNE88hDVzXYKTFVidwXnkS9bQKrf1wGEz3koYgFeErn",
+            )
+            .unwrap(),
+            nonce: Nonce(0),
+            content: Content::DeployFunction(DeployFunction {
+                function_code: ParsedCode("code".to_string()),
+                account_credit: 0,
+            }),
+        };
+        let hash = op.hash();
+        let signed_op = SignedOperation::new(
+            SecretKey::from_base58(
+                "edsk4WrVheGeqg1VuQkpybAkyqec8si4hhXM6nzxgYgMsNd7V1gvq6",
+            )
+            .unwrap()
+            .sign(hash)
+            .unwrap(),
+            op,
+        );
+
+        let encoded_msg =
+            super::encode_signed_operation(&signed_op, &rollup_addr).unwrap();
+        assert_eq!(
+            super::parse_inbox_message(
+                &DummyLogger,
+                InboxId {
+                    l1_level: 0,
+                    l1_message_id: 0,
+                },
+                &encoded_msg,
+                &ticketer_addr,
+                rollup_addr.hash()
+            ),
+            Some(ParsedInboxMessage::JstzMessage(Message::External(
+                signed_op
+            )))
+        );
     }
 }

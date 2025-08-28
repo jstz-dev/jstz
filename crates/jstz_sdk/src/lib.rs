@@ -4,7 +4,9 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 pub fn sign_operation(operation: JsValue, secret_key: &str) -> Result<String, JsValue> {
-    let operation: Operation = serde_wasm_bindgen::from_value(operation)?;
+    let json: serde_json::Value = serde_wasm_bindgen::from_value(operation)?;
+    let operation: Operation =
+        serde_json::from_value(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
     let hash = operation.hash();
     let secret_key = SecretKey::from_base58(secret_key)
         .map_err(|e| JsValue::from_str(&e.to_string()))?;

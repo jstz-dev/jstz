@@ -12,6 +12,7 @@ members = [
   "crates/jstz_node",
   "crates/jstz_oracle_node",
   "crates/jstz_proto",
+  "crates/jstz_riscv_wpt_test_kernel",
   "crates/jstz_sdk",
   "crates/jstz_tps_bench",
   "crates/jstz_utils",
@@ -22,7 +23,7 @@ members = [
 
 [workspace.package]
 edition = "2021"
-version = "0.1.1-alpha.3"
+version = "0.1.1-alpha.4"
 authors = ["TriliTech <contact@trili.tech>"]
 repository = "https://github.com/jstz-dev/jstz"
 homepage = "https://github.com/jstz-dev/jstz"
@@ -124,6 +125,7 @@ utoipa-scalar = { version = "0.2.0", features = ["axum"] }
 warp = "0.3.7"
 wasm-bindgen = "0.2.92"
 futures-core = "0.3.31"
+ron = "0.8"
 
 [workspace.dependencies.deno_fetch_base]
 git = "https://github.com/jstz-dev/deno"
@@ -142,6 +144,7 @@ features = [
   "data-encoding",
   "storage",
   "proto-alpha",
+  "utils",
 ]
 
 [workspace.dependencies.tezos-smart-rollup-host]

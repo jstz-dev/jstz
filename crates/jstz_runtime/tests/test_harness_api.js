@@ -16,13 +16,6 @@ Object.defineProperty(globalThis, "location", {
 delete globalThis.setTimeout;
 delete globalThis.clearTimeout;
 
-Object.defineProperty(globalThis, "self", {
-  value: globalThis,
-  enumerable: true,
-  configurable: true,
-  writable: true,
-});
-
 Object.defineProperty(globalThis, "test_result_callback", {
   value: test_result_callback,
   enumerable: true,

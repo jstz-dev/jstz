@@ -435,7 +435,7 @@ async fn jstzd_with_oracle_key_pair_test() {
     tokio::spawn(async move {
         sleep(Duration::from_secs(3)).await;
         reqwest::Client::new()
-            .put(format!("http://localhost:{}/shutdown", jstzd_port))
+            .put(format!("http://localhost:{jstzd_port}/shutdown"))
             .send()
             .await
             .unwrap();
