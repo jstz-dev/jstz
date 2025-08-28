@@ -12,6 +12,8 @@ use tempfile::NamedTempFile;
 
 use crate::task::jstzd::JstzdConfig;
 use crate::user_config::UserJstzNodeConfig;
+#[cfg(feature = "oracle")]
+use crate::user_config::UserOracleNodeConfig;
 use crate::{
     jstz_rollup_path, EXCHANGER_ADDRESS, JSTZ_NATIVE_BRIDGE_ADDRESS, JSTZ_ROLLUP_ADDRESS,
 };
@@ -69,6 +71,9 @@ pub struct Config {
     octez_rollup: Option<OctezRollupConfigBuilder>,
     #[serde(default)]
     jstz_node: UserJstzNodeConfig,
+    #[cfg(feature = "oracle")]
+    #[serde(default)]
+    oracle_node: UserOracleNodeConfig,
     #[serde(default)]
     protocol: ProtocolParameterBuilder,
 }
@@ -178,6 +183,15 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
     )
     .context("failed to build jstz node config")?;
 
+    #[cfg(feature = "oracle")]
+    let oracle_node_config = match config.oracle_node.skipped {
+        true => None,
+        false => Some(build_oracle_config(
+            Some(jstz_node_config.injector.clone()),
+            &jstz_node_config,
+        )),
+    };
+
     let server_port = config.server_port.unwrap_or(DEFAULT_JSTZD_SERVER_PORT);
     Ok((
         server_port,
@@ -187,10 +201,7 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
             octez_client_config,
             octez_rollup_config,
             #[cfg(feature = "oracle")]
-            build_oracle_config(
-                Some(jstz_node_config.injector.clone()),
-                &jstz_node_config,
-            ),
+            oracle_node_config,
             match skip_jstz_node {
                 true => None,
                 false => Some(jstz_node_config),
@@ -858,10 +869,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn build_config_skip_jstz_node() {
+    async fn build_config_skip_nodes() {
         let mut tmp_file = NamedTempFile::new().unwrap();
         let content = serde_json::to_string(&serde_json::json!({
-            "jstz_node": { "skipped": true }
+            "jstz_node": { "skipped": true },
+            "oracle_node": { "skipped": true },
         }))
         .unwrap();
         tmp_file.write_all(content.as_bytes()).unwrap();
@@ -872,6 +884,8 @@ mod tests {
         .await
         .unwrap();
         assert!(config.jstz_node_config().is_none());
+        #[cfg(feature = "oracle")]
+        assert!(config.oracle_node_config().is_none());
     }
 
     #[test]
