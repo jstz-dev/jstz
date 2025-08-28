@@ -1,4 +1,3 @@
-#![cfg(feature = "oracle")]
 use anyhow::Result;
 use async_trait::async_trait;
 use jstz_oracle_node::{node::OracleNode as InnerOracleNode, OracleNodeConfig};

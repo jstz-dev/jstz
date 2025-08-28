@@ -4,7 +4,6 @@ use anyhow::Result;
 use futures_util::StreamExt;
 use jstz_proto::runtime::v2::oracle::OracleRequest;
 use jstz_utils::event_stream::EventStream;
-use jstz_utils::test_util::append_async;
 use tokio::sync::broadcast;
 use tokio::task::AbortHandle;
 
@@ -72,13 +71,10 @@ impl Drop for Relay {
 mod tests {
     use super::*;
     use anyhow::Result;
+    use jstz_utils::test_util::append_async;
     use std::{io::Write, time::Duration};
     use tempfile::NamedTempFile;
-    use tokio::{
-        fs::OpenOptions,
-        io::AsyncWriteExt,
-        time::{sleep, timeout},
-    };
+    use tokio::time::timeout;
 
     async fn next_event(
         rx: &mut broadcast::Receiver<OracleRequest>,

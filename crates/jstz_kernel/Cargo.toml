@@ -33,6 +33,9 @@ serde.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
+tezos-smart-rollup-mock.workspace = true
+regex.workspace = true
+anyhow.workspace = true
 
 [dev-dependencies]
 anyhow.workspace = true

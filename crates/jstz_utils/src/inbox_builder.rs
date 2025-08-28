@@ -66,19 +66,17 @@ impl InboxBuilder {
         ticketer_address: Option<ContractKt1Hash>,
         #[cfg(feature = "v2_runtime")] oracle_signer: Option<Account>,
     ) -> Self {
-        let mut builder = Self {
+        Self {
             rollup_address,
             messages: Vec::new(),
             next_account_id: 0,
             ticketer_address,
-            next_level: 0,
+            next_level: 1,
             #[cfg(feature = "v2_runtime")]
             next_oracle_request_id: 0,
             #[cfg(feature = "v2_runtime")]
             oracle_signer,
-        };
-        builder.bump_level().expect("should set up level 0");
-        builder
+        }
     }
 
     pub fn build(self) -> InboxFile {
@@ -378,7 +376,7 @@ mod tests {
                 HttpBody::empty(),
             )
             .unwrap();
-        assert_eq!(builder.messages.len(), 2);
+        assert_eq!(builder.messages.len(), 1);
         match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
                 let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
@@ -414,7 +412,7 @@ mod tests {
         builder
             .deploy_function(&mut default_account(), ParsedCode("code".to_string()), 123)
             .unwrap();
-        assert_eq!(builder.messages.len(), 2);
+        assert_eq!(builder.messages.len(), 1);
         match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
                 let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
@@ -537,7 +535,7 @@ mod tests {
             None,
         );
         builder.deposit_from_l1(&account, 1).unwrap();
-        assert_eq!(builder.messages.len(), 2);
+        assert_eq!(builder.messages.len(), 1);
         match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
                 let (_, inbox_msg) =
@@ -572,7 +570,7 @@ mod tests {
         builder
             .withdraw(&mut account, &receiver.address, 10000)
             .unwrap();
-        assert_eq!(builder.messages.len(), 2);
+        assert_eq!(builder.messages.len(), 1);
         match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
                 let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
@@ -645,7 +643,7 @@ mod tests {
         let mut builder =
             InboxBuilder::new(rollup_address.clone(), None, Some(default_account()));
         builder.create_oracle_response(response).unwrap();
-        assert_eq!(builder.messages.len(), 2);
+        assert_eq!(builder.messages.len(), 1);
         match builder.messages.pop().unwrap() {
             Message::Raw(raw) => {
                 let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
@@ -690,18 +688,6 @@ mod tests {
             #[cfg(feature = "v2_runtime")]
             None,
         );
-        // 1 message: start of level 0
-        assert_eq!(builder.messages.len(), 1);
-        match builder.messages.pop().unwrap() {
-            Message::Raw(raw) => {
-                let (_, inbox_msg) = InboxMessage::<MichelsonUnit>::parse(&raw).unwrap();
-                matches!(
-                    inbox_msg,
-                    InboxMessage::Internal(InternalInboxMessage::StartOfLevel)
-                );
-            }
-            _ => panic!("should be raw message"),
-        }
 
         // there should be one end of level message for level 0 and
         // one start of level message for level 1
