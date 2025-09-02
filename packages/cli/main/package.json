@@ -1,11 +1,40 @@
 {
   "name": "@jstz-dev/cli",
-  "version": "0.1.1-alpha.3",
-  "dependencies": {},
+  "version": "0.1.1-alpha.4",
+  "description": "A command-line interface for jstz.",
+  "type": "module",
+  "bin": {
+    "jstz": "run.js"
+  },
+  "files": [
+    "run.js",
+    "install.js"
+  ],
+  "exports": {
+    ".": "./run.js",
+    "./package.json": "./package.json"
+  },
   "scripts": {
+    "format": "prettier . --write",
     "postinstall": "node install.js"
   },
-  "bin": {
-    "jstz": "run.mjs"
-  }
+  "devDependencies": {
+    "prettier": "^3.5.3"
+  },
+  "optionalDependencies": {
+    "@jstz-dev/cli-darwin-arm64": "0.1.1-alpha.3",
+    "@jstz-dev/cli-linux-arm64": "0.1.1-alpha.3",
+    "@jstz-dev/cli-linux-x64": "0.1.1-alpha.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jstz-dev/jstz.git"
+  },
+  "keywords": [
+    "jstz",
+    "cli",
+    "blockchain",
+    "tezos"
+  ],
+  "license": "MIT"
 }

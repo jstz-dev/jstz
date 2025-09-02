@@ -1,18 +1,18 @@
+use crate::{
+    context::account::Addressable,
+    operation::{OperationHash, RunFunction},
+    receipt::RunFunctionReceipt,
+};
 use fetch::{
-    error::FetchError, fetch_handler::process_and_dispatch_request,
-    http::convert_header_map, http::Body,
+    error::FetchError,
+    fetch_handler::process_and_dispatch_request,
+    http::{convert_header_map, Body},
 };
 use jstz_core::{
     host::{HostRuntime, JsHostRuntime},
     kv::Transaction,
 };
 use url::Url;
-
-use crate::{
-    context::account::Addressable,
-    operation::{OperationHash, RunFunction},
-    receipt::RunFunctionReceipt,
-};
 pub mod fetch;
 pub use jstz_core::log_record::{LogRecord, LOG_PREFIX};
 pub use jstz_runtime::{Kv, KvValue};
@@ -39,9 +39,16 @@ async fn run(
     run_operation: RunFunction,
     operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt, Error> {
-    let url =
-        Url::parse(run_operation.uri.to_string().as_str()).map_err(FetchError::from)?;
-    let body = run_operation.body.map(Body::Vector);
+    let RunFunction {
+        uri,
+        body,
+        method,
+        headers,
+        gas_limit: _,
+    } = run_operation;
+
+    let url = Url::parse(uri.to_string().as_str()).map_err(FetchError::from)?;
+    let body = body.0.map(Body::Vector);
     let response: http::Response<Option<Vec<u8>>> = process_and_dispatch_request(
         JsHostRuntime::new(hrt),
         tx.clone(),
@@ -49,15 +56,15 @@ async fn run(
         Some(operation_hash),
         source_address.clone().into(),
         source_address.clone().into(),
-        run_operation.method.to_string().into(),
+        method.to_string().into(),
         url,
-        convert_header_map(run_operation.headers),
+        convert_header_map(headers),
         body,
     )
     .await
     .into();
     Ok(RunFunctionReceipt {
-        body: response.body().clone(),
+        body: response.body().clone().into(),
         status_code: response.status().clone(),
         headers: response.headers().clone(),
     })

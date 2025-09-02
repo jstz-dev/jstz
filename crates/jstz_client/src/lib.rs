@@ -61,8 +61,7 @@ impl JstzClient {
                 Ok(nonce)
             }
             StatusCode::NOT_FOUND => Ok(Nonce::default()),
-            // For any other status, return a generic error
-            _ => bail!("Failed to get nonce"),
+            status => bail!("Failed to get nonce. Status: {}", status),
         }
     }
 
@@ -183,7 +182,7 @@ impl JstzClient {
         match response.status() {
             StatusCode::OK => Ok(()),
             // For any other status, return a generic error
-            _ => bail!("Failed to post operation"),
+            status => bail!("Failed to post operation. Status: {}", status),
         }
     }
 

@@ -4,9 +4,14 @@ use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::Duration;
 
-#[cfg(feature = "v2_runtime")]
+#[cfg(feature = "oracle")]
 use jstz_crypto::keypair_from_mnemonic;
-use jstz_node::config::{JstzNodeConfig, KeyPair};
+use jstz_crypto::public_key::PublicKey;
+use jstz_crypto::secret_key::SecretKey;
+use jstz_node::config::JstzNodeConfig;
+#[cfg(feature = "oracle")]
+use jstz_oracle_node::OracleNodeConfig;
+use jstz_utils::KeyPair;
 use jstzd::jstz_rollup_path::*;
 
 use http::Uri;
@@ -51,7 +56,7 @@ async fn jstzd_test() {
         &rollup_rpc_endpoint,
         &jstz_node_rpc_endpoint,
         jstzd_port,
-        #[cfg(feature = "v2_runtime")]
+        #[cfg(feature = "oracle")]
         None,
     )
     .await;
@@ -78,7 +83,7 @@ async fn jstzd_test() {
     tokio::spawn(async move {
         sleep(Duration::from_secs(10)).await;
         reqwest::Client::new()
-            .put(format!("http://localhost:{}/shutdown", jstzd_port))
+            .put(format!("http://localhost:{jstzd_port}/shutdown"))
             .send()
             .await
             .unwrap();
@@ -102,7 +107,7 @@ async fn create_jstzd_server(
     rollup_rpc_endpoint: &Endpoint,
     jstz_node_rpc_endpoint: &Endpoint,
     jstzd_port: u16,
-    #[cfg(feature = "v2_runtime")] oracle_key_pair: Option<KeyPair>,
+    #[cfg(feature = "oracle")] oracle_key_pair: Option<KeyPair>,
 ) -> (JstzdServer, JstzdConfig) {
     let run_options = OctezNodeRunOptionsBuilder::new()
         .set_synchronisation_threshold(0)
@@ -157,11 +162,6 @@ async fn create_jstzd_server(
         .expect("Failed to build baker config");
     let kernel_debug_file = FileWrapper::default();
     let kernel_debug_file_path = kernel_debug_file.path();
-    let debug_log_path = NamedTempFile::new()
-        .unwrap()
-        .into_temp_path()
-        .keep()
-        .unwrap();
     let preimages_dir = TempDir::new().unwrap();
     let preimages_dir_path = preimages_dir.path().to_path_buf();
     let rollup_config = OctezRollupConfigBuilder::new(
@@ -184,19 +184,33 @@ async fn create_jstzd_server(
         &rollup_config.rpc_endpoint,
         &preimages_dir_path,
         &kernel_debug_file_path,
-        KeyPair::default(),
+        KeyPair(
+            PublicKey::from_base58(
+                "edpkukK9ecWxib28zi52nvbXTdsYt8rYcvmt5bdH8KjipWXm8sH3Qi",
+            )
+            .unwrap(),
+            SecretKey::from_base58(
+                "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
+            )
+            .unwrap(),
+        ),
         jstz_node::RunMode::Default,
-        0,
-        &debug_log_path,
-        #[cfg(feature = "v2_runtime")]
-        oracle_key_pair,
+        false,
+        #[cfg(feature = "blueprint")]
+        &NamedTempFile::new().unwrap().into_temp_path().to_path_buf(),
     );
     let config = JstzdConfig::new(
         octez_node_config,
         baker_config,
         octez_client_config.clone(),
         rollup_config.clone(),
-        jstz_node_config,
+        #[cfg(feature = "oracle")]
+        Some(OracleNodeConfig {
+            key_pair: oracle_key_pair,
+            log_path: kernel_debug_file_path.clone(),
+            jstz_node_endpoint: jstz_node_rpc_endpoint.to_owned(),
+        }),
+        Some(jstz_node_config),
         protocol_params,
     );
     (JstzdServer::new(config.clone(), jstzd_port), config)
@@ -207,9 +221,9 @@ async fn ensure_jstzd_components_are_up(
     octez_node_rpc_endpoint: &Endpoint,
     jstzd_port: u16,
 ) {
-    let jstzd_health_check_endpoint = format!("http://localhost:{}/health", jstzd_port);
+    let jstzd_health_check_endpoint = format!("http://localhost:{jstzd_port}/health");
     let octez_node_health_check_endpoint =
-        format!("{}/health/ready", octez_node_rpc_endpoint);
+        format!("{octez_node_rpc_endpoint}/health/ready");
 
     let jstzd_running = retry(30, 1000, || async {
         let res = reqwest::get(&jstzd_health_check_endpoint).await;
@@ -235,9 +249,9 @@ async fn ensure_jstzd_components_are_down(
     octez_node_rpc_endpoint: &Endpoint,
     jstzd_port: u16,
 ) {
-    let jstzd_health_check_endpoint = format!("http://localhost:{}/health", jstzd_port);
+    let jstzd_health_check_endpoint = format!("http://localhost:{jstzd_port}/health");
     let octez_node_health_check_endpoint =
-        format!("{}/health/ready", octez_node_rpc_endpoint);
+        format!("{octez_node_rpc_endpoint}/health/ready");
 
     let jstzd_stopped = retry(30, 1000, || async {
         let res = reqwest::get(&jstzd_health_check_endpoint).await;
@@ -291,16 +305,14 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
             serde_json::to_value(jstzd_config.jstz_node_config()).unwrap(),
         ),
     ] {
-        let res =
-            reqwest::get(&format!("http://localhost:{}/config/{}", jstzd_port, key))
-                .await
-                .unwrap();
+        let res = reqwest::get(&format!("http://localhost:{jstzd_port}/config/{key}"))
+            .await
+            .unwrap();
         assert_eq!(
             expected_json,
             serde_json::from_str::<serde_json::Value>(&res.text().await.unwrap())
                 .unwrap(),
-            "config mismatch at /config/{}",
-            key
+            "config mismatch at /config/{key}"
         );
         full_config
             .as_object_mut()
@@ -310,7 +322,7 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
 
     // invalid config type
     assert_eq!(
-        reqwest::get(&format!("http://localhost:{}/config/foobar", jstzd_port))
+        reqwest::get(&format!("http://localhost:{jstzd_port}/config/foobar"))
             .await
             .unwrap()
             .status(),
@@ -318,7 +330,7 @@ async fn fetch_config_test(jstzd_config: JstzdConfig, jstzd_port: u16) {
     );
 
     // all configs
-    let res = reqwest::get(&format!("http://localhost:{}/config/", jstzd_port))
+    let res = reqwest::get(&format!("http://localhost:{jstzd_port}/config/"))
         .await
         .unwrap();
     assert_eq!(
@@ -366,8 +378,7 @@ async fn check_bootstrap_contracts(octez_client: &OctezClient) {
                     "should be able to find contract '{contract_name}' at '{hash}'"
                 )),
             CONTRACT_INIT_BALANCE,
-            "balance mismatch for contract '{}'",
-            contract_name
+            "balance mismatch for contract '{contract_name}'"
         );
     }
 }
@@ -381,7 +392,7 @@ async fn ensure_rollup_is_logging_to(kernel_debug_file: &NamedTempFile) {
 }
 
 #[cfg_attr(feature = "skip-rollup-tests", ignore)]
-#[cfg(feature = "v2_runtime")]
+#[cfg(feature = "oracle")]
 #[tokio::test(flavor = "multi_thread")]
 async fn jstzd_with_oracle_key_pair_test() {
     let octez_node_rpc_endpoint = Endpoint::localhost(unused_port());
@@ -408,8 +419,9 @@ async fn jstzd_with_oracle_key_pair_test() {
     ensure_jstzd_components_are_up(&jstzd, &octez_node_rpc_endpoint, jstzd_port).await;
 
     let KeyPair(cfg_pk, cfg_sk) = config
-        .jstz_node_config()
-        .oracle
+        .oracle_node_config()
+        .unwrap()
+        .key_pair
         .as_ref()
         .expect("oracle key pair missing");
     assert_eq!(
@@ -425,7 +437,7 @@ async fn jstzd_with_oracle_key_pair_test() {
     tokio::spawn(async move {
         sleep(Duration::from_secs(3)).await;
         reqwest::Client::new()
-            .put(format!("http://localhost:{}/shutdown", jstzd_port))
+            .put(format!("http://localhost:{jstzd_port}/shutdown"))
             .send()
             .await
             .unwrap();
@@ -435,30 +447,4 @@ async fn jstzd_with_oracle_key_pair_test() {
         .await
         .expect("shutdown timed out");
     ensure_jstzd_components_are_down(&jstzd, &octez_node_rpc_endpoint, jstzd_port).await;
-}
-
-#[cfg(feature = "v2_runtime")]
-#[test]
-fn oracle_config_serialization_test() {
-    let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
-    let (oracle_pk, oracle_sk) = keypair_from_mnemonic(mnemonic, "").unwrap();
-
-    let cfg = JstzNodeConfig::new(
-        &Endpoint::localhost(8932),
-        &Endpoint::localhost(8933),
-        PathBuf::from("/tmp/preimages").as_path(),
-        PathBuf::from("/tmp/kernel.log").as_path(),
-        KeyPair::default(),
-        jstz_node::RunMode::Default,
-        0,
-        PathBuf::from("/tmp/debug.log").as_path(),
-        Some(KeyPair(oracle_pk, oracle_sk)),
-    );
-
-    let json = serde_json::to_value(&cfg).unwrap();
-    let oracle_pk = json["oracle"].as_str().expect("oracle should be string");
-    assert_eq!(
-        oracle_pk,
-        "edpkuEb5VsDrcVZnbWg6sAsSG3VYVUNRKATfryPCDkzi77ZVLiXE3Z"
-    );
 }

@@ -245,7 +245,7 @@ impl WptTests for WptManifestFile {
         match self {
             WptManifestFile::Folder(folder) => folder
                 .iter()
-                .flat_map(|(name, file)| file.tests(format!("{}/{}", path, name), filter))
+                .flat_map(|(name, file)| file.tests(format!("{path}/{name}"), filter))
                 .collect(),
             WptManifestFile::Test(test) => test.tests(path, filter),
         }

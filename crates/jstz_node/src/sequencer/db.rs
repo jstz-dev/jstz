@@ -1,8 +1,8 @@
 use std::{fs, path::PathBuf};
 
-use crate::sequencer::inbox::parsing::Message;
 use anyhow::Context;
 use anyhow::Result;
+use jstz_kernel::inbox::Message;
 use r2d2::{Pool, PooledConnection};
 use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::params;

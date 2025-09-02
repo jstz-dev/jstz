@@ -51,7 +51,7 @@ pub async fn run_toplevel_fetch(
     let response = Response::try_from_js(&result)?;
     let (http_parts, body) = Response::to_http_response(&response).into_parts();
     Ok(RunFunctionReceipt {
-        body,
+        body: body.into(),
         status_code: http_parts.status,
         headers: http_parts.headers,
     })

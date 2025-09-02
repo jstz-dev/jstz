@@ -15,29 +15,29 @@ pub mod tests {
     };
     use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
 
-    use crate::sequencer::inbox::parsing::Message;
+    use crate::sequencer::queue::WrappedOperation;
 
-    use super::inbox::parsing::ParsedInboxMessage;
+    pub fn dummy_signed_op() -> SignedOperation {
+        SignedOperation::new(
+            Signature::Ed25519(Ed25519Signature::from_base58_check("edsigtkikkYx71PqeJigBom8sAf8ajRqynraWUFxej5XcbVFSzga6gHYz7whJTFJhZZRywQfXKUjSQeXHPikHJt114hUTEXJzED").unwrap().into()),
+            Operation {
+                public_key: PublicKey::Ed25519(
+                    PublicKeyEd25519::from_base58_check(
+                        "edpkuXD2CqRpWoTT8p4exrMPQYR2NqsYH3jTMeJMijHdgQqkMkzvnz",
+                    )
+                    .unwrap()
+                    .into(),
+                ),
+                nonce: Nonce(0),
+                content: Content::DeployFunction(DeployFunction {
+                    account_credit: 0,
+                    function_code: ParsedCode("1\n".to_string())
+                }),
+            },
+        )
+    }
 
-    pub fn dummy_op() -> ParsedInboxMessage {
-        let inner = SignedOperation::new(
-        Signature::Ed25519(Ed25519Signature::from_base58_check("edsigtkikkYx71PqeJigBom8sAf8ajRqynraWUFxej5XcbVFSzga6gHYz7whJTFJhZZRywQfXKUjSQeXHPikHJt114hUTEXJzED").unwrap().into()),
-         Operation {
-            public_key: PublicKey::Ed25519(
-                PublicKeyEd25519::from_base58_check(
-                    "edpkuXD2CqRpWoTT8p4exrMPQYR2NqsYH3jTMeJMijHdgQqkMkzvnz",
-                )
-                .unwrap()
-                .into(),
-            ),
-            nonce: Nonce(0),
-            content: Content::DeployFunction(DeployFunction {
-                account_credit: 0,
-                function_code: ParsedCode("1\n".to_string())
-            }),
-        },
-    );
-
-        ParsedInboxMessage::JstzMessage(Message::External(inner))
+    pub fn dummy_op() -> WrappedOperation {
+        WrappedOperation::FromNode(dummy_signed_op())
     }
 }

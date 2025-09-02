@@ -81,4 +81,21 @@ mod test {
         let receipt = result;
         assert!(receipt.is_ok());
     }
+
+    #[test]
+    fn execute_deploy_deploys_smart_function_with_insufficient_funds() {
+        let mut host = JstzMockHost::default();
+        let mut tx = Transaction::default();
+        let source = Address::User(jstz_mock::account1());
+        let hrt = host.rt();
+        tx.begin();
+        Account::set_balance(hrt, &mut tx, &source, 0).unwrap();
+
+        let deployment = DeployFunction {
+            function_code: "export default () => {}".to_string().try_into().unwrap(),
+            account_credit: 10000,
+        };
+        let result = smart_function::deploy::execute(hrt, &mut tx, &source, deployment);
+        assert!(result.is_err_and(|e| { e.to_string().contains("InsufficientFunds") }));
+    }
 }

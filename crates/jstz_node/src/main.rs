@@ -1,10 +1,15 @@
 use std::path::PathBuf;
 
 use anyhow::Context;
+use clap::ArgAction;
 use clap::Parser;
 use env_logger::Env;
-use jstz_node::{config::KeyPair, RunMode, RunOptions};
-use tempfile::NamedTempFile;
+use jstz_node::{
+    config::{RunModeBuilder, RunModeType},
+    RunOptions,
+};
+use jstz_utils::key_pair::parse_key_file;
+use tezos_crypto_rs::hash::SmartRollupHash;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
@@ -50,7 +55,7 @@ struct Args {
     preimages_dir: PathBuf,
 
     #[arg(long, default_value = DEFAULT_RUN_MODE)]
-    mode: RunMode,
+    mode: RunModeType,
 
     #[arg(long, default_value_t = DEFAULT_QUEUE_CAPACITY)]
     capacity: usize,
@@ -62,9 +67,18 @@ struct Args {
     #[arg(long)]
     blueprint_db_path: Option<PathBuf>,
 
-    /// Path to file containing oracle key pair for DataProvider (format: "public_key:secret_key")
+    /// Path to file containing injector key pair (format: {"public_key": ..., "secret_key": ...})
     #[arg(long)]
-    oracle_key_file: Option<PathBuf>,
+    injector_key_file: PathBuf,
+
+    #[arg(long)]
+    rollup_address: Option<String>,
+
+    #[arg(long)]
+    riscv_kernel_path: Option<PathBuf>,
+
+    #[arg(long, action = ArgAction::SetTrue)]
+    storage_sync: bool,
 }
 
 #[tokio::main]
@@ -77,45 +91,28 @@ async fn main() -> anyhow::Result<()> {
                 args.rollup_node_rpc_addr, args.rollup_node_rpc_port
             ));
 
-            // Parse oracle key if provided
-            #[cfg(feature = "v2_runtime")]
-            let oracle_key_pair = if let Some(oracle_key_file) = args.oracle_key_file {
-                let key_pair = std::fs::read_to_string(oracle_key_file)
-                    .context("Failed to read oracle key file")?;
-                let parts: Vec<&str> = key_pair.split(':').collect();
-                if parts.len() != 2 {
-                    anyhow::bail!("Oracle key must be in format 'public_key:secret_key'");
-                }
-                let public_key =
-                    jstz_crypto::public_key::PublicKey::from_base58(parts[0])
-                        .context("Invalid oracle public key")?;
-                let secret_key =
-                    jstz_crypto::secret_key::SecretKey::from_base58(parts[1])
-                        .context("Invalid oracle secret key")?;
-                Some(KeyPair(public_key, secret_key))
-            } else {
-                None
-            };
-
+            let mut run_mode_builder =
+                RunModeBuilder::new(args.mode).with_capacity(args.capacity)?;
+            if let Some(path) = args.debug_log_path {
+                run_mode_builder = run_mode_builder.with_debug_log_path(path)?;
+            }
+            if let Some(path) = args.riscv_kernel_path {
+                run_mode_builder = run_mode_builder.with_riscv_kernel_path(path)?;
+            }
+            if let Some(v) = args.rollup_address {
+                run_mode_builder = run_mode_builder
+                    .with_rollup_address(SmartRollupHash::from_base58_check(&v)?)?;
+            }
             jstz_node::run(RunOptions {
                 addr: args.addr,
                 port: args.port,
                 rollup_endpoint,
                 rollup_preimages_dir: args.preimages_dir,
                 kernel_log_path: args.kernel_log_path,
-                // TODO: make the keypair configurable
-                // https://linear.app/tezos/issue/JSTZ-424/make-keypair-configurable-in-jstz-main
-                injector: KeyPair::default(),
-                mode: args.mode,
-                capacity: args.capacity,
-                debug_log_path: args.debug_log_path.unwrap_or(
-                    NamedTempFile::new()
-                        .context("failed to create temporary debug log file")?
-                        .into_temp_path()
-                        .keep()
-                        .context("failed to convert temporary debug log file to path")?
-                        .to_path_buf(),
-                ),
+                injector: parse_key_file(args.injector_key_file)
+                    .context("failed to parse injector key file")?,
+                mode: run_mode_builder.build()?,
+                storage_sync: args.storage_sync,
                 #[cfg(feature = "blueprint")]
                 blueprint_db_path: args.blueprint_db_path.unwrap_or(
                     NamedTempFile::new()
@@ -125,8 +122,6 @@ async fn main() -> anyhow::Result<()> {
                         .context("failed to convert temporary blueprint db file to path")?
                         .to_path_buf(),
                 ),
-                #[cfg(feature = "v2_runtime")]
-                oracle_key_pair,
             })
             .await
         }
@@ -134,7 +129,7 @@ async fn main() -> anyhow::Result<()> {
             let spec = jstz_node::openapi_json_raw()?;
             match out {
                 Some(out) => std::fs::write(out, spec)?,
-                None => println!("{}", spec),
+                None => println!("{spec}"),
             }
             Ok(())
         }

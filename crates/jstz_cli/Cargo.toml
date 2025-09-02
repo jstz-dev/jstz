@@ -9,48 +9,35 @@ documentation.workspace = true
 readme.workspace = true
 license-file.workspace = true
 description = "👨‍⚖️ jstz CLI"
-include = ["jstz_kernel.wasm", "sandbox-params.json", "sandbox.json", "src"]
+include = ["src"]
 default-run = "jstz"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-ansi_term.workspace = true
 anyhow.workspace = true
 bip39.workspace = true
 boa_engine.workspace = true
-boa_gc.workspace = true
 bollard.workspace = true
-bs58.workspace = true
 clap.workspace = true 
 clap_complete.workspace = true
 console.workspace = true
-crossterm.workspace = true
-daemonize.workspace = true
 derive_more.workspace = true
 dialoguer.workspace = true
 dirs.workspace = true
 env_logger.workspace = true
-fs_extra.workspace = true
 futures-util.workspace = true
 futures.workspace = true
 hex.workspace = true
 http.workspace = true
 in-container.workspace = true
-indicatif.workspace = true
 jstz_api = { path = "../jstz_api" }
 jstz_client = { path = "../jstz_client" }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
-jstz_kernel = { path = "../jstz_kernel" }
-jstz_node = { path = "../jstz_node" }
 jstz_proto = { path = "../jstz_proto" }
-jstz_rollup = { path = "../jstz_rollup" }
 log.workspace = true
-nix.workspace = true
 octez = { path = "../octez" }
-prettytable.workspace = true
-rand.workspace = true
 regex.workspace = true
 reqwest.workspace = true
 reqwest-eventsource.workspace = true
@@ -59,17 +46,12 @@ rust_decimal.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 serde_with.workspace = true
-serde_yaml.workspace = true
-sha2.workspace = true
 signal-hook.workspace = true
-simplelog.workspace = true
-spinners.workspace = true
 syntect.workspace = true
 tempfile.workspace = true
 tezos-smart-rollup-mock.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
-tokio-util.workspace = true
 tokio.workspace = true
 url.workspace = true
 

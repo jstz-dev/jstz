@@ -1,13 +1,13 @@
 use anyhow::{Context, Result};
 use api_doc::{modify, ApiDoc};
 use axum::{extract::DefaultBodyLimit, http, routing::get};
-use config::{JstzNodeConfig, KeyPair};
+use config::JstzNodeConfig;
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
+use jstz_utils::KeyPair;
 use octez::OctezRollupClient;
 #[cfg(not(test))]
 use sequencer::inbox;
 use sequencer::{inbox::Monitor, queue::OperationQueue, worker};
-use serde::{Deserialize, Serialize};
 use services::{
     accounts::AccountsService,
     logs::{broadcaster::Broadcaster, db::Db, LogsService},
@@ -25,13 +25,14 @@ use tower_http::cors::{Any, CorsLayer};
 
 mod api_doc;
 mod services;
+pub mod storage_sync;
 use services::Service;
-use tokio_util::sync::CancellationToken;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 pub mod config;
 pub mod sequencer;
+pub use config::RunMode;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -46,6 +47,8 @@ pub struct AppState {
     #[cfg(feature = "blueprint")]
     pub blueprint_db: sequencer::db::BlueprintDb,
     worker_heartbeat: Arc<AtomicU64>,
+    storage_sync: bool,
+    storage_sync_db: sequencer::db::Db,
 }
 
 impl AppState {
@@ -63,20 +66,6 @@ impl AppState {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, Clone, clap::ValueEnum, PartialEq)]
-#[serde(rename_all = "lowercase")]
-pub enum RunMode {
-    Sequencer,
-    #[serde(alias = "default")]
-    Default,
-}
-
-impl Default for RunMode {
-    fn default() -> Self {
-        Self::Default
-    }
-}
-
 pub struct RunOptions {
     pub addr: String,
     pub port: u16,
@@ -85,12 +74,9 @@ pub struct RunOptions {
     pub kernel_log_path: PathBuf,
     pub injector: KeyPair,
     pub mode: RunMode,
-    pub capacity: usize,
-    pub debug_log_path: PathBuf,
+    pub storage_sync: bool,
     #[cfg(feature = "blueprint")]
     pub blueprint_db_path: PathBuf,
-    #[cfg(feature = "v2_runtime")]
-    pub oracle_key_pair: Option<KeyPair>,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -105,12 +91,9 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         kernel_log_path: config.kernel_log_file.to_path_buf(),
         injector: config.injector,
         mode: config.mode,
-        capacity: config.capacity,
-        debug_log_path: config.debug_log_file,
+        storage_sync: config.storage_sync,
         #[cfg(feature = "blueprint")]
         blueprint_db_path: config.blueprint_db_file,
-        #[cfg(feature = "v2_runtime")]
-        oracle_key_pair: config.oracle,
     })
     .await
 }
@@ -124,23 +107,19 @@ pub async fn run(
         kernel_log_path,
         injector,
         mode,
-        capacity,
-        debug_log_path,
+        storage_sync,
         #[cfg(feature = "blueprint")]
         blueprint_db_path,
-        #[cfg(feature = "v2_runtime")]
-        oracle_key_pair,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
-    let queue = Arc::new(RwLock::new(OperationQueue::new(capacity)));
+    let queue = Arc::new(RwLock::new(OperationQueue::new(match mode {
+        RunMode::Sequencer { capacity, .. } => capacity,
+        _ => 0,
+    })));
 
     // will make db_path configurable later
-    let db_file = NamedTempFile::new()?;
-    let db_path = db_file.path().to_str().ok_or(anyhow::anyhow!(
-        "failed to convert temp db file path to str"
-    ))?;
-    let runtime_db = sequencer::db::Db::init(Some(db_path))?;
+    let (runtime_db, _runtime_db_file) = temp_db()?;
     #[cfg(feature = "blueprint")]
     let blueprint_db =
         sequencer::db::BlueprintDb::init(Some(blueprint_db_path.to_str().ok_or(
@@ -148,20 +127,24 @@ pub async fn run(
         )?))?;
     let worker = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => Some(
+        RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => Some(
             worker::spawn(
                 queue.clone(),
                 runtime_db.clone(),
                 &injector,
                 rollup_preimages_dir.clone(),
-                Some(&debug_log_path),
+                Some(debug_log_path),
                 #[cfg(feature = "blueprint")]
                 blueprint_db.clone(),
             )
             .context("failed to launch worker")?,
         ),
         #[cfg(test)]
-        RunMode::Sequencer => {
+        RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
             Some(
                 worker::spawn(
@@ -169,7 +152,7 @@ pub async fn run(
                     runtime_db.clone(),
                     &injector,
                     rollup_preimages_dir.clone(),
-                    Some(&debug_log_path),
+                    Some(debug_log_path),
                     #[cfg(feature = "blueprint")]
                     blueprint_db.clone(),
                     move || {
@@ -184,48 +167,34 @@ pub async fn run(
 
     let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer => {
+        RunMode::Sequencer { .. } => {
             Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
         }
         #[cfg(test)]
-        RunMode::Sequencer => None,
+        RunMode::Sequencer { .. } => None,
         RunMode::Default => None,
     };
 
-    let cancellation_token = CancellationToken::new();
     // LogsService expects the log file to exist at instantiation, so this needs to be called after
     // debug log file is created.
-    let (broadcaster, db, tail_file_handle) = LogsService::init(
-        match mode {
-            RunMode::Default => &kernel_log_path,
-            RunMode::Sequencer => &debug_log_path,
-        },
-        &cancellation_token,
-    )
-    .await?;
+    let log_file_path = match mode {
+        RunMode::Default => kernel_log_path.clone(),
+        RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => debug_log_path.clone(),
+    };
 
-    // Start OracleNode if oracle keys are provided
-    #[cfg(feature = "v2_runtime")]
-    let _oracle_node = if let Some(oracle_key_pair) = oracle_key_pair {
-        let KeyPair(public_key, secret_key) = oracle_key_pair;
-        let node_endpoint = format!("http://{}:{}", addr, port);
-        let path = match mode {
-            // If sequencer, then listen to its debug path
-            RunMode::Sequencer => debug_log_path,
-            // otherwise, listen directly to the kernel debug log
-            RunMode::Default => kernel_log_path.clone(),
-        };
-        Some(
-            jstz_oracle_node::node::OracleNode::spawn(
-                path,
-                public_key,
-                secret_key,
-                node_endpoint,
-            )
-            .await?,
-        )
-    } else {
-        None
+    let (broadcaster, db, log_service_handle) = LogsService::init(&log_file_path).await?;
+
+    let (storage_sync_db, _storage_sync_db_file) = temp_db()?;
+    let storage_sync_handle = match storage_sync {
+        true => Some(storage_sync::spawn(
+            storage_sync_db.clone(),
+            kernel_log_path.clone(),
+            #[cfg(test)]
+            || {},
+        )?),
+        false => None,
     };
 
     let state = AppState {
@@ -240,6 +209,8 @@ pub async fn run(
         #[cfg(feature = "blueprint")]
         blueprint_db,
         worker_heartbeat: worker.as_ref().map(|w| w.heartbeat()).unwrap_or_default(),
+        storage_sync,
+        storage_sync_db,
     };
 
     let cors = CorsLayer::new()
@@ -251,12 +222,31 @@ pub async fn run(
     modify(&mut openapi);
     let router = router.merge(Scalar::with_url("/scalar", openapi));
 
-    let listener = TcpListener::bind(format!("{}:{}", addr, port)).await?;
-    axum::serve(listener, router).await?;
+    let listener = TcpListener::bind(format!("{addr}:{port}")).await?;
 
-    cancellation_token.cancel();
-    tail_file_handle.await.unwrap()?;
+    match storage_sync_handle {
+        Some(storage_sync_handle) => {
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            axum::serve(listener, router)
+                .with_graceful_shutdown(async {
+                    let _ = tx.send(storage_sync_handle.await);
+                })
+                .await?;
+            rx.await??;
+        }
+        None => axum::serve(listener, router).await?,
+    }
+
+    log_service_handle.shutdown().await?;
     Ok(())
+}
+
+fn temp_db() -> Result<(sequencer::db::Db, NamedTempFile)> {
+    let db_file = NamedTempFile::new()?;
+    let db_path = db_file.path().to_str().ok_or(anyhow::anyhow!(
+        "failed to convert temp db file path to str"
+    ))?;
+    Ok((sequencer::db::Db::init(Some(db_path))?, db_file))
 }
 
 fn router() -> OpenApiRouter<AppState> {
@@ -284,14 +274,42 @@ mod test {
         time::SystemTime,
     };
 
+    use jstz_core::{event::StringEncodable, kv::storage_update::BatchStorageUpdate};
+    use jstz_crypto::{
+        hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
+        secret_key::SecretKey,
+    };
+    use jstz_proto::context::account::{Account, Nonce, UserAccount};
+    use jstz_utils::test_util::append_async;
     use octez::unused_port;
     use pretty_assertions::assert_eq;
     use tempfile::{NamedTempFile, TempDir};
-    use tokio::time::{sleep, Duration};
+    use tezos_smart_rollup::storage::path::OwnedPath;
+    use tokio::{
+        task::yield_now,
+        time::{sleep, timeout, Duration},
+    };
 
     use crate::{
-        run, services::utils::tests::mock_app_state, KeyPair, RunMode, RunOptions,
+        config::RuntimeEnv,
+        run,
+        services::utils::tests::mock_app_state,
+        storage_sync::tests::{make_line, KILL_KEY},
+        KeyPair, RunMode, RunOptions,
     };
+
+    pub fn default_injector() -> KeyPair {
+        KeyPair(
+            PublicKey::from_base58(
+                "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+            )
+            .unwrap(),
+            SecretKey::from_base58(
+                "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh",
+            )
+            .unwrap(),
+        )
+    }
 
     #[test]
     fn api_doc_regression() {
@@ -315,27 +333,11 @@ mod test {
         );
     }
 
-    #[test]
-    fn default_runmode() {
-        assert_eq!(RunMode::default(), RunMode::Default);
-    }
-
     #[tokio::test]
     async fn test_run() {
-        async fn check_mode(mode: RunMode, expected: &str, with_oracle: bool) {
+        async fn check_mode(mode: RunMode, expected: &str) {
             let port = unused_port();
             let kernel_log_file = NamedTempFile::new().unwrap();
-            let debug_log_file = NamedTempFile::new().unwrap();
-
-            #[cfg(feature = "v2_runtime")]
-            let oracle_key_pair = if with_oracle {
-                let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
-                let (public_key, secret_key) =
-                    jstz_crypto::keypair_from_mnemonic(mnemonic, "").unwrap();
-                Some(KeyPair(public_key, secret_key))
-            } else {
-                None
-            };
 
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
@@ -343,16 +345,13 @@ mod test {
                 rollup_endpoint: "0.0.0.0:5678".to_string(),
                 rollup_preimages_dir: TempDir::new().unwrap().into_path(),
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
-                injector: KeyPair::default(),
+                injector: default_injector(),
                 mode: mode.clone(),
-                capacity: 0,
-                debug_log_path: debug_log_file.path().to_path_buf(),
-                #[cfg(feature = "v2_runtime")]
-                oracle_key_pair,
+                storage_sync: false,
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
-                reqwest::get(format!("http://0.0.0.0:{}/mode", port))
+                reqwest::get(format!("http://0.0.0.0:{port}/mode"))
                     .await
                     .ok()
             })
@@ -364,22 +363,23 @@ mod test {
 
             assert_eq!(
                 res, expected,
-                "expecting '{expected}' for mode '{mode:?}' with oracle={with_oracle} but got '{res}'"
+                "expecting '{expected}' for mode '{mode:?}' but got '{res}'"
             );
 
             h.abort();
         }
 
         // Test without oracle key pair
-        check_mode(RunMode::Default, "\"default\"", false).await;
-        check_mode(RunMode::Sequencer, "\"sequencer\"", false).await;
-
-        // Test with oracle key pair (only when v2_runtime feature is enabled)
-        #[cfg(feature = "v2_runtime")]
-        {
-            check_mode(RunMode::Default, "\"default\"", true).await;
-            check_mode(RunMode::Sequencer, "\"sequencer\"", true).await;
-        }
+        check_mode(RunMode::Default, "\"default\"").await;
+        check_mode(
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
+            },
+            "\"sequencer\"",
+        )
+        .await;
     }
 
     #[tokio::test]
@@ -392,17 +392,6 @@ mod test {
         ) {
             let port = unused_port();
             let kernel_log_file = NamedTempFile::new().unwrap();
-            let debug_log_file = NamedTempFile::new().unwrap();
-
-            #[cfg(feature = "v2_runtime")]
-            let oracle_key_pair = if with_oracle {
-                let mnemonic = "author crumble medal dose ribbon permit ankle sport final hood shadow vessel horn hawk enter zebra prefer devote captain during fly found despair business";
-                let (public_key, secret_key) =
-                    jstz_crypto::keypair_from_mnemonic(mnemonic, "").unwrap();
-                Some(KeyPair(public_key, secret_key))
-            } else {
-                None
-            };
 
             let h = tokio::spawn(run(RunOptions {
                 addr: "0.0.0.0".to_string(),
@@ -410,33 +399,12 @@ mod test {
                 rollup_endpoint,
                 rollup_preimages_dir,
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
-                injector: KeyPair::default(),
+                injector: default_injector(),
                 mode,
-                capacity: 0,
-                debug_log_path: debug_log_file.path().to_path_buf(),
-                #[cfg(feature = "v2_runtime")]
-                oracle_key_pair,
+                storage_sync: false,
             }));
 
             sleep(Duration::from_secs(1)).await;
-
-            // If oracle is enabled, test that the health endpoint is accessible
-            #[cfg(feature = "v2_runtime")]
-            if with_oracle {
-                let res = jstz_utils::poll(10, 500, || async {
-                    reqwest::get(format!("http://0.0.0.0:{}/health", port))
-                        .await
-                        .ok()
-                })
-                .await
-                .expect("should get response");
-
-                assert_eq!(
-                    res.status(),
-                    200,
-                    "health endpoint should be accessible with oracle node running"
-                );
-            }
 
             h.abort();
             // wait for the worker in run to be dropped
@@ -447,7 +415,11 @@ mod test {
         run_test(
             preimages_dir.clone(),
             "sequencer-test-file".to_string(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
+            },
             false,
         )
         .await;
@@ -464,18 +436,6 @@ mod test {
         )
         .await;
         assert!(!preimages_dir.join("default-test-file.txt").exists());
-
-        #[cfg(feature = "v2_runtime")]
-        {
-            run_test(
-                preimages_dir.clone(),
-                "oracle-test-file".to_string(),
-                RunMode::Default,
-                true,
-            )
-            .await;
-            assert!(!preimages_dir.join("oracle-test-file.txt").exists());
-        }
     }
 
     #[tokio::test]
@@ -496,5 +456,137 @@ mod test {
         state.worker_heartbeat = Arc::new(AtomicU64::new(now - 5));
         // heartbeat is recent enough
         assert!(state.is_worker_healthy());
+    }
+
+    // Make a storage update that sets the balance of the `addr` to `amount`
+    fn sets_balance(addr: PublicKeyHash, amount: u64) -> BatchStorageUpdate {
+        let mut updates = BatchStorageUpdate::new(1);
+        let key =
+            OwnedPath::try_from(format!("/jstz_account/{}", addr.to_base58())).unwrap();
+        let val = Account::User(UserAccount {
+            amount,
+            nonce: Nonce(0),
+        });
+        updates.push_insert(&key, &val).unwrap();
+        updates
+    }
+
+    // Make a storage update that kills the storage sync for testing
+    fn kills_storage_sync() -> BatchStorageUpdate {
+        let mut updates = BatchStorageUpdate::new(1);
+        let key = OwnedPath::try_from(KILL_KEY.to_string()).unwrap();
+        updates.push_remove(&key);
+        updates
+    }
+
+    fn start_server_with_storage_sync(
+        port: u16,
+        kernel_log_file: &NamedTempFile,
+        mode: RunMode,
+    ) -> tokio::task::JoinHandle<Result<(), anyhow::Error>> {
+        tokio::spawn(run(RunOptions {
+            addr: "0.0.0.0".to_string(),
+            port,
+            rollup_endpoint: "".to_string(),
+            rollup_preimages_dir: TempDir::new().unwrap().into_path(),
+            kernel_log_path: kernel_log_file.path().to_path_buf(),
+            injector: default_injector(),
+            mode,
+            storage_sync: true,
+        }))
+    }
+
+    #[tokio::test]
+    async fn storage_sync_spawn() -> anyhow::Result<()> {
+        let port = unused_port();
+        let kernel_log_file = NamedTempFile::new().unwrap();
+        let addr =
+            PublicKeyHash::from_base58("tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9").unwrap();
+        let amount = 10_000_000;
+
+        let _server: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
+            start_server_with_storage_sync(port, &kernel_log_file, RunMode::Default);
+
+        // wait for the server to start
+        sleep(Duration::from_secs(1)).await;
+
+        let storage_updates = sets_balance(addr.clone(), amount);
+        // write a storage update that deposits the `amount` to the `addr`
+        let writer = tokio::spawn(append_async(
+            kernel_log_file.path().to_path_buf(),
+            make_line(&storage_updates),
+            25,
+        ));
+
+        // Check that the storage update is applied to the database
+        timeout(Duration::from_secs(1), async {
+            loop {
+                let b = reqwest::get(format!(
+                    "http://0.0.0.0:{port}/accounts/{addr}/balance"
+                ))
+                .await
+                .ok();
+                if let Some(b) = b {
+                    if b.status().is_success() {
+                        let balance = b.text().await.unwrap();
+                        assert_eq!(u64::from_str(&balance).unwrap(), amount);
+                        break;
+                    }
+                }
+                yield_now().await;
+            }
+        })
+        .await
+        .expect("should update balance");
+        writer.await??;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn server_dies_when_storage_sync_dies() -> anyhow::Result<()> {
+        let port = unused_port();
+        let kernel_log_file = NamedTempFile::new().unwrap();
+        PublicKeyHash::from_base58("tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9").unwrap();
+
+        let server: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
+            start_server_with_storage_sync(port, &kernel_log_file, RunMode::Default);
+
+        // wait for the server to start
+        sleep(Duration::from_secs(2)).await;
+
+        // check health
+        let health_endpoint = format!("http://0.0.0.0:{port}/health");
+        let res = reqwest::get(health_endpoint.clone()).await?;
+        let status = res.status();
+        assert!(status.is_success());
+
+        // write a storage update that kills the storage sync
+        let writer = tokio::spawn(append_async(
+            kernel_log_file.path().to_path_buf(),
+            make_line(&kills_storage_sync()),
+            25,
+        ));
+
+        // Wait for the server to shutdown.
+        sleep(Duration::from_secs(2)).await;
+
+        // server dies after storage sync dies - should get a connection error
+        timeout(Duration::from_secs(2), async {
+            loop {
+                if let Err(e) = &reqwest::get(health_endpoint.clone()).await {
+                    assert!(e.is_connect(), "Expected connection error, got: {e:?}");
+                    break;
+                }
+                yield_now().await;
+            }
+        })
+        .await?;
+        writer.await??;
+
+        // server propagates the error from storage sync
+        assert!(server
+            .await?
+            .is_err_and(|e| e.to_string().contains("received test kill signal")));
+        Ok(())
     }
 }

@@ -240,7 +240,7 @@ The Jstz dev wallet supports only the Chrome web browser.
 1. Go into the repository, install the dependencies, and build the wallet:
 
    ```bash
-   cd dev-wallet && pnpm i && pnpm build
+   cd dev-wallet && git submodule update --init && pnpm i && pnpm build
    ```
 
 1. In Chrome, open the extensions page at `chrome://extensions`.
@@ -268,7 +268,7 @@ Follow these steps to run a sample web application that uses your smart function
 1. On the same system as you are running the Jstz sandbox, build and run the `web-call-to-jstz` sample application from the `dev-wallet` repository:
 
    ```sh
-   cd examples/web-call-to-jstz
+   cd apps/examples/web-call-to-jstz
    pnpm i
    pnpm dev
    ```

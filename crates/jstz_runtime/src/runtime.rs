@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::ext::jstz_fetch;
+use crate::ext::jstz_fetch::FetchAPI;
 use crate::ext::jstz_fetch::NotSupportedFetch;
 use deno_core::v8::new_single_threaded_default_platform;
 use deno_core::*;
@@ -76,7 +76,7 @@ impl Drop for JstzRuntime {
         };
     }
 }
-pub struct JstzRuntimeOptions {
+pub struct JstzRuntimeOptions<F: FetchAPI> {
     /// Protocol context accessible by protocol defined APIs
     pub protocol: Option<RuntimeContext>,
     /// Additional extensions to be registered on initialization.
@@ -88,58 +88,62 @@ pub struct JstzRuntimeOptions {
     /// (these are static, and treated differently)
     pub module_loader: Rc<dyn ModuleLoader>,
     /// Fetch extension
-    pub fetch: Extension,
+    pub fetch: F,
 }
 
-impl Default for JstzRuntimeOptions {
+impl Default for JstzRuntimeOptions<NotSupportedFetch> {
     fn default() -> Self {
         Self {
             protocol: Default::default(),
             extensions: Default::default(),
             module_loader: Rc::new(NoopModuleLoader),
-            fetch: jstz_fetch::jstz_fetch::init_ops_and_esm::<NotSupportedFetch>(()),
+            fetch: NotSupportedFetch,
         }
     }
 }
-
-pub struct JstzRuntimeSnapshot(Box<[u8]>);
-impl JstzRuntimeSnapshot {
-    pub fn snapshot(self) -> &'static [u8] {
-        // Safety: `JstzRuntimeSnapshot` is only dropped when the kernel
-        // is shutdown
-        Box::leak(self.0)
-    }
-
-    pub fn new(options: RuntimeOptions) -> Self {
-        let snapshot = JsRuntimeForSnapshot::new(options);
-        Self(snapshot.snapshot())
-    }
-}
-
 impl JstzRuntime {
-    /// Returns the default [`RuntimeOptions`] configured
-    /// with custom extensions
-    pub fn options() -> RuntimeOptions {
-        let extensions = init_extenions();
-        RuntimeOptions {
-            extensions,
-            ..Default::default()
-        }
+    /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`]
+    pub fn new<F: FetchAPI>(options: JstzRuntimeOptions<F>) -> Self {
+        // Register extensions
+        let mut extensions = vec![];
+        extensions.extend(init_base_extensions_ops_and_esm::<F>());
+        extensions.extend(options.extensions);
+        Self::new_inner(extensions, options.module_loader, options.protocol, None)
     }
 
-    /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`]
-    pub fn new(options: JstzRuntimeOptions) -> Self {
-        // Register extensions
-        let mut extensions = init_extenions();
-        extensions.push(options.fetch);
+    /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`] from a previously
+    /// snapshotted [`JsRuntime`]. Using a snapshot will reduce startup latency
+    pub fn new_from_snapshot<F: FetchAPI>(
+        options: JstzRuntimeOptions<F>,
+        snapshot: &'static [u8],
+    ) -> Self {
+        let mut extensions = vec![];
+        extensions.extend(init_base_extensions_ops::<F>());
         extensions.extend(options.extensions);
+        Self::new_inner(
+            extensions,
+            options.module_loader,
+            options.protocol,
+            Some(snapshot),
+        )
+    }
 
+    /// Unlike `new`, this function will not add default extensions
+    pub(crate) fn new_inner(
+        // The full extensions to initialize
+        extensions: Vec<Extension>,
+        module_loader: Rc<dyn ModuleLoader>,
+        protocol: Option<RuntimeContext>,
+        snapshot: Option<&'static [u8]>,
+    ) -> Self {
         let v8_platform = Some(new_single_threaded_default_platform(false).make_shared());
         // Construct Runtime options
         let js_runtime_options = RuntimeOptions {
             extensions,
-            module_loader: Some(options.module_loader),
+            module_loader: Some(module_loader),
             v8_platform,
+            startup_snapshot: snapshot,
+            skip_op_registration: false,
             ..Default::default()
         };
 
@@ -148,7 +152,7 @@ impl JstzRuntime {
         unsafe { runtime.v8_isolate().exit() };
         // Give protocol access to the running script
         let op_state = runtime.op_state();
-        if let Some(protocol) = options.protocol {
+        if let Some(protocol) = protocol {
             op_state.borrow_mut().put(protocol);
         };
         op_state.borrow_mut().put(JstzPermissions);
@@ -378,16 +382,7 @@ impl RuntimeContext {
     }
 }
 
-#[macro_export]
-macro_rules! init_ops_and_esm_extensions  {
-    ($($ext:ident $(::<$($generics:ty),*> )? $(($($args:expr),*))?),*) => {
-        vec![
-            $($ext::$ext::init_ops_and_esm$(::<$($generics),*> )?($($($args),*)?)),*
-        ]
-    };
-}
-
-struct JstzPermissions;
+pub struct JstzPermissions;
 
 impl TimersPermission for JstzPermissions {
     fn allow_hrtime(&mut self) -> bool {
@@ -396,16 +391,33 @@ impl TimersPermission for JstzPermissions {
     }
 }
 
-fn init_extenions() -> Vec<Extension> {
-    init_ops_and_esm_extensions!(
-        deno_webidl,
-        deno_console,
-        jstz_console,
-        deno_url,
-        jstz_kv,
-        deno_web::<JstzPermissions>(Default::default(), None),
-        jstz_main
-    )
+/// Initializes extension ops and esm sources
+fn init_base_extensions_ops_and_esm<F: FetchAPI>() -> Vec<Extension> {
+    vec![
+        deno_webidl::deno_webidl::init_ops_and_esm(),
+        deno_console::deno_console::init_ops_and_esm(),
+        jstz_console::jstz_console::init_ops_and_esm(),
+        deno_url::deno_url::init_ops_and_esm(),
+        jstz_kv::jstz_kv::init_ops_and_esm(),
+        deno_web::deno_web::init_ops_and_esm::<JstzPermissions>(Default::default(), None),
+        deno_fetch_base::deno_fetch::init_ops_and_esm::<F>(F::options()),
+        jstz_main::jstz_main::init_ops_and_esm(),
+    ]
+}
+
+/// Initializes extension ops only. Used when initializing runtime
+/// from snapshot
+fn init_base_extensions_ops<F: FetchAPI>() -> Vec<Extension> {
+    vec![
+        deno_webidl::deno_webidl::init_ops(),
+        deno_console::deno_console::init_ops(),
+        jstz_console::jstz_console::init_ops(),
+        deno_url::deno_url::init_ops(),
+        jstz_kv::jstz_kv::init_ops(),
+        deno_web::deno_web::init_ops::<JstzPermissions>(Default::default(), None),
+        deno_fetch_base::deno_fetch::init_ops::<F>(F::options()),
+        jstz_main::jstz_main::init_ops(),
+    ]
 }
 
 #[cfg(test)]
@@ -416,6 +428,7 @@ mod test {
     use crate::{error::RuntimeError, init_test_setup};
 
     use jstz_utils::test_util::TOKIO;
+    use tezos_smart_rollup_mock::MockHost;
 
     #[test]
     #[cfg_attr(
@@ -573,6 +586,59 @@ export default handler;
             };
             let id = rt.execute_main_module(&specifier).await.unwrap();
             let _ = rt.call_default_handler(id, &[]).await;
+        })
+    }
+
+    #[test]
+    fn test_snapshot() {
+        use deno_core::snapshot::create_snapshot;
+        use deno_core::snapshot::CreateSnapshotOptions;
+        let extensions = init_base_extensions_ops_and_esm::<NotSupportedFetch>();
+        let options = CreateSnapshotOptions {
+            cargo_manifest_dir: env!("CARGO_MANIFEST_DIR"),
+            startup_snapshot: None,
+            skip_op_registration: false,
+            extensions,
+            extension_transpiler: None,
+            with_runtime_cb: None,
+        };
+        let snapshot = create_snapshot(options, None).unwrap();
+        let static_snapshot = Box::leak(snapshot.output);
+
+        TOKIO.block_on(async {
+            let code = r#"
+function handler() {
+    Kv.set("abc", 22)
+    let result = Kv.get("abc")
+    return 42 + result;
+}
+
+export default handler;
+        "#;
+            let mut host = MockHost::default();
+            let mut tx = Transaction::default();
+            tx.begin();
+            let init_addr = SmartFunctionHash::digest(&[0u8; 32]).unwrap();
+            let specifier =
+                resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
+            let module_loader = StaticModuleLoader::with(specifier.clone(), code);
+            let protocol =
+                RuntimeContext::new(&mut host, &mut tx, init_addr.clone(), String::new());
+            let mut runtime = JstzRuntime::new_from_snapshot(
+                JstzRuntimeOptions {
+                    protocol: Some(protocol),
+                    extensions: vec![],
+                    module_loader: Rc::new(module_loader),
+                    fetch: NotSupportedFetch,
+                },
+                static_snapshot,
+            );
+
+            let id = runtime.execute_main_module(&specifier).await.unwrap();
+            let result = runtime.call_default_handler(id, &[]).await;
+            let scope = &mut runtime.handle_scope();
+            let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
+            assert_eq!(result_i64, 64);
         })
     }
 }

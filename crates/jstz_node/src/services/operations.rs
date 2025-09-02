@@ -3,10 +3,9 @@ use std::path;
 use std::sync::Arc;
 use std::sync::RwLock;
 
-use crate::config::KeyPair;
-use crate::sequencer::inbox::parsing::Message;
-use crate::sequencer::inbox::parsing::ParsedInboxMessage;
-use crate::sequencer::queue::OperationQueue;
+use crate::sequencer::queue::{OperationQueue, WrappedOperation};
+#[cfg(feature = "inject_inbox")]
+use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use crate::services::accounts::get_account_nonce;
 use crate::RunMode;
 
@@ -17,6 +16,8 @@ use anyhow::anyhow;
 use anyhow::Context;
 #[cfg(feature = "blueprint")]
 use axum::routing::get;
+#[cfg(feature = "inject_inbox")]
+use axum::routing::post;
 use axum::{
     extract::{Path, State},
     Json,
@@ -24,9 +25,14 @@ use axum::{
 
 use jstz_core::reveal_data::{PreimageHash, RevealData, MAX_REVEAL_SIZE};
 use jstz_core::BinEncodable;
+#[cfg(feature = "blueprint")]
+use jstz_kernel::inbox::Message;
 use jstz_proto::operation::{Content, Operation, SignedOperation};
 use jstz_proto::receipt::Receipt;
+use jstz_utils::KeyPair;
 use octez::OctezRollupClient;
+#[cfg(feature = "inject_inbox")]
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tezos_data_encoding::enc::BinWriter;
 use tezos_smart_rollup::inbox::ExternalMessageFrame;
 
@@ -46,8 +52,8 @@ type HexEncodedOperationHash = String;
 // Given a large operation, encode it into preimages and store them in the rollup's preimages directory
 async fn prepare_rlp_operation(
     operation: &SignedOperation,
-    signer: KeyPair,
-    store: StoreWrapper,
+    signer: &KeyPair,
+    store: &StoreWrapper,
     rollup_preimages_dir: &path::Path,
 ) -> ServiceResult<SignedOperation> {
     let reveal_type = operation
@@ -57,8 +63,7 @@ async fn prepare_rlp_operation(
         .try_into()
         .map_err(|e| {
             ServiceError::BadRequest(format!(
-                "Large payload operation not supported: {}",
-                e,
+                "Large payload operation not supported: {e}",
             ))
         })?;
 
@@ -82,7 +87,7 @@ async fn prepare_rlp_operation(
         .await?
         .unwrap_or_default();
     let rlp_operation = Operation {
-        public_key,
+        public_key: public_key.clone(),
         nonce,
         content: Content::new_reveal_large_payload(
             root_hash,
@@ -99,8 +104,8 @@ async fn prepare_rlp_operation(
 // Encode an operation. if the operation is too large, encode it into a reveal large payload operation
 async fn encode_operation(
     operation: SignedOperation,
-    injector: KeyPair,
-    store: StoreWrapper,
+    injector: &KeyPair,
+    store: &StoreWrapper,
     rollup_preimages_dir: &path::Path,
 ) -> ServiceResult<(SignedOperation, Vec<u8>)> {
     let encoded_op = operation
@@ -147,19 +152,27 @@ async fn inject(
         mode,
         queue,
         runtime_db,
+        storage_sync,
+        storage_sync_db,
         ..
     }): State<AppState>,
     Json(operation): Json<SignedOperation>,
 ) -> ServiceResult<()> {
-    let store = StoreWrapper::new(mode.clone(), rollup_client.clone(), runtime_db);
+    let store = StoreWrapper::new(
+        mode.clone(),
+        storage_sync,
+        rollup_client.clone(),
+        runtime_db,
+        storage_sync_db,
+    );
     let (operation, encoded_operation) =
-        encode_operation(operation, injector, store, &rollup_preimages_dir).await?;
+        encode_operation(operation, &injector, &store, &rollup_preimages_dir).await?;
     match mode {
         RunMode::Default => {
             inject_rollup_message(encoded_operation, &rollup_client).await?;
         }
-        RunMode::Sequencer => {
-            insert_operation_queue(&queue, operation).await?;
+        RunMode::Sequencer { .. } => {
+            insert_operation_queue(&queue, WrappedOperation::FromNode(operation)).await?;
         }
     }
     Ok(())
@@ -181,7 +194,7 @@ async fn inject_rollup_message(
 
 async fn insert_operation_queue(
     queue: &Arc<RwLock<OperationQueue>>,
-    operation: SignedOperation,
+    message: WrappedOperation,
 ) -> ServiceResult<()> {
     queue
         .write()
@@ -190,11 +203,115 @@ async fn insert_operation_queue(
                 "failed to insert operation to the queue: {e}"
             ))
         })?
-        .insert(ParsedInboxMessage::JstzMessage(Message::External(
-            operation,
-        )))
+        .insert(message)
         .map_err(|e| ServiceError::ServiceUnavailable(Some(e)))?;
     Ok(())
+}
+
+#[cfg(feature = "inject_inbox")]
+async fn inject_inbox_messages(
+    State(AppState {
+        rollup_client,
+        rollup_preimages_dir,
+        injector,
+        mode,
+        queue,
+        runtime_db,
+        storage_sync_db,
+        storage_sync,
+        ..
+    }): State<AppState>,
+    Json(inbox_msg_strings): Json<Vec<Vec<String>>>,
+) -> ServiceResult<()> {
+    match mode {
+        RunMode::Sequencer { .. } => {
+            let store = StoreWrapper::new(
+                mode.clone(),
+                storage_sync,
+                rollup_client.clone(),
+                runtime_db,
+                storage_sync_db,
+            );
+            let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
+            let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+            let mut ops = vec![];
+            for msg in inbox_msg_strings.into_iter().flatten() {
+                let parsed = handle_inbox_message(
+                    msg,
+                    &store,
+                    &injector,
+                    &rollup_preimages_dir,
+                    &ticketer,
+                    &jstz,
+                )
+                .await?;
+                ops.push(parsed);
+            }
+            for op in ops {
+                insert_operation_queue(&queue, op).await?;
+            }
+            Ok(())
+        }
+        _ => Err(ServiceError::BadRequest(
+            "injecting inbox messages directly is only available in sequencer mode"
+                .to_string(),
+        )),
+    }
+}
+
+#[cfg(feature = "inject_inbox")]
+async fn handle_inbox_message(
+    inbox_msg_string: String,
+    store: &StoreWrapper,
+    injector: &KeyPair,
+    rollup_preimages_dir: &path::Path,
+    ticketer: &ContractKt1Hash,
+    jstz_rollup_address: &SmartRollupHash,
+) -> ServiceResult<WrappedOperation> {
+    use crate::sequencer::inbox::Logger;
+    use crate::sequencer::queue::WrappedOperation;
+    use jstz_kernel::inbox::{
+        encode_signed_operation, parse_inbox_message_hex, Message, ParsedInboxMessage,
+    };
+    use jstz_proto::operation::internal::InboxId;
+    use tezos_smart_rollup::types::SmartRollupAddress;
+
+    let message = parse_inbox_message_hex(
+        &Logger,
+        // inbox ID does not matter here for now
+        InboxId {
+            l1_level: 0,
+            l1_message_id: 0,
+        },
+        &inbox_msg_string,
+        ticketer,
+        jstz_rollup_address,
+    )
+    .ok_or(ServiceError::FromAnyhow(anyhow::anyhow!(
+        "failed to parse injected inbox message"
+    )))?;
+    // parse_inbox_messages does not deal with large payload and thus it needs to be handled here
+    Ok(match message {
+        ParsedInboxMessage::JstzMessage(Message::External(m)) => {
+            let (op, _) =
+                encode_operation(m, injector, store, rollup_preimages_dir).await?;
+
+            let buf = encode_signed_operation(
+                &op,
+                &SmartRollupAddress::new(jstz_rollup_address.clone()),
+            )
+            .map_err(|e| ServiceError::FromAnyhow(anyhow::anyhow!("{e}")))?;
+
+            WrappedOperation::FromInbox {
+                message: ParsedInboxMessage::JstzMessage(Message::External(op)),
+                original_inbox_message: hex::encode(buf),
+            }
+        }
+        _ => WrappedOperation::FromInbox {
+            message,
+            original_inbox_message: inbox_msg_string,
+        },
+    })
 }
 
 /// Get the receipt of an operation
@@ -216,13 +333,21 @@ async fn receipt(
         rollup_client,
         mode,
         runtime_db,
+        storage_sync,
+        storage_sync_db,
         ..
     }): State<AppState>,
     Path(hash): Path<String>,
 ) -> ServiceResult<Json<Receipt>> {
-    let key = format!("/jstz_receipt/{}", hash);
+    let key = format!("/jstz_receipt/{hash}");
 
-    let store = StoreWrapper::new(mode, rollup_client, runtime_db);
+    let store = StoreWrapper::new(
+        mode,
+        storage_sync,
+        rollup_client,
+        runtime_db,
+        storage_sync_db,
+    );
     let value = store.get_value(key).await?;
 
     let receipt = match value {
@@ -264,14 +389,17 @@ async fn blueprint(
 
 impl Service for OperationsService {
     fn router_with_openapi() -> OpenApiRouter<AppState> {
-        let r = OpenApiRouter::new()
+        let routes = OpenApiRouter::new()
             .routes(routes!(inject))
             .routes(routes!(receipt))
             .routes(routes!(hash_operation));
         #[cfg(feature = "blueprint")]
-        let r = r.route("/blueprint/{id}", get(blueprint));
+        let routes = routes.route("/blueprint/{id}", get(blueprint));
 
-        OpenApiRouter::new().nest("/operations", r)
+        #[cfg(feature = "inject_inbox")]
+        let routes = routes.route("/inbox", post(inject_inbox_messages));
+
+        OpenApiRouter::new().nest("/operations", routes)
     }
 }
 
@@ -297,21 +425,23 @@ mod tests {
     };
     use jstz_proto::operation::{RevealLargePayload, RevealType};
     use jstz_proto::receipt::{ReceiptContent, ReceiptResult};
+    use jstz_proto::HttpBody;
     use jstz_proto::{
         context::account::{Amount, Nonce},
         operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
         receipt::{DeployFunctionReceipt, Receipt},
         runtime::ParsedCode,
     };
+    use jstz_utils::KeyPair;
     use octez::OctezRollupClient;
     use tempfile::{NamedTempFile, TempDir};
     use tezos_crypto_rs::hash::ContractKt1Hash;
     use tower::ServiceExt;
 
-    use crate::sequencer::inbox::parsing::{Message, ParsedInboxMessage};
+    use crate::config::RuntimeEnv;
+    use crate::sequencer::queue::WrappedOperation;
     use crate::services::utils::StoreWrapper;
     use crate::{
-        config::KeyPair,
         services::{
             error::ServiceError,
             operations::{encode_operation, OperationsService},
@@ -390,7 +520,8 @@ mod tests {
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
         let store = StoreWrapper::Rollup(client);
-        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
+        let result =
+            encode_operation(operation, &key_pair, &store, temp_dir.path()).await;
         assert!(result.is_ok());
     }
 
@@ -399,8 +530,7 @@ mod tests {
         let (pkh, pk, sk) = bootstrap1();
         let mut server = mockito::Server::new_async().await;
         let url = format!(
-            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{}",
-            pkh
+            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{pkh}"
         );
         server
             .mock("GET", url.as_str())
@@ -418,7 +548,8 @@ mod tests {
         }));
         let key_pair = KeyPair(pk, sk);
         let store = StoreWrapper::Rollup(client);
-        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
+        let result =
+            encode_operation(operation, &key_pair, &store, temp_dir.path()).await;
         assert!(result.is_ok());
         let dir_size = get_dir_size(temp_dir.path());
         assert!(
@@ -439,7 +570,8 @@ mod tests {
         let key_pair = KeyPair(pk, sk);
         let temp_dir = tempfile::tempdir().unwrap();
         let store = StoreWrapper::Rollup(client);
-        let result = encode_operation(operation, key_pair, store, temp_dir.path()).await;
+        let result =
+            encode_operation(operation, &key_pair, &store, temp_dir.path()).await;
         assert!(result.is_err());
     }
 
@@ -448,8 +580,7 @@ mod tests {
         let (pkh, pk, sk) = bootstrap1();
         let mut server = mockito::Server::new_async().await;
         let url = format!(
-            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{}",
-            pkh
+            "/global/block/head/durable/wasm_2_0_0/value?key=/jstz_account/{pkh}"
         );
         server
             .mock("GET", url.as_str())
@@ -466,7 +597,8 @@ mod tests {
         let key_pair = KeyPair(pk, sk);
         let store = StoreWrapper::Rollup(client);
         let result =
-            encode_operation(operation, key_pair, store, Path::new("invalid path")).await;
+            encode_operation(operation, &key_pair, &store, Path::new("invalid path"))
+                .await;
         assert!(result.is_err_and(|e| {
             matches!(
                 e,
@@ -503,7 +635,7 @@ mod tests {
                     uri: Uri::from_static("http://http://"),
                     method: Method::HEAD,
                     headers: HeaderMap::new(),
-                    body: None,
+                    body: HttpBody::empty(),
                     gas_limit: 0,
                 }),
             )))
@@ -522,7 +654,11 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
+            },
         )
         .await;
         let queue = state.queue.clone();
@@ -534,7 +670,7 @@ mod tests {
             uri: Uri::from_static("http://http://"),
             method: Method::HEAD,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 0,
         }));
         let res = router
@@ -562,7 +698,11 @@ mod tests {
             "",
             preimage_dir.path().to_path_buf(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
+            },
         )
         .await;
         let queue = state.queue.clone();
@@ -582,7 +722,7 @@ mod tests {
         assert_eq!(res.status(), 200);
         assert_eq!(queue.read().unwrap().len(), 1);
         let injected_op = match queue.write().unwrap().pop().unwrap() {
-            ParsedInboxMessage::JstzMessage(Message::External(op)) => op,
+            WrappedOperation::FromNode(op) => op,
             _ => panic!("invalid message type"),
         };
         let inner = injected_op.verify_ref().unwrap();
@@ -608,7 +748,11 @@ mod tests {
             "",
             PathBuf::default(),
             db_file.path().to_str().unwrap(),
-            RunMode::Sequencer,
+            RunMode::Sequencer {
+                capacity: 0,
+                debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
+            },
         )
         .await;
         state

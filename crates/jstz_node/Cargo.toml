@@ -18,40 +18,37 @@ anyhow.workspace = true
 async-dropper-simple.workspace = true
 async-trait.workspace = true
 axum.workspace = true
-base64.workspace = true
 bincode.workspace = true
 bytes.workspace = true
 clap.workspace = true
 dirs.workspace = true
 derive_more.workspace = true
 env_logger.workspace = true
-futures.workspace = true
 futures-util.workspace = true
 hex.workspace = true
-jstz_api = { path = "../jstz_api" }
 jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto", features = ["kernel"] }
-jstz_oracle_node = { path = "../jstz_oracle_node", features = ["v2_runtime"], optional = true}
 jstz_utils = { path = "../jstz_utils" }
+jstz_kernel = { path = "../jstz_kernel" }
 
 log.workspace = true
 mockito.workspace = true
 num-traits.workspace = true
 octez = { path = "../octez" }
+octez-riscv.workspace = true
 parking_lot.workspace = true
-r2d2 = { version = "0.8" }
-r2d2_sqlite = { version = "0.22" }
+r2d2.workspace = true
+r2d2_sqlite.workspace = true
 reqwest.workspace = true
-rusqlite = { version = "0.29" }
+rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tempfile.workspace = true
-tezos-smart-rollup-encoding.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
-thiserror.workspace = true
+tokio-retry2.workspace = true
 tokio-stream.workspace = true
 tokio-util.workspace = true
 tokio.workspace = true
@@ -65,6 +62,7 @@ utoipa-scalar.workspace = true
 assert_cmd.workspace = true
 pretty_assertions.workspace = true
 warp.workspace = true
+http.workspace = true
 jstz_mock = { path = "../jstz_mock" }
 
 [[bin]]
@@ -73,6 +71,7 @@ path = "src/main.rs"
 
 [features]
 persistent-logging = []
-v2_runtime = ["jstz_proto/v2_runtime", "dep:jstz_oracle_node"]
+v2_runtime = ["jstz_proto/v2_runtime", "jstz_kernel/v2_runtime"]
 blueprint = []
 oracle = ["v2_runtime"]
+inject_inbox = []

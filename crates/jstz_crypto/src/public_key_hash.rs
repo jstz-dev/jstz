@@ -147,9 +147,36 @@ impl From<&PublicKey> for PublicKeyHash {
     }
 }
 
+// This needs to be TryFrom at the moment because Jstz does not support tz4 addresses.
+impl TryFrom<&tezos_crypto_rs::public_key_hash::PublicKeyHash> for PublicKeyHash {
+    type Error = Error;
+
+    fn try_from(
+        value: &tezos_crypto_rs::public_key_hash::PublicKeyHash,
+    ) -> std::result::Result<Self, Self::Error> {
+        Self::from_str(&value.to_b58check())
+    }
+}
+
+impl From<&PublicKeyHash> for tezos_crypto_rs::public_key_hash::PublicKeyHash {
+    fn from(value: &PublicKeyHash) -> Self {
+        match value {
+            PublicKeyHash::Tz1(v) => {
+                tezos_crypto_rs::public_key_hash::PublicKeyHash::Ed25519(v.0.clone())
+            }
+            PublicKeyHash::Tz2(v) => {
+                tezos_crypto_rs::public_key_hash::PublicKeyHash::Secp256k1(v.0.clone())
+            }
+            PublicKeyHash::Tz3(v) => {
+                tezos_crypto_rs::public_key_hash::PublicKeyHash::P256(v.0.clone())
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::hash::Hash;
+    use crate::{hash::Hash, public_key_hash::Tz1};
     use std::str::FromStr;
 
     use tezos_crypto_rs::hash::{
@@ -247,5 +274,51 @@ mod test {
         let (decoded, _): (PublicKeyHash, usize) =
             bincode::decode_from_slice(bin.as_ref(), bincode::config::legacy()).unwrap();
         assert_eq!(pkh, decoded);
+    }
+
+    #[test]
+    fn try_from_tezos_crypto_rs() {
+        let h = tezos_crypto_rs::public_key_hash::PublicKeyHash::from_b58check(
+            "tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU",
+        )
+        .unwrap();
+        assert_eq!(
+            PublicKeyHash::try_from(&h).unwrap(),
+            PublicKeyHash::Tz1(Tz1(ContractTz1Hash::from_base58_check(TZ1).unwrap()))
+        );
+
+        let h = tezos_crypto_rs::public_key_hash::PublicKeyHash::from_b58check(
+            "tz4FENGt5zkiGaHPm1ya4MgLomgkL1k7Dy7q",
+        )
+        .unwrap();
+        assert_eq!(
+            PublicKeyHash::try_from(&h).unwrap_err().to_string(),
+            "InvalidPublicKeyHash"
+        );
+    }
+
+    #[test]
+    fn to_tezos_crypto_rs() {
+        let h = PublicKeyHash::from_base58(TZ1).unwrap();
+        assert_eq!(
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::from(&h),
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::Ed25519(
+                ContractTz1Hash::from_base58_check(TZ1).unwrap()
+            )
+        );
+        let h = PublicKeyHash::from_base58(TZ2).unwrap();
+        assert_eq!(
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::from(&h),
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::Secp256k1(
+                ContractTz2Hash::from_base58_check(TZ2).unwrap()
+            )
+        );
+        let h = PublicKeyHash::from_base58(TZ3).unwrap();
+        assert_eq!(
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::from(&h),
+            tezos_crypto_rs::public_key_hash::PublicKeyHash::P256(
+                ContractTz3Hash::from_base58_check(TZ3).unwrap()
+            )
+        );
     }
 }

@@ -2,26 +2,26 @@
 #![allow(unreachable_code)]
 use std::sync::{Arc, RwLock};
 
-use std::time::Duration;
-
-use crate::sequencer::queue::OperationQueue;
+use crate::sequencer::queue::{OperationQueue, WrappedOperation};
 use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use anyhow::Result;
 use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
 use jstz_core::host::WriteDebug;
+use jstz_kernel::inbox::parse_inbox_message_hex;
+use jstz_proto::operation::internal::InboxId;
 use log::{debug, error};
-use parsing::{parse_inbox_message_hex, ParsedInboxMessage};
-#[cfg(test)]
 use std::future::Future;
+use std::time::Duration;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tokio::{select, task::JoinHandle};
+use tokio_retry2::strategy::ExponentialFactorBackoff;
+use tokio_retry2::{Retry, RetryError};
 use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 pub mod api;
-pub mod parsing;
 
 #[derive(Default)]
 pub struct Monitor {
@@ -45,7 +45,7 @@ impl AsyncDrop for Monitor {
     }
 }
 
-struct Logger;
+pub struct Logger;
 impl WriteDebug for Logger {
     fn write_debug(&self, msg: &str) {
         debug!("{msg}");
@@ -82,7 +82,7 @@ pub async fn spawn_monitor<
                                 continue;
                             }
                             let block_content = retry_fetch_block(&rollup_endpoint, block.level).await;
-                            process_inbox_messages(block_content, queue.clone(), &ticketer, &jstz).await;
+                            process_inbox_messages(block.level, block_content, queue.clone(), &ticketer, &jstz).await;
                         }
                         _ => {
                             //TODO: handle the case when the stream ended/errored
@@ -104,12 +104,13 @@ pub async fn spawn_monitor<
 
 /// Process the inbox messages of the given block and push them into the queue.
 async fn process_inbox_messages(
+    block_level: u32,
     block_content: BlockResponse,
     queue: Arc<RwLock<OperationQueue>>,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
 ) {
-    let mut ops = parse_inbox_messages(block_content, ticketer, jstz);
+    let mut ops = parse_inbox_messages(block_level, block_content, ticketer, jstz);
     while let Some(op) = ops.pop() {
         loop {
             let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
@@ -123,18 +124,52 @@ async fn process_inbox_messages(
 
 /// parse the inbox messages into jstz operations of the given block
 fn parse_inbox_messages(
+    block_level: u32,
     block: BlockResponse,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
-) -> Vec<ParsedInboxMessage> {
+) -> Vec<WrappedOperation> {
     block
         .messages
         .iter()
         .enumerate()
-        .filter_map(|(inbox_id, inbox_msg)| {
-            parse_inbox_message_hex(&Logger, inbox_id as u32, inbox_msg, ticketer, jstz)
+        .filter_map(|(l1_message_id, inbox_msg)| {
+            parse_inbox_message_hex(
+                &Logger,
+                InboxId {
+                    l1_level: block_level,
+                    l1_message_id: l1_message_id as u32,
+                },
+                inbox_msg,
+                ticketer,
+                jstz,
+            )
+            .map(|op| WrappedOperation::FromInbox {
+                message: op,
+                original_inbox_message: inbox_msg.clone(),
+            })
         })
         .collect()
+}
+
+/// Retry the given async function using exponential backoff until it succeeds.
+///
+/// - Starts at `initial_delay_ms` milliseconds
+/// - Backs off exponentially
+/// - Max delay is capped at 5 seconds
+pub(crate) async fn retry_expo<T, E, Fut>(
+    initial_delay_ms: u64,
+    f: impl FnMut() -> Fut,
+) -> T
+where
+    Fut: Future<Output = Result<T, RetryError<E>>>,
+{
+    let backoff = ExponentialFactorBackoff::from_millis(initial_delay_ms, 2.0)
+        .max_delay(Duration::from_secs(5));
+    match Retry::spawn(backoff, f).await {
+        Ok(val) => val,
+        _ => unreachable!("Exponential backoff is infinite; this should never fail"),
+    }
 }
 
 // Retry fetching the block indefinitely because:
@@ -143,30 +178,25 @@ fn parse_inbox_messages(
 // 3. Temporary network issues or API unavailability should not stop the sequencer
 // 4. The exponential backoff ensures we don't overwhelm the API
 async fn retry_fetch_block(rollup_endpoint: &str, block_level: u32) -> BlockResponse {
-    let mut attempts = 0;
-    let mut backoff = Duration::from_millis(200);
-    const MAX_BACKOFF: Duration = Duration::from_secs(5);
-    loop {
+    retry_expo(200, || async {
         match api::fetch_block(rollup_endpoint, block_level).await {
-            Ok(block) => return block,
+            Ok(block) => Ok(block),
             Err(e) => {
-                attempts += 1;
-                error!(
-                    "Retry {}: Failed to fetch block {}: {:?}",
-                    attempts, block_level, e
-                );
-                tokio::time::sleep(backoff).await;
-                backoff = std::cmp::min(backoff * 2, MAX_BACKOFF);
+                error!("Failed to fetch block {}: {:?}", block_level, e);
+                Err(RetryError::transient(e))
             }
         }
-    }
+    })
+    .await
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::sequencer::inbox::parsing::{LevelInfo, Message};
     use crate::sequencer::inbox::test_utils::{hash_of, make_mock_monitor_blocks_filter};
+    use jstz_kernel::inbox::LevelInfo;
+    use jstz_kernel::inbox::Message;
+    use jstz_kernel::inbox::ParsedInboxMessage;
     use std::time::Duration;
     use std::{
         future::Future,
@@ -174,7 +204,8 @@ mod tests {
         sync::{Arc, Mutex, RwLock},
     };
     use tokio::task;
-    use tokio::time::sleep;
+    use tokio::time::{sleep, Instant};
+    use tokio_retry2::RetryError;
 
     fn mock_deploy_op() -> (&'static str, &'static str) {
         let op = "0100c3ea4c18195bcfac262dcb29e3d803ae746817390000000040000000000000002c33da9518a6fce4c22a7ba352580d9097cacc9123df767adb40871cef49cbc7efebffcb4a1021b514dca58450ac9c50e221deaeb0ed2034dd36f1ae2de11f0f00000000200000000000000073c58fbff04bb1bc965986ad626d2a233e630ea253d49e1714a0bc9610c1ef450000000000000000000000000901000000000000636f6e7374204b4559203d2022636f756e746572223b0a0a636f6e73742068616e646c6572203d202829203d3e207b0a20206c657420636f756e746572203d204b762e676574284b4559293b0a2020636f6e736f6c652e6c6f672860436f756e7465723a20247b636f756e7465727d60293b0a202069662028636f756e746572203d3d3d206e756c6c29207b0a20202020636f756e746572203d20303b0a20207d20656c7365207b0a20202020636f756e7465722b2b3b0a20207d0a20204b762e736574284b45592c20636f756e746572293b0a202072657475726e206e657720526573706f6e736528293b0a7d3b0a0a6578706f72742064656661756c742068616e646c65723b0a0000000000000000";
@@ -204,7 +235,7 @@ mod tests {
         let (addr, server) = warp::serve(make_mock_monitor_blocks_filter())
             .bind_ephemeral(([127, 0, 0, 1], 0));
         task::spawn(server);
-        let endpoint = format!("http://{}", addr);
+        let endpoint = format!("http://{addr}");
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
         let (counter, on_new_block) = make_on_new_block();
         let mut monitor = spawn_monitor(endpoint.clone(), q.clone(), on_new_block)
@@ -222,7 +253,7 @@ mod tests {
         let (addr, server) = warp::serve(make_mock_monitor_blocks_filter())
             .bind_ephemeral(([127, 0, 0, 1], 0));
         task::spawn(server);
-        let endpoint = format!("http://{}", addr);
+        let endpoint = format!("http://{addr}");
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
         let (counter, on_new_block) = make_on_new_block();
         let _ = spawn_monitor(endpoint, q, on_new_block).await.unwrap();
@@ -238,18 +269,23 @@ mod tests {
         let q = Arc::new(RwLock::new(OperationQueue::new(2)));
         let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+        let raw_messages = vec![String::from("0001"), String::from(op)];
         let block_content = BlockResponse {
-            messages: vec![String::from("0001"), String::from(op)],
+            messages: raw_messages.clone(),
         };
-        let msgs = parse_inbox_messages(block_content, &ticketer, &jstz);
+        let msgs = parse_inbox_messages(1, block_content, &ticketer, &jstz);
         assert_eq!(msgs.len(), 2);
         assert!(matches!(
             &msgs[0],
-            ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+            WrappedOperation::FromInbox{
+                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
+                original_inbox_message
+            } if original_inbox_message == &raw_messages[0]
         ));
-        assert!(
-            matches!(&msgs[1], ParsedInboxMessage::JstzMessage(Message::External(op)) if op.hash().to_string() == op_hash)
-        );
+        assert!(matches!(&msgs[1], WrappedOperation::FromInbox{
+                message: ParsedInboxMessage::JstzMessage(Message::External(op)),
+                original_inbox_message } if op.hash().to_string() == op_hash
+                && original_inbox_message == &raw_messages[1]));
     }
 
     #[tokio::test]
@@ -271,7 +307,8 @@ mod tests {
         let handle = tokio::spawn(async move {
             let ticketer = ticketer;
             let jstz = jstz;
-            process_inbox_messages(block_content, queue.clone(), &ticketer, &jstz).await;
+            process_inbox_messages(1, block_content, queue.clone(), &ticketer, &jstz)
+                .await;
         });
 
         tokio::time::sleep(Duration::from_millis(10)).await;
@@ -282,7 +319,10 @@ mod tests {
         let op = q.write().unwrap().pop().unwrap();
         assert!(matches!(
             sol,
-            ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+            WrappedOperation::FromInbox{
+                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
+                original_inbox_message
+            } if original_inbox_message == "0001"
         ));
         assert_eq!(hash_of(&op), op_hash);
         assert_eq!(q.read().unwrap().len(), 0);
@@ -295,19 +335,56 @@ mod tests {
 
         handle.abort();
     }
+
+    #[tokio::test]
+    async fn test_retry_expo_retries_and_succeeds() {
+        let attempts = Arc::new(Mutex::new(0));
+        let attempts_clone = attempts.clone();
+        let fail_times = 3;
+        let time_before = Instant::now();
+        let result = retry_expo(10, || {
+            let attempts_clone = attempts_clone.clone();
+            async move {
+                let mut lock = attempts_clone.lock().unwrap();
+                *lock += 1;
+                if *lock <= fail_times {
+                    Err(RetryError::transient("fail"))
+                } else {
+                    Ok("success")
+                }
+            }
+        })
+        .await;
+        let time_after = Instant::now();
+        let duration = time_after.duration_since(time_before);
+        // 10 + 20 + 40 = 70ms
+        assert!(duration > Duration::from_millis(70));
+        assert!(duration < Duration::from_millis(80));
+        assert_eq!(result, "success");
+        assert_eq!(*attempts.lock().unwrap(), fail_times + 1);
+    }
 }
 
 #[cfg(test)]
 pub(crate) mod test_utils {
-    use super::{api::BlockResponse, parsing::Message, *};
+    use super::{api::BlockResponse, *};
     use bytes::Bytes;
     use futures_util::stream;
+    use jstz_kernel::inbox::Message;
+    use jstz_kernel::inbox::ParsedInboxMessage;
     use std::{convert::Infallible, time::Duration};
     use tokio::time::sleep;
     use warp::{hyper::Body, Filter};
 
-    pub(crate) fn hash_of(op: &ParsedInboxMessage) -> String {
-        match op {
+    pub(crate) fn hash_of(op: &WrappedOperation) -> String {
+        let message = match op {
+            WrappedOperation::FromInbox {
+                message,
+                original_inbox_message,
+            } => message,
+            WrappedOperation::FromNode(v) => return v.hash().to_string(),
+        };
+        match message {
             ParsedInboxMessage::JstzMessage(Message::External(op)) => {
                 op.hash().to_string()
             }

@@ -274,7 +274,7 @@ pub enum NetworkName {
 impl fmt::Display for NetworkName {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            NetworkName::Custom(name) => write!(f, "{}", name),
+            NetworkName::Custom(name) => write!(f, "{name}"),
             NetworkName::Dev => write!(f, "dev"),
         }
     }
@@ -470,12 +470,10 @@ impl Config {
                 }
                 None => Ok(Network {
                     octez_node_rpc_endpoint: format!(
-                        "http://{}:{}",
-                        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_OCTEZ_NODE_RPC_PORT
+                        "http://{SANDBOX_LOCAL_HOST_ADDR}:{SANDBOX_OCTEZ_NODE_RPC_PORT}"
                     ),
                     jstz_node_endpoint: format!(
-                        "http://{}:{}",
-                        SANDBOX_LOCAL_HOST_ADDR, SANDBOX_JSTZ_NODE_PORT,
+                        "http://{SANDBOX_LOCAL_HOST_ADDR}:{SANDBOX_JSTZ_NODE_PORT}",
                     ),
                 }),
             },

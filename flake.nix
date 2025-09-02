@@ -174,19 +174,27 @@
 
           rust-toolchain = pkgs.callPackage ./nix/rust-toolchain.nix {};
 
-          riscvSandbox = with pkgs;
-            rustPlatform.buildRustPackage {
-              name = "riscv-sandbox";
-              src = builtins.fetchGit {
-                url = "https://gitlab.com/tezos/tezos.git";
-                ref = "master";
-                rev = "03eccd0c9bddbe225730ef1e8ece67a3e3005fd3";
-              };
-              cargoRoot = "src/riscv";
-              buildAndTestSubdir = "src/riscv/sandbox";
-              useFetchCargoVendor = true;
-              cargoHash = "sha256-ZhvEguaALAbxo/Icf3SIA6ROc5eq7GhNA/ZIfWoT5oc=";
-              buildFeatures = ["supervisor"];
+          riscvSandbox = with builtins; let
+            craneLib = (crane.mkLib pkgs).overrideToolchain (_: rust-toolchain);
+            fetchedSrc = fetchGit {
+              url = "https://github.com/tezos/riscv-pvm.git";
+              rev = "0de5159bcd6a25cb32249b161de19d5a72e1272c";
+            };
+            sandboxManifest = fromTOML (readFile "${fetchedSrc}/src/riscv/sandbox/Cargo.toml");
+          in
+            # Note on `craneLib` vs `buildRustPackage`
+            #
+            # `buildRustPackage` will attempt to vendor all dependencies in a workspace. Because
+            # riscv sandbox depends on `tezos-smart-rollup-*` crates (which is a tezos workpace crate),
+            # `buildRustPackage` vendors irrelevant dependencies from `tezos/tezos` like `rust_deps` which
+            # tries to build `wasmer` and fails. Its overrides are completely broken. `craneLib` does the
+            # right thing by only building the exact nested dependencies even if they were workpace dependent
+            craneLib.buildPackage rec {
+              src = "${fetchedSrc}/src/riscv";
+              pname = sandboxManifest.package.name;
+              version = sandboxManifest.package.version;
+              doCheck = false;
+              cargoExtraArgs = "--package ${pname} --features huge-memory";
             };
 
           llvmPackages = pkgs.llvmPackages_16;
@@ -198,8 +206,8 @@
           # preserve the hash compatability among case (in/)sensitive file systems
           riscvV8 = with pkgs; let
             tarball = fetchurl {
-              url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/a79160903d4930b8a5cb70441af21bc77ca8191d/librusty_v8.tar.gz";
-              sha256 = "sha256-FORkogiYgyKZNibvQ7OH9lrSTwsx4Ed7rWgzPMIcP+w=";
+              url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/63dcedfc7ba101a4bbf4ce9fd94bba8ff71f8824/librusty_v8.tar.gz";
+              sha256 = "sha256-Wi4guXiewq9zmAme5Oos31Gq4YJ5Oh2/yOxdm+NUPhM=";
             };
           in
             runCommand "fetch-riscv-v8" {} ''
@@ -267,6 +275,12 @@
             };
           in
             crossPkgs.pkgsCross.riscv64;
+          heaptrackNoGui = pkgs.heaptrack.overrideAttrs (old: {
+            postInstall = ''
+              ${old.postInstall}
+              rm $out/bin/heaptrack_gui
+            '';
+          });
         in {
           packages =
             crates.packages
@@ -276,7 +290,6 @@
               default = self.packages.${system}.jstz_kernel;
             };
           checks = crates.checks // {formatting = fmt.config.build.check self;};
-          apps = crates.apps;
 
           formatter = fmt.config.build.wrapper;
 
@@ -313,6 +326,11 @@
                   ''
                     npm install --lockfile-version 2
                     export PATH="$PWD/node_modules/.bin/:$PATH"
+                  ''
+                  ''
+                    if [ ! -f ".git/hooks/pre-commit" ]; then
+                      ./scripts/install-hooks.sh
+                    fi
                   ''
                 ]
                 ++ lib.optionals stdenv.isLinux [
@@ -352,7 +370,11 @@
                 riscv64MuslPkgs.pkgsStatic.stdenv.cc
                 riscvSandbox
               ]
-              ++ lib.optionals stdenv.isLinux [pkg-config openssl.dev];
+              ++ lib.optionals stdenv.isLinux [
+                pkg-config
+                openssl.dev
+                heaptrackNoGui
+              ];
           };
         }
       );

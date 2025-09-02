@@ -1,5 +1,5 @@
 #![cfg_attr(feature = "v2_runtime", allow(unused))]
-use crate::{context::account::Addressable, operation::RunFunction};
+use crate::{context::account::Addressable, operation::RunFunction, HttpBody};
 
 use jstz_core::{
     host::HostRuntime,
@@ -35,9 +35,10 @@ where
         return Err(Error::InvalidHttpRequestMethod);
     }
 
-    if run.body.is_none() {
+    if run.body.is_empty() {
         return Err(Error::InvalidHttpRequestBody);
     }
+
     let withdrawal = serde_json::from_slice(run.body.as_ref().unwrap())
         .map_err(|_| Error::InvalidHttpRequestBody)?;
     Ok(withdrawal)
@@ -64,7 +65,7 @@ pub(crate) fn execute(
                 hrt, tx, source, withdrawal, ticketer,
             )?;
             let receipt = RunFunctionReceipt {
-                body: None,
+                body: HttpBody::empty(),
                 status_code: http::StatusCode::OK,
                 headers: http::HeaderMap::new(),
             };
@@ -126,15 +127,10 @@ mod test {
                 header::CONTENT_TYPE,
                 "application/json".try_into().unwrap(),
             )]),
-            body: Some(
-                json!({
-                    "amount": 10,
-                    "receiver": jstz_mock::account2().to_base58().to_string(),
-                })
-                .to_string()
-                .as_bytes()
-                .to_vec(),
-            ),
+            body: HttpBody::from_json(json!({
+                "amount": 10,
+                "receiver": jstz_mock::account2().to_base58().to_string(),
+            })),
             gas_limit: 10,
         }
     }
@@ -162,7 +158,7 @@ mod test {
                 header::CONTENT_TYPE,
                 "application/json".try_into().unwrap(),
             )]),
-            body: Some(json!(fa_withdrawal).to_string().as_bytes().to_vec()),
+            body: HttpBody::from_json(json!(fa_withdrawal)),
             gas_limit: 10,
         }
     }
@@ -221,15 +217,10 @@ mod test {
         let mut tx = Transaction::default();
         let source = Address::User(jstz_mock::account1());
         let req = RunFunction {
-            body: Some(
-                json!({
-                    "amount": 10,
-                    "not_receiver": jstz_mock::account2().to_base58()
-                })
-                .to_string()
-                .as_bytes()
-                .to_vec(),
-            ),
+            body: HttpBody::from_json(json!({
+                "amount": 10,
+                "not_receiver": jstz_mock::account2().to_base58()
+            })),
             ..withdraw_request()
         };
         let ticketer =
@@ -238,7 +229,7 @@ mod test {
         assert!(matches!(result, Err(Error::InvalidHttpRequestBody)));
 
         let req = RunFunction {
-            body: None,
+            body: HttpBody::empty(),
             ..withdraw_request()
         };
         let result = execute(&mut host, &mut tx, &ticketer, &source, req);
@@ -316,15 +307,10 @@ mod test {
         let mut tx = Transaction::default();
         let source = Address::User(jstz_mock::account1());
         let req = RunFunction {
-            body: Some(
-                json!({
-                    "amount": 10,
-                    "not_receiver": jstz_mock::account2().to_base58()
-                })
-                .to_string()
-                .as_bytes()
-                .to_vec(),
-            ),
+            body: HttpBody::from_json(json!({
+                "amount": 10,
+                "not_receiver": jstz_mock::account2().to_base58()
+            })),
             ..fa_withdraw_request()
         };
         let ticketer =
@@ -333,7 +319,7 @@ mod test {
         assert!(matches!(result, Err(Error::InvalidHttpRequestBody)));
 
         let req = RunFunction {
-            body: None,
+            body: HttpBody::empty(),
             ..withdraw_request()
         };
         let result = execute(&mut host, &mut tx, &ticketer, &source, req);
