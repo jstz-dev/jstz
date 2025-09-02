@@ -1,7 +1,7 @@
 ARG OCTEZ_TAG
-FROM tezos/tezos:${OCTEZ_TAG} AS octez
+FROM tezos/tezos:octez-v${OCTEZ_TAG} AS octez
 
-FROM rust:1.73.0-alpine AS builder
+FROM rust:1.86.0-alpine AS builder
 RUN apk --no-cache add musl-dev libcrypto3 openssl-dev clang
 ENV OPENSSL_DIR=/usr
 WORKDIR /jstz_build
