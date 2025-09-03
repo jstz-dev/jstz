@@ -7,7 +7,6 @@ use std::path::Path;
 use base64::{engine::general_purpose::URL_SAFE, Engine};
 use http::{HeaderMap, Method, Uri};
 use jstz_proto::context::account::{Address, Addressable};
-use jstz_proto::runtime::ParsedCode;
 use jstz_proto::HttpBody;
 use serde::{Serialize, Serializer};
 use tezos_smart_rollup::types::SmartRollupAddress;
@@ -62,8 +61,7 @@ fn generate_inbox(rollup_addr: &str, transfers: usize) -> Result<InboxFile> {
     );
     let mut accounts = builder.create_accounts(accounts)?;
 
-    let code: ParsedCode = FA2.to_string().try_into()?;
-    let fa2_address = builder.deploy_function(&mut accounts[0], code, 0)?;
+    let fa2_address = builder.deploy_function(&mut accounts[0], FA2.into(), 0)?;
 
     batch_mint(&mut builder, &mut accounts, &fa2_address)?;
     transfer(&mut builder, &mut accounts, &fa2_address, transfers)?;

@@ -115,7 +115,6 @@ mod test {
         },
         executor::smart_function,
         operation::{DeployFunction, Operation, RunFunction, SignedOperation},
-        runtime::ParsedCode,
         HttpBody,
     };
     use jstz_utils::{
@@ -197,7 +196,7 @@ mod test {
                 bob_pk.hash()
             );
             let deploy_fn = DeployFunction {
-                function_code: ParsedCode::try_from(code).unwrap(),
+                function_code: code,
                 account_credit: 0,
             };
             let op = Operation {
@@ -297,9 +296,7 @@ mod test {
 
         let tx = &mut Transaction::default();
         tx.begin();
-        let parsed_code =
-            ParsedCode::try_from(jstz_mock::host::MOCK_PROXY_FUNCTION.to_string())
-                .unwrap();
+        let parsed_code = jstz_mock::host::MOCK_PROXY_FUNCTION.to_string();
         let addr = Address::User(
             jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
                 .unwrap(),
