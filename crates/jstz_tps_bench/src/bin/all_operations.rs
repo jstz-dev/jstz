@@ -4,10 +4,7 @@ use anyhow::Context;
 use http::{HeaderMap, Method, Uri};
 use jstz_proto::{
     context::account::{Address, Nonce},
-    runtime::{
-        v2::fetch::http::{Body, Response},
-        ParsedCode,
-    },
+    runtime::v2::fetch::http::{Body, Response},
     HttpBody,
 };
 use jstz_utils::{
@@ -70,8 +67,7 @@ fn main() -> jstz_tps_bench::Result<()> {
     // a regular smart function that refunds half of the amount received.
     let small_function_addr = builder.deploy_function(
         &mut accounts[0],
-        ParsedCode(
-            r#"
+        r#"
 export default (request) => {
     const transferred_amount = request.headers.get("X-JSTZ-AMOUNT");
     console.log("small function transferred amount", transferred_amount);
@@ -81,15 +77,14 @@ export default (request) => {
         },
     });
 };"#
-            .to_string(),
-        ),
+        .to_string(),
         0,
     )?;
 
     // a large smart function that calls the refund smart function with the full amount received.
     let large_function_addr = builder.deploy_function(
         &mut accounts[0],
-        ParsedCode(format!(
+        format!(
             r#"
 export default async (request) => {{
     const transferred_amount = request.headers.get("X-JSTZ-AMOUNT");
@@ -104,7 +99,7 @@ export default async (request) => {{
 }};"#,
             "a".repeat(4096),
             small_function_addr,
-        )),
+        ),
         0,
     )?;
 
@@ -123,16 +118,14 @@ export default async (request) => {{
     // oracle
     let oracle_function_addr = builder.deploy_function(
         &mut accounts[0],
-        ParsedCode(
-            r#"
+        r#"
 export default async (request) => {
     const call_request = new Request("http://foo.bar/");
     const response = await fetch(call_request);
     console.log("oracle response status:", response.status);
     return response;
 };"#
-            .to_string(),
-        ),
+        .to_string(),
         0,
     )?;
     builder.run_function(

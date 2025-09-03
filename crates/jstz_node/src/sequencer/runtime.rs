@@ -106,7 +106,6 @@ mod tests {
             DeployFunctionReceipt, DepositReceipt, Receipt, ReceiptContent,
             ReceiptResult, RunFunctionReceipt,
         },
-        runtime::ParsedCode,
         HttpBody,
     };
     use tempfile::{NamedTempFile, TempDir};
@@ -164,7 +163,7 @@ mod tests {
 
         // This smart function has about 8k characters. The runtime is okay with it and simply
         // stores it in the data store, though this would not work with a rollup.
-        let deploy_op = dummy_op( 0, Content::DeployFunction(DeployFunction {function_code: ParsedCode::try_from(format!("const handler = async () => {{ const s = \"{}\"; const myHeaders = new Headers();  myHeaders.append(\"X-JSTZ-TRANSFER\", \"1\"); return await fetch(new Request(\"jstz://tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/\", {{ headers: myHeaders }})); }}; export default handler;", "a".repeat(8000))).unwrap(), account_credit: 1}));
+        let deploy_op = dummy_op( 0, Content::DeployFunction(DeployFunction {function_code: format!("const handler = async () => {{ const s = \"{}\"; const myHeaders = new Headers();  myHeaders.append(\"X-JSTZ-TRANSFER\", \"1\"); return await fetch(new Request(\"jstz://tz1KqTpEZ7Yob7QbPE4Hy4Wo8fHG8LhKxZSx/\", {{ headers: myHeaders }})); }}; export default handler;", "a".repeat(8000)), account_credit: 1}));
 
         let call_op = dummy_op(
             1,
@@ -398,9 +397,9 @@ mod tests {
             content: DeployFunction {
                 // # Safety: Ok in test
                 function_code:
-                    ParsedCode::try_from(format!(
+                    format!(
                         "const handler = (request) => {{ let x = '{}'; return new Response('this is a big function'); }}; export default handler;",
-                        "a".repeat(5000))).unwrap()
+                        "a".repeat(5000))
                 ,
                 account_credit: 0,
             }

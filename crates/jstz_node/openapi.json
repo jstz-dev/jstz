@@ -667,7 +667,7 @@
             "description": "Amount of tez to credit to the smart function account, debited from the sender"
           },
           "functionCode": {
-            "$ref": "#/components/schemas/ParsedCode",
+            "type": "string",
             "description": "Smart function code"
           }
         }
