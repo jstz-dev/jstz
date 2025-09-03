@@ -50,7 +50,7 @@ pub fn run(rt: &mut impl Runtime) {
         {
             let operation: Operation = signed_operation.into();
             if let Content::DeployFunction(deploy_function) = operation.content {
-                if deploy_function.function_code.to_string() == "STOP" {
+                if deploy_function.function_code == "STOP" {
                     break;
                 }
                 source += &deploy_function.function_code.to_string();

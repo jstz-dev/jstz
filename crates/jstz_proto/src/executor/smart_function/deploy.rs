@@ -15,9 +15,10 @@ pub fn deploy_smart_function(
     hrt: &mut impl HostRuntime,
     tx: &mut Transaction,
     source: &impl Addressable,
-    function_code: ParsedCode,
+    function_code: String,
     account_credit: u64,
 ) -> Result<SmartFunctionHash> {
+    let function_code = ParsedCode::try_from(function_code)?;
     let address =
         Account::create_smart_function(hrt, tx, source, account_credit, function_code)?;
     Account::sub_balance(hrt, tx, source, account_credit)?;
@@ -73,7 +74,7 @@ mod test {
         tx.begin();
 
         let deployment = DeployFunction {
-            function_code: "export default () => {}".to_string().try_into().unwrap(),
+            function_code: "export default () => {}".to_string(),
             account_credit: 0,
         };
         let result = smart_function::deploy::execute(hrt, &mut tx, &source, deployment);
@@ -92,7 +93,7 @@ mod test {
         Account::set_balance(hrt, &mut tx, &source, 0).unwrap();
 
         let deployment = DeployFunction {
-            function_code: "export default () => {}".to_string().try_into().unwrap(),
+            function_code: "export default () => {}".to_string(),
             account_credit: 10000,
         };
         let result = smart_function::deploy::execute(hrt, &mut tx, &source, deployment);
