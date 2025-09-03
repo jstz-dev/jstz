@@ -172,9 +172,6 @@ mod test {
         assert_eq!(balance_after, balance_before);
     }
 
-    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
-    // v2 fetch does not support noop path
-    #[cfg(not(feature = "v2_runtime"))]
     #[tokio::test]
     async fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
         let source = Address::User(jstz_mock::account1());
@@ -654,10 +651,6 @@ mod test {
         );
         assert_eq!(source_after - source_before, transfer_amount);
     }
-
-    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
-    // v2 fetch does not support noop path
-    #[cfg(not(feature = "v2_runtime"))]
     #[tokio::test]
     async fn transfer_xtz_from_smart_function_succeeds_with_noop() {
         let source = Address::User(jstz_mock::account2());
