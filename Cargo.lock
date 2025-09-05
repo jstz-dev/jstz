@@ -3150,6 +3150,7 @@ dependencies = [
  "boa_gc",
  "derive_more",
  "hex",
+ "libsecp256k1",
  "proptest",
  "serde",
  "serde_json",
