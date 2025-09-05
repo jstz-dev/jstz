@@ -3,7 +3,7 @@ name: Deploy prod docs
 on:
   push:
     tags:
-      - "*"
+      - "abc"
 
   # In case we want to deploy cherrypicked changes, e.g. hot fixes for docs before the next release
   workflow_dispatch:
