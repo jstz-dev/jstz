@@ -55,11 +55,11 @@ impl Operation {
     /// Returns the operation's
     pub fn verify_nonce(&self, rt: &mut impl HostRuntime) -> Result<()> {
         let expected_nonce = Account::storage_get_nonce(rt, &self.source())?;
-
         if self.nonce == expected_nonce {
             Account::storage_set_nonce(rt, &self.source(), expected_nonce.next())?;
-
             Ok(())
+        } else if self.nonce.0 < expected_nonce.0 {
+            Err(Error::NoncePassed)
         } else {
             Err(Error::InvalidNonce)
         }

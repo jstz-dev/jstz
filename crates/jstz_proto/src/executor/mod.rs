@@ -143,7 +143,7 @@ fn resolve_operation_hash(op: &Operation) -> Blake2b {
 #[cfg(test)]
 mod tests {
     use http::{HeaderMap, Method, Uri};
-    use jstz_core::{reveal_data::PreimageHash, BinEncodable};
+    use jstz_core::{kv::transaction::Guarded, reveal_data::PreimageHash, BinEncodable};
     use jstz_crypto::{
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
@@ -152,6 +152,7 @@ mod tests {
     use jstz_utils::{test_util::alice_keys, KeyPair};
     use operation::RevealType;
     use tezos_crypto_rs::hash::HashTrait;
+    use tezos_smart_rollup::storage::path::OwnedPath;
     use tezos_smart_rollup_mock::MockHost;
 
     use super::*;
@@ -363,13 +364,41 @@ mod tests {
         tx.begin();
         let (_, pk, sk) = bootstrap1();
         let deploy_op = make_signed_op(deploy_function_content(), pk.clone(), sk.clone());
+        let op_hash = deploy_op.hash();
+        let receipt_path = format!("/jstz_receipt/{op_hash}");
+
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt =
             execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer, &pk)
                 .await;
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
+        receipt.write(&host, &mut tx).unwrap();
+
         let receipt =
             execute_operation(&mut host, &mut tx, deploy_op, &ticketer, &pk).await;
+        assert!(
+            matches!(receipt.result.clone(), ReceiptResult::Failed(e) if e.contains("NoncePassed"))
+        );
+        receipt.write(&host, &mut tx).unwrap();
+
+        {
+            let stored_receipt: Guarded<Receipt> = tx
+                .get(&host, OwnedPath::try_from(receipt_path).unwrap())
+                .unwrap()
+                .unwrap();
+
+            assert!(matches!(stored_receipt.result, ReceiptResult::Success(_)));
+        }
+
+        let deploy_op = Operation {
+            public_key: pk.clone(),
+            nonce: Nonce(2),
+            content: deploy_function_content(),
+        };
+        let sig = sk.sign(deploy_op.hash()).unwrap();
+        let op = SignedOperation::new(sig, deploy_op);
+        let receipt =
+            execute_operation(&mut host, &mut tx, op.clone(), &ticketer, &pk).await;
         assert!(
             matches!(receipt.result, ReceiptResult::Failed(e) if e.contains("InvalidNonce"))
         );
