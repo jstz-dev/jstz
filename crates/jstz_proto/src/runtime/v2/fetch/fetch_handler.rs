@@ -1,3 +1,4 @@
+use crate::executor::smart_function::NOOP_PATH;
 use crate::logger::{
     log_request_end_with_host, log_request_start_with_host, log_response_status_code,
 };
@@ -390,12 +391,7 @@ async fn handle_address(
     let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
     headers.push((REFERER_HEADER_KEY.clone(), from.to_base58().into()));
     let response = match to.kind() {
-        AddressKind::User => Ok(Response {
-            status: 200,
-            status_text: "OK".into(),
-            headers,
-            body: Body::Vector(Vec::with_capacity(0)),
-        }),
+        AddressKind::User => Ok(Response::ok(Body::zero_capacity(), headers)),
         AddressKind::SmartFunction => {
             if !Account::exists(host, tx, &to)
                 .map_err(|e| FetchError::JstzError(e.to_string()))?
@@ -406,6 +402,9 @@ async fn handle_address(
                     headers,
                     body: "Account does not exist".into(),
                 });
+            }
+            if url.path() == NOOP_PATH {
+                return Ok(Response::ok(Body::zero_capacity(), headers));
             }
             let address = to.as_smart_function().unwrap();
             let run_result = load_and_run(

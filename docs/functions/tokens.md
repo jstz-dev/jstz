@@ -31,7 +31,6 @@ if (Ledger.balance(Ledger.selfAddress) >= ONE_TEZ) {
 }
 ```
 
-<!-- Blocked by JSTZ-657
 To send tez to a smart function without calling the smart function and running its handler function, send the tez in a request to `jstz://<ADDRESS>/-/noop`, as in this example:
 
 ```typescript
@@ -42,7 +41,6 @@ const call_request = new Request(`jstz://${smart_function}/-/noop`, {
   },
 });
 ```
--->
 
 As described in [Errors](/functions/errors), any transfers are reverted if a smart function throws an uncaught error.
 
