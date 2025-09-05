@@ -1,14 +1,28 @@
 use jstz_core::{host::HostRuntime, kv::Transaction};
 use tezos_smart_rollup::storage::path::{self, OwnedPath, RefPath};
 
-use crate::{receipt::Receipt, Result};
+use crate::{
+    receipt::{Receipt, ReceiptResult},
+    Result,
+};
 
 const RECEIPTS_PATH: RefPath = RefPath::assert_from(b"/jstz_receipt");
 
 impl Receipt {
-    pub fn write(self, _hrt: &impl HostRuntime, tx: &mut Transaction) -> Result<()> {
+    pub fn write(self, hrt: &impl HostRuntime, tx: &mut Transaction) -> Result<()> {
         let receipt_path = OwnedPath::try_from(format!("/{}", self.hash()))?;
-        Ok(tx.insert(path::concat(&RECEIPTS_PATH, &receipt_path)?, self)?)
+        let path = path::concat(&RECEIPTS_PATH, &receipt_path)?;
+        let skip = match &self.result {
+            ReceiptResult::Failed(err) if err == "NoncePassed" => {
+                tx.contains_key(hrt, &path)?
+            }
+            _ => false,
+        };
+
+        if !skip {
+            tx.insert(path, self)?;
+        }
+        Ok(())
     }
 }
 
