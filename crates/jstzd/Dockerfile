@@ -1,4 +1,4 @@
-ARG OCTEZ_VERSION=23.0
+ARG OCTEZ_VERSION=23.1
 ARG FEATURES="build-image,oracle"
 FROM rust:1.86.0-slim-bookworm AS builder
 RUN apt update && apt install -y curl pkg-config libssl-dev libsqlite3-dev

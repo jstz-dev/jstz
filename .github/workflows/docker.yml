@@ -40,7 +40,7 @@ jobs:
       - id: run
         run: |
           input_tag=${{ inputs.octez-tag }}
-          octez_tag=${input_tag:-"23.0"}
+          octez_tag=${input_tag:-"23.1"}
           echo "OCTEZ_TAG=${octez_tag}" >> ${GITHUB_OUTPUT}
   build-kernel:
     name: Build (Kernel)
