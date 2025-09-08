@@ -125,6 +125,10 @@ fn check_transfer_metrics(
     level: &Level,
     expected_transfers: usize,
 ) -> Result<TransferMetrics> {
+    eprintln!("level.executions.len(): {}", level.executions.len());
+    eprintln!("level.deployments.len(): {}", level.deployments.len());
+    eprintln!("level.balance_checks.len(): {}", level.balance_checks.len());
+    eprintln!("expected_transfers: {}", expected_transfers);
     if expected_transfers + 1 != level.executions.len() {
         return Err(format!(
             "Expected {expected_transfers} transfers, got {}",
@@ -235,7 +239,10 @@ fn logs_to_levels(logs: Vec<LogType>) -> Result<Vec<Level>> {
             LogType::Deploy(l) => level.deployments.push(l),
             LogType::Success(l) if balance_checks.is_empty() => level.executions.push(l),
             LogType::Success(_) => level.balance_checks.append(&mut balance_checks),
-            LogType::SmartFunctionLog(l) => balance_checks.push(l),
+            LogType::SmartFunctionLog(l) if l.message.contains(" of token ") => {
+                balance_checks.push(l)
+            }
+            LogType::SmartFunctionLog(l) => {}
         }
     }
 
