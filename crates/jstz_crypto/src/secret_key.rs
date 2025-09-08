@@ -36,11 +36,11 @@ impl SecretKey {
         match &data[..4] {
             "edsk" => {
                 let sk = SecretKeyEd25519::from_base58_check(data)?;
-                Ok(SecretKey::Ed25519(sk.into()))
+                Ok(SecretKey::Ed25519(sk))
             }
             "spsk" => {
                 let sk = SecretKeySecp256k1::from_base58_check(data)?;
-                Ok(SecretKey::Secp256k1(sk.into()))
+                Ok(SecretKey::Secp256k1(sk))
             }
             _ => Err(Error::InvalidSecretKey),
         }
