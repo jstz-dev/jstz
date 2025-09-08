@@ -21,7 +21,6 @@ use crate::{
     executor::smart_function,
     operation::{DeployFunction, OperationHash},
     runtime::v1::{fetch_handler, ProtocolData},
-    runtime::ParsedCode,
     Result,
 };
 
@@ -55,7 +54,7 @@ impl SmartFunction {
         &self,
         hrt: &mut impl HostRuntime,
         tx: &mut Transaction,
-        function_code: ParsedCode,
+        function_code: String,
         initial_balance: Amount,
     ) -> Result<String> {
         // 1. Deploy the smart function
@@ -137,7 +136,6 @@ impl SmartFunctionApi {
                     .with_message("Expected at least 1 argument but 0 provided")
             })?
             .try_js_into(context)?;
-        let parsed_code: ParsedCode = function_code.try_into()?;
 
         let initial_balance = match args.get(1) {
             None => 0,
@@ -147,7 +145,12 @@ impl SmartFunctionApi {
         let promise = JsPromise::new(
             move |resolvers, context| {
                 let address = runtime::with_js_hrt_and_tx(|hrt, tx| {
-                    smart_function.create(hrt, tx, parsed_code, initial_balance as Amount)
+                    smart_function.create(
+                        hrt,
+                        tx,
+                        function_code,
+                        initial_balance as Amount,
+                    )
                 })?;
 
                 resolvers.resolve.call(

@@ -171,7 +171,6 @@ mod test {
 
     use std::io::empty;
 
-    use crate::runtime::ParsedCode;
     use crate::{
         context::{account::Address, ticket_table::TicketTable},
         executor::{
@@ -289,7 +288,7 @@ mod test {
             return Response.error();
         }
         "#;
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let proxy =
             smart_function::deploy(&mut host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -337,7 +336,7 @@ mod test {
             return Response.error();
         }
         "#;
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let proxy =
             smart_function::deploy(&mut host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -387,7 +386,7 @@ mod test {
             return Response.error();
         }
         "#;
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         let proxy =
             smart_function::deploy(&mut host, &mut tx, &source, parsed_code, 0).unwrap();
 

@@ -277,7 +277,7 @@ mod tests {
         let mut buf = String::new();
         log_file.read_to_string(&mut buf).unwrap();
         assert!(
-            buf.contains("Smart function deployed: KT19xhZJaQkEiVo6w3uRZor6VY5Z9KXZkQ1N")
+            buf.contains("Smart function deployed: KT1H4GfcBgx11M8ri6wwyDtbMUbqYfDQ7WmU")
         );
     }
 }

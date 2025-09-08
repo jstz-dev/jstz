@@ -45,7 +45,6 @@ fn should_skip_test(test_path: &str) -> bool {
 
 #[cfg(feature = "wpt-in-riscv")]
 fn run_wpt_test_harness_in_riscv_sandbox(source: String) -> TestHarnessReport {
-    use jstz_proto::runtime::ParsedCode;
     use jstz_utils::inbox_builder::InboxBuilder;
     use tezos_smart_rollup::types::SmartRollupAddress;
 
@@ -64,20 +63,12 @@ fn run_wpt_test_harness_in_riscv_sandbox(source: String) -> TestHarnessReport {
     for chunk in source.chars().collect::<Vec<_>>().chunks(chunk_size) {
         let chunk_str: String = chunk.iter().collect();
         inbox_builder
-            .deploy_function(
-                &mut account,
-                unsafe { ParsedCode::new_unchecked(chunk_str) },
-                1_000_000,
-            )
+            .deploy_function(&mut account, chunk_str, 1_000_000)
             .unwrap();
     }
 
     inbox_builder
-        .deploy_function(
-            &mut account,
-            unsafe { ParsedCode::new_unchecked("STOP".to_string()) },
-            1_000_000,
-        )
+        .deploy_function(&mut account, "STOP".to_string(), 1_000_000)
         .unwrap();
 
     let temp_file = std::env::temp_dir().join("jstz_inbox_message.json");
