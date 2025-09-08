@@ -49,7 +49,7 @@ jobs:
 
   wpt_riscv:
     name: Web Platform Test (RISC-V)
-    runs-on: ubuntu-latest
+    runs-on: [x86_64, linux, nix]
     steps:
       - uses: actions/checkout@v4
         with:
