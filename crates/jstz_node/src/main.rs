@@ -79,7 +79,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    env_logger::init_from_env(Env::default().default_filter_or("info"));
+    env_logger::init_from_env(Env::default().default_filter_or("jstz_node=info"));
     match Command::parse() {
         Command::Run(args) => {
             let rollup_endpoint = args.rollup_endpoint.unwrap_or(format!(
