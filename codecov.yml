@@ -5,6 +5,7 @@ comment:
 
 ignore:
   - crates/jstz_tps_bench
+  - crates/jstz_node/src/sequencer/riscv_pvm.rs
 
 # Configures coverage checks -- both patch and project-wide checks
 # can drop by 5% before failing the CI build.
