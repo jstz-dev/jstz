@@ -248,7 +248,16 @@ fn read_external_message(
     logger: &impl WriteDebug,
     bytes: &[u8],
 ) -> Option<ExternalMessage> {
-    let msg = ExternalMessage::decode(bytes).ok()?;
+    println!("bytes: {:?}", bytes);
+    //let msg = ExternalMessage::decode(bytes).ok()?;
+    let msg = match ExternalMessage::decode(bytes) {
+        Ok(msg) => msg,
+        Err(e) => {
+            logger.write_debug(&format!("Failed to decode external message: {:?}\n", e));
+            return None;
+        }
+    };
+    println!("msg: {:?}", msg);
     logger.write_debug(&format!("External message: {msg:?}\n"));
     Some(msg)
 }

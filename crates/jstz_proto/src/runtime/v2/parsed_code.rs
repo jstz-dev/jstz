@@ -73,6 +73,7 @@ impl ParsedCode {
     /// Note that even if code is parsable, it may not be a valid smart function if it
     /// does not have the correct argument and return types
     pub fn parse(code: String) -> Result<ParsedCode> {
+        println!("WOOHHOO code");
         let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
             // Explicitly switch off protocol
             protocol: None,
@@ -109,6 +110,8 @@ impl ParsedCode {
 
         let ns = module.get_module_namespace();
         has_valid_default_export(scope, ns)?;
+
+        println!("WOOHHOO it worked");
 
         Ok(ParsedCode(code))
     }
