@@ -52,7 +52,7 @@ async fn execute_operation_inner(
                 &reveal.root_hash,
             )?;
             signed_op.verify()?;
-            signed_op.verify_nonce(hrt)?;
+            signed_op.verify_nonce(hrt, tx)?;
             let revealed_op: Operation = signed_op.into();
             if reveal.reveal_type == revealed_op.content().try_into()? {
                 return execute_operation_inner(
@@ -116,7 +116,7 @@ pub async fn execute_operation(
 ) -> Receipt {
     let validity = signed_operation
         .verify()
-        .and_then(|_| signed_operation.verify_nonce(hrt));
+        .and_then(|_| signed_operation.verify_nonce(hrt, tx));
     let op = signed_operation.into();
     let op_hash = resolve_operation_hash(&op);
     let result = match validity {
@@ -368,14 +368,18 @@ mod tests {
         let receipt_path = format!("/jstz_receipt/{op_hash}");
 
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
+        println!("before: {:?}", deploy_op.nonce());
         let receipt =
             execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer, &pk)
                 .await;
+        tx.commit(&mut host).unwrap();
+        tx.begin();
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
         receipt.write(&host, &mut tx).unwrap();
-
+        println!("after: {:?}", deploy_op.nonce());
         let receipt =
             execute_operation(&mut host, &mut tx, deploy_op, &ticketer, &pk).await;
+        println!("receipt: {:?}", receipt.result);
         assert!(
             matches!(receipt.result.clone(), ReceiptResult::Failed(e) if e.contains("NoncePassed"))
         );

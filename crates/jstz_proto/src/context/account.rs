@@ -340,6 +340,16 @@ impl Account {
         result
     }
 
+    pub fn increment_nonce(
+        hrt: &impl HostRuntime,
+        tx: &mut Transaction,
+        addr: &impl Addressable,
+    ) -> Result<()> {
+        let mut nonce = Self::nonce(hrt, tx, addr)?;
+        nonce.deref_mut().increment();
+        Ok(())
+    }
+
     pub fn create_smart_function(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,
