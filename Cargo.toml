@@ -77,6 +77,11 @@ http = "1.0.0"
 http-serde = "2.0.0"
 in-container = "^1"
 indicatif = "0.17.0"
+libsecp256k1 = { version = "0.7", default-features = false, features = [
+  "static-context",
+  "hmac",
+  "std",
+] }
 log = "0.4.20"
 mockito = "1.7.0"
 nix = { version = "^0.27.1", features = ["process", "signal"] }

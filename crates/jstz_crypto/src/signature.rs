@@ -115,6 +115,22 @@ mod test {
     }
 
     #[test]
+    fn verify_secp256k1() {
+        let sk = SecretKey::from_base58(
+            "spsk3C5t8pmj3etbMhXFFo2wVgiM9CQn5oPW7XuT3ZHM2Edv2wg171",
+        )
+        .unwrap();
+        let pk = PublicKey::from_base58(
+            "sppk7afHH74dFkEzF3ZbGZJRJEf2MKfVvHw3pg3vBdohVbyG8kKfaXz",
+        )
+        .unwrap();
+        let message = b"Hello, world!";
+        let signature = sk.sign(message).unwrap();
+
+        assert!(signature.verify(&pk, message).is_ok());
+    }
+
+    #[test]
     fn base58() {
         let sk = SecretKey::from_base58(
             "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",
