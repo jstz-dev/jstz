@@ -1,7 +1,5 @@
 #![allow(unused_variables)]
 #![allow(unreachable_code)]
-use std::sync::{Arc, RwLock};
-
 use crate::sequencer::queue::{OperationQueue, WrappedOperation};
 use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use anyhow::Result;
@@ -12,7 +10,9 @@ use jstz_core::host::WriteDebug;
 use jstz_kernel::inbox::parse_inbox_message_hex;
 use jstz_proto::operation::internal::InboxId;
 use log::{debug, error};
+use std::collections::VecDeque;
 use std::future::Future;
+use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tokio::{select, task::JoinHandle};
@@ -111,7 +111,7 @@ async fn process_inbox_messages(
     jstz: &SmartRollupHash,
 ) {
     let mut ops = parse_inbox_messages(block_level, block_content, ticketer, jstz);
-    while let Some(op) = ops.pop() {
+    while let Some(op) = ops.pop_front() {
         loop {
             let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
             if success {
@@ -128,7 +128,7 @@ fn parse_inbox_messages(
     block: BlockResponse,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
-) -> Vec<WrappedOperation> {
+) -> VecDeque<WrappedOperation> {
     block
         .messages
         .iter()
@@ -194,23 +194,56 @@ async fn retry_fetch_block(rollup_endpoint: &str, block_level: u32) -> BlockResp
 mod tests {
     use super::*;
     use crate::sequencer::inbox::test_utils::{hash_of, make_mock_monitor_blocks_filter};
+    use jstz_kernel::inbox::encode_signed_operation;
     use jstz_kernel::inbox::LevelInfo;
     use jstz_kernel::inbox::Message;
     use jstz_kernel::inbox::ParsedInboxMessage;
+    use jstz_proto::operation::DeployFunction;
+    use jstz_proto::operation::Operation;
+    use jstz_proto::operation::SignedOperation;
+    use jstz_proto::runtime::ParsedCode;
+    use jstz_utils::test_util::alice_keys;
+    use jstz_utils::KeyPair;
     use std::time::Duration;
     use std::{
         future::Future,
         pin::Pin,
         sync::{Arc, Mutex, RwLock},
     };
+    use tezos_smart_rollup::types::SmartRollupAddress;
     use tokio::task;
     use tokio::time::{sleep, Instant};
     use tokio_retry2::RetryError;
 
-    fn mock_deploy_op() -> (&'static str, &'static str) {
-        let op = "0100c3ea4c18195bcfac262dcb29e3d803ae746817390000000040000000000000002c33da9518a6fce4c22a7ba352580d9097cacc9123df767adb40871cef49cbc7efebffcb4a1021b514dca58450ac9c50e221deaeb0ed2034dd36f1ae2de11f0f00000000200000000000000073c58fbff04bb1bc965986ad626d2a233e630ea253d49e1714a0bc9610c1ef450000000000000000000000000901000000000000636f6e7374204b4559203d2022636f756e746572223b0a0a636f6e73742068616e646c6572203d202829203d3e207b0a20206c657420636f756e746572203d204b762e676574284b4559293b0a2020636f6e736f6c652e6c6f672860436f756e7465723a20247b636f756e7465727d60293b0a202069662028636f756e746572203d3d3d206e756c6c29207b0a20202020636f756e746572203d20303b0a20207d20656c7365207b0a20202020636f756e7465722b2b3b0a20207d0a20204b762e736574284b45592c20636f756e746572293b0a202072657475726e206e657720526573706f6e736528293b0a7d3b0a0a6578706f72742064656661756c742068616e646c65723b0a0000000000000000";
-        let op_hash = "eea5a17541e509914c7ebe48dd862ba5b96b878522a01132fc881080278a6b83";
-        (op_hash, op)
+    pub fn mock_deploy_op(nonce: u64) -> SignedOperation {
+        let KeyPair(alice_pk, alice_sk) = alice_keys();
+        let code = r#"
+            const handler = async () => {{
+                return new Response();
+            }};
+            export default handler;
+            "#;
+
+        let deploy_fn = DeployFunction {
+            function_code: ParsedCode::try_from(code.to_string()).unwrap(),
+            account_credit: 0,
+        };
+        let op = Operation {
+            public_key: alice_pk.clone(),
+            nonce: nonce.into(),
+            content: deploy_fn.into(),
+        };
+        SignedOperation::new(alice_sk.sign(op.hash()).unwrap(), op.clone())
+    }
+
+    // Returns the hex-encoded serialized external message for a given SignedOperation.
+    pub fn hex_external_message(op: SignedOperation) -> String {
+        let bytes = encode_signed_operation(
+            &op,
+            &SmartRollupAddress::from_b58check(JSTZ_ROLLUP_ADDRESS).unwrap(),
+        )
+        .unwrap();
+        hex::encode(bytes)
     }
 
     type OnNewBlockCallback =
@@ -265,41 +298,74 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_inbox_messages() {
-        let (op_hash, op) = mock_deploy_op();
+        let op = mock_deploy_op(0);
+        let op_hash = op.hash().to_string();
         let q = Arc::new(RwLock::new(OperationQueue::new(2)));
         let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
-        let raw_messages = vec![String::from("0001"), String::from(op)];
+        let raw_messages = vec![String::from("0001"), hex_external_message(op.clone())];
         let block_content = BlockResponse {
             messages: raw_messages.clone(),
         };
         let msgs = parse_inbox_messages(1, block_content, &ticketer, &jstz);
         assert_eq!(msgs.len(), 2);
-        assert!(matches!(
-            &msgs[0],
-            WrappedOperation::FromInbox{
-                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
-                original_inbox_message
-            } if original_inbox_message == &raw_messages[0]
-        ));
-        assert!(matches!(&msgs[1], WrappedOperation::FromInbox{
-                message: ParsedInboxMessage::JstzMessage(Message::External(op)),
-                original_inbox_message } if op.hash().to_string() == op_hash
-                && original_inbox_message == &raw_messages[1]));
+
+        match &msgs[0] {
+            WrappedOperation::FromInbox {
+                message,
+                original_inbox_message,
+            } => {
+                assert_eq!(original_inbox_message, &raw_messages[0]);
+                assert_eq!(
+                    message.content,
+                    ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+                );
+                assert_eq!(
+                    message.inbox_id,
+                    InboxId {
+                        l1_level: 1,
+                        l1_message_id: 0
+                    }
+                );
+            }
+            _ => panic!("should be from inbox"),
+        };
+
+        match &msgs[1] {
+            WrappedOperation::FromInbox {
+                message,
+                original_inbox_message,
+            } => {
+                assert_eq!(original_inbox_message, &raw_messages[1]);
+                assert_eq!(
+                    message.content,
+                    ParsedInboxMessage::JstzMessage(Message::External(op))
+                );
+                assert_eq!(
+                    message.inbox_id,
+                    InboxId {
+                        l1_level: 1,
+                        l1_message_id: 1
+                    }
+                );
+            }
+            _ => panic!("should be from inbox"),
+        };
     }
 
     #[tokio::test]
     async fn test_process_inbox_messages() {
-        let (op_hash, op) = mock_deploy_op();
+        let op1 = mock_deploy_op(0);
+        let op2 = mock_deploy_op(1);
         let q = Arc::new(RwLock::new(OperationQueue::new(2)));
         let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
         let block_content = BlockResponse {
             messages: vec![
-                String::from("0000"),
-                String::from(op),
-                String::from(op),
-                String::from("0001"),
+                String::from("0001"), // Start of block
+                hex_external_message(op1.clone()),
+                hex_external_message(op2.clone()),
+                String::from("FOO"), // Noise to be ignored
             ],
         };
 
@@ -317,21 +383,28 @@ mod tests {
 
         let sol = q.write().unwrap().pop().unwrap();
         let op = q.write().unwrap().pop().unwrap();
-        assert!(matches!(
-            sol,
-            WrappedOperation::FromInbox{
-                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
-                original_inbox_message
-            } if original_inbox_message == "0001"
-        ));
-        assert_eq!(hash_of(&op), op_hash);
+        match sol {
+            WrappedOperation::FromInbox {
+                message,
+                original_inbox_message,
+            } => {
+                assert_eq!(original_inbox_message, "0001");
+                assert_eq!(
+                    message.content,
+                    ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+                );
+            }
+            _ => panic!("should be from inbox"),
+        };
+
+        assert_eq!(hash_of(&op), op1.hash().to_string());
         assert_eq!(q.read().unwrap().len(), 0);
 
         // the waiting operation should be added to the queue now that the previous one is processed
         tokio::time::sleep(Duration::from_millis(100)).await;
         assert_eq!(q.read().unwrap().len(), 1);
         let op = q.write().unwrap().pop().unwrap();
-        assert_eq!(hash_of(&op), op_hash);
+        assert_eq!(hash_of(&op), op2.hash().to_string());
 
         handle.abort();
     }
@@ -384,7 +457,7 @@ pub(crate) mod test_utils {
             } => message,
             WrappedOperation::FromNode(v) => return v.hash().to_string(),
         };
-        match message {
+        match &message.content {
             ParsedInboxMessage::JstzMessage(Message::External(op)) => {
                 op.hash().to_string()
             }

@@ -13,7 +13,7 @@ pub fn run(rt: &mut impl Runtime) {
         tx.begin();
         if let Some(message) = read_message(rt, &ticketer) {
             let _ = rt.mark_for_reboot();
-            match message {
+            match message.content {
                 ParsedInboxMessage::JstzMessage(message) => {
                     handle_message(rt, message, &ticketer, &mut tx, &injector)
                         .await
