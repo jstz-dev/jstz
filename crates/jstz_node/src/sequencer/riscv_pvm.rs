@@ -23,7 +23,6 @@ type BlockImplInner = block::Jitted<block::OutlineCompiler<MemoryConfig>, Memory
 pub struct JstzRiscvPvm {
     pvm: Pvm<MemoryConfig, DefaultCacheConfig, BlockImplInner, Owned>,
     hooks: DebugLogHook,
-    origination_level: u32,
     reveal_request_response_map: RevealRequestResponseMap,
     heartbeat: Arc<AtomicU64>,
 }
@@ -73,7 +72,6 @@ impl JstzRiscvPvm {
         Ok(Self {
             pvm,
             hooks,
-            origination_level,
             reveal_request_response_map,
             heartbeat,
         })
@@ -253,7 +251,7 @@ mod tests {
             message,
             std::ops::Bound::Unbounded,
         );
-        println!("output: {:?}", output);
+        println!("output: {output:?}");
         assert!(matches!(
             output,
             StepperStatus::Exited {
