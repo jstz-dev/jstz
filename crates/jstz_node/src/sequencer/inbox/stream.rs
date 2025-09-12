@@ -331,14 +331,16 @@ pub(crate) mod tests {
     #[derive(Clone)]
     pub(crate) struct MockStore {
         buffer: Arc<Mutex<Vec<BlockLevel>>>,
-        store_error_count: Arc<AtomicUsize>,
+        load_error_count: Arc<AtomicUsize>,
+        save_error_count: Arc<AtomicUsize>,
     }
 
     impl MockStore {
         pub(crate) fn new() -> Self {
             Self {
                 buffer: Arc::new(Mutex::new(vec![])),
-                store_error_count: Arc::new(AtomicUsize::new(0)),
+                load_error_count: Arc::new(AtomicUsize::new(0)),
+                save_error_count: Arc::new(AtomicUsize::new(0)),
             }
         }
 
@@ -353,15 +355,21 @@ pub(crate) mod tests {
         async fn load(&self) -> io::Result<Option<BlockLevel>> {
             let val = self.buffer.lock().unwrap().last().copied();
             if self.buffer.lock().unwrap().len() == 10 {
-                if self.store_error_count.load(Ordering::SeqCst) == 3 {
+                if self.load_error_count.load(Ordering::SeqCst) == 3 {
                     return Ok(val);
                 }
-                self.store_error_count.fetch_add(1, Ordering::SeqCst);
+                self.load_error_count.fetch_add(1, Ordering::SeqCst);
                 return Err(io::Error::other("storage error"));
             }
             Ok(val)
         }
         async fn save(&mut self, level: BlockLevel) -> io::Result<()> {
+            if self.buffer.lock().unwrap().len() == 5
+                && self.save_error_count.load(Ordering::SeqCst) <= 2
+            {
+                self.save_error_count.fetch_add(1, Ordering::SeqCst);
+                return Err(io::Error::other("storage error"));
+            }
             self.buffer.lock().unwrap().push(level);
             Ok(())
         }
