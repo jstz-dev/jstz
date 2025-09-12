@@ -309,17 +309,48 @@ mod tests {
         };
         let msgs = parse_inbox_messages(1, block_content, &ticketer, &jstz);
         assert_eq!(msgs.len(), 2);
-        assert!(matches!(
-            &msgs[0],
-            WrappedOperation::FromInbox{
-                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
-                original_inbox_message
-            } if original_inbox_message == &raw_messages[0]
-        ));
-        assert!(matches!(&msgs[1], WrappedOperation::FromInbox{
-                message: ParsedInboxMessage::JstzMessage(Message::External(op)),
-                original_inbox_message } if op.hash().to_string() == op_hash
-                && original_inbox_message == &raw_messages[1]));
+
+        match &msgs[0] {
+            WrappedOperation::FromInbox {
+                message,
+                original_inbox_message,
+            } => {
+                assert_eq!(original_inbox_message, &raw_messages[0]);
+                assert_eq!(
+                    message.content,
+                    ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+                );
+                assert_eq!(
+                    message.inbox_id,
+                    InboxId {
+                        l1_level: 1,
+                        l1_message_id: 0
+                    }
+                );
+            }
+            _ => panic!("should be from inbox"),
+        };
+
+        match &msgs[1] {
+            WrappedOperation::FromInbox {
+                message,
+                original_inbox_message,
+            } => {
+                assert_eq!(original_inbox_message, &raw_messages[1]);
+                assert_eq!(
+                    message.content,
+                    ParsedInboxMessage::JstzMessage(Message::External(op))
+                );
+                assert_eq!(
+                    message.inbox_id,
+                    InboxId {
+                        l1_level: 1,
+                        l1_message_id: 1
+                    }
+                );
+            }
+            _ => panic!("should be from inbox"),
+        };
     }
 
     #[tokio::test]
@@ -352,13 +383,20 @@ mod tests {
 
         let sol = q.write().unwrap().pop().unwrap();
         let op = q.write().unwrap().pop().unwrap();
-        assert!(matches!(
-            sol,
-            WrappedOperation::FromInbox{
-                message: ParsedInboxMessage::LevelInfo(LevelInfo::Start),
-                original_inbox_message
-            } if original_inbox_message == "0001"
-        ));
+        match sol {
+            WrappedOperation::FromInbox {
+                message,
+                original_inbox_message,
+            } => {
+                assert_eq!(original_inbox_message, "0001");
+                assert_eq!(
+                    message.content,
+                    ParsedInboxMessage::LevelInfo(LevelInfo::Start)
+                );
+            }
+            _ => panic!("should be from inbox"),
+        };
+
         assert_eq!(hash_of(&op), op1.hash().to_string());
         assert_eq!(q.read().unwrap().len(), 0);
 
@@ -419,7 +457,7 @@ pub(crate) mod test_utils {
             } => message,
             WrappedOperation::FromNode(v) => return v.hash().to_string(),
         };
-        match message {
+        match &message.content {
             ParsedInboxMessage::JstzMessage(Message::External(op)) => {
                 op.hash().to_string()
             }

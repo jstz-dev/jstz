@@ -56,7 +56,7 @@ const NATIVE_TICKET_CONTENT: MichelsonOption<MichelsonBytes> = MichelsonOption(N
 pub fn read_message(
     rt: &mut impl Runtime,
     ticketer: &ContractKt1Hash,
-) -> Option<ParsedInboxMessage> {
+) -> Option<ParsedInboxMessageWrapper> {
     let input = rt.read_input().ok()??;
     let jstz_rollup_address = rt.reveal_metadata().address();
     let inbox_id = InboxId {
@@ -89,7 +89,7 @@ pub fn parse_inbox_message_hex(
     inbox_msg: &str,
     ticketer: &ContractKt1Hash,
     jstz_rollup_address: &SmartRollupHash,
-) -> Option<ParsedInboxMessage> {
+) -> Option<ParsedInboxMessageWrapper> {
     let inbox_msg = hex::decode(inbox_msg).ok()?;
     parse_inbox_message(logger, inbox_id, &inbox_msg, ticketer, jstz_rollup_address)
 }
@@ -100,10 +100,10 @@ pub fn parse_inbox_message(
     inbox_msg: &[u8],
     ticketer: &ContractKt1Hash,
     jstz_rollup_address: &SmartRollupHash,
-) -> Option<ParsedInboxMessage> {
+) -> Option<ParsedInboxMessageWrapper> {
     let (_, message) = InboxMessage::<RollupType>::parse(inbox_msg).ok()?;
 
-    match message {
+    let content = match message {
         InboxMessage::Internal(InternalInboxMessage::StartOfLevel) => {
             // Start of level message pushed by the Layer 1 at the
             // beginning of eavh level.
@@ -165,7 +165,9 @@ pub fn parse_inbox_message(
                 None
             }
         },
-    }
+    }?;
+
+    Some(ParsedInboxMessageWrapper { inbox_id, content })
 }
 
 fn is_valid_native_deposit(
@@ -249,6 +251,12 @@ fn read_external_message(
     let msg = ExternalMessage::decode(bytes).ok()?;
     logger.write_debug(&format!("External message: {msg:?}\n"));
     Some(msg)
+}
+
+#[derive(derive_more::From, Debug, PartialEq, Eq, Clone)]
+pub struct ParsedInboxMessageWrapper {
+    pub inbox_id: InboxId,
+    pub content: ParsedInboxMessage,
 }
 
 #[derive(derive_more::From, Debug, PartialEq, Eq, Clone)]
@@ -339,15 +347,16 @@ mod test {
         let deposit = MockNativeDeposit::default();
         let ticketer = host.get_ticketer();
         host.add_internal_message(&deposit);
+        let message = read_message(host.rt(), &ticketer)
+            .expect("Expected message but non received");
         if let ParsedInboxMessage::JstzMessage(Message::Internal(
             InternalMessage::Deposit(internal::Deposit {
                 amount,
                 receiver,
                 source,
-                ..
+                inbox_id,
             }),
-        )) =
-            read_message(host.rt(), &ticketer).expect("Expected message but non received")
+        )) = message.content
         {
             assert_eq!(amount, 100);
             assert_eq!(receiver.to_base58(), deposit.receiver.to_b58check());
@@ -355,6 +364,7 @@ mod test {
                 Addressable::to_base58(&source),
                 deposit.source.to_b58check()
             );
+            assert_eq!(message.inbox_id, inbox_id);
         } else {
             panic!("Expected deposit message")
         }
@@ -414,7 +424,9 @@ mod test {
                 source,
                 ..
             }),
-        )) = read_message(host.rt(), &ticketer).expect("Expected FA message")
+        )) = read_message(host.rt(), &ticketer)
+            .expect("Expected FA message")
+            .content
         {
             assert_eq!(300, amount);
             assert_eq!(fa_deposit.receiver.to_b58check(), receiver.to_base58());
@@ -471,20 +483,27 @@ mod test {
 
         let encoded_msg =
             super::encode_signed_operation(&signed_op, &rollup_addr).unwrap();
+        let parsed_message = super::parse_inbox_message(
+            &DummyLogger,
+            InboxId {
+                l1_level: 123,
+                l1_message_id: 456,
+            },
+            &encoded_msg,
+            &ticketer_addr,
+            rollup_addr.hash(),
+        )
+        .unwrap();
         assert_eq!(
-            super::parse_inbox_message(
-                &DummyLogger,
-                InboxId {
-                    l1_level: 0,
-                    l1_message_id: 0,
-                },
-                &encoded_msg,
-                &ticketer_addr,
-                rollup_addr.hash()
-            ),
-            Some(ParsedInboxMessage::JstzMessage(Message::External(
-                signed_op
-            )))
+            parsed_message.content,
+            ParsedInboxMessage::JstzMessage(Message::External(signed_op))
+        );
+        assert_eq!(
+            parsed_message.inbox_id,
+            InboxId {
+                l1_level: 123,
+                l1_message_id: 456,
+            }
         );
     }
 }
