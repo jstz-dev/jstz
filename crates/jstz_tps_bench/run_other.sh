@@ -7,6 +7,10 @@ n_transfer=20
 log_file_path=./output.log
 result_path=./result.log
 dir="$(realpath $(dirname "$0"))"
+contract_folder_path=./tps_test
+init_endpoint=init
+transfer_endpoint=benchmark_transaction3
+check_endpoint=check
 
 case "${DISABLE_BUILD}" in
 1 | true | yes) ;;
@@ -24,11 +28,17 @@ esac
 
 cargo build --bin bench --features v2_runtime
 
+# Compile contract
+cd $contract_folder_path
+npm run build
+cd $dir
+contract_file_path=$contract_folder_path/dist/index.js
+
 # Generate inbox file
-$dir/../../target/debug/bench generate fa2 --transfers $n_transfer --inbox-file $inbox_file_path --address $rollup_address
+$dir/../../target/debug/bench generate other --transfers $n_transfer --inbox-file $inbox_file_path --address $rollup_address --contract-file $contract_file_path --init-endpoint $init_endpoint --transfer-endpoint $transfer_endpoint --check-endpoint $check_endpoint
 
 # Run riscv kernel with inbox file
 riscv-sandbox run --timings --address $rollup_address --inbox-file $inbox_file_path --input $dir/../../target/riscv64gc-unknown-linux-musl/release/kernel-executable >$log_file_path
 
 # Process results and calculate TPS
-$dir/../../target/debug/bench results --expected-transfers $n_transfer --inbox-file $inbox_file_path --log-file $log_file_path >$result_path
+$dir/../../target/debug/bench results --expected-transfers $n_transfer --inbox-file $inbox_file_path --log-file $log_file_path | tee $result_path
