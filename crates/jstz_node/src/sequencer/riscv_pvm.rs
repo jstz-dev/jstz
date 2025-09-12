@@ -1,3 +1,4 @@
+use jstz_proto::operation::internal::InboxId;
 use octez_riscv::{
     machine_state::block_cache::{block, DefaultCacheConfig},
     program::Program,
@@ -122,6 +123,7 @@ impl JstzRiscvPvm {
 
     pub fn execute_operation(
         &mut self,
+        inbox_id: InboxId,
         encoded_operation: Vec<u8>,
         mut step_bounds: Bound<usize>,
     ) -> StepperStatus {
@@ -152,10 +154,9 @@ impl JstzRiscvPvm {
                     total_steps = total_steps.saturating_add(steps);
                     match container.take() {
                         Some(payload) => {
-                            // TODO: use inbox ID here? Not sure if level and counter affect app state
                             let success = self.pvm.provide_inbox_message(
-                                self.origination_level,
-                                0,
+                                inbox_id.l1_level,
+                                inbox_id.l1_message_id,
                                 &payload,
                             );
                             if !success {
@@ -202,9 +203,14 @@ fn bound_saturating_sub(bound: Bound<usize>, shift: usize) -> Bound<usize> {
 
 #[cfg(test)]
 mod tests {
-    use std::{path::PathBuf, str::FromStr};
+    use std::{
+        path::{Path, PathBuf},
+        str::FromStr,
+    };
 
     use jstz_kernel::inbox::encode_signed_operation;
+    use jstz_proto::operation::internal::InboxId;
+    use octez_riscv::stepper::StepperStatus;
     use tempfile::TempDir;
     use tezos_crypto_rs::hash::SmartRollupHash;
     use tezos_smart_rollup::types::SmartRollupAddress;
@@ -212,15 +218,20 @@ mod tests {
     use crate::sequencer::tests::dummy_signed_op;
 
     #[test]
-    #[ignore = "PVM consumes too much memory and therefore this cannot be part of CI"]
+    #[cfg_attr(
+        not(feature = "riscv_test"),
+        ignore = "PVM consumes too much memory and therefore this cannot be part of CI"
+    )]
     fn create_pvm() {
         let rollup_address =
             SmartRollupHash::from_base58_check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
         let tmp_dir = TempDir::new().unwrap();
+        let riscv_kernel_path =
+            Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/riscv_kernel");
 
         let mut pvm = super::JstzRiscvPvm::new(
-            PathBuf::from_str("<path to riscv kernel>").unwrap(),
+            riscv_kernel_path.to_path_buf(),
             &rollup_address,
             0,
             Some(tmp_dir.path().to_path_buf().into_boxed_path()),
@@ -234,9 +245,22 @@ mod tests {
             &SmartRollupAddress::new(rollup_address),
         )
         .unwrap();
-        println!(
-            "output: {:?}",
-            pvm.execute_operation(message, std::ops::Bound::Unbounded)
+        let output = pvm.execute_operation(
+            InboxId {
+                l1_level: 123,
+                l1_message_id: 456,
+            },
+            message,
+            std::ops::Bound::Unbounded,
         );
+        println!("output: {:?}", output);
+        assert!(matches!(
+            output,
+            StepperStatus::Exited {
+                steps: _,
+                success: true,
+                status: _
+            }
+        ));
     }
 }
