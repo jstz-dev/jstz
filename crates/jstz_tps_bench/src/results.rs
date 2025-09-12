@@ -15,8 +15,8 @@ use crate::Result;
 
 // Three sets of messages:
 // 1. Deployment
-// 2. Minting & Transfers
-// 3. Balance Checks
+// 2. Initialisation (or Minting) & Transfers
+// 3. Checks
 // ... but all contained in one level
 const EXPECTED_LEVELS: usize = 1;
 
@@ -51,7 +51,7 @@ pub fn handle_results(
 
             check_deploy(&results)?;
             let metrics = check_transfer_metrics(&results, expected_transfers)?;
-            check_balances(
+            post_transfer_checks(
                 &results,
                 &inbox.0[0][2 + expected_transfers..],
                 expected_transfers,
@@ -79,11 +79,11 @@ pub fn handle_results(
 
 fn check_deploy(level: &Level) -> Result<()> {
     if level.deployments.len() != 1 {
-        return Err("Expected FA2 contract deployment".into());
+        return Err("Expected contract deployment".into());
     }
 
     if level.executions.is_empty() {
-        return Err("Expected FA2 token minting".into());
+        return Err("Expected contract initialisation or FA2 token minting".into());
     }
 
     Ok(())
@@ -115,7 +115,7 @@ impl fmt::Display for TransferMetrics {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "{} FA2 transfers took {:?} @ {:.3} TPS",
+            "{} transfers took {:?} @ {:.3} TPS",
             self.transfers, self.duration, self.tps
         )
     }
@@ -125,10 +125,6 @@ fn check_transfer_metrics(
     level: &Level,
     expected_transfers: usize,
 ) -> Result<TransferMetrics> {
-    eprintln!("level.executions.len(): {}", level.executions.len());
-    eprintln!("level.deployments.len(): {}", level.deployments.len());
-    eprintln!("level.balance_checks.len(): {}", level.balance_checks.len());
-    eprintln!("expected_transfers: {}", expected_transfers);
     if expected_transfers + 1 != level.executions.len() {
         return Err(format!(
             "Expected {expected_transfers} transfers, got {}",
@@ -138,8 +134,8 @@ fn check_transfer_metrics(
     }
 
     let transfers = level.executions.len() - 1;
-    // The first execution is the minting call. We collect the time elapsed at the _end_ of the
-    // minting, all the way up to the _end_ of the last execution (transfer).
+    // The first execution is the initialisation (or minting) call. We collect the time elapsed at the _end_ of the
+    // initialisation (or minting), all the way up to the _end_ of the last execution (transfer).
     let duration = level.executions[transfers].elapsed - level.executions[0].elapsed;
     let tps = (transfers as f64) / duration.as_secs_f64();
 
@@ -150,6 +146,8 @@ fn check_transfer_metrics(
     })
 }
 
+// Post-transfer checks
+// FA2:
 // The generated transfers (for a number of accounts N), has a target final state:
 // Every account should hold one of every token.
 //
@@ -157,11 +155,34 @@ fn check_transfer_metrics(
 //
 // Therefore, if an account has `0` of a token, there's a transfer missing below this maximum
 // number.
-fn check_balances(
+//
+// Other:
+// Checking logic is performed in the smart function.
+// Requires to output "Checking..." at the start and then "Checks succeeded." if the checks succeeded.
+fn post_transfer_checks(
     level: &Level,
     messages: &[Message],
     num_transfers: usize,
 ) -> Result<()> {
+    // Other
+    if level.checks.len() >= 1
+        && level
+            .checks
+            .iter()
+            .any(|l| l.message.contains("Checking..."))
+    {
+        if !level
+            .checks
+            .iter()
+            .any(|l| l.message.contains("Checks succeeded."))
+        {
+            return Err("Post-transfer checks failed".into());
+        }
+
+        return Ok(());
+    }
+
+    // FA2
     #[cfg(feature = "v2_runtime")]
     let re =
         Regex::new(r#"^.*"([\w0-9]+) has ([0-9]+) of token ([0-9]+)\\n".*$"#).unwrap();
@@ -172,7 +193,7 @@ fn check_balances(
     let mut tokens = HashSet::new();
     let mut skipped_receives = 0;
 
-    for m in level.balance_checks.iter().map(|l| &l.message) {
+    for m in level.checks.iter().map(|l| &l.message) {
         for (_, [address, balance, token]) in re.captures_iter(m).map(|c| c.extract()) {
             accounts.insert(address);
             tokens.insert(token.parse::<usize>()?);
@@ -221,7 +242,7 @@ fn logs_to_levels(logs: Vec<LogType>) -> Result<Vec<Level>> {
 
     let mut level = Level::default();
 
-    let mut balance_checks = Vec::new();
+    let mut checks = Vec::new();
     for line in logs.into_iter() {
         match line {
             LogType::StartOfLevel(_) => {
@@ -237,12 +258,16 @@ fn logs_to_levels(logs: Vec<LogType>) -> Result<Vec<Level>> {
                 level = Default::default();
             }
             LogType::Deploy(l) => level.deployments.push(l),
-            LogType::Success(l) if balance_checks.is_empty() => level.executions.push(l),
-            LogType::Success(_) => level.balance_checks.append(&mut balance_checks),
-            LogType::SmartFunctionLog(l) if l.message.contains(" of token ") => {
-                balance_checks.push(l)
+            LogType::Success(l) if checks.is_empty() => level.executions.push(l),
+            LogType::Success(_) => level.checks.append(&mut checks),
+            LogType::SmartFunctionLog(l)
+                if l.message.contains(" of token ") // FA2
+                    || l.message.contains("Checking...") // Other
+                    || l.message.contains("Checks succeeded.") =>
+            {
+                checks.push(l)
             }
-            LogType::SmartFunctionLog(l) => {}
+            LogType::SmartFunctionLog(_l) => {}
         }
     }
 
@@ -301,5 +326,5 @@ const LOG: &str = "[JSTZ:SMART_FUNCTION:LOG]";
 struct Level {
     deployments: Vec<LogLine>,
     executions: Vec<LogLine>,
-    balance_checks: Vec<LogLine>,
+    checks: Vec<LogLine>,
 }

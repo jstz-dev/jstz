@@ -26,7 +26,7 @@ esac
 cargo build --bin bench --features v2_runtime
 
 # Generate inbox file
-$dir/../../target/debug/bench generate --transfers $n_transfer --inbox-file $inbox_file_path --address $rollup_address
+$dir/../../target/debug/bench generate fa2 --transfers $n_transfer --inbox-file $inbox_file_path --address $rollup_address
 
 # Run riscv kernel with inbox file
 riscv-sandbox run --timings --address $rollup_address --inbox-file $inbox_file_path --input $riscv_kernel_path >$log_file_path
