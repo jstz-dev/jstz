@@ -9,6 +9,7 @@ use async_trait::async_trait;
 use jstz_core::host::WriteDebug;
 use jstz_kernel::inbox::parse_inbox_message_hex;
 use jstz_proto::operation::internal::InboxId;
+use jstz_proto::BlockLevel;
 use log::{debug, error};
 use std::collections::VecDeque;
 use std::future::Future;
@@ -22,6 +23,8 @@ use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 pub mod api;
+pub mod store;
+pub mod stream;
 
 #[derive(Default)]
 pub struct Monitor {
@@ -56,7 +59,7 @@ impl WriteDebug for Logger {
 /// precondition: the rollup node is healthy.
 pub async fn spawn_monitor<
     #[cfg(test)] Fut: Future<Output = ()> + 'static + Send,
-    #[cfg(test)] F: Fn(u32) -> Fut + Send + 'static,
+    #[cfg(test)] F: Fn(BlockLevel) -> Fut + Send + 'static,
 >(
     rollup_endpoint: String,
     queue: Arc<RwLock<OperationQueue>>,
@@ -104,7 +107,7 @@ pub async fn spawn_monitor<
 
 /// Process the inbox messages of the given block and push them into the queue.
 async fn process_inbox_messages(
-    block_level: u32,
+    block_level: BlockLevel,
     block_content: BlockResponse,
     queue: Arc<RwLock<OperationQueue>>,
     ticketer: &ContractKt1Hash,
@@ -124,7 +127,7 @@ async fn process_inbox_messages(
 
 /// parse the inbox messages into jstz operations of the given block
 fn parse_inbox_messages(
-    block_level: u32,
+    block_level: BlockLevel,
     block: BlockResponse,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
@@ -137,7 +140,7 @@ fn parse_inbox_messages(
             parse_inbox_message_hex(
                 &Logger,
                 InboxId {
-                    l1_level: block_level,
+                    l1_level: block_level as u32,
                     l1_message_id: l1_message_id as u32,
                 },
                 inbox_msg,
@@ -177,7 +180,10 @@ where
 // 2. The block data must eventually become available (it's part of the chain)
 // 3. Temporary network issues or API unavailability should not stop the sequencer
 // 4. The exponential backoff ensures we don't overwhelm the API
-async fn retry_fetch_block(rollup_endpoint: &str, block_level: u32) -> BlockResponse {
+async fn retry_fetch_block(
+    rollup_endpoint: &str,
+    block_level: BlockLevel,
+) -> BlockResponse {
     retry_expo(200, || async {
         match api::fetch_block(rollup_endpoint, block_level).await {
             Ok(block) => Ok(block),
@@ -246,13 +252,14 @@ mod tests {
         hex::encode(bytes)
     }
 
-    type OnNewBlockCallback =
-        Box<dyn Fn(u32) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static>;
+    type OnNewBlockCallback = Box<
+        dyn Fn(BlockLevel) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static,
+    >;
 
-    fn make_on_new_block() -> (Arc<Mutex<u32>>, OnNewBlockCallback) {
-        let counter = Arc::new(Mutex::new(0u32));
+    fn make_on_new_block() -> (Arc<Mutex<BlockLevel>>, OnNewBlockCallback) {
+        let counter = Arc::new(Mutex::new(0));
         let counter_clone = counter.clone();
-        let on_new_block = move |num: u32| {
+        let on_new_block = move |num: BlockLevel| {
             let counter_clone = counter_clone.clone();
             Box::pin(async move {
                 let mut value = counter_clone.lock().unwrap();
@@ -274,7 +281,7 @@ mod tests {
         let mut monitor = spawn_monitor(endpoint.clone(), q.clone(), on_new_block)
             .await
             .unwrap();
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(200)).await;
         assert_eq!(*counter.lock().unwrap(), 123);
         monitor.shut_down().await;
         sleep(Duration::from_millis(400)).await;
@@ -290,7 +297,7 @@ mod tests {
         let q = Arc::new(RwLock::new(OperationQueue::new(0)));
         let (counter, on_new_block) = make_on_new_block();
         let _ = spawn_monitor(endpoint, q, on_new_block).await.unwrap();
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(200)).await;
         assert_eq!(*counter.lock().unwrap(), 123);
         sleep(Duration::from_millis(400)).await;
         assert_eq!(*counter.lock().unwrap(), 124);
