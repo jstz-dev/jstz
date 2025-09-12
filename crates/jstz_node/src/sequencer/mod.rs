@@ -2,6 +2,8 @@ pub mod db;
 mod host;
 pub mod inbox;
 pub mod queue;
+#[allow(unused)]
+mod riscv_pvm;
 pub mod runtime;
 pub mod worker;
 
