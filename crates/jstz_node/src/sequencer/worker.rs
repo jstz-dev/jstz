@@ -57,7 +57,7 @@ pub fn spawn(
     injector: &KeyPair,
     preimage_dir: PathBuf,
     debug_log_path: Option<&Path>,
-    runtime_env: RuntimeEnv,
+    runtime_env: &RuntimeEnv,
     #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
 ) -> anyhow::Result<Worker> {
     match runtime_env {
@@ -242,15 +242,15 @@ fn spawn_riscv_worker(
     queue: Arc<RwLock<OperationQueue>>,
     preimages_dir: PathBuf,
     debug_log_path: Option<&Path>,
-    kernel_path: PathBuf,
-    rollup_address: SmartRollupHash,
+    kernel_path: &PathBuf,
+    rollup_address: &SmartRollupHash,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
     let heartbeat = Arc::new(AtomicU64::default());
     let debug_log_path = debug_log_path.map(|v| v.to_path_buf());
     let mut pvm = JstzRiscvPvm::new(
         kernel_path,
-        &rollup_address,
+        rollup_address,
         0,
         Some(preimages_dir.into_boxed_path()),
         heartbeat.clone(),
@@ -258,13 +258,13 @@ fn spawn_riscv_worker(
     )
     .context("failed to launch RISCV PVM")?;
 
+    let rollup_addr = SmartRollupAddress::new(rollup_address.clone());
     Ok(Worker {
         thread_kill_sig,
         heartbeat: heartbeat.clone(),
         inner: Some(spawn_thread(move || {
             info!("RISCV PVM launched");
 
-            let rollup_addr = SmartRollupAddress::new(rollup_address);
             'worker: loop {
                 let operation = {
                     match queue.write() {
@@ -353,7 +353,7 @@ mod tests {
             &default_injector(),
             PathBuf::new(),
             None,
-            crate::config::RuntimeEnv::Native,
+            &crate::config::RuntimeEnv::Native,
             move || {
                 *cp.lock().unwrap() += 1;
             },
@@ -397,7 +397,7 @@ mod tests {
             &default_injector(),
             PathBuf::new(),
             Some(log_file.path()),
-            crate::config::RuntimeEnv::Native,
+            &crate::config::RuntimeEnv::Native,
             move || {},
         );
 
