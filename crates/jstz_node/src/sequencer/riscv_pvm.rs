@@ -201,10 +201,7 @@ fn bound_saturating_sub(bound: Bound<usize>, shift: usize) -> Bound<usize> {
 
 #[cfg(test)]
 mod tests {
-    use std::{
-        path::{Path, PathBuf},
-        str::FromStr,
-    };
+    use std::path::Path;
 
     use jstz_kernel::inbox::encode_signed_operation;
     use jstz_proto::operation::internal::InboxId;
