@@ -242,7 +242,7 @@ fn spawn_riscv_worker(
     queue: Arc<RwLock<OperationQueue>>,
     preimages_dir: PathBuf,
     debug_log_path: Option<&Path>,
-    kernel_path: &PathBuf,
+    kernel_path: &Path,
     rollup_address: &SmartRollupHash,
 ) -> anyhow::Result<Worker> {
     let (thread_kill_sig, rx) = channel();
