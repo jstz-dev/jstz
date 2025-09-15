@@ -40,7 +40,7 @@ impl PvmHooks for DebugLogHook {
 impl JstzRiscvPvm {
     /// Create a PVM that runs Jstz RISCV kernel.
     pub fn new(
-        kernel_path: PathBuf,
+        kernel_path: &Path,
         rollup_address: &SmartRollupHash,
         origination_level: u32,
         preimages_dir: Option<Box<Path>>,
@@ -226,7 +226,7 @@ mod tests {
             Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/riscv_kernel");
 
         let mut pvm = super::JstzRiscvPvm::new(
-            riscv_kernel_path.to_path_buf(),
+            &riscv_kernel_path,
             &rollup_address,
             0,
             Some(tmp_dir.path().to_path_buf().into_boxed_path()),
