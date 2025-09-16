@@ -182,7 +182,7 @@ pub async fn run(
     if storage_sync {
         storage_sync_handles.spawn(storage_sync::spawn(
             storage_sync_db.clone(),
-            log_file_path,
+            kernel_log_path.clone(),
             #[cfg(test)]
             || {},
         )?);
