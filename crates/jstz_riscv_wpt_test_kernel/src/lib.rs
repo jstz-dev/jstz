@@ -15,7 +15,7 @@ const DEFAULT_TICKETER_ADDRESS: &str = "KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton";
 fn read_message(
     rt: &mut impl Runtime,
     ticketer: &ContractKt1Hash,
-) -> Option<ParsedInboxMessage> {
+) -> Option<ParsedInboxMessageWrapper> {
     let input = match rt.read_input() {
         Ok(input) => match input {
             Some(input) => input,
@@ -46,7 +46,7 @@ pub fn run(rt: &mut impl Runtime) {
 
     while let Some(message) = read_message(rt, &ticketer) {
         if let ParsedInboxMessage::JstzMessage(Message::External(signed_operation)) =
-            message
+            message.content
         {
             let operation: Operation = signed_operation.into();
             if let Content::DeployFunction(deploy_function) = operation.content {
