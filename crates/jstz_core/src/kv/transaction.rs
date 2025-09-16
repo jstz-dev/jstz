@@ -350,6 +350,8 @@ impl InnerTransaction {
                 curr_ctxt.remove_edits.len() + curr_ctxt.insert_edits.len(),
             );
 
+            // TODO: Ensure atomicity
+            // https://github.com/jstz-dev/jstz/pull/1319#discussion_r2339917375
             for key in &curr_ctxt.remove_edits {
                 Storage::remove(rt, key)?;
                 storage_updates.push_remove(key);

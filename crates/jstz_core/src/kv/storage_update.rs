@@ -52,6 +52,13 @@ impl BatchStorageUpdate {
         Ok(())
     }
 
+    /// Create a BatchStorageUpdate with a single Insert operation.
+    pub fn single_insert<K: Path, V: Value + ?Sized>(key: &K, value: &V) -> Result<Self> {
+        let mut batch = BatchStorageUpdate::new(1);
+        batch.push_insert(key, value)?;
+        Ok(batch)
+    }
+
     pub fn push_remove<K: Path>(&mut self, key: &K) {
         self.0.push(StorageUpdate::Remove {
             key: key.to_string(),
@@ -157,5 +164,17 @@ mod tests {
             prev_len, after_len,
             "No event should be published for empty batch"
         );
+    }
+
+    #[test]
+    fn test_single_insert() {
+        let key = OwnedPath::try_from("/single".to_string()).unwrap();
+        let val = DummyValue(99);
+        let batch = BatchStorageUpdate::single_insert(&key, &val).unwrap();
+        assert_eq!(batch.0.len(), 1);
+        match &batch.0[0] {
+            StorageUpdate::Insert { key: k, .. } => assert_eq!(k, "/single"),
+            _ => panic!("Expected Insert variant"),
+        }
     }
 }

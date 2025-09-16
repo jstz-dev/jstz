@@ -13,6 +13,7 @@ use bincode::{Decode, Encode};
 use boa_gc::{empty_trace, Finalize, Trace};
 use derive_more::From;
 use jstz_core::kv::{
+    storage_update::BatchStorageUpdate,
     transaction::{Guarded, GuardedMut},
     Storage,
 };
@@ -259,6 +260,8 @@ impl Account {
         }
     }
 
+    /// Sets the nonce of an account and publishes the storage update event.
+    /// The storage needs to be leaked because the nonce isn't updated via the transaction.
     pub fn storage_set_nonce(
         hrt: &mut impl HostRuntime,
         addr: &impl Addressable,
@@ -269,7 +272,13 @@ impl Account {
             Account::User(user) => user.nonce = nonce,
             Account::SmartFunction(sf) => sf.nonce = nonce,
         }
-        account.storage_insert(hrt, addr)
+        // TODO: Ensure atomicity
+        // https://github.com/jstz-dev/jstz/pull/1319#discussion_r2339917375
+        account.storage_insert(hrt, addr)?;
+        BatchStorageUpdate::single_insert(&Self::path(addr)?, &account)?
+            .publish_event(hrt)
+            .map_err(jstz_core::error::Error::from)?;
+        Ok(())
     }
 
     fn get_mut<'a>(
