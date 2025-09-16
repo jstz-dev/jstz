@@ -38,6 +38,7 @@ num-traits.workspace = true
 octez = { path = "../octez" }
 octez-riscv.workspace = true
 parking_lot.workspace = true
+pin-project.workspace = true
 r2d2.workspace = true
 r2d2_sqlite.workspace = true
 reqwest.workspace = true
@@ -48,6 +49,7 @@ tempfile.workspace = true
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
+thiserror.workspace = true
 tokio-retry2.workspace = true
 tokio-stream.workspace = true
 tokio-util.workspace = true
