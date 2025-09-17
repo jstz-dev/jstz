@@ -231,7 +231,7 @@ mod tests {
             "#;
 
         let deploy_fn = DeployFunction {
-            function_code: ParsedCode::try_from(code.to_string()).unwrap(),
+            function_code: ParsedCode::try_from(code.to_string()).unwrap().into(),
             account_credit: 0,
         };
         let op = Operation {
