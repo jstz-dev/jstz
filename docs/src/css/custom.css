@@ -240,3 +240,12 @@ article a[target="_blank"]:after {
   content: url("/img/external_link.svg");
   padding-left: 5px;
 }
+
+/* Override color for <VARIABLES> in bash codeblocks */
+/* See src/theme/languages/prism-bash.js */
+.language-bash .token.variable,
+.language-sh .token.variable,
+.language-shell .token.variable {
+  color: var(--ifm-color-primary) !important;
+  font-style: inherit !important;
+}
