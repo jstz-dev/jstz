@@ -6,7 +6,6 @@ use std::path::Path;
 
 use http::{HeaderMap, Method, Uri};
 use jstz_proto::context::account::Address;
-use jstz_proto::runtime::ParsedCode;
 use jstz_proto::HttpBody;
 use tezos_smart_rollup::types::SmartRollupAddress;
 use tezos_smart_rollup::utils::inbox::file::InboxFile;
@@ -65,8 +64,7 @@ fn generate_inbox(
     // Load the contract code from the given file
     let code_string = std::fs::read_to_string(contract_file)?;
 
-    let code: ParsedCode = code_string.try_into()?;
-    let contract_address = builder.deploy_function(&mut accounts[0], code, 0)?;
+    let contract_address = builder.deploy_function(&mut accounts[0], code_string, 0)?;
 
     init(
         &mut builder,
