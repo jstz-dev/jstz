@@ -1,6 +1,5 @@
 #[cfg(feature = "v2_runtime")]
 use crate::runtime::v2::fetch::http::Response;
-use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
     Error, HttpBody, Result,
@@ -112,7 +111,7 @@ impl Operation {
 #[serde(rename_all = "camelCase")]
 pub struct DeployFunction {
     /// Smart function code
-    pub function_code: ParsedCode,
+    pub function_code: String,
     /// Amount of tez to credit to the smart function account, debited from the sender
     pub account_credit: Amount,
 }
@@ -396,7 +395,6 @@ mod test {
     use crate::context::account::{Account, Address, Nonce};
     use crate::operation::internal::{FaDeposit, InboxId};
     use crate::operation::OperationHash;
-    use crate::runtime::ParsedCode;
     use crate::tests::DebugLogSink;
     use crate::HttpBody;
     use http::{HeaderMap, Method, Uri};
@@ -429,7 +427,7 @@ mod test {
     fn deploy_function_content() -> Content {
         let raw_code =
             r#"export default () => new Response("hello world!");"#.to_string();
-        let function_code = ParsedCode::try_from(raw_code).unwrap();
+        let function_code = raw_code;
         let account_credit = 100000;
         Content::DeployFunction(DeployFunction {
             function_code,
