@@ -187,7 +187,7 @@ fn run_event_loop(
     })
 }
 
-fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
+pub(crate) fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
     let current_sec = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
