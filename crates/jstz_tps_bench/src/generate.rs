@@ -14,7 +14,7 @@ use tezos_smart_rollup::utils::inbox::file::InboxFile;
 
 use jstz_utils::inbox_builder::{Account, InboxBuilder, Result};
 
-const FA2: &str = include_str!("../fa2.js");
+const FA2: &str = include_str!("../fa2/dist/index.js");
 
 /// Generate the requested 'FA2 transfers', writing to `./inbox.json`.
 ///
