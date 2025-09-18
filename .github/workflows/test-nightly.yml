@@ -8,7 +8,7 @@ on:
 jobs:
   wpt_riscv:
     name: Web Platform Test (RISC-V)
-    runs-on: [macOS, ARM64]
+    runs-on: [large, nix]
     steps:
       - uses: actions/checkout@v4
         with:
