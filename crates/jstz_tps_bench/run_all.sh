@@ -17,6 +17,18 @@ OTHER_CONFIGS=(
   "init_2 benchmark_transaction2 check_2 200 benchmark2_config"
   "init_3 benchmark_transaction3 check_3 200 benchmark3_config"
   "init_4 benchmark_transaction4 check_4 200 benchmark4_config"
+
+  "init_3 benchmark_transaction5 check_5 20 overhead_benchmark_0"
+  "init_3 benchmark_transaction6 check_5 20 overhead_benchmark_1"
+  "init_3 benchmark_transaction7 check_5 20 overhead_benchmark_10"
+  "init_3 benchmark_transaction8 check_5 20 overhead_benchmark_100"
+  "init_3 benchmark_transaction9 check_5 20 overhead_benchmark_1000"
+  "init_3 benchmark_transaction10 check_5 20 overhead_benchmark_2000"
+  "init_3 benchmark_transaction11 check_5 20 overhead_benchmark_5000"
+  "init_3 benchmark_transaction12 check_5 20 overhead_benchmark_10000"
+  "init_3 benchmark_transaction13 check_5 20 overhead_benchmark_20000"
+  "init_3 benchmark_transaction14 check_5 20 overhead_benchmark_50000"
+  "init_3 benchmark_transaction15 check_5 20 overhead_benchmark_100000"
 )
 
 echo "Running FA2 benchmark ($REPEATS times)..."

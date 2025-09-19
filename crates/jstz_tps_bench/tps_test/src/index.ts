@@ -34,9 +34,10 @@ async function handleBenchmarkTransaction2(
 }
 
 async function handleBenchmarkTransaction3(
+  count: number,
   request: Request,
 ): Promise<Response> {
-  for (let i = 1; i < 5000; i++) {
+  for (let i = 1; i < count + 1; i++) {
     Kv.set(`value${i}`, (parseInt(Kv.get(`value${i - 1}`)) + 1).toString());
   }
   return new Response();
@@ -116,10 +117,45 @@ async function handler(request: Request): Promise<Response> {
       return handleBenchmarkTransaction2(request);
 
     case "/benchmark_transaction3":
-      return handleBenchmarkTransaction3(request);
+      return handleBenchmarkTransaction3(5000, request);
 
     case "/benchmark_transaction4":
       return handleBenchmarkTransaction4(request);
+
+    // Different counts of KV updates
+
+    case "/benchmark_transaction5":
+      return handleBenchmarkTransaction3(0, request);
+
+    case "/benchmark_transaction6":
+      return handleBenchmarkTransaction3(1, request);
+
+    case "/benchmark_transaction7":
+      return handleBenchmarkTransaction3(10, request);
+
+    case "/benchmark_transaction8":
+      return handleBenchmarkTransaction3(100, request);
+
+    case "/benchmark_transaction9":
+      return handleBenchmarkTransaction3(1000, request);
+
+    case "/benchmark_transaction10":
+      return handleBenchmarkTransaction3(2000, request);
+
+    case "/benchmark_transaction11":
+      return handleBenchmarkTransaction3(5000, request);
+
+    case "/benchmark_transaction12":
+      return handleBenchmarkTransaction3(10000, request);
+
+    case "/benchmark_transaction13":
+      return handleBenchmarkTransaction3(20000, request);
+
+    case "/benchmark_transaction14":
+      return handleBenchmarkTransaction3(50000, request);
+
+    case "/benchmark_transaction15":
+      return handleBenchmarkTransaction3(100000, request);
 
     case "/check_1":
       console.log("Checking...");
@@ -145,6 +181,15 @@ async function handler(request: Request): Promise<Response> {
       console.log("Checking...");
       // TODO: Add checks for nested sf
       assert(false);
+      console.log("Checks succeeded.");
+      return new Response("Success!");
+
+    case "/check_5":
+      console.log("Checking...");
+      if (Kv.get("value1") != undefined) {
+        console.log(Kv.get("value1"));
+        assert(parseInt(Kv.get("value1")) > 0);
+      }
       console.log("Checks succeeded.");
       return new Response("Success!");
   }
