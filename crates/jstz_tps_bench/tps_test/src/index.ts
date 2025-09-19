@@ -16,31 +16,28 @@ async function handleBenchmarkTransaction1(
 async function handleBenchmarkTransaction2(
   request: Request,
 ): Promise<Response> {
-  Kv.set("last_sent", Kv.get("last_sent") + 1);
+  Kv.set("last_sent", (parseInt(Kv.get("last_sent")) + 1).toString());
   // TODO: Update once Ledger is fully replaced in v2 runtime and we can deposit from bootstrap accounts in riscv-sandbox
   if (Kv.get("account1") > 0) {
-    Kv.set("account1", Kv.get("account1") - 1);
+    Kv.set("account1", (parseInt(Kv.get("account1")) - 1).toString());
   } else {
     throw new Error("Account 1 has no funds");
   }
 
   let receiver = "account" + Kv.get("last_sent");
-  if (receiver === "account0") {
-    if (Kv.get(receiver) === undefined) {
-      Kv.set(receiver, 1);
-    } else {
-      Kv.set(receiver, Kv.get(receiver) + 1);
-    }
-    return new Response();
+  if (Kv.get(receiver) === undefined) {
+    Kv.set(receiver, 1);
+  } else {
+    Kv.set(receiver, (parseInt(Kv.get(receiver)) + 1).toString());
   }
+  return new Response();
 }
 
 async function handleBenchmarkTransaction3(
   request: Request,
 ): Promise<Response> {
-  Kv.set("value0", "47");
-  for (let i = 0; i < 5000; i++) {
-    Kv.set(`value${i}`, Kv.get(`value${i - 1}`) + 1);
+  for (let i = 1; i < 5000; i++) {
+    Kv.set(`value${i}`, (parseInt(Kv.get(`value${i - 1}`)) + 1).toString());
   }
   return new Response();
 }
@@ -61,15 +58,28 @@ async function handleBenchmarkTransaction4(
   return response;
 }
 
+function assert(condition) {
+  if (!condition) {
+    throw "Assertion failed";
+  }
+}
+
 async function handler(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const path = url.pathname;
   switch (path) {
-    case "/init":
+    case "/init_1":
       Kv.set("account0", "0");
       Kv.set("account1", "470");
+      return new Response("Success!");
 
+    case "/init_2":
       Kv.set("last_sent", "0");
+      Kv.set("account1", "470");
+      return new Response("Success!");
+
+    case "/init_3":
+      Kv.set("value0", "47");
       return new Response("Success!");
 
     case "/init_4":
@@ -111,9 +121,30 @@ async function handler(request: Request): Promise<Response> {
     case "/benchmark_transaction4":
       return handleBenchmarkTransaction4(request);
 
-    case "/check":
+    case "/check_1":
       console.log("Checking...");
-      // Checking logic can be implemented here.
+      assert(Kv.get("account0") === "0");
+      assert(Kv.get("account1") === "470");
+      console.log("Checks succeeded.");
+      return new Response("Success!");
+
+    case "/check_2":
+      console.log("Checking...");
+      assert(parseInt(Kv.get("last_sent")) > 0);
+      assert(parseInt(Kv.get("account1")) < 470);
+      console.log("Checks succeeded.");
+      return new Response("Success!");
+
+    case "/check_3":
+      console.log("Checking...");
+      assert(parseInt(Kv.get("value4999")) > 0);
+      console.log("Checks succeeded.");
+      return new Response("Success!");
+
+    case "/check_4":
+      console.log("Checking...");
+      // TODO: Add checks for nested sf
+      assert(false);
       console.log("Checks succeeded.");
       return new Response("Success!");
   }
