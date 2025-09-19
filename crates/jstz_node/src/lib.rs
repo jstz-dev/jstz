@@ -232,12 +232,12 @@ pub async fn run(
             let (tx, rx) = tokio::sync::oneshot::channel();
             axum::serve(listener, router)
                 .with_graceful_shutdown(async move {
-                    let _ = tx.send(tokio::select! {
-                        Some(t) = storage_sync_handles.join_next() => match t {
-                            Ok(v) => v,
-                            Err(e) => Err(e.into())
-                        }
-                    });
+                    let sig = match storage_sync_handles.join_next().await {
+                        Some(Ok(v)) => v,
+                        Some(Err(e)) => Err(e.into()),
+                        None => Ok(()), // should not reach here actually as storage_sync_handles is confirmed non-empty
+                    };
+                    let _ = tx.send(sig);
                     // kill other storage sync instances
                     drop(storage_sync_handles);
                 })

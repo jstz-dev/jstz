@@ -417,7 +417,6 @@ mod tests {
         context::account::{Amount, Nonce},
         operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
         receipt::{DeployFunctionReceipt, Receipt},
-        runtime::ParsedCode,
     };
     use jstz_utils::KeyPair;
     use octez::OctezRollupClient;
@@ -465,9 +464,9 @@ mod tests {
         SignedOperation::new(sig, deploy_op)
     }
 
-    fn mock_code(size: usize) -> ParsedCode {
+    fn mock_code(size: usize) -> String {
         // SAFETY: This code is never interpreted (so does not need to be parsable)
-        unsafe { ParsedCode::new_unchecked("a".repeat(size)) }
+        "a".repeat(size)
     }
 
     fn get_dir_size(path: &Path) -> u64 {
@@ -698,7 +697,7 @@ mod tests {
             .with_state(state)
             .split_for_parts();
         let dummy_op = make_signed_op(Content::DeployFunction(DeployFunction {
-            function_code: ParsedCode("a".repeat(4000)),
+            function_code: "a".repeat(4000),
             account_credit: 0,
         }));
         let res = router

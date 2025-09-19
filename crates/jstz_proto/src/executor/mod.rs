@@ -165,7 +165,6 @@ mod tests {
         HttpBody,
     };
 
-    use crate::runtime::ParsedCode;
     #[cfg(feature = "v2_runtime")]
     mod response_test_utils {
         use super::*;
@@ -273,7 +272,7 @@ mod tests {
     fn deploy_function_content() -> Content {
         let raw_code =
             r#"export default () => new Response("hello world!");"#.to_string();
-        let function_code = ParsedCode::try_from(raw_code).unwrap();
+        let function_code = raw_code.to_string();
         let account_credit = 0;
         Content::DeployFunction(DeployFunction {
             function_code,
