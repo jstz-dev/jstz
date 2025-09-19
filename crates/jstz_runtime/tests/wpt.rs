@@ -98,8 +98,6 @@ fn run_wpt_test_harness_in_riscv_sandbox(source: String) -> TestHarnessReport {
             "riscv-sandbox failed with exit code: {}",
             output.status.code().unwrap_or(-1)
         );
-        println!("output: {}", String::from_utf8_lossy(&output.stdout));
-        println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
         return TestHarnessReport {
             status: Some(WptTestStatus::Err),
             subtests: vec![WptSubtest {
