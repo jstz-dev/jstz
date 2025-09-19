@@ -1,4 +1,4 @@
-use crate::executor::smart_function::NOOP_PATH;
+use crate::executor::smart_function::{FA_WITHDRAW_PATH, NOOP_PATH, WITHDRAW_PATH};
 use crate::logger::{
     log_request_end_with_host, log_request_start_with_host, log_response_status_code,
 };
@@ -364,12 +364,24 @@ async fn dispatch_run(
             log_event(host, operation_hash, LogEvent::RequestEnd(&to));
             response
         }
-        Ok(HostName::JstzHost) if is_run_function => Ok(Response {
-            status: 400,
-            status_text: "Bad Request".into(),
-            headers: Vec::with_capacity(0),
-            body: "HostScript is not callable from RunFunction".into(),
-        }),
+        Ok(HostName::JstzHost) if is_run_function => {
+            let url_path = url.path();
+            if url_path == WITHDRAW_PATH || url_path == FA_WITHDRAW_PATH {
+                return Ok(Response {
+                    status: 400,
+                    status_text: "Bad Request".into(),
+                    headers: Vec::with_capacity(0),
+                    body: "Withdrawals are not supported yet".into(),
+                });
+            }
+
+            Ok(Response {
+                status: 400,
+                status_text: "Bad Request".into(),
+                headers: Vec::with_capacity(0),
+                body: "Unsupported HostScript endpoint".into(),
+            })
+        }
         Ok(HostName::JstzHost) => HostScript::route(host, tx, from, method, url).await,
         Err(e) => Err(e),
     }

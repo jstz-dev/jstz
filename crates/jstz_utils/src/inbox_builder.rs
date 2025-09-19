@@ -7,7 +7,6 @@ use jstz_crypto::{
 use jstz_proto::{
     context::account::{Address, Nonce},
     operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
-    runtime::ParsedCode,
     HttpBody,
 };
 #[cfg(feature = "v2_runtime")]
@@ -145,7 +144,7 @@ impl InboxBuilder {
     pub fn deploy_function(
         &mut self,
         account: &mut Account,
-        code: ParsedCode,
+        code: String,
         account_credit: u64,
     ) -> Result<Address> {
         // TODO: JSTZ-849 somehow reuse the logic in proto
@@ -305,7 +304,6 @@ mod tests {
         context::account::{Address, Nonce},
         executor::withdraw::Withdrawal,
         operation::{Content, DeployFunction, RunFunction, SignedOperation},
-        runtime::ParsedCode,
         HttpBody,
     };
     use tezos_crypto_rs::hash::ContractKt1Hash;
@@ -410,7 +408,7 @@ mod tests {
             None,
         );
         builder
-            .deploy_function(&mut default_account(), ParsedCode("code".to_string()), 123)
+            .deploy_function(&mut default_account(), "code".to_string(), 123)
             .unwrap();
         assert_eq!(builder.messages.len(), 1);
         match builder.messages.pop().unwrap() {
@@ -437,7 +435,7 @@ mod tests {
     #[test]
     fn generate_external_message() {
         let content = Content::DeployFunction(DeployFunction {
-            function_code: ParsedCode("foo".to_string()),
+            function_code: "foo".to_string(),
             account_credit: 123,
         });
 

@@ -17,7 +17,6 @@ use jstz_proto::{
         DeployFunctionReceipt, DepositReceipt, Receipt, ReceiptContent, ReceiptResult,
         RunFunctionReceipt,
     },
-    runtime::ParsedCode,
     HttpBody,
 };
 use jstz_utils::{test_util::alice_keys, KeyPair};
@@ -245,7 +244,7 @@ async fn poll_receipt(client: &Client, base_uri: &str, hash: &str) -> Receipt {
 }
 
 async fn deploy_function(client: &Client, base_uri: &str) {
-    let deploy_op = raw_operation(0, Content::DeployFunction(DeployFunction {function_code: ParsedCode::try_from(format!("const handler = async () => {{ const s = \"{}\"; console.log(\"debug message here\"); return new Response(\"this is a big function\"); }}; export default handler;\n", "a".repeat(8000))).unwrap(), account_credit: 0}));
+    let deploy_op = raw_operation(0, Content::DeployFunction(DeployFunction {function_code: format!("const handler = async () => {{ const s = \"{}\"; console.log(\"debug message here\"); return new Response(\"this is a big function\"); }}; export default handler;\n", "a".repeat(8000)), account_credit: 0}));
 
     let receipt = submit_operation(
         client,
@@ -395,7 +394,7 @@ fn mock_deploy_op() -> SignedOperation {
         "#;
 
     let deploy_fn = DeployFunction {
-        function_code: ParsedCode::try_from(code.to_string()).unwrap(),
+        function_code: code.to_string(),
         account_credit: 0,
     };
     let op = Operation {

@@ -311,7 +311,6 @@ mod test {
             internal::{self, InboxId},
             Content, DeployFunction, Operation, SignedOperation,
         },
-        runtime::ParsedCode,
     };
     use tezos_crypto_rs::hash::{ContractKt1Hash, HashTrait};
     use tezos_smart_rollup::types::SmartRollupAddress;
@@ -466,7 +465,7 @@ mod test {
             .unwrap(),
             nonce: Nonce(0),
             content: Content::DeployFunction(DeployFunction {
-                function_code: ParsedCode("code".to_string()),
+                function_code: "code".to_string(),
                 account_credit: 0,
             }),
         };

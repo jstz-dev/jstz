@@ -29,11 +29,14 @@ jobs:
   linux-amd64:
     name: Build CLI for Linux AMD64
     runs-on: ubuntu-24.04
+    # Need to build in an alpine container to ship statically compiled binaries
+    # Target: x86_64-unknown-linux-musl
+    container:
+      image: alpine:3.21
     steps:
       - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y make bash curl
+        shell: sh
+        run: apk add make musl-dev libcrypto3 openssl-dev clang gcc musl-dev libstdc++ libffi-dev g++ openssl-libs-static bash curl
         # curl and bash are required by dtolnay/rust-toolchain
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.82.0
@@ -53,15 +56,28 @@ jobs:
         with:
           artefact_name: jstz_linux_x64
   linux-arm64:
-    # cannot easily build with nix on arm64 because mozjs does not have prebuilds for linux arm64
-    # so we need to use make build-cli here
+    # Need to build in an alpine container to ship statically compiled binaries.
+    # Target: aarch64-unknown-linux-musl
     name: Build CLI for Linux Arm64
     runs-on: ubuntu-24.04-arm
+    container:
+      image: alpine
+      volumes:
+        - /opt:/opt:rw,rshared
+        - /opt:/__e/node20:ro,rshared
     steps:
-      - name: Install dependencies
+      # Hack for github actions to work in arm64 alpine linux
+      # https://github.com/actions/runner/issues/801#issuecomment-2976165281
+      - name: Patch native Alpine NodeJS into Runner environment
+        shell: sh
         run: |
-          sudo apt-get update
-          sudo apt-get install -y make bash curl
+          sed -i "/^ID=/s/alpine/NotpineForGHA/" /etc/os-release
+          apk add nodejs --update-cache
+          mkdir /opt/bin
+          ln -s /usr/bin/node /opt/bin/node
+      - name: Install dependencies
+        shell: sh
+        run: apk add make musl-dev libcrypto3 openssl-dev clang gcc musl-dev libstdc++ libffi-dev g++ openssl-libs-static bash curl
         # curl and bash are required by dtolnay/rust-toolchain
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.82.0
