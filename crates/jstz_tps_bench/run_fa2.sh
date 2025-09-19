@@ -3,7 +3,7 @@ set -ex
 
 rollup_address=sr163Lv22CdE8QagCwf48PWDTquk6isQwv57
 inbox_file_path=./inbox.json
-n_transfer=200
+n_transfer=${1:-transfers}
 log_file_path=./output.log
 result_path=./result.log
 dir="$(realpath $(dirname "$0"))"

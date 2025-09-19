@@ -165,7 +165,7 @@ fn post_transfer_checks(
     num_transfers: usize,
 ) -> Result<()> {
     // Other
-    if level.checks.len() >= 1
+    if !level.checks.is_empty()
         && level
             .checks
             .iter()

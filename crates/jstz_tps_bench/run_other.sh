@@ -3,14 +3,15 @@ set -ex
 
 rollup_address=sr163Lv22CdE8QagCwf48PWDTquk6isQwv57
 inbox_file_path=./inbox.json
-n_transfer=200
 log_file_path=./output.log
 result_path=./result.log
 dir="$(realpath $(dirname "$0"))"
 contract_folder_path=./tps_test
-init_endpoint=init
-transfer_endpoint=benchmark_transaction1
-check_endpoint=check
+
+init_endpoint=${1:-init}
+transfer_endpoint=${2:-benchmark_transaction1}
+check_endpoint=${3:-check}
+n_transfer=${4:-transfers}
 
 case "${DISABLE_BUILD}" in
 1 | true | yes) ;;

@@ -52,7 +52,7 @@ jobs:
 
   benchmark:
     name: Benchmark RISCV kernel
-    runs-on: [large, nix]
+    runs-on: benchmark
     needs: [build_riscv_kernel]
     steps:
       - uses: actions/checkout@v4
@@ -65,9 +65,9 @@ jobs:
         run: |
           mv $GITHUB_WORKSPACE/riscv_kernel/kernel-executable crates/jstz_tps_bench
           cd crates/jstz_tps_bench
-          nix --accept-flake-config --log-format raw -L develop --command sh -c 'export DISABLE_BUILD=true; export RISCV_KERNEL_PATH=./kernel-executable; ./run.sh'
+          nix --accept-flake-config --log-format raw -L develop --command sh ./run_all.sh
           echo "### Benchmark summary" >> $GITHUB_STEP_SUMMARY
-          cat ./result.log >> $GITHUB_STEP_SUMMARY
+          cat ./results_all.log >> $GITHUB_STEP_SUMMARY
 
   sequencer_riscv_test:
     name: Run sequencer RISCV test
