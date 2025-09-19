@@ -156,10 +156,14 @@ pub async fn run(
         RunMode::Default => None,
     };
 
+    // TODO: make checkpoint path configurable
+    // https://linear.app/tezos/issue/JSTZ-912/make-inbox-checkpoint-file-configurable
+    let _checkpoint = NamedTempFile::new()?;
     let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer { .. } => {
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
+            let path = _checkpoint.path().to_path_buf();
+            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone(), path).await?)
         }
         #[cfg(test)]
         RunMode::Sequencer { .. } => None,
