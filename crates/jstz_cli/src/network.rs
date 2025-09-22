@@ -44,6 +44,12 @@ pub enum Command {
         #[command(flatten)]
         args: UpdateArgs,
     },
+    /// Delete a network.
+    Delete {
+        /// Name of the network to be deleted.
+        #[arg(value_name = "NETWORK_NAME")]
+        name: String,
+    },
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -140,6 +146,16 @@ pub async fn exec(command: Command) -> Result<()> {
 
             cfg.save()?;
             info!("Updated network '{short_name}'.");
+            Ok(())
+        }
+        Command::Delete { name } => {
+            let short_name = trim_long_string(&name, 20);
+            if cfg.networks.networks.remove(&name).is_none() {
+                bail_user_error!("Network '{short_name}' does not exist.");
+            }
+
+            cfg.save()?;
+            info!("Deleted network '{short_name}'.");
             Ok(())
         }
     }
