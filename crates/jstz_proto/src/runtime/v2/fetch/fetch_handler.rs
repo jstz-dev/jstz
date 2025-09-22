@@ -8,12 +8,15 @@ use crate::runtime::v2::fetch::http::Request;
 use crate::runtime::v2::ledger;
 use crate::runtime::v2::protocol_context::PROTOCOL_CONTEXT;
 
+use deno_core::error::CoreError;
 use deno_core::{
     resolve_import, v8, ByteString, JsBuffer, OpState, ResourceId, StaticModuleLoader,
 };
+use deno_error::JsError;
 use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
 use futures::FutureExt;
 use jstz_crypto::public_key_hash::PublicKeyHash;
+use jstz_runtime::error::RuntimeError;
 use jstz_runtime::runtime::AsyncEntered;
 use std::future::Future;
 use std::pin::Pin;
@@ -132,12 +135,13 @@ fn fetch(
     body: Option<Body>,
 ) -> Result<FetchReturn> {
     let url = Url::try_from(url.as_str())?;
-    let (tx, from, host) = {
+    let (tx, from, host, depth) = {
         let rt_context = state.borrow_mut::<RuntimeContext>();
         (
             rt_context.tx.clone(),
             rt_context.address.clone(),
             JsHostRuntime::new(&mut rt_context.host),
+            rt_context.depth,
         )
     };
     let SourceAddress(source) = state.borrow::<SourceAddress>();
@@ -152,6 +156,7 @@ fn fetch(
         url.clone(),
         headers,
         body,
+        depth,
     );
     let fetch_request_resource = FetchRequestResource {
         future: Box::pin(fut),
@@ -190,6 +195,7 @@ pub async fn process_and_dispatch_request(
     url: Url,
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
+    depth: u8,
 ) -> Response {
     let scheme = SupportedScheme::try_from(&url);
     let source = match SourceAddress::try_from(source) {
@@ -212,6 +218,7 @@ pub async fn process_and_dispatch_request(
                 headers,
                 data,
                 &mut is_successful,
+                depth,
             )
             .await;
             let _ =
@@ -342,6 +349,7 @@ async fn dispatch_run(
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
     is_successful: &mut bool,
+    depth: u8,
 ) -> Result<Response> {
     let to = url.try_into();
     match to {
@@ -359,6 +367,7 @@ async fn dispatch_run(
                 data,
                 is_successful,
                 from,
+                depth,
             )
             .await;
             log_event(host, operation_hash, LogEvent::RequestEnd(&to));
@@ -399,6 +408,7 @@ async fn handle_address(
     data: Option<Body>,
     is_successful: &mut bool,
     from: Address,
+    depth: u8,
 ) -> Result<Response> {
     let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
     headers.push((REFERER_HEADER_KEY.clone(), from.to_base58().into()));
@@ -429,6 +439,7 @@ async fn handle_address(
                 url,
                 headers,
                 data,
+                depth,
             )
             .await;
             if let Ok(response) = run_result {
@@ -465,6 +476,7 @@ async fn handle_address(
 
 // - Loads the smart function script at `address`
 // - Bootstraps a new runtime with new context and module loader
+// - Call depth is incremented by 1 and if it exceeds the max depth, a runtime error is returned
 // - Runs the smart function
 async fn load_and_run(
     host: &mut impl HostRuntime,
@@ -476,6 +488,7 @@ async fn load_and_run(
     url: &Url,
     headers: Vec<(ByteString, ByteString)>,
     body: Option<Body>,
+    depth: u8,
 ) -> Result<Response> {
     let mut body = body;
 
@@ -485,7 +498,19 @@ async fn load_and_run(
         tx,
         address.clone(),
         operation_hash.map(|v| v.to_string()).unwrap_or_default(),
+        depth + 1,
     );
+    if proto.is_max_depth() {
+        // Protocol guard: this is not a true JS/native stack overflow.
+        // We limit smart function call depth to prevent resource exhaustion.
+        // Error message matches V8's RangeError for JS familiarity.
+        // See: https://github.com/v8/v8/blob/95f69453064ecd11fdee3020f2219ccc5412b410/src/execution/isolate.cc#L1919
+        let err: CoreError = deno_error::JsErrorBox::range_error(
+            "Maximum call stack size exceeded".to_string(),
+        )
+        .into();
+        return Err(FetchError::JstzError(err.to_string()));
+    }
     // 1. Load script
     let script = { load_script(tx, &mut proto.host, &proto.address)? };
     // 2. Prepare runtime
@@ -835,6 +860,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -872,6 +898,7 @@ mod test {
                 .unwrap(),
             vec![],
             None,
+            0,
         )
         .await;
 
@@ -910,6 +937,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -951,6 +979,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -989,6 +1018,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1031,6 +1061,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1066,6 +1097,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1108,6 +1140,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1163,6 +1196,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1210,6 +1244,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1273,6 +1308,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1319,6 +1355,7 @@ mod test {
                 .unwrap(),
             vec![],
             None,
+            0,
         )
         .await;
 
@@ -1358,6 +1395,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1404,6 +1442,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1446,6 +1485,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
             assert_eq!(response.status, 200);
@@ -1493,6 +1533,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1542,6 +1583,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1588,6 +1630,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1628,6 +1671,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -1672,6 +1716,7 @@ mod test {
                 .unwrap(),
             vec![],
             None,
+            0,
         )
         .await;
 
@@ -1699,6 +1744,7 @@ mod test {
             &mut tx,
             address.clone(),
             String::new(),
+            0,
         ));
 
         let source = Address::User(jstz_mock::account1());
@@ -1909,6 +1955,7 @@ mod test {
             Url::parse(&format!("jstz://{}/", func_addr.to_base58_check())).unwrap(),
             vec![],
             None,
+            0,
         )
         .await;
 
@@ -1961,6 +2008,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -2003,6 +2051,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -2041,6 +2090,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -2081,6 +2131,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -2122,6 +2173,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -2171,6 +2223,7 @@ mod test {
                     Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                     vec![],
                     None,
+                    0,
                 );
             };
             let response = Response {
@@ -2250,6 +2303,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 

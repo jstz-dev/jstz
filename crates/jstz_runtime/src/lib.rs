@@ -104,7 +104,7 @@ mod test_utils {
             let request_id = String::new();
             $(let request_id = $request_id.to_string();)?
             #[allow(unused)]
-            let protocol  = Some($crate::RuntimeContext::new(&mut init_host, &mut init_tx, init_addr.clone(), request_id));
+            let protocol  = Some($crate::RuntimeContext::new(&mut init_host, &mut init_tx, init_addr.clone(), request_id, 0));
             #[allow(unused)]
             let mut $runtime = $crate::JstzRuntime::new($crate::JstzRuntimeOptions {
                 protocol,

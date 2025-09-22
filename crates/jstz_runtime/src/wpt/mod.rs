@@ -296,7 +296,7 @@ pub fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRu
         .push(test_harness_api::init_ops_and_esm());
 
     let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
-        protocol: Some(RuntimeContext::new(host, tx, address, String::new())),
+        protocol: Some(RuntimeContext::new(host, tx, address, String::new(), 0)),
         extensions: vec![test_harness_api::init_ops_and_esm()],
         ..Default::default()
     });
