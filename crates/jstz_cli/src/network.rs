@@ -1,4 +1,7 @@
-use crate::{config::Config, error::Result};
+use crate::{
+    config::{Config, Network},
+    error::{bail_user_error, Result},
+};
 use clap::Subcommand;
 use log::info;
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
@@ -7,6 +10,21 @@ use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
 pub enum Command {
     /// List known networks.
     List,
+    /// Add a new network.
+    Add {
+        /// Name of the new network.
+        #[arg(value_name = "NETWORK_NAME")]
+        name: String,
+        /// Octez node RPC endpoint.
+        #[arg(long)]
+        octez_node_rpc_endpoint: String,
+        /// Jstz node API endpoint.
+        #[arg(long)]
+        jstz_node_endpoint: String,
+        /// Overwrites an existing network name.
+        #[arg(short, long)]
+        force: bool,
+    },
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -17,7 +35,7 @@ pub async fn exec(command: Command) -> Result<()> {
         input.to_owned()
     }
 
-    let cfg = Config::load_path(None).await?;
+    let mut cfg = Config::load_path(None).await?;
     match command {
         Command::List => {
             let mut table = Table::new();
@@ -56,6 +74,28 @@ pub async fn exec(command: Command) -> Result<()> {
             });
 
             info!("{table}");
+            Ok(())
+        }
+        Command::Add {
+            name,
+            octez_node_rpc_endpoint,
+            jstz_node_endpoint,
+            force,
+        } => {
+            let short_name = trim_long_string(&name, 20);
+            if !force && cfg.networks.networks.contains_key(&name) {
+                bail_user_error!("Network '{short_name}' already exists. Use `--force` to overwrite the network.")
+            }
+            cfg.networks.networks.insert(
+                name.clone(),
+                Network {
+                    octez_node_rpc_endpoint,
+                    jstz_node_endpoint,
+                },
+            );
+
+            cfg.save()?;
+            info!("Added network '{short_name}'.");
             Ok(())
         }
     }
