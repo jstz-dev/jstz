@@ -166,13 +166,11 @@ where
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
         loop {
-            println!("[poll_next] starting loop");
-            let store = this.store.clone();
             let (next_state, ret) = match *this.state {
                 // Waiting for a delay to pass before trying to reconnect to the source stream
                 State::Backoff => this.handle_backoff(cx),
                 // We know about a gap [left, right) and emit it sequentially.
-                State::Backlog((left, right)) => this.handle_backlog(cx, left, right),
+                State::Backlog((left, right)) => this.handle_backlog(left, right),
                 // Poll the current block from the source stream and transition to checkpoint loading
                 State::Streaming => this.handle_streaming(cx),
                 // Awaiting a checkpoint store read to compare with `live` and determine the next block to yield.
@@ -199,7 +197,6 @@ where
         &mut self,
         cx: &mut Context<'_>,
     ) -> (State, Option<PollResult<S, F>>) {
-        println!("[handle_backoff] Entered Backoff");
         if self.delay.is_none() {
             self.delay.set(Some(sleep(Duration::from_millis(RETRY_MS))));
         }
@@ -214,15 +211,12 @@ where
 
     fn handle_backlog(
         &mut self,
-        cx: &mut Context<'_>,
         left: BlockLevel,
         right: BlockLevel,
     ) -> (State, Option<PollResult<S, F>>) {
-        println!("[poll_next] Entered Backlog: left={left}, right={right}");
         // If there are more blocks in the backlog, yield the next one
         if left < right {
             let next = left;
-            println!("[poll_next] Returning PendingBlock for backlog: {next}");
             (
                 State::Backlog((next + 1, right)),
                 Some(Poll::Ready(Some(Ok(PendingBlock::new(
@@ -232,7 +226,6 @@ where
             )
         } else {
             // Backlog exhausted, switch to the connected state to stream live blocks
-            println!("[poll_next] Backlog exhausted, switching to Connected");
             (State::Streaming, None)
         }
     }
@@ -267,15 +260,10 @@ where
         cx: &mut Context<'_>,
         live: BlockLevel,
     ) -> (State, Option<PollResult<S, F>>) {
-        println!("[handle_loading_checkpoint] Entered LoadCheckpoint for block {live}");
         let fut = self.fut.get_or_insert(self.store.load_fut());
         match fut.poll_unpin(cx) {
-            Poll::Pending => {
-                println!("[handle_loading_checkpoint] Checkpoint future pending");
-                (State::LoadingCheckpoint { live }, Some(Poll::Pending))
-            }
+            Poll::Pending => (State::LoadingCheckpoint { live }, Some(Poll::Pending)),
             Poll::Ready(Err(e)) => {
-                println!("[handle_loading_checkpoint] Checkpoint future error: {e:?}");
                 // Error loading checkpoint, return error
                 // NOTE: unlikely to happen as checkpoint is saved in the file
                 self.fut.take();
@@ -285,7 +273,6 @@ where
                 )
             }
             Poll::Ready(Ok(checkpoint)) => {
-                println!("[handle_loading_checkpoint] Checkpoint ready: {checkpoint:?}");
                 let (next_state, next_level) = match checkpoint {
                     None => (State::Streaming, Some(live)), // Cold start: follow live
                     Some(chk) if chk + 1 == live => (State::Streaming, Some(live)), // In sync
@@ -331,14 +318,16 @@ pub(crate) mod tests {
     #[derive(Clone)]
     pub(crate) struct MockStore {
         buffer: Arc<Mutex<Vec<BlockLevel>>>,
-        store_error_count: Arc<AtomicUsize>,
+        load_error_count: Arc<AtomicUsize>,
+        save_error_count: Arc<AtomicUsize>,
     }
 
     impl MockStore {
         pub(crate) fn new() -> Self {
             Self {
                 buffer: Arc::new(Mutex::new(vec![])),
-                store_error_count: Arc::new(AtomicUsize::new(0)),
+                load_error_count: Arc::new(AtomicUsize::new(0)),
+                save_error_count: Arc::new(AtomicUsize::new(0)),
             }
         }
 
@@ -353,15 +342,21 @@ pub(crate) mod tests {
         async fn load(&self) -> io::Result<Option<BlockLevel>> {
             let val = self.buffer.lock().unwrap().last().copied();
             if self.buffer.lock().unwrap().len() == 10 {
-                if self.store_error_count.load(Ordering::SeqCst) == 3 {
+                if self.load_error_count.load(Ordering::SeqCst) == 3 {
                     return Ok(val);
                 }
-                self.store_error_count.fetch_add(1, Ordering::SeqCst);
+                self.load_error_count.fetch_add(1, Ordering::SeqCst);
                 return Err(io::Error::other("storage error"));
             }
             Ok(val)
         }
         async fn save(&mut self, level: BlockLevel) -> io::Result<()> {
+            if self.buffer.lock().unwrap().len() == 5
+                && self.save_error_count.load(Ordering::SeqCst) <= 2
+            {
+                self.save_error_count.fetch_add(1, Ordering::SeqCst);
+                return Err(io::Error::other("storage error"));
+            }
             self.buffer.lock().unwrap().push(level);
             Ok(())
         }
@@ -483,9 +478,6 @@ pub(crate) mod tests {
     #[tokio::test]
     async fn stream_respects_backoff_delay() {
         let mut store = mock_store();
-        let factory =
-            move || mock_stream(vec![Err(anyhow!("stream error"))].into_iter().collect());
-
         let increment = |c: &AtomicUsize| c.fetch_add(1, Ordering::SeqCst);
         let count = Arc::new(AtomicUsize::new(0));
         let timestamps = Arc::new(Mutex::new(Vec::new()));

@@ -1,11 +1,14 @@
-#![allow(unused_variables)]
-#![allow(unreachable_code)]
+use crate::sequencer::inbox::store::{CheckpointStore, FileCheckpointStore};
+use crate::sequencer::inbox::stream::{
+    Error, PendingBlock, SequentialBlockStream, StreamFactory,
+};
 use crate::sequencer::queue::{OperationQueue, WrappedOperation};
 use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use anyhow::Result;
 use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
 use async_trait::async_trait;
+use futures_util::{StreamExt, TryStreamExt};
 use jstz_core::host::WriteDebug;
 use jstz_kernel::inbox::parse_inbox_message_hex;
 use jstz_proto::operation::internal::InboxId;
@@ -13,13 +16,13 @@ use jstz_proto::BlockLevel;
 use log::{debug, error};
 use std::collections::VecDeque;
 use std::future::Future;
+use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tokio::{select, task::JoinHandle};
 use tokio_retry2::strategy::ExponentialFactorBackoff;
 use tokio_retry2::{Retry, RetryError};
-use tokio_stream::StreamExt;
 use tokio_util::sync::CancellationToken;
 
 pub mod api;
@@ -57,18 +60,20 @@ impl WriteDebug for Logger {
 
 /// Spawn a future that monitors the L1 blocks, parses inbox messages and pushes them into the queue.
 /// precondition: the rollup node is healthy.
-pub async fn spawn_monitor<
-    #[cfg(test)] Fut: Future<Output = ()> + 'static + Send,
-    #[cfg(test)] F: Fn(BlockLevel) -> Fut + Send + 'static,
->(
+pub async fn spawn_monitor(
     rollup_endpoint: String,
     queue: Arc<RwLock<OperationQueue>>,
-    #[cfg(test)] on_new_block: F,
+    // TODO: make it take a file-like object instead of a path (e.g, AsyncRead + AsyncWrite)
+    // https://linear.app/tezos/issue/JSTZ-917/use-asyncread-asyncwrite-instead-of-file-path
+    checkpoint_path: PathBuf,
 ) -> Result<Monitor> {
     let kill_sig = CancellationToken::new();
     let kill_sig_clone = kill_sig.clone();
-    let mut block_stream = api::monitor_blocks(&rollup_endpoint).await?;
-    let handle = tokio::spawn(async move {
+    let store = FileCheckpointStore::new(checkpoint_path);
+    let mut block_stream =
+        SequentialBlockStream::new(store, stream_factory(rollup_endpoint.clone()))
+            .boxed();
+    let handle: JoinHandle<()> = tokio::spawn(async move {
         let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
         loop {
@@ -78,21 +83,15 @@ pub async fn spawn_monitor<
                 }
                 result = block_stream.next() => {
                     match result {
-                        Some(Ok(block)) => {
-                            #[cfg(test)]
-                            {
-                                on_new_block(block.level).await;
-                                continue;
-                            }
-                            let block_content = retry_fetch_block(&rollup_endpoint, block.level).await;
-                            process_inbox_messages(block.level, block_content, queue.clone(), &ticketer, &jstz).await;
+                        Some(Ok(mut block)) => {
+                            let block_content = retry_fetch_block(&rollup_endpoint, block.level()).await;
+                            process_inbox_messages(&mut block, block_content, queue.clone(), &ticketer, &jstz).await;
                         }
-                        _ => {
-                            //TODO: handle the case when the stream ended/errored
-                            // https://linear.app/tezos/issue/JSTZ-622/handle-retrial-when-stream-connection-is-lost
-                            error!("`monitor_blocks` stream connection lost");
-                            break;
+                        Some(Err(Error::CheckpointIo(e))) => {
+                            error!("checkpoint io error: {e:?}");
+                            tokio::time::sleep(Duration::from_millis(200)).await;
                         }
+                        None => unreachable!("Should be unreachable as block stream is an infinite stream"),
                     }
                 }
             }
@@ -105,34 +104,53 @@ pub async fn spawn_monitor<
     })
 }
 
-/// Process the inbox messages of the given block and push them into the queue.
-async fn process_inbox_messages(
-    block_level: BlockLevel,
+fn stream_factory(endpoint: String) -> impl StreamFactory {
+    move || {
+        let endpoint = endpoint.clone();
+        let stream = async move {
+            api::monitor_blocks(&endpoint)
+                .await
+                .map(|s| s.map_ok(|b| b.level))
+        };
+        futures_util::stream::once(stream).try_flatten().boxed()
+    }
+}
+
+/// Process inbox msgs for the given block:
+/// 1. Filter out irrelevant msgs and parse valid ones into operations.
+/// 2. Push each operation into the shared queue, retrying on failure.
+/// 3. Commit the block as a checkpoint after all operations are queued.
+async fn process_inbox_messages<S: CheckpointStore>(
+    block: &mut PendingBlock<S>,
     block_content: BlockResponse,
     queue: Arc<RwLock<OperationQueue>>,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
 ) {
-    let mut ops = parse_inbox_messages(block_level, block_content, ticketer, jstz);
+    let mut ops = parse_inbox_messages(block.level(), block_content, ticketer, jstz);
+    let push =
+        |op: &WrappedOperation| queue.write().is_ok_and(|mut q| q.insert_ref(op).is_ok());
+
     while let Some(op) = ops.pop_front() {
-        loop {
-            let success = queue.write().is_ok_and(|mut q| q.insert_ref(&op).is_ok());
-            if success {
-                break;
-            }
+        while !push(&op) {
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
+    }
+
+    while block.commit().await.is_err() {
+        error!("Failed to commit block, retrying...");
+        tokio::time::sleep(Duration::from_millis(100)).await;
     }
 }
 
 /// parse the inbox messages into jstz operations of the given block
 fn parse_inbox_messages(
     block_level: BlockLevel,
-    block: BlockResponse,
+    block_content: BlockResponse,
     ticketer: &ContractKt1Hash,
     jstz: &SmartRollupHash,
 ) -> VecDeque<WrappedOperation> {
-    block
+    block_content
         .messages
         .iter()
         .enumerate()
@@ -199,7 +217,9 @@ async fn retry_fetch_block(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::sequencer::inbox::test_utils::make_mock_global_block_filter;
     use crate::sequencer::inbox::test_utils::{hash_of, make_mock_monitor_blocks_filter};
+    use bytes::Bytes;
     use jstz_kernel::inbox::encode_signed_operation;
     use jstz_kernel::inbox::LevelInfo;
     use jstz_kernel::inbox::Message;
@@ -210,16 +230,15 @@ mod tests {
     use jstz_proto::runtime::ParsedCode;
     use jstz_utils::test_util::alice_keys;
     use jstz_utils::KeyPair;
+    use std::convert::Infallible;
+    use std::sync::{Arc, Mutex, RwLock};
     use std::time::Duration;
-    use std::{
-        future::Future,
-        pin::Pin,
-        sync::{Arc, Mutex, RwLock},
-    };
+    use tempfile::NamedTempFile;
     use tezos_smart_rollup::types::SmartRollupAddress;
     use tokio::task;
     use tokio::time::{sleep, Instant};
     use tokio_retry2::RetryError;
+    use warp::Filter;
 
     pub fn mock_deploy_op(nonce: u64) -> SignedOperation {
         let KeyPair(alice_pk, alice_sk) = alice_keys();
@@ -252,62 +271,112 @@ mod tests {
         hex::encode(bytes)
     }
 
-    type OnNewBlockCallback = Box<
-        dyn Fn(BlockLevel) -> Pin<Box<dyn Future<Output = ()> + Send>> + Send + 'static,
-    >;
-
-    fn make_on_new_block() -> (Arc<Mutex<BlockLevel>>, OnNewBlockCallback) {
-        let counter = Arc::new(Mutex::new(0));
-        let counter_clone = counter.clone();
-        let on_new_block = move |num: BlockLevel| {
-            let counter_clone = counter_clone.clone();
-            Box::pin(async move {
-                let mut value = counter_clone.lock().unwrap();
-                *value = num;
-            })
-        }
-            as Pin<Box<dyn Future<Output = ()> + Send>>;
-        (counter, Box::new(on_new_block))
+    fn spawn_mock_server() -> (String, JoinHandle<()>) {
+        let filter =
+            make_mock_monitor_blocks_filter().or(make_mock_global_block_filter());
+        let (addr, server) = warp::serve(filter).bind_ephemeral(([127, 0, 0, 1], 0));
+        (format!("http://{addr}"), task::spawn(server))
     }
 
     #[tokio::test]
-    async fn test_spawn_shuts_down() {
-        let (addr, server) = warp::serve(make_mock_monitor_blocks_filter())
-            .bind_ephemeral(([127, 0, 0, 1], 0));
-        task::spawn(server);
-        let endpoint = format!("http://{addr}");
-        let q = Arc::new(RwLock::new(OperationQueue::new(0)));
-        let (counter, on_new_block) = make_on_new_block();
-        let mut monitor = spawn_monitor(endpoint.clone(), q.clone(), on_new_block)
+    async fn test_spawn_monitor() {
+        let (endpoint, _server) = spawn_mock_server();
+        let q = Arc::new(RwLock::new(OperationQueue::new(10)));
+        let file = NamedTempFile::new().unwrap();
+        let store = FileCheckpointStore::new(file.path().to_path_buf());
+        let _monitor = spawn_monitor(endpoint, q, file.path().to_path_buf())
             .await
             .unwrap();
-        sleep(Duration::from_millis(200)).await;
-        assert_eq!(*counter.lock().unwrap(), 123);
-        monitor.shut_down().await;
-        sleep(Duration::from_millis(400)).await;
-        assert_eq!(*counter.lock().unwrap(), 123);
+        let mut set = std::collections::HashSet::new();
+        let timer = Instant::now();
+        while let Ok(chk) = store.load().await {
+            if let Some(chk) = chk {
+                set.insert(chk);
+            }
+            if timer.elapsed() > Duration::from_secs(2) {
+                break;
+            }
+        }
+        assert!(set.contains(&123));
+        assert!(set.contains(&124));
+    }
+
+    fn spawn_mock_server2() -> (String, JoinHandle<()>) {
+        let filter = warp::path!("global" / "monitor_blocks")
+            .map(|| {
+                warp::reply::Response::new(warp::hyper::Body::wrap_stream(
+                    futures_util::stream::iter(vec![Ok::<Bytes, Infallible>(
+                        Bytes::from("{\"level\": 126}\n"),
+                    )]),
+                ))
+            })
+            .or(make_mock_global_block_filter());
+
+        let (addr, server) = warp::serve(filter).bind_ephemeral(([127, 0, 0, 1], 0));
+        (format!("http://{addr}"), task::spawn(server))
     }
 
     #[tokio::test]
-    async fn test_spawn() {
-        let (addr, server) = warp::serve(make_mock_monitor_blocks_filter())
-            .bind_ephemeral(([127, 0, 0, 1], 0));
-        task::spawn(server);
-        let endpoint = format!("http://{addr}");
-        let q = Arc::new(RwLock::new(OperationQueue::new(0)));
-        let (counter, on_new_block) = make_on_new_block();
-        let _ = spawn_monitor(endpoint, q, on_new_block).await.unwrap();
+    async fn test_spawn_monitor_shuts_down_and_resumes() {
+        let (endpoint, server) = spawn_mock_server();
+        let q = Arc::new(RwLock::new(OperationQueue::new(10)));
+        let file = NamedTempFile::new().unwrap();
+        let store: FileCheckpointStore =
+            FileCheckpointStore::new(file.path().to_path_buf());
+        let mut monitor =
+            spawn_monitor(endpoint.clone(), q.clone(), file.path().to_path_buf())
+                .await
+                .unwrap();
+
+        let mut set = std::collections::HashSet::new();
+        // Shutdown the monitor after the first block is processed
+        while let Ok(chk) = store.load().await {
+            if chk.is_some() {
+                set.insert(chk.unwrap());
+                break;
+            }
+        }
+        monitor.shut_down().await;
+        drop(server);
         sleep(Duration::from_millis(200)).await;
-        assert_eq!(*counter.lock().unwrap(), 123);
-        sleep(Duration::from_millis(400)).await;
-        assert_eq!(*counter.lock().unwrap(), 124);
+        // Resumes the monitor after the shutdown, the source stream returns block 126
+        // but the monitor should handle the missing blocks in between.
+        let (endpoint, _server) = spawn_mock_server2();
+        let _monitor =
+            spawn_monitor(endpoint.clone(), q.clone(), file.path().to_path_buf())
+                .await
+                .unwrap();
+
+        while let Ok(chk) = store.load().await {
+            if let Some(chk) = chk {
+                set.insert(chk);
+                if chk == 126 {
+                    break;
+                }
+            }
+        }
+
+        for i in 123..=126 {
+            assert!(set.contains(&i));
+            let op = q.write().unwrap().pop().unwrap();
+            match op {
+                WrappedOperation::FromInbox {
+                    original_inbox_message,
+                    ..
+                } => {
+                    assert_eq!(
+                        original_inbox_message,
+                        hex_external_message(mock_deploy_op(i))
+                    );
+                }
+                WrappedOperation::FromNode(_) => panic!("should be from inbox"),
+            }
+        }
     }
 
     #[tokio::test]
     async fn test_parse_inbox_messages() {
         let op = mock_deploy_op(0);
-        let op_hash = op.hash().to_string();
-        let q = Arc::new(RwLock::new(OperationQueue::new(2)));
         let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
         let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
         let raw_messages = vec![String::from("0001"), hex_external_message(op.clone())];
@@ -361,7 +430,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_process_inbox_messages() {
+    async fn process_inbox_messages_respects_queue_size_and_order() {
         let op1 = mock_deploy_op(0);
         let op2 = mock_deploy_op(1);
         let q = Arc::new(RwLock::new(OperationQueue::new(2)));
@@ -375,19 +444,22 @@ mod tests {
                 String::from("FOO"), // Noise to be ignored
             ],
         };
-
+        let store = stream::tests::MockStore::new();
+        let mut block = PendingBlock::new(store.clone(), 1);
         let queue = q.clone();
         let handle = tokio::spawn(async move {
-            let ticketer = ticketer;
-            let jstz = jstz;
-            process_inbox_messages(1, block_content, queue.clone(), &ticketer, &jstz)
-                .await;
+            process_inbox_messages(
+                &mut block,
+                block_content,
+                queue.clone(),
+                &ticketer,
+                &jstz,
+            )
+            .await;
         });
-
         tokio::time::sleep(Duration::from_millis(10)).await;
-        // only one message should be in the queue to respect the limit
+        // only two messages should be in the queue to respect the queue limit
         assert_eq!(q.read().unwrap().len(), 2);
-
         let sol = q.write().unwrap().pop().unwrap();
         let op = q.write().unwrap().pop().unwrap();
         match sol {
@@ -412,8 +484,42 @@ mod tests {
         assert_eq!(q.read().unwrap().len(), 1);
         let op = q.write().unwrap().pop().unwrap();
         assert_eq!(hash_of(&op), op2.hash().to_string());
-
+        // Checkpoint stores the block level 1
+        assert_eq!(store.load().await.unwrap().unwrap(), 1);
         handle.abort();
+    }
+
+    #[tokio::test]
+    async fn process_inbox_messages_retires_until_checkpoint_is_saved() {
+        let block_level = 6;
+        let messages = vec![mock_deploy_op(0), mock_deploy_op(1)]
+            .iter()
+            .map(|op| hex_external_message(op.clone()))
+            .collect();
+        let q = Arc::new(RwLock::new(OperationQueue::new(3)));
+        let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
+        let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+        let block_content = BlockResponse { messages };
+        let mut store = stream::tests::MockStore::new();
+        for i in 1..block_level {
+            store.save(i).await.unwrap();
+        }
+        let mut block = PendingBlock::new(store.clone(), block_level);
+        let queue = q.clone();
+        let time = Instant::now();
+        process_inbox_messages(
+            &mut block,
+            block_content,
+            queue.clone(),
+            &ticketer,
+            &jstz,
+        )
+        .await;
+        // The mock store fails twice before succeeding to save the checkpoint.
+        // It should take at least 200ms to process the entire operations and save the checkpoint.
+        assert!(time.elapsed() > Duration::from_millis(200));
+        assert_eq!(q.read().unwrap().len(), 2);
+        assert_eq!(store.load().await.unwrap().unwrap(), block_level);
     }
 
     #[tokio::test]
@@ -422,7 +528,7 @@ mod tests {
         let attempts_clone = attempts.clone();
         let fail_times = 3;
         let time_before = Instant::now();
-        let result = retry_expo(10, || {
+        let result = retry_expo(100, || {
             let attempts_clone = attempts_clone.clone();
             async move {
                 let mut lock = attempts_clone.lock().unwrap();
@@ -437,9 +543,9 @@ mod tests {
         .await;
         let time_after = Instant::now();
         let duration = time_after.duration_since(time_before);
-        // 10 + 20 + 40 = 70ms
-        assert!(duration > Duration::from_millis(70));
-        assert!(duration < Duration::from_millis(80));
+        // 100 + 200 + 400 = 700ms
+        assert!(duration > Duration::from_millis(700));
+        assert!(duration < Duration::from_millis(800));
         assert_eq!(result, "success");
         assert_eq!(*attempts.lock().unwrap(), fail_times + 1);
     }
@@ -448,8 +554,10 @@ mod tests {
 #[cfg(test)]
 pub(crate) mod test_utils {
     use super::{api::BlockResponse, *};
+    use crate::sequencer::inbox::tests::hex_external_message;
+    use crate::sequencer::inbox::tests::mock_deploy_op;
     use bytes::Bytes;
-    use futures_util::stream;
+    use futures_util::{stream, StreamExt};
     use jstz_kernel::inbox::Message;
     use jstz_kernel::inbox::ParsedInboxMessage;
     use std::{convert::Infallible, time::Duration};
@@ -458,10 +566,7 @@ pub(crate) mod test_utils {
 
     pub(crate) fn hash_of(op: &WrappedOperation) -> String {
         let message = match op {
-            WrappedOperation::FromInbox {
-                message,
-                original_inbox_message,
-            } => message,
+            WrappedOperation::FromInbox { message, .. } => message,
             WrappedOperation::FromNode(v) => return v.hash().to_string(),
         };
         match &message.content {
@@ -504,7 +609,10 @@ pub(crate) mod test_utils {
     {
         warp::path!("global" / "block" / u32).map(|level: u32| {
             let response = BlockResponse {
-                messages: vec![format!("message for block {}", level)],
+                messages: vec![&hex_external_message(mock_deploy_op(level as u64))]
+                    .into_iter()
+                    .map(String::from)
+                    .collect(),
             };
             warp::reply::json(&response)
         })
