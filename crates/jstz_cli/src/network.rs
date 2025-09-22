@@ -27,11 +27,22 @@ pub async fn exec(command: Command) -> Result<()> {
                 Cell::new("Jstz node endpoint"),
             ]));
 
-            for (n, network) in cfg.networks.networks.iter() {
-                let name = trim_long_strings(n, 20);
-                let octez_endpoint =
-                    trim_long_strings(&network.octez_node_rpc_endpoint, 25);
-                let jstz_endpoint = trim_long_strings(&network.jstz_node_endpoint, 25);
+            let mut rows = cfg
+                .networks
+                .networks
+                .iter()
+                .map(|(n, network)| {
+                    let name = trim_long_strings(n, 20);
+                    let octez_endpoint =
+                        trim_long_strings(&network.octez_node_rpc_endpoint, 25);
+                    let jstz_endpoint =
+                        trim_long_strings(&network.jstz_node_endpoint, 25);
+                    (name, octez_endpoint, jstz_endpoint)
+                })
+                .collect::<Vec<_>>();
+            rows.sort_by(|a, b| a.0.cmp(&b.0));
+
+            for (name, octez_endpoint, jstz_endpoint) in rows {
                 table.add_row(Row::new(vec![
                     Cell::new(&name),
                     Cell::new(&octez_endpoint),
