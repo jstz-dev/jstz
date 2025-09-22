@@ -50,6 +50,8 @@ pub enum Command {
         #[arg(value_name = "NETWORK_NAME")]
         name: String,
     },
+    /// Retrieve the default network.
+    GetDefault,
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -156,6 +158,24 @@ pub async fn exec(command: Command) -> Result<()> {
 
             cfg.save()?;
             info!("Deleted network '{short_name}'.");
+            Ok(())
+        }
+        Command::GetDefault => {
+            match cfg.networks.default_network {
+                Some(v) => {
+                    let name = v.to_string();
+                    let size = name.len();
+                    if size > 30 {
+                        info!(
+                            "{} (long network name truncated)",
+                            trim_long_string(&name, 30),
+                        );
+                    } else {
+                        info!("{name}")
+                    }
+                }
+                None => info!("Default network is not set."),
+            };
             Ok(())
         }
     }
