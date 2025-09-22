@@ -398,3 +398,59 @@ fn delete_network() {
         ))
         .failure();
 }
+
+#[test]
+fn get_default_network() {
+    let tmp_dir = TempDir::new().unwrap();
+    let home_path = tmp_dir.path().to_string_lossy().to_string();
+    let path = tmp_dir.path().join(".config/jstz/config.json");
+    create_dir_all(path.parent().expect("should find parent dir"))
+        .expect("should create dir");
+    let file = File::create(&path).expect("should create file");
+    serde_json::to_writer(file, &serde_json::json!({}))
+        .expect("should write config file");
+
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains("Default network is not set."))
+        .success();
+
+    let file = File::options()
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .expect("should create file");
+    serde_json::to_writer(file, &serde_json::json!({"default_network": "foo"}))
+        .expect("should write config file");
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains("foo"))
+        .success();
+
+    // long name
+    let file = File::options()
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .expect("should create file");
+    serde_json::to_writer(
+        file,
+        &serde_json::json!({"default_network": "a".repeat(50)}),
+    )
+    .expect("should write config file");
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaa... (long network name truncated)",
+        ))
+        .success();
+}
