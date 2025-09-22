@@ -10,7 +10,7 @@ pub enum Command {
 }
 
 pub async fn exec(command: Command) -> Result<()> {
-    fn trim_long_strings(input: &str, cap: usize) -> String {
+    fn trim_long_string(input: &str, cap: usize) -> String {
         if input.len() > cap {
             return format!("{}...", &input[..cap - 3]);
         };
@@ -32,11 +32,10 @@ pub async fn exec(command: Command) -> Result<()> {
                 .networks
                 .iter()
                 .map(|(n, network)| {
-                    let name = trim_long_strings(n, 20);
+                    let name = trim_long_string(n, 20);
                     let octez_endpoint =
-                        trim_long_strings(&network.octez_node_rpc_endpoint, 25);
-                    let jstz_endpoint =
-                        trim_long_strings(&network.jstz_node_endpoint, 25);
+                        trim_long_string(&network.octez_node_rpc_endpoint, 25);
+                    let jstz_endpoint = trim_long_string(&network.jstz_node_endpoint, 25);
                     (name, octez_endpoint, jstz_endpoint)
                 })
                 .collect::<Vec<_>>();
