@@ -319,3 +319,65 @@ fn update_network() {
         ))
         .failure();
 }
+
+#[test]
+fn delete_network() {
+    let network_name = "foo";
+    let tmp_dir = TempDir::new().unwrap();
+    let home_path = tmp_dir.path().to_string_lossy().to_string();
+    let path = tmp_dir.path().join(".config/jstz/config.json");
+    create_dir_all(path.parent().expect("should find parent dir"))
+        .expect("should create dir");
+    let file = File::create(&path).expect("should create file");
+    serde_json::to_writer(
+        file,
+        &serde_json::json!({
+            "networks": {
+                network_name: {
+                    "octez_node_rpc_endpoint": "http://octez.test",
+                    "jstz_node_endpoint": "http://jstz.test"
+                },
+            }
+        }),
+    )
+    .expect("should write config file");
+
+    // network should be listed
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "list"])
+        .assert()
+        .stderr(predicates::str::contains(network_name))
+        .success();
+
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "delete", network_name])
+        .assert()
+        .stderr(predicates::str::contains(format!(
+            "Deleted network '{network_name}'."
+        )))
+        .success();
+
+    // network should not be listed
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "list"])
+        .assert()
+        .stderr(predicates::str::contains(network_name).not())
+        .success();
+
+    // unknown network should lead to an error
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "delete", &"a".repeat(40)])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Network 'aaaaaaaaaaaaaaaaa...' does not exist.",
+        ))
+        .failure();
+}
