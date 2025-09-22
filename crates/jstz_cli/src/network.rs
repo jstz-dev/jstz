@@ -10,11 +10,11 @@ pub enum Command {
 }
 
 pub async fn exec(command: Command) -> Result<()> {
-    fn trim_long_strings(input: &String, cap: usize) -> String {
+    fn trim_long_strings(input: &str, cap: usize) -> String {
         if input.len() > cap {
             return format!("{}...", &input[..cap - 3]);
         };
-        return input.clone();
+        input.to_owned()
     }
 
     let cfg = Config::load_path(None).await?;
