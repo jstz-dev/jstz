@@ -38,6 +38,7 @@ jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto" }
 log.workspace = true
 octez = { path = "../octez" }
+prettytable.workspace = true
 regex.workspace = true
 reqwest.workspace = true
 reqwest-eventsource.workspace = true
