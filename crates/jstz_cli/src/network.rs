@@ -52,6 +52,12 @@ pub enum Command {
     },
     /// Retrieve the default network.
     GetDefault,
+    /// Set default network.
+    SetDefault {
+        /// Name of the network to be used as the default network.
+        #[arg(value_name = "NETWORK_NAME")]
+        name: String,
+    },
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -176,6 +182,18 @@ pub async fn exec(command: Command) -> Result<()> {
                 }
                 None => info!("Default network is not set."),
             };
+            Ok(())
+        }
+        Command::SetDefault { name } => {
+            let short_name = trim_long_string(&name, 20);
+            if !cfg.networks.networks.contains_key(&name) {
+                bail_user_error!("Network '{short_name}' does not exist.")
+            }
+            cfg.networks
+                .default_network
+                .replace(crate::config::NetworkName::Custom(name.clone()));
+            cfg.save()?;
+            info!("Using network '{short_name}' as the default network.");
             Ok(())
         }
     }
