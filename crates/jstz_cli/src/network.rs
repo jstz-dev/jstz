@@ -2,9 +2,20 @@ use crate::{
     config::{Config, Network},
     error::{bail_user_error, Result},
 };
-use clap::Subcommand;
+use clap::{Args, Subcommand};
 use log::info;
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
+
+#[derive(Args, Debug)]
+#[group(required = true, multiple = true)]
+pub struct UpdateArgs {
+    /// Octez node RPC endpoint.
+    #[arg(long, default_value = None)]
+    octez_node_rpc_endpoint: Option<String>,
+    /// Jstz node API endpoint.
+    #[arg(long, default_value = None)]
+    jstz_node_endpoint: Option<String>,
+}
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
@@ -24,6 +35,14 @@ pub enum Command {
         /// Overwrites an existing network name.
         #[arg(short, long)]
         force: bool,
+    },
+    /// Update a network.
+    Update {
+        /// Name of the network to be updated.
+        #[arg(value_name = "NETWORK_NAME")]
+        name: String,
+        #[command(flatten)]
+        args: UpdateArgs,
     },
 }
 
@@ -96,6 +115,31 @@ pub async fn exec(command: Command) -> Result<()> {
 
             cfg.save()?;
             info!("Added network '{short_name}'.");
+            Ok(())
+        }
+        Command::Update {
+            name,
+            args:
+                UpdateArgs {
+                    octez_node_rpc_endpoint,
+                    jstz_node_endpoint,
+                },
+        } => {
+            let short_name = trim_long_string(&name, 20);
+            match cfg.networks.networks.get_mut(&name) {
+                None => bail_user_error!("Network '{short_name}' does not exist."),
+                Some(network) => {
+                    if let Some(v) = octez_node_rpc_endpoint {
+                        network.octez_node_rpc_endpoint = v;
+                    }
+                    if let Some(v) = jstz_node_endpoint {
+                        network.jstz_node_endpoint = v;
+                    }
+                }
+            };
+
+            cfg.save()?;
+            info!("Updated network '{short_name}'.");
             Ok(())
         }
     }
