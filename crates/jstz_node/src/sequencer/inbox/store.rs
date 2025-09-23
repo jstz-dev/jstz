@@ -24,8 +24,8 @@ pub trait CheckpointStore: Clone + Send + 'static {
 
 /// JSON structure written to disk
 #[derive(Serialize, Deserialize)]
-struct CheckpointFile {
-    block_level: BlockLevel,
+pub(super) struct CheckpointFile {
+    pub(super) block_level: BlockLevel,
 }
 
 /// Persists the last processed block level to a JSON file.
@@ -51,13 +51,11 @@ impl CheckpointStore for FileCheckpointStore {
         match fs::read(&*self.path).await {
             Ok(bytes) => {
                 if bytes.is_empty() {
-                    println!("checkpoint file is empty");
                     return Ok(None);
                 }
 
                 let chk: CheckpointFile = serde_json::from_slice(&bytes)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-                println!("checkpoint file value: {}", chk.block_level);
                 Ok(Some(chk.block_level))
             }
             Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(None),
