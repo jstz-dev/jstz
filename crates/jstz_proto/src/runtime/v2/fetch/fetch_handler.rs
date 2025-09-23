@@ -753,7 +753,9 @@ impl TryFrom<Address> for SourceAddress {
         if matches!(source, Address::User(_)) {
             Ok(SourceAddress(source))
         } else {
-            Err(FetchError::InvalidSourceAddress)
+            Err(FetchError::JstzError(
+                "Source address must be user address".to_string(),
+            ))
         }
     }
 }
@@ -917,7 +919,7 @@ mod test {
             assert_eq!(response.status, 500);
             assert_eq!(response.status_text, "InternalServerError");
             assert_eq!(
-                json!({"class":"RuntimeError","message":"InvalidAddress"}),
+                json!({"class":"Error","message":"JstzError: InvalidAddress"}),
                 serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
                     .unwrap()
             );
@@ -1498,7 +1500,7 @@ mod test {
 
             assert_eq!(500, response.status);
             assert_eq!(
-                json!({"class":"RuntimeError","message":"InsufficientFunds"}),
+                json!({"class":"Error","message":"JstzError: InsufficientFunds"}),
                 serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
                     .unwrap()
             )
@@ -1678,7 +1680,7 @@ mod test {
         assert_eq!("InternalServerError", response.status_text);
         assert_eq!(500, response.status);
         assert_eq!(
-            json!({"class":"RuntimeError","message":"Error: boom\n    at default (jstz://KT1WSFFotGccKa4WZ5PNQGT3EgsRutzLMD4z:2:19)"}),
+            json!({"class":"Error","message":"Error: boom\n    at default (jstz://KT1WSFFotGccKa4WZ5PNQGT3EgsRutzLMD4z:2:19)"}),
             serde_json::from_slice::<JsonValue>(response.body.to_vec().as_slice())
                 .unwrap()
         );

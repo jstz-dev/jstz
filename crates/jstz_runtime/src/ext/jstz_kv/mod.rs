@@ -121,31 +121,23 @@ pub(crate) mod extension {
             let mut runtime = JstzRuntime::new(JstzRuntimeOptions::default());
             let code = r#"Kv.set("hello", "world")"#;
             let err = runtime.execute(code).unwrap_err();
-            assert_eq!(
-                "Error: Uncaught undefined",
-                format!("{}: {}", err.get_class(), err.get_message())
-            );
+            assert_eq!("Error", err.get_class());
+            assert!(err.get_message().contains("Kv is not supported"));
 
             let code = r#"Kv.get("hello")"#;
             let err = runtime.execute(code).unwrap_err();
-            assert_eq!(
-                "Error: Uncaught undefined",
-                format!("{}: {}", err.get_class(), err.get_message())
-            );
+            assert_eq!("Error", err.get_class());
+            assert!(err.get_message().contains("Kv is not supported"));
 
             let code = r#"Kv.contains("hello")"#;
             let err = runtime.execute(code).unwrap_err();
-            assert_eq!(
-                "Error: Uncaught undefined",
-                format!("{}: {}", err.get_class(), err.get_message())
-            );
+            assert_eq!("Error", err.get_class());
+            assert!(err.get_message().contains("Kv is not supported"));
 
             let code = r#"Kv.delete("hello")"#;
             let err = runtime.execute(code).unwrap_err();
-            assert_eq!(
-                "Error: Uncaught undefined",
-                format!("{}: {}", err.get_class(), err.get_message())
-            );
+            assert_eq!("Error", err.get_class());
+            assert!(err.get_message().contains("Kv is not supported"));
         }
     }
 }

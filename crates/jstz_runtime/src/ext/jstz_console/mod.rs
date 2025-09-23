@@ -202,9 +202,7 @@ mod tests {
         let mut runtime = JstzRuntime::new(JstzRuntimeOptions::default());
         let code = r#"console.info("hello")"#;
         let err = runtime.execute(code).unwrap_err();
-        assert_eq!(
-            "Error: Uncaught undefined",
-            format!("{}: {}", err.get_class(), err.get_message())
-        );
+        assert_eq!("Error", err.get_class());
+        assert_eq!("Error: console is not supported\n    at Console.console.Console.noColorStdout (ext:jstz_console/console.js:4:44)\n    at console.info (ext:deno_console/01_console.js:3167:20)\n    at jstz://run:1:9", err.get_message());
     }
 }

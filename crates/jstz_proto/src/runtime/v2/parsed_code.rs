@@ -253,7 +253,7 @@ pub enum ParseError {
     #[error(transparent)]
     Other(#[from] jstz_runtime::error::RuntimeError),
 
-    #[class(not_supported)]
+    #[class(generic)]
     #[error("Import specifiers are not supported")]
     ImportsNotSupported,
 
@@ -378,7 +378,7 @@ mod test {
         let error = ParsedCode::parse(code.to_string()).unwrap_err();
         println!("{:?}", error);
         assert!(matches!(error, ParseError::ImportsNotSupported));
-        assert_eq!(error.get_class(), "NotSupported");
+        assert_eq!(error.get_class(), "Error");
         assert_eq!(error.get_message(), "Import specifiers are not supported");
     }
 
@@ -395,7 +395,7 @@ mod test {
             error,
             ParseError::CompileModuleError(CompileModuleError(_))
         ));
-        assert_eq!(error.get_class(), "CompileModuleError");
-        assert_eq!(error.get_message(), "Uncaught undefined");
+        assert_eq!(error.get_class(), "Error");
+        assert_eq!(error.get_message(), "Uncaught Error: Kv is not supported");
     }
 }

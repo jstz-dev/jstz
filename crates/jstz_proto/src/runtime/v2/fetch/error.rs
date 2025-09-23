@@ -25,25 +25,22 @@ pub enum FetchError {
     #[class(type)]
     #[error("Invalid Response type")]
     InvalidResponseType,
-    #[class("RuntimeError")]
+    #[class(generic)]
     #[error(transparent)]
     RuntimeError(#[from] RuntimeError),
-    #[class(not_supported)]
-    #[error("{0}")]
+    #[class(generic)]
+    #[error("NotSupportedError:{0}")]
     NotSupported(&'static str),
     #[class(generic)]
     #[error("Oracle calls are not allowed to be called from RunFunction")]
     TopLevelOracleCallNotSupported,
-    #[class("ProtocolError")]
-    #[error("Source address must be user address")]
-    InvalidSourceAddress,
     #[class(inherit)]
     #[error(transparent)]
     OracleError(#[from] OracleError),
     // TODO: Boa's JsClass errors are not Send safe. Once we remove boa, we
     // should be able to use crate::Error type directly
-    #[class("RuntimeError")]
-    #[error("{0}")]
+    #[class(generic)]
+    #[error("JstzError: {0}")]
     JstzError(String),
     #[class(syntax)]
     #[error("Smart function '{address}' has no code")]
