@@ -16,7 +16,7 @@ Other networks are becoming available as Jstz expands.
 
 ## Switching networks
 
-If you have access to other networks, you can set them up manually in your configuration file and deploy smart functions to them.
+If you have access to other networks, you can add them to your configuration file with the CLI and deploy smart functions to them.
 
 To add a network, you need:
 
@@ -24,18 +24,12 @@ To add a network, you need:
 
 - The URL of the Jstz node for the network, represented by the variable `<JSTZ_NODE>`.
 
-To set up and use a different network from the sandbox open your Jstz configuration file at `~/.config/jstz/config.json` and add an entry to the `networks` field to represent the new network, as in this example:
+To set up and use a different network from the sandbox, run
 
-```json
-{
-  "current_alias": "my_account",
-  "networks": {
-    "<NETWORK_NAME>": {
-      "octez_node_rpc_endpoint": "<OCTEZ_NODE_RPC>",
-      "jstz_node_endpoint": "<JSTZ_NODE>"
-    }
-  }
-}
+```bash
+jstz network add <NETWORK_NAME> \
+  --octez-node-rpc-endpoint <OCTEZ_NODE_RPC> \
+  --jstz-node-endpoint <JSTZ_NODE>
 ```
 
 This example uses the variable `<NETWORK_NAME>` for the local alias of the new network.
@@ -48,19 +42,10 @@ Then you can use the alias of the network in the config file to deploy and inter
 jstz deploy examples/counter.js -n <NETWORK_NAME>
 ```
 
-You can set a network as the default by putting its name in the `default_network` field, as in this example:
+You can set a network as the default with the CLI as well, as in this example:
 
-```json
-{
-  "current_alias": "my_account",
-  "default_network": "my_network",
-  "networks": {
-    "my_network": {
-      "octez_node_rpc_endpoint": "<OCTEZ_NODE_RPC>",
-      "jstz_node_endpoint": "<JSTZ_NODE>"
-    }
-  }
-}
+```bash
+jstz network set-default <NETWORK_NAME>
 ```
 
 Now, when you omit the `-n` argument from a Jstz command, it uses the default network.
@@ -70,3 +55,5 @@ Now, when you omit the `-n` argument from a Jstz command, it uses the default ne
 To set the local sandbox as the default network, set the `default_network` field to `dev`.
 
 :::
+
+For more information about the CLI `network` command, see the [CLI page](/cli#network).
