@@ -13,6 +13,7 @@ It provides these main commands:
 - [`login`](#log-in) - Set the account that the CLI uses to send requests to Jstz
 - [`logout`](#log-out) - Deselect the current account
 - [`logs`](#logs) - Get smart function logs
+- [`network`](#network) - Manage networks recognised by the CLI
 - [`run`](#run) - Send requests to smart functions
 - [`sandbox`](#sandbox) - Start and interact with the local [sandbox](/sandbox) environment
 - [`transfer`](#transfer) - Transfer XTZ between Jstz accounts
@@ -296,6 +297,82 @@ In a new terminal, run the counter function and you will see the following outpu
 [WARN]: warn
 [ERROR]: error
 [ERROR]: Assertion failed
+```
+
+### Network
+
+The `network` commands manage the [networks](/architecture/networks) recognised by the CLI.
+
+#### Commands
+
+- `list`: Prints all known networks.
+- `add`: Adds a new network to the local config.
+- `update`: Updates an existing network.
+- `delete`: Deletes a network from the local config.
+- `get-default`: Prints the name of the default network.
+- `set-default`: Sets the default network.
+
+#### Usage
+
+```bash
+jstz network list
+jstz network add <NETWORK_NAME> --octez-node-rpc-endpoint <OCTEZ_NODE_RPC_ENDPOINT> --jstz-node-endpoint <JSTZ_NODE_ENDPOINT>
+jstz network update <NETWORK_NAME> <--octez-node-rpc-endpoint <OCTEZ_NODE_RPC_ENDPOINT>|--jstz-node-endpoint <JSTZ_NODE_ENDPOINT>>
+jstz network delete <NETWORK_NAME>
+jstz network set-default <NETWORK_NAME>
+jstz network get-default
+```
+
+#### Options
+
+For `network add` and `network update` commands,
+
+- `--octez-node-rpc-endpoint <OCTEZ_NODE_RPC_ENDPOINT>`: The network's Octez node RPC endpoint.
+
+- `--jstz-node-endpoint <JSTZ_NODE_ENDPOINT>`: The network's Jstz API endpoint.
+
+
+#### Examples
+
+```bash
+$ jstz network list
+  +------+--------------------+--------------------+
+  | Name | Octez RPC endpoint | Jstz node endpoint |
+  +======+====================+====================+
+  | dev  | -                  | -                  |
+  +------+--------------------+--------------------+
+
+$ jstz network add my_network --octez-node-rpc-endpoint http://my.octez.network --jstz-node-endpoint http://my.jstz.network
+Added network 'my_network'.
+$ jstz network list
+  +------------+-------------------------+------------------------+
+  | Name       | Octez RPC endpoint      | Jstz node endpoint     |
+  +============+=========================+========================+
+  | dev        | -                       | -                      |
+  +------------+-------------------------+------------------------+
+  | my_network | http://my.octez.network | http://my.jstz.network |
+  +------------+-------------------------+------------------------+
+$ jstz network update my_network --octez-node-rpc-endpoint http://new.octez.network
+Updated network 'my_network'.
+$ jstz network update my_network --jstz-node-endpoint http://new.jstz.network
+Updated network 'my_network'.
+$ jstz network update my_network --octez-node-rpc-endpoint http://new.octez.network --jstz-node-endpoint http://new.jstz.network
+Updated network 'my_network'.
+$ jstz network list
+  +------------+--------------------------+-------------------------+
+  | Name       | Octez RPC endpoint       | Jstz node endpoint      |
+  +============+==========================+=========================+
+  | dev        | -                        | -                       |
+  +------------+--------------------------+-------------------------+
+  | my_network | http://new.octez.network | http://new.jstz.network |
+  +------------+--------------------------+-------------------------+
+
+$ jstz network delete my_network
+Deleted network 'my_network'.
+$ jstz network set-default dev
+Using network 'dev' as the default network.
+$ jstz network get-default
+dev
 ```
 
 ### Run
