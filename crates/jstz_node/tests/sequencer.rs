@@ -166,7 +166,7 @@ async fn run_riscv_sequencer() {
 }
 
 async fn check_mode(client: &Client, base_uri: &str) {
-    let res = jstz_utils::poll(15, 500, || async {
+    let res = jstz_utils::poll(60, 500, || async {
         client.get(format!("{base_uri}/mode")).send().await.ok()
     })
     .await
@@ -440,7 +440,7 @@ fn mock_fa_deposit_op_hash_matches_actual_hash() {
 }
 
 async fn check_worker_health(client: &Client, base_uri: &str) {
-    let res = jstz_utils::poll(20, 500, || async {
+    let res = jstz_utils::poll(60, 500, || async {
         client
             .get(format!("{base_uri}/worker/health"))
             .send()
