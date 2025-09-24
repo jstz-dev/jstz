@@ -3183,6 +3183,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "jstz_lightweight_kernel"
+version = "0.1.1-alpha.4"
+dependencies = [
+ "jstz_core",
+ "jstz_crypto",
+ "jstz_kernel",
+ "jstz_mock",
+ "jstz_proto",
+ "serde_json",
+ "tezos-smart-rollup",
+ "tezos-smart-rollup-mock 0.2.2 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
+ "tezos_crypto_rs 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
+]
+
+[[package]]
 name = "jstz_mock"
 version = "0.1.1-alpha.4"
 dependencies = [
