@@ -278,7 +278,7 @@ mod tests {
         (format!("http://{addr}"), task::spawn(server))
     }
 
-    /*#[tokio::test]
+    #[tokio::test]
     async fn test_spawn_monitor() {
         let (endpoint, _server) = spawn_mock_server();
         let q = Arc::new(RwLock::new(OperationQueue::new(10)));
@@ -299,7 +299,7 @@ mod tests {
         }
         assert!(set.contains(&123));
         assert!(set.contains(&124));
-    }*/
+    }
 
     fn spawn_mock_server2() -> (String, JoinHandle<()>) {
         let filter = warp::path!("global" / "monitor_blocks")
