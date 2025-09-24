@@ -16,7 +16,7 @@ crate-type = ["cdylib", "lib"]
 [[bin]]
 name = "lightweight-kernel-executable"
 path = "src/executable.rs"
-required-features = ["executable"]
+required-features = ["lightweight-kernel"]
 
 [dependencies]
 jstz_core = { path = "../../jstz_core" }
