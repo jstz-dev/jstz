@@ -556,7 +556,7 @@ mod test {
         Ok(())
     }
 
-    /*#[tokio::test]
+    #[tokio::test]
     async fn server_dies_when_storage_sync_dies() -> anyhow::Result<()> {
         let port = unused_port();
         let kernel_log_file = NamedTempFile::new().unwrap();
@@ -602,5 +602,5 @@ mod test {
             .await?
             .is_err_and(|e| e.to_string().contains("received test kill signal")));
         Ok(())
-    }*/
+    }
 }
