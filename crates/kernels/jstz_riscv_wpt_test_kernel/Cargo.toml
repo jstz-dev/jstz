@@ -19,10 +19,10 @@ path = "src/executable.rs"
 required-features = ["wpt_test_kernel"]
 
 [dependencies]
-jstz_core = { path = "../../crates/jstz_core" }
-jstz_crypto = { path = "../../crates/jstz_crypto" }
-jstz_proto = { path = "../../crates/jstz_proto" }
-jstz_runtime = { path = "../../crates/jstz_runtime", features = ["wpt", "wpt-in-riscv"] }
+jstz_core = { path = "../../jstz_core" }
+jstz_crypto = { path = "../../jstz_crypto" }
+jstz_proto = { path = "../../jstz_proto" }
+jstz_runtime = { path = "../../jstz_runtime", features = ["wpt", "wpt-in-riscv"] }
 jstz_kernel = { path = "../jstz_kernel" }
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
