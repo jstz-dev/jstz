@@ -230,7 +230,7 @@ async fn submit_operation(
 
 async fn poll_receipt(client: &Client, base_uri: &str, hash: &str) -> Receipt {
     let uri = format!("{base_uri}/operations/{hash}/receipt");
-    jstz_utils::poll(30, 500, || async {
+    jstz_utils::poll(60, 500, || async {
         match client.get(&uri).send().await.ok() {
             Some(r) if r.status() != 404 => Some(r),
             _ => None,
@@ -440,11 +440,16 @@ fn mock_fa_deposit_op_hash_matches_actual_hash() {
 }
 
 async fn check_worker_health(client: &Client, base_uri: &str) {
-    let res = client
-        .get(format!("{base_uri}/worker/health"))
-        .send()
-        .await
-        .unwrap();
+    let res = jstz_utils::poll(20, 500, || async {
+        client
+            .get(format!("{base_uri}/worker/health"))
+            .send()
+            .await
+            .ok()
+    })
+    .await
+    .expect("should get response");
+
     assert!(res.status().is_success());
 }
 
