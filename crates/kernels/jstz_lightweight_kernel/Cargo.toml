@@ -32,6 +32,6 @@ tezos-smart-rollup-mock.workspace = true
 serde_json.workspace = true
 
 [features]
-executable = []
+lightweight-kernel = []
 
 
