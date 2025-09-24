@@ -19,15 +19,15 @@ path = "src/executable.rs"
 required-features = ["executable"]
 
 [dependencies]
-jstz_core = { path = "../../crates/jstz_core" }
+jstz_core = { path = "../../jstz_core" }
 jstz_kernel = { path = "../jstz_kernel" }
-jstz_proto = { path = "../../crates/jstz_proto" }
-jstz_crypto = { path = "../../crates/jstz_crypto" }
+jstz_proto = { path = "../../jstz_proto" }
+jstz_crypto = { path = "../../jstz_crypto" }
 tezos-smart-rollup.workspace = true
 tezos_crypto_rs.workspace = true
 
 [dev-dependencies]
-jstz_mock = { path = "../../crates/jstz_mock" }
+jstz_mock = { path = "../../jstz_mock" }
 tezos-smart-rollup-mock.workspace = true
 serde_json.workspace = true
 
