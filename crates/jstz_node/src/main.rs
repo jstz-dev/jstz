@@ -83,7 +83,7 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    env_logger::init_from_env(Env::default().default_filter_or("info"));
+    env_logger::init_from_env(Env::default().default_filter_or("jstz_node=info"));
     match Command::parse() {
         Command::Run(args) => {
             let rollup_endpoint = args.rollup_endpoint.unwrap_or(format!(
@@ -115,7 +115,7 @@ async fn main() -> anyhow::Result<()> {
                 storage_sync: args.storage_sync,
                 #[cfg(feature = "blueprint")]
                 blueprint_db_path: args.blueprint_db_path.unwrap_or(
-                    NamedTempFile::new()
+                    tempfile::NamedTempFile::new()
                         .context("failed to create temporary blueprint db file")?
                         .into_temp_path()
                         .keep()

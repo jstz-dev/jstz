@@ -1,3 +1,4 @@
+use crate::executor::smart_function::{FA_WITHDRAW_PATH, NOOP_PATH, WITHDRAW_PATH};
 use crate::logger::{
     log_request_end_with_host, log_request_start_with_host, log_response_status_code,
 };
@@ -363,12 +364,24 @@ async fn dispatch_run(
             log_event(host, operation_hash, LogEvent::RequestEnd(&to));
             response
         }
-        Ok(HostName::JstzHost) if is_run_function => Ok(Response {
-            status: 400,
-            status_text: "Bad Request".into(),
-            headers: Vec::with_capacity(0),
-            body: "HostScript is not callable from RunFunction".into(),
-        }),
+        Ok(HostName::JstzHost) if is_run_function => {
+            let url_path = url.path();
+            if url_path == WITHDRAW_PATH || url_path == FA_WITHDRAW_PATH {
+                return Ok(Response {
+                    status: 400,
+                    status_text: "Bad Request".into(),
+                    headers: Vec::with_capacity(0),
+                    body: "Withdrawals are not supported yet".into(),
+                });
+            }
+
+            Ok(Response {
+                status: 400,
+                status_text: "Bad Request".into(),
+                headers: Vec::with_capacity(0),
+                body: "Unsupported HostScript endpoint".into(),
+            })
+        }
         Ok(HostName::JstzHost) => HostScript::route(host, tx, from, method, url).await,
         Err(e) => Err(e),
     }
@@ -390,12 +403,7 @@ async fn handle_address(
     let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
     headers.push((REFERER_HEADER_KEY.clone(), from.to_base58().into()));
     let response = match to.kind() {
-        AddressKind::User => Ok(Response {
-            status: 200,
-            status_text: "OK".into(),
-            headers,
-            body: Body::Vector(Vec::with_capacity(0)),
-        }),
+        AddressKind::User => Ok(Response::ok(Body::zero_capacity(), headers)),
         AddressKind::SmartFunction => {
             if !Account::exists(host, tx, &to)
                 .map_err(|e| FetchError::JstzError(e.to_string()))?
@@ -406,6 +414,9 @@ async fn handle_address(
                     headers,
                     body: "Account does not exist".into(),
                 });
+            }
+            if url.path() == NOOP_PATH {
+                return Ok(Response::ok(Body::zero_capacity(), headers));
             }
             let address = to.as_smart_function().unwrap();
             let run_result = load_and_run(

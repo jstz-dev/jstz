@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use jstz_kernel::inbox::ParsedInboxMessage;
+use jstz_kernel::inbox::{ParsedInboxMessage, ParsedInboxMessageWrapper};
 use jstz_proto::operation::SignedOperation;
 
 /// A wrapper for the actual parsed operations. The original inbox message is attached for
@@ -8,7 +8,7 @@ use jstz_proto::operation::SignedOperation;
 #[derive(Clone)]
 pub enum WrappedOperation {
     FromInbox {
-        message: ParsedInboxMessage,
+        message: ParsedInboxMessageWrapper,
         original_inbox_message: String,
     },
     FromNode(SignedOperation),
@@ -17,7 +17,7 @@ pub enum WrappedOperation {
 impl WrappedOperation {
     pub fn to_message(self) -> ParsedInboxMessage {
         match self {
-            WrappedOperation::FromInbox { message, .. } => message,
+            WrappedOperation::FromInbox { message, .. } => message.content,
             WrappedOperation::FromNode(v) => {
                 ParsedInboxMessage::JstzMessage(jstz_kernel::inbox::Message::External(v))
             }
@@ -73,6 +73,8 @@ impl OperationQueue {
 
 #[cfg(test)]
 mod tests {
+    use jstz_proto::operation::internal::InboxId;
+
     use super::OperationQueue;
     use crate::sequencer::{
         queue::WrappedOperation,
@@ -128,9 +130,15 @@ mod tests {
     #[test]
     fn wrapped_operation_to_message() {
         let op = WrappedOperation::FromInbox {
-            message: jstz_kernel::inbox::ParsedInboxMessage::LevelInfo(
-                jstz_kernel::inbox::LevelInfo::End,
-            ),
+            message: jstz_kernel::inbox::ParsedInboxMessageWrapper {
+                content: jstz_kernel::inbox::ParsedInboxMessage::LevelInfo(
+                    jstz_kernel::inbox::LevelInfo::End,
+                ),
+                inbox_id: InboxId {
+                    l1_level: 0,
+                    l1_message_id: 0,
+                },
+            },
             original_inbox_message: "0002".to_string(),
         };
         assert_eq!(

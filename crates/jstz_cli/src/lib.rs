@@ -12,6 +12,7 @@ pub mod error;
 mod jstz;
 mod kv;
 mod logs;
+mod network;
 #[cfg(not(feature = "v2_runtime"))]
 mod repl;
 mod run;
@@ -142,6 +143,10 @@ pub enum Command {
     #[command(name = "whoami")]
     WhoAmI {},
 
+    /// Manage recognised networks
+    #[command(subcommand)]
+    Network(network::Command),
+
     /// 📚 Open jstz's docs in your browser
     Docs,
     /// 🐚 Generates shell completions {n}
@@ -206,5 +211,6 @@ pub async fn exec(command: Command) -> Result<()> {
         Command::Logout {} => account::logout().await,
         Command::WhoAmI {} => account::whoami().await,
         Command::Kv(kv_command) => kv::exec(kv_command).await,
+        Command::Network(command) => network::exec(command).await,
     }
 }

@@ -223,6 +223,8 @@ mod tests {
             ),
             RunMode::Default,
             true,
+            #[cfg(feature = "blueprint")]
+            &Path::new("/blueprint"),
         );
 
         let json = serde_json::to_value(&config).unwrap();

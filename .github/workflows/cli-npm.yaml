@@ -29,8 +29,8 @@ jobs:
   linux-amd64:
     name: Build CLI for Linux AMD64
     runs-on: ubuntu-24.04
-    # need to build in an alpine container so that cargo can build with musl
-    # target: x86_64-unknown-linux-musl
+    # Need to build in an alpine container to ship statically compiled binaries
+    # Target: x86_64-unknown-linux-musl
     container:
       image: alpine:3.21
     steps:
@@ -40,8 +40,6 @@ jobs:
         # curl and bash are required by dtolnay/rust-toolchain
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.82.0
-        with:
-          targets: wasm32-unknown-unknown
       - name: Build
         shell: sh
         run: make build-cli
@@ -53,43 +51,36 @@ jobs:
     name: Test basic CLI usability for Linux AMD64
     runs-on: ubuntu-24.04
     needs: [linux-amd64]
-    # run in a clean environment without dependencies
-    container:
-      image: alpine:3.21
     steps:
       - uses: jstz-dev/jstz/.github/actions/test-cli@main
         with:
           artefact_name: jstz_linux_x64
   linux-arm64:
-    # cannot easily build with nix on arm64 because mozjs does not have prebuilds for linux arm64
-    # so we need to use make build-cli here
+    # Need to build in an alpine container to ship statically compiled binaries.
+    # Target: aarch64-unknown-linux-musl
     name: Build CLI for Linux Arm64
     runs-on: ubuntu-24.04-arm
-    # need to build in an alpine container so that cargo can build with musl
     container:
-      image: alpine:3.21
+      image: alpine
       volumes:
-        - /:/host
+        - /opt:/opt:rw,rshared
+        - /opt:/__e/node20:ro,rshared
     steps:
-      # hack for github actions to work with arm64
-      # https://github.com/actions/runner/issues/801#issuecomment-2394425757
+      # Hack for github actions to work in arm64 alpine linux
+      # https://github.com/actions/runner/issues/801#issuecomment-2976165281
       - name: Patch native Alpine NodeJS into Runner environment
-        run: |
-          apk add nodejs
-          sed -i "s:ID=alpine:ID=NotpineForGHA:" /etc/os-release
-          cd /host/home/runner/runners/*/externals/
-          rm -rf node20/*
-          mkdir node20/bin
-          ln -s /usr/bin/node node20/bin/node
         shell: sh
+        run: |
+          sed -i "/^ID=/s/alpine/NotpineForGHA/" /etc/os-release
+          apk add nodejs --update-cache
+          mkdir /opt/bin
+          ln -s /usr/bin/node /opt/bin/node
       - name: Install dependencies
         shell: sh
         run: apk add make musl-dev libcrypto3 openssl-dev clang gcc musl-dev libstdc++ libffi-dev g++ openssl-libs-static bash curl
         # curl and bash are required by dtolnay/rust-toolchain
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.82.0
-        with:
-          targets: wasm32-unknown-unknown
       - name: Build
         shell: sh
         run: make build-cli
@@ -101,23 +92,7 @@ jobs:
     name: Test basic CLI usability for Linux Arm64
     runs-on: ubuntu-24.04-arm
     needs: [linux-arm64]
-    # run in a clean environment without dependencies
-    container:
-      image: alpine:3.21
-      volumes:
-        - /:/host
     steps:
-      # hack for github actions to work with arm64
-      # https://github.com/actions/runner/issues/801#issuecomment-2394425757
-      - name: Patch native Alpine NodeJS into Runner environment
-        run: |
-          apk add nodejs
-          sed -i "s:ID=alpine:ID=NotpineForGHA:" /etc/os-release
-          cd /host/home/runner/runners/*/externals/
-          rm -rf node20/*
-          mkdir node20/bin
-          ln -s /usr/bin/node node20/bin/node
-        shell: sh
       - uses: jstz-dev/jstz/.github/actions/test-cli@main
         with:
           artefact_name: jstz_linux_arm64

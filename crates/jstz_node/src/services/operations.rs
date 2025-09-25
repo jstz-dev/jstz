@@ -272,6 +272,7 @@ async fn handle_inbox_message(
     use crate::sequencer::queue::WrappedOperation;
     use jstz_kernel::inbox::{
         encode_signed_operation, parse_inbox_message_hex, Message, ParsedInboxMessage,
+        ParsedInboxMessageWrapper,
     };
     use jstz_proto::operation::internal::InboxId;
     use tezos_smart_rollup::types::SmartRollupAddress;
@@ -291,7 +292,7 @@ async fn handle_inbox_message(
         "failed to parse injected inbox message"
     )))?;
     // parse_inbox_messages does not deal with large payload and thus it needs to be handled here
-    Ok(match message {
+    Ok(match message.content {
         ParsedInboxMessage::JstzMessage(Message::External(m)) => {
             let (op, _) =
                 encode_operation(m, injector, store, rollup_preimages_dir).await?;
@@ -303,7 +304,10 @@ async fn handle_inbox_message(
             .map_err(|e| ServiceError::FromAnyhow(anyhow::anyhow!("{e}")))?;
 
             WrappedOperation::FromInbox {
-                message: ParsedInboxMessage::JstzMessage(Message::External(op)),
+                message: ParsedInboxMessageWrapper {
+                    content: ParsedInboxMessage::JstzMessage(Message::External(op)),
+                    inbox_id: message.inbox_id,
+                },
                 original_inbox_message: hex::encode(buf),
             }
         }
@@ -430,7 +434,6 @@ mod tests {
         context::account::{Amount, Nonce},
         operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
         receipt::{DeployFunctionReceipt, Receipt},
-        runtime::ParsedCode,
     };
     use jstz_utils::KeyPair;
     use octez::OctezRollupClient;
@@ -478,9 +481,9 @@ mod tests {
         SignedOperation::new(sig, deploy_op)
     }
 
-    fn mock_code(size: usize) -> ParsedCode {
+    fn mock_code(size: usize) -> String {
         // SAFETY: This code is never interpreted (so does not need to be parsable)
-        unsafe { ParsedCode::new_unchecked("a".repeat(size)) }
+        "a".repeat(size)
     }
 
     fn get_dir_size(path: &Path) -> u64 {
@@ -711,7 +714,7 @@ mod tests {
             .with_state(state)
             .split_for_parts();
         let dummy_op = make_signed_op(Content::DeployFunction(DeployFunction {
-            function_code: ParsedCode("a".repeat(4000)),
+            function_code: "a".repeat(4000),
             account_credit: 0,
         }));
         let res = router

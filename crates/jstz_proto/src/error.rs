@@ -19,6 +19,7 @@ pub enum Error {
     BalanceOverflow,
     InsufficientFunds,
     InvalidNonce,
+    NoncePassed,
     InvalidAddress,
     InvalidScheme,
     RefererShouldNotBeSet,
@@ -146,6 +147,9 @@ impl From<Error> for JsError {
             #[cfg(feature = "v2_runtime")]
             Error::V2Error(_) => {
                 unimplemented!("V2 runtime errors are not supported in boa")
+            }
+            Error::NoncePassed => {
+                JsNativeError::eval().with_message("NoncePassed").into()
             }
         }
     }

@@ -59,32 +59,38 @@ async fn run_event_loop(rt: &mut impl Runtime) {
 
     loop {
         match read_message(rt, &ticketer) {
-            Some(ParsedInboxMessage::JstzMessage(message)) => {
-                let ticketer = ticketer.clone();
-                let injector = injector.clone();
-                let mut host = JsHostRuntime::new(rt);
-                // SpawnError only occurs in spawn_local when the executor has shutdown
-                tokio::task::spawn_local(async move {
-                    let mut tx = Transaction::default();
-                    tx.begin();
-                    handle_message(&mut host, message, &ticketer, &mut tx, &injector)
-                        .await
-                        .unwrap_or_else(|err| debug_msg!(&host, "[🔴] {err:?}\n"));
-                    if let Err(commit_error) = tx.commit(&mut host) {
-                        debug_msg!(
-                            &host,
-                            "Failed to commit transaction: {commit_error:?}\n"
-                        );
+            Some(m) => {
+                match m.content {
+                    ParsedInboxMessage::JstzMessage(message) => {
+                        let ticketer = ticketer.clone();
+                        let injector = injector.clone();
+                        let mut host = JsHostRuntime::new(rt);
+                        // SpawnError only occurs in spawn_local when the executor has shutdown
+                        tokio::task::spawn_local(async move {
+                            let mut tx = Transaction::default();
+                            tx.begin();
+                            handle_message(
+                                &mut host, message, &ticketer, &mut tx, &injector,
+                            )
+                            .await
+                            .unwrap_or_else(|err| debug_msg!(&host, "[🔴] {err:?}\n"));
+                            if let Err(commit_error) = tx.commit(&mut host) {
+                                debug_msg!(
+                                    &host,
+                                    "Failed to commit transaction: {commit_error:?}\n"
+                                );
+                            }
+                        });
                     }
-                });
+                    ParsedInboxMessage::LevelInfo(LevelInfo::Start) => {
+                        PROTOCOL_CONTEXT.get().unwrap().increment_level();
+                        let oracle_ctx = PROTOCOL_CONTEXT.get().unwrap().oracle();
+                        let mut oracle = oracle_ctx.lock();
+                        oracle.gc_timeout_requests(rt);
+                    }
+                    ParsedInboxMessage::LevelInfo(_) => {}
+                }
             }
-            Some(ParsedInboxMessage::LevelInfo(LevelInfo::Start)) => {
-                PROTOCOL_CONTEXT.get().unwrap().increment_level();
-                let oracle_ctx = PROTOCOL_CONTEXT.get().unwrap().oracle();
-                let mut oracle = oracle_ctx.lock();
-                oracle.gc_timeout_requests(rt);
-            }
-            Some(ParsedInboxMessage::LevelInfo(_)) => {}
             None => {
                 // See `read_message` for cases that return None
                 // Break enabled in tests only
@@ -115,7 +121,6 @@ mod test {
         },
         executor::smart_function,
         operation::{DeployFunction, Operation, RunFunction, SignedOperation},
-        runtime::ParsedCode,
         HttpBody,
     };
     use jstz_utils::{
@@ -197,7 +202,7 @@ mod test {
                 bob_pk.hash()
             );
             let deploy_fn = DeployFunction {
-                function_code: ParsedCode::try_from(code).unwrap(),
+                function_code: code,
                 account_credit: 0,
             };
             let op = Operation {
@@ -297,9 +302,7 @@ mod test {
 
         let tx = &mut Transaction::default();
         tx.begin();
-        let parsed_code =
-            ParsedCode::try_from(jstz_mock::host::MOCK_PROXY_FUNCTION.to_string())
-                .unwrap();
+        let parsed_code = jstz_mock::host::MOCK_PROXY_FUNCTION.to_string();
         let addr = Address::User(
             jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
                 .unwrap(),

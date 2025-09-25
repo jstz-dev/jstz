@@ -20,7 +20,7 @@ use std::{
     time::SystemTime,
 };
 use tempfile::NamedTempFile;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, task::JoinSet};
 use tower_http::cors::{Any, CorsLayer};
 
 mod api_doc;
@@ -33,6 +33,8 @@ use utoipa_scalar::{Scalar, Servable};
 pub mod config;
 pub mod sequencer;
 pub use config::RunMode;
+
+use crate::config::RuntimeEnv;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -128,7 +130,9 @@ pub async fn run(
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer {
-            ref debug_log_path, ..
+            ref debug_log_path,
+            ref runtime_env,
+            ..
         } => Some(
             worker::spawn(
                 queue.clone(),
@@ -136,6 +140,7 @@ pub async fn run(
                 &injector,
                 rollup_preimages_dir.clone(),
                 Some(debug_log_path),
+                runtime_env,
                 #[cfg(feature = "blueprint")]
                 blueprint_db.clone(),
             )
@@ -143,7 +148,9 @@ pub async fn run(
         ),
         #[cfg(test)]
         RunMode::Sequencer {
-            ref debug_log_path, ..
+            ref debug_log_path,
+            ref runtime_env,
+            ..
         } => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
             Some(
@@ -153,6 +160,7 @@ pub async fn run(
                     &injector,
                     rollup_preimages_dir.clone(),
                     Some(debug_log_path),
+                    runtime_env,
                     #[cfg(feature = "blueprint")]
                     blueprint_db.clone(),
                     move || {
@@ -165,10 +173,14 @@ pub async fn run(
         RunMode::Default => None,
     };
 
+    // TODO: make checkpoint path configurable
+    // https://linear.app/tezos/issue/JSTZ-912/make-inbox-checkpoint-file-configurable
+    let _checkpoint = NamedTempFile::new()?;
     let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer { .. } => {
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
+            let path = _checkpoint.path().to_path_buf();
+            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone(), path).await?)
         }
         #[cfg(test)]
         RunMode::Sequencer { .. } => None,
@@ -187,14 +199,28 @@ pub async fn run(
     let (broadcaster, db, log_service_handle) = LogsService::init(&log_file_path).await?;
 
     let (storage_sync_db, _storage_sync_db_file) = temp_db()?;
-    let storage_sync_handle = match storage_sync {
-        true => Some(storage_sync::spawn(
+    let mut storage_sync_handles = JoinSet::new();
+    if storage_sync {
+        storage_sync_handles.spawn(storage_sync::spawn(
             storage_sync_db.clone(),
             kernel_log_path.clone(),
             #[cfg(test)]
             || {},
-        )?),
-        false => None,
+        )?);
+    };
+
+    if let RunMode::Sequencer {
+        debug_log_path,
+        runtime_env: RuntimeEnv::Riscv { .. },
+        ..
+    } = &mode
+    {
+        storage_sync_handles.spawn(storage_sync::spawn(
+            runtime_db.clone(),
+            debug_log_path.to_owned(),
+            #[cfg(test)]
+            || {},
+        )?);
     };
 
     let state = AppState {
@@ -224,18 +250,25 @@ pub async fn run(
 
     let listener = TcpListener::bind(format!("{addr}:{port}")).await?;
 
-    match storage_sync_handle {
-        Some(storage_sync_handle) => {
+    match storage_sync_handles.is_empty() {
+        false => {
             let (tx, rx) = tokio::sync::oneshot::channel();
             axum::serve(listener, router)
-                .with_graceful_shutdown(async {
-                    let _ = tx.send(storage_sync_handle.await);
+                .with_graceful_shutdown(async move {
+                    let sig = match storage_sync_handles.join_next().await {
+                        Some(Ok(v)) => v,
+                        Some(Err(e)) => Err(e.into()),
+                        None => Ok(()), // should not reach here actually as storage_sync_handles is confirmed non-empty
+                    };
+                    let _ = tx.send(sig);
+                    // kill other storage sync instances
+                    drop(storage_sync_handles);
                 })
                 .await?;
             rx.await??;
         }
-        None => axum::serve(listener, router).await?,
-    }
+        true => axum::serve(listener, router).await?,
+    };
 
     log_service_handle.shutdown().await?;
     Ok(())
@@ -348,6 +381,8 @@ mod test {
                 injector: default_injector(),
                 mode: mode.clone(),
                 storage_sync: false,
+                #[cfg(feature = "blueprint")]
+                blueprint_db_path: NamedTempFile::new().unwrap().path().to_path_buf(),
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -402,6 +437,8 @@ mod test {
                 injector: default_injector(),
                 mode,
                 storage_sync: false,
+                #[cfg(feature = "blueprint")]
+                blueprint_db_path: NamedTempFile::new().unwrap().path().to_path_buf(),
             }));
 
             sleep(Duration::from_secs(1)).await;
@@ -493,6 +530,8 @@ mod test {
             injector: default_injector(),
             mode,
             storage_sync: true,
+            #[cfg(feature = "blueprint")]
+            blueprint_db_path: NamedTempFile::new().unwrap().path().to_path_buf(),
         }))
     }
 

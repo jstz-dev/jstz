@@ -1,6 +1,7 @@
 use boa_engine::{JsError, JsNativeError};
 use derive_more::{Display, Error, From};
 
+use crate::event;
 use crate::host;
 use crate::kv;
 use crate::reveal_data;
@@ -36,6 +37,9 @@ pub enum Error {
     RevealDataError {
         source: reveal_data::Error,
     },
+    EventError {
+        source: event::EventError,
+    },
 }
 
 impl From<Error> for JsError {
@@ -62,6 +66,9 @@ impl From<Error> for JsError {
                 .into(),
             Error::RevealDataError { source } => JsNativeError::eval()
                 .with_message(format!("RevealDataError: {source}"))
+                .into(),
+            Error::EventError { source } => JsNativeError::eval()
+                .with_message(format!("EventError: {source}"))
                 .into(),
         }
     }
