@@ -1,3 +1,5 @@
+use std::sync::OnceLock;
+
 use crate::{
     context::account::Addressable,
     operation::{OperationHash, RunFunction},
@@ -22,6 +24,8 @@ pub use parsed_code::ParsedCode;
 mod ledger;
 pub mod oracle;
 pub mod protocol_context;
+
+pub static SNAPSHOT: OnceLock<&'static [u8]> = OnceLock::new();
 
 pub async fn run_toplevel_fetch(
     hrt: &mut impl HostRuntime,

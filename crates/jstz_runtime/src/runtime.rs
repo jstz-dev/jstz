@@ -1,6 +1,10 @@
 use crate::error::Result;
 use crate::ext::jstz_fetch::FetchAPI;
 use crate::ext::jstz_fetch::NotSupportedFetch;
+use deno_core::error::CoreError;
+use deno_core::snapshot::create_snapshot;
+use deno_core::snapshot::CreateSnapshotOptions;
+use deno_core::snapshot::CreateSnapshotOutput;
 use deno_core::v8::new_single_threaded_default_platform;
 use deno_core::*;
 use derive_more::{Deref, DerefMut};
@@ -96,6 +100,9 @@ pub struct JstzRuntimeOptions<F: FetchAPI> {
     pub module_loader: Rc<dyn ModuleLoader>,
     /// Fetch extension
     pub fetch: F,
+    /// Pre-generated runtime snapshot. Using a snapshot will reduce
+    /// startup latency
+    pub snapshot: Option<&'static [u8]>,
 }
 
 impl Default for JstzRuntimeOptions<NotSupportedFetch> {
@@ -105,6 +112,7 @@ impl Default for JstzRuntimeOptions<NotSupportedFetch> {
             extensions: Default::default(),
             module_loader: Rc::new(NoopModuleLoader),
             fetch: NotSupportedFetch,
+            snapshot: None,
         }
     }
 }
@@ -113,26 +121,41 @@ impl JstzRuntime {
     pub fn new<F: FetchAPI>(options: JstzRuntimeOptions<F>) -> Self {
         // Register extensions
         let mut extensions = vec![];
-        extensions.extend(init_base_extensions_ops_and_esm::<F>());
-        extensions.extend(options.extensions);
-        Self::new_inner(extensions, options.module_loader, options.protocol, None)
-    }
+        if options.snapshot.is_none() {
+            extensions.extend(init_base_extensions_ops_and_esm::<F>());
+        } else {
+            // Initializing from a snapshot only requires initializing
+            // the rust ops
+            // TODO(https://linear.app/tezos/issue/JSTZ-923/explore-caching-rust-ops-initialisation)
+            // Attempt to cache the base extensions rust ops
+            extensions.extend(init_base_extensions_ops::<F>());
+        }
 
-    /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`] from a previously
-    /// snapshotted [`JsRuntime`]. Using a snapshot will reduce startup latency
-    pub fn new_from_snapshot<F: FetchAPI>(
-        options: JstzRuntimeOptions<F>,
-        snapshot: &'static [u8],
-    ) -> Self {
-        let mut extensions = vec![];
-        extensions.extend(init_base_extensions_ops::<F>());
         extensions.extend(options.extensions);
         Self::new_inner(
             extensions,
             options.module_loader,
             options.protocol,
-            Some(snapshot),
+            options.snapshot,
         )
+    }
+
+    /// Generates a runtime snapshot
+    ///
+    /// The snapshot should be generated on kernel startup and re-used thereafter
+    pub fn generate_snapshot<F: FetchAPI>(
+    ) -> std::result::Result<CreateSnapshotOutput, CoreError> {
+        let extensions = init_base_extensions_ops_and_esm::<F>();
+        let options = CreateSnapshotOptions {
+            cargo_manifest_dir: env!("CARGO_MANIFEST_DIR"),
+            startup_snapshot: None,
+            skip_op_registration: false,
+            extensions,
+            extension_transpiler: None,
+            with_runtime_cb: None,
+        };
+
+        create_snapshot(options, None)
     }
 
     /// Unlike `new`, this function will not add default extensions
@@ -660,18 +683,7 @@ export default handler;
 
     #[test]
     fn test_snapshot() {
-        use deno_core::snapshot::create_snapshot;
-        use deno_core::snapshot::CreateSnapshotOptions;
-        let extensions = init_base_extensions_ops_and_esm::<NotSupportedFetch>();
-        let options = CreateSnapshotOptions {
-            cargo_manifest_dir: env!("CARGO_MANIFEST_DIR"),
-            startup_snapshot: None,
-            skip_op_registration: false,
-            extensions,
-            extension_transpiler: None,
-            with_runtime_cb: None,
-        };
-        let snapshot = create_snapshot(options, None).unwrap();
+        let snapshot = JstzRuntime::generate_snapshot::<NotSupportedFetch>().unwrap();
         let static_snapshot = Box::leak(snapshot.output);
 
         TOKIO.block_on(async {
@@ -700,15 +712,13 @@ export default handler;
                     .try_acquire()
                     .unwrap(),
             );
-            let mut runtime = JstzRuntime::new_from_snapshot(
-                JstzRuntimeOptions {
-                    protocol: Some(protocol),
-                    extensions: vec![],
-                    module_loader: Rc::new(module_loader),
-                    fetch: NotSupportedFetch,
-                },
-                static_snapshot,
-            );
+            let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
+                protocol: Some(protocol),
+                extensions: vec![],
+                module_loader: Rc::new(module_loader),
+                fetch: NotSupportedFetch,
+                snapshot: Some(static_snapshot),
+            });
 
             let id = runtime.execute_main_module(&specifier).await.unwrap();
             let result = runtime.call_default_handler(id, &[]).await;
