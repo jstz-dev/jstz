@@ -7,6 +7,6 @@ pub use v1::{run_toplevel_fetch, Kv, KvValue, LogRecord, ParsedCode, LOG_PREFIX}
 pub mod v2;
 #[cfg(feature = "v2_runtime")]
 pub use v2::{
-    protocol_context::*, run_toplevel_fetch, Kv, KvValue, LogRecord, ParsedCode,
-    LOG_PREFIX,
+    fetch::fetch_handler::ProtoFetchHandler, protocol_context::*, run_toplevel_fetch, Kv,
+    KvValue, LogRecord, ParsedCode, LOG_PREFIX, SNAPSHOT,
 };
