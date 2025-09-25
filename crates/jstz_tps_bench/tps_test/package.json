@@ -1,9 +1,9 @@
 {
-  "name": "@tezos/fa2",
+  "name": "tps_test",
   "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
   "private": true,
   "version": "0.0.0",
-  "main": "fa2.ts",
+  "main": "index.ts",
   "dependencies": {
     "@tezos/jstz": "^0.0.0"
   },
@@ -12,8 +12,6 @@
   },
   "scripts": {
     "check:types": "tsc --noEmit",
-    "build": "esbuild src/index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js",
-    "build:test": "esbuild test/index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/test/index.js",
-    "build:test-actor": "esbuild test/actor.ts --bundle --format=esm --target=esnext --minify --outfile=dist/test/actor.js"
+    "build": "esbuild src/index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js"
   }
 }

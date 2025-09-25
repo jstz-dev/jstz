@@ -65,7 +65,7 @@ jobs:
         run: |
           mv $GITHUB_WORKSPACE/riscv_kernel/kernel-executable crates/jstz_tps_bench
           cd crates/jstz_tps_bench
-          nix --accept-flake-config --log-format raw -L develop --command sh ./run_all.sh
+          nix --accept-flake-config --log-format raw -L develop --command sh -c 'export RISCV_KERNEL_PATH=./kernel-executable; ./run_all.sh'
           echo "### Benchmark summary" >> $GITHUB_STEP_SUMMARY
           cat ./results_all.log >> $GITHUB_STEP_SUMMARY
 

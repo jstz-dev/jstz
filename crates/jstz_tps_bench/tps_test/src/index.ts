@@ -1,3 +1,13 @@
+/**
+ * TPS benchmark smart function for jstz_tps_bench provides reproducible workloads to measure throughput.
+ *
+ * Structure
+ * - Initialization routes: before running a benchmark, you can for example seed KV with baseline state or deploy new contracts.
+ * - Benchmark routes: different workloads to measure throughput and storage performance.
+ * - Check routes: assert expected post-conditions after running a given benchmark.
+ * - Fallback: returns 404 for unknown paths.
+ */
+
 async function handleBenchmarkTransaction1(
   request: Request,
 ): Promise<Response> {
@@ -49,12 +59,10 @@ async function handleBenchmarkTransaction4(
   const smartFunctionAddress = Kv.get("smartFunctionAddress");
   let response = new Response();
   for (let i = 0; i < 200; i++) {
-    response = await SmartFunction.call(
-      new Request(`jstz://${smartFunctionAddress}/`, {
-        method: "POST",
-        body: JSON.stringify({ message: "hello" }),
-      }),
-    );
+    response = await fetch(`jstz://${smartFunctionAddress}/`, {
+      method: "POST",
+      body: JSON.stringify({ message: "hello" }),
+    });
   }
   return response;
 }
