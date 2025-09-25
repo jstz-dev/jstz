@@ -184,6 +184,23 @@ fn update_network() {
     )
     .expect("should write config file");
 
+    // update non-existent network
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "update",
+            "some-random-name",
+            "--jstz-node-endpoint",
+            "http://v2.jstz.test",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Network 'some-random-name' does not exist.",
+        ))
+        .failure();
+
     // network should be listed
     Command::cargo_bin("jstz")
         .unwrap()
