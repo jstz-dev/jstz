@@ -79,6 +79,14 @@ riscv-pvm-kernel:
 		--release \
 		--target riscv64gc-unknown-linux-musl
 
+.PHONY: riscv-native-kernel
+riscv-native-kernel:
+	@cargo build \
+		-p jstz_kernel \
+		--no-default-features \
+		--features native_kernel \
+		--release
+
 .PHONY: riscv-wpt-test-kernel
 riscv-wpt-test-kernel:
 	@unset NIX_LDFLAGS && RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a \

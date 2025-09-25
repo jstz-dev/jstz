@@ -28,8 +28,25 @@ cargo build --bin bench --features v2_runtime
 # Generate inbox file
 $dir/../../target/debug/bench generate fa2 --transfers $n_transfer --inbox-file $inbox_file_path --address $rollup_address
 
-# Run riscv kernel with inbox file
-riscv-sandbox run --timings --address $rollup_address --inbox-file $inbox_file_path --input $riscv_kernel_path >$log_file_path
+# Run kernel
+if [ -n "${RUN_NATIVELY+x}" ]; then
+  make -C $dir/../.. riscv-native-kernel
+  $dir/../../target/release/native-kernel-executable --timings >$log_file_path 2>&1 &
+  kernel_pid=$!
+
+  # Watch the log and kill kernel when we see the end marker
+  (
+    tail -n +1 -F "$log_file_path" | sed -n '/Internal message: end of level/q'
+    kill "$kernel_pid"
+  ) &
+  watcher_pid=$!
+
+  # Wait for kernel to exit, then ensure watcher stops
+  wait "$kernel_pid" || true
+  kill "$watcher_pid" 2>/dev/null || true
+else
+  riscv-sandbox run --timings --address $rollup_address --inbox-file $inbox_file_path --input $riscv_kernel_path >$log_file_path
+fi
 
 # Process results and calculate TPS
 $dir/../../target/debug/bench results --expected-transfers $n_transfer --inbox-file $inbox_file_path --log-file $log_file_path >$result_path

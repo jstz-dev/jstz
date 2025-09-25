@@ -6,6 +6,9 @@ REPEATS=${1:-5}
 
 DIR="$(realpath $(dirname "$0"))"
 
+export DISABLE_BUILD=true
+export RISCV_KERNEL_PATH=${RISCV_KERNEL_PATH:-"$DIR/../../target/riscv64gc-unknown-linux-musl/release/kernel-executable"}
+
 # Clear the results_all.log file at the start
 >"$DIR/results_all.log"
 
