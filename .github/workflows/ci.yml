@@ -88,3 +88,14 @@ jobs:
           path: target/riscv64gc-unknown-linux-musl/release/kernel-executable
           if-no-files-found: error
           retention-days: 1
+
+  native_benchmark:
+    name: Benchmark RISCV kernel natively
+    runs-on: benchmark
+    steps:
+      - name: Run
+        run: |
+          cd crates/jstz_tps_bench
+          nix --accept-flake-config --log-format raw -L develop --command sh -c 'export RUN_NATIVELY=1; ./run_all.sh'
+          echo "### Benchmark summary" >> $GITHUB_STEP_SUMMARY
+          cat ./results_all.log >> $GITHUB_STEP_SUMMARY
