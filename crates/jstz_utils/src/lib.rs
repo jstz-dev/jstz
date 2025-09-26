@@ -26,6 +26,7 @@ where
 }
 
 // WARNING: Should only be used in tests!
+#[cfg(any(test, feature = "test_utils"))]
 pub mod test_util {
     use crate::key_pair::KeyPair;
     use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
@@ -81,6 +82,45 @@ pub mod test_util {
         file.write_all(b"\n").await?;
         file.sync_all().await?;
         Ok(())
+    }
+
+    use std::sync::{Arc, Mutex};
+    use tezos_smart_rollup_mock::DebugSink;
+
+    #[derive(Clone, Default)]
+    pub struct DebugLogSink {
+        pub inner: Arc<Mutex<Vec<u8>>>,
+    }
+
+    impl DebugSink for DebugLogSink {
+        fn write_all(&mut self, buffer: &[u8]) -> std::io::Result<()> {
+            self.inner.lock().unwrap().extend_from_slice(buffer);
+            Ok(())
+        }
+    }
+
+    impl DebugLogSink {
+        pub fn new() -> Self {
+            Self {
+                inner: Arc::new(Mutex::new(vec![])),
+            }
+        }
+
+        pub fn content(&self) -> Arc<Mutex<Vec<u8>>> {
+            self.inner.clone()
+        }
+
+        #[cfg(feature = "v2_runtime")]
+        pub fn str_content(&self) -> String {
+            let buf = self.inner.lock().unwrap();
+            String::from_utf8(buf.to_vec()).unwrap()
+        }
+
+        #[cfg(feature = "v2_runtime")]
+        pub fn lines(&self) -> Vec<String> {
+            let str_content = self.str_content();
+            str_content.split("\n").map(|s| s.to_string()).collect()
+        }
     }
 }
 
