@@ -1,0 +1,38 @@
+[package]
+name = "jstz_lightweight_kernel"
+authors.workspace = true
+version.workspace = true
+edition.workspace = true
+repository.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+readme.workspace = true
+license-file.workspace = true
+description = "A minimal kernel that logs inbox messages to the kernel debug log"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[[bin]]
+name = "lightweight-kernel-executable"
+path = "src/executable.rs"
+required-features = ["lightweight-kernel"]
+
+[dependencies]
+jstz_core = { path = "../../jstz_core" }
+jstz_kernel = { path = "../jstz_kernel" }
+jstz_proto = { path = "../../jstz_proto" }
+jstz_crypto = { path = "../../jstz_crypto" }
+tezos-smart-rollup.workspace = true
+tezos_crypto_rs.workspace = true
+
+[dev-dependencies]
+jstz_mock = { path = "../../jstz_mock" }
+tezos-smart-rollup-mock.workspace = true
+serde_json.workspace = true
+jstz_utils = { path = "../../jstz_utils", features = ["test_utils"] }
+
+[features]
+lightweight-kernel = []
+
+
