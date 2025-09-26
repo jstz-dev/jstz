@@ -6,25 +6,32 @@ on:
     - cron: "30 4 * * *" # Runs at 4:30 am daily
 
 jobs:
-  wpt:
-    name: Web Platform Test
-    runs-on: ubuntu-latest
-    container:
-      image: rust:1.82-slim
+  wpt_riscv:
+    name: Web Platform Test (RISC-V)
+    runs-on: wpt
     steps:
-      - name: Setup
-        run: apt update && apt install -y git curl python3.11 pkg-config libssl-dev
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Run
+      - name: Build RISCV WPT kernel
+        run: nix --accept-flake-config --log-format raw -L develop -j auto --command make riscv-wpt-test-kernel
+      - name: Setup WPT test server
         run: |
-          ln -s /usr/bin/python3.11 /usr/bin/python3
           cd crates/jstz_wpt/wpt && python3 wpt make-hosts-file >> /etc/hosts
           python3 wpt serve &
-          cd ../../jstz_runtime
+      - name: Download Deno test baseline
+        run: |
+          cd crates/jstz_runtime
           curl -s --output tests/deno_report.json https://storage.googleapis.com/wptd-results/e78446e34a1921371658a5df08c71d83f50a2a2f/deno-2.1.10_4921411-linux-unknown-fccd901f99/report.json
-          STATS_PATH=$(pwd)/out.txt cargo test --test wpt
+      - name: Execute WPT tests
+        run: |
+          nix --accept-flake-config --log-format raw -L develop -j auto --command sh -c '
+          cd crates/jstz_runtime
+          STATS_PATH=$(pwd)/out.txt cargo test --features wpt-in-riscv --test wpt -- --nocapture
+          '
+      - name: Collect and display test results
+        run: |
+          cd crates/jstz_runtime
           while read line; do
             echo "$line" >> $GITHUB_STEP_SUMMARY
           done < $(pwd)/out.txt

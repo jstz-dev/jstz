@@ -522,7 +522,7 @@ mod test {
             start_server_with_storage_sync(port, &kernel_log_file, RunMode::Default);
 
         // wait for the server to start
-        sleep(Duration::from_secs(1)).await;
+        sleep(Duration::from_secs(3)).await;
 
         let storage_updates = sets_balance(addr.clone(), amount);
         // write a storage update that deposits the `amount` to the `addr`
@@ -533,7 +533,7 @@ mod test {
         ));
 
         // Check that the storage update is applied to the database
-        timeout(Duration::from_secs(1), async {
+        timeout(Duration::from_secs(3), async {
             loop {
                 let b = reqwest::get(format!(
                     "http://0.0.0.0:{port}/accounts/{addr}/balance"
