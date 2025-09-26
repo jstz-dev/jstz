@@ -28,6 +28,7 @@ async fn test() {
             &mut tx,
             address,
             String::new(),
+            0,
         )),
         extensions: vec![api_coverage_test::init_ops_and_esm()],
         module_loader: std::rc::Rc::new(StaticModuleLoader::with(

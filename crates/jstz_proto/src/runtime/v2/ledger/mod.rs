@@ -96,6 +96,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 
@@ -135,6 +136,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
             // Assert
@@ -176,6 +178,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                0,
             )
             .await;
 

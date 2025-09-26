@@ -356,12 +356,16 @@ impl DerefMut for JstzRuntime {
     }
 }
 
+const MAX_SMART_FUNCTION_CALL_DEPTH: u8 = 10;
+
 pub struct RuntimeContext {
     pub host: JsHostRuntime<'static>,
     pub tx: Transaction,
     pub kv: Kv,
     pub address: SmartFunctionHash,
     pub request_id: String,
+    /// Depth of the smart function call
+    pub depth: u8,
 }
 
 impl RuntimeContext {
@@ -370,6 +374,7 @@ impl RuntimeContext {
         tx: &mut Transaction,
         address: SmartFunctionHash,
         request_id: String,
+        depth: u8,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
         RuntimeContext {
@@ -378,7 +383,12 @@ impl RuntimeContext {
             kv: Kv::new(address.to_base58()),
             address,
             request_id,
+            depth,
         }
+    }
+
+    pub fn is_max_depth(&self) -> bool {
+        self.depth >= MAX_SMART_FUNCTION_CALL_DEPTH
     }
 }
 
@@ -622,8 +632,13 @@ export default handler;
             let specifier =
                 resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
             let module_loader = StaticModuleLoader::with(specifier.clone(), code);
-            let protocol =
-                RuntimeContext::new(&mut host, &mut tx, init_addr.clone(), String::new());
+            let protocol = RuntimeContext::new(
+                &mut host,
+                &mut tx,
+                init_addr.clone(),
+                String::new(),
+                0,
+            );
             let mut runtime = JstzRuntime::new_from_snapshot(
                 JstzRuntimeOptions {
                     protocol: Some(protocol),
