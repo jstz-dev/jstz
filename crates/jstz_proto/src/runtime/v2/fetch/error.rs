@@ -11,6 +11,8 @@ use super::http::*;
 
 pub type Result<T> = std::result::Result<T, FetchError>;
 
+// Note: When adding a custom error class (e.g. `class("CustomError")`),
+// make sure to register on the js side in `jstz_runtime/src/ext/jstz_main/98_global_scope.js`.
 #[derive(Debug, thiserror::Error, deno_error::JsError)]
 pub enum FetchError {
     #[class(type)]
@@ -34,9 +36,6 @@ pub enum FetchError {
     #[class(generic)]
     #[error("Oracle calls are not allowed to be called from RunFunction")]
     TopLevelOracleCallNotSupported,
-    #[class("ProtocolError")]
-    #[error("Source address must be user address")]
-    InvalidSourceAddress,
     #[class(inherit)]
     #[error(transparent)]
     OracleError(#[from] OracleError),

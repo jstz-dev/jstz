@@ -274,7 +274,7 @@ impl CompileModuleError {
     ) -> Result<Self> {
         let js_error = deno_core::error::JsError::from_v8_exception(scope, value);
         let js_error_box = JsErrorBox::new(
-            js_error.name.unwrap_or("CompileModuleError".to_string()),
+            js_error.name.unwrap_or("Error".to_string()),
             js_error.exception_message,
         );
         Ok(CompileModuleError(js_error_box))
@@ -390,12 +390,28 @@ mod test {
             export default () => 42
         "#;
         let error = ParsedCode::parse(code.to_string()).unwrap_err();
-        println!("{:?}", error);
         assert!(matches!(
             error,
             ParseError::CompileModuleError(CompileModuleError(_))
         ));
-        assert_eq!(error.get_class(), "CompileModuleError");
-        assert_eq!(error.get_message(), "Uncaught undefined");
+        assert_eq!(error.get_class(), "NotSupported");
+        assert_eq!(
+            error.get_message(),
+            "Uncaught NotSupported: Kv is not supported"
+        );
+    }
+
+    #[test]
+    fn parse_throw_string_literal_fails() {
+        let code = r#"
+        throw "just a string";
+        export default () => 42;
+    "#;
+
+        let error = ParsedCode::parse(code.to_string()).unwrap_err();
+
+        assert!(matches!(error, ParseError::CompileModuleError(_)));
+        assert_eq!(error.get_class(), "Error");
+        assert!(error.get_message().contains("just a string"));
     }
 }
