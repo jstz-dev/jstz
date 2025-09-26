@@ -18,6 +18,11 @@ name = "kernel-executable"
 path = "src/executable.rs"
 required-features = ["riscv_kernel"]
 
+[[bin]]
+name = "native-kernel-executable"
+path = "src/executable.rs"
+required-features = ["native_kernel"]
+
 [dependencies]
 bincode.workspace = true
 derive_more = { workspace = true, features = ["from"] }
@@ -48,3 +53,8 @@ tokio.workspace = true
 [features]
 v2_runtime = ["jstz_proto/v2_runtime", "jstz_proto/kernel"]
 riscv_kernel = ["v2_runtime", "dep:tokio", "dep:jstz_runtime", "tezos-smart-rollup/experimental-host-in-memory-store"]
+native_kernel = [
+    "riscv_kernel",
+    "tezos-smart-rollup/extra",
+    "tezos-smart-rollup/native-kernel",
+]
