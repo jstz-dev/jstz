@@ -753,7 +753,9 @@ impl TryFrom<Address> for SourceAddress {
         if matches!(source, Address::User(_)) {
             Ok(SourceAddress(source))
         } else {
-            Err(FetchError::InvalidSourceAddress)
+            Err(FetchError::JstzError(
+                "Source address must be user address".to_string(),
+            ))
         }
     }
 }
