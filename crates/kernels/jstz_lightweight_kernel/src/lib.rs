@@ -35,22 +35,12 @@ pub fn entry(rt: &mut impl Runtime) {
 mod tests {
     use super::run;
     use jstz_mock::{host::JstzMockHost, message::native_deposit::MockNativeDeposit};
-    use std::sync::{Arc, Mutex};
-    use tezos_smart_rollup_mock::DebugSink;
-
-    #[derive(Clone, Default)]
-    struct BufSink(Arc<Mutex<Vec<u8>>>);
-    impl DebugSink for BufSink {
-        fn write_all(&mut self, buffer: &[u8]) -> std::io::Result<()> {
-            self.0.lock().unwrap().extend_from_slice(buffer);
-            Ok(())
-        }
-    }
+    use jstz_utils::test_util::DebugLogSink;
 
     #[test]
     fn logs_internal_deposit_message() {
-        let sink = BufSink::default();
-        let buf = sink.0.clone();
+        let sink = DebugLogSink::new();
+        let buf = sink.content();
 
         let mut host = JstzMockHost::new(true);
         host.set_debug_handler(sink);
