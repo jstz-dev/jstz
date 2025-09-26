@@ -40,11 +40,12 @@ try {
 
   if (packageName != null) {
     try {
-      import.meta.resolveSync(`${packageName}/package.json`);
-      console.log(
-        `Found optional dependency: ${packageName}. Skipping download.`,
-      );
-      process.exit(0);
+      // FIXME(https://linear.app/tezos/issue/JSTZ-924/release-platform-specific-cli-binaries-to-npm)
+      // import.meta.resolveSync(`${packageName}/package.json`);
+      // console.log(
+      //   `Found optional dependency: ${packageName}. Skipping download.`,
+      // );
+      // process.exit(0);
     } catch (e) {}
   }
 
