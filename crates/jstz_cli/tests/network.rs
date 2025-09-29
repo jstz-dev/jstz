@@ -441,7 +441,7 @@ fn get_default_network() {
         .expect("should create file");
     serde_json::to_writer(
         file,
-        &serde_json::json!({"default_network": "a".repeat(50)}),
+        &serde_json::json!({"default_network": "a".repeat(80)}),
     )
     .expect("should write config file");
     Command::cargo_bin("jstz")
@@ -450,7 +450,7 @@ fn get_default_network() {
         .args(["network", "get-default"])
         .assert()
         .stderr(predicates::str::contains(
-            "aaaaaaaaaaaaaaaaaaaaaaaaaaa... (long network name truncated)",
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa... (long network name truncated)",
         ))
         .success();
 }

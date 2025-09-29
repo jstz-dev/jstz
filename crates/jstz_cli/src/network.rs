@@ -165,10 +165,10 @@ pub async fn exec(command: Command) -> Result<()> {
                 Some(v) => {
                     let name = v.to_string();
                     let size = name.len();
-                    if size > 30 {
+                    if size > 50 {
                         info!(
                             "{} (long network name truncated)",
-                            trim_long_string(&name, 30),
+                            trim_long_string(&name, 50),
                         );
                     } else {
                         info!("{name}")
