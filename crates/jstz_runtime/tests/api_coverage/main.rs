@@ -4,6 +4,7 @@ use std::path::Path;
 use deno_core::StaticModuleLoader;
 use jstz_core::kv::Transaction;
 use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
+use jstz_runtime::runtime::Limiter;
 use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 use tezos_smart_rollup_mock::MockHost;
 use url::Url;
@@ -28,6 +29,7 @@ async fn test() {
             &mut tx,
             address,
             String::new(),
+            Limiter::default(),
         )),
         extensions: vec![api_coverage_test::init_ops_and_esm()],
         module_loader: std::rc::Rc::new(StaticModuleLoader::with(

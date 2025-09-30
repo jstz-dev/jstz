@@ -8,13 +8,14 @@ use crate::runtime::v2::fetch::http::Request;
 use crate::runtime::v2::ledger;
 use crate::runtime::v2::protocol_context::PROTOCOL_CONTEXT;
 
+use deno_core::error::CoreError;
 use deno_core::{
     resolve_import, v8, ByteString, JsBuffer, OpState, ResourceId, StaticModuleLoader,
 };
 use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
 use futures::FutureExt;
 use jstz_crypto::public_key_hash::PublicKeyHash;
-use jstz_runtime::runtime::AsyncEntered;
+use jstz_runtime::runtime::{AsyncEntered, Limiter, MAX_SMART_FUNCTION_CALL_COUNT};
 use std::future::Future;
 use std::pin::Pin;
 use std::{cell::RefCell, rc::Rc};
@@ -132,12 +133,13 @@ fn fetch(
     body: Option<Body>,
 ) -> Result<FetchReturn> {
     let url = Url::try_from(url.as_str())?;
-    let (tx, from, host) = {
+    let (tx, from, host, limiter) = {
         let rt_context = state.borrow_mut::<RuntimeContext>();
         (
             rt_context.tx.clone(),
             rt_context.address.clone(),
             JsHostRuntime::new(&mut rt_context.host),
+            rt_context.limiter.clone(),
         )
     };
     let SourceAddress(source) = state.borrow::<SourceAddress>();
@@ -152,6 +154,7 @@ fn fetch(
         url.clone(),
         headers,
         body,
+        limiter,
     );
     let fetch_request_resource = FetchRequestResource {
         future: Box::pin(fut),
@@ -190,6 +193,7 @@ pub async fn process_and_dispatch_request(
     url: Url,
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
+    limiter: Limiter,
 ) -> Response {
     let scheme = SupportedScheme::try_from(&url);
     let source = match SourceAddress::try_from(source) {
@@ -212,6 +216,7 @@ pub async fn process_and_dispatch_request(
                 headers,
                 data,
                 &mut is_successful,
+                limiter,
             )
             .await;
             let _ =
@@ -342,6 +347,7 @@ async fn dispatch_run(
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
     is_successful: &mut bool,
+    limiter: Limiter,
 ) -> Result<Response> {
     let to = url.try_into();
     match to {
@@ -359,6 +365,7 @@ async fn dispatch_run(
                 data,
                 is_successful,
                 from,
+                limiter,
             )
             .await;
             log_event(host, operation_hash, LogEvent::RequestEnd(&to));
@@ -399,6 +406,7 @@ async fn handle_address(
     data: Option<Body>,
     is_successful: &mut bool,
     from: Address,
+    limiter: Limiter,
 ) -> Result<Response> {
     let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
     headers.push((REFERER_HEADER_KEY.clone(), from.to_base58().into()));
@@ -429,8 +437,10 @@ async fn handle_address(
                 url,
                 headers,
                 data,
+                limiter,
             )
             .await;
+
             if let Ok(response) = run_result {
                 if response.status < 200 || response.status >= 300 {
                     // Anything not a success should rollback
@@ -476,7 +486,23 @@ async fn load_and_run(
     url: &Url,
     headers: Vec<(ByteString, ByteString)>,
     body: Option<Body>,
+    limiter: Limiter,
 ) -> Result<Response> {
+    let _slot = limiter.try_acquire().map_err(|_| {
+        // Protocol guard: this is not a true JS/native stack overflow.
+        // We limit smart function call count to prevent resource exhaustion.
+        // Error message matches V8's RangeError for JS familiarity.
+        // See: https://github.com/v8/v8/blob/95f69453064ecd11fdee3020f2219ccc5412b410/src/execution/isolate.cc#L1919
+        let err: CoreError = deno_error::JsErrorBox::range_error(
+            format!(
+                "Too many smart function calls (max: {})",
+                MAX_SMART_FUNCTION_CALL_COUNT
+            )
+            .to_string(),
+        )
+        .into();
+        FetchError::JstzError(err.to_string())
+    })?;
     let mut body = body;
 
     // 0. Prepare Protocol
@@ -485,6 +511,7 @@ async fn load_and_run(
         tx,
         address.clone(),
         operation_hash.map(|v| v.to_string()).unwrap_or_default(),
+        limiter,
     );
     // 1. Load script
     let script = { load_script(tx, &mut proto.host, &proto.address)? };
@@ -760,27 +787,6 @@ impl TryFrom<Address> for SourceAddress {
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, str::FromStr};
-
-    use deno_core::{resolve_import, StaticModuleLoader};
-
-    use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
-
-    use jstz_core::{
-        event::{self, Event},
-        host::JsHostRuntime,
-        kv::{Storage, Transaction},
-    };
-    use jstz_crypto::{
-        hash::{Blake2b, Hash},
-        public_key::PublicKey,
-        smart_function_hash::SmartFunctionHash,
-    };
-    use jstz_utils::test_util::TOKIO;
-
-    use serde_json::{json, Value as JsonValue};
-    use url::Url;
-
     use super::ProtoFetchHandler;
     use crate::runtime::v2::{
         fetch::fetch_handler::process_and_dispatch_request, oracle::OracleRequest,
@@ -799,8 +805,25 @@ mod test {
         },
         storage::ORACLE_PUBLIC_KEY_PATH,
     };
-
+    use deno_core::{resolve_import, StaticModuleLoader};
+    use jstz_core::{
+        event::{self, Event},
+        host::JsHostRuntime,
+        kv::{Storage, Transaction},
+    };
+    use jstz_crypto::{
+        hash::{Blake2b, Hash},
+        public_key::PublicKey,
+        smart_function_hash::SmartFunctionHash,
+    };
+    use jstz_runtime::{
+        runtime::Limiter, JstzRuntime, JstzRuntimeOptions, RuntimeContext,
+    };
+    use jstz_utils::test_util::TOKIO;
+    use serde_json::{json, Value as JsonValue};
     use std::rc::Rc;
+    use std::{collections::HashMap, str::FromStr};
+    use url::Url;
 
     // Script simply fetches the smart function given in the path param
     // eg. jstz://<host address>/<remote address> will call fetch("jstz://<remote address>")
@@ -835,6 +858,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -872,6 +896,7 @@ mod test {
                 .unwrap(),
             vec![],
             None,
+            Limiter::default(),
         )
         .await;
 
@@ -910,6 +935,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -951,6 +977,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -989,6 +1016,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1031,6 +1059,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1066,6 +1095,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1078,6 +1108,41 @@ mod test {
                 }),
                 json
             )
+        })
+    }
+
+    #[test]
+    fn fetch_handles_infinite_recursion() {
+        TOKIO.block_on(async {
+            // Code
+            let run = include_str!("tests/resources/recursive/run.js");
+
+            // Setup
+            let mut host = tezos_smart_rollup_mock::MockHost::default();
+            let (mut host, tx, _, hashes) = setup(&mut host, [run]);
+            let run_address = hashes[0].clone();
+            let limiter = Limiter::default();
+
+            let response = process_and_dispatch_request(
+                JsHostRuntime::new(&mut host),
+                tx,
+                false,
+                None,
+                jstz_mock::account1().into(),
+                jstz_mock::account1().into(),
+                "GET".into(),
+                Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
+                vec![("count-limit".into(), "100".into())],
+                None,
+                limiter.clone(),
+            )
+            .await;
+
+            let text = String::from_utf8(response.body.to_vec()).unwrap();
+            assert!(text.contains("Too many smart function calls (max: 5)"));
+
+            // call count should be decremented
+            assert_eq!(limiter.in_use(), 0);
         })
     }
 
@@ -1108,6 +1173,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1163,6 +1229,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1210,6 +1277,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1273,6 +1341,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1319,6 +1388,7 @@ mod test {
                 .unwrap(),
             vec![],
             None,
+            Limiter::default(),
         )
         .await;
 
@@ -1358,6 +1428,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1404,6 +1475,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1446,6 +1518,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
             assert_eq!(response.status, 200);
@@ -1493,6 +1566,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1542,6 +1616,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1588,6 +1663,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1628,6 +1704,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -1672,6 +1749,7 @@ mod test {
                 .unwrap(),
             vec![],
             None,
+            Limiter::default(),
         )
         .await;
 
@@ -1699,6 +1777,7 @@ mod test {
             &mut tx,
             address.clone(),
             String::new(),
+            Limiter::default(),
         ));
 
         let source = Address::User(jstz_mock::account1());
@@ -1909,6 +1988,7 @@ mod test {
             Url::parse(&format!("jstz://{}/", func_addr.to_base58_check())).unwrap(),
             vec![],
             None,
+            Limiter::default(),
         )
         .await;
 
@@ -1961,6 +2041,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -2003,6 +2084,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default()
             )
             .await;
 
@@ -2041,6 +2123,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -2081,6 +2164,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default()
             )
             .await;
 
@@ -2122,6 +2206,7 @@ mod test {
                     .unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -2171,6 +2256,7 @@ mod test {
                     Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                     vec![],
                     None,
+                    Limiter::default(),
                 );
             };
             let response = Response {
@@ -2238,7 +2324,6 @@ mod test {
 
             let run_address = hashes[0].clone();
             ProtocolContext::init_global(&mut host, 0).unwrap();
-
             let response = process_and_dispatch_request(
                 JsHostRuntime::new(&mut host),
                 tx.clone(),
@@ -2250,6 +2335,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
