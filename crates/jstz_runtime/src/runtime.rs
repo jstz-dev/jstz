@@ -10,8 +10,13 @@ use jstz_core::kv::Transaction;
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use pin_project::pin_project;
+use serde::Deserialize;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
+use std::result::Result as StdResult;
+use std::sync::atomic::AtomicU8;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::{
     future::Future,
     ops::{Deref, DerefMut},
@@ -20,13 +25,15 @@ use std::{
     task::{Context, Poll},
 };
 
-use serde::Deserialize;
-
 use crate::ext::{jstz_console, jstz_kv, jstz_kv::kv::Kv, jstz_main};
 use deno_console;
 use deno_url;
 use deno_web::TimersPermission;
 use deno_webidl;
+
+// This is just a placeholder to reduce the risk of stack overflows
+// TODO: Track the memory usage of the smart function and explore a reasonable limit.
+const MAX_SMART_FUNCTION_CALL_COUNT: u8 = 5;
 
 /// Returns the default object of the specified JavaScript namespace (Object).
 ///
@@ -362,6 +369,7 @@ pub struct RuntimeContext {
     pub kv: Kv,
     pub address: SmartFunctionHash,
     pub request_id: String,
+    pub limiter: Limiter,
 }
 
 impl RuntimeContext {
@@ -370,6 +378,7 @@ impl RuntimeContext {
         tx: &mut Transaction,
         address: SmartFunctionHash,
         request_id: String,
+        limiter: Limiter,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
         RuntimeContext {
@@ -378,7 +387,61 @@ impl RuntimeContext {
             kv: Kv::new(address.to_base58()),
             address,
             request_id,
+            limiter,
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum LimiterError {
+    /// The limiter has reached its configured limit.
+    LimitExceeded,
+}
+
+#[derive(Debug)]
+pub struct Slot {
+    slots: Arc<AtomicU8>,
+}
+
+impl Drop for Slot {
+    fn drop(&mut self) {
+        self.slots.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+/// A shareable limiter that allows at most `LIMIT` concurrent slots.
+///
+/// Each successful call to [`Limiter::try_acquire`] returns a [`Slot`].
+/// The slot frees up once it is dropped.
+#[derive(Debug, Clone, Default)]
+pub struct Limiter<const LIMIT: u8 = MAX_SMART_FUNCTION_CALL_COUNT> {
+    slots_in_use: Arc<AtomicU8>,
+}
+
+impl<const LIMIT: u8> Limiter<LIMIT> {
+    /// Attempts to acquire a slot.
+    ///
+    /// Returns:
+    /// - `Ok(Slot)` if the current usage is below `LIMIT`. The Slot frees up once it is dropped.
+    /// - `Err(LimiterError::LimitExceeded)` if the limit has been reached.
+    pub fn try_acquire(&self) -> StdResult<Slot, LimiterError> {
+        self.slots_in_use
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |val| {
+                if val < LIMIT {
+                    Some(val + 1)
+                } else {
+                    None
+                }
+            })
+            .map_err(|_| LimiterError::LimitExceeded)?;
+        Ok(Slot {
+            slots: Arc::clone(&self.slots_in_use),
+        })
+    }
+
+    /// Returns the current number of occupied slots.
+    pub fn in_use(&self) -> u8 {
+        self.slots_in_use.load(Ordering::Relaxed)
     }
 }
 
@@ -622,8 +685,13 @@ export default handler;
             let specifier =
                 resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
             let module_loader = StaticModuleLoader::with(specifier.clone(), code);
-            let protocol =
-                RuntimeContext::new(&mut host, &mut tx, init_addr.clone(), String::new());
+            let protocol = RuntimeContext::new(
+                &mut host,
+                &mut tx,
+                init_addr.clone(),
+                String::new(),
+                crate::runtime::Limiter::default(),
+            );
             let mut runtime = JstzRuntime::new_from_snapshot(
                 JstzRuntimeOptions {
                     protocol: Some(protocol),
@@ -640,5 +708,51 @@ export default handler;
             let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
             assert_eq!(result_i64, 64);
         })
+    }
+
+    #[tokio::test]
+    async fn test_limiter() {
+        let limiter = Limiter::<2>::default();
+        assert_eq!(limiter.in_use(), 0);
+        // Acquiring a slot should succeed
+        {
+            let l = limiter.clone();
+            let _slot = l.try_acquire().unwrap();
+            // The slot gets dropped, freeing up a slot
+        }
+
+        assert_eq!(limiter.in_use(), 0);
+
+        // Two concurrent aquires should succeed, third should fail
+        let l1 = limiter.clone();
+        let l2 = limiter.clone();
+
+        let (tx1, rx1) = tokio::sync::oneshot::channel();
+        let (tx2, rx2) = tokio::sync::oneshot::channel();
+
+        let t1 = tokio::task::spawn(async move {
+            let _p = l1.try_acquire().unwrap();
+            rx1.await.unwrap();
+        });
+        let t2 = tokio::task::spawn(async move {
+            let _p = l2.try_acquire().unwrap();
+            rx2.await.unwrap();
+        });
+
+        // Wait a moment to ensure t1 and t2 acquire the slots
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+
+        assert_eq!(limiter.in_use(), 2);
+
+        // Third acquire should fail
+        let res = limiter.try_acquire();
+        assert!(matches!(res, Err(LimiterError::LimitExceeded)));
+
+        // Release t1 and t2
+        let _ = tx1.send(());
+        let _ = tx2.send(());
+        assert!(t1.await.is_ok());
+        assert!(t2.await.is_ok());
+        assert_eq!(limiter.in_use(), 0);
     }
 }

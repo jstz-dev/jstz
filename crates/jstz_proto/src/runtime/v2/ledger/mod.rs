@@ -63,6 +63,7 @@ extension!(
 #[cfg(test)]
 mod test {
     use jstz_core::host::JsHostRuntime;
+    use jstz_runtime::runtime::Limiter;
     use jstz_utils::test_util::TOKIO_MULTI_THREAD;
     use url::Url;
 
@@ -96,6 +97,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
@@ -135,6 +137,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
             // Assert
@@ -176,6 +179,7 @@ mod test {
                 Url::parse(format!("jstz://{}", run_address).as_str()).unwrap(),
                 vec![],
                 None,
+                Limiter::default(),
             )
             .await;
 
