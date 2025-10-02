@@ -6,18 +6,7 @@ on:
 jobs:
   benchmark:
     name: Benchmark RISCV kernel natively
-    runs-on: benchmark
-    steps:
-      - uses: actions/checkout@v4
-      - name: Download RISCV kernel
-        uses: actions/download-artifact@v5
-        with:
-          name: riscv_kernel
-          path: riscv_kernel
-      - name: Run
-        run: |
-          mv $GITHUB_WORKSPACE/riscv_kernel/kernel-executable crates/jstz_tps_bench
-          cd crates/jstz_tps_bench
-          nix --accept-flake-config --log-format raw -L develop --command sh -c 'export RUN_NATIVELY=1; ./run_all.sh'
-          echo "### Benchmark summary" >> $GITHUB_STEP_SUMMARY
-          cat ./results_all.log >> $GITHUB_STEP_SUMMARY
+    uses: ./.github/workflows/run-benchmark-job.yml
+    with:
+      run-natively: true
+      job-name: "Benchmark RISCV kernel natively"
