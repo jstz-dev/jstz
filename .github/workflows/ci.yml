@@ -74,28 +74,3 @@ jobs:
 
       - name: Build
         run: npm run docs:build
-
-  build_riscv_kernel:
-    name: Build RISCV kernel
-    runs-on: [linux, nix]
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build kernel
-        run: nix --accept-flake-config --log-format raw -L develop --command make riscv-pvm-kernel
-      - uses: actions/upload-artifact@v4
-        with:
-          name: riscv_kernel
-          path: target/riscv64gc-unknown-linux-musl/release/kernel-executable
-          if-no-files-found: error
-          retention-days: 1
-
-  native_benchmark:
-    name: Benchmark RISCV kernel natively
-    runs-on: benchmark
-    steps:
-      - name: Run
-        run: |
-          cd crates/jstz_tps_bench
-          nix --accept-flake-config --log-format raw -L develop --command sh -c 'export RUN_NATIVELY=1; ./run_all.sh'
-          echo "### Benchmark summary" >> $GITHUB_STEP_SUMMARY
-          cat ./results_all.log >> $GITHUB_STEP_SUMMARY
