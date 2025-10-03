@@ -12,6 +12,7 @@ use jstz_core::{
     host::{HostRuntime, JsHostRuntime},
     kv::Transaction,
 };
+use jstz_runtime::runtime::Limiter;
 use url::Url;
 pub mod fetch;
 pub use jstz_core::log_record::{LogRecord, LOG_PREFIX};
@@ -60,6 +61,7 @@ async fn run(
         url,
         convert_header_map(headers),
         body,
+        Limiter::default(),
     )
     .await
     .into();
