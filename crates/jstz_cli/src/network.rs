@@ -80,6 +80,15 @@ pub async fn exec(command: Command) -> Result<()> {
                 Cell::new("Jstz node endpoint"),
             ]));
 
+            // one row for sandbox
+            table.add_row(Row::new(vec![
+                Cell::new("dev"),
+                // Actual endpoints are not printed because those can be dynamic depending on
+                // how the sandbox is created. It's less confusing keeping them opaque.
+                Cell::new("-"),
+                Cell::new("-"),
+            ]));
+
             let mut rows = cfg
                 .networks
                 .networks
@@ -95,6 +104,13 @@ pub async fn exec(command: Command) -> Result<()> {
             rows.sort_by(|a, b| a.0.cmp(&b.0));
 
             for (name, octez_endpoint, jstz_endpoint) in rows {
+                if let NetworkName::Dev = &NetworkName::from_str(&name)
+                    .context("failed to parse network name")?
+                {
+                    // Since users can still manually add a "dev" network to the config file,
+                    // here the entry is simply ignored to avoid confusion.
+                    continue;
+                }
                 table.add_row(Row::new(vec![
                     Cell::new(&name),
                     Cell::new(&octez_endpoint),
@@ -117,6 +133,15 @@ pub async fn exec(command: Command) -> Result<()> {
             jstz_node_endpoint,
             force,
         } => {
+            if let NetworkName::Dev =
+                &NetworkName::from_str(&name).context("failed to parse network name")?
+            {
+                bail_user_error!(
+                    "Network '{}' is reserved for the sandbox.",
+                    NetworkName::Dev
+                )
+            }
+
             let short_name = trim_long_string(&name, 20);
             if !force && cfg.networks.networks.contains_key(&name) {
                 bail_user_error!("Network '{short_name}' already exists. Use `--force` to overwrite the network.")
@@ -141,6 +166,15 @@ pub async fn exec(command: Command) -> Result<()> {
                     jstz_node_endpoint,
                 },
         } => {
+            if let NetworkName::Dev =
+                &NetworkName::from_str(&name).context("failed to parse network name")?
+            {
+                bail_user_error!(
+                    "Cannot update the sandbox network '{}'.",
+                    NetworkName::Dev
+                )
+            }
+
             let short_name = trim_long_string(&name, 20);
             match cfg.networks.networks.get_mut(&name) {
                 None => bail_user_error!("Network '{short_name}' does not exist."),
@@ -159,6 +193,15 @@ pub async fn exec(command: Command) -> Result<()> {
             Ok(())
         }
         Command::Delete { name } => {
+            if let NetworkName::Dev =
+                &NetworkName::from_str(&name).context("failed to parse network name")?
+            {
+                bail_user_error!(
+                    "Cannot delete the sandbox network '{}'.",
+                    NetworkName::Dev
+                )
+            }
+
             let short_name = trim_long_string(&name, 20);
             if cfg.networks.networks.remove(&name).is_none() {
                 bail_user_error!("Network '{short_name}' does not exist.");
