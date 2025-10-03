@@ -454,3 +454,72 @@ fn get_default_network() {
         ))
         .success();
 }
+
+#[test]
+fn set_default_network() {
+    let tmp_dir = TempDir::new().unwrap();
+    let home_path = tmp_dir.path().to_string_lossy().to_string();
+    let path = tmp_dir.path().join(".config/jstz/config.json");
+    create_dir_all(path.parent().expect("should find parent dir"))
+        .expect("should create dir");
+    let file = File::create(&path).expect("should create file");
+    serde_json::to_writer(
+        file,
+        &serde_json::json!({
+            "networks": {
+                "foo": {
+                    "octez_node_rpc_endpoint": "http://octez.test",
+                    "jstz_node_endpoint": "http://jstz.test"
+                },
+            }
+        }),
+    )
+    .expect("should write config file");
+
+    // default network is not set in the initial config
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains("Default network is not set."))
+        .success();
+
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "set-default", "foo"])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Using network 'foo' as the default network.",
+        ))
+        .success();
+
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains("foo"))
+        .success();
+
+    // unknown network should lead to an error
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "set-default", &"a".repeat(40)])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Network 'aaaaaaaaaaaaaaaaa...' does not exist.",
+        ))
+        .failure();
+
+    // dev network
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "set-default", "dev"])
+        .assert()
+        .stderr(predicates::str::contains("dev"))
+        .success();
+}

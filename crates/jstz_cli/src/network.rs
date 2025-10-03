@@ -1,10 +1,12 @@
 use crate::{
-    config::{Config, Network},
+    config::{Config, Network, NetworkName},
     error::{bail_user_error, Result},
 };
+use anyhow::Context;
 use clap::{Args, Subcommand};
 use log::info;
 use prettytable::{format::consts::FORMAT_DEFAULT, Cell, Row, Table};
+use std::str::FromStr;
 
 #[derive(Args, Debug)]
 #[group(required = true, multiple = true)]
@@ -52,6 +54,12 @@ pub enum Command {
     },
     /// Retrieve the default network.
     GetDefault,
+    /// Set default network.
+    SetDefault {
+        /// Name of the network to be used as the default network.
+        #[arg(value_name = "NETWORK_NAME")]
+        name: String,
+    },
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -176,6 +184,21 @@ pub async fn exec(command: Command) -> Result<()> {
                 }
                 None => info!("Default network is not set."),
             };
+            Ok(())
+        }
+        Command::SetDefault { name } => {
+            let network =
+                NetworkName::from_str(&name).context("failed to parse network name")?;
+            let short_name = trim_long_string(&name, 20);
+            if let NetworkName::Custom(_) = &network {
+                if !cfg.networks.networks.contains_key(&name) {
+                    bail_user_error!("Network '{short_name}' does not exist.")
+                }
+            }
+
+            cfg.networks.default_network.replace(network);
+            cfg.save()?;
+            info!("Using network '{short_name}' as the default network.");
             Ok(())
         }
     }
