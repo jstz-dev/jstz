@@ -1,5 +1,5 @@
 use crate::{
-    config::{Config, Network},
+    config::{Config, Network, NetworkName},
     error::{bail_user_error, Result},
 };
 use anyhow::Context;
@@ -187,10 +187,10 @@ pub async fn exec(command: Command) -> Result<()> {
             Ok(())
         }
         Command::SetDefault { name } => {
-            let network = crate::config::NetworkName::from_str(&name)
-                .context("failed to parse network name")?;
+            let network =
+                NetworkName::from_str(&name).context("failed to parse network name")?;
             let short_name = trim_long_string(&name, 20);
-            if let crate::config::NetworkName::Custom(_) = &network {
+            if let NetworkName::Custom(_) = &network {
                 if !cfg.networks.networks.contains_key(&name) {
                     bail_user_error!("Network '{short_name}' does not exist.")
                 }
