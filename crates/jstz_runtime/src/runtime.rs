@@ -254,8 +254,6 @@ impl JstzRuntime {
         };
         // Note: [`call_with_args`] wraps the scope with TryCatch for us and converts
         // any exception into an error
-        // FIXME(ryan): If user code throws an uncaught exception, the original
-        // exception is lost and replaced with Uncaught undefined
         let fut = self.call_with_args(&default_fn, args);
         let result = self.with_event_loop_future(fut, Default::default()).await;
         Ok(result?)

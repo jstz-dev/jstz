@@ -83,10 +83,8 @@ mod test {
             });
             let id = runtime.execute_main_module(&specifier).await.unwrap();
             let err = runtime.call_default_handler(id, &[]).await.unwrap_err();
-            assert_eq!(
-                "Error: Uncaught (in promise) undefined",
-                format!("{}: {}", err.get_class(), err.get_message())
-            );
+            assert_eq!(err.get_class(), "NotSupported");
+            assert!(err.get_message().contains("fetch is not supported"));
         });
     }
 }
