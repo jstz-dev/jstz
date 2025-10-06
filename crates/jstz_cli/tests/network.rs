@@ -26,6 +26,10 @@ fn list_networks() {
                 "very_long_name_very_long_name_very_long_name": {
                     "octez_node_rpc_endpoint": "http://octez.long.long.long.long.test",
                     "jstz_node_endpoint": "http://jstz.long.long.long.long.test"
+                },
+                "dev": {
+                    "octez_node_rpc_endpoint": "http://octez.dev.test",
+                    "jstz_node_endpoint": "http://jstz.dev.test"
                 }
             }
         })
@@ -37,11 +41,14 @@ fn list_networks() {
 
     let mut process = utils::jstz_cmd(["network", "list"], Some(tmp_dir));
     let output = process.exp_eof().unwrap().replace("\r\n", "\n");
+    // the dev network in the config file should not be listed
     assert_eq!(
         output,
         r#"  +----------------------+---------------------------+---------------------------+
   | Name                 | Octez RPC endpoint        | Jstz node endpoint        |
   +======================+===========================+===========================+
+  | dev                  | -                         | -                         |
+  +----------------------+---------------------------+---------------------------+
   | foo                  | http://octez.foo.test     | http://jstz.foo.test      |
   +----------------------+---------------------------+---------------------------+
   | very_long_name_ve... | http://octez.long.long... | http://jstz.long.long.... |
@@ -160,6 +167,25 @@ fn add_network() {
                 .and(predicates::str::contains("http://new.octez.test")),
         )
         .success();
+
+    // adding a "dev" network should fail
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "add",
+            "dev",
+            "--octez-node-rpc-endpoint",
+            "http://octez.dev",
+            "--jstz-node-endpoint",
+            "http://jstz.dev",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Network 'dev' is reserved for the sandbox.",
+        ))
+        .failure();
 }
 
 #[test]
@@ -335,6 +361,23 @@ fn update_network() {
             "the argument '--octez-node-rpc-endpoint <OCTEZ_NODE_RPC_ENDPOINT>' cannot be used multiple times",
         ))
         .failure();
+
+    // updating a "dev" network should fail
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "update",
+            "dev",
+            "--octez-node-rpc-endpoint",
+            "http://octez.dev",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Cannot update the sandbox network 'dev'",
+        ))
+        .failure();
 }
 
 #[test]
@@ -395,6 +438,17 @@ fn delete_network() {
         .assert()
         .stderr(predicates::str::contains(
             "Network 'aaaaaaaaaaaaaaaaa...' does not exist.",
+        ))
+        .failure();
+
+    // deleting 'dev' network should fail
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "delete", "dev"])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Cannot delete the sandbox network 'dev'.",
         ))
         .failure();
 }
