@@ -367,7 +367,8 @@ pub struct RuntimeContext {
     pub kv: Kv,
     pub address: SmartFunctionHash,
     pub request_id: String,
-    pub limiter: Limiter,
+    /// The slot acquired from the limiter to limit the number of smart function calls.
+    pub slot: Slot,
 }
 
 impl RuntimeContext {
@@ -376,7 +377,7 @@ impl RuntimeContext {
         tx: &mut Transaction,
         address: SmartFunctionHash,
         request_id: String,
-        limiter: Limiter,
+        slot: Slot,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
         RuntimeContext {
@@ -385,7 +386,7 @@ impl RuntimeContext {
             kv: Kv::new(address.to_base58()),
             address,
             request_id,
-            limiter,
+            slot,
         }
     }
 }
@@ -401,6 +402,14 @@ pub enum LimiterError {
 #[derive(Debug)]
 pub struct Slot {
     slots: Arc<AtomicU8>,
+}
+
+impl Slot {
+    pub fn limiter(&self) -> Limiter {
+        Limiter {
+            slots_in_use: Arc::clone(&self.slots),
+        }
+    }
 }
 
 impl Drop for Slot {
@@ -485,11 +494,8 @@ fn init_base_extensions_ops<F: FetchAPI>() -> Vec<Extension> {
 
 #[cfg(test)]
 mod test {
-
     use super::*;
-
     use crate::{error::RuntimeError, init_test_setup};
-
     use jstz_utils::test_util::TOKIO;
     use tezos_smart_rollup_mock::MockHost;
 
@@ -690,7 +696,9 @@ export default handler;
                 &mut tx,
                 init_addr.clone(),
                 String::new(),
-                crate::runtime::Limiter::default(),
+                Limiter::<MAX_SMART_FUNCTION_CALL_COUNT>::default()
+                    .try_acquire()
+                    .unwrap(),
             );
             let mut runtime = JstzRuntime::new_from_snapshot(
                 JstzRuntimeOptions {

@@ -23,13 +23,14 @@ async fn test() {
     let mut host = MockHost::default();
     let address =
         SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton").unwrap();
+    let limiter = Limiter::<5>::default();
     let mut rt = JstzRuntime::new(JstzRuntimeOptions {
         protocol: Some(RuntimeContext::new(
             &mut host,
             &mut tx,
             address,
             String::new(),
-            Limiter::default(),
+            limiter.try_acquire().unwrap(),
         )),
         extensions: vec![api_coverage_test::init_ops_and_esm()],
         module_loader: std::rc::Rc::new(StaticModuleLoader::with(

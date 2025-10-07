@@ -139,7 +139,7 @@ fn fetch(
             rt_context.tx.clone(),
             rt_context.address.clone(),
             JsHostRuntime::new(&mut rt_context.host),
-            rt_context.limiter.clone(),
+            rt_context.slot.limiter(),
         )
     };
     let SourceAddress(source) = state.borrow::<SourceAddress>();
@@ -193,6 +193,7 @@ pub async fn process_and_dispatch_request(
     url: Url,
     headers: Vec<(ByteString, ByteString)>,
     data: Option<Body>,
+    // Limits the number of smart function calls per `RunFunction` operation.
     limiter: Limiter,
 ) -> Response {
     let scheme = SupportedScheme::try_from(&url);
@@ -488,7 +489,7 @@ async fn load_and_run(
     body: Option<Body>,
     limiter: Limiter,
 ) -> Result<Response> {
-    let _slot = limiter.try_acquire().map_err(|_| {
+    let slot = limiter.try_acquire().map_err(|_| {
         // Protocol guard: this is not a true JS/native stack overflow.
         // We limit smart function call count to prevent resource exhaustion.
         // Error message matches V8's RangeError for JS familiarity.
@@ -511,7 +512,7 @@ async fn load_and_run(
         tx,
         address.clone(),
         operation_hash.map(|v| v.to_string()).unwrap_or_default(),
-        limiter,
+        slot,
     );
     // 1. Load script
     let script = { load_script(tx, &mut proto.host, &proto.address)? };
@@ -1772,12 +1773,13 @@ mod test {
 
         let mut tx = jstz_core::kv::Transaction::default();
         tx.begin();
+        let limiter: Limiter<5> = Limiter::default();
         let protocol = Some(RuntimeContext::new(
             &mut host,
             &mut tx,
             address.clone(),
             String::new(),
-            Limiter::default(),
+            limiter.try_acquire().unwrap(),
         ));
 
         let source = Address::User(jstz_mock::account1());
