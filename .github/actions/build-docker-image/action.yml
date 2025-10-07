@@ -33,9 +33,24 @@ inputs:
   kernel_artefact_name:
     description: Kernel artefact name
     required: true
+  dry_run:
+    description: Dry-run image build without pushing to the registry
+    required: false
+    default: 'true'
+
 runs:
   using: "composite"
   steps:
+    - name: Set push flag
+      id: set-push-flag
+      shell: bash
+      run: |
+        # This push flag is the inverse of dry_run
+        push="false"
+        if [ "${{ inputs.dry_run }}" = "false" ]; then
+          push="true"
+        fi
+        echo "push=$push" >> $GITHUB_OUTPUT
     - uses: actions/checkout@v4
     - run: echo "${{ runner.temp }}"
       shell: bash
@@ -64,6 +79,7 @@ runs:
       id: build-image
       uses: docker/build-push-action@v6.3.0
       with:
+        push: ${{ steps.set-push-flag.outputs.push }}
         context: .
         file: ${{ inputs.dockerfile }}
         build-args: |
@@ -73,7 +89,7 @@ runs:
         cache-to: type=gha,mode=max
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ inputs.platform }}
-        outputs: type=image,"name=${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}",push-by-digest=true,name-canonical=true,push=true
+        outputs: type=image,"name=${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}",push-by-digest=true,name-canonical=true,"push=${{ steps.set-push-flag.outputs.push }}"
     - name: Export digest
       shell: bash
       run: |
