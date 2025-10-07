@@ -3148,6 +3148,7 @@ dependencies = [
  "derive_more",
  "hex",
  "libsecp256k1",
+ "p256",
  "proptest",
  "serde",
  "serde_json",
