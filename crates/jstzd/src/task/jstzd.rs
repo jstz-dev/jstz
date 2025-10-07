@@ -144,7 +144,7 @@ impl JstzdConfig {
 impl Task for Jstzd {
     type Config = JstzdConfig;
 
-    async fn spawn(config: Self::Config) -> Result<Self> {
+    async fn spawn(mut config: Self::Config) -> Result<Self> {
         let octez_node = OctezNode::spawn(config.octez_node_config.clone()).await?;
         let octez_client = OctezClient::new(config.octez_client_config.clone());
         Self::wait_for_node(&octez_node).await?;
@@ -163,8 +163,28 @@ impl Task for Jstzd {
         Self::activate_protocol(&octez_client, &config.protocol_params).await?;
         let baker = OctezBaker::spawn(config.baker_config.clone()).await?;
         Self::wait_for_block_level(&config.octez_node_config.rpc_endpoint, 3).await?;
+
+        // Originate the RISC-V rollup and update the config with the new address
+        let rollup_address = Self::originate_rollup(&octez_client).await?;
+        config.octez_rollup_config =
+            config.octez_rollup_config.with_address(rollup_address);
+
+        // Wait a couple blocks for the origination to be included
+        println!("\n⏳ Waiting for rollup origination to be included...");
+        Self::wait_for_block_level(&config.octez_node_config.rpc_endpoint, 5).await?;
+        println!("   ✅ Rollup origination included!");
+
+        println!(
+            "\n🔧 Starting rollup node (connecting to {})...",
+            config.octez_node_config.rpc_endpoint
+        );
         let rollup = OctezRollup::spawn(config.octez_rollup_config.clone()).await?;
-        Self::wait_for_rollup(&rollup).await?;
+
+        // Give the rollup node a moment to start, but don't wait for full health check
+        // It will catch up and sync in the background
+        println!("   ⏳ Waiting for rollup node to start...");
+        sleep(Duration::from_secs(5)).await;
+        println!("   ✅ Rollup node started (will sync in background)!");
         let jstz_node = match config.jstz_node_config {
             Some(config) => Some(JstzNode::spawn(config.clone()).await?.into_shared()),
             None => None,
@@ -291,14 +311,56 @@ impl Jstzd {
             .await
     }
 
+    /// Originate the RISC-V smart rollup
+    ///
+    /// This function originates a RISC-V kernel using the octez client.
+    /// The kernel path format is: kernel:<path>:<checksum>
+    ///
+    /// The kernel path and checksum are computed at build time from the
+    /// lightweight-kernel-executable in resources/jstz_rollup/
+    async fn originate_rollup(
+        octez_client: &OctezClient,
+    ) -> Result<tezos_crypto_rs::hash::SmartRollupHash> {
+        use crate::jstz_rollup_path;
+
+        let kernel_path = jstz_rollup_path::riscv_kernel_path();
+        let kernel_checksum = jstz_rollup_path::riscv_kernel_checksum();
+
+        // Format: kernel:<absolute_path>:<sha256_checksum>
+        let kernel = format!("kernel:{}:{}", kernel_path.display(), kernel_checksum);
+
+        println!("Originating RISC-V smart rollup...");
+        println!("  Kernel path: {}", kernel_path.display());
+        println!("  Kernel checksum: {}", kernel_checksum);
+
+        let rollup_address = octez_client
+            .originate_smart_rollup(
+                "jstz_rollup",
+                ROLLUP_OPERATOR_ACCOUNT_ALIAS,
+                "riscv",
+                "string",
+                &kernel,
+                Some(999999.0),
+            )
+            .await?;
+
+        println!("Smart rollup originated with address: {}", rollup_address);
+        Ok(rollup_address)
+    }
+
     async fn wait_for_node(octez_node: &OctezNode) -> Result<()> {
-        let ready = retry(10, 1000, || async {
-            Ok(octez_node.health_check().await.unwrap_or(false))
+        let ready = retry(30, 1000, || async {
+            let health = octez_node.health_check().await.unwrap_or(false);
+            if !health {
+                print!(".");
+                stdout().flush().ok();
+            }
+            Ok(health)
         })
         .await;
         if !ready {
             return Err(anyhow::anyhow!(
-                "octez node is still not ready after retries"
+                "octez node is still not ready after 30 retries"
             ));
         }
         Ok(())
@@ -319,13 +381,22 @@ impl Jstzd {
     }
 
     async fn wait_for_rollup(rollup: &OctezRollup) -> Result<()> {
-        let ready = retry(20, 1000, || async {
-            Ok(rollup.health_check().await.unwrap_or(false))
+        println!(
+            "   Waiting for rollup node to become ready (this may take a minute)..."
+        );
+        let ready = retry(60, 2000, || async {
+            let health = rollup.health_check().await.unwrap_or(false);
+            if !health {
+                print!(".");
+                stdout().flush().ok();
+            }
+            Ok(health)
         })
         .await;
+        println!(); // newline after dots
         if !ready {
             return Err(anyhow::anyhow!(
-                "rollup node is still not ready after retries"
+                "rollup node is still not ready after 60 retries (2 minutes). Check the rollup log file for details."
             ));
         }
         Ok(())
@@ -469,6 +540,8 @@ impl JstzdServer {
         // 60 seconds
         for _ in 0..120 {
             let (overall_result, individual_results) = jstzd.health_check_inner().await;
+            println!("overall_result: {:?}", overall_result);
+            println!("individual_results: {:?}", individual_results);
             jstzd_healthy = overall_result.unwrap_or_default();
             let latest_progress = collect_progress(individual_results);
             update_progress_bar(progress_bar.as_ref(), latest_progress);

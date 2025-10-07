@@ -21,9 +21,7 @@ use anyhow::{Context, Result};
 use http::Uri;
 use jstz_node::config::{JstzNodeConfig, RunModeBuilder};
 use octez::r#async::endpoint::Endpoint;
-use octez::r#async::protocol::{
-    BootstrapContract, BootstrapSmartRollup, ProtocolParameter, SmartRollupPvmKind,
-};
+use octez::r#async::protocol::{BootstrapContract, ProtocolParameter};
 use octez::r#async::{
     baker::{BakerBinaryPath, OctezBakerConfig, OctezBakerConfigBuilder},
     client::{OctezClientConfig, OctezClientConfigBuilder},
@@ -396,18 +394,8 @@ async fn build_protocol_params(
         accounts.push(account);
     }
 
+    // No longer bootstrap the rollup - it will be originated instead
     builder
-        .set_bootstrap_smart_rollups([BootstrapSmartRollup::new(
-            JSTZ_ROLLUP_ADDRESS,
-            SmartRollupPvmKind::Wasm,
-            &tokio::fs::read_to_string(jstz_rollup_path::kernel_installer_path()).await?,
-            serde_json::from_slice(
-                &BootstrapRollupFile::get("parameters_ty.json")
-                    .ok_or(anyhow::anyhow!("file not found"))?
-                    .data,
-            )?,
-        )
-        .unwrap()])
         .set_bootstrap_contracts(contracts)
         .set_bootstrap_accounts(accounts)
         .build()
