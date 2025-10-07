@@ -651,7 +651,7 @@ impl OctezClient {
         burn_cap: Option<f64>,
     ) -> Result<SmartRollupHash> {
         let burn_cap_str = burn_cap.map(|v| v.to_string()).unwrap_or("999".to_string());
-        
+
         // Resolve the source alias to its actual address for the whitelist
         let src_address = self.show_address(src, false).await?;
         let whitelist = format!("[\"{}\"]", src_address.hash);

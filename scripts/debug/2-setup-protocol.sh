@@ -18,12 +18,12 @@ source /tmp/jstz-debug-env.sh
 # Wait for node to be ready
 echo -e "\n${YELLOW}Waiting for node to be ready...${NC}"
 for i in {1..30}; do
-    if curl -s http://localhost:18731/health/ready > /dev/null 2>&1; then
-        echo -e "${GREEN}✓ Node is ready!${NC}"
-        break
-    fi
-    echo -n "."
-    sleep 1
+  if curl -s http://localhost:18731/health/ready >/dev/null 2>&1; then
+    echo -e "${GREEN}✓ Node is ready!${NC}"
+    break
+  fi
+  echo -n "."
+  sleep 1
 done
 echo ""
 
@@ -32,15 +32,15 @@ echo -e "\n${BLUE}Importing bootstrap accounts...${NC}"
 
 # Activator
 octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    import secret key activator unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6 --force
+  import secret key activator unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6 --force
 
 # Injector (bootstrap1)
 octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    import secret key injector unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh --force
+  import secret key injector unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh --force
 
 # Rollup operator
 octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    import secret key rollup_operator unencrypted:edsk3D6aGWpSiMMiEfNZ7Jyi52S9AtjvLCutqnCi3qev65WShKLKW4 --force
+  import secret key rollup_operator unencrypted:edsk3D6aGWpSiMMiEfNZ7Jyi52S9AtjvLCutqnCi3qev65WShKLKW4 --force
 
 echo -e "${GREEN}✓ Bootstrap accounts imported${NC}"
 
@@ -58,12 +58,12 @@ PARAMS_FILE="$BASE_DIR/protocol_params.json"
 JSTZD_PARAMS="/Users/alanmarko/projects/jstz_attempt2/jstz/crates/jstzd/tests/sandbox-params.json"
 
 if [ -f "$JSTZD_PARAMS" ]; then
-    echo "Using parameters from: $JSTZD_PARAMS"
-    cp "$JSTZD_PARAMS" "$PARAMS_FILE"
+  echo "Using parameters from: $JSTZD_PARAMS"
+  cp "$JSTZD_PARAMS" "$PARAMS_FILE"
 else
-    echo "Warning: Could not find jstzd params, using minimal params"
-    # Create minimal protocol parameters as fallback
-    cat > "$PARAMS_FILE" << 'EOF'
+  echo "Warning: Could not find jstzd params, using minimal params"
+  # Create minimal protocol parameters as fallback
+  cat >"$PARAMS_FILE" <<'EOF'
 {
   "bootstrap_accounts": [
     ["edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav", "4000000000000"],
@@ -142,10 +142,9 @@ EOF
 fi
 
 octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    -block genesis activate protocol ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK \
-    with fitness 1 and key activator and parameters "$PARAMS_FILE"
+  -block genesis activate protocol ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK \
+  with fitness 1 and key activator and parameters "$PARAMS_FILE"
 
 echo -e "${GREEN}✓ Protocol activated${NC}"
 
 echo -e "\n${YELLOW}You can now proceed to script 3 to start the baker${NC}"
-

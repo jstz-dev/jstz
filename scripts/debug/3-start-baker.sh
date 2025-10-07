@@ -21,5 +21,4 @@ echo ""
 
 # Start baking (without DAL node)
 octez-baker-alpha --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    run with local node "$NODE_DIR" injector --liquidity-baking-toggle-vote pass --without-dal
-
+  run with local node "$NODE_DIR" injector --liquidity-baking-toggle-vote pass --without-dal

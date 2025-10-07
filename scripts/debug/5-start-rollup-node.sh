@@ -17,8 +17,8 @@ echo -e "${BLUE}=== Starting Rollup Node ===${NC}"
 source /tmp/jstz-debug-env.sh
 
 if [ -z "$ROLLUP_ADDR" ]; then
-    echo -e "${RED}Error: ROLLUP_ADDR not set. Did you run script 4?${NC}"
-    exit 1
+  echo -e "${RED}Error: ROLLUP_ADDR not set. Did you run script 4?${NC}"
+  exit 1
 fi
 
 echo "Rollup address: $ROLLUP_ADDR"
@@ -37,13 +37,12 @@ echo ""
 
 # Start the rollup node
 octez-smart-rollup-node \
-    --endpoint http://localhost:18731 \
-    --base-dir "$CLIENT_DIR" \
-    run operator for "$ROLLUP_ADDR" \
-    with operators rollup_operator \
-    --data-dir "$ROLLUP_DIR" \
-    --rpc-addr 127.0.0.1 \
-    --rpc-port 18745 \
-    --acl-override allow-all \
-    --history-mode full
-
+  --endpoint http://localhost:18731 \
+  --base-dir "$CLIENT_DIR" \
+  run operator for "$ROLLUP_ADDR" \
+  with operators rollup_operator \
+  --data-dir "$ROLLUP_DIR" \
+  --rpc-addr 127.0.0.1 \
+  --rpc-port 18745 \
+  --acl-override allow-all \
+  --history-mode full

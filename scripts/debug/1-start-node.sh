@@ -24,10 +24,10 @@ echo "Node directory: $NODE_DIR"
 echo "Client directory: $CLIENT_DIR"
 
 # Save directories to file for other scripts
-echo "export BASE_DIR=$BASE_DIR" > /tmp/jstz-debug-env.sh
-echo "export NODE_DIR=$NODE_DIR" >> /tmp/jstz-debug-env.sh
-echo "export CLIENT_DIR=$CLIENT_DIR" >> /tmp/jstz-debug-env.sh
-echo "export NODE_RPC=http://localhost:18731" >> /tmp/jstz-debug-env.sh
+echo "export BASE_DIR=$BASE_DIR" >/tmp/jstz-debug-env.sh
+echo "export NODE_DIR=$NODE_DIR" >>/tmp/jstz-debug-env.sh
+echo "export CLIENT_DIR=$CLIENT_DIR" >>/tmp/jstz-debug-env.sh
+echo "export NODE_RPC=http://localhost:18731" >>/tmp/jstz-debug-env.sh
 
 echo -e "${GREEN}✓ Directories created${NC}"
 
@@ -39,11 +39,11 @@ echo -e "${GREEN}✓ Identity generated${NC}"
 # Initialize config
 echo -e "\n${BLUE}Initializing node config...${NC}"
 octez-node config init \
-    --data-dir "$NODE_DIR" \
-    --network sandbox \
-    --net-addr "127.0.0.1:19732" \
-    --rpc-addr "127.0.0.1:18731" \
-    --expected-pow 0
+  --data-dir "$NODE_DIR" \
+  --network sandbox \
+  --net-addr "127.0.0.1:19732" \
+  --rpc-addr "127.0.0.1:18731" \
+  --expected-pow 0
 echo -e "${GREEN}✓ Config initialized${NC}"
 
 # Start the node
@@ -53,8 +53,7 @@ echo "Logs will appear below:"
 echo ""
 
 octez-node run \
-    --data-dir "$NODE_DIR" \
-    --network sandbox \
-    --synchronisation-threshold 0 \
-    --connections 0
-
+  --data-dir "$NODE_DIR" \
+  --network sandbox \
+  --synchronisation-threshold 0 \
+  --connections 0

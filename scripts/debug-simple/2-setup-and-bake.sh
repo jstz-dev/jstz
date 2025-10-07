@@ -4,20 +4,20 @@ set -e
 source /tmp/jstz-debug-env.sh
 
 for i in {1..30}; do
-    if curl -s http://localhost:18731/health/ready > /dev/null 2>&1; then
-        break
-    fi
-    sleep 1
+  if curl -s http://localhost:18731/health/ready >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
 done
 
 octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    import secret key activator unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6 --force
+  import secret key activator unencrypted:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6 --force
 
 octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    import secret key injector unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh --force
+  import secret key injector unencrypted:edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh --force
 
 octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    import secret key rollup_operator unencrypted:edsk3D6aGWpSiMMiEfNZ7Jyi52S9AtjvLCutqnCi3qev65WShKLKW4 --force
+  import secret key rollup_operator unencrypted:edsk3D6aGWpSiMMiEfNZ7Jyi52S9AtjvLCutqnCi3qev65WShKLKW4 --force
 
 cp /Users/alanmarko/projects/jstz_attempt2/jstz/crates/jstzd/tests/sandbox-params.json "$BASE_DIR/protocol_params.json"
 
@@ -38,9 +38,8 @@ cp /Users/alanmarko/projects/jstz_attempt2/jstz/crates/jstzd/tests/sandbox-param
 #mv "$BASE_DIR/protocol_params_tmp.json" "$BASE_DIR/protocol_params.json"
 
 octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    -block genesis activate protocol ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK \
-    with fitness 1 and key activator and parameters "$BASE_DIR/protocol_params.json"
+  -block genesis activate protocol ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK \
+  with fitness 1 and key activator and parameters "$BASE_DIR/protocol_params.json"
 
 octez-baker-alpha --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    run with local node "$NODE_DIR" injector --liquidity-baking-toggle-vote pass --without-dal
-
+  run with local node "$NODE_DIR" injector --liquidity-baking-toggle-vote pass --without-dal
