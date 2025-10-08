@@ -36,7 +36,7 @@ inputs:
   dry_run:
     description: Dry-run image build without pushing to the registry
     required: false
-    default: 'true'
+    default: "true"
 
 runs:
   using: "composite"
