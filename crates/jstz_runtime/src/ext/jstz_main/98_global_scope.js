@@ -8,7 +8,7 @@ import * as jstzKv from "ext:jstz_kv/kv.js";
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope
 import { DOMException } from "ext:deno_web/01_dom_exception.js";
-import { NotSupported } from "ext:jstz_main/01_errors.js";
+import { registerErrorClasses } from "ext:jstz_main/01_errors.js";
 import * as event from "ext:deno_web/02_event.js";
 // import * as timers from "ext:deno_web/02_timers.js";
 import * as abortSignal from "ext:deno_web/03_abort_signal.js";
@@ -99,7 +99,18 @@ JstzDate.UTC = (...args) => NativeDate.UTC(...args);
 
 // Forwards instance methods
 JstzDate.prototype = NativeDate.prototype;
-JstzDate.prototype.contructor = JstzDate;
+JstzDate.prototype.constructor = JstzDate;
+
+// Register custom error classes
+// By default, deno core registers built-in error classes like Error, TypeError, etc.
+// Whenever a new custom JsError is registered on the rust side, we need to register the corresponding error class here.
+const CUSTOM_ERROR_CLASSES = [
+  "RuntimeError",
+  "NotSupported",
+  "CompileModuleError",
+];
+const customErrorClasses = registerErrorClasses(CUSTOM_ERROR_CLASSES);
+const { NotSupported } = customErrorClasses;
 
 // https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope
 const workerGlobalScope = {
@@ -205,6 +216,12 @@ const workerGlobalScope = {
     configurable: false,
     writable: false,
   },
+  ...Object.fromEntries(
+    Object.entries(customErrorClasses).map(([name, ErrorClass]) => [
+      name,
+      core.propNonEnumerable(ErrorClass),
+    ]),
+  ),
 };
 
 export { workerGlobalScope };
