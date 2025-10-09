@@ -15,7 +15,6 @@ pub use runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
 mod test_utils {
 
     use std::fmt::Display;
-
     use tezos_smart_rollup_mock::MockHost;
 
     #[allow(clippy::box_collection)]
@@ -104,7 +103,7 @@ mod test_utils {
             let request_id = String::new();
             $(let request_id = $request_id.to_string();)?
             #[allow(unused)]
-            let protocol  = Some($crate::RuntimeContext::new(&mut init_host, &mut init_tx, init_addr.clone(), request_id));
+            let protocol  = Some($crate::RuntimeContext::new(&mut init_host, &mut init_tx, init_addr.clone(), request_id, $crate::runtime::Limiter::<5>::default().try_acquire().unwrap()));
             #[allow(unused)]
             let mut $runtime = $crate::JstzRuntime::new($crate::JstzRuntimeOptions {
                 protocol,
