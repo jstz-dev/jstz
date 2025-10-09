@@ -628,6 +628,65 @@ impl OctezClient {
         let output = self.spawn_and_wait_command(args).await?;
         Ok((parse_block_hash(&output)?, parse_operation_hash(&output)?))
     }
+
+    /// Originate a smart rollup
+    ///
+    /// # Arguments
+    /// * `name` - Alias for the rollup
+    /// * `src` - Source account that will pay for the origination
+    /// * `kind` - PVM kind (e.g., "wasm_2_0_0", "riscv")
+    /// * `r#type` - Parameter type (e.g., "string", "unit")
+    /// * `kernel` - Kernel to use. Format: "kernel:<path>:<hash>" for RISC-V or hex string for WASM
+    /// * `burn_cap` - Optional burn cap (defaults to 999)
+    ///
+    /// # Returns
+    /// The smart rollup address (sr1...)
+    pub async fn originate_smart_rollup(
+        &self,
+        name: &str,
+        src: &str,
+        kind: &str,
+        r#type: &str,
+        kernel: &str,
+        burn_cap: Option<f64>,
+    ) -> Result<SmartRollupHash> {
+        let burn_cap_str = burn_cap.map(|v| v.to_string()).unwrap_or("999".to_string());
+
+        // Resolve the source alias to its actual address for the whitelist
+        let src_address = self.show_address(src, false).await?;
+        let whitelist = format!("[\"{}\"]", src_address.hash);
+
+        let args = vec![
+            "originate",
+            "smart",
+            "rollup",
+            name,
+            "from",
+            src,
+            "of",
+            "kind",
+            kind,
+            "of",
+            "type",
+            r#type,
+            "with",
+            "kernel",
+            kernel,
+            "--burn-cap",
+            &burn_cap_str,
+            "--force",
+            "--whitelist",
+            &whitelist,
+        ];
+
+        let output = self.spawn_and_wait_command(args).await?;
+
+        let operation_hash = parse_operation_hash(&output)?;
+        // Wait for the operation to be included
+        self.wait_for(&operation_hash, None, None).await?;
+
+        parse_rollup_address(&output)
+    }
 }
 
 fn parse_regex(pattern_str: &str, output: &str) -> Result<String> {
@@ -661,6 +720,11 @@ fn parse_block_hash(output: &str) -> Result<BlockHash> {
         output,
     )?;
     Ok(BlockHash::from_base58_check(&raw_block_hash)?)
+}
+
+fn parse_rollup_address(output: &str) -> Result<SmartRollupHash> {
+    let raw_rollup_hash = parse_regex("Address: (sr1[1-9A-HJ-NP-Za-km-z]{33})", output)?;
+    Ok(SmartRollupHash::from_base58_check(&raw_rollup_hash)?)
 }
 
 #[cfg(test)]

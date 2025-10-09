@@ -260,6 +260,14 @@ impl fmt::Display for HistoryMode {
     }
 }
 
+impl OctezRollupConfig {
+    /// Create a new config with a different rollup address
+    pub fn with_address(mut self, address: SmartRollupHash) -> Self {
+        self.address = address;
+        self
+    }
+}
+
 pub struct OctezRollup {
     binary_path: PathBuf,
     /// Path to the directory where the rollup state & kernel preimages are stored
@@ -344,6 +352,19 @@ impl OctezRollup {
                 &kernel_debug_file.to_string_lossy(),
             ]);
         }
+
+        // Print command and log file location for debugging
+        println!("🔧 Starting octez-smart-rollup-node...");
+        println!("   Command: {:?}", command.as_std());
+        println!("   Log file: {}", self.log_file.as_ref());
+        println!("   Data dir: {}", self.data_dir.to_string_lossy());
+        println!(
+            "   RPC endpoint: {}:{}",
+            self.rpc_endpoint.host(),
+            self.rpc_endpoint.port()
+        );
+        println!();
+
         Ok(command.spawn()?)
     }
 }
