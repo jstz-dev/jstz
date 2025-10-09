@@ -1,7 +1,6 @@
 ARG OCTEZ_VERSION=23.2
 ARG FEATURES="build-image,oracle"
-FROM rust:1.86.0-slim-bookworm AS builder
-RUN apt update && apt install -y curl pkg-config libssl-dev libsqlite3-dev
+FROM ghcr.io/jstz-dev/jstz/build:7f08c1b AS builder
 
 WORKDIR /jstz_build
 ADD . .
@@ -14,7 +13,7 @@ COPY $KERNEL_PATH crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
 # release build is required for rust-embed to pack the resource files into the executable
 RUN KERNEL_DEST_DIR=/jstzd_kernel_files cargo build --bin jstzd --release --features "$FEATURES"
 
-FROM debian:bookworm-20250520-slim AS jstzd
+FROM ghcr.io/jstz-dev/jstz/serve:7f08c1b AS jstzd
 ARG OCTEZ_VERSION
 # It's possible to download static executables from github according to architecture, but that seems
 # a bit too messy and error prone.
