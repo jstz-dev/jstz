@@ -102,50 +102,12 @@ impl From<serde_json::Value> for HttpBody {
 
 #[cfg(test)]
 pub mod tests {
-    use std::sync::{Arc, Mutex};
-
     use jstz_core::{host::HostRuntime, kv::Storage};
     use serde::de::DeserializeOwned;
     use tezos_smart_rollup::storage::path::OwnedPath;
-    use tezos_smart_rollup_mock::DebugSink;
 
     use crate::{operation::OperationHash, receipt::Receipt};
-
-    #[derive(Clone, Default)]
-    pub struct DebugLogSink {
-        pub inner: Arc<Mutex<Vec<u8>>>,
-    }
-
-    impl DebugSink for DebugLogSink {
-        fn write_all(&mut self, buffer: &[u8]) -> std::io::Result<()> {
-            self.inner.lock().unwrap().extend_from_slice(buffer);
-            Ok(())
-        }
-    }
-
-    impl DebugLogSink {
-        pub fn new() -> Self {
-            Self {
-                inner: Arc::new(Mutex::new(vec![])),
-            }
-        }
-
-        pub fn content(&self) -> Arc<Mutex<Vec<u8>>> {
-            self.inner.clone()
-        }
-
-        #[cfg(feature = "v2_runtime")]
-        pub fn str_content(&self) -> String {
-            let buf = self.inner.lock().unwrap();
-            String::from_utf8(buf.to_vec()).unwrap()
-        }
-
-        #[cfg(feature = "v2_runtime")]
-        pub fn lines(&self) -> Vec<String> {
-            let str_content = self.str_content();
-            str_content.split("\n").map(|s| s.to_string()).collect()
-        }
-    }
+    pub use jstz_utils::test_util::DebugLogSink;
 
     // Helper to inpect fields in a receipt by tarversing the json path. Useful for debugging.
     // For example, to inpect the body of a successful RunFunctionReceipt, you can provide the path

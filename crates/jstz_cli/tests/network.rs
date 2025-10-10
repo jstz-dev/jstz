@@ -26,6 +26,10 @@ fn list_networks() {
                 "very_long_name_very_long_name_very_long_name": {
                     "octez_node_rpc_endpoint": "http://octez.long.long.long.long.test",
                     "jstz_node_endpoint": "http://jstz.long.long.long.long.test"
+                },
+                "dev": {
+                    "octez_node_rpc_endpoint": "http://octez.dev.test",
+                    "jstz_node_endpoint": "http://jstz.dev.test"
                 }
             }
         })
@@ -37,11 +41,14 @@ fn list_networks() {
 
     let mut process = utils::jstz_cmd(["network", "list"], Some(tmp_dir));
     let output = process.exp_eof().unwrap().replace("\r\n", "\n");
+    // the dev network in the config file should not be listed
     assert_eq!(
         output,
         r#"  +----------------------+---------------------------+---------------------------+
   | Name                 | Octez RPC endpoint        | Jstz node endpoint        |
   +======================+===========================+===========================+
+  | dev                  | -                         | -                         |
+  +----------------------+---------------------------+---------------------------+
   | foo                  | http://octez.foo.test     | http://jstz.foo.test      |
   +----------------------+---------------------------+---------------------------+
   | very_long_name_ve... | http://octez.long.long... | http://jstz.long.long.... |
@@ -159,5 +166,414 @@ fn add_network() {
             predicates::str::contains(short_name)
                 .and(predicates::str::contains("http://new.octez.test")),
         )
+        .success();
+
+    // adding a "dev" network should fail
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "add",
+            "dev",
+            "--octez-node-rpc-endpoint",
+            "http://octez.dev",
+            "--jstz-node-endpoint",
+            "http://jstz.dev",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Network 'dev' is reserved for the sandbox.",
+        ))
+        .failure();
+}
+
+#[test]
+fn update_network() {
+    let network_name = "foo";
+    let tmp_dir = TempDir::new().unwrap();
+    let home_path = tmp_dir.path().to_string_lossy().to_string();
+    let path = tmp_dir.path().join(".config/jstz/config.json");
+    create_dir_all(path.parent().expect("should find parent dir"))
+        .expect("should create dir");
+    let file = File::create(&path).expect("should create file");
+    serde_json::to_writer(
+        file,
+        &serde_json::json!({
+            "networks": {
+                network_name: {
+                    "octez_node_rpc_endpoint": "http://octez.test",
+                    "jstz_node_endpoint": "http://jstz.test"
+                },
+            }
+        }),
+    )
+    .expect("should write config file");
+
+    // update non-existent network
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "update",
+            "some-random-name",
+            "--jstz-node-endpoint",
+            "http://v2.jstz.test",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Network 'some-random-name' does not exist.",
+        ))
+        .failure();
+
+    // network should be listed
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "list"])
+        .assert()
+        .stderr(
+            predicates::str::contains(network_name)
+                .and(predicates::str::contains("http://octez.test"))
+                .and(predicates::str::contains("http://jstz.test")),
+        )
+        .success();
+
+    // update octez endpoint
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "update",
+            network_name,
+            "--octez-node-rpc-endpoint",
+            "http://v2.octez.test",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(format!(
+            "Updated network '{network_name}'.",
+        )))
+        .success();
+
+    // network should be listed with new octez endpoint
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "list"])
+        .assert()
+        .stderr(
+            predicates::str::contains(network_name)
+                .and(predicates::str::contains("http://v2.octez.test"))
+                .and(predicates::str::contains("http://jstz.test")),
+        )
+        .success();
+
+    // update jstz endpoint
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "update",
+            network_name,
+            "--jstz-node-endpoint",
+            "http://v2.jstz.test",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(format!(
+            "Updated network '{network_name}'.",
+        )))
+        .success();
+
+    // network should be listed with new jstz endpoint
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "list"])
+        .assert()
+        .stderr(
+            predicates::str::contains(network_name)
+                .and(predicates::str::contains("http://v2.octez.test"))
+                .and(predicates::str::contains("http://v2.jstz.test")),
+        )
+        .success();
+
+    // update both
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "update",
+            network_name,
+            "--jstz-node-endpoint",
+            "http://v3.jstz.test",
+            "--octez-node-rpc-endpoint",
+            "http://v3.octez.test",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(format!(
+            "Updated network '{network_name}'.",
+        )))
+        .success();
+
+    // network should be listed with new jstz endpoint
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "list"])
+        .assert()
+        .stderr(
+            predicates::str::contains(network_name)
+                .and(predicates::str::contains("http://v3.octez.test"))
+                .and(predicates::str::contains("http://v3.jstz.test")),
+        )
+        .success();
+
+    // missing options
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "update", network_name])
+        .assert()
+        .stderr(predicates::str::contains(
+            "the following required arguments were not provided",
+        ))
+        .failure();
+
+    // option used multiple times
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "update",
+            network_name,
+            "--octez-node-rpc-endpoint",
+            "http://v4.octez.test",
+            "--octez-node-rpc-endpoint",
+            "http://v5.octez.test",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(
+            "the argument '--octez-node-rpc-endpoint <OCTEZ_NODE_RPC_ENDPOINT>' cannot be used multiple times",
+        ))
+        .failure();
+
+    // updating a "dev" network should fail
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args([
+            "network",
+            "update",
+            "dev",
+            "--octez-node-rpc-endpoint",
+            "http://octez.dev",
+        ])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Cannot update the sandbox network 'dev'",
+        ))
+        .failure();
+}
+
+#[test]
+fn delete_network() {
+    let network_name = "foo";
+    let tmp_dir = TempDir::new().unwrap();
+    let home_path = tmp_dir.path().to_string_lossy().to_string();
+    let path = tmp_dir.path().join(".config/jstz/config.json");
+    create_dir_all(path.parent().expect("should find parent dir"))
+        .expect("should create dir");
+    let file = File::create(&path).expect("should create file");
+    serde_json::to_writer(
+        file,
+        &serde_json::json!({
+            "networks": {
+                network_name: {
+                    "octez_node_rpc_endpoint": "http://octez.test",
+                    "jstz_node_endpoint": "http://jstz.test"
+                },
+            }
+        }),
+    )
+    .expect("should write config file");
+
+    // network should be listed
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "list"])
+        .assert()
+        .stderr(predicates::str::contains(network_name))
+        .success();
+
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "delete", network_name])
+        .assert()
+        .stderr(predicates::str::contains(format!(
+            "Deleted network '{network_name}'."
+        )))
+        .success();
+
+    // network should not be listed
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "list"])
+        .assert()
+        .stderr(predicates::str::contains(network_name).not())
+        .success();
+
+    // unknown network should lead to an error
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "delete", &"a".repeat(40)])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Network 'aaaaaaaaaaaaaaaaa...' does not exist.",
+        ))
+        .failure();
+
+    // deleting 'dev' network should fail
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "delete", "dev"])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Cannot delete the sandbox network 'dev'.",
+        ))
+        .failure();
+}
+
+#[test]
+fn get_default_network() {
+    let tmp_dir = TempDir::new().unwrap();
+    let home_path = tmp_dir.path().to_string_lossy().to_string();
+    let path = tmp_dir.path().join(".config/jstz/config.json");
+    create_dir_all(path.parent().expect("should find parent dir"))
+        .expect("should create dir");
+    let file = File::create(&path).expect("should create file");
+    serde_json::to_writer(file, &serde_json::json!({}))
+        .expect("should write config file");
+
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains("Default network is not set."))
+        .success();
+
+    let file = File::options()
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .expect("should create file");
+    serde_json::to_writer(file, &serde_json::json!({"default_network": "foo"}))
+        .expect("should write config file");
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains("foo"))
+        .success();
+
+    // long name
+    let file = File::options()
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .expect("should create file");
+    serde_json::to_writer(
+        file,
+        &serde_json::json!({"default_network": "a".repeat(80)}),
+    )
+    .expect("should write config file");
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains(
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa... (long network name truncated)",
+        ))
+        .success();
+}
+
+#[test]
+fn set_default_network() {
+    let tmp_dir = TempDir::new().unwrap();
+    let home_path = tmp_dir.path().to_string_lossy().to_string();
+    let path = tmp_dir.path().join(".config/jstz/config.json");
+    create_dir_all(path.parent().expect("should find parent dir"))
+        .expect("should create dir");
+    let file = File::create(&path).expect("should create file");
+    serde_json::to_writer(
+        file,
+        &serde_json::json!({
+            "networks": {
+                "foo": {
+                    "octez_node_rpc_endpoint": "http://octez.test",
+                    "jstz_node_endpoint": "http://jstz.test"
+                },
+            }
+        }),
+    )
+    .expect("should write config file");
+
+    // default network is not set in the initial config
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains("Default network is not set."))
+        .success();
+
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "set-default", "foo"])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Using network 'foo' as the default network.",
+        ))
+        .success();
+
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "get-default"])
+        .assert()
+        .stderr(predicates::str::contains("foo"))
+        .success();
+
+    // unknown network should lead to an error
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "set-default", &"a".repeat(40)])
+        .assert()
+        .stderr(predicates::str::contains(
+            "Network 'aaaaaaaaaaaaaaaaa...' does not exist.",
+        ))
+        .failure();
+
+    // dev network
+    Command::cargo_bin("jstz")
+        .unwrap()
+        .env("HOME", &home_path)
+        .args(["network", "set-default", "dev"])
+        .assert()
+        .stderr(predicates::str::contains("dev"))
         .success();
 }

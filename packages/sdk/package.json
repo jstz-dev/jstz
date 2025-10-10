@@ -10,6 +10,6 @@
   },
   "dependencies": {
     "@jstz-dev/jstz-client": "0.1.1-alpha.4",
-    "jstz_sdk": "0.1.1-alpha.4"
+    "jstz_sdk": "0.1.1-alpha.4.1"
   }
 }

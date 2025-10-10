@@ -89,6 +89,16 @@ riscv-wpt-test-kernel:
 		--release \
 		--target riscv64gc-unknown-linux-musl
 
+.PHONY: build-lightweight-kernel
+build-lightweight-kernel:
+	@unset NIX_LDFLAGS && RUSTY_V8_ARCHIVE=$$RISCV_V8_ARCHIVE_DIR/librusty_v8.a \
+		RUSTY_V8_SRC_BINDING_PATH=$$RISCV_V8_ARCHIVE_DIR/src_binding.rs \
+		cargo build \
+		-p jstz_lightweight_kernel \
+		--features lightweight-kernel \
+		--release \
+		--target riscv64gc-unknown-linux-musl
+
 .PHONY: test
 test: test-unit test-int
 

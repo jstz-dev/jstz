@@ -40,11 +40,12 @@ try {
 
   if (packageName != null) {
     try {
-      import.meta.resolveSync(`${packageName}/package.json`);
-      console.log(
-        `Found optional dependency: ${packageName}. Skipping download.`,
-      );
-      process.exit(0);
+      // FIXME(https://linear.app/tezos/issue/JSTZ-924/release-platform-specific-cli-binaries-to-npm)
+      // import.meta.resolveSync(`${packageName}/package.json`);
+      // console.log(
+      //   `Found optional dependency: ${packageName}. Skipping download.`,
+      // );
+      // process.exit(0);
     } catch (e) {}
   }
 
@@ -54,11 +55,17 @@ try {
 
   await fsPromises.mkdir(BIN_DIR, { recursive: true });
 
-  if (!packageJson.version) {
+  let version = packageJson.version;
+  if (!version) {
     throw new Error("The 'version' field was not found in package.json");
   }
 
-  const url = `https://github.com/jstz-dev/jstz/releases/download/${packageJson.version}/${binaryName}`;
+  // Map 0.1.1-alpha.4.1 to 0.1.1-alpha.4
+  if (version == "0.1.1-alpha.4.1") {
+    version = "0.1.1-alpha.4";
+  }
+
+  const url = `https://github.com/jstz-dev/jstz/releases/download/${version}/${binaryName}`;
 
   console.log(`Downloading ${binaryName} from ${url}`);
 

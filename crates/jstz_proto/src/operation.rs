@@ -390,7 +390,7 @@ pub mod internal {
                 {
                     body[k] = v;
                 } else {
-                    return Err(A::Error::custom(format!("unknown key: {:?}", k)));
+                    return Err(A::Error::custom(format!("unknown key: {k:?}")));
                 }
             }
             let proxy_smart_function =

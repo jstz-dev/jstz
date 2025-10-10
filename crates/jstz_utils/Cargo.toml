@@ -24,6 +24,7 @@ regex.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tezos-smart-rollup = { workspace = true, features =  ["utils"], optional = true }
+tezos-smart-rollup-mock = { workspace = true, optional = true }
 tezos_crypto_rs.workspace = true
 tezos_data_encoding = { workspace = true, optional = true }
 tokio.workspace = true
@@ -38,3 +39,4 @@ url.workspace = true
 [features]
 v2_runtime = ["jstz_proto?/v2_runtime"]
 inbox_builder = ["dep:jstz_proto", "dep:http", "dep:tezos-smart-rollup", "dep:tezos_data_encoding"]
+test_utils = ["dep:tezos-smart-rollup-mock"]

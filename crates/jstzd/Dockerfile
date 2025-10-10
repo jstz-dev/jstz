@@ -1,4 +1,4 @@
-ARG OCTEZ_VERSION=23.1
+ARG OCTEZ_VERSION=23.2
 ARG FEATURES="build-image,oracle,blueprint"
 FROM rust:1.86.0-slim-bookworm AS builder
 RUN apt update && apt install -y curl pkg-config libssl-dev libsqlite3-dev
@@ -24,8 +24,7 @@ RUN apt update && apt install -y curl gpg && \
     curl -s "https://packages.nomadic-labs.com/debian/octez.asc" | gpg --dearmor -o /etc/apt/keyrings/octez.gpg && \
     # FIXME(https://linear.app/tezos/issue/JSTZ-901/verify-nl-package-in-jstzd-dockerfile)
     # Set trusted=yes to skip signing as it is currently broken
-    # echo "deb [signed-by=/etc/apt/keyrings/octez.gpg] https://packages.nomadic-labs.com/debian bookworm main" | tee /etc/apt/sources.list.d/octez.list && \
-    echo "deb [trusted=yes] https://packages.nomadic-labs.com/debian bookworm main" | tee /etc/apt/sources.list.d/octez.list && \
+    echo "deb [signed-by=/etc/apt/keyrings/octez.gpg] https://packages.nomadic-labs.com/debian bookworm main" | tee /etc/apt/sources.list.d/octez.list && \
     apt-get update && echo $'\n\n\n\n' | apt -y install octez-node=${OCTEZ_VERSION} \
         octez-client=${OCTEZ_VERSION} octez-baker=${OCTEZ_VERSION} \
         octez-smart-rollup-node=${OCTEZ_VERSION} && \

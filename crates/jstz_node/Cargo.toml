@@ -30,7 +30,7 @@ jstz_core = { path = "../jstz_core" }
 jstz_crypto = { path = "../jstz_crypto" }
 jstz_proto = { path = "../jstz_proto", features = ["kernel"] }
 jstz_utils = { path = "../jstz_utils" }
-jstz_kernel = { path = "../jstz_kernel" }
+jstz_kernel = { path = "../kernels/jstz_kernel" }
 
 log.workspace = true
 mockito.workspace = true
@@ -66,6 +66,7 @@ pretty_assertions.workspace = true
 warp.workspace = true
 http.workspace = true
 jstz_mock = { path = "../jstz_mock" }
+jstz_utils = { path = "../jstz_utils", features = ["test_utils"] }
 
 [[bin]]
 name = "jstz-node"

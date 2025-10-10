@@ -27,6 +27,11 @@ on:
         description: Kernel artifact name
         required: true
         type: string
+      dry_run:
+        description: Dry-run image build without pushing to the registry
+        type: boolean
+        required: false
+        default: true
     outputs:
       tag:
         description: "docker image tag"
@@ -54,6 +59,7 @@ jobs:
           image: ${{ inputs.image }}
           dockerfile: ${{ inputs.dockerfile }}
           kernel_artefact_name: ${{ inputs.kernel_artifact_name }}
+          dry_run: ${{ inputs.dry_run }}
   build-docker-amd64:
     name: Build (Docker amd64)
     runs-on: ubuntu-24.04
@@ -75,6 +81,7 @@ jobs:
           image: ${{ inputs.image }}
           dockerfile: ${{ inputs.dockerfile }}
           kernel_artefact_name: ${{ inputs.kernel_artifact_name }}
+          dry_run: ${{ inputs.dry_run }}
   merge:
     runs-on: ubuntu-latest
     needs:
@@ -107,11 +114,13 @@ jobs:
             type=ref,event=tag
             {{sha}}
       - name: Create manifest list and push
+        if: ${{ !inputs.dry_run }}
         working-directory: ${{ runner.temp }}/digests/${{ inputs.image }}
         run: |
           docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}') \
             $(printf '${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}@sha256:%s ' *)
       - name: Inspect image
+        if: ${{ !inputs.dry_run }}
         id: inspect-image
         run: |
           docker buildx imagetools inspect "${{ fromJson(steps.meta.outputs.json).tags[0] }}"
