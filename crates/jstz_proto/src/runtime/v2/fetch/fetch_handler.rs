@@ -1540,11 +1540,7 @@ mod test {
             let run = SIMPLE_REMOTE_CALLER;
             let remote = r#"
             export default async (req) => {
-                return new Response(null, {
-                    headers: {
-                        "X-JSTZ-TRANSFER": 100
-                    }
-                })
+                return Response.withTransfer(100);
             }
         "#;
 
