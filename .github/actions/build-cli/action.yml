@@ -32,6 +32,8 @@ runs:
       with:
         name: jstz_${{ inputs.platform }}_${{ inputs.arch }}
         path: result/bin/jstz
+        if-no-files-found: error
+        retention-days: 1
     - name: Output
       id: output
       shell: bash
