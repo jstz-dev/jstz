@@ -4,8 +4,34 @@ on:
   push:
     tags:
       - "*"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry-run CLI build without publishing a release
+        type: boolean
+        required: false
+        default: true
+  workflow_call:
+    inputs:
+      dry_run:
+        description: Dry-run SDK build without pushing to NPM
+        type: boolean
+        required: false
+        default: true
 
 jobs:
+  set-input-values:
+    name: Set input values for workflows triggered by tags
+    runs-on: ubuntu-latest
+    outputs:
+      dry_run: ${{ steps.run.outputs.DRY_RUN }}
+    steps:
+      - id: run
+        run: |
+          dry_run=${{ inputs.dry_run }}
+          # Default to false because workflows triggered by tags are not going to dry-run
+          dry_run=${dry_run:-"false"}
+          echo "DRY_RUN=${dry_run}" >> ${GITHUB_OUTPUT}
   macos-arm64:
     name: Build CLI for MacOS Arm64
     runs-on: macos
@@ -89,7 +115,8 @@ jobs:
   upload-github-release:
     name: Upload to github release
     runs-on: ubuntu-24.04
-    needs: [test-macos-arm64, test-linux-arm64, test-linux-amd64]
+    needs: [test-macos-arm64, test-linux-arm64, test-linux-amd64, set-input-values]
+    if: ${{ needs.set-input-values.outputs.dry_run == 'false' || needs.set-input-values.outputs.dry_run == false }}
     steps:
       - uses: actions/download-artifact@v6
         with:
