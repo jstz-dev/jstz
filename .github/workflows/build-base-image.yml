@@ -33,6 +33,8 @@ jobs:
             dockerfile: ./images/build.Dockerfile
           - image: serve
             dockerfile: ./images/serve.Dockerfile
+          - image: build_cli
+            dockerfile: ./images/build_cli.Dockerfile
     uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
     with:
       octez-tag: "" # This value is not referenced by the base docker files
