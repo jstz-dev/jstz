@@ -29,9 +29,6 @@ esac
 
 cargo build --bin bench --features v2_runtime
 
-# Compile contract
-cd $contract_folder_path
-npm run build
 cd $dir
 contract_file_path=$contract_folder_path/dist/index.js
 
