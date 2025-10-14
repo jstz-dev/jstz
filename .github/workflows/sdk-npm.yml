@@ -92,8 +92,8 @@ jobs:
           path: jstz_sdk
       - uses: actions/setup-node@v6
         with:
-          node-version: '22.x'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: "22.x"
+          registry-url: "https://registry.npmjs.org"
       - name: Publish
         shell: bash
         run: |
