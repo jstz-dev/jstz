@@ -161,6 +161,8 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
             rollup_builder.set_operator(ROLLUP_OPERATOR_ACCOUNT_ALIAS.to_string());
     }
     if !rollup_builder.has_boot_sector_file() {
+        // Set a dummy path to satisfy the builder - won't be used for RISC-V rollups
+        // since we pass None when spawning (kernel comes from origination)
         rollup_builder = rollup_builder
             .set_boot_sector_file(jstz_rollup_path::kernel_installer_path());
     }

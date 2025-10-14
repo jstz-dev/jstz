@@ -1,35 +1,42 @@
-# RISC-V Rollup Debug Scripts
+# Debug Scripts - jstzd Equivalent
 
-This directory contains shell scripts to manually reproduce what `cargo run --bin jstzd` does, but split into separate components for easier debugging.
+These scripts replicate exactly what `cargo run --bin jstzd -- run` does.
 
-## Prerequisites
+## Overview
 
-- Octez binaries in PATH:
-  - `octez-node`
-  - `octez-client`
-  - `octez-baker-alpha`
-  - `octez-smart-rollup-node-alpha`
-- The RISC-V kernel at: `crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable`
+These scripts break down the jstzd startup process into individual steps for debugging. They use the **same configuration, accounts, and parameters** that jstzd uses.
+
+## Key Differences from Old Debug Scripts
+
+1. **8 Bootstrap Accounts**: Uses all 8 bootstrap accounts from `crates/jstzd/resources/bootstrap_account/accounts.json`
+
+   - activator (1 mutez)
+   - injector (100,000,000,000 mutez)
+   - **rollup_operator (100,000,000,000 mutez)** ← Bootstrap account, doesn't need manual funding!
+   - bootstrap1-5 (each 100,000,000,000 mutez)
+
+2. **Protocol Parameters**: Uses octez sandbox parameters from `crates/octez/resources/protocol_parameters/sandbox/ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK`
+
+   - Not the jstzd/tests params!
+
+3. **NO Boot Sector File**: The rollup node does NOT use `--boot-sector-file`
+
+   - RISC-V rollups get their kernel from origination: `kernel:<path>:<checksum>`
+   - Boot sector files are only for legacy WASM rollups
+
+4. **Block Level Timing**: Waits for level 5 after origination (not just level 3 + 10 seconds)
 
 ## Usage
 
-Run each script in a separate terminal window in order:
+Open 4 terminals and run these scripts in order:
 
-### Terminal 1: Start Octez Node
+### Terminal 1: Start Node
 
 ```bash
 ./scripts/debug/1-start-node.sh
 ```
 
-This will:
-
-- Create temporary directories
-- Generate node identity
-- Initialize node config
-- Start the octez node
-- Keep running (showing node logs)
-
-**Wait for**: Node to start accepting connections
+Wait for the node to start and show "Node is now running".
 
 ### Terminal 2: Setup Protocol
 
@@ -37,14 +44,7 @@ This will:
 ./scripts/debug/2-setup-protocol.sh
 ```
 
-This will:
-
-- Wait for node to be ready
-- Import bootstrap accounts (activator, injector, rollup_operator)
-- Activate the protocol
-- Exit when done
-
-**Wait for**: Script to complete successfully
+This imports all 8 bootstrap accounts and activates the protocol.
 
 ### Terminal 3: Start Baker
 
@@ -52,13 +52,7 @@ This will:
 ./scripts/debug/3-start-baker.sh
 ```
 
-This will:
-
-- Start the baker
-- Begin producing blocks automatically
-- Keep running (showing baker logs)
-
-**Wait for**: A few blocks to be produced (check Terminal 1 logs)
+Wait for the baker to start producing blocks.
 
 ### Terminal 4: Originate Rollup
 
@@ -66,133 +60,102 @@ This will:
 ./scripts/debug/4-originate-rollup.sh
 ```
 
-This will:
+This originates the RISC-V rollup. No manual funding needed since rollup_operator is a bootstrap account.
 
-- Compute the RISC-V kernel checksum
-- Get the operator address for the whitelist
-- Wait for block level 3
-- Originate the RISC-V smart rollup
-- Save the rollup address
-- Exit when done
-
-**Output**: You'll see the rollup address (sr1...)
-
-### Terminal 5: Start Rollup Node
+### Terminal 4 (same): Start Rollup Node
 
 ```bash
 ./scripts/debug/5-start-rollup-node.sh
 ```
 
-This will:
+Starts the rollup node WITHOUT boot sector file.
 
-- Start the octez-smart-rollup-node
-- Connect to the L1 node
-- Begin syncing
-- Keep running (showing rollup node logs)
+## What Each Script Does
 
-**Watch for**:
+### 1-start-node.sh
 
-- Connection messages
-- Block processing
-- Any timeout errors
+- Creates temp directories (like jstzd does)
+- Generates node identity
+- Initializes node config
+- Starts octez-node in sandbox mode
+
+### 2-setup-protocol.sh
+
+- Waits for node readiness (30 retries × 1 second)
+- Imports ALL 8 bootstrap accounts (matching jstzd)
+- Uses octez sandbox protocol parameters
+- Adds bootstrap accounts to parameters
+- Activates protocol
+
+### 3-start-baker.sh
+
+- Starts baker for injector account
+- Uses --without-dal flag (matching jstzd)
+
+### 4-originate-rollup.sh
+
+- Waits for block level 3
+- Computes RISC-V kernel checksum
+- Originates rollup with `kernel:<path>:<checksum>` format
+- NO manual funding (rollup_operator has funds from genesis)
+- Waits for block level 5 (2 more blocks)
+
+### 5-start-rollup-node.sh
+
+- Starts rollup node for the originated rollup
+- **DOES NOT use --boot-sector-file** (critical!)
+- Uses full history mode
+- RPC on port 18745
 
 ## Debugging Tips
 
-### Check Node Health
-
-```bash
-curl http://localhost:18731/health/ready
-```
-
-### Check Current Block Level
-
-```bash
-source /tmp/jstz-debug-env.sh
-octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    rpc get /chains/main/blocks/head/header | grep level
-```
-
-### List Rollups
-
-```bash
-source /tmp/jstz-debug-env.sh
-octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    list known smart rollups
-```
-
-### Check Rollup Node Health
-
-```bash
-curl http://localhost:18745/health/ready
-```
-
-### View Rollup Node Status
-
-```bash
-curl http://localhost:18745/local/batcher/queue
-```
-
-## Environment Variables
-
-All scripts save and load environment variables from `/tmp/jstz-debug-env.sh`:
-
-- `BASE_DIR`: Temporary directory for all data
-- `NODE_DIR`: Octez node data directory
-- `CLIENT_DIR`: Octez client data directory
-- `NODE_RPC`: Node RPC endpoint
-- `ROLLUP_ADDR`: Originated rollup address (after script 4)
+1. **Check Node Health**: `curl http://localhost:18731/health/ready`
+2. **Check Block Level**: `curl http://localhost:18731/chains/main/blocks/head/header | grep level`
+3. **Check Rollup Status**: `curl http://localhost:18745/global/block/head/status`
+4. **View Account Balance**:
+   ```bash
+   octez-client --base-dir /tmp/jstz-debug-*/octez-client --endpoint http://localhost:18731 \
+     get balance for rollup_operator
+   ```
 
 ## Cleanup
 
-To clean up after testing:
-
-```bash
-source /tmp/jstz-debug-env.sh
-rm -rf "$BASE_DIR"
-rm /tmp/jstz-debug-env.sh
-```
+When done, press Ctrl+C in each terminal. The files are in `/tmp/jstz-debug-*` and will be cleaned up automatically.
 
 ## Common Issues
 
-### "Kernel not found" error
+### Rollup Node Fails to Start
 
-Make sure the kernel exists at:
+- **Old Issue**: Used boot sector file for RISC-V rollup ❌
+- **Fixed**: No boot sector file for RISC-V rollups ✅
 
-```bash
-ls -lh crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable
-```
+### Rollup Operator Has No Funds
 
-### "Connection timeout" in rollup node
+- **Old Issue**: rollup_operator wasn't a bootstrap account ❌
+- **Fixed**: rollup_operator is a bootstrap account with 100B mutez ✅
 
-- Check that the node is still running (Terminal 1)
-- Check the node RPC is accessible: `curl http://localhost:18731/health/ready`
-- The rollup node may show some timeout warnings initially - this is often normal
+### Wrong Protocol Parameters
 
-### "Whitelist" JSON error
+- **Old Issue**: Used jstzd/tests params ❌
+- **Fixed**: Uses octez sandbox params ✅
 
-The operator address must be a valid tz1 address, not an alias. Script 4 handles this automatically.
+## References
 
-### Baker not producing blocks
+- Bootstrap accounts: `crates/jstzd/resources/bootstrap_account/accounts.json`
+- Protocol parameters: `crates/octez/resources/protocol_parameters/sandbox/ProtoALphaALphaALphaALphaALphaALphaALphaALphaDdp3zK`
+- Kernel path: `crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable` (no .elf extension!)
+- Kernel checksum: Computed at build time by `crates/jstzd/build.rs`
 
-- Make sure the protocol was activated (script 2 completed successfully)
-- Check node logs for any errors
-- The baker needs the injector account which should have XTZ from the bootstrap
+## Comparison with jstzd
 
-## What This Replicates
+| Aspect                  | jstzd         | These Scripts    |
+| ----------------------- | ------------- | ---------------- |
+| Bootstrap Accounts      | 8 accounts    | 8 accounts ✅    |
+| Protocol Params         | octez sandbox | octez sandbox ✅ |
+| Rollup Operator Funding | From genesis  | From genesis ✅  |
+| Boot Sector File        | None          | None ✅          |
+| Wait for Level          | 3, then 5     | 3, then 5 ✅     |
+| Health Checks           | Yes (60×2s)   | Manual ⚠️        |
+| jstz_node               | Optional      | Not included ⚠️  |
 
-These scripts replicate the key steps that `jstzd` does:
-
-1. ✅ Start octez node
-2. ✅ Import bootstrap accounts
-3. ✅ Activate protocol
-4. ✅ Start baker
-5. ✅ Originate RISC-V rollup (with proper kernel format)
-6. ✅ Start rollup node
-
-The main differences:
-
-- No jstz_node (JavaScript execution layer)
-- No oracle node
-- Simpler protocol parameters
-- Manual control over timing
-- Easier to see what's happening at each step
+These scripts are functionally equivalent to `cargo run --bin jstzd -- run` for the core Tezos infrastructure (node, baker, rollup). The jstz_node startup would need to be added separately if needed.

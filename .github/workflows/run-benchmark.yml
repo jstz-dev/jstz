@@ -1,0 +1,17 @@
+name: Run benchmark
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_riscv_kernel:
+    name: Build RISCV kernel
+    uses: ./.github/workflows/build-riscv-kernel.yml
+
+  benchmark:
+    name: Benchmark RISCV kernel
+    needs: [build_riscv_kernel]
+    uses: ./.github/workflows/run-benchmark-job.yml
+    with:
+      run-natively: false
+      job-name: "Benchmark RISCV kernel"

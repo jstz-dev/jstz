@@ -1,6 +1,5 @@
 #!/bin/bash
 # Script 4: Originate RISC-V Rollup
-# This replicates what jstzd does when originating the rollup
 # Run this in a new terminal after the baker has produced a few blocks
 
 set -e
@@ -12,32 +11,16 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}=== Originating RISC-V Rollup (jstzd equivalent) ===${NC}"
+echo -e "${BLUE}=== Originating RISC-V Rollup ===${NC}"
 
 # Load environment
 source /tmp/jstz-debug-env.sh
 
-# Wait for block level 3 (jstzd waits for level 3 before originating)
-echo -e "\n${YELLOW}Waiting for block level 3...${NC}"
-for i in {1..30}; do
-  LEVEL=$(octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    rpc get /chains/main/blocks/head/header 2>/dev/null | grep -o '"level":[0-9]*' | cut -d':' -f2 || echo "0")
-  if [ -n "$LEVEL" ] && [ "$LEVEL" -ge 3 ]; then
-    echo -e "${GREEN}✓ At block level $LEVEL${NC}"
-    break
-  fi
-  echo -n "."
-  sleep 1
-done
-echo ""
-
-# Get the RISC-V kernel path
-# This should match what build.rs generates
-KERNEL_PATH="/Users/alanmarko/projects/jstz_attempt2/jstz/crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable"
+# Get the RISC-V kernel path and checksum
+KERNEL_PATH="/Users/alanmarko/projects/jstz_attempt2/jstz/crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable.elf"
 
 if [ ! -f "$KERNEL_PATH" ]; then
   echo -e "${RED}Error: Kernel not found at $KERNEL_PATH${NC}"
-  echo "Note: jstzd uses the file WITHOUT the .elf extension"
   exit 1
 fi
 
@@ -53,7 +36,7 @@ else
 fi
 echo "Checksum: $KERNEL_CHECKSUM"
 
-# Format kernel parameter (jstzd uses: kernel:<path>:<checksum>)
+# Format kernel parameter
 KERNEL_PARAM="kernel:${KERNEL_PATH}:${KERNEL_CHECKSUM}"
 
 echo -e "\n${BLUE}Kernel parameter:${NC}"
@@ -65,9 +48,27 @@ OPERATOR_ADDR=$(octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhos
   show address rollup_operator | grep Hash: | awk '{print $2}')
 echo "Operator address: $OPERATOR_ADDR"
 
-# NOTE: No need to transfer funds! rollup_operator is a bootstrap account with 100,000,000,000 mutez
+# Transfer funds to rollup_operator (it's not a bootstrap account)
+echo -e "\n${BLUE}Transferring funds to rollup_operator...${NC}"
+octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
+  transfer 1000000 from injector to rollup_operator --burn-cap 1 2>&1 | grep -v "Warning:"
+echo -e "${GREEN}✓ Funds transferred${NC}"
 
-# Originate the rollup (jstzd does this at level 3)
+# Wait for a few blocks
+echo -e "\n${YELLOW}Waiting for block level 3...${NC}"
+for i in {1..30}; do
+  LEVEL=$(octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
+    rpc get /chains/main/blocks/head/header 2>/dev/null | grep -o '"level":[0-9]*' | cut -d':' -f2)
+  if [ -n "$LEVEL" ] && [ "$LEVEL" -ge 3 ]; then
+    echo -e "${GREEN}✓ At block level $LEVEL${NC}"
+    break
+  fi
+  echo -n "."
+  sleep 1
+done
+echo ""
+
+# Originate the rollup
 echo -e "\n${BLUE}Originating RISC-V smart rollup...${NC}"
 echo "This may take a moment..."
 
@@ -78,7 +79,8 @@ ORIGINATION_OUTPUT=$(octez-client --base-dir "$CLIENT_DIR" --endpoint http://loc
   of type string \
   with kernel "$KERNEL_PARAM" \
   --burn-cap 999999 \
-  --force 2>&1)
+  --force \
+  --whitelist "[\"$OPERATOR_ADDR\"]" 2>&1)
 ORIGINATION_EXIT_CODE=$?
 set -e
 
@@ -105,18 +107,7 @@ echo -e "${GREEN}  Address: $ROLLUP_ADDR${NC}"
 # Save rollup address
 echo "export ROLLUP_ADDR=$ROLLUP_ADDR" >>/tmp/jstz-debug-env.sh
 
-# Wait for block level 5 (jstzd waits for level 5 after origination)
-echo -e "\n${YELLOW}Waiting for block level 5 (jstzd waits 2 more blocks)...${NC}"
-for i in {1..30}; do
-  LEVEL=$(octez-client --base-dir "$CLIENT_DIR" --endpoint http://localhost:18731 \
-    rpc get /chains/main/blocks/head/header 2>/dev/null | grep -o '"level":[0-9]*' | cut -d':' -f2 || echo "0")
-  if [ -n "$LEVEL" ] && [ "$LEVEL" -ge 5 ]; then
-    echo -e "${GREEN}✓ At block level $LEVEL${NC}"
-    break
-  fi
-  echo -n "."
-  sleep 1
-done
-echo ""
+echo -e "\n${YELLOW}Waiting for origination to be included in a block...${NC}"
+sleep 10
 
 echo -e "\n${GREEN}Ready to start rollup node (script 5)${NC}"

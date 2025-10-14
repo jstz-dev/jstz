@@ -1,0 +1,12 @@
+name: Run benchmark natively
+
+on:
+  workflow_dispatch:
+
+jobs:
+  benchmark:
+    name: Benchmark RISCV kernel natively
+    uses: ./.github/workflows/run-benchmark-job.yml
+    with:
+      run-natively: true
+      job-name: "Benchmark RISCV kernel natively"

@@ -180,6 +180,7 @@ impl Task for Jstzd {
         );
         let rollup = OctezRollup::spawn(config.octez_rollup_config.clone()).await?;
 
+        Self::wait_for_rollup(&rollup).await?;
         // Give the rollup node a moment to start, but don't wait for full health check
         // It will catch up and sync in the background
         println!("   ⏳ Waiting for rollup node to start...");

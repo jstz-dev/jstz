@@ -1,6 +1,5 @@
 #!/bin/bash
 # Script 1: Start Octez Node
-# This replicates what jstzd does when starting the octez node
 # Run this in Terminal 1
 
 set -e
@@ -10,12 +9,12 @@ GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-echo -e "${BLUE}=== Starting Octez Node (jstzd equivalent) ===${NC}"
+echo -e "${BLUE}=== Starting Octez Node ===${NC}"
 
-# Setup directories (using temp dir like jstzd does)
+# Setup directories
 export BASE_DIR="/tmp/jstz-debug-$(date +%s)"
-export NODE_DIR="$BASE_DIR/octez-node"
-export CLIENT_DIR="$BASE_DIR/octez-client"
+export NODE_DIR="$BASE_DIR/node"
+export CLIENT_DIR="$BASE_DIR/client"
 
 mkdir -p "$NODE_DIR"
 mkdir -p "$CLIENT_DIR"

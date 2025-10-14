@@ -1,6 +1,5 @@
 #!/bin/bash
 # Script 5: Start Rollup Node
-# This replicates what jstzd does when starting the rollup node
 # Run this in Terminal 4 after originating the rollup
 
 set -e
@@ -12,7 +11,7 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
 
-echo -e "${BLUE}=== Starting Rollup Node (jstzd equivalent) ===${NC}"
+echo -e "${BLUE}=== Starting Rollup Node ===${NC}"
 
 # Load environment
 source /tmp/jstz-debug-env.sh
@@ -33,14 +32,10 @@ echo -e "\n${BLUE}Starting octez-smart-rollup-node...${NC}"
 echo "Data directory: $ROLLUP_DIR"
 echo "RPC will be available at: http://localhost:18745"
 echo ""
-echo -e "${YELLOW}IMPORTANT: NO boot sector file is used (RISC-V kernel comes from origination)${NC}"
-echo ""
 echo "Logs will appear below:"
 echo ""
 
 # Start the rollup node
-# CRITICAL: jstzd does NOT use --boot-sector-file for RISC-V rollups!
-# The kernel comes from the origination (kernel:<path>:<checksum>)
 octez-smart-rollup-node \
   --endpoint http://localhost:18731 \
   --base-dir "$CLIENT_DIR" \
