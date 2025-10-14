@@ -65,7 +65,7 @@ impl Task for OctezRollup {
                 &config.address,
                 &config.operator,
                 &config.history_mode,
-                None, // RISC-V rollups get kernel from origination, not boot sector
+                Some(&config.boot_sector_file),
                 config
                     .kernel_debug_file
                     .as_ref()

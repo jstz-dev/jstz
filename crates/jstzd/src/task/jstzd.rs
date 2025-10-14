@@ -162,12 +162,12 @@ impl Task for Jstzd {
         .await?;
         Self::activate_protocol(&octez_client, &config.protocol_params).await?;
         let baker = OctezBaker::spawn(config.baker_config.clone()).await?;
-        Self::wait_for_block_level(&config.octez_node_config.rpc_endpoint, 3).await?;
+        //Self::wait_for_block_level(&config.octez_node_config.rpc_endpoint, 3).await?;
 
         // Originate the RISC-V rollup and update the config with the new address
-        let rollup_address = Self::originate_rollup(&octez_client).await?;
+        /*let rollup_address = Self::originate_rollup(&octez_client).await?;
         config.octez_rollup_config =
-            config.octez_rollup_config.with_address(rollup_address);
+            config.octez_rollup_config.with_address(rollup_address);*/
 
         // Wait a couple blocks for the origination to be included
         println!("\n⏳ Waiting for rollup origination to be included...");
@@ -369,7 +369,7 @@ impl Jstzd {
 
     /// Wait for the baker to bake at least `level` blocks.
     async fn wait_for_block_level(node_endpoint: &Endpoint, level: i64) -> Result<()> {
-        let ready = retry(10, 1000, || async {
+        let ready = retry(100, 1000, || async {
             get_block_level(&node_endpoint.to_string())
                 .await
                 .map(|l| l >= level)
