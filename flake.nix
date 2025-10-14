@@ -38,7 +38,7 @@
 
     octezPackages = {
       inputs.nixpkgs.follows = "nixpkgs";
-      url = "gitlab:tezos/tezos/octez-v22.0-rc1";
+      url = "gitlab:tezos/tezos/51117ed39f82ab60edd6fe4f6d63094605bb22c7";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.opam-nix-integration.follows = "opam-nix-integration";
@@ -72,8 +72,8 @@
             patches =
               (old.patches or [])
               ++ [
-                ./nix/patches/octez/0001-fix-octez-rust-deps-for-nix.patch
-                ./nix/patches/octez/0002-allow-floats-in-wasm-rollup.patch
+                # ./nix/patches/octez/0001-fix-octez-rust-deps-for-nix.patch
+                # ./nix/patches/octez/0002-allow-floats-in-wasm-rollup.patch
               ];
 
             # Network access for fetching cargo dependencies is disabled in sandboxed
@@ -130,8 +130,7 @@
               octez-client
               octez-node
               octez-smart-rollup-node
-              octez-smart-rollup-wasm-debugger
-              octez-baker-PsQuebec
+              octez-baker-PtSeouLo
               octez-baker-PsRiotum
               octez-baker-alpha
             '';

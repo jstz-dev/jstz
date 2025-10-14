@@ -167,6 +167,11 @@ impl OctezRollupConfigBuilder {
         self
     }
 
+    pub fn set_pvm_kind(mut self, pvm_kind: SmartRollupPvmKind) -> Self {
+        self.pvm_kind = Some(pvm_kind);
+        self
+    }
+
     // Getter methods to check if fields are set
     pub fn has_octez_client_base_dir(&self) -> bool {
         self.octez_client_base_dir.is_some()
@@ -199,7 +204,7 @@ impl OctezRollupConfigBuilder {
             octez_node_endpoint: self
                 .octez_node_endpoint
                 .ok_or_else(|| anyhow::anyhow!("octez_node_endpoint is required"))?,
-            pvm_kind: self.pvm_kind.unwrap_or(SmartRollupPvmKind::Wasm),
+            pvm_kind: self.pvm_kind.clone().unwrap_or(SmartRollupPvmKind::Wasm),
             data_dir: self.data_dir.unwrap_or(RollupDataDir::Temp),
             address: self
                 .address
@@ -207,9 +212,16 @@ impl OctezRollupConfigBuilder {
             operator: self
                 .operator
                 .ok_or_else(|| anyhow::anyhow!("operator is required"))?,
-            boot_sector_file: self
-                .boot_sector_file
-                .ok_or_else(|| anyhow::anyhow!("boot_sector_file is required"))?,
+            boot_sector_file: match self.pvm_kind.unwrap_or(SmartRollupPvmKind::Wasm) {
+                SmartRollupPvmKind::Wasm => self.boot_sector_file.ok_or_else(|| {
+                    anyhow::anyhow!("boot_sector_file is required for WASM rollups")
+                })?,
+                SmartRollupPvmKind::Riscv => self.boot_sector_file.unwrap_or_else(|| {
+                    // For RISC-V rollups, boot sector file is optional since kernel is embedded in origination
+                    // Use a dummy path that won't be used
+                    PathBuf::from("/dev/null")
+                }),
+            },
             rpc_endpoint: self.rpc_endpoint.unwrap_or_else(|| {
                 let port = unused_port();
                 let uri = Uri::from_str(&format!("127.0.0.1:{port}")).unwrap();
@@ -260,6 +272,14 @@ impl fmt::Display for HistoryMode {
     }
 }
 
+impl OctezRollupConfig {
+    /// Create a new config with a different rollup address
+    pub fn with_address(mut self, address: SmartRollupHash) -> Self {
+        self.address = address;
+        self
+    }
+}
+
 pub struct OctezRollup {
     binary_path: PathBuf,
     /// Path to the directory where the rollup state & kernel preimages are stored
@@ -300,8 +320,8 @@ impl OctezRollup {
                 "--base-dir",
                 &self.octez_client_base_dir.to_string_lossy(),
             ])
-            .stdout(Stdio::from(self.log_file.as_file().try_clone()?))
-            .stderr(Stdio::from(self.log_file.as_file().try_clone()?));
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
         Ok(command)
     }
 
@@ -344,6 +364,19 @@ impl OctezRollup {
                 &kernel_debug_file.to_string_lossy(),
             ]);
         }
+
+        // Print command and log file location for debugging
+        println!("🔧 Starting octez-smart-rollup-node...");
+        println!("   Command: {:?}", command.as_std());
+        println!("   Log file: {}", self.log_file.as_ref());
+        println!("   Data dir: {}", self.data_dir.to_string_lossy());
+        println!(
+            "   RPC endpoint: {}:{}",
+            self.rpc_endpoint.host(),
+            self.rpc_endpoint.port()
+        );
+        println!();
+
         Ok(command.spawn()?)
     }
 }

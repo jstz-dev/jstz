@@ -163,11 +163,14 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
             rollup_builder.set_operator(ROLLUP_OPERATOR_ACCOUNT_ALIAS.to_string());
     }
     if !rollup_builder.has_boot_sector_file() {
-        rollup_builder = rollup_builder
-            .set_boot_sector_file(jstz_rollup_path::kernel_installer_path());
+        // Set a dummy path to satisfy the builder - won't be used for RISC-V rollups
+        // since we pass None when spawning (kernel comes from origination)
+        rollup_builder =
+            rollup_builder.set_boot_sector_file(jstz_rollup_path::riscv_kernel_path());
     }
 
     let octez_rollup_config = rollup_builder
+        .set_pvm_kind(SmartRollupPvmKind::Riscv)
         .set_data_dir(RollupDataDir::TempWithPreImages {
             preimages_dir: jstz_rollup_path::preimages_path(),
         })
@@ -396,11 +399,21 @@ async fn build_protocol_params(
         accounts.push(account);
     }
 
+    let kernel_path = jstz_rollup_path::riscv_kernel_path();
+    let kernel_checksum = jstz_rollup_path::riscv_kernel_checksum();
+
+    // Format: kernel:<absolute_path>:<sha256_checksum>
+    let kernel = format!("kernel:{}:{}", kernel_path.display(), kernel_checksum);
+    println!("kernel: {}", kernel);
+
+    // No longer bootstrap the rollup - it will be originated instead
     builder
         .set_bootstrap_smart_rollups([BootstrapSmartRollup::new(
             JSTZ_ROLLUP_ADDRESS,
-            SmartRollupPvmKind::Wasm,
-            &tokio::fs::read_to_string(jstz_rollup_path::kernel_installer_path()).await?,
+            SmartRollupPvmKind::Riscv,
+            &hex::encode(&kernel),
+            //hex::encode(&tokio::fs::read(jstz_rollup_path::riscv_kernel_path()).await?)
+            //    .as_str(),
             serde_json::from_slice(
                 &BootstrapRollupFile::get("parameters_ty.json")
                     .ok_or(anyhow::anyhow!("file not found"))?
