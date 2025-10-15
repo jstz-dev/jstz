@@ -106,7 +106,7 @@ jobs:
           cd jstz_sdk
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             echo "Dry-run npm publish"
-            npm publish --provenance --access public --verbose  --tag latest --dry-run
+            npm publish --provenance --access public --verbose --tag latest --dry-run
           else
             echo "Publish to NPM"
             npm publish --provenance --access public --verbose --tag latest
