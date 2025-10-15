@@ -19,6 +19,10 @@ on:
         required: false
         default: true
 
+permissions:
+  id-token: write # Required for OIDC
+  contents: write # Required for github release
+
 jobs:
   set-input-values:
     name: Set input values for workflows triggered by tags
@@ -133,3 +137,26 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: jstz_*
+
+  publish-to-npm:
+    name: Publish to NPM
+    runs-on: ubuntu-24.04
+    needs: [test-macos-arm64, test-linux-arm64, test-linux-amd64]
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "22.x"
+          registry-url: "https://registry.npmjs.org"
+      - name: Update npm # npm 11.5.1 or later is required for trusted publishing
+        run: npm install -g npm@latest
+      - name: Publish
+        shell: bash
+        run: |
+          cd packages/cli/main
+          if [[ "${{ needs.set-input-values.outputs.dry_run }}" == "true" ]]; then
+            echo "Dry-run npm publish"
+            npm publish --provenance --access public --verbose --tag latest --dry-run
+          else
+            echo "Publish to NPM"
+            npm publish --provenance --access public --verbose --tag latest
+          fi
