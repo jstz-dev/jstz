@@ -26,6 +26,10 @@ on:
         required: false
         default: true
 
+permissions:
+  id-token: write  # Required for OIDC
+  contents: read
+
 jobs:
   build:
     name: Build SDK
@@ -103,8 +107,5 @@ jobs:
             npm publish --provenance --access public --dry-run
           else
             echo "Publish to NPM"
-            # Uncomment when a shared npm token becomes available as secrets.NPM_PKG_AUTH_TOKEN
-            # npm publish --provenance --access public
+            npm publish --provenance --access public
           fi
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_PKG_AUTH_TOKEN }}
