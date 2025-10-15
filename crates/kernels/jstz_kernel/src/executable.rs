@@ -16,7 +16,7 @@ pub fn entry(rt: &mut impl Runtime) {
 // kernel entry for native kernel
 #[cfg(feature = "native_kernel")]
 #[entrypoint::main]
-#[entrypoint::runtime(static_inbox = "../../jstz_tps_bench/inbox.json")]
+#[entrypoint::runtime(static_inbox = "../../../jstz_tps_bench/inbox.json")]
 pub fn entry(rt: &mut impl Runtime) {
     entry_function(rt);
 }
