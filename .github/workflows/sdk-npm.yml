@@ -28,7 +28,7 @@ on:
 
 permissions:
   id-token: write # Required for OIDC
-  contents: read
+  contents: write # Required for github release
 
 jobs:
   build:
@@ -106,8 +106,8 @@ jobs:
           cd jstz_sdk
           if [[ "${{ inputs.dry_run }}" == "true" ]]; then
             echo "Dry-run npm publish"
-            npm publish --provenance --access public --dry-run
+            npm publish --provenance --access public --verbose  --tag latest --dry-run
           else
             echo "Publish to NPM"
-            npm publish --provenance --access public
+            npm publish --provenance --access public --verbose --tag latest
           fi
