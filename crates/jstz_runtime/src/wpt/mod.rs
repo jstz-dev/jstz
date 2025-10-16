@@ -3,7 +3,10 @@
 //! Provides test status enums, result and report structures, runtime operations and integration
 //! for running WPT tests within the JSTZ kernel.
 
-use crate::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
+use crate::{
+    runtime::{Limiter, MAX_SMART_FUNCTION_CALL_COUNT},
+    JstzRuntime, JstzRuntimeOptions, RuntimeContext,
+};
 use deno_core::{
     convert::Smi,
     op2,
@@ -294,9 +297,15 @@ pub fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRu
     options
         .extensions
         .push(test_harness_api::init_ops_and_esm());
-
+    let limiter = Limiter::<MAX_SMART_FUNCTION_CALL_COUNT>::default();
     let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
-        protocol: Some(RuntimeContext::new(host, tx, address, String::new())),
+        protocol: Some(RuntimeContext::new(
+            host,
+            tx,
+            address,
+            String::new(),
+            limiter.try_acquire().unwrap(),
+        )),
         extensions: vec![test_harness_api::init_ops_and_esm()],
         ..Default::default()
     });

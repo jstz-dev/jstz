@@ -1,0 +1,24 @@
+name: Nightly test post-run actions
+
+on:
+  workflow_run:
+    workflows: ["Run nightly long-running tests"]
+    types:
+      - completed
+    branches: [main]
+
+jobs:
+  notify-on-failure:
+    # Failed re-run attempts will not trigger new notifications.
+    if: ${{ github.event.workflow_run.conclusion == 'failure' && github.event.workflow_run.run_attempt == 1 }}
+    name: Send notification when run fails
+    runs-on: ubuntu-latest
+    steps:
+      - name: Push slack message
+        uses: slackapi/slack-github-action@v2.1.1
+        with:
+          webhook: ${{ secrets.NIGHTLY_TEST_SLACK_WEBHOOK_URL }}
+          webhook-type: webhook-trigger
+          payload: |
+            "source": "GitHub",
+            "message": "Nightly test failed. ${{ github.event.workflow_run.html_url }}",

@@ -13,7 +13,7 @@ pub fn run(rt: &mut impl Runtime) {
         tx.begin();
         if let Some(message) = read_message(rt, &ticketer) {
             let _ = rt.mark_for_reboot();
-            match message {
+            match message.content {
                 ParsedInboxMessage::JstzMessage(message) => {
                     handle_message(rt, message, &ticketer, &mut tx, &injector)
                         .await
@@ -43,7 +43,6 @@ mod test {
             ticket_table::TicketTable,
         },
         executor::smart_function,
-        runtime::ParsedCode,
     };
     use tezos_smart_rollup::types::{Contract, PublicKeyHash};
 
@@ -91,9 +90,7 @@ mod test {
 
         let tx = &mut Transaction::default();
         tx.begin();
-        let parsed_code =
-            ParsedCode::try_from(jstz_mock::host::MOCK_PROXY_FUNCTION.to_string())
-                .unwrap();
+        let parsed_code = jstz_mock::host::MOCK_PROXY_FUNCTION.to_string();
         let addr = Address::User(
             jstz_crypto::public_key_hash::PublicKeyHash::from_base58(MOCK_SOURCE)
                 .unwrap(),

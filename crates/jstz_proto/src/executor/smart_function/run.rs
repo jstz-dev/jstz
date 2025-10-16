@@ -36,7 +36,6 @@ mod test {
         context::account::{Account, Address},
         executor::smart_function,
         operation::RunFunction,
-        runtime::ParsedCode,
         HttpBody,
     };
 
@@ -76,7 +75,7 @@ mod test {
         export default handler;
         "#
         );
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let smart_function =
             smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -172,9 +171,6 @@ mod test {
         assert_eq!(balance_after, balance_before);
     }
 
-    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
-    // v2 fetch does not support noop path
-    #[cfg(not(feature = "v2_runtime"))]
     #[tokio::test]
     async fn transfer_xtz_to_smart_function_succeeds_with_noop_path() {
         let source = Address::User(jstz_mock::account1());
@@ -202,7 +198,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let smart_function =
             smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -317,7 +313,7 @@ mod test {
             "#;
 
         // 1. Deploy smart function
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let smart_function =
             deploy_smart_function(host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -389,7 +385,7 @@ mod test {
         );
 
         // 1. Deploy smart function
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let smart_function =
             smart_function::deploy(host, &mut tx, &source, parsed_code, initial_balance)
@@ -476,7 +472,7 @@ mod test {
         tx.commit(host).unwrap();
 
         // 1. Deploy smart function
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let smart_function =
             smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -543,7 +539,7 @@ mod test {
             return SmartFunction.call(withdrawRequest);
         }
         "#;
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         Account::add_balance(host, &mut tx, &source, 1000).unwrap();
         let smart_function = smart_function::deploy::deploy_smart_function(
@@ -625,7 +621,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code2 = ParsedCode::try_from(code2.to_string()).unwrap();
+        let parsed_code2 = code2.to_string();
         tx.begin();
         let smart_function2 =
             smart_function::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
@@ -654,10 +650,6 @@ mod test {
         );
         assert_eq!(source_after - source_before, transfer_amount);
     }
-
-    // TODO: https://linear.app/tezos/issue/JSTZ-657/v2-fetch-should-support-transfer-with-noop
-    // v2 fetch does not support noop path
-    #[cfg(not(feature = "v2_runtime"))]
     #[tokio::test]
     async fn transfer_xtz_from_smart_function_succeeds_with_noop() {
         let source = Address::User(jstz_mock::account2());
@@ -691,7 +683,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code2 = ParsedCode::try_from(code2.to_string()).unwrap();
+        let parsed_code2 = code2.to_string();
         tx.begin();
         let smart_function2 =
             smart_function::deploy(host, &mut tx, &source, parsed_code2, transfer_amount)
@@ -747,7 +739,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let smart_function = smart_function::deploy(
             host,
@@ -817,7 +809,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let smart_function =
             smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -871,7 +863,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
+        let parsed_code = refund_code.to_string();
         let refund_sf = smart_function::deploy(
             host,
             &mut tx,
@@ -895,7 +887,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         let caller_sf = smart_function::deploy(
             host,
             &mut tx,
@@ -963,7 +955,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
+        let parsed_code = refund_code.to_string();
         let refund_sf = smart_function::deploy(
             host,
             &mut tx,
@@ -983,7 +975,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         let caller_sf = smart_function::deploy(
             host,
             &mut tx,
@@ -1052,7 +1044,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(invalid_refund_code.to_string()).unwrap();
+        let parsed_code = invalid_refund_code.to_string();
         let fake_refund_sf = smart_function::deploy(
             host,
             &mut tx,
@@ -1073,7 +1065,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         let caller_sf = smart_function::deploy(
             host,
             &mut tx,
@@ -1146,7 +1138,7 @@ mod test {
             };
             export default handler;
             "#;
-        let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
+        let parsed_code = refund_code.to_string();
         let fake_refund_sf = smart_function::deploy(
             host,
             &mut tx,
@@ -1174,7 +1166,7 @@ mod test {
             host,
             &mut tx,
             &source,
-            ParsedCode::try_from(invalid_request_amount_code.to_string()).unwrap(),
+            invalid_request_amount_code.to_string(),
             initial_caller_sf_balance,
         )
         .unwrap();
@@ -1257,7 +1249,7 @@ mod test {
         Account::add_balance(host, &mut tx, &source, initial_refund_sf_balance).unwrap();
 
         // 1. Deploy the smart function that refunds to the caller
-        let parsed_code = ParsedCode::try_from(refund_code.to_string()).unwrap();
+        let parsed_code = refund_code.to_string();
         let refund_sf = smart_function::deploy(
             host,
             &mut tx,
@@ -1281,7 +1273,7 @@ mod test {
             export default handler;
             "#
         );
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         let caller_sf = smart_function::deploy(
             host,
             &mut tx,
@@ -1405,7 +1397,7 @@ mod test {
                 }}
             "#,
         );
-        let parsed_code = ParsedCode::try_from(token_contract_code.to_string()).unwrap();
+        let parsed_code = token_contract_code.to_string();
         let token_smart_function =
             smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
 
@@ -1500,7 +1492,7 @@ mod test {
         export default handler;
         "#
         );
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let smart_function =
             smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -1531,5 +1523,58 @@ mod test {
         let text = String::from_utf8(response.body.unwrap()).unwrap();
         assert_eq!(text, "a-b;c-d;");
         assert_eq!(response.status_code, http::StatusCode::OK);
+    }
+
+    #[cfg(feature = "v2_runtime")]
+    #[tokio::test]
+    async fn handles_infinite_recursion() {
+        let source = Address::User(jstz_mock::account1());
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+
+        // This smart function recursively calls itself given a body of its own address
+        let code = format!(
+            r#"
+        async function handler(req) {{
+            const k = await req.text();
+            return await fetch(`jstz://${{k}}/`, {{body: k, method: "POST"}});
+        }}
+        export default handler;
+        "#
+        );
+        let parsed_code = code.to_string();
+        tx.begin();
+        let smart_function =
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+        tx.commit(host).unwrap();
+
+        tx.begin();
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
+            method: Method::POST,
+            headers: HeaderMap::new(),
+            body: HttpBody::from_string(smart_function.to_base58()),
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        let response = super::execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            fake_op_hash.clone(),
+        )
+        .await
+        .expect("run function expected");
+        tx.commit(host).unwrap();
+
+        let text = String::from_utf8(response.body.unwrap()).unwrap();
+        assert!(text.contains("Too many smart function calls (max: 5)"));
+        assert_eq!(
+            response.status_code,
+            http::StatusCode::INTERNAL_SERVER_ERROR
+        );
     }
 }

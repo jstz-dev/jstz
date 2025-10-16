@@ -48,7 +48,7 @@ jobs:
           ref: ${{ needs.set-ref.outputs.target_ref }}
           fetch-depth: 0 # Not needed if lastUpdated is not enabled
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 18
           cache: npm
@@ -59,7 +59,7 @@ jobs:
           npm run docs:build
           touch docs/build/.nojekyll
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v5
         with:
           aws-access-key-id: ${{ secrets.AWS_S3_PRODUCTION_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_S3_PRODUCTION_SECRET }}

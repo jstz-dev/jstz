@@ -17,7 +17,6 @@ use jstz_proto::{
         DeployFunctionReceipt, DepositReceipt, Receipt, ReceiptContent, ReceiptResult,
         RunFunctionReceipt,
     },
-    runtime::ParsedCode,
     HttpBody,
 };
 use jstz_utils::{test_util::alice_keys, KeyPair};
@@ -25,6 +24,7 @@ use octez::unused_port;
 use reqwest::Client;
 use std::{
     io::Write,
+    path::Path,
     process::{Child, Command},
 };
 use tempfile::{NamedTempFile, TempDir};
@@ -54,7 +54,7 @@ impl Drop for ChildWrapper {
 const DEFAULT_ROLLUP_NODE_RPC: &str = "127.0.0.1:8932";
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn run_sequencer() {
+async fn run_native_sequencer() {
     let tmp_dir = TempDir::new().unwrap();
     let log_file = NamedTempFile::new().unwrap();
     let mut injector_file = NamedTempFile::new().unwrap();
@@ -101,8 +101,72 @@ async fn run_sequencer() {
     check_worker_health(&client, &base_uri).await;
 }
 
+#[cfg_attr(
+    not(feature = "riscv_test"),
+    ignore = "RISCV tests are not enabled by default due to memory usage"
+)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn run_riscv_sequencer() {
+    let riscv_kernel_path =
+        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/riscv_kernel");
+    let tmp_dir = TempDir::new().unwrap();
+    let log_file = NamedTempFile::new().unwrap();
+    let mut injector_file = NamedTempFile::new().unwrap();
+    injector_file
+        // using the kernel's default injector public key in build.rs
+        .write_all(
+            br#"{
+            "public_key": "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+            "secret_key": "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh"
+}"#,
+        )
+        .unwrap();
+    injector_file.flush().unwrap();
+    let port = unused_port();
+    let rollup_rpc_port = unused_port();
+    let base_uri = format!("http://127.0.0.1:{port}");
+    let _rollup_rpc = make_mock_rollup_rpc_server(format!("127.0.0.1:{rollup_rpc_port}"));
+
+    let bin_path = assert_cmd::cargo::cargo_bin("jstz-node");
+    let _c = ChildWrapper(
+        Command::new(bin_path)
+            .args([
+                "run",
+                "--port",
+                &port.to_string(),
+                "--rollup-node-rpc-addr",
+                "127.0.0.1",
+                "--rollup-node-rpc-port",
+                &rollup_rpc_port.to_string(),
+                "--preimages-dir",
+                tmp_dir.path().to_str().unwrap(),
+                "--debug-log-path",
+                log_file.path().to_str().unwrap(),
+                "--mode",
+                "sequencer",
+                "--injector-key-file",
+                injector_file.path().to_str().unwrap(),
+                "--riscv-kernel-path",
+                riscv_kernel_path.to_str().unwrap(),
+                "--rollup-address",
+                "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+            ])
+            .spawn()
+            .unwrap(),
+    );
+
+    let client = Client::new();
+
+    check_mode(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
+    deploy_function(&client, &base_uri).await;
+    call_function_and_stream_logs(&base_uri).await;
+    check_inbox_op(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
+}
+
 async fn check_mode(client: &Client, base_uri: &str) {
-    let res = jstz_utils::poll(15, 500, || async {
+    let res = jstz_utils::poll(60, 500, || async {
         client.get(format!("{base_uri}/mode")).send().await.ok()
     })
     .await
@@ -166,7 +230,7 @@ async fn submit_operation(
 
 async fn poll_receipt(client: &Client, base_uri: &str, hash: &str) -> Receipt {
     let uri = format!("{base_uri}/operations/{hash}/receipt");
-    jstz_utils::poll(10, 500, || async {
+    jstz_utils::poll(60, 500, || async {
         match client.get(&uri).send().await.ok() {
             Some(r) if r.status() != 404 => Some(r),
             _ => None,
@@ -180,7 +244,7 @@ async fn poll_receipt(client: &Client, base_uri: &str, hash: &str) -> Receipt {
 }
 
 async fn deploy_function(client: &Client, base_uri: &str) {
-    let deploy_op = raw_operation(0, Content::DeployFunction(DeployFunction {function_code: ParsedCode::try_from(format!("const handler = async () => {{ const s = \"{}\"; console.log(\"debug message here\"); return new Response(\"this is a big function\"); }}; export default handler;\n", "a".repeat(8000))).unwrap(), account_credit: 0}));
+    let deploy_op = raw_operation(0, Content::DeployFunction(DeployFunction {function_code: format!("const handler = async () => {{ const s = \"{}\"; console.log(\"debug message here\"); return new Response(\"this is a big function\"); }}; export default handler;\n", "a".repeat(8000)), account_credit: 0}));
 
     let receipt = submit_operation(
         client,
@@ -330,7 +394,7 @@ fn mock_deploy_op() -> SignedOperation {
         "#;
 
     let deploy_fn = DeployFunction {
-        function_code: ParsedCode::try_from(code.to_string()).unwrap(),
+        function_code: code.to_string(),
         account_credit: 0,
     };
     let op = Operation {
@@ -376,11 +440,16 @@ fn mock_fa_deposit_op_hash_matches_actual_hash() {
 }
 
 async fn check_worker_health(client: &Client, base_uri: &str) {
-    let res = client
-        .get(format!("{base_uri}/worker/health"))
-        .send()
-        .await
-        .unwrap();
+    let res = jstz_utils::poll(60, 500, || async {
+        client
+            .get(format!("{base_uri}/worker/health"))
+            .send()
+            .await
+            .ok()
+    })
+    .await
+    .expect("should get response");
+
     assert!(res.status().is_success());
 }
 

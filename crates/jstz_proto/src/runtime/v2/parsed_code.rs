@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use bincode::{Decode, Encode};
 use deno_core::v8;
-use deno_error::JsErrorBox;
+use deno_error::{JsErrorBox, JsErrorClass};
 use derive_more::{Deref, DerefMut, Display};
 use jstz_runtime::{sys::FromV8, JstzRuntime, JstzRuntimeOptions};
 use serde::{Deserialize, Serialize};
@@ -231,7 +231,7 @@ type Result<T> = std::result::Result<T, ParseError>;
 
 #[derive(Debug, thiserror::Error, deno_error::JsError)]
 pub enum ParseError {
-    #[class(inherit)]
+    #[class("CompileModuleError")]
     #[error(transparent)]
     CompileModuleError(#[from] CompileModuleError),
 
@@ -264,7 +264,7 @@ pub enum ParseError {
 
 #[derive(Debug, thiserror::Error, deno_error::JsError)]
 #[class(inherit)]
-#[error(transparent)]
+#[error("{}: {}", .0.get_class(), .0.get_message())]
 pub struct CompileModuleError(JsErrorBox);
 
 impl CompileModuleError {
@@ -274,7 +274,7 @@ impl CompileModuleError {
     ) -> Result<Self> {
         let js_error = deno_core::error::JsError::from_v8_exception(scope, value);
         let js_error_box = JsErrorBox::new(
-            js_error.name.unwrap_or("CompileModuleError".to_string()),
+            js_error.name.unwrap_or("Error".to_string()),
             js_error.exception_message,
         );
         Ok(CompileModuleError(js_error_box))
@@ -331,14 +331,20 @@ mod test {
         let code = "invalid js";
         let error = ParsedCode::parse(code.to_string()).unwrap_err();
         assert!(matches!(error, ParseError::CompileModuleError(_)));
-        assert_eq!(error.get_class(), "SyntaxError");
-        assert_eq!(error.get_message(), "Unexpected identifier 'js'");
+        assert_eq!(error.get_class(), "CompileModuleError");
+        assert_eq!(
+            error.get_message(),
+            "SyntaxError: Unexpected identifier 'js'"
+        );
 
         let code = "export default () => return new Response()";
         let error = ParsedCode::parse(code.to_string()).unwrap_err();
         assert!(matches!(error, ParseError::CompileModuleError(_)));
-        assert_eq!(error.get_class(), "SyntaxError");
-        assert_eq!(error.get_message(), "Unexpected token 'return'");
+        assert_eq!(error.get_class(), "CompileModuleError");
+        assert_eq!(
+            error.get_message(),
+            "SyntaxError: Unexpected token 'return'"
+        );
     }
 
     #[test]
@@ -390,12 +396,28 @@ mod test {
             export default () => 42
         "#;
         let error = ParsedCode::parse(code.to_string()).unwrap_err();
-        println!("{:?}", error);
         assert!(matches!(
             error,
             ParseError::CompileModuleError(CompileModuleError(_))
         ));
         assert_eq!(error.get_class(), "CompileModuleError");
-        assert_eq!(error.get_message(), "Uncaught undefined");
+        assert_eq!(
+            error.get_message(),
+            "NotSupported: Uncaught NotSupported: Kv is not supported"
+        );
+    }
+
+    #[test]
+    fn parse_throw_string_literal_fails() {
+        let code = r#"
+        throw "just a string";
+        export default () => 42;
+    "#;
+
+        let error = ParsedCode::parse(code.to_string()).unwrap_err();
+
+        assert!(matches!(error, ParseError::CompileModuleError(_)));
+        assert_eq!(error.get_class(), "CompileModuleError");
+        assert_eq!(error.get_message(), "Error: Uncaught just a string");
     }
 }

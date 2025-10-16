@@ -1,6 +1,5 @@
 #[cfg(feature = "v2_runtime")]
 use crate::runtime::v2::fetch::http::Response;
-use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
     Error, HttpBody, Result,
@@ -54,14 +53,14 @@ impl Operation {
     }
 
     /// Verify the nonce of the operation
-    /// Returns the operation's
-    pub fn verify_nonce(&self, rt: &mut impl HostRuntime) -> Result<()> {
+    /// If valid, increment the nonce and leak as storage update event.
+    pub fn verify_and_increment_nonce(&self, rt: &mut impl HostRuntime) -> Result<()> {
         let expected_nonce = Account::storage_get_nonce(rt, &self.source())?;
-
         if self.nonce == expected_nonce {
             Account::storage_set_nonce(rt, &self.source(), expected_nonce.next())?;
-
             Ok(())
+        } else if self.nonce.0 < expected_nonce.0 {
+            Err(Error::NoncePassed)
         } else {
             Err(Error::InvalidNonce)
         }
@@ -114,7 +113,7 @@ impl Operation {
 #[serde(rename_all = "camelCase")]
 pub struct DeployFunction {
     /// Smart function code
-    pub function_code: ParsedCode,
+    pub function_code: String,
     /// Amount of tez to credit to the smart function account, debited from the sender
     pub account_credit: Amount,
 }
@@ -391,7 +390,7 @@ pub mod internal {
                 {
                     body[k] = v;
                 } else {
-                    return Err(A::Error::custom(format!("unknown key: {:?}", k)));
+                    return Err(A::Error::custom(format!("unknown key: {k:?}")));
                 }
             }
             let proxy_smart_function =
@@ -517,9 +516,11 @@ mod test {
     use crate::context::account::{Account, Address, Nonce};
     use crate::operation::internal::{FaDeposit, InboxId};
     use crate::operation::OperationHash;
-    use crate::runtime::ParsedCode;
+    use crate::tests::DebugLogSink;
     use crate::HttpBody;
     use http::{HeaderMap, Method, Uri};
+    use jstz_core::event::decode_line;
+    use jstz_core::kv::storage_update::BatchStorageUpdate;
     use jstz_core::reveal_data::PreimageHash;
     use jstz_core::BinEncodable;
     use jstz_crypto::hash::Hash;
@@ -547,7 +548,7 @@ mod test {
     fn deploy_function_content() -> Content {
         let raw_code =
             r#"export default () => new Response("hello world!");"#.to_string();
-        let function_code = ParsedCode::try_from(raw_code).unwrap();
+        let function_code = raw_code;
         let account_credit = 100000;
         Content::DeployFunction(DeployFunction {
             function_code,
@@ -634,22 +635,32 @@ mod test {
     #[test]
     fn test_verify_nonce_checks_and_increments_nonce() {
         let nonce = Nonce(42);
+        let sink = DebugLogSink::new();
+        let buf = sink.content();
         let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), nonce)]);
-
+        hrt.set_debug_handler(sink);
         let operation = dummy_operation(jstz_mock::pk1(), nonce);
-        assert!(operation.verify_nonce(hrt.rt()).is_ok());
-
+        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_ok());
         let updated_nonce =
             Account::storage_get_nonce(hrt.rt(), &jstz_mock::pkh1()).unwrap();
+        let line = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
         assert_eq!(updated_nonce, nonce.next());
+        assert!(decode_line::<BatchStorageUpdate>(&line).is_ok());
+        assert!(line.contains(&jstz_mock::pkh1().to_base58()));
     }
 
     #[test]
     fn test_verify_nonce_incorrect() {
+        let sink = DebugLogSink::new();
+        let buf = sink.content();
         let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), Nonce(1337))]);
+        hrt.set_debug_handler(sink);
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(42));
-        assert!(operation.verify_nonce(hrt.rt()).is_err());
+        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_err());
+        assert!(String::from_utf8(buf.lock().unwrap().to_vec())
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
@@ -658,10 +669,10 @@ mod test {
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(7));
 
-        assert!(operation.verify_nonce(hrt.rt()).is_ok());
+        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_ok());
 
         // Replaying the operation fails
-        assert!(operation.verify_nonce(hrt.rt()).is_err());
+        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_err());
     }
 
     #[test]

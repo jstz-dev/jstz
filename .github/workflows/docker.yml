@@ -12,6 +12,11 @@ on:
         description: "tezos/tezos docker tag to be used"
         required: true
         type: string
+      dry_run:
+        description: Dry-run image build without pushing to the registry
+        type: boolean
+        required: false
+        default: true
 
   workflow_call:
     inputs:
@@ -19,6 +24,11 @@ on:
         description: "tezos/tezos docker tag to be used"
         required: true
         type: string
+      dry_run:
+        description: Dry-run image build without pushing to the registry
+        type: boolean
+        required: false
+        default: true
     outputs:
       jstz-cli:
         description: "jstz docker image tag"
@@ -31,17 +41,23 @@ on:
         value: ${{ jobs.build-image.outputs.tag }}
 
 jobs:
-  set-octez-tag:
-    name: Set octez tag for workflows triggered by tags
+  set-input-values:
+    name: Set input values for workflows triggered by tags
     runs-on: ubuntu-latest
     outputs:
       octez-tag: ${{ steps.run.outputs.OCTEZ_TAG }}
+      dry_run: ${{ steps.run.outputs.DRY_RUN }}
     steps:
       - id: run
         run: |
           input_tag=${{ inputs.octez-tag }}
-          octez_tag=${input_tag:-"octez-v22.0"}
+          octez_tag=${input_tag:-"23.2"}
           echo "OCTEZ_TAG=${octez_tag}" >> ${GITHUB_OUTPUT}
+
+          dry_run=${{ inputs.dry_run }}
+          # Default to false because workflows triggered by tags are not going to dry-run
+          dry_run=${dry_run:-"false"}
+          echo "DRY_RUN=${dry_run}" >> ${GITHUB_OUTPUT}
   build-kernel:
     name: Build (Kernel)
     runs-on: [x86_64, linux, nix]
@@ -62,7 +78,7 @@ jobs:
           path: result/lib/jstz_kernel.wasm
   build-image:
     name: Build image
-    needs: [build-kernel, set-octez-tag]
+    needs: [build-kernel, set-input-values]
     strategy:
       matrix:
         include:
@@ -74,10 +90,11 @@ jobs:
             dockerfile: ./crates/jstz_node/Dockerfile
     uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
     with:
-      octez-tag: ${{ needs.set-octez-tag.outputs.octez-tag }}
+      octez-tag: ${{ needs.set-input-values.outputs.octez-tag }}
       docker_registry: ghcr.io
       docker_image_base: jstz-dev/jstz
       image: ${{ matrix.image }}
       dockerfile: ${{ matrix.dockerfile }}
       kernel_artifact_name: jstz-kernel
+      dry_run: ${{ needs.set-input-values.outputs.dry_run == 'true' || needs.set-input-values.outputs.dry_run == true }}
     secrets: inherit

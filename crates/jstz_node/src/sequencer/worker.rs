@@ -1,6 +1,13 @@
 #[cfg(feature = "blueprint")]
 use crate::sequencer::db::BlueprintDb;
-use crate::sequencer::runtime::{init_host, process_message};
+use crate::{
+    config::RuntimeEnv,
+    sequencer::{
+        queue::WrappedOperation,
+        riscv_pvm::JstzRiscvPvm,
+        runtime::{init_host, process_message},
+    },
+};
 use std::{
     path::{Path, PathBuf},
     sync::{
@@ -13,11 +20,14 @@ use std::{
 };
 
 use anyhow::Context;
+use jstz_proto::operation::internal::InboxId;
 use jstz_utils::KeyPair;
-use log::warn;
+use log::{error, info, warn};
+use tezos_crypto_rs::hash::SmartRollupHash;
+use tezos_smart_rollup::types::SmartRollupAddress;
 
 use super::{db::Db, queue::OperationQueue};
-use jstz_kernel::inbox::ParsedInboxMessage;
+use jstz_kernel::inbox::{encode_signed_operation, ParsedInboxMessage};
 
 #[cfg(feature = "oracle")]
 use jstz_kernel::inbox::LevelInfo;
@@ -44,6 +54,43 @@ impl Drop for Worker {
 }
 
 pub fn spawn(
+    queue: Arc<RwLock<OperationQueue>>,
+    db: Db,
+    injector: &KeyPair,
+    preimage_dir: PathBuf,
+    debug_log_path: Option<&Path>,
+    runtime_env: &RuntimeEnv,
+    #[cfg(feature = "blueprint")] blueprint_db: BlueprintDb,
+    #[cfg(test)] on_exit: impl FnOnce() + Send + 'static,
+) -> anyhow::Result<Worker> {
+    match runtime_env {
+        RuntimeEnv::Riscv {
+            kernel_path,
+            rollup_address,
+        } => spawn_riscv_worker(
+            queue,
+            preimage_dir,
+            debug_log_path,
+            kernel_path,
+            rollup_address,
+            #[cfg(feature = "blueprint")]
+            blueprint_db,
+        ),
+        RuntimeEnv::Native => spawn_native_worker(
+            queue,
+            db,
+            injector,
+            preimage_dir,
+            debug_log_path,
+            #[cfg(feature = "blueprint")]
+            blueprint_db,
+            #[cfg(test)]
+            on_exit,
+        ),
+    }
+}
+
+fn spawn_native_worker(
     queue: Arc<RwLock<OperationQueue>>,
     db: Db,
     injector: &KeyPair,
@@ -201,13 +248,123 @@ fn run_event_loop(
     })
 }
 
-fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
+pub(crate) fn write_heartbeat(heartbeat: &Arc<AtomicU64>) {
     let current_sec = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
     // safety: this worker should be the only writer
     heartbeat.store(current_sec, std::sync::atomic::Ordering::Relaxed);
+}
+
+fn spawn_riscv_worker(
+    queue: Arc<RwLock<OperationQueue>>,
+    preimages_dir: PathBuf,
+    debug_log_path: Option<&Path>,
+    kernel_path: &Path,
+    rollup_address: &SmartRollupHash,
+    #[cfg(feature = "blueprint")] blueprint_db: BlueprintDb,
+) -> anyhow::Result<Worker> {
+    let (thread_kill_sig, rx) = channel();
+    let heartbeat = Arc::new(AtomicU64::default());
+    let debug_log_path = debug_log_path.map(|v| v.to_path_buf());
+    let mut pvm = JstzRiscvPvm::new(
+        kernel_path,
+        rollup_address,
+        0,
+        Some(preimages_dir.into_boxed_path()),
+        heartbeat.clone(),
+        debug_log_path,
+    )
+    .context("failed to launch RISCV PVM")?;
+
+    let rollup_addr = SmartRollupAddress::new(rollup_address.clone());
+    Ok(Worker {
+        thread_kill_sig,
+        heartbeat: heartbeat.clone(),
+        inner: Some(spawn_thread(move || {
+            info!("RISCV PVM launched");
+
+            'worker: loop {
+                let operation = {
+                    match queue.write() {
+                        Ok(mut q) => q.pop(),
+                        Err(e) => {
+                            warn!("worker failed to read from queue: {e:?}");
+                            None
+                        }
+                    }
+                };
+                match operation {
+                    Some(op) => {
+                        let (inbox_id, encoded_message) = match op {
+                            WrappedOperation::FromInbox {
+                                original_inbox_message,
+                                message,
+                                ..
+                            } => {
+                                match hex::decode(original_inbox_message) {
+                                    Err(e) => {
+                                        // Inbox messages cannot be skipped since eventually rollup will
+                                        // execute the messages and sequencer will deviate from rollup.
+                                        // Terminating the worker will at least surface the error through
+                                        // outdated heartbeats.
+                                        error!("worker failed to decode original inbox message: {e}");
+                                        break 'worker;
+                                    }
+                                    Ok(m) => {
+                                        #[cfg(feature = "blueprint")]
+                                        if let ParsedInboxMessage::JstzMessage(m) =
+                                            &message.content
+                                        {
+                                            if let Err(e) = blueprint_db.write(m) {
+                                                warn!("error writing blueprint: {e:?}");
+                                            };
+                                        }
+                                        (message.inbox_id, Ok(m))
+                                    }
+                                }
+                            }
+                            WrappedOperation::FromNode(signed_op) => {
+                                #[cfg(feature = "blueprint")]
+                                if let Err(e) = blueprint_db.write(
+                                    &jstz_kernel::inbox::Message::External(
+                                        signed_op.clone(),
+                                    ),
+                                ) {
+                                    warn!("error writing blueprint: {e:?}");
+                                };
+                                (
+                                    InboxId{l1_level: 0, l1_message_id: 0},
+                                    encode_signed_operation(&signed_op, &rollup_addr).map_err(|e| anyhow::anyhow!("worker failed to encode signed operation into inbox message: {e:?}"))
+                                )
+                            }
+                        };
+                        match encoded_message {
+                            Ok(message) => {
+                                pvm.execute_operation(
+                                    inbox_id,
+                                    message,
+                                    std::ops::Bound::Unbounded,
+                                );
+                            }
+                            Err(e) => {
+                                warn!("{e:?}");
+                            }
+                        };
+                    }
+                    _ => std::thread::sleep(Duration::from_millis(100)),
+                };
+
+                match rx.try_recv() {
+                    Ok(_) | Err(TryRecvError::Disconnected) => {
+                        break;
+                    }
+                    Err(TryRecvError::Empty) => {}
+                }
+            }
+        })),
+    })
 }
 
 #[cfg(not(feature = "blueprint"))]
@@ -236,6 +393,7 @@ mod tests {
             &default_injector(),
             PathBuf::new(),
             None,
+            &crate::config::RuntimeEnv::Native,
             move || {
                 *cp.lock().unwrap() += 1;
             },
@@ -279,6 +437,7 @@ mod tests {
             &default_injector(),
             PathBuf::new(),
             Some(log_file.path()),
+            &crate::config::RuntimeEnv::Native,
             move || {},
         );
 
@@ -292,7 +451,7 @@ mod tests {
         let mut buf = String::new();
         log_file.read_to_string(&mut buf).unwrap();
         assert!(
-            buf.contains("Smart function deployed: KT19xhZJaQkEiVo6w3uRZor6VY5Z9KXZkQ1N")
+            buf.contains("Smart function deployed: KT1H4GfcBgx11M8ri6wwyDtbMUbqYfDQ7WmU")
         );
     }
 }

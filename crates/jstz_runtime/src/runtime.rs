@@ -10,8 +10,13 @@ use jstz_core::kv::Transaction;
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use pin_project::pin_project;
+use serde::Deserialize;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
+use std::result::Result as StdResult;
+use std::sync::atomic::AtomicU8;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::{
     future::Future,
     ops::{Deref, DerefMut},
@@ -20,13 +25,15 @@ use std::{
     task::{Context, Poll},
 };
 
-use serde::Deserialize;
-
 use crate::ext::{jstz_console, jstz_kv, jstz_kv::kv::Kv, jstz_main};
 use deno_console;
 use deno_url;
 use deno_web::TimersPermission;
 use deno_webidl;
+
+// This is just a placeholder to reduce the risk of stack overflows
+// TODO: Track the memory usage of the smart function and explore a reasonable limit.
+pub const MAX_SMART_FUNCTION_CALL_COUNT: u8 = 5;
 
 /// Returns the default object of the specified JavaScript namespace (Object).
 ///
@@ -254,8 +261,6 @@ impl JstzRuntime {
         };
         // Note: [`call_with_args`] wraps the scope with TryCatch for us and converts
         // any exception into an error
-        // FIXME(ryan): If user code throws an uncaught exception, the original
-        // exception is lost and replaced with Uncaught undefined
         let fut = self.call_with_args(&default_fn, args);
         let result = self.with_event_loop_future(fut, Default::default()).await;
         Ok(result?)
@@ -362,6 +367,8 @@ pub struct RuntimeContext {
     pub kv: Kv,
     pub address: SmartFunctionHash,
     pub request_id: String,
+    /// The slot acquired from the limiter to limit the number of smart function calls.
+    pub slot: Slot,
 }
 
 impl RuntimeContext {
@@ -370,6 +377,7 @@ impl RuntimeContext {
         tx: &mut Transaction,
         address: SmartFunctionHash,
         request_id: String,
+        slot: Slot,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
         RuntimeContext {
@@ -378,7 +386,71 @@ impl RuntimeContext {
             kv: Kv::new(address.to_base58()),
             address,
             request_id,
+            slot,
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum LimiterError {
+    /// The limiter has reached its configured limit.
+    LimitExceeded,
+}
+
+/// A handle that represents one acquired slot from the limiter.
+/// Release the slot by dropping it.
+#[derive(Debug)]
+pub struct Slot {
+    slots: Arc<AtomicU8>,
+}
+
+impl Slot {
+    pub fn limiter(&self) -> Limiter {
+        Limiter {
+            slots_in_use: Arc::clone(&self.slots),
+        }
+    }
+}
+
+impl Drop for Slot {
+    fn drop(&mut self) {
+        self.slots.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+/// A shareable limiter that allows at most `LIMIT` concurrent counts.
+///
+/// Each successful call to [`Limiter::try_acquire`] returns a [`Slot`].
+/// The slot frees up once it is dropped.
+#[derive(Debug, Clone, Default)]
+pub struct Limiter<const LIMIT: u8 = MAX_SMART_FUNCTION_CALL_COUNT> {
+    slots_in_use: Arc<AtomicU8>,
+}
+
+impl<const LIMIT: u8> Limiter<LIMIT> {
+    /// Attempts to acquire a slot.
+    ///
+    /// Returns:
+    /// - `Ok(Slot)` if the current usage is below `LIMIT`. The Slot frees up once it is dropped.
+    /// - `Err(LimiterError::LimitExceeded)` if the limit has been reached.
+    pub fn try_acquire(&self) -> StdResult<Slot, LimiterError> {
+        self.slots_in_use
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |val| {
+                if val < LIMIT {
+                    Some(val + 1)
+                } else {
+                    None
+                }
+            })
+            .map_err(|_| LimiterError::LimitExceeded)?;
+        Ok(Slot {
+            slots: Arc::clone(&self.slots_in_use),
+        })
+    }
+
+    /// Returns the current number of occupied slots.
+    pub fn in_use(&self) -> u8 {
+        self.slots_in_use.load(Ordering::Relaxed)
     }
 }
 
@@ -422,11 +494,8 @@ fn init_base_extensions_ops<F: FetchAPI>() -> Vec<Extension> {
 
 #[cfg(test)]
 mod test {
-
     use super::*;
-
     use crate::{error::RuntimeError, init_test_setup};
-
     use jstz_utils::test_util::TOKIO;
     use tezos_smart_rollup_mock::MockHost;
 
@@ -622,8 +691,15 @@ export default handler;
             let specifier =
                 resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
             let module_loader = StaticModuleLoader::with(specifier.clone(), code);
-            let protocol =
-                RuntimeContext::new(&mut host, &mut tx, init_addr.clone(), String::new());
+            let protocol = RuntimeContext::new(
+                &mut host,
+                &mut tx,
+                init_addr.clone(),
+                String::new(),
+                Limiter::<MAX_SMART_FUNCTION_CALL_COUNT>::default()
+                    .try_acquire()
+                    .unwrap(),
+            );
             let mut runtime = JstzRuntime::new_from_snapshot(
                 JstzRuntimeOptions {
                     protocol: Some(protocol),
@@ -640,5 +716,50 @@ export default handler;
             let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
             assert_eq!(result_i64, 64);
         })
+    }
+
+    #[tokio::test]
+    async fn test_limiter() {
+        let limiter = Limiter::<2>::default();
+        assert_eq!(limiter.in_use(), 0);
+        // Acquiring a slot should succeed
+        {
+            let l = limiter.clone();
+            let _slot = l.try_acquire().unwrap();
+            // The slot gets dropped, freeing up a slot
+        }
+
+        assert_eq!(limiter.in_use(), 0);
+
+        // Two concurrent aquires should succeed, third should fail
+        let l1 = limiter.clone();
+        let l2 = limiter.clone();
+
+        let (tx1, rx1) = tokio::sync::oneshot::channel();
+        let (tx2, rx2) = tokio::sync::oneshot::channel();
+
+        let t1 = tokio::task::spawn(async move {
+            let _p = l1.try_acquire().unwrap();
+            rx1.await.unwrap();
+        });
+        let t2 = tokio::task::spawn(async move {
+            let _p = l2.try_acquire().unwrap();
+            rx2.await.unwrap();
+        });
+
+        tokio::task::yield_now().await;
+
+        assert_eq!(limiter.in_use(), 2);
+
+        // Third acquire should fail
+        let res = limiter.try_acquire();
+        assert!(matches!(res, Err(LimiterError::LimitExceeded)));
+
+        // Release t1 and t2
+        let _ = tx1.send(());
+        let _ = tx2.send(());
+        assert!(t1.await.is_ok());
+        assert!(t2.await.is_ok());
+        assert_eq!(limiter.in_use(), 0);
     }
 }
