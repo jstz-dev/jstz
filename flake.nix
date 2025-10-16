@@ -38,7 +38,7 @@
 
     octezPackages = {
       inputs.nixpkgs.follows = "nixpkgs";
-      url = "gitlab:tezos/tezos/51117ed39f82ab60edd6fe4f6d63094605bb22c7";
+      url = "gitlab:tezos/tezos/51117ed39f82ab60edd6fe4f6d63094605bb22c7?narHash=sha256-U0lonhSK/7u5SGJYzenr/4Xm6AMY7bcxJ9d+X6/k1+I=";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.opam-nix-integration.follows = "opam-nix-integration";
@@ -71,9 +71,7 @@
           in {
             patches =
               (old.patches or [])
-              ++ [
-                # ./nix/patches/octez/0001-fix-octez-rust-deps-for-nix.patch
-              ];
+              ++ [];
 
             # Network access for fetching cargo dependencies is disabled in sandboxed
             # builds. Instead we need to explicitly fetch the dependencies. Nixpkgs
