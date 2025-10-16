@@ -100,17 +100,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1740505579,
-        "narHash": "sha256-Gf83zujQlUWJVu8UFweDB+NBefCQ6dlOKX5FAs68eQk=",
+        "lastModified": 1756359221,
+        "narHash": "sha256-U0lonhSK/7u5SGJYzenr/4Xm6AMY7bcxJ9d+X6/k1+I=",
         "owner": "tezos",
         "repo": "tezos",
-        "rev": "f1704a0580f70c48451cf0beef0a93bf10f536a9",
+        "rev": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
         "type": "gitlab"
       },
       "original": {
         "owner": "tezos",
-        "ref": "octez-v22.0-rc1",
         "repo": "tezos",
+        "rev": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
         "type": "gitlab"
       }
     },
@@ -141,11 +141,11 @@
     "opam-repository": {
       "flake": false,
       "locked": {
-        "lastModified": 1738066957,
-        "narHash": "sha256-zUOPhbEsAJprwvanDVDT3DSV1ioUjuGxMVYCYlzfd2E=",
+        "lastModified": 1755781987,
+        "narHash": "sha256-W/19uUKf7NdcN5wYvGucT5uKYI7wbutdOqm8q1MKHHk=",
         "owner": "ocaml",
         "repo": "opam-repository",
-        "rev": "aa131f3eda80ed7121debe7582faaf50448bc105",
+        "rev": "e933f68540530644f7ada1411a300dfe5b6da63d",
         "type": "github"
       },
       "original": {
