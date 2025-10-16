@@ -38,7 +38,7 @@
 
     octezPackages = {
       inputs.nixpkgs.follows = "nixpkgs";
-      url = "gitlab:tezos/tezos/51117ed39f82ab60edd6fe4f6d63094605bb22c7";
+      url = "git+https://gitlab.com/tezos/tezos.git?rev=51117ed39f82ab60edd6fe4f6d63094605bb22c7";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.opam-nix-integration.follows = "opam-nix-integration";

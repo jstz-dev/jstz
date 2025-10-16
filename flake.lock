@@ -102,16 +102,16 @@
       "locked": {
         "lastModified": 1756359221,
         "narHash": "sha256-U0lonhSK/7u5SGJYzenr/4Xm6AMY7bcxJ9d+X6/k1+I=",
-        "owner": "tezos",
-        "repo": "tezos",
+        "ref": "refs/heads/master",
         "rev": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
-        "type": "gitlab"
+        "revCount": 61036,
+        "type": "git",
+        "url": "https://gitlab.com/tezos/tezos.git"
       },
       "original": {
-        "owner": "tezos",
-        "repo": "tezos",
         "rev": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
-        "type": "gitlab"
+        "type": "git",
+        "url": "https://gitlab.com/tezos/tezos.git"
       }
     },
     "opam-nix-integration": {
