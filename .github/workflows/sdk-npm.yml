@@ -38,7 +38,7 @@ jobs:
       - name: Install wasm-pack
         shell: sh
         run: |
-          export VERSION=0.13.0
+          export VERSION=0.13.1
           # The released install script https://drager.github.io/wasm-pack/installer/init.sh
           # is buggy at the time of implementation
           curl https://raw.githubusercontent.com/drager/wasm-pack/d881b07f63fc145f5af1eccb85e107cf7ea7e9c1/docs/_installer/init.sh -sSf | bash
