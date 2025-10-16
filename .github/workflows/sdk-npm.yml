@@ -38,7 +38,17 @@ jobs:
       - name: Install wasm-pack
         shell: sh
         run: |
-          curl https://drager.github.io/wasm-pack/installer/init.sh -sSf | bash
+          export VERSION=0.13.0
+          # The released install script https://drager.github.io/wasm-pack/installer/init.sh
+          # is buggy at the time of implementation
+          curl https://raw.githubusercontent.com/drager/wasm-pack/d881b07f63fc145f5af1eccb85e107cf7ea7e9c1/docs/_installer/init.sh -sSf | bash
+
+          installed_version=$(wasm-pack -V)
+          echo "Installed: $installed_version"
+          if [[ $installed_version != *"$VERSION"* ]]; then
+            echo "Installed version mismatch: expecting $VERSION"
+            exit 1
+          fi
       - name: Build
         shell: sh
         run: |
