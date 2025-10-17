@@ -78,7 +78,9 @@
           in {
             patches =
               (old.patches or [])
-              ++ [];
+              ++ [
+                ./nix/patches/octez/0001-fix-octez-rust-deps-for-nix.patch
+              ];
 
             # Network access for fetching cargo dependencies is disabled in sandboxed
             # builds. Instead we need to explicitly fetch the dependencies. Nixpkgs
@@ -133,17 +135,6 @@
               # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
               # but does for Linux.
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                # Ensure any helper scripts use Nix-friendly interpreters and are executable.
-                # (Fixes: "/bin/bash: line 1: ./build.sh: cannot execute: required file not found")
-                for d in src/rust_deps src/rustzcash_deps; do
-                  if [ -d "$d" ]; then
-                    # Rewrite shebangs like /usr/bin/env bash -> /nix/store/.../env
-                    patchShebangs "$d" || true
-                    # Make sure build.sh is executable if present
-                    if [ -f "$d/build.sh" ]; then chmod +x "$d/build.sh"; fi
-                  fi
-                done
-
                 ${vendorDeps {
                   dir = "src/rust_deps";
                   allGitHashes = rustGitHashes;
