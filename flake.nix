@@ -38,7 +38,7 @@
 
     octezPackages = {
       inputs.nixpkgs.follows = "nixpkgs";
-      url = "git+https://gitlab.com/tezos/tezos.git?rev=51117ed39f82ab60edd6fe4f6d63094605bb22c7&shallow=0";
+      url = "git+https://gitlab.com/tezos/tezos.git?rev=51117ed39f82ab60edd6fe4f6d63094605bb22c7&shallow=0&submodules=1";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.opam-nix-integration.follows = "opam-nix-integration";
@@ -68,6 +68,13 @@
               rustc = rustToolchain;
               cargo = rustToolchain;
             };
+
+            rustGitHashes = {
+              "crypto-3.1.1" = "sha256-1jWMRi/uHYDxm1dgbyCbxe2htVA7vK7NFHKV4o6SpKQ=";
+              "octez-riscv-0.0.0" = "sha256-7TxDp0gltdoAC1Yhbb/roPbHBZYirlgcBaFROtYJYWw=";
+              "quickcheck_derive-0.3.0" = "sha256-tTkcf/vE3GECIt1sriO80gnAB0MsTgAPokY8AeMoQkM=";
+              "tezos-smart-rollup-build-utils-0.2.2" = "sha256-Z6Z3Jti5J4YzDKdsaZ5i/YdaSTctbPGmj5nMlOG7RuA=";
+            };
           in {
             patches =
               (old.patches or [])
@@ -89,11 +96,25 @@
               # Configure cargo to get dependencies from vendored dir
               vendorDeps = {
                 dir,
-                gitDepHashes ? {},
+                allGitHashes ? {},
               }: let
+                lockPath = "${old.src}/${dir}/Cargo.lock";
+                lockToml = builtins.fromTOML (builtins.readFile lockPath);
+
+                # Only packages with a git source need outputHashes.
+                isGit = p: pkgs.lib.hasPrefix "git+" (p.source or "");
+                gitPkgs = pkgs.lib.filter isGit (lockToml.package or []);
+
+                # Keys are "<name>-<version>" just like importCargoLock expects.
+                gitKeys = map (p: "${p.name}-${p.version}") gitPkgs;
+
+                # Keep only hashes that correspond to *present* git deps in this lockfile.
+                filteredHashes =
+                  pkgs.lib.attrsets.filterAttrs (k: _v: pkgs.lib.elem k gitKeys) allGitHashes;
+
                 vendoredDir = rustPlatform.importCargoLock {
-                  lockFile = "${old.src}/${dir}/Cargo.lock";
-                  outputHashes = gitDepHashes;
+                  lockFile = lockPath;
+                  outputHashes = filteredHashes;
                 };
               in ''
                 mkdir -p ${dir}/.cargo
@@ -112,8 +133,25 @@
               # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
               # but does for Linux.
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                ${vendorDeps {dir = "src/rust_deps";}}
-                ${vendorDeps {dir = "src/rustzcash_deps";}}
+                # Ensure any helper scripts use Nix-friendly interpreters and are executable.
+                # (Fixes: "/bin/bash: line 1: ./build.sh: cannot execute: required file not found")
+                for d in src/rust_deps src/rustzcash_deps; do
+                  if [ -d "$d" ]; then
+                    # Rewrite shebangs like /usr/bin/env bash -> /nix/store/.../env
+                    patchShebangs "$d" || true
+                    # Make sure build.sh is executable if present
+                    if [ -f "$d/build.sh" ]; then chmod +x "$d/build.sh"; fi
+                  fi
+                done
+
+                ${vendorDeps {
+                  dir = "src/rust_deps";
+                  allGitHashes = rustGitHashes;
+                }}
+                ${vendorDeps {
+                  dir = "src/rustzcash_deps";
+                  allGitHashes = rustGitHashes;
+                }}
               '';
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
