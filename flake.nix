@@ -102,58 +102,71 @@
             # The latter is slower but doesn't require an explicit `hash` and is therefore
             # more maintainable (since this derivation isn't built in CI).
             preBuild = let
-              # Configure cargo to get dependencies from vendored dir
-              vendorDeps = {
+              # For each lockfile, vendor and collect the git sources it references.
+              vendorInfo = {
                 dir,
-                allGitHashes ? {},
+                hashes ? {},
               }: let
                 lockPath = "${old.src}/${dir}/Cargo.lock";
                 lockToml = builtins.fromTOML (builtins.readFile lockPath);
-
-                # Only packages with a git source need outputHashes.
                 isGit = p: pkgs.lib.hasPrefix "git+" (p.source or "");
                 gitPkgs = pkgs.lib.filter isGit (lockToml.package or []);
-
-                # Keys are "<name>-<version>" just like importCargoLock expects.
                 gitKeys = map (p: "${p.name}-${p.version}") gitPkgs;
-
-                # Keep only hashes that correspond to *present* git deps in this lockfile.
-                filteredHashes =
-                  pkgs.lib.attrsets.filterAttrs (k: _v: pkgs.lib.elem k gitKeys) allGitHashes;
-
                 vendoredDir = rustPlatform.importCargoLock {
                   lockFile = lockPath;
-                  outputHashes = filteredHashes;
+                  # Only pass hashes that actually appear in THIS lockfile
+                  outputHashes = pkgs.lib.attrsets.filterAttrs (k: _v: pkgs.lib.elem k gitKeys) hashes;
                 };
-              in ''
-                mkdir -p ${dir}/.cargo
-                cat >> ${dir}/.cargo/config.toml << EOF
+                gitSources = pkgs.lib.unique (map (p: p.source) gitPkgs);
+              in {inherit vendoredDir gitSources;};
+
+              vi_rust_deps = vendorInfo {
+                dir = "src/rust_deps";
+                hashes = rustGitHashes2;
+              };
+              vi_riscv = vendorInfo {
+                dir = "src/riscv";
+                hashes = rustGitHashes;
+              };
+              vi_rustzcash = vendorInfo {
+                dir = "src/rustzcash_deps";
+                hashes = rustGitHashes2;
+              };
+
+              # Merge all vendored outputs into a single directory so Cargo can use a single source.
+              combinedVendor = pkgs.runCommand "cargo-vendor-all" {} ''
+                mkdir -p $out
+                cp -R ${vi_rust_deps.vendoredDir}/.   $out/ || true
+                cp -R ${vi_riscv.vendoredDir}/.       $out/ || true
+                cp -R ${vi_rustzcash.vendoredDir}/.   $out/ || true
+              '';
+
+              # Create [source."git+…"] sections for every distinct git source from both lockfiles.
+              gitSources =
+                pkgs.lib.unique (vi_rust_deps.gitSources ++ vi_riscv.gitSources ++ vi_rustzcash.gitSources);
+              gitSourceSections = pkgs.lib.concatStringsSep "\n" (map (src: ''
+                  [source."${src}"]
+                  replace-with = "vendored-sources"
+                '')
+                gitSources);
+            in
+              # HACK: Does not run on macOS to match prior behavior.
+              pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
+                                export CARGO_HOME="$PWD/.cargo-home"
+                                mkdir -p "$CARGO_HOME"
+
+                                cat > "$CARGO_HOME/config.toml" << 'EOF'
                 [net]
                 offline = true
 
                 [source.crates-io]
                 replace-with = "vendored-sources"
 
+                ${gitSourceSections}
+
                 [source.vendored-sources]
-                directory = "${vendoredDir}"
+                directory = "${combinedVendor}"
                 EOF
-              '';
-            in
-              # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
-              # but does for Linux.
-              pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                ${vendorDeps {
-                  dir = "src/rust_deps";
-                  allGitHashes = rustGitHashes2;
-                }}
-                ${vendorDeps {
-                  dir = "src/rustzcash_deps";
-                  allGitHashes = rustGitHashes2;
-                }}
-                ${vendorDeps {
-                  dir = "src/riscv";
-                  allGitHashes = rustGitHashes;
-                }}
               '';
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
