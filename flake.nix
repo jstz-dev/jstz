@@ -143,6 +143,10 @@
                   dir = "src/rustzcash_deps";
                   allGitHashes = rustGitHashes;
                 }}
+                ${vendorDeps {
+                  dir = "src/riscv/api";
+                  allGitHashes = rustGitHashes;
+                }}
               '';
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
