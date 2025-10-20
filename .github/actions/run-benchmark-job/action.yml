@@ -1,0 +1,40 @@
+name: "Run benchmark job"
+description: "Reusable composite action for running benchmarks"
+inputs:
+  run-natively:
+    description: "Run benchmark natively instead of using RISCV kernel"
+    required: false
+    type: boolean
+    default: false
+  benchmark-repeats:
+    description: "Number of times to repeat each benchmark configuration"
+    required: false
+    type: number
+    default: 5
+  job-name:
+    description: "Name for the benchmark job"
+    required: false
+    type: string
+    default: "Benchmark RISCV kernel"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Download RISCV kernel
+      if: ${{ inputs.run-natively == false }}
+      uses: actions/download-artifact@v5
+      with:
+        name: riscv_kernel
+        path: .
+    - name: Run benchmark
+      shell: bash
+      run: |
+        set -euo pipefail
+        if [ "${{ inputs.run-natively }}" = "true" ]; then
+          nix --accept-flake-config --log-format raw -L develop --command bash -lc 'cd crates/jstz_tps_bench; export RUN_NATIVELY=1; ./run_all.sh ${{ inputs.benchmark-repeats }}'
+        else
+          export RISCV_KERNEL_PATH="$GITHUB_WORKSPACE/kernel-executable"
+          nix --accept-flake-config --log-format raw -L develop --command bash -lc 'cd crates/jstz_tps_bench; ./run_all.sh ${{ inputs.benchmark-repeats }}'
+        fi
+        echo "### Benchmark summary" >> $GITHUB_STEP_SUMMARY
+        cat crates/jstz_tps_bench/results_all.log >> $GITHUB_STEP_SUMMARY

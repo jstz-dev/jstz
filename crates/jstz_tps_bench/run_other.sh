@@ -6,6 +6,7 @@ inbox_file_path=./inbox.json
 log_file_path=./output.log
 result_path=./result.log
 dir="$(realpath $(dirname "$0"))"
+riscv_kernel_path=${RISCV_KERNEL_PATH:-"$dir/../../target/riscv64gc-unknown-linux-musl/release/kernel-executable"}
 contract_folder_path=./tps_test
 
 init_endpoint=${1:-init}
@@ -52,7 +53,7 @@ if [ -n "${RUN_NATIVELY+x}" ]; then
   wait "$kernel_pid" || true
   kill "$watcher_pid" 2>/dev/null || true
 else
-  riscv-sandbox run --timings --address $rollup_address --inbox-file $inbox_file_path --input $dir/../../target/riscv64gc-unknown-linux-musl/release/kernel-executable >$log_file_path
+  riscv-sandbox run --timings --address $rollup_address --inbox-file $inbox_file_path --input $riscv_kernel_path >$log_file_path
 fi
 
 # Process results and calculate TPS

@@ -68,20 +68,20 @@ fn generate_inbox(
 
     init(
         &mut builder,
-        &mut accounts,
+        &mut accounts[0],
         &contract_address,
         init_endpoint,
     )?;
     transfer(
         &mut builder,
-        &mut accounts,
+        &mut accounts[0],
         &contract_address,
         transfers,
         transfer_endpoint,
     )?;
     check(
         &mut builder,
-        &mut accounts,
+        &mut accounts[0],
         &contract_address,
         check_endpoint,
     )?;
@@ -91,7 +91,7 @@ fn generate_inbox(
 
 fn transfer(
     builder: &mut InboxBuilder,
-    accounts: &mut [Account],
+    account: &mut Account,
     contract_address: &Address,
     transfers: usize,
     transfer_endpoint: Option<&str>,
@@ -100,9 +100,9 @@ fn transfer(
     let transfer_endpoint_uri =
         Uri::try_from(format!("jstz://{contract_address}/{endpoint}"))?;
 
-    for _transfer_id in 0..transfers {
+    for _ in 0..transfers {
         builder.run_function(
-            &mut accounts[0],
+            account,
             transfer_endpoint_uri.clone(),
             Method::POST,
             HeaderMap::default(),
@@ -116,7 +116,7 @@ fn transfer(
 // Simple check after all transactions have been run
 fn check(
     builder: &mut InboxBuilder,
-    accounts: &mut [Account],
+    account: &mut Account,
     contract_address: &Address,
     check_endpoint: Option<&str>,
 ) -> Result<()> {
@@ -125,7 +125,7 @@ fn check(
         Uri::try_from(format!("jstz://{contract_address}/{endpoint}"))?;
 
     builder.run_function(
-        &mut accounts[0],
+        account,
         check_endpoint_uri,
         Method::GET,
         HeaderMap::default(),
@@ -137,7 +137,7 @@ fn check(
 // Initialise the contract
 fn init(
     builder: &mut InboxBuilder,
-    accounts: &mut [Account],
+    account: &mut Account,
     contract_address: &Address,
     init_endpoint: Option<&str>,
 ) -> Result<()> {
@@ -147,7 +147,7 @@ fn init(
 
     let body = HttpBody::empty();
     builder.run_function(
-        &mut accounts[0],
+        account,
         init_endpoint_uri,
         Method::POST,
         HeaderMap::default(),

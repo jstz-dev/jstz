@@ -6,7 +6,10 @@ on:
 jobs:
   benchmark:
     name: Benchmark RISCV kernel natively
-    uses: ./.github/workflows/run-benchmark-job.yml
-    with:
-      run-natively: true
-      job-name: "Benchmark RISCV kernel natively"
+    runs-on: benchmark
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/run-benchmark-job
+        with:
+          run-natively: true
+          job-name: "Benchmark RISCV kernel natively"
