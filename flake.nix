@@ -73,6 +73,13 @@
               "crypto-3.1.1" = "sha256-1jWMRi/uHYDxm1dgbyCbxe2htVA7vK7NFHKV4o6SpKQ=";
               "octez-riscv-0.0.0" = "sha256-bT5+4+M5//uemGcLq038siqfyCYKF5tzY39H9h+6RvA=";
               "quickcheck_derive-0.3.0" = "sha256-tTkcf/vE3GECIt1sriO80gnAB0MsTgAPokY8AeMoQkM=";
+              "tezos-smart-rollup-build-utils-0.2.2" = "sha256-HXANyit8Hwuh7JaZ2/67lUa1qmPRmSM4myLES3AxyCA=";
+            };
+
+            rustGitHashes2 = {
+              "crypto-3.1.1" = "sha256-1jWMRi/uHYDxm1dgbyCbxe2htVA7vK7NFHKV4o6SpKQ=";
+              "octez-riscv-0.0.0" = "sha256-7TxDp0gltdoAC1Yhbb/roPbHBZYirlgcBaFROtYJYWw=";
+              "quickcheck_derive-0.3.0" = "sha256-tTkcf/vE3GECIt1sriO80gnAB0MsTgAPokY8AeMoQkM=";
               "tezos-smart-rollup-build-utils-0.2.2" = "sha256-Z6Z3Jti5J4YzDKdsaZ5i/YdaSTctbPGmj5nMlOG7RuA=";
             };
           in {
@@ -137,11 +144,11 @@
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
                 ${vendorDeps {
                   dir = "src/rust_deps";
-                  allGitHashes = rustGitHashes;
+                  allGitHashes = rustGitHashes2;
                 }}
                 ${vendorDeps {
                   dir = "src/rustzcash_deps";
-                  allGitHashes = rustGitHashes;
+                  allGitHashes = rustGitHashes2;
                 }}
                 ${vendorDeps {
                   dir = "src/riscv";
