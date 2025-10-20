@@ -105,14 +105,12 @@
         "ref": "refs/heads/master",
         "rev": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
         "revCount": 61036,
-        "shallow": false,
         "submodules": true,
         "type": "git",
         "url": "https://gitlab.com/tezos/tezos.git"
       },
       "original": {
         "rev": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
-        "shallow": false,
         "submodules": true,
         "type": "git",
         "url": "https://gitlab.com/tezos/tezos.git"
