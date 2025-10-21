@@ -4,7 +4,6 @@ on:
   pull_request:
   merge_group:
   push:
-    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -74,3 +73,10 @@ jobs:
 
       - name: Build
         run: npm run docs:build
+
+  test-benchmark-build:
+    name: Build RISCV kernel for benchmark test
+    runs-on: [linux, nix]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-riscv-kernel
