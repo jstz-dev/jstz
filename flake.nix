@@ -154,15 +154,18 @@
                 hashes = rustGitHashes2;
               };
 
-              # Use one of the registry vendor dirs for crates.io; any is fine.
-              registryVendor = vi_rust_deps.vendoredDir;
+              # Combined registry vendor: union of all vendored trees -> a unique path
+              combinedVendor = pkgs.runCommand "cargo-vendor-union" {} ''
+                mkdir -p $out
+                cp -R ${vi_rust_deps.vendoredDir}/.   $out/ || true
+                cp -R ${vi_riscv.vendoredDir}/.       $out/ || true
+                cp -R ${vi_rustzcash.vendoredDir}/.   $out/ || true
+              '';
 
-              # For each lockfile, map its git sources (URL+rev) to its own vendor dir.
+              # For each lockfile, replace the exact git source id (git+URL#SHA) with that lockfile's vendor dir.
               mkGitSections = vi:
-                pkgs.lib.concatStringsSep "\n" (map (triple: ''
-                  [source."${vi.name}-${builtins.substring 0 7 triple.rev}"]
-                  git = "${triple.url}"
-                  rev = "${triple.rev}"
+                pkgs.lib.concatStringsSep "\n" (map (t: ''
+                  [source."git+${t.url}#${t.rev}"]
                   replace-with = "${vi.name}"
                 '') (pkgs.lib.filter (t: t.rev != "") vi.gitTriples));
 
@@ -184,8 +187,9 @@
                 [source.crates-io]
                 replace-with = "vendored-sources"
 
-                [source.vendored-sources]      # registry crates
-                directory = "${registryVendor}"
+                # Unique directory for registry crates (union of all vendors)
+                [source.vendored-sources]
+                directory = "${combinedVendor}"
 
                 # Per-lockfile vendor directories (avoid octez-riscv 0.0.0 commit clashes)
                 [source.${vi_rust_deps.name}]
