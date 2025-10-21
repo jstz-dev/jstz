@@ -162,31 +162,35 @@
                 cp -R ${vi_rustzcash.vendoredDir}/.   $out/ || true
               '';
 
-              # For each lockfile, define BOTH source-id spellings Cargo may use
-              # and include explicit `git`/`rev` so Cargo treats them as git sources.
-              # We then redirect them to this lockfile's vendor dir via `replace-with`.
-              mkGitSections = vi: let
-                entriesFor = t: ''
-                  [source."git+${t.url}?rev=${t.rev}"]
-                  git = "${t.url}"
-                  rev = "${t.rev}"
-                  replace-with = "${vi.name}"
+              # Build ONE mapping of canonical git source ids (git+URL#REV) to vendor dirs,
+              # deduplicated across all lockfiles. Emit only the '#REV' form.
+              gitSections = let
+                toPairs = vi:
+                  builtins.listToAttrs (map (t: {
+                    name = "git+${t.url}#${t.rev}";
+                    value = {
+                      vendor = vi.name;
+                      url = t.url;
+                      rev = t.rev;
+                    };
+                  }) (pkgs.lib.filter (t: t.rev != "") vi.gitTriples));
 
-                  [source."git+${t.url}#${t.rev}"]
-                  git = "${t.url}"
-                  rev = "${t.rev}"
-                  replace-with = "${vi.name}"
+                # Earlier entries win; adjust order if you prefer a different precedence.
+                mapping =
+                  (toPairs vi_rust_deps)
+                  // (pkgs.lib.attrsets.filterAttrs (k: _: !(pkgs.lib.hasAttr k (toPairs vi_rust_deps))) (toPairs vi_riscv))
+                  // (pkgs.lib.attrsets.filterAttrs (k: _: !(pkgs.lib.hasAttr k (toPairs vi_rust_deps) || pkgs.lib.hasAttr k (toPairs vi_riscv))) (toPairs vi_rustzcash));
+
+                render = key: let
+                  ent = mapping.${key};
+                in ''
+                  [source."${key}"]
+                  git = "${ent.url}"
+                  rev = "${ent.rev}"
+                  replace-with = "${ent.vendor}"
                 '';
               in
-                pkgs.lib.concatStringsSep "\n"
-                (map entriesFor (pkgs.lib.filter (t: t.rev != "") vi.gitTriples));
-
-              gitSections =
-                (mkGitSections vi_rust_deps)
-                + "\n"
-                + (mkGitSections vi_riscv)
-                + "\n"
-                + (mkGitSections vi_rustzcash);
+                pkgs.lib.concatStringsSep "\n" (map render (pkgs.lib.attrNames mapping));
             in
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
                                 # Ensure Cargo always reads our config (dune sets CARGO_HOME=/build/.cargo)
