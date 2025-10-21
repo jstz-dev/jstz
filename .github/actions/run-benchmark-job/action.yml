@@ -21,7 +21,7 @@ runs:
   using: "composite"
   steps:
     - name: Download RISCV kernel
-      if: ${{ inputs.run-natively == false }}
+      if: ${{ !fromJSON(inputs.run-natively) }}
       uses: actions/download-artifact@v5
       with:
         name: riscv_kernel

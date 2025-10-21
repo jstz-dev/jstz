@@ -34,7 +34,7 @@ cd $dir
 contract_file_path=$contract_folder_path/dist/index.js
 
 # Generate inbox file
-$dir/../../target/debug/bench generate other --transfers $n_transfer --inbox-file $inbox_file_path --address $rollup_address --contract-file $contract_file_path --init-endpoint $init_endpoint --transfer-endpoint $transfer_endpoint --check-endpoint $check_endpoint
+$dir/../../target/debug/bench generate other --num-operations $n_transfer --inbox-file $inbox_file_path --address $rollup_address --smart-function $contract_file_path --init-endpoint $init_endpoint --run-endpoint $transfer_endpoint --check-endpoint $check_endpoint
 
 # Run kernel
 if [ -n "${RUN_NATIVELY+x}" ]; then

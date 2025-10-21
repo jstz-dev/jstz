@@ -4,7 +4,7 @@
 use std::path::Path;
 
 use clap::{Parser, Subcommand};
-use jstz_tps_bench::generate::{handle_generate, handle_generate_script};
+use jstz_tps_bench::fa2_bench_generator::{handle_generate, handle_generate_script};
 use jstz_tps_bench::generate_other::handle_generate_other;
 use jstz_tps_bench::results::handle_results;
 
@@ -55,20 +55,20 @@ enum GenerateCommands {
         #[arg(long, default_value = "inbox.json")]
         inbox_file: Box<Path>,
     },
-    #[command(about = "Generate other types of transactions")]
+    #[command(about = "Generate other types of operations and benchmarking setup")]
     Other {
         #[arg(long, default_value = DEFAULT_ROLLUP_ADDRESS)]
         address: String,
         #[arg(long)]
-        transfers: usize,
+        num_operations: usize,
         #[arg(long, default_value = "inbox.json")]
         inbox_file: Box<Path>,
         #[arg(long)]
-        contract_file: Box<Path>,
+        smart_function: Box<Path>,
         #[arg(long)]
         init_endpoint: Option<String>,
         #[arg(long)]
-        transfer_endpoint: Option<String>,
+        run_endpoint: Option<String>,
         #[arg(long)]
         check_endpoint: Option<String>,
     },
@@ -85,18 +85,18 @@ fn main() -> jstz_tps_bench::Result<()> {
             GenerateCommands::Other {
                 address,
                 inbox_file,
-                transfers,
-                contract_file,
+                num_operations,
+                smart_function,
                 init_endpoint,
-                transfer_endpoint,
+                run_endpoint,
                 check_endpoint,
             } => handle_generate_other(
                 &address,
                 &inbox_file,
-                transfers,
-                &contract_file,
+                num_operations,
+                &smart_function,
                 init_endpoint.as_deref(),
-                transfer_endpoint.as_deref(),
+                run_endpoint.as_deref(),
                 check_endpoint.as_deref(),
             )?,
         },

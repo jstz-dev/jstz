@@ -12,46 +12,41 @@ use tezos_smart_rollup::utils::inbox::file::InboxFile;
 
 use jstz_utils::inbox_builder::{Account, InboxBuilder, Result};
 
-/// Generate the requested transactions from the given contract, writing to `./inbox.json`.
+/// Generate the requested operations from the given contract, writing to `./inbox.json`.
 ///
-/// This includes contract deployment, initialisation, requested transactions, and checks at the end.
+/// This includes contract deployment, initialisation, requested operations, and checks at the end.
 pub fn handle_generate_other(
     rollup_addr: &str,
     inbox_file: &Path,
-    transfers: usize,
-    contract_file: &Path,
+    num_operations: usize,
+    smart_function: &Path,
     init_endpoint: Option<&str>,
-    transfer_endpoint: Option<&str>,
+    run_endpoint: Option<&str>,
     check_endpoint: Option<&str>,
 ) -> Result<()> {
     let inbox = generate_inbox(
         rollup_addr,
-        transfers,
-        contract_file,
+        num_operations,
+        smart_function,
         init_endpoint,
-        transfer_endpoint,
+        run_endpoint,
         check_endpoint,
     )?;
     inbox.save(inbox_file)?;
     Ok(())
 }
 
-/// Generate the inbox for the given rollup address and number of transfers.
-fn generate_inbox(
+/// Prepare an `InboxBuilder` and a set of accounts for subsequent operations.
+pub fn prepare_builder_and_accounts(
     rollup_addr: &str,
-    transfers: usize,
-    contract_file: &Path,
-    init_endpoint: Option<&str>,
-    transfer_endpoint: Option<&str>,
-    check_endpoint: Option<&str>,
-) -> Result<InboxFile> {
-    let rollup_addr = SmartRollupAddress::from_b58check(rollup_addr)?;
-
-    let accounts = accounts_for_transfers(transfers);
-
-    if accounts == 0 {
-        return Err("--transfers must be greater than zero".into());
+    num_operations: usize,
+) -> Result<(InboxBuilder, Vec<Account>)> {
+    if num_operations == 0 {
+        return Err("Number of operations must be greater than zero".into());
     }
+
+    let accounts = accounts_for_operations(num_operations);
+    let rollup_addr = SmartRollupAddress::from_b58check(rollup_addr)?;
 
     let mut builder = InboxBuilder::new(
         rollup_addr,
@@ -59,10 +54,25 @@ fn generate_inbox(
         #[cfg(feature = "v2_runtime")]
         None,
     );
-    let mut accounts = builder.create_accounts(accounts)?;
+    let accounts = builder.create_accounts(accounts)?;
+
+    Ok((builder, accounts))
+}
+
+/// Generate the inbox for the given rollup address and number of transfers.
+fn generate_inbox(
+    rollup_addr: &str,
+    num_operations: usize,
+    smart_function: &Path,
+    init_endpoint: Option<&str>,
+    run_endpoint: Option<&str>,
+    check_endpoint: Option<&str>,
+) -> Result<InboxFile> {
+    let (mut builder, mut accounts) =
+        prepare_builder_and_accounts(rollup_addr, num_operations)?;
 
     // Load the contract code from the given file
-    let code_string = std::fs::read_to_string(contract_file)?;
+    let code_string = std::fs::read_to_string(smart_function)?;
 
     let contract_address = builder.deploy_function(&mut accounts[0], code_string, 0)?;
 
@@ -76,8 +86,8 @@ fn generate_inbox(
         &mut builder,
         &mut accounts[0],
         &contract_address,
-        transfers,
-        transfer_endpoint,
+        num_operations,
+        run_endpoint,
     )?;
     check(
         &mut builder,
@@ -93,17 +103,17 @@ fn transfer(
     builder: &mut InboxBuilder,
     account: &mut Account,
     contract_address: &Address,
-    transfers: usize,
-    transfer_endpoint: Option<&str>,
+    num_operations: usize,
+    run_endpoint: Option<&str>,
 ) -> Result<()> {
-    let endpoint = transfer_endpoint.unwrap_or("transfer");
-    let transfer_endpoint_uri =
+    let endpoint = run_endpoint.unwrap_or("transfer");
+    let run_endpoint_uri =
         Uri::try_from(format!("jstz://{contract_address}/{endpoint}"))?;
 
-    for _ in 0..transfers {
+    for _ in 0..num_operations {
         builder.run_function(
             account,
-            transfer_endpoint_uri.clone(),
+            run_endpoint_uri.clone(),
             Method::POST,
             HeaderMap::default(),
             HttpBody::empty(),
@@ -157,6 +167,6 @@ fn init(
 
 /// The generation strategy supports up to `num_accounts ^ 2` transfers,
 /// find the smallest number of accounts which will allow for this.
-fn accounts_for_transfers(transfers: usize) -> usize {
-    f64::sqrt(transfers as f64).ceil() as usize + 1
+fn accounts_for_operations(num_operations: usize) -> usize {
+    f64::sqrt(num_operations as f64).ceil() as usize + 1
 }
