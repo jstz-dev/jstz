@@ -162,12 +162,24 @@
                 cp -R ${vi_rustzcash.vendoredDir}/.   $out/ || true
               '';
 
-              # For each lockfile, replace the exact git source id (git+URL#SHA) with that lockfile's vendor dir.
-              mkGitSections = vi:
-                pkgs.lib.concatStringsSep "\n" (map (t: ''
-                  [source."git+${t.url}#${t.rev}"]
+              # For each lockfile, define BOTH source-id spellings Cargo may use
+              # and include explicit `git`/`rev` so Cargo treats them as git sources.
+              # We then redirect them to this lockfile's vendor dir via `replace-with`.
+              mkGitSections = vi: let
+                entriesFor = t: ''
+                  [source."git+${t.url}?rev=${t.rev}"]
+                  git = "${t.url}"
+                  rev = "${t.rev}"
                   replace-with = "${vi.name}"
-                '') (pkgs.lib.filter (t: t.rev != "") vi.gitTriples));
+
+                  [source."git+${t.url}#${t.rev}"]
+                  git = "${t.url}"
+                  rev = "${t.rev}"
+                  replace-with = "${vi.name}"
+                '';
+              in
+                pkgs.lib.concatStringsSep "\n"
+                (map entriesFor (pkgs.lib.filter (t: t.rev != "") vi.gitTriples));
 
               gitSections =
                 (mkGitSections vi_rust_deps)
