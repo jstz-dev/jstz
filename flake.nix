@@ -102,9 +102,10 @@
             # The latter is slower but doesn't require an explicit `hash` and is therefore
             # more maintainable (since this derivation isn't built in CI).
             preBuild = let
-              # For each lockfile, vendor and collect the git sources it references.
+              # Vendor a lockfile and extract (url, rev) pairs for its git deps.
               vendorInfo = {
                 dir,
+                name,
                 hashes ? {},
               }: let
                 lockPath = "${old.src}/${dir}/Cargo.lock";
@@ -112,61 +113,92 @@
                 isGit = p: pkgs.lib.hasPrefix "git+" (p.source or "");
                 gitPkgs = pkgs.lib.filter isGit (lockToml.package or []);
                 gitKeys = map (p: "${p.name}-${p.version}") gitPkgs;
+
                 vendoredDir = rustPlatform.importCargoLock {
                   lockFile = lockPath;
-                  # Only pass hashes that actually appear in THIS lockfile
                   outputHashes = pkgs.lib.attrsets.filterAttrs (k: _v: pkgs.lib.elem k gitKeys) hashes;
                 };
-                gitSources = pkgs.lib.unique (map (p: p.source) gitPkgs);
-              in {inherit vendoredDir gitSources;};
 
+                # Parse "git+URL[?…]#<rev>" -> { url, rev }
+                parseGit = src: let
+                  s0 = pkgs.lib.removePrefix "git+" src;
+                  partsHash = pkgs.lib.splitString "#" s0;
+                  urlAndQuery = builtins.elemAt partsHash 0;
+                  rev =
+                    if pkgs.lib.length partsHash > 1
+                    then builtins.elemAt partsHash 1
+                    else "";
+                  url0 = builtins.elemAt (pkgs.lib.splitString "?" urlAndQuery) 0;
+                in {
+                  url = url0;
+                  rev = rev;
+                };
+
+                gitTriples = pkgs.lib.unique (map (p: parseGit (p.source)) gitPkgs);
+              in {inherit vendoredDir gitTriples name;};
+
+              # One vendor dir per lockfile to avoid clobbering same name/version with different commits
               vi_rust_deps = vendorInfo {
                 dir = "src/rust_deps";
+                name = "vendor-rust-deps";
                 hashes = rustGitHashes2;
               };
               vi_riscv = vendorInfo {
                 dir = "src/riscv";
+                name = "vendor-riscv";
                 hashes = rustGitHashes;
               };
               vi_rustzcash = vendorInfo {
                 dir = "src/rustzcash_deps";
+                name = "vendor-rustzcash";
                 hashes = rustGitHashes2;
               };
 
-              # Merge all vendored outputs into a single directory so Cargo can use a single source.
-              combinedVendor = pkgs.runCommand "cargo-vendor-all" {} ''
-                mkdir -p $out
-                cp -R ${vi_rust_deps.vendoredDir}/.   $out/ || true
-                cp -R ${vi_riscv.vendoredDir}/.       $out/ || true
-                cp -R ${vi_rustzcash.vendoredDir}/.   $out/ || true
-              '';
+              # Use one of the registry vendor dirs for crates.io; any is fine.
+              registryVendor = vi_rust_deps.vendoredDir;
 
-              # Create [source."git+…"] sections for every distinct git source from both lockfiles.
-              gitSources =
-                pkgs.lib.unique (vi_rust_deps.gitSources ++ vi_riscv.gitSources ++ vi_rustzcash.gitSources);
-              gitSourceSections = pkgs.lib.concatStringsSep "\n" (map (src: ''
-                  [source."${src}"]
-                  replace-with = "vendored-sources"
-                '')
-                gitSources);
+              # For each lockfile, map its git sources (URL+rev) to its own vendor dir.
+              mkGitSections = vi:
+                pkgs.lib.concatStringsSep "\n" (map (triple: ''
+                  [source."${vi.name}-${builtins.substring 0 7 triple.rev}"]
+                  git = "${triple.url}"
+                  rev = "${triple.rev}"
+                  replace-with = "${vi.name}"
+                '') (pkgs.lib.filter (t: t.rev != "") vi.gitTriples));
+
+              gitSections =
+                (mkGitSections vi_rust_deps)
+                + "\n"
+                + (mkGitSections vi_riscv)
+                + "\n"
+                + (mkGitSections vi_rustzcash);
             in
-              # HACK: Does not run on macOS to match prior behavior.
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                                export CARGO_HOME="$PWD/.cargo-home"
+                                # Ensure Cargo always reads our config (dune sets CARGO_HOME=/build/.cargo)
+                                export CARGO_HOME="/build/.cargo"
                                 mkdir -p "$CARGO_HOME"
-
-                                cat > "$CARGO_HOME/config.toml" << 'EOF'
+                                cat > "$CARGO_HOME/config.toml" << EOF
                 [net]
                 offline = true
 
                 [source.crates-io]
                 replace-with = "vendored-sources"
 
-                ${gitSourceSections}
+                [source.vendored-sources]      # registry crates
+                directory = "${registryVendor}"
 
-                [source.vendored-sources]
-                directory = "${combinedVendor}"
+                # Per-lockfile vendor directories (avoid octez-riscv 0.0.0 commit clashes)
+                [source.${vi_rust_deps.name}]
+                directory = "${vi_rust_deps.vendoredDir}"
+                [source.${vi_riscv.name}]
+                directory = "${vi_riscv.vendoredDir}"
+                [source.${vi_rustzcash.name}]
+                directory = "${vi_rustzcash.vendoredDir}"
+
+                ${gitSections}
                 EOF
+                                # Optional: also drop a copy for debugging
+                                mkdir -p .cargo; cp "$CARGO_HOME/config.toml" .cargo/config.toml
               '';
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
