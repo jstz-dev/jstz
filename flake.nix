@@ -162,6 +162,13 @@
                 hashes = rustGitHashes2;
               };
 
+              # NEW: vendor the SDK Rust subtree Dune includes via ../../sdk/rust
+              vi_sdk_rust = vendorInfo {
+                dir = "sdk/rust";
+                name = "vendor-sdk-rust";
+                hashes = rustGitHashes2;
+              };
+
               # Combined registry vendor: union of all vendored trees -> a unique path
               combinedVendor = pkgs.runCommand "cargo-vendor-union" {} ''
                 mkdir -p $out
@@ -169,6 +176,7 @@
                 cp -R ${vi_riscv.vendoredDir}/.       $out/ || true
                 cp -R ${vi_rustzcash.vendoredDir}/.   $out/ || true
                 cp -R ${vi_kernel_sdk.vendoredDir}/.  $out/ || true
+                cp -R ${vi_sdk_rust.vendoredDir}/.    $out/ || true
               '';
 
               # Build ONE mapping of canonical git source ids (git+URL#REV) to vendor dirs, deduped across all trees.
@@ -193,7 +201,14 @@
                       pkgs.lib.hasAttr k (toPairs vi_rust_deps)
                       || pkgs.lib.hasAttr k (toPairs vi_riscv)
                       || pkgs.lib.hasAttr k (toPairs vi_rustzcash)
-                    )) (toPairs vi_kernel_sdk));
+                    )) (toPairs vi_kernel_sdk))
+                  // (pkgs.lib.attrsets.filterAttrs (k: _:
+                    !(
+                      pkgs.lib.hasAttr k (toPairs vi_rust_deps)
+                      || pkgs.lib.hasAttr k (toPairs vi_riscv)
+                      || pkgs.lib.hasAttr k (toPairs vi_rustzcash)
+                      || pkgs.lib.hasAttr k (toPairs vi_kernel_sdk)
+                    )) (toPairs vi_sdk_rust));
 
                 render = key: let
                   ent = mapping.${key};
@@ -207,7 +222,7 @@
                 pkgs.lib.concatStringsSep "\n" (map render (pkgs.lib.attrNames mapping));
             in
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                                # Ensure Cargo always reads our config (dune sets CARGO_HOME=/build/.cargo)
+                                # Write the config to a stable path first
                                 export CARGO_HOME="/build/.cargo"
                                 mkdir -p "$CARGO_HOME"
                                 cat > "$CARGO_HOME/config.toml" << EOF
@@ -230,11 +245,42 @@
                 directory = "${vi_rustzcash.vendoredDir}"
                 [source.${vi_kernel_sdk.name}]
                 directory = "${vi_kernel_sdk.vendoredDir}"
+                [source.${vi_sdk_rust.name}]
+                directory = "${vi_sdk_rust.vendoredDir}"
 
                 ${gitSections}
                 EOF
+                                # Mirror to the location Make/Dune will export (see logs: CARGO_HOME=$TMPDIR/.cargo …),
+                                # but avoid self-copy when TMPDIR=/build. NOTE: escape Bash  so Nix doesn't interpolate.
+                                if [ -n "''${TMPDIR:-}" ]; then
+                                  if [ "''${TMPDIR%/}" != "/build" ]; then
+                                    mkdir -p "''$TMPDIR/.cargo"
+                                    # Only copy if content differs, to avoid "are the same file" errors
+                                    if [ -e "''$TMPDIR/.cargo/config.toml" ]; then
+                                      if ! cmp -s "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"; then
+                                        cp -f "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"
+                                      fi
+                                    else
+                                      cp -f "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"
+                                    fi
+                                    # Ensure subsequent cargo from Make uses the mirrored config
+                                    export CARGO_HOME="''$TMPDIR/.cargo"
+                                  else
+                                    # TMPDIR is /build already; just ensure CARGO_HOME matches and skip copy
+                                    export CARGO_HOME="/build/.cargo"
+                                  fi
+                                fi
+
                                 # Optional: also drop a copy for debugging
-                                mkdir -p .cargo; cp "$CARGO_HOME/config.toml" .cargo/config.toml
+                                mkdir -p .cargo
+                                cp -f "$CARGO_HOME/config.toml" .cargo/config.toml || true
+
+                                ## ---- DEBUG: prove both locations exist ----
+                                echo "CARGO_HOME now: $CARGO_HOME"
+                                echo "Config at /build/.cargo/config.toml:"
+                                sed -n '1,80p' /build/.cargo/config.toml || true
+                                echo "Config at $TMPDIR/.cargo/config.toml:"
+                                sed -n '1,80p' "$TMPDIR/.cargo/config.toml" || true
 
                                 ## ---- DEBUG: print what Cargo will see ----
                                 echo "---- CARGO CONFIG (first 200 lines) ----"
