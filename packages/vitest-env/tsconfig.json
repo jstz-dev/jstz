@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "module": "nodenext",
+    "outDir": "build",
+    "declaration": true,
+    "sourceMap": true,
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "include": ["src/", "tests/"],
+  "exclude": ["node_modules", "build"]
+}

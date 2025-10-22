@@ -17,6 +17,7 @@ members = [
   "crates/jstz_sdk",
   "crates/jstz_tps_bench",
   "crates/jstz_utils",
+  "crates/jstz_vitest",
   "crates/jstz_wpt",
   "crates/jstzd",
   "crates/octez",
@@ -53,7 +54,11 @@ console = "0.15.8"
 ctrlc = "3.4.2"
 deno_core = "0.336.0"
 deno_error = "0.5.5"
+node_resolver = "0.28.0"
+deno_resolver = "0.21.0"
+deno_node = "0.128.0"
 deno_url = "0.190.0"
+deno_fs = "0.100.0"
 deno_web = "0.221.0"
 deno_webidl = "0.190.0"
 derive_more = "0.99.17"
@@ -114,6 +119,7 @@ serde_with = { version = "3.6.1", features = ["macros", "base64"] }
 serde_bytes = "0.11.17"
 signal-hook = "0.3.17"
 syntect = "5.2.0"
+sys_traits = "0.1.7"
 tempfile = "3.10.0"
 thiserror = "1.0.69"
 tl = "0.7.7"

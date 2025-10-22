@@ -3,6 +3,7 @@ use crate::ext::jstz_fetch::FetchAPI;
 use crate::ext::jstz_fetch::NotSupportedFetch;
 use deno_core::v8::new_single_threaded_default_platform;
 use deno_core::*;
+use deno_error::JsErrorBox;
 use derive_more::{Deref, DerefMut};
 use jstz_core::host::HostRuntime;
 use jstz_core::host::JsHostRuntime;
@@ -83,6 +84,13 @@ impl Drop for JstzRuntime {
         };
     }
 }
+
+pub type ExtensionTranspiler =
+  dyn Fn(
+    ModuleName,
+    ModuleCodeString,
+  ) -> std::result::Result<(ModuleCodeString, Option<SourceMapData>), JsErrorBox>;
+
 pub struct JstzRuntimeOptions<F: FetchAPI> {
     /// Protocol context accessible by protocol defined APIs
     pub protocol: Option<RuntimeContext>,
@@ -96,6 +104,7 @@ pub struct JstzRuntimeOptions<F: FetchAPI> {
     pub module_loader: Rc<dyn ModuleLoader>,
     /// Fetch extension
     pub fetch: F,
+    pub extension_transpiler: Option<Rc<ExtensionTranspiler>>,
 }
 
 impl Default for JstzRuntimeOptions<NotSupportedFetch> {
@@ -105,6 +114,7 @@ impl Default for JstzRuntimeOptions<NotSupportedFetch> {
             extensions: Default::default(),
             module_loader: Rc::new(NoopModuleLoader),
             fetch: NotSupportedFetch,
+            extension_transpiler: None,
         }
     }
 }
@@ -115,7 +125,13 @@ impl JstzRuntime {
         let mut extensions = vec![];
         extensions.extend(init_base_extensions_ops_and_esm::<F>());
         extensions.extend(options.extensions);
-        Self::new_inner(extensions, options.module_loader, options.protocol, None)
+        Self::new_inner(
+            extensions,
+            options.module_loader,
+            options.protocol,
+            None,
+            options.extension_transpiler,
+        )
     }
 
     /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`] from a previously
@@ -132,6 +148,7 @@ impl JstzRuntime {
             options.module_loader,
             options.protocol,
             Some(snapshot),
+            None,
         )
     }
 
@@ -142,6 +159,7 @@ impl JstzRuntime {
         module_loader: Rc<dyn ModuleLoader>,
         protocol: Option<RuntimeContext>,
         snapshot: Option<&'static [u8]>,
+        extension_transpiler: Option<Rc<ExtensionTranspiler>>,
     ) -> Self {
         let v8_platform = Some(new_single_threaded_default_platform(false).make_shared());
         // Construct Runtime options
@@ -151,6 +169,7 @@ impl JstzRuntime {
             v8_platform,
             startup_snapshot: snapshot,
             skip_op_registration: false,
+            extension_transpiler,
             ..Default::default()
         };
 
@@ -474,6 +493,7 @@ fn init_base_extensions_ops_and_esm<F: FetchAPI>() -> Vec<Extension> {
         deno_web::deno_web::init_ops_and_esm::<JstzPermissions>(Default::default(), None),
         deno_fetch_base::deno_fetch::init_ops_and_esm::<F>(F::options()),
         jstz_main::jstz_main::init_ops_and_esm(),
+        jstz_main::runtime::init_ops_and_esm()
     ]
 }
 

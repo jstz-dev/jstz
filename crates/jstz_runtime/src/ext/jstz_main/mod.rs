@@ -7,6 +7,13 @@ extension!(
   esm = [dir "src/ext/jstz_main", "01_errors.js", "98_global_scope.js", "99_main.js"],
 );
 
+extension!(
+    runtime,
+    deps = [jstz_main],
+    esm_entry_point = "ext:jstz_main/98_global_scope_shared.js",
+    esm = [dir "src/ext/jstz_main", "98_global_scope_shared.js"]
+);
+
 #[cfg(test)]
 mod test {
     use deno_core::{serde_v8, v8};

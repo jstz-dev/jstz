@@ -1,5 +1,6 @@
 use clap::Parser;
 use clap_complete::Shell;
+use url::Url;
 use std::path::PathBuf;
 
 mod account;
