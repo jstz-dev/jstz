@@ -30,7 +30,7 @@ jobs:
       - name: Format
         run: nix --accept-flake-config fmt -- --fail-on-change
       - name: Prevent blst
-        run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
+        run: nix -L --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
       - name: Build
         run: nix --accept-flake-config --log-format raw -L build -j auto .#all
       - name: Flake check

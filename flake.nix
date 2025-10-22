@@ -119,7 +119,7 @@
                   outputHashes = pkgs.lib.attrsets.filterAttrs (k: _v: pkgs.lib.elem k gitKeys) hashes;
                 };
 
-                # Parse "git+URL[?…]#<rev>" -> { id, url, rev }
+                # Parse "git+URL[?…]#<rev>" and canonicalize the key to "git+URL#<rev>"
                 parseGit = src: let
                   s0 = pkgs.lib.removePrefix "git+" src;
                   partsHash = pkgs.lib.splitString "#" s0;
@@ -130,9 +130,9 @@
                     else "";
                   url0 = builtins.elemAt (pkgs.lib.splitString "?" urlAndQuery) 0;
                 in {
-                  id = src;
                   url = url0;
                   rev = rev;
+                  key = "git+" + url0 + "#" + rev;
                 };
 
                 gitTriples = pkgs.lib.unique (map (p: parseGit (p.source)) gitPkgs);
@@ -155,20 +155,27 @@
                 hashes = rustGitHashes2;
               };
 
+              # Also vendor the other Rust trees Dune compiles:
+              vi_kernel_sdk = vendorInfo {
+                dir = "src/kernel_sdk";
+                name = "vendor-kernel-sdk";
+                hashes = rustGitHashes2;
+              };
+
               # Combined registry vendor: union of all vendored trees -> a unique path
               combinedVendor = pkgs.runCommand "cargo-vendor-union" {} ''
                 mkdir -p $out
                 cp -R ${vi_rust_deps.vendoredDir}/.   $out/ || true
                 cp -R ${vi_riscv.vendoredDir}/.       $out/ || true
                 cp -R ${vi_rustzcash.vendoredDir}/.   $out/ || true
+                cp -R ${vi_kernel_sdk.vendoredDir}/.  $out/ || true
               '';
 
-              # Build ONE mapping of canonical git source ids (full Cargo ids including query params)
-              # to vendor dirs, deduplicated across all lockfiles.
+              # Build ONE mapping of canonical git source ids (git+URL#REV) to vendor dirs, deduped across all trees.
               gitSections = let
                 toPairs = vi:
                   builtins.listToAttrs (map (t: {
-                    name = t.id;
+                    name = t.key; # canonical "git+URL#REV"
                     value = {
                       vendor = vi.name;
                       url = t.url;
@@ -180,7 +187,13 @@
                 mapping =
                   (toPairs vi_rust_deps)
                   // (pkgs.lib.attrsets.filterAttrs (k: _: !(pkgs.lib.hasAttr k (toPairs vi_rust_deps))) (toPairs vi_riscv))
-                  // (pkgs.lib.attrsets.filterAttrs (k: _: !(pkgs.lib.hasAttr k (toPairs vi_rust_deps) || pkgs.lib.hasAttr k (toPairs vi_riscv))) (toPairs vi_rustzcash));
+                  // (pkgs.lib.attrsets.filterAttrs (k: _: !(pkgs.lib.hasAttr k (toPairs vi_rust_deps) || pkgs.lib.hasAttr k (toPairs vi_riscv))) (toPairs vi_rustzcash))
+                  // (pkgs.lib.attrsets.filterAttrs (k: _:
+                    !(
+                      pkgs.lib.hasAttr k (toPairs vi_rust_deps)
+                      || pkgs.lib.hasAttr k (toPairs vi_riscv)
+                      || pkgs.lib.hasAttr k (toPairs vi_rustzcash)
+                    )) (toPairs vi_kernel_sdk));
 
                 render = key: let
                   ent = mapping.${key};
@@ -208,13 +221,15 @@
                 [source.vendored-sources]
                 directory = "${combinedVendor}"
 
-                # Per-lockfile vendor directories (avoid octez-riscv 0.0.0 commit clashes)
+                # Per-tree vendor directories
                 [source.${vi_rust_deps.name}]
                 directory = "${vi_rust_deps.vendoredDir}"
                 [source.${vi_riscv.name}]
                 directory = "${vi_riscv.vendoredDir}"
                 [source.${vi_rustzcash.name}]
                 directory = "${vi_rustzcash.vendoredDir}"
+                [source.${vi_kernel_sdk.name}]
+                directory = "${vi_kernel_sdk.vendoredDir}"
 
                 ${gitSections}
                 EOF
@@ -230,6 +245,8 @@
 
                                 echo "---- GIT SOURCE MAPPINGS (#REV) ----"
                                 grep -n '^\[source\."git\+.*#' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
+                                echo "---- LOOK FOR riscv-pvm ffdd7b97 ----"
+                                grep -n 'riscv-pvm.*ffdd7b97' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
 
                                 echo "---- CARGO ENV ----"
                                 echo "CARGO_HOME=$CARGO_HOME"
