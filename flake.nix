@@ -119,7 +119,7 @@
                   outputHashes = pkgs.lib.attrsets.filterAttrs (k: _v: pkgs.lib.elem k gitKeys) hashes;
                 };
 
-                # Parse "git+URL[?…]#<rev>" -> { url, rev }
+                # Parse "git+URL[?…]#<rev>" -> { id, url, rev }
                 parseGit = src: let
                   s0 = pkgs.lib.removePrefix "git+" src;
                   partsHash = pkgs.lib.splitString "#" s0;
@@ -130,6 +130,7 @@
                     else "";
                   url0 = builtins.elemAt (pkgs.lib.splitString "?" urlAndQuery) 0;
                 in {
+                  id = src;
                   url = url0;
                   rev = rev;
                 };
@@ -162,12 +163,12 @@
                 cp -R ${vi_rustzcash.vendoredDir}/.   $out/ || true
               '';
 
-              # Build ONE mapping of canonical git source ids (git+URL#REV) to vendor dirs,
-              # deduplicated across all lockfiles. Emit only the '#REV' form.
+              # Build ONE mapping of canonical git source ids (full Cargo ids including query params)
+              # to vendor dirs, deduplicated across all lockfiles.
               gitSections = let
                 toPairs = vi:
                   builtins.listToAttrs (map (t: {
-                    name = "git+${t.url}#${t.rev}";
+                    name = t.id;
                     value = {
                       vendor = vi.name;
                       url = t.url;
