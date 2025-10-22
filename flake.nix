@@ -220,6 +220,27 @@
                 EOF
                                 # Optional: also drop a copy for debugging
                                 mkdir -p .cargo; cp "$CARGO_HOME/config.toml" .cargo/config.toml
+
+                                ## ---- DEBUG: print what Cargo will see ----
+                                echo "---- CARGO CONFIG (first 200 lines) ----"
+                                sed -n '1,200p' "$CARGO_HOME/config.toml" || true
+
+                                echo "---- DEFINED SOURCES ----"
+                                grep -n '^\[source\.' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
+
+                                echo "---- GIT SOURCE MAPPINGS (#REV) ----"
+                                grep -n '^\[source\."git\+.*#' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
+
+                                echo "---- CARGO ENV ----"
+                                echo "CARGO_HOME=$CARGO_HOME"
+                                env | grep -E '^CARGO_' | sed 's/^/  /' || true
+                                command -v cargo && cargo --version || true
+
+                                echo "---- VENDOR DIRS ----"
+                                for d in ${combinedVendor} ${vi_rust_deps.vendoredDir} ${vi_riscv.vendoredDir} ${vi_rustzcash.vendoredDir}; do
+                                  echo "  $d"
+                                  [ -d "$d" ] && (ls -ld "$d" | sed 's/^/    /') || echo "    MISSING"
+                                done
               '';
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
