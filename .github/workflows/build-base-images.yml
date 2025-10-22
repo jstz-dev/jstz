@@ -1,0 +1,47 @@
+name: Build base images
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Dry-run image build without pushing to the registry
+        type: boolean
+        required: false
+        default: true
+
+jobs:
+  dummy-artefact:
+    # create a dummy artefact since the `docker-multiplatform` workflow expects one artefact
+    # for jstz kernel
+    name: Create dummy artefact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create dummy file
+        run: touch dummy
+      - name: Upload artefact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dummy
+          path: dummy
+  build-image:
+    name: Build image
+    needs: [dummy-artefact]
+    strategy:
+      matrix:
+        include:
+          - image: build
+            dockerfile: ./images/build.Dockerfile
+          - image: serve
+            dockerfile: ./images/serve.Dockerfile
+          - image: build_cli
+            dockerfile: ./images/build_cli.Dockerfile
+    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
+    with:
+      octez-tag: "" # This value is not referenced by the base docker files
+      docker_registry: ghcr.io
+      docker_image_base: jstz-dev/jstz
+      image: ${{ matrix.image }}
+      dockerfile: ${{ matrix.dockerfile }}
+      kernel_artifact_name: dummy
+      dry_run: ${{ inputs.dry_run }}
+    secrets: inherit
