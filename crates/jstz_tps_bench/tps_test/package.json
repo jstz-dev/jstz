@@ -1,0 +1,14 @@
+{
+  "name": "tps_test",
+  "authors": "TriliTech Ecosystems and Tools Team <contact@trili.tech>",
+  "private": true,
+  "version": "0.0.0",
+  "main": "index.ts",
+  "devDependencies": {
+    "esbuild": "^0.20.1"
+  },
+  "scripts": {
+    "check:types": "tsc --noEmit",
+    "build": "esbuild src/index.ts --bundle --format=esm --target=esnext --minify --outfile=dist/index.js"
+  }
+}
