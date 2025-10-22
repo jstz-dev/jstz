@@ -3377,6 +3377,7 @@ dependencies = [
  "deno_web",
  "deno_webidl",
  "derive_more",
+ "indexmap 2.6.0",
  "jstz_core",
  "jstz_crypto",
  "jstz_proto",

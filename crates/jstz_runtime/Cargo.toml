@@ -34,6 +34,7 @@ pin-project.workspace = true
 ron.workspace = true
 anyhow.workspace = true
 regex.workspace = true
+indexmap.workspace = true
 
 
 [dev-dependencies]
