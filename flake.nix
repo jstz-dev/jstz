@@ -169,6 +169,23 @@
                 hashes = rustGitHashes2;
               };
 
+              # ---- NEW: local git checkouts for the riscv-pvm commits used offline ----
+              # Fill in the sha256s (content hash of the git checkout) for each commit.
+              riscv_pvm_ff = pkgs.fetchgit {
+                url = "https://github.com/tezos/riscv-pvm.git";
+                rev = "ffdd7b976f9a98f3140d8080b1119354afb04356";
+                sha256 = "sha256-OdF016wQzNaZo9rst6Mem9w0sWPXMuefp7wJ4zeBkYI=";
+                deepClone = true;
+                leaveDotGit = true;
+              };
+              riscv_pvm_af = pkgs.fetchgit {
+                url = "https://github.com/tezos/riscv-pvm.git";
+                rev = "afb02b632401f873fba323177f4619be723fd87e";
+                sha256 = "sha256-6XWiTbzL/o94vG4M3TbdmgnAkuNYH1pr2fXsoU32W4U=";
+                deepClone = true;
+                leaveDotGit = true;
+              };
+
               # Combined registry vendor: union of all vendored trees -> a unique path
               combinedVendor = pkgs.runCommand "cargo-vendor-union" {} ''
                 mkdir -p $out
@@ -179,7 +196,8 @@
                 cp -R ${vi_sdk_rust.vendoredDir}/.    $out/ || true
               '';
 
-              # Build ONE mapping of canonical git source ids (git+URL#REV) to vendor dirs, deduped across all trees.
+              # Build ONE mapping of canonical git source ids (git+URL#REV) to *local git sources*,
+              # falling back to vendor dirs for other git deps if any.
               gitSections = let
                 toPairs = vi:
                   builtins.listToAttrs (map (t: {
@@ -210,14 +228,35 @@
                       || pkgs.lib.hasAttr k (toPairs vi_kernel_sdk)
                     )) (toPairs vi_sdk_rust));
 
+                # For the two riscv-pvm commits, point to a local *git* source (file://… with .git present).
                 render = key: let
                   ent = mapping.${key};
-                in ''
-                  [source."${key}"]
-                  git = "${ent.url}"
-                  rev = "${ent.rev}"
-                  replace-with = "${ent.vendor}"
-                '';
+                  is_ff =
+                    ent.url
+                    == "https://github.com/tezos/riscv-pvm.git"
+                    && ent.rev == "ffdd7b976f9a98f3140d8080b1119354afb04356";
+                  is_af =
+                    ent.url
+                    == "https://github.com/tezos/riscv-pvm.git"
+                    && ent.rev == "afb02b632401f873fba323177f4619be723fd87e";
+                  srcPath =
+                    if is_ff
+                    then riscv_pvm_ff
+                    else if is_af
+                    then riscv_pvm_af
+                    else null;
+                in
+                  if srcPath != null
+                  then ''
+                    # Map directly to a local git repo (no replace-with indirection)
+                    [source."${key}"]
+                    git = "file://${srcPath}"
+                    rev = "${ent.rev}"
+                  ''
+                  else ''
+                    [source."${key}"]
+                    replace-with = "${ent.vendor}"
+                  ''; # fallback: for any other git deps you might have added
               in
                 pkgs.lib.concatStringsSep "\n" (map render (pkgs.lib.attrNames mapping));
             in
@@ -293,6 +332,25 @@
                                 grep -n '^\[source\."git\+.*#' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
                                 echo "---- LOOK FOR riscv-pvm ffdd7b97 ----"
                                 grep -n 'riscv-pvm.*ffdd7b97' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
+
+                                ## ---- EXTRA DEBUG: verify local riscv-pvm repos and config blocks ----
+                                echo "---- RISCV-PVM LOCAL GIT CHECKS ----"
+                                for p in ${riscv_pvm_af} ${riscv_pvm_ff}; do
+                                  echo "  repo: $p"
+                                  if [ -d "$p/.git" ]; then
+                                    echo "    .git: OK"
+                                    if command -v git >/dev/null 2>&1; then
+                                      echo -n "    HEAD: " && git -C "$p" rev-parse --short=12 HEAD || true
+                                      echo -n "    HEAD(ts): " && git -C "$p" show -s --format='%H %ci' HEAD || true
+                                    fi
+                                  else
+                                    echo "    .git: MISSING"
+                                  fi
+                                done
+
+                                echo "---- RISCV-PVM SOURCE TABLES (/build/.cargo) ----"
+                                grep -n -A4 -B1 'riscv-pvm\.git#afb02b6' /build/.cargo/config.toml || true
+                                grep -n -A4 -B1 'riscv-pvm\.git#ffdd7b9' /build/.cargo/config.toml || true
 
                                 echo "---- CARGO ENV ----"
                                 echo "CARGO_HOME=$CARGO_HOME"
