@@ -12,6 +12,7 @@ use http::{HeaderMap, Method, Uri};
 use crate::runtime::v2::oracle::request::RequestId;
 
 use jstz_core::{host::HostRuntime, reveal_data::PreimageHash};
+use jstz_crypto::verifier::Verifier;
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
     signature::Signature,
@@ -227,11 +228,16 @@ pub struct SignedOperation {
     signature: Signature,
     #[deref]
     inner: Operation,
+    verifier: Option<Verifier>,
 }
 
 impl SignedOperation {
     pub fn new(signature: Signature, inner: Operation) -> Self {
-        Self { signature, inner }
+        Self {
+            signature,
+            inner,
+            verifier: None,
+        }
     }
 
     pub fn hash(&self) -> Blake2b {
