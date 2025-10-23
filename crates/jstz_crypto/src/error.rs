@@ -33,6 +33,11 @@ pub enum Error {
     },
     #[display(fmt = "invalid smart function hash")]
     InvalidSmartFunctionHash,
+    #[display(fmt = "PasskeyError: {source}")]
+    PasskeyError {
+        source: crate::verifier::passkey::PasskeyError,
+    },
+    InvalidVerifier,
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
