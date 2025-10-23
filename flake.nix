@@ -186,6 +186,44 @@
                 leaveDotGit = true;
               };
 
+              # ---- NEW: local git checkout for vch9/tezedge used offline ----
+              tezedge_git_0cca = pkgs.fetchgit {
+                url = "https://github.com/vch9/tezedge.git";
+                rev = "0cca879fda37ce3713da717c40263f025b5501ea";
+                # Replace after first build with the real value Nix prints
+                sha256 = "sha256-JhekWHfe2t3hZdxKBdUzSlT8lkDfXk2IcL1FiU/pEfs=";
+                deepClone = true;
+                leaveDotGit = true;
+              };
+
+              # ---- NEW: local git checkout for tezedge/quickcheck_derive (offline) ----
+              quickcheck_derive_git_ad01 = pkgs.fetchgit {
+                url = "https://github.com/tezedge/quickcheck_derive.git";
+                rev = "ad01cec7d62ffbed5490e155e57856672c102645";
+                # Replace after first build with the real value Nix prints
+                sha256 = "sha256-oJSX/4/3oIePIYeNjF/mGeHM0QdA2u8FIhH3qTk/fZs=";
+                deepClone = true;
+                leaveDotGit = true;
+              };
+
+              # ---- NEW: local git checkouts for tezos/tezos commits used offline ----
+              tezos_git_70187e = pkgs.fetchgit {
+                url = "https://gitlab.com/tezos/tezos.git";
+                rev = "70187e57c4f994f44f4461f3cb4498d47c426c7d";
+                # Replace after first build with the real value Nix prints
+                sha256 = "sha256-6wdplccm0dtmZb0X6rEkJSAvmMrjVagIZf8BMeJHgQE=";
+                deepClone = true;
+                leaveDotGit = true;
+              };
+              tezos_git_646ce5 = pkgs.fetchgit {
+                url = "https://gitlab.com/tezos/tezos.git";
+                rev = "646ce59cd891e652d69777314c44b3a48a293edd";
+                # Replace after first build with the real value Nix prints
+                sha256 = "sha256-fKnoDMdL7IvxfDktbdSxq18kDOKurJeZ4eOccubj4oc=";
+                deepClone = true;
+                leaveDotGit = true;
+              };
+
               # Combined registry vendor: union of all vendored trees -> a unique path
               combinedVendor = pkgs.runCommand "cargo-vendor-union" {} ''
                 mkdir -p $out
@@ -210,6 +248,12 @@
                   }) (pkgs.lib.filter (t: t.rev != "") vi.gitTriples));
 
                 # Earlier entries win; adjust order if you prefer a different precedence.
+
+                # Provide local sources for the Tezos GitLab commits we know about.
+                tezosGitSources = {
+                  "70187e57c4f994f44f4461f3cb4498d47c426c7d" = tezos_git_70187e;
+                  "646ce59cd891e652d69777314c44b3a48a293edd" = tezos_git_646ce5;
+                };
                 mapping =
                   (toPairs vi_rust_deps)
                   // (pkgs.lib.attrsets.filterAttrs (k: _: !(pkgs.lib.hasAttr k (toPairs vi_rust_deps))) (toPairs vi_riscv))
@@ -239,11 +283,28 @@
                     ent.url
                     == "https://github.com/tezos/riscv-pvm.git"
                     && ent.rev == "afb02b632401f873fba323177f4619be723fd87e";
+                  is_tezos =
+                    ent.url
+                    == "https://gitlab.com/tezos/tezos.git";
+                  is_quickcheck_derive =
+                    ent.url
+                    == "https://github.com/tezedge/quickcheck_derive"
+                    || ent.url == "https://github.com/tezedge/quickcheck_derive.git";
+                  is_tezedge =
+                    ent.url
+                    == "https://github.com/vch9/tezedge";
+                  srcPathTezos = pkgs.lib.attrByPath [ent.rev] null tezosGitSources;
                   srcPath =
                     if is_ff
                     then riscv_pvm_ff
                     else if is_af
                     then riscv_pvm_af
+                    else if is_quickcheck_derive
+                    then quickcheck_derive_git_ad01
+                    else if is_tezos && srcPathTezos != null
+                    then srcPathTezos
+                    else if is_tezedge
+                    then tezedge_git_0cca
                     else null;
                 in
                   if srcPath != null
@@ -261,107 +322,196 @@
                 pkgs.lib.concatStringsSep "\n" (map render (pkgs.lib.attrNames mapping));
             in
               pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                                # Write the config to a stable path first
-                                export CARGO_HOME="/build/.cargo"
-                                mkdir -p "$CARGO_HOME"
-                                cat > "$CARGO_HOME/config.toml" << EOF
-                [net]
-                offline = true
+                                                # Write the config to a stable path first
+                                                export CARGO_HOME="/build/.cargo"
+                                                mkdir -p "$CARGO_HOME"
+                                                cat > "$CARGO_HOME/config.toml" << EOF
+                                [net]
+                                offline = true
 
-                [source.crates-io]
-                replace-with = "vendored-sources"
+                                [source.crates-io]
+                                replace-with = "vendored-sources"
 
-                # Unique directory for registry crates (union of all vendors)
-                [source.vendored-sources]
-                directory = "${combinedVendor}"
+                                # Unique directory for registry crates (union of all vendors)
+                                [source.vendored-sources]
+                                directory = "${combinedVendor}"
 
-                # Per-tree vendor directories
-                [source.${vi_rust_deps.name}]
-                directory = "${vi_rust_deps.vendoredDir}"
-                [source.${vi_riscv.name}]
-                directory = "${vi_riscv.vendoredDir}"
-                [source.${vi_rustzcash.name}]
-                directory = "${vi_rustzcash.vendoredDir}"
-                [source.${vi_kernel_sdk.name}]
-                directory = "${vi_kernel_sdk.vendoredDir}"
-                [source.${vi_sdk_rust.name}]
-                directory = "${vi_sdk_rust.vendoredDir}"
+                                # Per-tree vendor directories
+                                [source.${vi_rust_deps.name}]
+                                directory = "${vi_rust_deps.vendoredDir}"
+                                [source.${vi_riscv.name}]
+                                directory = "${vi_riscv.vendoredDir}"
+                                [source.${vi_rustzcash.name}]
+                                directory = "${vi_rustzcash.vendoredDir}"
+                                [source.${vi_kernel_sdk.name}]
+                                directory = "${vi_kernel_sdk.vendoredDir}"
+                                [source.${vi_sdk_rust.name}]
+                                directory = "${vi_sdk_rust.vendoredDir}"
 
-                ${gitSections}
-                EOF
-                                # Mirror to the location Make/Dune will export (see logs: CARGO_HOME=$TMPDIR/.cargo …),
-                                # but avoid self-copy when TMPDIR=/build. NOTE: escape Bash  so Nix doesn't interpolate.
-                                if [ -n "''${TMPDIR:-}" ]; then
-                                  if [ "''${TMPDIR%/}" != "/build" ]; then
-                                    mkdir -p "''$TMPDIR/.cargo"
-                                    # Only copy if content differs, to avoid "are the same file" errors
-                                    if [ -e "''$TMPDIR/.cargo/config.toml" ]; then
-                                      if ! cmp -s "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"; then
-                                        cp -f "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"
-                                      fi
-                                    else
-                                      cp -f "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"
-                                    fi
-                                    # Ensure subsequent cargo from Make uses the mirrored config
-                                    export CARGO_HOME="''$TMPDIR/.cargo"
-                                  else
-                                    # TMPDIR is /build already; just ensure CARGO_HOME matches and skip copy
-                                    export CARGO_HOME="/build/.cargo"
-                                  fi
-                                fi
+                                ${gitSections}
 
-                                # Optional: also drop a copy for debugging
-                                mkdir -p .cargo
-                                cp -f "$CARGO_HOME/config.toml" .cargo/config.toml || true
+                                # ---- Umbrella mapping for riscv-pvm (.git variant only) ----
+                                [source."git+https://github.com/tezos/riscv-pvm.git"]
+                                git = "file://${riscv_pvm_ff}"
+                                EOF
+                                                # Mirror to the location Make/Dune will export (see logs: CARGO_HOME=$TMPDIR/.cargo …),
+                                                # but avoid self-copy when TMPDIR=/build. NOTE: escape Bash  so Nix doesn't interpolate.
+                                                if [ -n "''${TMPDIR:-}" ]; then
+                                                  if [ "''${TMPDIR%/}" != "/build" ]; then
+                                                    mkdir -p "''$TMPDIR/.cargo"
+                                                    # Only copy if content differs, to avoid "are the same file" errors
+                                                    if [ -e "''$TMPDIR/.cargo/config.toml" ]; then
+                                                      if ! cmp -s "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"; then
+                                                        cp -f "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"
+                                                      fi
+                                                    else
+                                                      cp -f "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"
+                                                    fi
+                                                    # Ensure subsequent cargo from Make uses the mirrored config
+                                                    export CARGO_HOME="''$TMPDIR/.cargo"
+                                                  else
+                                                    # TMPDIR is /build already; just ensure CARGO_HOME matches and skip copy
+                                                    export CARGO_HOME="/build/.cargo"
+                                                  fi
+                                                fi
 
-                                ## ---- DEBUG: prove both locations exist ----
-                                echo "CARGO_HOME now: $CARGO_HOME"
-                                echo "Config at /build/.cargo/config.toml:"
-                                sed -n '1,80p' /build/.cargo/config.toml || true
-                                echo "Config at $TMPDIR/.cargo/config.toml:"
-                                sed -n '1,80p' "$TMPDIR/.cargo/config.toml" || true
+                                                # Optional: also drop a copy for debugging
+                                                mkdir -p .cargo
+                                                cp -f "$CARGO_HOME/config.toml" .cargo/config.toml || true
 
-                                ## ---- DEBUG: print what Cargo will see ----
-                                echo "---- CARGO CONFIG (first 200 lines) ----"
-                                sed -n '1,200p' "$CARGO_HOME/config.toml" || true
+                                                ## ---- DEBUG: prove both locations exist ----
+                                                echo "CARGO_HOME now: $CARGO_HOME"
+                                                echo "Config at /build/.cargo/config.toml:"
+                                                sed -n '1,120p' /build/.cargo/config.toml || true
+                                                if [ -n "''${TMPDIR:-}" ] && [ -e "$TMPDIR/.cargo/config.toml" ]; then
+                                                  echo "Config at \$TMPDIR/.cargo/config.toml:"
+                                                  sed -n '1,120p' "$TMPDIR/.cargo/config.toml" || true
+                                                else
+                                                  echo "\$TMPDIR/.cargo/config.toml not present (ok if we force CARGO_HOME)."
+                                                fi
 
-                                echo "---- DEFINED SOURCES ----"
-                                grep -n '^\[source\.' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
+                                                ## ---- DEBUG: print what Cargo will see ----
+                                                echo "---- CARGO CONFIG (first 200 lines) ----"
+                                                sed -n '1,200p' "$CARGO_HOME/config.toml" || true
 
-                                echo "---- GIT SOURCE MAPPINGS (#REV) ----"
-                                grep -n '^\[source\."git\+.*#' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
-                                echo "---- LOOK FOR riscv-pvm ffdd7b97 ----"
-                                grep -n 'riscv-pvm.*ffdd7b97' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
+                                                ## ---- DUPLICATE-SOURCE SANITY CHECKS ----
+                                                echo "---- DUPLICATE CHECK: riscv-pvm git= definitions ----"
+                                                grep -nE '^\s*git\s*=\s*"file:.*/riscv-pvm-' "$CARGO_HOME/config.toml" || true
+                                                echo "---- DUPLICATE CHECK: all git= definitions ----"
+                                                awk '/^\[source\./{blk=$0} /^\s*git\s*=/{print NR ":" $0 "  << in " blk}' \
+                                                  "$CARGO_HOME/config.toml" | sort -t/ -k3,3 -k4,4 | sed 's/^/  /' || true
 
-                                ## ---- EXTRA DEBUG: verify local riscv-pvm repos and config blocks ----
-                                echo "---- RISCV-PVM LOCAL GIT CHECKS ----"
-                                for p in ${riscv_pvm_af} ${riscv_pvm_ff}; do
-                                  echo "  repo: $p"
-                                  if [ -d "$p/.git" ]; then
-                                    echo "    .git: OK"
-                                    if command -v git >/dev/null 2>&1; then
-                                      echo -n "    HEAD: " && git -C "$p" rev-parse --short=12 HEAD || true
-                                      echo -n "    HEAD(ts): " && git -C "$p" show -s --format='%H %ci' HEAD || true
-                                    fi
-                                  else
-                                    echo "    .git: MISSING"
-                                  fi
-                                done
+                                                ## ---- GIT URL REWRITE: force any remote access to riscv-pvm -> local clone
+                                                # This makes *any* 'git fetch https://github.com/tezos/riscv-pvm(.git)' hit the Nix-store repo.
+                                                export GIT_CONFIG_GLOBAL=/build/gitconfig
+                                                cat > "$GIT_CONFIG_GLOBAL" << EOF_GIT
+                [url "file://${riscv_pvm_ff}/"]
+                    insteadOf = https://github.com/tezos/riscv-pvm.git
+                    insteadOf = https://github.com/tezos/riscv-pvm
+                    insteadOf = git@github.com:tezos/riscv-pvm.git
+                EOF_GIT
+                                                echo "---- GIT CONFIG GLOBAL ----"
+                                                cat "$GIT_CONFIG_GLOBAL" || true
+                                                echo "---- TEST GIT REWRITE ----"
+                                                command -v git >/dev/null 2>&1 && {
+                                                  git config --global -l | sed 's/^/  /' || true
+                                                  echo "  url rewrite check:"
+                                                  git ls-remote https://github.com/tezos/riscv-pvm.git 2>&1 | head -n 2 | sed 's/^/    /' || true
+                                                } || echo "  git not found (unexpected)"
 
-                                echo "---- RISCV-PVM SOURCE TABLES (/build/.cargo) ----"
-                                grep -n -A4 -B1 'riscv-pvm\.git#afb02b6' /build/.cargo/config.toml || true
-                                grep -n -A4 -B1 'riscv-pvm\.git#ffdd7b9' /build/.cargo/config.toml || true
+                                                ## Put a copy *inside* Dune's build tree so cargo finds it no matter what.
+                                                for d in . _build _build/default; do
+                                                  mkdir -p "$d/.cargo"
+                                                  cp -f "$CARGO_HOME/config.toml" "$d/.cargo/config.toml" || true
+                                                done
+                                                echo "---- LOCAL .cargo CONFIGS ----"; for f in ./.cargo/config.toml ./_build/.cargo/config.toml ./_build/default/.cargo/config.toml; do [ -e "$f" ] && { echo "  $f"; sed -n '1,40p' "$f" || true; }; done
 
-                                echo "---- CARGO ENV ----"
-                                echo "CARGO_HOME=$CARGO_HOME"
-                                env | grep -E '^CARGO_' | sed 's/^/  /' || true
-                                command -v cargo && cargo --version || true
+                                                echo "---- DEFINED SOURCES ----"
+                                                grep -n '^\[source\.' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
 
-                                echo "---- VENDOR DIRS ----"
-                                for d in ${combinedVendor} ${vi_rust_deps.vendoredDir} ${vi_riscv.vendoredDir} ${vi_rustzcash.vendoredDir}; do
-                                  echo "  $d"
-                                  [ -d "$d" ] && (ls -ld "$d" | sed 's/^/    /') || echo "    MISSING"
-                                done
+                                                echo "---- GIT SOURCE MAPPINGS (#REV) ----"
+                                                grep -n '^\[source\."git\+.*#' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
+                                                echo "---- LOOK FOR riscv-pvm ffdd7b97 ----"
+                                                grep -n 'riscv-pvm.*ffdd7b97' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
+
+                                                ## ---- EXTRA DEBUG: verify local riscv-pvm repos and config blocks ----
+                                                echo "---- RISCV-PVM LOCAL GIT CHECKS ----"
+                                                for p in ${riscv_pvm_af} ${riscv_pvm_ff}; do
+                                                  echo "  repo: $p"
+                                                  if [ -d "$p/.git" ]; then
+                                                    echo "    .git: OK"
+                                                    if command -v git >/dev/null 2>&1; then
+                                                      echo -n "    HEAD: " && git -C "$p" rev-parse --short=12 HEAD || true
+                                                      echo -n "    HEAD(ts): " && git -C "$p" show -s --format='%H %ci' HEAD || true
+                                                    fi
+                                                  else
+                                                    echo "    .git: MISSING"
+                                                  fi
+                                                done
+
+                                                echo "---- RISCV-PVM SOURCE TABLES (/build/.cargo) ----"
+                                                grep -n -A4 -B1 'riscv-pvm\.git#afb02b6' /build/.cargo/config.toml || true
+                                                grep -n -A4 -B1 'riscv-pvm\.git#ffdd7b9' /build/.cargo/config.toml || true
+
+                                                echo "---- CARGO ENV ----"
+                                                echo "CARGO_HOME=$CARGO_HOME"
+                                                env | grep -E '^CARGO_' | sed 's/^/  /' || true
+                                                command -v cargo && cargo --version || true
+
+                                                ## ---- EXTRA DEBUG: verify Tezos GitLab repos and related config ----
+                                                echo "---- TEZOS GITLAB LOCAL GIT CHECKS ----"
+                                                for p in ${tezos_git_646ce5} ${tezos_git_70187e}; do
+                                                  echo "  repo: $p"
+                                                  if [ -d "$p/.git" ]; then
+                                                    echo "    .git: OK"
+                                                    if command -v git >/dev/null 2>&1; then
+                                                      echo -n "    HEAD: " && git -C "$p" rev-parse --short=12 HEAD || true
+                                                    fi
+                                                  else
+                                                    echo "    .git: MISSING"
+                                                  fi
+                                                done
+                                                echo "---- TEZOS SOURCE TABLES (/build/.cargo) ----"
+                                                grep -n -A4 -B1 'gitlab\.com/tezos/tezos\.git#70187e57' /build/.cargo/config.toml || true
+                                                grep -n -A4 -B1 'gitlab\.com/tezos/tezos\.git#646ce59c' /build/.cargo/config.toml || true
+
+                                                ## ---- EXTRA DEBUG: verify tezedge/quickcheck_derive repo and config ----
+                                                echo "---- QUICKCHECK_DERIVE LOCAL GIT CHECKS ----"
+                                                for p in ${quickcheck_derive_git_ad01}; do
+                                                  echo "  repo: $p"
+                                                  if [ -d "$p/.git" ]; then
+                                                    echo "    .git: OK"
+                                                    if command -v git >/dev/null 2>&1; then
+                                                      echo -n "    HEAD: " && git -C "$p" rev-parse --short=12 HEAD || true
+                                                    fi
+                                                  else
+                                                    echo "    .git: MISSING"
+                                                  fi
+                                                done
+                                                echo "---- QUICKCHECK_DERIVE SOURCE TABLE (/build/.cargo) ----"
+                                                grep -n -A4 -B1 'github\.com/tezedge/quickcheck_derive#ad01cec7' /build/.cargo/config.toml || true
+
+                                                ## ---- EXTRA DEBUG: verify vch9/tezedge repo and config ----
+                                                echo "---- TEZEDGE LOCAL GIT CHECKS ----"
+                                                for p in ${tezedge_git_0cca}; do
+                                                  echo "  repo: $p"
+                                                  if [ -d "$p/.git" ]; then
+                                                    echo "    .git: OK"
+                                                    if command -v git >/dev/null 2>&1; then
+                                                      echo -n "    HEAD: " && git -C "$p" rev-parse --short=12 HEAD || true
+                                                    fi
+                                                  else
+                                                    echo "    .git: MISSING"
+                                                  fi
+                                                done
+                                                echo "---- TEZEDGE SOURCE TABLE (/build/.cargo) ----"
+                                                grep -n -A4 -B1 'github\.com/vch9/tezedge#0cca879f' /build/.cargo/config.toml || true
+
+                                                echo "---- VENDOR DIRS ----"
+                                                for d in ${combinedVendor} ${vi_rust_deps.vendoredDir} ${vi_riscv.vendoredDir} ${vi_rustzcash.vendoredDir}; do
+                                                  echo "  $d"
+                                                  [ -d "$d" ] && (ls -ld "$d" | sed 's/^/    /') || echo "    MISSING"
+                                                done
               '';
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
@@ -384,8 +534,15 @@
             # We require the `preBuild` hook to run to configure Cargo to use vendored dependencies
             # instead of making network calls to crates.io.
             buildPhase = ''
+              # Keep the environment consistent for cargo even if Make/Dune try to tweak TMPDIR.
+              export CARGO_HOME=/build/.cargo
+              export TMPDIR=/build
+              export GIT_CONFIG_GLOBAL=/build/gitconfig
+              echo "BUILD-PHASE ENV: CARGO_HOME=$CARGO_HOME TMPDIR=$TMPDIR"
               runHook preBuild
-              ${old.buildPhase}
+              # Force these for the make invocation too (higher precedence than whatever Make exports).
+              CARGO_HOME=/build/.cargo TMPDIR=/build GIT_CONFIG_GLOBAL=/build/gitconfig \
+                ${old.buildPhase}
               runHook postBuild
             '';
 
