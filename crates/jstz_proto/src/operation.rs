@@ -228,6 +228,7 @@ pub struct SignedOperation {
     signature: Signature,
     #[deref]
     inner: Operation,
+    #[serde(default)]
     verifier: Option<Verifier>,
 }
 
@@ -246,16 +247,21 @@ impl SignedOperation {
 
     pub fn verify(&self) -> Result<()> {
         let hash = self.inner.hash();
-        Ok(self
-            .signature
-            .verify(&self.inner.public_key, hash.as_ref())?)
+        match &self.verifier {
+            Some(verifier) => self.signature.verify_with_verifier(
+                &self.inner.public_key,
+                hash.as_ref(),
+                verifier,
+            )?,
+            None => self
+                .signature
+                .verify(&self.inner.public_key, hash.as_ref())?,
+        }
+        Ok(())
     }
 
     pub fn verify_ref(&self) -> Result<&Operation> {
-        let hash = self.inner.hash();
-        self.signature
-            .verify(&self.inner.public_key, hash.as_ref())?;
-
+        self.verify()?;
         Ok(&self.inner)
     }
 }
@@ -671,6 +677,7 @@ mod test {
         let signed_op = SignedOperation {
             signature,
             inner: op,
+            verifier: None,
         };
         let json = serde_json::to_vec(&signed_op).unwrap();
         let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();

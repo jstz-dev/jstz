@@ -54,12 +54,14 @@ use PasskeyError::*;
 #[serde(rename_all = "camelCase")]
 pub struct AuthenticatorAssertionResponseRaw {
     #[serde_as(as = "Base64<UrlSafe, Unpadded>")]
+    #[schema(value_type = String)]
     authenticator_data: Vec<u8>,
-    /// ClientDataJSON contains metadata about the client and the cryptographic
-    /// challenge in JSON encoding. For the purposes of Jstz, the challenge
-    /// is the operation hash.
+    /// clientDataJSON contains metadata about the client and the cryptographic
+    /// challenge in enoded in JSON. For the purposes of Jstz, the challenge
+    /// is the operation hash. This field is base64url enoded
     #[serde_as(as = "Base64<UrlSafe, Unpadded>")]
     #[serde(rename = "clientDataJSON")]
+    #[schema(value_type = String)]
     client_data_json: Vec<u8>,
 }
 
