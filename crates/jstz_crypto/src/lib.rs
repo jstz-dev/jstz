@@ -7,6 +7,9 @@ pub mod public_key_hash;
 pub mod secret_key;
 pub mod signature;
 pub mod smart_function_hash;
+pub mod verifier;
+
+pub use tezos_crypto_rs::hash::HashTrait;
 
 use crate::{public_key::PublicKey, secret_key::SecretKey};
 use bip39::{Language, Mnemonic};

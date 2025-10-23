@@ -94,6 +94,18 @@ impl Display for Signature {
     }
 }
 
+impl TryFrom<&P256> for p256::ecdsa::Signature {
+    type Error = crate::Error;
+
+    fn try_from(signature: &P256) -> Result<Self> {
+        let sig = signature.as_ref();
+        let r: [u8; 32] = sig[..32].try_into().unwrap();
+        let s: [u8; 32] = sig[32..].try_into().unwrap();
+        let sig = p256::ecdsa::Signature::from_scalars(r, s).unwrap();
+        Ok(sig)
+    }
+}
+
 #[cfg(test)]
 mod test {
     use crate::{public_key::PublicKey, secret_key::SecretKey, signature::Signature};
