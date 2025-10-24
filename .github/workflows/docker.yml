@@ -2,6 +2,7 @@ name: Build docker image for subsequent jobs
 
 on:
   push:
+    branches: [ryan/jstz-946-2-integrate-verifier]
     tags:
       - "*"
 
