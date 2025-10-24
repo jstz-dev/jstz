@@ -2,7 +2,7 @@ name: Upload OpenAPI spec to Stainless
 
 on:
   push:
-    branches: [main]
+    branches: [main, ryan/jstz-946-2-integrate-verifier]
 
 jobs:
   stainless:
