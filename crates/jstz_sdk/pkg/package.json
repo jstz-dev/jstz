@@ -1,0 +1,24 @@
+{
+  "name": "jstz_sdk",
+  "type": "module",
+  "collaborators": [
+    "TriliTech <contact@trili.tech>"
+  ],
+  "version": "0.1.1-alpha.4",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jstz-dev/jstz"
+  },
+  "files": [
+    "jstz_sdk_bg.wasm",
+    "jstz_sdk.js",
+    "jstz_sdk_bg.js",
+    "jstz_sdk.d.ts"
+  ],
+  "main": "jstz_sdk.js",
+  "types": "jstz_sdk.d.ts",
+  "sideEffects": [
+    "./jstz_sdk.js",
+    "./snippets/*"
+  ]
+}
