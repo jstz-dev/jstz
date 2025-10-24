@@ -12,6 +12,7 @@ use http::{HeaderMap, Method, Uri};
 use crate::runtime::v2::oracle::request::RequestId;
 
 use jstz_core::{host::HostRuntime, reveal_data::PreimageHash};
+use jstz_crypto::verifier::Verifier;
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
     signature::Signature,
@@ -227,11 +228,17 @@ pub struct SignedOperation {
     signature: Signature,
     #[deref]
     inner: Operation,
+    #[serde(default)]
+    verifier: Option<Verifier>,
 }
 
 impl SignedOperation {
     pub fn new(signature: Signature, inner: Operation) -> Self {
-        Self { signature, inner }
+        Self {
+            signature,
+            inner,
+            verifier: None,
+        }
     }
 
     pub fn hash(&self) -> Blake2b {
@@ -240,16 +247,21 @@ impl SignedOperation {
 
     pub fn verify(&self) -> Result<()> {
         let hash = self.inner.hash();
-        Ok(self
-            .signature
-            .verify(&self.inner.public_key, hash.as_ref())?)
+        match &self.verifier {
+            Some(verifier) => self.signature.verify_with_verifier(
+                &self.inner.public_key,
+                hash.as_ref(),
+                verifier,
+            )?,
+            None => self
+                .signature
+                .verify(&self.inner.public_key, hash.as_ref())?,
+        }
+        Ok(())
     }
 
     pub fn verify_ref(&self) -> Result<&Operation> {
-        let hash = self.inner.hash();
-        self.signature
-            .verify(&self.inner.public_key, hash.as_ref())?;
-
+        self.verify()?;
         Ok(&self.inner)
     }
 }
@@ -665,6 +677,7 @@ mod test {
         let signed_op = SignedOperation {
             signature,
             inner: op,
+            verifier: None,
         };
         let json = serde_json::to_vec(&signed_op).unwrap();
         let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
