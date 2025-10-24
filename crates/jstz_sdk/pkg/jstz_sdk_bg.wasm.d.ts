@@ -7,7 +7,7 @@ export const sign_operation: (
   c: number,
 ) => [number, number, number, number];
 export const hash_operation: (a: any) => [number, number, number, number];
-export const parse_passkey_signature: (
+export const convert_passkey_signature: (
   a: any,
 ) => [number, number, number, number];
 export const __getrandom_custom: (a: number, b: number) => number;

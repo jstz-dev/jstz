@@ -256,17 +256,17 @@ export function hash_operation(operation) {
 }
 
 /**
- * Parses signature returned from the passkey device into a valid base58
+ * Converts signature returned from the passkey device into a valid base58
  * Tezos P256 signature. The passkey signature proivided must be using
  * P256 (alg = -7)
  * @param {any} signature
  * @returns {string}
  */
-export function parse_passkey_signature(signature) {
+export function convert_passkey_signature(signature) {
   let deferred2_0;
   let deferred2_1;
   try {
-    const ret = wasm.parse_passkey_signature(signature);
+    const ret = wasm.convert_passkey_signature(signature);
     var ptr1 = ret[0];
     var len1 = ret[1];
     if (ret[3]) {
