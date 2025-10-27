@@ -2,7 +2,9 @@ use deno_core::{v8, ByteString};
 
 use super::Headers;
 use crate::sys::js::convert::Serde;
-use crate::{js_class, js_constructor, js_getter, js_method, js_setter};
+use crate::{
+    js_class, js_constructor, js_getter, js_method, js_setter, js_static_method,
+};
 
 js_class!(Request);
 
@@ -14,6 +16,16 @@ impl<'s> Request<'s> {
     js_constructor! { fn new_with_request_and_init(input: Request<'s>, init: RequestInit<'s>) }
 
     js_constructor! { fn new_with_string_and_init(input: String, init: RequestInit<'s>) }
+
+    js_static_method! {
+      #[js_name(withTransfer)]
+      fn new_with_request_transfer(input: Request<'s>, amount: u64) -> Self
+    }
+
+    js_static_method! {
+      #[js_name(withTransfer)]
+      fn new_with_string_transfer(input: String, amount: u64) -> Self
+    }
 
     js_getter! { fn method() -> String }
 
@@ -91,6 +103,36 @@ mod test {
         assert_eq!(new_request.method(scope).unwrap(), "GET");
 
         assert_ne!(request, new_request);
+    }
+
+    #[test]
+    fn test_new_with_transfer() {
+        init_test_setup! { runtime = runtime; };
+        let scope = &mut runtime.handle_scope();
+
+        let request =
+            Request::new_with_string(scope, "https://example.com".into()).unwrap();
+
+        // Create request w transfer headers from a request & string
+        let new_request1 =
+            Request::new_with_request_transfer(scope, request.clone(), 12).unwrap();
+        let new_request2 =
+            Request::new_with_string_transfer(scope, "https://example.com".into(), 12)
+                .unwrap();
+
+        for new_request in [new_request1, new_request2] {
+            assert_eq!(new_request.url(scope).unwrap(), "https://example.com/");
+            assert_eq!(new_request.method(scope).unwrap(), "GET");
+            let headers = new_request.headers(scope).unwrap();
+            assert_eq!(
+                headers
+                    .get(scope, "X-JSTZ-TRANSFER".into())
+                    .unwrap()
+                    .unwrap(),
+                "12"
+            );
+            assert_ne!(request, new_request)
+        }
     }
 
     #[test]
