@@ -38,7 +38,7 @@ jobs:
           cd crates/jstz_runtime
           bash ./tests/api_coverage/setup.sh || exit $?
           OUTPUT_PATH=./output.json cargo test --test api_coverage
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: report
           path: crates/jstz_runtime/output.json

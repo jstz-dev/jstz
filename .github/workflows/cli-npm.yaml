@@ -43,7 +43,7 @@ jobs:
       - name: Build
         shell: sh
         run: make build-cli
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: jstz_linux_x64
           path: target/release/jstz
@@ -84,7 +84,7 @@ jobs:
       - name: Build
         shell: sh
         run: make build-cli
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: jstz_linux_arm64
           path: target/release/jstz
