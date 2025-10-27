@@ -16,6 +16,7 @@ clap.workspace = true
 console.workspace = true
 futures.workspace = true
 futures-util.workspace = true
+hex.workspace = true
 http.workspace = true
 indicatif.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
@@ -38,6 +39,7 @@ anyhow.workspace = true
 bincode.workspace = true
 hex.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 tempfile.workspace = true
 tezos_crypto_rs.workspace = true
 tezos-smart-rollup.workspace = true

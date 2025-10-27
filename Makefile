@@ -12,6 +12,7 @@ else
 endif
 
 JSTZD_KERNEL_PATH := crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
+JSTZD_LIGHTWEIGHT_KERNEL_PATH := crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable
 
 .PHONY: all
 all: build-v2 test-v2 test-riscv-kernel check
@@ -20,7 +21,7 @@ all: build-v2 test-v2 test-riscv-kernel check
 build: build-jstzd-kernel
 	@cargo build $(PROFILE_OPT)
 
-build-v2: build-jstzd-kernel
+build-v2: build-jstzd-lightweight-kernel
 	@cargo build $(PROFILE_OPT) --features v2_runtime
 
 .PHONY: build-bridge
@@ -39,6 +40,10 @@ build-kernel:
 .PHONY: build-jstzd-kernel
 build-jstzd-kernel: build-kernel
 	@cp target/wasm32-unknown-unknown/$(PROFILE_TARGET_DIR)/jstz_kernel.wasm $(JSTZD_KERNEL_PATH)
+
+.PHONY: build-jstzd-lightweight-kernel
+build-jstzd-lightweight-kernel: build-lightweight-kernel
+	@cp target/riscv64gc-unknown-linux-musl/release/lightweight-kernel-executable $(JSTZD_LIGHTWEIGHT_KERNEL_PATH)
 
 .PHONY: build-cli
 build-cli:
