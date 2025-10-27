@@ -19,7 +19,7 @@ ARG OCTEZ_VERSION
 # a bit too messy and error prone.
 # The `echo $'\n\n\n\n'` command below is due to the octez packages prompting for options during
 # installation and `echo` makes sure that installation does not hang there.
-RUN apt update && apt install -y curl gpg && \
+RUN apt update && apt install -y curl gpg ca-certificates=20230311+deb12u1 && \
     curl -s "https://packages.nomadic-labs.com/debian/octez.asc" | gpg --dearmor -o /etc/apt/keyrings/octez.gpg && \
     # FIXME(https://linear.app/tezos/issue/JSTZ-901/verify-nl-package-in-jstzd-dockerfile)
     # Set trusted=yes to skip signing as it is currently broken
