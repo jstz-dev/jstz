@@ -61,7 +61,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download RISCV kernel
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: riscv_kernel
           path: riscv_kernel

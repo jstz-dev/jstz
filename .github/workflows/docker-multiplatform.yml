@@ -92,7 +92,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Download digests
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           path: ${{ runner.temp }}/digests/${{ inputs.image }}
           pattern: digests-${{ inputs.image }}-*
