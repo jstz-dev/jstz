@@ -74,3 +74,10 @@ jobs:
 
       - name: Build
         run: npm run docs:build
+
+  build-riscv-kernel:
+    name: Build RISCV kernel
+    runs-on: [linux, nix]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-riscv-kernel

@@ -4,7 +4,8 @@
 use std::path::Path;
 
 use clap::{Parser, Subcommand};
-use jstz_tps_bench::generate::{handle_generate, handle_generate_script};
+use jstz_tps_bench::fa2_bench_generator::{handle_generate, handle_generate_script};
+use jstz_tps_bench::generate_other::handle_generate_other;
 use jstz_tps_bench::results::handle_results;
 
 const DEFAULT_ROLLUP_ADDRESS: &str = "sr163Lv22CdE8QagCwf48PWDTquk6isQwv57";
@@ -20,12 +21,8 @@ pub struct Cli {
 enum Commands {
     #[command(about = "Generate inbox.json file")]
     Generate {
-        #[arg(long, default_value = DEFAULT_ROLLUP_ADDRESS)]
-        address: String,
-        #[arg(long)]
-        transfers: usize,
-        #[arg(long, default_value = "inbox.json")]
-        inbox_file: Box<Path>,
+        #[command(subcommand)]
+        generate_command: GenerateCommands,
     },
     #[command(about = "Generate inbox.sh script")]
     GenerateScript {
@@ -47,13 +44,62 @@ enum Commands {
     },
 }
 
+#[derive(Debug, Subcommand)]
+enum GenerateCommands {
+    #[command(about = "Generate FA2 transactions")]
+    Fa2 {
+        #[arg(long, default_value = DEFAULT_ROLLUP_ADDRESS)]
+        address: String,
+        #[arg(long)]
+        transfers: usize,
+        #[arg(long, default_value = "inbox.json")]
+        inbox_file: Box<Path>,
+    },
+    #[command(about = "Generate other types of operations and benchmarking setup")]
+    Other {
+        #[arg(long, default_value = DEFAULT_ROLLUP_ADDRESS)]
+        address: String,
+        #[arg(long)]
+        num_operations: usize,
+        #[arg(long, default_value = "inbox.json")]
+        inbox_file: Box<Path>,
+        #[arg(long)]
+        smart_function: Box<Path>,
+        #[arg(long)]
+        init_endpoint: Option<String>,
+        #[arg(long)]
+        run_endpoint: Option<String>,
+        #[arg(long)]
+        check_endpoint: Option<String>,
+    },
+}
+
 fn main() -> jstz_tps_bench::Result<()> {
     match Cli::parse().command {
-        Commands::Generate {
-            address,
-            inbox_file,
-            transfers,
-        } => handle_generate(&address, &inbox_file, transfers)?,
+        Commands::Generate { generate_command } => match generate_command {
+            GenerateCommands::Fa2 {
+                address,
+                inbox_file,
+                transfers,
+            } => handle_generate(&address, &inbox_file, transfers)?,
+            GenerateCommands::Other {
+                address,
+                inbox_file,
+                num_operations,
+                smart_function,
+                init_endpoint,
+                run_endpoint,
+                check_endpoint,
+            } => handle_generate_other(
+                &address,
+                &inbox_file,
+                num_operations,
+                &smart_function,
+                init_endpoint.as_deref(),
+                run_endpoint.as_deref(),
+                check_endpoint.as_deref(),
+            )?,
+        },
         Commands::GenerateScript {
             address,
             script_file,

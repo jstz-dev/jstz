@@ -72,7 +72,7 @@ jobs:
         run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_kernel
       - name: Upload kernel
         id: upload-kernel
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: jstz-kernel
           path: result/lib/jstz_kernel.wasm
