@@ -65,7 +65,7 @@ jobs:
           else
             npm i
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: jstz_sdk
           path: crates/jstz_sdk/pkg
@@ -80,7 +80,7 @@ jobs:
       contents: write # Required for github release
     if: ${{ !inputs.dry_run }}
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           path: jstz_sdk
       - name: Package
@@ -101,7 +101,7 @@ jobs:
     permissions:
       id-token: write # Required for OIDC
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           path: jstz_sdk
       - uses: actions/setup-node@v6
