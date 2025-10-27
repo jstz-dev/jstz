@@ -1,0 +1,22 @@
+name: "Build RISCV kernel"
+description: "Reusable composite action for building RISCV kernel"
+inputs:
+  retention-days:
+    description: "Number of days to retain the artifact"
+    required: false
+    type: number
+    default: 1
+
+runs:
+  using: "composite"
+  steps:
+    - name: Build kernel
+      shell: bash
+      run: nix --accept-flake-config --log-format raw -L develop --command make riscv-pvm-kernel
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: riscv_kernel
+        path: target/riscv64gc-unknown-linux-musl/release/kernel-executable
+        if-no-files-found: error
+        retention-days: ${{ inputs.retention-days }}

@@ -9,12 +9,12 @@ use http::{HeaderMap, Method, Uri};
 use jstz_proto::context::account::{Address, Addressable};
 use jstz_proto::HttpBody;
 use serde::{Serialize, Serializer};
-use tezos_smart_rollup::types::SmartRollupAddress;
 use tezos_smart_rollup::utils::inbox::file::InboxFile;
 
+use crate::generate_other::prepare_builder_and_accounts;
 use jstz_utils::inbox_builder::{Account, InboxBuilder, Result};
 
-const FA2: &str = include_str!("../fa2.js");
+const FA2: &str = include_str!("../fa2/dist/index.js");
 
 /// Generate the requested 'FA2 transfers', writing to `./inbox.json`.
 ///
@@ -45,21 +45,8 @@ pub fn handle_generate_script(
 
 /// Generate the inbox for the given rollup address and number of transfers.
 fn generate_inbox(rollup_addr: &str, transfers: usize) -> Result<InboxFile> {
-    let rollup_addr = SmartRollupAddress::from_b58check(rollup_addr)?;
-
-    let accounts = accounts_for_transfers(transfers);
-
-    if accounts == 0 {
-        return Err("--transfers must be greater than zero".into());
-    }
-
-    let mut builder = InboxBuilder::new(
-        rollup_addr,
-        None,
-        #[cfg(feature = "v2_runtime")]
-        None,
-    );
-    let mut accounts = builder.create_accounts(accounts)?;
+    let (mut builder, mut accounts) =
+        prepare_builder_and_accounts(rollup_addr, transfers)?;
 
     let fa2_address = builder.deploy_function(&mut accounts[0], FA2.into(), 0)?;
 
@@ -201,10 +188,4 @@ fn batch_mint(
         HeaderMap::default(),
         body,
     )
-}
-
-/// The generation strategy supports up to `num_accounts ^ 2` transfers,
-/// find the smallest number of accounts which will allow for this.
-fn accounts_for_transfers(transfers: usize) -> usize {
-    f64::sqrt(transfers as f64).ceil() as usize + 1
 }

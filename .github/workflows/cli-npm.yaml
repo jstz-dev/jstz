@@ -43,7 +43,7 @@ jobs:
       - name: Build
         shell: sh
         run: make build-cli
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: jstz_linux_x64
           path: target/release/jstz
@@ -84,7 +84,7 @@ jobs:
       - name: Build
         shell: sh
         run: make build-cli
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: jstz_linux_arm64
           path: target/release/jstz
@@ -101,7 +101,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [test-macos-arm64, test-linux-arm64, test-linux-amd64]
     steps:
-      - uses: actions/download-artifact@v5
+      - uses: actions/download-artifact@v6
         with:
           path: download
       # All downloaded artefacts will be placed in their individual folders with the folder names
