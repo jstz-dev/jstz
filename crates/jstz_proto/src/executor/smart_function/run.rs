@@ -69,7 +69,7 @@ mod test {
             if (transferred_amount !== "{transfer_amount}") {{
                 return Response.error("Invalid transferred amount");
             }}
-            return Response.withTransfer("{refund_amount}");
+            return Response.withTransfer("transferred!", "{refund_amount}");
         }};
         export default handler;
         "#
@@ -109,6 +109,8 @@ mod test {
         .await
         .expect("run function expected");
 
+        let body = String::from_utf8(response.body.unwrap()).unwrap();
+        assert_eq!(&body, "transferred!");
         assert!(response.headers.get(X_JSTZ_TRANSFER).is_none());
         assert!(response.headers.get(X_JSTZ_AMOUNT).is_some_and(|amt| amt
             .to_str()
@@ -1219,7 +1221,7 @@ mod test {
         let refund_code = format!(
             r#"
             const handler = async () => {{
-                return Response.withTransfer("{refund_amount}");
+                return Response.withTransfer(null, "{refund_amount}");
             }};
             export default handler;
             "#

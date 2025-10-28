@@ -19,12 +19,22 @@ impl<'s> Request<'s> {
 
     js_static_method! {
       #[js_name(withTransfer)]
-      fn new_with_request_transfer(input: Request<'s>, amount: u64) -> Self
+      fn new_transfer_with_request(input: Request<'s>, amount: u64) -> Self
     }
 
     js_static_method! {
       #[js_name(withTransfer)]
-      fn new_with_string_transfer(input: String, amount: u64) -> Self
+      fn new_transfer_with_string(input: String, amount: u64) -> Self
+    }
+
+    js_static_method! {
+      #[js_name(withTransfer)]
+      fn new_transfer_with_request_and_init(input: Request<'s>, amount: u64, init: RequestInit<'s>) -> Self
+    }
+
+    js_static_method! {
+      #[js_name(withTransfer)]
+      fn new_transfer_with_string_and_init(input: String, amount: u64, init: RequestInit<'s>) -> Self
     }
 
     js_getter! { fn method() -> String }
@@ -106,23 +116,43 @@ mod test {
     }
 
     #[test]
-    fn test_new_with_transfer() {
+    fn test_new_transfer() {
         init_test_setup! { runtime = runtime; };
         let scope = &mut runtime.handle_scope();
 
         let request =
             Request::new_with_string(scope, "https://example.com".into()).unwrap();
 
+        let body = v8::String::new(scope, "Hello World").unwrap();
+        let headers = Headers::new(scope).unwrap();
+        headers
+            .append(scope, "Content-Type".into(), "application/json".into())
+            .unwrap();
+        let init: RequestInit<'_> = RequestInit::new(scope);
+        init.set_method(scope, ByteString::from("POST").into())
+            .unwrap();
+        init.set_body(scope, body.into()).unwrap();
+        init.set_headers(scope, headers).unwrap();
+
         // Create request w transfer headers from a request & string
-        let new_request1 =
-            Request::new_with_request_transfer(scope, request.clone(), 12).unwrap();
-        let new_request2 =
-            Request::new_with_string_transfer(scope, "https://example.com".into(), 12)
-                .unwrap();
+        let new_request1 = Request::new_transfer_with_request_and_init(
+            scope,
+            request.clone(),
+            12,
+            init.clone(),
+        )
+        .unwrap();
+        let new_request2 = Request::new_transfer_with_string_and_init(
+            scope,
+            "https://example.com".into(),
+            12,
+            init,
+        )
+        .unwrap();
 
         for new_request in [new_request1, new_request2] {
             assert_eq!(new_request.url(scope).unwrap(), "https://example.com/");
-            assert_eq!(new_request.method(scope).unwrap(), "GET");
+            assert_eq!(new_request.method(scope).unwrap(), "POST");
             let headers = new_request.headers(scope).unwrap();
             assert_eq!(
                 headers
@@ -131,7 +161,17 @@ mod test {
                     .unwrap(),
                 "12"
             );
-            assert_ne!(request, new_request)
+            assert_ne!(request, new_request);
+            assert_eq!(
+                new_request
+                    .headers(scope)
+                    .unwrap()
+                    .get(scope, "Content-Type".into())
+                    .unwrap()
+                    .unwrap(),
+                "application/json"
+            );
+            assert!(new_request.body(scope).unwrap().is_some());
         }
     }
 

@@ -1542,7 +1542,7 @@ mod test {
             let run = SIMPLE_REMOTE_CALLER;
             let remote = r#"
             export default async (req) => {
-                return Response.withTransfer(100);
+                return Response.withTransfer(null, 100);
             }
         "#;
 
