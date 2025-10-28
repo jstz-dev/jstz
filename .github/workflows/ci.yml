@@ -30,9 +30,9 @@ jobs:
       - name: Format
         run: nix --accept-flake-config fmt -- --fail-on-change
       - name: Prevent blst
-        run: nix -L --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]' --option sandbox false
+        run: nix -L --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]' --no-sandbox
       - name: Build
-        run: nix --accept-flake-config --log-format raw -L build -j auto .#all --option sandbox false
+        run: nix --accept-flake-config --log-format raw -L build -j auto .#all --no-sandbox
       - name: Flake check
         run: nix --accept-flake-config --log-format raw --log-lines 1500 -L flake check -j auto
       # Coverage is part of nix flake check, but we want to upload it to Codecov
