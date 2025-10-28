@@ -117,27 +117,7 @@
               octez-baker-alpha
             '';
 
-            # Make Cargo use the vendored deps and go offline.
-            # preBuild = let
-            #   vendorOctezPackages = ''
-            #     ${vendorDeps {dir = "src/rust_deps";}}
-            #     ${vendorDeps {dir = "src/riscv";}}
-            #     ${vendorDeps {dir = "src/rustzcash_deps";}}
-            #     ${vendorDeps {dir = "src/kernel_sdk";}}
-            #     ${vendorDeps {dir = "sdk/rust";}}
-            #   '';
-            # in ''
-            #   ${vendorOctezPackages}
-            # '';
-
             preBuild = '''';
-
-            # export CARGO_HOME="$TMPDIR/.cargo"
-            #   mkdir -p "$CARGO_HOME"
-            #   # Use Crane's generated config for the vendor dir
-            #   cat ${vendoredOctez}/config.toml >> "$CARGO_HOME/config.toml"
-            #   # Belt-and-braces: force offline
-            #   # printf '\n[net]\noffline = true\n' >> "$CARGO_HOME/config.toml"
 
             # Ensure our hooks actually run around upstream build.
             buildPhase = ''
