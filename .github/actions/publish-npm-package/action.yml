@@ -28,5 +28,5 @@ runs:
           npm publish --provenance --access public --verbose --tag latest --dry-run
         else
           echo "Publish to NPM"
-          #npm publish --provenance --access public --verbose --tag latest
+          npm publish --provenance --access public --verbose --tag latest
         fi
