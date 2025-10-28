@@ -115,7 +115,8 @@ jobs:
   upload-github-release:
     name: Upload to github release
     runs-on: ubuntu-24.04
-    needs: [test-macos-arm64, test-linux-arm64, test-linux-amd64, set-input-values]
+    needs:
+      [test-macos-arm64, test-linux-arm64, test-linux-amd64, set-input-values]
     if: ${{ needs.set-input-values.outputs.dry_run == 'false' || needs.set-input-values.outputs.dry_run == false }}
     steps:
       - uses: actions/download-artifact@v6
