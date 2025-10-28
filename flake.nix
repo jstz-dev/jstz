@@ -72,8 +72,8 @@
           in ''
             mkdir -p ${dir}/.cargo
             cat >> ${dir}/.cargo/config.toml << EOF
-            [net]
-            offline = true
+            # [net]
+            # offline = true
 
             [source.crates-io]
             replace-with = "vendored-sources"
@@ -118,17 +118,19 @@
             '';
 
             # Make Cargo use the vendored deps and go offline.
-            preBuild = let
-              vendorOctezPackages = ''
-                ${vendorDeps {dir = "src/rust_deps";}}
-                ${vendorDeps {dir = "src/riscv";}}
-                ${vendorDeps {dir = "src/rustzcash_deps";}}
-                ${vendorDeps {dir = "src/kernel_sdk";}}
-                ${vendorDeps {dir = "sdk/rust";}}
-              '';
-            in ''
-              ${vendorOctezPackages}
-            '';
+            # preBuild = let
+            #   vendorOctezPackages = ''
+            #     ${vendorDeps {dir = "src/rust_deps";}}
+            #     ${vendorDeps {dir = "src/riscv";}}
+            #     ${vendorDeps {dir = "src/rustzcash_deps";}}
+            #     ${vendorDeps {dir = "src/kernel_sdk";}}
+            #     ${vendorDeps {dir = "sdk/rust";}}
+            #   '';
+            # in ''
+            #   ${vendorOctezPackages}
+            # '';
+
+            preBuild = '''';
 
             # export CARGO_HOME="$TMPDIR/.cargo"
             #   mkdir -p "$CARGO_HOME"
