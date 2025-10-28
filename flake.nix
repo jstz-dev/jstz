@@ -83,18 +83,25 @@
             EOF
           '';
 
-          # Collect all [[package]] entries from all the lockfiles once
-          lockfiles = [
-            "${octezSrc}/src/rust_deps/Cargo.lock"
-            "${octezSrc}/src/riscv/Cargo.lock"
-            "${octezSrc}/src/rustzcash_deps/Cargo.lock"
-            "${octezSrc}/src/kernel_sdk/Cargo.lock"
-            "${octezSrc}/sdk/rust/Cargo.lock"
-          ];
-          # Vendor *all* Cargo deps (registries + git) across all lockfiles in one go
-          vendoredOctez = craneLibForOctez.vendorMultipleCargoDeps {
-            cargoLockList = lockfiles;
-          };
+          vendorAllDeps = {dirs}: let
+            lockFiles = builtins.map (dir: "${octezSrc}/${dir}/Cargo.lock") dirs;
+            vendoredDir = craneLibForOctez.vendorMultipleCargoDeps {
+              cargoLockList = lockFiles;
+            };
+          in
+            pkgs.lib.forEach dirs (dir: ''
+              mkdir -p ${dir}/.cargo
+              cat >> ${dir}/.cargo/config.toml << EOF
+              [net]
+              offline = true
+
+              [source.crates-io]
+              replace-with = "vendored-sources"
+
+              [source.vendored-sources]
+              directory = "${vendoredDir}"
+              EOF
+            '');
 
           # Build octez release for this system
           #
@@ -118,17 +125,15 @@
             '';
 
             # Make Cargo use the vendored deps and go offline.
-            preBuild = let
-              vendorOctezPackages = ''
-                ${vendorDeps {dir = "src/rust_deps";}}
-                ${vendorDeps {dir = "src/riscv";}}
-                ${vendorDeps {dir = "src/rustzcash_deps";}}
-                ${vendorDeps {dir = "src/kernel_sdk";}}
-                ${vendorDeps {dir = "sdk/rust";}}
-              '';
-            in ''
-              ${vendorOctezPackages}
-            '';
+            preBuild = vendorAllDeps {
+              dirs = [
+                "src/rust_deps"
+                "src/riscv"
+                "src/rustzcash_deps"
+                "src/kernel_sdk"
+                "sdk/rust"
+              ];
+            };
 
             # export CARGO_HOME="$TMPDIR/.cargo"
             #   mkdir -p "$CARGO_HOME"
