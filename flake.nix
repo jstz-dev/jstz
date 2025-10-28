@@ -58,319 +58,37 @@
             ];
           };
 
+          # Build octez release for this system (Crane-based vendoring)
+          #
+          # Use Octez's own rust-toolchain and vendor all Cargo deps from its multiple lockfiles.
+          octezSrc = octezPackages.packages.${system}.default.src;
+          octezRustToolchain = pkgs.rust-bin.fromRustupToolchainFile "${octezSrc}/rust-toolchain";
+          craneLibForOctez = (crane.mkLib pkgs).overrideToolchain (_: octezRustToolchain);
+          # Collect all [[package]] entries from all the lockfiles once
+          lockfiles = [
+            "${octezSrc}/src/rust_deps/Cargo.lock"
+            "${octezSrc}/src/riscv/Cargo.lock"
+            "${octezSrc}/src/rustzcash_deps/Cargo.lock"
+            "${octezSrc}/src/kernel_sdk/Cargo.lock"
+            "${octezSrc}/sdk/rust/Cargo.lock"
+          ];
+          # Vendor *all* Cargo deps (registries + git) across all lockfiles in one go
+          vendoredOctez = craneLibForOctez.vendorMultipleCargoDeps {
+            cargoLockList = lockfiles;
+          };
+
           # Build octez release for this system
           #
           # TODO(https://linear.app/tezos/issue/JSTZ-152):
           # This patch here should be upstreamed to tezos/tezos
-          octez = octezPackages.packages.${system}.default.overrideAttrs (old: let
-            rustToolchain = pkgs.rust-bin.fromRustupToolchainFile "${old.src}/rust-toolchain";
-            rustPlatform = pkgs.makeRustPlatform {
-              rustc = rustToolchain;
-              cargo = rustToolchain;
-            };
-
-            rustGitHashes = {
-              "crypto-3.1.1" = "sha256-1jWMRi/uHYDxm1dgbyCbxe2htVA7vK7NFHKV4o6SpKQ=";
-              "octez-riscv-0.0.0" = "sha256-bT5+4+M5//uemGcLq038siqfyCYKF5tzY39H9h+6RvA=";
-              "quickcheck_derive-0.3.0" = "sha256-tTkcf/vE3GECIt1sriO80gnAB0MsTgAPokY8AeMoQkM=";
-              "tezos-smart-rollup-build-utils-0.2.2" = "sha256-HXANyit8Hwuh7JaZ2/67lUa1qmPRmSM4myLES3AxyCA=";
-            };
-
-            rustGitHashes2 = {
-              "crypto-3.1.1" = "sha256-1jWMRi/uHYDxm1dgbyCbxe2htVA7vK7NFHKV4o6SpKQ=";
-              "octez-riscv-0.0.0" = "sha256-7TxDp0gltdoAC1Yhbb/roPbHBZYirlgcBaFROtYJYWw=";
-              "quickcheck_derive-0.3.0" = "sha256-tTkcf/vE3GECIt1sriO80gnAB0MsTgAPokY8AeMoQkM=";
-              "tezos-smart-rollup-build-utils-0.2.2" = "sha256-Z6Z3Jti5J4YzDKdsaZ5i/YdaSTctbPGmj5nMlOG7RuA=";
-            };
-          in {
+          octez = octezPackages.packages.${system}.default.overrideAttrs (old: {
             patches =
               (old.patches or [])
               ++ [
                 ./nix/patches/octez/0001-fix-octez-rust-deps-for-nix.patch
               ];
 
-            # Network access for fetching cargo dependencies is disabled in sandboxed
-            # builds. Instead we need to explicitly fetch the dependencies. Nixpkgs
-            # provides two ways to do this:
-            #
-            #  - `fetchCargoTarball` fetches the dependencies using `cargo vendor`
-            #     It requires an explicit `hash`.
-            #
-            #  - `importCargoLock` parses the `Cargo.lock` file and fetches each
-            #     dependency using `fetchurl`. It doesn't require an explicit `hash`.
-            #
-            # The latter is slower but doesn't require an explicit `hash` and is therefore
-            # more maintainable (since this derivation isn't built in CI).
-            preBuild = let
-              # Vendor a lockfile and extract (url, rev) pairs for its git deps.
-              vendorInfo = {
-                dir,
-                name,
-                hashes ? {},
-              }: let
-                lockPath = "${old.src}/${dir}/Cargo.lock";
-                lockToml = builtins.fromTOML (builtins.readFile lockPath);
-                isGit = p: pkgs.lib.hasPrefix "git+" (p.source or "");
-                gitPkgs = pkgs.lib.filter isGit (lockToml.package or []);
-                gitKeys = map (p: "${p.name}-${p.version}") gitPkgs;
-
-                vendoredDir = rustPlatform.importCargoLock {
-                  lockFile = lockPath;
-                  outputHashes = pkgs.lib.attrsets.filterAttrs (k: _v: pkgs.lib.elem k gitKeys) hashes;
-                };
-
-                # Parse "git+URL[?…]#<rev>" and canonicalize the key to "git+URL#<rev>"
-                parseGit = src: let
-                  s0 = pkgs.lib.removePrefix "git+" src;
-                  partsHash = pkgs.lib.splitString "#" s0;
-                  urlAndQuery = builtins.elemAt partsHash 0;
-                  rev =
-                    if pkgs.lib.length partsHash > 1
-                    then builtins.elemAt partsHash 1
-                    else "";
-                  url0 = builtins.elemAt (pkgs.lib.splitString "?" urlAndQuery) 0;
-                in {
-                  url = url0;
-                  rev = rev;
-                  key = "git+" + url0 + "#" + rev;
-                };
-
-                gitTriples = pkgs.lib.unique (map (p: parseGit (p.source)) gitPkgs);
-              in {inherit vendoredDir gitTriples name;};
-
-              # One vendor dir per lockfile to avoid clobbering same name/version with different commits
-              vi_rust_deps = vendorInfo {
-                dir = "src/rust_deps";
-                name = "vendor-rust-deps";
-                hashes = rustGitHashes2;
-              };
-              vi_riscv = vendorInfo {
-                dir = "src/riscv";
-                name = "vendor-riscv";
-                hashes = rustGitHashes;
-              };
-              vi_rustzcash = vendorInfo {
-                dir = "src/rustzcash_deps";
-                name = "vendor-rustzcash";
-                hashes = rustGitHashes2;
-              };
-
-              # Also vendor the other Rust trees Dune compiles:
-              vi_kernel_sdk = vendorInfo {
-                dir = "src/kernel_sdk";
-                name = "vendor-kernel-sdk";
-                hashes = rustGitHashes2;
-              };
-
-              # NEW: vendor the SDK Rust subtree Dune includes via ../../sdk/rust
-              vi_sdk_rust = vendorInfo {
-                dir = "sdk/rust";
-                name = "vendor-sdk-rust";
-                hashes = rustGitHashes2;
-              };
-
-              # ---- NEW: local git checkouts for the riscv-pvm commits used offline ----
-              # Fill in the sha256s (content hash of the git checkout) for each commit.
-              riscv_pvm_ff = pkgs.fetchgit {
-                url = "https://github.com/tezos/riscv-pvm.git";
-                rev = "ffdd7b976f9a98f3140d8080b1119354afb04356";
-                sha256 = "sha256-OdF016wQzNaZo9rst6Mem9w0sWPXMuefp7wJ4zeBkYI=";
-                deepClone = true;
-                leaveDotGit = true;
-              };
-              riscv_pvm_af = pkgs.fetchgit {
-                url = "https://github.com/tezos/riscv-pvm.git";
-                rev = "afb02b632401f873fba323177f4619be723fd87e";
-                sha256 = "sha256-6XWiTbzL/o94vG4M3TbdmgnAkuNYH1pr2fXsoU32W4U=";
-                deepClone = true;
-                leaveDotGit = true;
-              };
-
-              # Combined registry vendor: union of all vendored trees -> a unique path
-              combinedVendor = pkgs.runCommand "cargo-vendor-union" {} ''
-                mkdir -p $out
-                cp -R ${vi_rust_deps.vendoredDir}/.   $out/ || true
-                cp -R ${vi_riscv.vendoredDir}/.       $out/ || true
-                cp -R ${vi_rustzcash.vendoredDir}/.   $out/ || true
-                cp -R ${vi_kernel_sdk.vendoredDir}/.  $out/ || true
-                cp -R ${vi_sdk_rust.vendoredDir}/.    $out/ || true
-              '';
-
-              # Build ONE mapping of canonical git source ids (git+URL#REV) to *local git sources*,
-              # falling back to vendor dirs for other git deps if any.
-              gitSections = let
-                toPairs = vi:
-                  builtins.listToAttrs (map (t: {
-                    name = t.key; # canonical "git+URL#REV"
-                    value = {
-                      vendor = vi.name;
-                      url = t.url;
-                      rev = t.rev;
-                    };
-                  }) (pkgs.lib.filter (t: t.rev != "") vi.gitTriples));
-
-                # Earlier entries win; adjust order if you prefer a different precedence.
-                mapping =
-                  (toPairs vi_rust_deps)
-                  // (pkgs.lib.attrsets.filterAttrs (k: _: !(pkgs.lib.hasAttr k (toPairs vi_rust_deps))) (toPairs vi_riscv))
-                  // (pkgs.lib.attrsets.filterAttrs (k: _: !(pkgs.lib.hasAttr k (toPairs vi_rust_deps) || pkgs.lib.hasAttr k (toPairs vi_riscv))) (toPairs vi_rustzcash))
-                  // (pkgs.lib.attrsets.filterAttrs (k: _:
-                    !(
-                      pkgs.lib.hasAttr k (toPairs vi_rust_deps)
-                      || pkgs.lib.hasAttr k (toPairs vi_riscv)
-                      || pkgs.lib.hasAttr k (toPairs vi_rustzcash)
-                    )) (toPairs vi_kernel_sdk))
-                  // (pkgs.lib.attrsets.filterAttrs (k: _:
-                    !(
-                      pkgs.lib.hasAttr k (toPairs vi_rust_deps)
-                      || pkgs.lib.hasAttr k (toPairs vi_riscv)
-                      || pkgs.lib.hasAttr k (toPairs vi_rustzcash)
-                      || pkgs.lib.hasAttr k (toPairs vi_kernel_sdk)
-                    )) (toPairs vi_sdk_rust));
-
-                # For the two riscv-pvm commits, point to a local *git* source (file://… with .git present).
-                render = key: let
-                  ent = mapping.${key};
-                  is_ff =
-                    ent.url
-                    == "https://github.com/tezos/riscv-pvm.git"
-                    && ent.rev == "ffdd7b976f9a98f3140d8080b1119354afb04356";
-                  is_af =
-                    ent.url
-                    == "https://github.com/tezos/riscv-pvm.git"
-                    && ent.rev == "afb02b632401f873fba323177f4619be723fd87e";
-                  srcPath =
-                    if is_ff
-                    then riscv_pvm_ff
-                    else if is_af
-                    then riscv_pvm_af
-                    else null;
-                in
-                  if srcPath != null
-                  then ''
-                    # Map directly to a local git repo (no replace-with indirection)
-                    [source."${key}"]
-                    git = "file://${srcPath}"
-                    rev = "${ent.rev}"
-                  ''
-                  else ''
-                    [source."${key}"]
-                    replace-with = "${ent.vendor}"
-                  ''; # fallback: for any other git deps you might have added
-              in
-                pkgs.lib.concatStringsSep "\n" (map render (pkgs.lib.attrNames mapping));
-            in
-              pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                                # Write the config to a stable path first
-                                export CARGO_HOME="/build/.cargo"
-                                mkdir -p "$CARGO_HOME"
-                                cat > "$CARGO_HOME/config.toml" << EOF
-                [net]
-                offline = true
-
-                [source.crates-io]
-                replace-with = "vendored-sources"
-
-                # Unique directory for registry crates (union of all vendors)
-                [source.vendored-sources]
-                directory = "${combinedVendor}"
-
-                # Per-tree vendor directories
-                [source.${vi_rust_deps.name}]
-                directory = "${vi_rust_deps.vendoredDir}"
-                [source.${vi_riscv.name}]
-                directory = "${vi_riscv.vendoredDir}"
-                [source.${vi_rustzcash.name}]
-                directory = "${vi_rustzcash.vendoredDir}"
-                [source.${vi_kernel_sdk.name}]
-                directory = "${vi_kernel_sdk.vendoredDir}"
-                [source.${vi_sdk_rust.name}]
-                directory = "${vi_sdk_rust.vendoredDir}"
-
-                ${gitSections}
-                EOF
-                                # Mirror to the location Make/Dune will export (see logs: CARGO_HOME=$TMPDIR/.cargo …),
-                                # but avoid self-copy when TMPDIR=/build. NOTE: escape Bash  so Nix doesn't interpolate.
-                                if [ -n "''${TMPDIR:-}" ]; then
-                                  if [ "''${TMPDIR%/}" != "/build" ]; then
-                                    mkdir -p "''$TMPDIR/.cargo"
-                                    # Only copy if content differs, to avoid "are the same file" errors
-                                    if [ -e "''$TMPDIR/.cargo/config.toml" ]; then
-                                      if ! cmp -s "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"; then
-                                        cp -f "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"
-                                      fi
-                                    else
-                                      cp -f "$CARGO_HOME/config.toml" "''$TMPDIR/.cargo/config.toml"
-                                    fi
-                                    # Ensure subsequent cargo from Make uses the mirrored config
-                                    export CARGO_HOME="''$TMPDIR/.cargo"
-                                  else
-                                    # TMPDIR is /build already; just ensure CARGO_HOME matches and skip copy
-                                    export CARGO_HOME="/build/.cargo"
-                                  fi
-                                fi
-
-                                # Optional: also drop a copy for debugging
-                                mkdir -p .cargo
-                                cp -f "$CARGO_HOME/config.toml" .cargo/config.toml || true
-
-                                ## ---- DEBUG: prove both locations exist ----
-                                echo "CARGO_HOME now: $CARGO_HOME"
-                                echo "Config at /build/.cargo/config.toml:"
-                                sed -n '1,80p' /build/.cargo/config.toml || true
-                                echo "Config at $TMPDIR/.cargo/config.toml:"
-                                sed -n '1,80p' "$TMPDIR/.cargo/config.toml" || true
-
-                                ## ---- DEBUG: print what Cargo will see ----
-                                echo "---- CARGO CONFIG (first 200 lines) ----"
-                                sed -n '1,200p' "$CARGO_HOME/config.toml" || true
-
-                                echo "---- DEFINED SOURCES ----"
-                                grep -n '^\[source\.' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
-
-                                echo "---- GIT SOURCE MAPPINGS (#REV) ----"
-                                grep -n '^\[source\."git\+.*#' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
-                                echo "---- LOOK FOR riscv-pvm ffdd7b97 ----"
-                                grep -n 'riscv-pvm.*ffdd7b97' "$CARGO_HOME/config.toml" | sed 's/^/  /' || true
-
-                                ## ---- EXTRA DEBUG: verify local riscv-pvm repos and config blocks ----
-                                echo "---- RISCV-PVM LOCAL GIT CHECKS ----"
-                                for p in ${riscv_pvm_af} ${riscv_pvm_ff}; do
-                                  echo "  repo: $p"
-                                  if [ -d "$p/.git" ]; then
-                                    echo "    .git: OK"
-                                    if command -v git >/dev/null 2>&1; then
-                                      echo -n "    HEAD: " && git -C "$p" rev-parse --short=12 HEAD || true
-                                      echo -n "    HEAD(ts): " && git -C "$p" show -s --format='%H %ci' HEAD || true
-                                    fi
-                                  else
-                                    echo "    .git: MISSING"
-                                  fi
-                                done
-
-                                echo "---- RISCV-PVM SOURCE TABLES (/build/.cargo) ----"
-                                grep -n -A4 -B1 'riscv-pvm\.git#afb02b6' /build/.cargo/config.toml || true
-                                grep -n -A4 -B1 'riscv-pvm\.git#ffdd7b9' /build/.cargo/config.toml || true
-
-                                echo "---- CARGO ENV ----"
-                                echo "CARGO_HOME=$CARGO_HOME"
-                                env | grep -E '^CARGO_' | sed 's/^/  /' || true
-                                command -v cargo && cargo --version || true
-
-                                echo "---- VENDOR DIRS ----"
-                                for d in ${combinedVendor} ${vi_rust_deps.vendoredDir} ${vi_riscv.vendoredDir} ${vi_rustzcash.vendoredDir}; do
-                                  echo "  $d"
-                                  [ -d "$d" ] && (ls -ld "$d" | sed 's/^/    /') || echo "    MISSING"
-                                done
-              '';
-
-            # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
-            # However, many of these executables are unnecessary, leading to longer build times. Additionally, some
-            # targets are not properly sandboxed for Nix. To address this, we specify the set of Octez executables
-            # required by Jstz using the `OCTEZ_EXECUTABLES` environment variable. This overrides the default set
-            # defined in the `experimental-release` target of the root Makefile.
-            #
-            # NOTE: When updating the protocol, remember to update the protocol versions for the Baker executables here.
+            # Build a smaller set of Octez binaries we actually need.
             OCTEZ_EXECUTABLES = ''
               octez-client
               octez-node
@@ -380,9 +98,17 @@
               octez-baker-alpha
             '';
 
-            # The build phase for `octez` does not execute the pre- and post-phase hooks as expected.
-            # We require the `preBuild` hook to run to configure Cargo to use vendored dependencies
-            # instead of making network calls to crates.io.
+            # Make Cargo use the vendored deps and go offline.
+            preBuild = ''
+              export CARGO_HOME="$TMPDIR/.cargo"
+              mkdir -p "$CARGO_HOME"
+              # Use Crane's generated config for the vendor dir
+              cp ${vendoredOctez}/config.toml "$CARGO_HOME/config.toml"
+              # Belt-and-braces: force offline
+              printf '\n[net]\noffline = true\n' >> "$CARGO_HOME/config.toml"
+            '';
+
+            # Ensure our hooks actually run around upstream build.
             buildPhase = ''
               runHook preBuild
               ${old.buildPhase}
@@ -391,12 +117,19 @@
 
             nativeBuildInputs =
               (old.nativeBuildInputs or [])
-              ++ [
-                # See https://nixos.org/manual/nixpkgs/stable/#compiling-non-rust-packages-that-include-rust-code
-                # for more information.
-                #
-                rustToolchain
-              ];
+              ++ [octezRustToolchain vendoredOctez];
+
+            # On macOS, satisfy the -F .../Library/Frameworks search paths seen in logs
+            buildInputs =
+              (old.buildInputs or [])
+              ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [
+                Security
+                CoreFoundation
+                IOKit
+                AppKit
+                Foundation
+                SystemConfiguration
+              ]);
           });
 
           clangNoArch =
