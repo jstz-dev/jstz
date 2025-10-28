@@ -102,7 +102,7 @@
       "locked": {
         "lastModified": 1756359221,
         "narHash": "sha256-g/lnt59FGlgDJaDGp5q8GyEybHQ9TUjVZ2c0mieU0GQ=",
-        "ref": "refs/heads/master",
+        "ref": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
         "rev": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
         "revCount": 61036,
         "submodules": true,
@@ -110,7 +110,7 @@
         "url": "https://gitlab.com/tezos/tezos.git"
       },
       "original": {
-        "rev": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
+        "ref": "51117ed39f82ab60edd6fe4f6d63094605bb22c7",
         "submodules": true,
         "type": "git",
         "url": "https://gitlab.com/tezos/tezos.git"
