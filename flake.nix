@@ -38,7 +38,7 @@
 
     octezPackages = {
       inputs.nixpkgs.follows = "nixpkgs";
-      url = "git+https://gitlab.com/tezos/tezos.git?rev=51117ed39f82ab60edd6fe4f6d63094605bb22c7&submodules=1";
+      url = "git+https://gitlab.com/tezos/tezos.git?ref=51117ed39f82ab60edd6fe4f6d63094605bb22c7&submodules=1";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.opam-nix-integration.follows = "opam-nix-integration";
@@ -64,6 +64,25 @@
           octezSrc = octezPackages.packages.${system}.default.src;
           octezRustToolchain = pkgs.rust-bin.fromRustupToolchainFile "${octezSrc}/rust-toolchain";
           craneLibForOctez = (crane.mkLib pkgs).overrideToolchain (_: octezRustToolchain);
+
+          vendorDeps = {dir}: let
+            vendoredDir = craneLibForOctez.vendorCargoDeps {
+              src = "${octezSrc}/${dir}";
+            };
+          in ''
+            mkdir -p ${dir}/.cargo
+            cat >> ${dir}/.cargo/config.toml << EOF
+            [net]
+            offline = true
+
+            [source.crates-io]
+            replace-with = "vendored-sources"
+
+            [source.vendored-sources]
+            directory = "${vendoredDir}"
+            EOF
+          '';
+
           # Collect all [[package]] entries from all the lockfiles once
           lockfiles = [
             "${octezSrc}/src/rust_deps/Cargo.lock"
@@ -99,14 +118,24 @@
             '';
 
             # Make Cargo use the vendored deps and go offline.
-            preBuild = ''
-              export CARGO_HOME="$TMPDIR/.cargo"
-              mkdir -p "$CARGO_HOME"
-              # Use Crane's generated config for the vendor dir
-              cp ${vendoredOctez}/config.toml "$CARGO_HOME/config.toml"
-              # Belt-and-braces: force offline
-              printf '\n[net]\noffline = true\n' >> "$CARGO_HOME/config.toml"
+            preBuild = let
+              vendorOctezPackages = ''
+                ${vendorDeps {dir = "src/rust_deps";}}
+                ${vendorDeps {dir = "src/riscv";}}
+                ${vendorDeps {dir = "src/rustzcash_deps";}}
+                ${vendorDeps {dir = "src/kernel_sdk";}}
+                ${vendorDeps {dir = "sdk/rust";}}
+              '';
+            in ''
+              ${vendorOctezPackages}
             '';
+
+            # export CARGO_HOME="$TMPDIR/.cargo"
+            #   mkdir -p "$CARGO_HOME"
+            #   # Use Crane's generated config for the vendor dir
+            #   cat ${vendoredOctez}/config.toml >> "$CARGO_HOME/config.toml"
+            #   # Belt-and-braces: force offline
+            #   # printf '\n[net]\noffline = true\n' >> "$CARGO_HOME/config.toml"
 
             # Ensure our hooks actually run around upstream build.
             buildPhase = ''
@@ -117,7 +146,7 @@
 
             nativeBuildInputs =
               (old.nativeBuildInputs or [])
-              ++ [octezRustToolchain vendoredOctez];
+              ++ [octezRustToolchain];
 
             # On macOS, satisfy the -F .../Library/Frameworks search paths seen in logs
             buildInputs =
