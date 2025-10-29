@@ -58,46 +58,6 @@
             ];
           };
 
-          # Build octez release for this system (Crane-based vendoring)
-          #
-          # Use Octez's own rust-toolchain and vendor all Cargo deps from its multiple lockfiles.
-          octezSrc = octezPackages.packages.${system}.default.src;
-          octezRustToolchain = pkgs.rust-bin.fromRustupToolchainFile "${octezSrc}/rust-toolchain";
-          craneLibForOctez = (crane.mkLib pkgs).overrideToolchain (_: octezRustToolchain);
-
-          vendorDeps = {dir}: let
-            vendoredDir = craneLibForOctez.vendorCargoDeps {
-              src = "${octezSrc}/${dir}";
-            };
-          in ''
-            mkdir -p ${dir}/.cargo
-            cat >> ${dir}/.cargo/config.toml << EOF
-            # [net]
-            # offline = true
-
-            [source.crates-io]
-            replace-with = "vendored-sources"
-
-            [source.vendored-sources]
-            directory = "${vendoredDir}"
-            EOF
-          '';
-
-          # Collect all [[package]] entries from all the lockfiles once
-          lockfiles = [
-            "${octezSrc}/src/rust_deps/Cargo.lock"
-            "${octezSrc}/src/riscv/Cargo.lock"
-            "${octezSrc}/src/rustzcash_deps/Cargo.lock"
-            "${octezSrc}/src/kernel_sdk/Cargo.lock"
-            "${octezSrc}/sdk/rust/Cargo.lock"
-          ];
-          # Vendor *all* Cargo deps (registries + git) across all lockfiles in one go
-          vendoredOctez = craneLibForOctez.vendorMultipleCargoDeps {
-            cargoLockList = lockfiles;
-          };
-
-          # Build octez release for this system
-          #
           # TODO(https://linear.app/tezos/issue/JSTZ-152):
           # This patch here should be upstreamed to tezos/tezos
           octez = octezPackages.packages.${system}.default.overrideAttrs (old: {
@@ -123,8 +83,6 @@
               octez-baker-alpha
             '';
 
-            preBuild = '''';
-
             # The build phase for `octez` does not execute the pre- and post-phase hooks as expected.
             # We require the `preBuild` hook to run to configure Cargo to use vendored dependencies
             # instead of making network calls to crates.io.
@@ -135,20 +93,7 @@
             '';
 
             nativeBuildInputs =
-              (old.nativeBuildInputs or [])
-              ++ [octezRustToolchain];
-
-            # On macOS, satisfy the -F .../Library/Frameworks search paths seen in logs
-            buildInputs =
-              (old.buildInputs or [])
-              ++ pkgs.lib.optionals pkgs.stdenv.isDarwin (with pkgs.darwin.apple_sdk.frameworks; [
-                Security
-                CoreFoundation
-                IOKit
-                AppKit
-                Foundation
-                SystemConfiguration
-              ]);
+              old.nativeBuildInputs or [];
           });
 
           clangNoArch =
