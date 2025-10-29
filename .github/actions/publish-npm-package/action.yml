@@ -1,0 +1,32 @@
+name: Publish NPM package
+inputs:
+  package_dir:
+    description: Path to the directory that contains the package's package.json
+    required: true
+  dry_run:
+    description: Dry-run package publish
+    required: false
+    default: "true"
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-node@v6
+      with:
+        node-version: "22.x"
+        registry-url: "https://registry.npmjs.org"
+    - name: Update npm # npm 11.5.1 or later is required for trusted publishing
+      run: npm install -g npm@latest
+      shell: bash
+    - name: Publish
+      shell: bash
+      run: |
+        cd ${{ inputs.package_dir }}
+
+        if [[ "${{ inputs.dry_run }}" == "true" ]]; then
+          echo "Dry-run npm publish"
+          npm publish --provenance --access public --verbose --tag latest --dry-run
+        else
+          echo "Publish to NPM"
+          npm publish --provenance --access public --verbose --tag latest
+        fi

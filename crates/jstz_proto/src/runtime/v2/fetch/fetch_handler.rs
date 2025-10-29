@@ -7,6 +7,7 @@ use crate::runtime::v2::fetch::error::{FetchError, Result};
 use crate::runtime::v2::fetch::http::Request;
 use crate::runtime::v2::ledger;
 use crate::runtime::v2::protocol_context::PROTOCOL_CONTEXT;
+use crate::runtime::SNAPSHOT;
 
 use deno_core::error::CoreError;
 use deno_core::{
@@ -529,6 +530,7 @@ async fn load_and_run(
         fetch: ProtoFetchHandler,
         protocol: Some(proto),
         extensions: vec![ledger::jstz_ledger::init_ops_and_esm()],
+        snapshot: SNAPSHOT.get().map(|v| *v),
     });
     runtime.set_state(source);
 
@@ -1867,6 +1869,7 @@ mod test {
             fetch: ProtoFetchHandler,
             module_loader: Rc::new(module_loader),
             extensions: vec![],
+            snapshot: None,
         });
         runtime.set_state(SourceAddress::try_from(source).unwrap());
         let id = runtime.execute_main_module(&specifier).await.unwrap();
