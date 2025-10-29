@@ -703,4 +703,112 @@ mod test {
             })
         );
     }
+
+    /// Test that fails if the hash includes Rust-specific debug information.
+    /// This proves that using {:?} formatting in hash generation is problematic
+    /// for non-Rust systems trying to reconstruct or verify hashes.
+    #[test]
+    #[should_panic(expected = "Hash includes Rust-specific debug information")]
+    fn test_hash_includes_debug_info_problem() {
+        use http::{HeaderMap, HeaderValue, Method, Uri};
+
+        let mut headers = HeaderMap::new();
+        headers.insert("content-type", HeaderValue::from_static("application/json"));
+        headers.insert("authorization", HeaderValue::from_static("Bearer token123"));
+
+        let body = HttpBody::from_string(r#"{"test": "data"}"#.to_string());
+
+        let run_function = RunFunction {
+            uri: Uri::try_from("jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/test")
+                .unwrap(),
+            method: Method::POST,
+            headers,
+            body,
+            gas_limit: 10000,
+        };
+
+        let operation = Operation {
+            public_key: jstz_mock::pk1(),
+            nonce: Nonce(42),
+            content: Content::RunFunction(run_function),
+        };
+
+        let formatted_string = match &operation.content {
+            Content::RunFunction(RunFunction {
+                uri,
+                method,
+                headers,
+                body,
+                ..
+            }) => {
+                format!(
+                    "{}{}{}{:?}{:?}{:?}",
+                    operation.public_key, operation.nonce, uri, method, headers, body
+                )
+            }
+            _ => panic!("Expected RunFunction content"),
+        };
+
+        // Fail if hash includes Rust-specific debug information
+        if formatted_string.contains("HttpBody")
+            || formatted_string.contains("Some(")
+            || formatted_string.contains("[123, 34")
+        {
+            println!("Hashed string: {formatted_string}");
+            panic!("Hash includes Rust-specific debug information");
+        }
+    }
+
+    /// Test that fails if non-Rust systems would need Rust-specific knowledge to reproduce the hash.
+    #[test]
+    #[should_panic(expected = "Hash requires Rust-specific debug formatting")]
+    fn test_non_rust_system_hash_reproduction_challenge() {
+        use http::{HeaderMap, HeaderValue, Method, Uri};
+
+        let mut headers = HeaderMap::new();
+        headers.insert("content-type", HeaderValue::from_static("application/json"));
+
+        let body = HttpBody::from_string("hello world".to_string());
+
+        let run_function = RunFunction {
+            uri: Uri::try_from("jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/test")
+                .unwrap(),
+            method: Method::POST,
+            headers,
+            body,
+            gas_limit: 10000,
+        };
+
+        let operation = Operation {
+            public_key: jstz_mock::pk1(),
+            nonce: Nonce(42),
+            content: Content::RunFunction(run_function),
+        };
+
+        let formatted_string = match &operation.content {
+            Content::RunFunction(RunFunction {
+                uri,
+                method,
+                headers,
+                body,
+                ..
+            }) => {
+                format!(
+                    "{}{}{}{:?}{:?}{:?}",
+                    operation.public_key, operation.nonce, uri, method, headers, body
+                )
+            }
+            _ => panic!("Expected RunFunction content"),
+        };
+
+        // Fail if the formatted string requires Rust-specific knowledge
+        if formatted_string.contains("HttpBody")
+            || formatted_string.contains("Some(")
+            || formatted_string
+                .contains("[104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100]")
+        {
+            println!("Hashed string: {formatted_string}");
+            panic!("Hash requires Rust-specific debug formatting");
+        }
+    }
 }
