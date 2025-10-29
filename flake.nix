@@ -107,7 +107,13 @@
                 ./nix/patches/octez/0001-fix-octez-rust-deps-for-nix.patch
               ];
 
-            # Build a smaller set of Octez binaries we actually need.
+            # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
+            # However, many of these executables are unnecessary, leading to longer build times. Additionally, some
+            # targets are not properly sandboxed for Nix. To address this, we specify the set of Octez executables
+            # required by Jstz using the `OCTEZ_EXECUTABLES` environment variable. This overrides the default set
+            # defined in the `experimental-release` target of the root Makefile.
+            #
+            # NOTE: When updating the protocol, remember to update the protocol versions for the Baker executables here.
             OCTEZ_EXECUTABLES = ''
               octez-client
               octez-node
@@ -119,7 +125,9 @@
 
             preBuild = '''';
 
-            # Ensure our hooks actually run around upstream build.
+            # The build phase for `octez` does not execute the pre- and post-phase hooks as expected.
+            # We require the `preBuild` hook to run to configure Cargo to use vendored dependencies
+            # instead of making network calls to crates.io.
             buildPhase = ''
               runHook preBuild
               ${old.buildPhase}
