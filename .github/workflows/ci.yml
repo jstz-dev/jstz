@@ -26,7 +26,7 @@ jobs:
     needs: [commitlint]
     env:
       # Force unsandboxed builds for this job. The daemon may still enforce
-      # sandboxing unless the runner user is trusted (see notes below).
+      # sandboxing unless the runner user is trusted.
       NIX_CONFIG: |
         sandbox = false
     steps:
