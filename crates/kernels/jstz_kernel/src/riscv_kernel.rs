@@ -7,7 +7,9 @@ use jstz_core::{
 use jstz_crypto::{
     hash::Hash, public_key::PublicKey, smart_function_hash::SmartFunctionHash,
 };
-use jstz_proto::runtime::{ProtocolContext, PROTOCOL_CONTEXT};
+use jstz_proto::runtime::{
+    ProtoFetchHandler, ProtocolContext, PROTOCOL_CONTEXT, SNAPSHOT,
+};
 use jstz_runtime::JstzRuntime;
 use tezos_smart_rollup::prelude::{debug_msg, Runtime};
 
@@ -55,6 +57,7 @@ pub fn run(rt: &mut impl Runtime) {
 async fn run_event_loop(rt: &mut impl Runtime) {
     let ticketer = Arc::new(read_ticketer(rt));
     let injector = Arc::new(read_injector(rt));
+    initialize_snapshot(rt);
     ProtocolContext::init_global(rt, 0).unwrap();
 
     loop {
@@ -102,6 +105,15 @@ async fn run_event_loop(rt: &mut impl Runtime) {
         // processing tasks that were awaken by the first.
         tokio::task::yield_now().await;
         tokio::task::yield_now().await;
+    }
+}
+
+fn initialize_snapshot(rt: &mut impl Runtime) {
+    let snapshot = JstzRuntime::generate_snapshot::<ProtoFetchHandler>();
+    if let Ok(snapshot) = snapshot {
+        SNAPSHOT.get_or_init(|| Box::leak(snapshot.output));
+    } else {
+        debug_msg!(rt, "Failed to generate snapshot: {:?}", snapshot.err());
     }
 }
 
