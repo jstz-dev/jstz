@@ -1,5 +1,7 @@
 use anyhow::Result;
+use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
 use std::{
+    collections::HashMap,
     env, fs,
     path::{Path, PathBuf},
 };
@@ -14,6 +16,10 @@ const JSTZ_PARAMETERS_TY_PATH: &str = "./resources/jstz_rollup/parameters_ty.jso
 /// Generated file that contains path getter functions
 const JSTZ_ROLLUP_PATH: &str = "jstz_rollup_path.rs";
 const BOOTSTRAP_ACCOUNT_PATH: &str = "./resources/bootstrap_account/accounts.json";
+// These aliases are also used by jstzd during config validation.
+const ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "activator";
+const INJECTOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "injector";
+const ROLLUP_OPERATOR_BOOTSTRAP_ACCOUNT_ALIAS: &str = "rollup_operator";
 
 /// Build script that validates built-in bootstrap accounts and generates and saves
 /// the following files in OUT_DIR:
@@ -37,11 +43,14 @@ fn main() {
     fs::copy(JSTZ_PARAMETERS_TY_PATH, out_dir.join("parameters_ty.json"))
         .expect("Failed to copy parameters_ty.json to OUT_DIR");
 
-    // 2. Compute RISC-V kernel checksum and generate path getters
+    // 2. Validate built-in bootstrap accounts stored in the resource file
+    validate_builtin_bootstrap_accounts();
+
+    // 3. Compute RISC-V kernel checksum and generate path getters
     let riscv_kernel_checksum = compute_sha256(Path::new(JSTZ_RISCV_KERNEL_PATH))
         .expect("Failed to compute RISC-V kernel checksum");
 
-    // 3. Generate path getter code in OUT_DIR
+    // 4 Generate path getter code in OUT_DIR
     generate_code(&out_dir, &riscv_kernel_checksum);
 
     println!(
@@ -153,6 +162,40 @@ fn generate_path_getter_code(out_dir: &Path, fn_name: &str, path_suffix: &str) -
         &name_upper,
         path_suffix
     )
+}
+
+fn validate_builtin_bootstrap_accounts() -> HashMap<String, PublicKey> {
+    let bytes =
+        fs::read(BOOTSTRAP_ACCOUNT_PATH).expect("failed to read bootstrap account file");
+    let raw_accounts: Vec<(String, String, String, u64)> = serde_json::from_slice(&bytes)
+        .unwrap_or_else(|e| panic!("failed to parse built-in bootstrap accounts: {e:?}"));
+    let mut mapping = HashMap::new();
+    for (name, pk, raw_sk, _) in raw_accounts {
+        let public_key = PublicKey::from_base58(&pk).unwrap_or_else(|e| {
+            panic!("failed to parse public key of bootstrap account '{name}': {e:?}")
+        });
+        let sk = if raw_sk.starts_with("unencrypted") {
+            raw_sk.split(':').nth(1).unwrap()
+        } else {
+            &raw_sk
+        };
+        SecretKey::from_base58(sk).unwrap_or_else(|e| {
+            panic!("failed to parse secret key of bootstrap account '{name}': {e:?}")
+        });
+        if mapping.insert(name.clone(), public_key).is_some() {
+            panic!("bootstrap account name '{name}' already exists");
+        }
+    }
+    for required_alias in [
+        INJECTOR_BOOTSTRAP_ACCOUNT_ALIAS,
+        ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS,
+        ROLLUP_OPERATOR_BOOTSTRAP_ACCOUNT_ALIAS,
+    ] {
+        if !mapping.contains_key(ACTIVATOR_BOOTSTRAP_ACCOUNT_ALIAS) {
+            panic!("there must be one built-in bootstrap account with alias '{required_alias}'");
+        }
+    }
+    mapping
 }
 
 fn compute_sha256(path: &Path) -> Result<String> {
