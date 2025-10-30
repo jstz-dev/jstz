@@ -65,6 +65,7 @@
               (old.patches or [])
               ++ [
                 ./nix/patches/octez/0001-fix-octez-rust-deps-for-nix.patch
+                ./nix/patches/octez/0002-allow-floats-in-wasm-rollup.patch
               ];
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.

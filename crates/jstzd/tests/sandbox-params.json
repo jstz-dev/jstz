@@ -145,7 +145,7 @@
     "slot_size": 126944,
     "number_of_shards": 256
   },
-  "smart_rollup_arith_pvm_enable": true,
+  "smart_rollup_arith_pvm_enable": false,
   "smart_rollup_origination_size": 6314,
   "smart_rollup_challenge_window_in_blocks": 151200,
   "smart_rollup_stake_amount": "10000000000",
