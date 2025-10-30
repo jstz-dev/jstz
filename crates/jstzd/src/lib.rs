@@ -13,6 +13,25 @@ pub mod jstz_rollup_path {
         let kernel_checksum = riscv_kernel_checksum();
         format!("kernel:{}:{}", kernel_path.display(), kernel_checksum)
     }
+
+    pub fn riscv_kernel_checksum() -> String {
+        let path = riscv_kernel_path();
+        compute_sha256(&path).expect("Failed to compute RISC-V kernel checksum")
+    }
+
+    fn compute_sha256(path: &std::path::PathBuf) -> anyhow::Result<String> {
+        use sha2::{Digest, Sha256};
+        if !path.exists() {
+            return Err(anyhow::anyhow!(
+                "RISC-V kernel file not found: {}",
+                path.display()
+            ));
+        }
+        let content = std::fs::read(path)?;
+        let mut hasher = Sha256::new();
+        hasher.update(&content);
+        Ok(format!("{:x}", hasher.finalize()))
+    }
 }
 use console::style;
 use std::io::{stdout, Write};
