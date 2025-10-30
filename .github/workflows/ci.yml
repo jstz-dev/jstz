@@ -24,11 +24,6 @@ jobs:
     name: Build
     runs-on: [x86_64, linux, nix]
     needs: [commitlint]
-    env:
-      # Force unsandboxed builds for this job. The daemon may still enforce
-      # sandboxing unless the runner user is trusted.
-      NIX_CONFIG: |
-        sandbox = false
     steps:
       - uses: actions/checkout@v4
       - run: nix --version
