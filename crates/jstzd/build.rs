@@ -43,6 +43,13 @@ fn main() {
     fs::copy(JSTZ_PARAMETERS_TY_PATH, out_dir.join("parameters_ty.json"))
         .expect("Failed to copy parameters_ty.json to OUT_DIR");
 
+    // 2. Copy RISC-V kernel executable to OUT_DIR
+    fs::copy(
+        JSTZ_RISCV_KERNEL_PATH,
+        out_dir.join("lightweight-kernel-executable"),
+    )
+    .expect("Failed to copy RISC-V kernel to OUT_DIR");
+
     // 2. Validate built-in bootstrap accounts stored in the resource file
     validate_builtin_bootstrap_accounts();
 
@@ -86,9 +93,9 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result
 /// Generates Rust code for path getters to access files in OUT_DIR
 ///
 /// Generates the following functions:
-/// - kernel_installer_path(): Path to the kernel installer hex file
 /// - parameters_ty_path(): Path to the parameters type JSON file
-/// - preimages_path(): Path to the preimages directory
+/// - riscv_kernel_path(): Path to the RISC-V kernel executable
+/// - riscv_kernel_checksum(): Checksum of the RISC-V kernel executable
 fn generate_code(out_dir: &Path, riscv_kernel_checksum: &str) {
     let mut code = String::new();
     code.push_str(&generate_path_getter_code(
@@ -101,27 +108,19 @@ fn generate_code(out_dir: &Path, riscv_kernel_checksum: &str) {
         "preimages",
         "preimages",
     ));
-    // RISC-V kernel path & checksum getters
-    // TODO: maybe use the path getter fn
-    let manifest_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
-    let riscv_kernel_absolute_path = PathBuf::from(&manifest_dir)
-        .join(JSTZ_RISCV_KERNEL_PATH)
-        .canonicalize()
-        .expect("Failed to canonicalize RISC-V kernel path");
+    code.push_str(&generate_path_getter_code(
+        out_dir,
+        "riscv_kernel",
+        "lightweight-kernel-executable",
+    ));
 
     code.push_str(&format!(
         r#"
-        const RISCV_KERNEL_PATH: &str = "{}";
-        pub fn riscv_kernel_path() -> std::path::PathBuf {{
-            std::path::PathBuf::from(RISCV_KERNEL_PATH)
-        }}
-
         const RISCV_KERNEL_CHECKSUM: &str = "{}";
         pub fn riscv_kernel_checksum() -> &'static str {{
             RISCV_KERNEL_CHECKSUM
         }}
         "#,
-        riscv_kernel_absolute_path.display(),
         riscv_kernel_checksum
     ));
 
