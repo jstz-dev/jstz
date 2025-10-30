@@ -54,7 +54,7 @@ build-dev-deps: build-deps
 
 .PHONY: build-sdk-wasm-pkg
 build-sdk-wasm-pkg:
-	@cd crates/jstz_sdk && wasm-pack build --target bundler --release
+	@cd crates/jstz_sdk && wasm-pack build --target bundler --release --scope jstz-dev
 
 .PHONY: build-native-kernel
 build-native-kernel:
