@@ -123,9 +123,7 @@ async fn create_jstzd_server(
 
     let (rollup_preimages_dir, rollup_parameters_ty) = jstz_rollup_files();
 
-    let kernel_path = jstz_rollup_path::riscv_kernel_path();
-    let kernel_checksum = jstz_rollup_path::riscv_kernel_checksum();
-    let kernel = format!("kernel:{}:{}", kernel_path.display(), kernel_checksum);
+    let kernel = jstz_rollup_path::riscv_kernel_descriptor();
 
     let protocol_params = ProtocolParameterBuilder::new()
         // this is the activator account

@@ -394,9 +394,7 @@ async fn build_protocol_params(
         accounts.push(account);
     }
 
-    let kernel_path = jstz_rollup_path::riscv_kernel_path();
-    let kernel_checksum = jstz_rollup_path::riscv_kernel_checksum();
-    let kernel = format!("kernel:{}:{}", kernel_path.display(), kernel_checksum);
+    let kernel = jstz_rollup_path::riscv_kernel_descriptor();
 
     builder
         .set_bootstrap_smart_rollups([BootstrapSmartRollup::new(

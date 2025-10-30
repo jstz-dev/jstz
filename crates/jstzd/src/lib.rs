@@ -7,6 +7,12 @@ use crate::task::jstzd::{JstzdConfig, JstzdServer};
 pub use config::BOOTSTRAP_CONTRACT_NAMES;
 pub mod jstz_rollup_path {
     include!(concat!(env!("OUT_DIR"), "/jstz_rollup_path.rs"));
+
+    pub fn riscv_kernel_descriptor() -> String {
+        let kernel_path = riscv_kernel_path();
+        let kernel_checksum = riscv_kernel_checksum();
+        format!("kernel:{}:{}", kernel_path.display(), kernel_checksum)
+    }
 }
 use console::style;
 use std::io::{stdout, Write};
