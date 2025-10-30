@@ -18,6 +18,7 @@ boa_gc.workspace = true
 derive_more.workspace = true
 hex.workspace = true
 libsecp256k1.workspace = true
+p256.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 tezos_crypto_rs.workspace = true

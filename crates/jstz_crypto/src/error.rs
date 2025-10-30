@@ -27,7 +27,10 @@ pub enum Error {
     Libsecp256k1Error {
         source: libsecp256k1::Error,
     },
-
+    #[display(fmt = "p256 error: {source}")]
+    P256Error {
+        source: p256::ecdsa::signature::Error,
+    },
     #[display(fmt = "invalid smart function hash")]
     InvalidSmartFunctionHash,
 }
