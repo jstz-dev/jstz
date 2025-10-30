@@ -21,14 +21,10 @@ const BOOTSTRAP_ACCOUNT_PATH: &str = "./resources/bootstrap_account/accounts.jso
 /// - parameters_ty.json: JSON file containing parameter types
 ///
 /// Files generated:
-/// - kernel_installer.hex: Hex-encoded kernel installer binary
-/// - preimages/: Directory containing kernel preimages
 /// - jstz_rollup_path.rs: Generated Rust code with path getters
 ///
 /// The generated jstz_rollup_path.rs provides the following functions:
-/// - kernel_installer_path(): Path to the kernel installer hex file
 /// - parameters_ty_path(): Path to the parameters type JSON file
-/// - preimages_path(): Path to the preimages directory
 fn main() {
     println!("cargo:rerun-if-changed={JSTZ_RISCV_KERNEL_PATH}");
     println!("cargo:rerun-if-changed={JSTZ_PARAMETERS_TY_PATH}");
