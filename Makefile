@@ -172,8 +172,10 @@ fmt-check:
 lint:
 #  Jstzd has to processes a non-empty kernel in its build script
 	@echo "ignore" > $(JSTZD_KERNEL_PATH)
+	@echo "ignore" > $(JSTZD_LIGHTWEIGHT_KERNEL_PATH)
 	@cargo clippy --all-targets --features skip-wpt -- --deny warnings
 	@rm -f $(JSTZD_KERNEL_PATH)
+	@rm -f $(JSTZD_LIGHTWEIGHT_KERNEL_PATH)
 
 .PHONY: run-manual-test
 run-manual-test: riscv-pvm-kernel
