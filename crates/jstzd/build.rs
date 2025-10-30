@@ -1,4 +1,3 @@
-use anyhow::Result;
 use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
 use std::{
     collections::HashMap,
@@ -50,15 +49,11 @@ fn main() {
     )
     .expect("Failed to copy RISC-V kernel to OUT_DIR");
 
-    // 2. Validate built-in bootstrap accounts stored in the resource file
+    // 3. Validate built-in bootstrap accounts stored in the resource file
     validate_builtin_bootstrap_accounts();
 
-    // 3. Compute RISC-V kernel checksum and generate path getters
-    let riscv_kernel_checksum = compute_sha256(Path::new(JSTZ_RISCV_KERNEL_PATH))
-        .expect("Failed to compute RISC-V kernel checksum");
-
-    // 4 Generate path getter code in OUT_DIR
-    generate_code(&out_dir, &riscv_kernel_checksum);
+    // 4. Generate path getter code in OUT_DIR
+    generate_code(&out_dir);
 
     println!(
         "cargo:warning=Build script output directory: {}",
@@ -96,7 +91,7 @@ fn copy_dir_all(src: impl AsRef<Path>, dst: impl AsRef<Path>) -> std::io::Result
 /// - parameters_ty_path(): Path to the parameters type JSON file
 /// - riscv_kernel_path(): Path to the RISC-V kernel executable
 /// - riscv_kernel_checksum(): Checksum of the RISC-V kernel executable
-fn generate_code(out_dir: &Path, riscv_kernel_checksum: &str) {
+fn generate_code(out_dir: &Path) {
     let mut code = String::new();
     code.push_str(&generate_path_getter_code(
         out_dir,
@@ -112,16 +107,6 @@ fn generate_code(out_dir: &Path, riscv_kernel_checksum: &str) {
         out_dir,
         "riscv_kernel",
         "lightweight-kernel-executable",
-    ));
-
-    code.push_str(&format!(
-        r#"
-        const RISCV_KERNEL_CHECKSUM: &str = "{}";
-        pub fn riscv_kernel_checksum() -> &'static str {{
-            RISCV_KERNEL_CHECKSUM
-        }}
-        "#,
-        riscv_kernel_checksum
     ));
 
     fs::write(out_dir.join(JSTZ_ROLLUP_PATH), code).expect("Failed to write paths.rs");
@@ -195,18 +180,4 @@ fn validate_builtin_bootstrap_accounts() -> HashMap<String, PublicKey> {
         }
     }
     mapping
-}
-
-fn compute_sha256(path: &Path) -> Result<String> {
-    use sha2::{Digest, Sha256};
-    if !path.exists() {
-        return Err(anyhow::anyhow!(
-            "RISC-V kernel file not found: {}",
-            path.display()
-        ));
-    }
-    let content = fs::read(path)?;
-    let mut hasher = Sha256::new();
-    hasher.update(&content);
-    Ok(format!("{:x}", hasher.finalize()))
 }
