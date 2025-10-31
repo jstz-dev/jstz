@@ -32,14 +32,9 @@ jobs:
     # Need to build in an alpine container to ship statically compiled binaries
     # Target: x86_64-unknown-linux-musl
     container:
-      image: alpine:3.21
+      image: ghcr.io/jstz-dev/jstz/build_cli:7f08c1b
     steps:
-      - name: Install dependencies
-        shell: sh
-        run: apk add make musl-dev libcrypto3 openssl-dev clang gcc musl-dev libstdc++ libffi-dev g++ openssl-libs-static bash curl
-        # curl and bash are required by dtolnay/rust-toolchain
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.82.0
       - name: Build
         shell: sh
         run: make build-cli
@@ -61,7 +56,7 @@ jobs:
     name: Build CLI for Linux Arm64
     runs-on: ubuntu-24.04-arm
     container:
-      image: alpine
+      image: ghcr.io/jstz-dev/jstz/build_cli:7f08c1b
       volumes:
         - /opt:/opt:rw,rshared
         - /opt:/__e/node20:ro,rshared
@@ -75,12 +70,7 @@ jobs:
           apk add nodejs --update-cache
           mkdir /opt/bin
           ln -s /usr/bin/node /opt/bin/node
-      - name: Install dependencies
-        shell: sh
-        run: apk add make musl-dev libcrypto3 openssl-dev clang gcc musl-dev libstdc++ libffi-dev g++ openssl-libs-static bash curl
-        # curl and bash are required by dtolnay/rust-toolchain
       - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@1.82.0
       - name: Build
         shell: sh
         run: make build-cli
