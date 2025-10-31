@@ -9,8 +9,9 @@ use deno_core::{error::JsError, extension, op2, v8, ModuleSpecifier, OpState};
 use deno_error::JsErrorBox;
 use indexmap::{IndexMap, IndexSet};
 use serde::Deserialize;
-use tokio::sync::mpsc::error::SendError;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::{error::SendError, UnboundedReceiver, UnboundedSender};
+
+pub mod executor;
 
 #[derive(Debug, Clone, PartialEq, Deserialize, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
@@ -299,6 +300,26 @@ impl TestEventSender {
         }
         Ok(self.sender.send((self.id, message))?)
     }
+}
+
+/// Polls for the next [`TestEvent`] from any worker. Events from multiple worker
+/// streams may be interleaved.
+pub struct TestEventReceiver {
+    receiver: UnboundedReceiver<(usize, TestEvent)>,
+}
+
+impl TestEventReceiver {
+    /// Receive a single test event, or `None` if no workers are alive.
+    pub async fn recv(&mut self) -> Option<(usize, TestEvent)> {
+        self.receiver.recv().await
+    }
+}
+
+pub(crate) fn create_test_event_channel() -> (TestEventSender, TestEventReceiver) {
+    let (tx, rx) = tokio::sync::mpsc::unbounded_channel();
+    let sender = TestEventSender { id: 0, sender: tx };
+    let receiver = TestEventReceiver { receiver: rx };
+    (sender, receiver)
 }
 
 extension!(

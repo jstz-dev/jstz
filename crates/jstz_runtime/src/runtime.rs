@@ -1,7 +1,6 @@
 use crate::error::Result;
 use crate::ext::jstz_fetch::FetchAPI;
 use crate::ext::jstz_fetch::NotSupportedFetch;
-use crate::jstz_test;
 use deno_core::v8::new_single_threaded_default_platform;
 use deno_core::*;
 use derive_more::{Deref, DerefMut};
