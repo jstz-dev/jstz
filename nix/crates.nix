@@ -5,6 +5,8 @@
   crane,
   rust-toolchain,
   octez,
+  riscvV8,
+  riscv64MuslCc,
 }: let
   craneLib = (crane.mkLib pkgs).overrideToolchain (_: rust-toolchain);
 
@@ -79,6 +81,22 @@
       cargoExtraArgs = "-p ${pname} --target ${target}";
     });
 
+  # RISC-V lightweight kernel (native executable)
+  jstz_lightweight_kernel = craneLib.buildPackage (common
+    // rec {
+      inherit (craneLib.crateNameFromCargoToml {inherit src;}) version;
+      cargoArtifacts = cargoDeps;
+      doCheck = false;
+      pname = "jstz_lightweight_kernel";
+      target = "riscv64gc-unknown-linux-musl";
+      cargoExtraArgs = "-p ${pname} --features lightweight-kernel --target ${target}";
+      # Provide cross toolchain and V8 artifacts for RISC-V build
+      buildInputs = (common.buildInputs or []) ++ [riscv64MuslCc];
+      NIX_LDFLAGS = "";
+      RUSTY_V8_ARCHIVE = "${riscvV8}/librusty_v8.a";
+      RUSTY_V8_SRC_BINDING_PATH = "${riscvV8}/src_binding.rs";
+    });
+
   # Fetch the necessary scripts for the runtime API coverage test in jstz_runtime
   apiCoverageTestScripts = with pkgs; let
     TARGET_SHA = "426ca553141d5ac41764beb9078bd27efd980756";
@@ -105,9 +123,12 @@
       cargoArtifacts = cargoDeps;
       doCheck = false;
       buildInputs = common.buildInputs ++ [pkgs.iana-etc octez pkgs.cacert pkgs.sqlite];
-      preBuildPhases = ["cpJstzKernel" "setUpApiCoverageTest"];
+      preBuildPhases = ["cpJstzKernel" "cpLightweightKernel" "setUpApiCoverageTest"];
       cpJstzKernel = ''
         cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
+      '';
+      cpLightweightKernel = ''
+        cp ${jstz_lightweight_kernel}/bin/lightweight-kernel-executable ./crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable
       '';
       # This is the same as the script at `jstz_runtime/tests/api_coverage/setup.sh`.
       setUpApiCoverageTest = ''
@@ -147,7 +168,7 @@ in {
     jstz_cli = crate "jstz_cli";
     jstz_core = crate "jstz_core";
     jstz_crypto = crate "jstz_crypto";
-    inherit jstz_kernel;
+    inherit jstz_kernel jstz_lightweight_kernel;
     jstz_mock = crate "jstz_mock";
     jstz_node = crate "jstz_node";
     jstz_proto = crate "jstz_proto";
@@ -157,9 +178,12 @@ in {
       // rec {
         pname = "jstzd";
         cargoExtraArgs = "-p ${pname}";
-        preBuildPhases = ["mkJstzKernelForJstzd"];
+        preBuildPhases = ["mkJstzKernelForJstzd" "mkLightweightKernelForJstzd"];
         mkJstzKernelForJstzd = ''
           cp ${jstz_kernel}/lib/jstz_kernel.wasm ./crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
+        '';
+        mkLightweightKernelForJstzd = ''
+          cp ${jstz_lightweight_kernel}/bin/lightweight-kernel-executable ./crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable
         '';
       });
     octez = crate "octez";
