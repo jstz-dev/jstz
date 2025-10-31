@@ -115,6 +115,8 @@ jobs:
   upload-github-release:
     name: Upload to github release
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write # Required for github release
     needs:
       [test-macos-arm64, test-linux-arm64, test-linux-amd64, set-input-values]
     if: ${{ needs.set-input-values.outputs.dry_run == 'false' || needs.set-input-values.outputs.dry_run == false }}
@@ -134,3 +136,17 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: jstz_*
+
+  publish-to-npm:
+    name: Publish to NPM
+    runs-on: ubuntu-24.04
+    permissions:
+      id-token: write # Required for OIDC
+    needs:
+      [test-macos-arm64, test-linux-arm64, test-linux-amd64, set-input-values]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jstz-dev/jstz/.github/actions/publish-npm-package@main
+        with:
+          package_dir: packages/cli/main
+          dry_run: ${{ needs.set-input-values.outputs.dry_run }}
