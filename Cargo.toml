@@ -139,7 +139,8 @@ ron = "0.8"
 
 [workspace.dependencies.deno_fetch_base]
 git = "https://github.com/jstz-dev/deno"
-branch = "leo/extend-fetch-base"
+branch = "leo/request-response-transfer"
+# branch = "leo/extend-fetch-base"
 features = ["sandbox"]
 default-features = false
 
