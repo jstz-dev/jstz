@@ -37,12 +37,18 @@ inputs:
     description: Dry-run image build without pushing to the registry
     required: false
     default: "true"
+  ref:
+    description: The branch, tag, or SHA from which images will be built
+    required: true
 
 runs:
   using: "composite"
   steps:
-    - name: Set push flag
-      id: set-push-flag
+    - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref }}
+    - name: Set values
+      id: set-values
       shell: bash
       run: |
         # This push flag is the inverse of dry_run
@@ -51,7 +57,8 @@ runs:
           push="true"
         fi
         echo "push=$push" >> $GITHUB_OUTPUT
-    - uses: actions/checkout@v4
+
+        echo "short_sha=$(git rev-parse --short ${{ inputs.ref }})" >> $GITHUB_OUTPUT
     - run: echo "${{ runner.temp }}"
       shell: bash
     - name: Set up Docker Buildx
@@ -74,12 +81,15 @@ runs:
         images: ${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}
         tags: |
           type=ref,event=tag
-          {{sha}}
+          type=raw,value=${{ inputs.ref }}
+          type=raw,value=${{ steps.set-values.outputs.short_sha }}
+          # {{sha}} is not the right value here because that refers to the commit that triggered
+          # the run, which is not the same as inputs.ref in most cases
     - name: Build and push Docker image
       id: build-image
       uses: docker/build-push-action@v6.3.0
       with:
-        push: ${{ steps.set-push-flag.outputs.push }}
+        push: ${{ steps.set-values.outputs.push }}
         context: .
         file: ${{ inputs.dockerfile }}
         build-args: |
@@ -89,7 +99,7 @@ runs:
         cache-to: type=gha,mode=max
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ inputs.platform }}
-        outputs: type=image,"name=${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}",push-by-digest=true,name-canonical=true,"push=${{ steps.set-push-flag.outputs.push }}"
+        outputs: type=image,"name=${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}",push-by-digest=true,name-canonical=true,"push=${{ steps.set-values.outputs.push }}"
     - name: Export digest
       shell: bash
       run: |
