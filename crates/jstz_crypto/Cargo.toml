@@ -12,15 +12,21 @@ description.workspace = true
 
 [dependencies]
 anyhow.workspace = true
+base64.workspace = true
 bincode.workspace = true
 bip39.workspace = true
+cryptoxide.workspace = true
 boa_gc.workspace = true
 derive_more.workspace = true
 hex.workspace = true
 libsecp256k1.workspace = true
+p256.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+serde_with.workspace = true
+simple_asn1.workspace = true
 tezos_crypto_rs.workspace = true
+thiserror.workspace = true
 utoipa.workspace = true
 
 [dev-dependencies]
