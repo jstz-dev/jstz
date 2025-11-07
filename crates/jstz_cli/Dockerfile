@@ -1,5 +1,5 @@
-ARG OCTEZ_TAG
-FROM tezos/tezos:octez-v${OCTEZ_TAG} AS octez
+ARG OCTEZ_VERSION
+FROM tezos/tezos:octez-v${OCTEZ_VERSION} AS octez
 
 FROM ghcr.io/jstz-dev/jstz/build_cli:7f08c1b AS builder
 ENV OPENSSL_DIR=/usr

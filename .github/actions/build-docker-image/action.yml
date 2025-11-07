@@ -9,8 +9,8 @@ inputs:
   repo_token:
     description: API token that gives access to manage the target repo
     required: true
-  octez-tag:
-    description: "tezos/tezos docker tag to be used"
+  octez_version:
+    description: Version of the octez package to be used for the image
     required: true
   docker_registry:
     description: Docker registry
@@ -98,7 +98,7 @@ runs:
         context: .
         file: ${{ inputs.dockerfile }}
         build-args: |
-          OCTEZ_TAG=${{ inputs.octez-tag }}
+          OCTEZ_VERSION=${{ inputs.octez_version }}
           KERNEL_PATH=./jstz_kernel/jstz_kernel.wasm
         cache-from: type=gha
         cache-to: type=gha,mode=max
