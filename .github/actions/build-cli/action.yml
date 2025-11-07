@@ -35,11 +35,11 @@ runs:
       run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_cli
     - uses: actions/upload-artifact@v4
       with:
-        name: jstz_${{ inputs.platform }}_${{ inputs.arch }}
+        name: cli_${{ inputs.platform }}_${{ inputs.arch }}
         path: result/bin/jstz
         if-no-files-found: error
         retention-days: 1
     - name: Output
       id: output
       shell: bash
-      run: echo "artefact_name=jstz_${{ inputs.platform }}_${{ inputs.arch }}" >> $GITHUB_OUTPUT
+      run: echo "artefact_name=cli_${{ inputs.platform }}_${{ inputs.arch }}" >> $GITHUB_OUTPUT
