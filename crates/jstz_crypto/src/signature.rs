@@ -131,6 +131,31 @@ mod test {
     }
 
     #[test]
+    fn verify_p256() {
+        let sk = SecretKey::from_base58(
+            "p2sk2REWfVA5GbHf6cdGK74krBzHzEaS9ifLg3b1syZ821DQ5Btd3T",
+        )
+        .unwrap();
+        let pk = PublicKey::from_base58(
+            "p2pk677rSbvNHKG7B1UZ8JGkgVBCsqVNUKYzeek6frCFVTFfrguZg7i",
+        )
+        .unwrap();
+        let message = b"Hello, world!";
+        let signature = sk.sign(message).unwrap();
+
+        signature.verify(&pk, message).unwrap();
+
+        let bad_sk = SecretKey::from_base58(
+            "p2sk3MM3DtXHr1aRtoQXMUFHaU6S9WeMHwTVx7hoBoPFshUmGFeiFK",
+        )
+        .unwrap();
+        let signature = bad_sk.sign(message).unwrap();
+        signature
+            .verify(&pk, message)
+            .expect_err("Should fail verification");
+    }
+
+    #[test]
     fn base58() {
         let sk = SecretKey::from_base58(
             "edsk3AbxMYLgdY71xPEjWjXi5JCx6tSS8jhQ2mc1KczZ1JfPrTqSgM",

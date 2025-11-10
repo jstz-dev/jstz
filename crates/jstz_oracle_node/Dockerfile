@@ -1,19 +1,10 @@
-FROM rust:1.88.0-slim-bookworm AS builder
-
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    curl libssl-dev pkg-config
+FROM ghcr.io/jstz-dev/jstz/build:7f08c1b AS builder
 
 WORKDIR /jstz_build
 COPY . .
 RUN cargo build --bin jstz-oracle-node --release --features v2_runtime
 
-FROM debian:bookworm-20250520-slim AS jstz_oracle_node
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    libssl-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+FROM ghcr.io/jstz-dev/jstz/serve:7f08c1b AS jstz_oracle_node
 COPY --from=builder /jstz_build/target/release/jstz-oracle-node /usr/bin/jstz-oracle-node
 
 ENV RUST_BACKTRACE=1
