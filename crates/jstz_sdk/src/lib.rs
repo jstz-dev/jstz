@@ -21,8 +21,11 @@ pub fn sign_operation(operation: JsValue, secret_key: &str) -> Result<String, Js
 
 #[wasm_bindgen]
 pub fn hash_operation(operation: JsValue) -> Result<String, JsValue> {
-    let operation: Operation = serde_wasm_bindgen::from_value(operation)?;
-    Ok(operation.hash().to_string())
+    let json: serde_json::Value = serde_wasm_bindgen::from_value(operation)?;
+    let operation: Operation =
+        serde_json::from_value(json).map_err(|e| JsValue::from_str(&e.to_string()))?;
+    let hash = operation.hash();
+    Ok(hash.to_string())
 }
 
 /// Converts signature returned from the passkey device into a valid base58
