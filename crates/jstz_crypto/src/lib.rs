@@ -47,8 +47,8 @@ macro_rules! impl_bincode_for_hash {
             }
         }
 
-        impl Decode for $newtype {
-            fn decode<D: bincode::de::Decoder>(
+        impl<C> Decode<C> for $newtype {
+            fn decode<D: bincode::de::Decoder<Context = C>>(
                 decoder: &mut D,
             ) -> std::result::Result<Self, bincode::error::DecodeError> {
                 let raw_hash: Vec<u8> = Decode::decode(decoder)?;

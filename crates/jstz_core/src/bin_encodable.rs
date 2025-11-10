@@ -26,7 +26,7 @@ pub trait BinEncodable {
 }
 
 /// Default implementation for types that can be encoded to and decoded from binary format
-impl<T: Encode + Decode> BinEncodable for T {
+impl<T: Encode + Decode<()>> BinEncodable for T {
     fn encode(&self) -> Result<Vec<u8>> {
         bincode::encode_to_vec(self, BINCODE_CONFIGURATION).map_err(|err| {
             Error::SerializationError {

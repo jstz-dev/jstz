@@ -27,7 +27,7 @@ const KV_PATH: RefPath = RefPath::assert_from(b"/jstz_kv");
 #[schema(value_type = Value)]
 pub struct KvValue(pub serde_json::Value);
 
-impl Decode for KvValue {
+impl Decode<()> for KvValue {
     fn decode<D: Decoder>(decoder: &mut D) -> std::result::Result<KvValue, DecodeError> {
         let bytes: Vec<u8> = Decode::decode(decoder)?;
         let value = serde_json::from_slice(&bytes).map_err(|e| {
