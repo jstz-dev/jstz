@@ -1,8 +1,7 @@
 ARG OCTEZ_TAG
 FROM tezos/tezos:octez-v${OCTEZ_TAG} AS octez
 
-FROM rust:1.86.0-alpine AS builder
-RUN apk --no-cache add musl-dev libcrypto3 openssl-dev clang
+FROM ghcr.io/jstz-dev/jstz/build_cli:7f08c1b AS builder
 ENV OPENSSL_DIR=/usr
 WORKDIR /jstz_build
 COPY . .
