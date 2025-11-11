@@ -33,6 +33,6 @@ serde_json.workspace = true
 jstz_utils = { path = "../../jstz_utils", features = ["test_utils"] }
 
 [features]
-lightweight-kernel = []
+lightweight-kernel = ["tezos-smart-rollup/experimental-host-in-memory-store"]
 
 
