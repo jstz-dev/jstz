@@ -69,8 +69,7 @@ mod test {
             if (transferred_amount !== "{transfer_amount}") {{
                 return Response.error("Invalid transferred amount");
             }}
-            const headers = {{"X-JSTZ-TRANSFER": "{refund_amount}"}};
-            return new Response(null, {{headers}});
+            return Response.withTransfer("transferred!", {refund_amount});
         }};
         export default handler;
         "#
@@ -110,6 +109,8 @@ mod test {
         .await
         .expect("run function expected");
 
+        let body = String::from_utf8(response.body.unwrap()).unwrap();
+        assert_eq!(&body, "transferred!");
         assert!(response.headers.get(X_JSTZ_TRANSFER).is_none());
         assert!(response.headers.get(X_JSTZ_AMOUNT).is_some_and(|amt| amt
             .to_str()
@@ -611,11 +612,7 @@ mod test {
         let code2 = format!(
             r#"
             const handler = async () => {{
-                const myHeaders = new Headers();
-                myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
-                await fetch(new Request("jstz://{smart_function1}/", {{
-                    headers: myHeaders
-                }}));
+                await fetch(Request.withTransfer("jstz://{smart_function1}/", {transfer_amount}));
                 return new Response();
             }};
             export default handler;
@@ -729,11 +726,8 @@ mod test {
         let code = format!(
             r#"
             const handler = async () => {{
-                const myHeaders = new Headers();
-                myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
-                await fetch(new Request("jstz://{source}", {{
-                    headers: myHeaders
-                }}));
+                const request = Request.withTransfer("jstz://{source}", {transfer_amount});
+                await fetch(request);
                 return new Response();
             }};
             export default handler;
@@ -857,7 +851,7 @@ mod test {
             r#"
             const handler = () => {{
                 return new Response(null, {{
-                    headers: {{ "X-JSTZ-TRANSFER": "{refund_amount}" }},
+                    headers: {{ "X-JSTZ-TRANSFER": {refund_amount} }},
                 }});
             }};
             export default handler;
@@ -949,7 +943,7 @@ mod test {
             r#"
             const handler = () => {{
                 return new Response(null, {{
-                    headers: {{ "X-JSTZ-TRANSFER": "{refund_amount}" }},
+                    headers: {{ "X-JSTZ-TRANSFER": {refund_amount} }},
                 }});
             }};
             export default handler;
@@ -1038,7 +1032,7 @@ mod test {
             r#"
             const handler = () => {{
                 return new Response(null, {{
-                    headers: {{ "X-JSTZ-AMOUNT": "{refund_amount}" }},
+                    headers: {{ "X-JSTZ-AMOUNT": {refund_amount} }},
                 }});
             }};
             export default handler;
@@ -1212,7 +1206,7 @@ mod test {
             r#"
             const handler = () => {{
                 return new Response(null, {{
-                    headers: {{ "X-JSTZ-TRANSFER": "{refund_amount}" }},
+                    headers: {{ "X-JSTZ-TRANSFER": {refund_amount} }},
                 }});
             }};
             export default handler;
@@ -1227,9 +1221,7 @@ mod test {
         let refund_code = format!(
             r#"
             const handler = async () => {{
-                return new Response(null, {{
-                    headers: {{ "X-JSTZ-TRANSFER": "{refund_amount}" }},
-                }});
+                return Response.withTransfer(null, {refund_amount});
             }};
             export default handler;
             "#
