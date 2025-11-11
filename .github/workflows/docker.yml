@@ -86,12 +86,20 @@ jobs:
         run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
       - name: Build
         run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_kernel
+      - name: Build lightweight kernel
+        run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_lightweight-kernel
       - name: Upload kernel
         id: upload-kernel
         uses: actions/upload-artifact@v5
         with:
           name: jstz-kernel
           path: result/lib/jstz_kernel.wasm
+      - name: Upload lightweight kernel
+        id: upload-lightweight-kernel
+        uses: actions/upload-artifact@v5
+        with:
+          name: lightweight-kernel-executable
+          path: result/lib/lightweight-kernel-executable
   build-image:
     name: Build image
     needs: [build-kernel, set-input-values]
@@ -111,6 +119,7 @@ jobs:
       image_id: ${{ matrix.image }}
       dockerfile: ${{ matrix.dockerfile }}
       kernel_artifact_name: jstz-kernel
+      lightweight_kernel_artifact_name: lightweight-kernel-executable
       dry_run: ${{ needs.set-input-values.outputs.dry_run == 'true' || needs.set-input-values.outputs.dry_run == true }}
       ref: ${{ needs.set-input-values.outputs.ref }}
     secrets: inherit
