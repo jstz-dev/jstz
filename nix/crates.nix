@@ -81,7 +81,7 @@
       cargoExtraArgs = "-p ${pname} --target ${target}";
     });
 
-  # RISC-V lightweight kernel (native executable)
+  # RISC-V lightweight kernel
   jstz_lightweight_kernel = craneLib.buildPackage (common
     // rec {
       inherit (craneLib.crateNameFromCargoToml {inherit src;}) version;

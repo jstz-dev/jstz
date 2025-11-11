@@ -142,8 +142,7 @@
           llvmPackages = pkgs.llvmPackages_16;
 
           crates = pkgs.callPackage ./nix/crates.nix {
-            inherit crane rust-toolchain octez;
-            riscvV8 = riscvV8;
+            inherit crane rust-toolchain octez riscvV8;
             riscv64MuslCc = riscv64MuslPkgs.pkgsStatic.stdenv.cc;
           };
           js-packages = pkgs.callPackage ./nix/js-packages.nix {};
