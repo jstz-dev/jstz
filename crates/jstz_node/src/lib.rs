@@ -159,16 +159,6 @@ pub async fn run(
     // TODO: make checkpoint path configurable
     // https://linear.app/tezos/issue/JSTZ-912/make-inbox-checkpoint-file-configurable
     let _checkpoint = NamedTempFile::new()?;
-    let _monitor: Option<Monitor> = match mode {
-        #[cfg(not(test))]
-        RunMode::Sequencer { .. } => {
-            let path = _checkpoint.path().to_path_buf();
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone(), path).await?)
-        }
-        #[cfg(test)]
-        RunMode::Sequencer { .. } => None,
-        RunMode::Default => None,
-    };
 
     // LogsService expects the log file to exist at instantiation, so this needs to be called after
     // debug log file is created.
@@ -260,6 +250,7 @@ fn temp_db() -> Result<(sequencer::db::Db, NamedTempFile)> {
     let db_path = db_file.path().to_str().ok_or(anyhow::anyhow!(
         "failed to convert temp db file path to str"
     ))?;
+    println!("db_path: {db_path}");
     Ok((sequencer::db::Db::init(Some(db_path))?, db_file))
 }
 

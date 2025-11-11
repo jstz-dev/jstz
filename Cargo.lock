@@ -4047,7 +4047,7 @@ dependencies = [
 [[package]]
 name = "octez-riscv"
 version = "0.0.0"
-source = "git+https://github.com/huancheng-trili/riscv-pvm?rev=724948df6792dfbc1268c71109c5ec6c2946321a#724948df6792dfbc1268c71109c5ec6c2946321a"
+source = "git+https://github.com/huancheng-trili/riscv-pvm?rev=0a86887545320dba438e4e329583d068cef3555e#0a86887545320dba438e4e329583d068cef3555e"
 dependencies = [
  "arbitrary-int",
  "bincode 2.0.1",
@@ -4089,7 +4089,7 @@ dependencies = [
 [[package]]
 name = "octez-riscv-data"
 version = "0.0.0"
-source = "git+https://github.com/huancheng-trili/riscv-pvm?rev=724948df6792dfbc1268c71109c5ec6c2946321a#724948df6792dfbc1268c71109c5ec6c2946321a"
+source = "git+https://github.com/huancheng-trili/riscv-pvm?rev=0a86887545320dba438e4e329583d068cef3555e#0a86887545320dba438e4e329583d068cef3555e"
 dependencies = [
  "bincode 2.0.1",
  "blake3",

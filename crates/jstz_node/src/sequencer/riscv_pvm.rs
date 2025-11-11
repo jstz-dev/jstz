@@ -9,7 +9,7 @@ use octez_riscv::{
 use tezos_crypto_rs::hash::SmartRollupHash;
 
 use std::{
-    io::{stdout, Write},
+    io::{stdout, Read, Write},
     ops::Bound,
     path::{Path, PathBuf},
     sync::{atomic::AtomicU64, Arc},
@@ -47,6 +47,15 @@ impl JstzRiscvPvm {
         debug_log_path: Option<PathBuf>,
     ) -> anyhow::Result<Self> {
         let mut pvm = Pvm::new(Default::default());
+
+        if let Ok(mut f) = std::fs::File::open("/tmp/pvm.state") {
+            let mut data = vec![];
+            f.read_to_end(&mut data).unwrap();
+            let space = octez_riscv::storage::binary::deserialise(&data).unwrap();
+
+            pvm = Pvm::bind(space, Default::default());
+            println!("loaded state");
+        }
 
         let program = std::fs::read(kernel_path)?;
         let program = Program::<MemoryConfig>::from_elf(&program)?;
@@ -187,6 +196,21 @@ impl JstzRiscvPvm {
                 }
             }
         }
+    }
+
+    pub fn dump(&self) {
+        let refs = self
+            .pvm
+            .struct_ref::<octez_riscv::state_backend::FnManagerIdent>();
+        let data = octez_riscv::storage::binary::serialise(&refs).unwrap();
+        std::fs::OpenOptions::new()
+            .truncate(true)
+            .write(true)
+            .create(true)
+            .open("/tmp/pvm.state")
+            .unwrap()
+            .write_all(&data)
+            .unwrap();
     }
 }
 

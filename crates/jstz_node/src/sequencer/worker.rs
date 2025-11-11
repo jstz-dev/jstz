@@ -308,6 +308,7 @@ fn spawn_riscv_worker(
                                     message,
                                     std::ops::Bound::Unbounded,
                                 );
+                                pvm.dump();
                             }
                             Err(e) => {
                                 warn!("{e:?}");
