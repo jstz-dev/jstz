@@ -1,9 +1,9 @@
 use jstz_proto::operation::internal::InboxId;
+use octez_riscv::machine_state::page_cache::Interpreted;
+use octez_riscv::state_backend::owned_backend::Owned;
 use octez_riscv::{
-    machine_state::block_cache::{block, DefaultCacheConfig},
     program::Program,
     pvm::{hooks::PvmHooks, Pvm, PvmStatus},
-    state_backend::owned_backend::Owned,
     stepper::{pvm::reveals::RevealRequestResponseMap, StepperStatus},
 };
 use tezos_crypto_rs::hash::SmartRollupHash;
@@ -18,10 +18,9 @@ use std::{
 use crate::sequencer::worker::write_heartbeat;
 
 type MemoryConfig = octez_riscv::machine_state::memory::M32G;
-type BlockImplInner = block::Jitted<block::OutlineCompiler<MemoryConfig>, MemoryConfig>;
 
 pub struct JstzRiscvPvm {
-    pvm: Pvm<MemoryConfig, DefaultCacheConfig, BlockImplInner, Owned>,
+    pvm: Pvm<MemoryConfig, Interpreted<MemoryConfig, Owned>, Owned>,
     hooks: DebugLogHook,
     reveal_request_response_map: RevealRequestResponseMap,
     heartbeat: Arc<AtomicU64>,
