@@ -33,6 +33,10 @@ inputs:
   kernel_artefact_name:
     description: Kernel artefact name
     required: true
+  lightweight_kernel_artefact_name:
+    description: Lightweight kernel artefact name
+    required: false
+    default: "lightweight-kernel-executable"
   dry_run:
     description: Dry-run image build without pushing to the registry
     required: false
@@ -74,6 +78,11 @@ runs:
       uses: actions/download-artifact@v4
       with:
         name: ${{ inputs.kernel_artefact_name }}
+        path: jstz_kernel
+    - name: Download lightweight kernel artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: ${{ inputs.lightweight_kernel_artefact_name }}
         path: jstz_kernel
     - name: Extract metadata
       id: meta
