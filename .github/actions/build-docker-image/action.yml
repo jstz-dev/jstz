@@ -84,6 +84,7 @@ runs:
         build-args: |
           OCTEZ_TAG=${{ inputs.octez-tag }}
           KERNEL_PATH=./jstz_kernel/jstz_kernel.wasm
+          LIGHTWEIGHT_KERNEL_PATH=./jstz_kernel/lightweight-kernel-executable
         cache-from: type=gha
         cache-to: type=gha,mode=max
         labels: ${{ steps.meta.outputs.labels }}
