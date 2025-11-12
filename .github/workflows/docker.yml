@@ -110,7 +110,7 @@ jobs:
             dockerfile: ./crates/jstzd/Dockerfile
           - image: jstz-node
             dockerfile: ./crates/jstz_node/Dockerfile
-    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
+    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@alan/just-lw-kernel
     with:
       octez-tag: ${{ needs.set-input-values.outputs.octez-tag }}
       docker_registry: ghcr.io
