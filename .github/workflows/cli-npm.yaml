@@ -72,21 +72,19 @@ jobs:
     name: Build CLI for Linux AMD64
     runs-on: ubuntu-24.04
     needs: [set-input-values]
-    # Need to build in an alpine container to ship statically compiled binaries
-    # Target: x86_64-unknown-linux-musl
     container:
-      image: ghcr.io/jstz-dev/jstz/build_cli:7f08c1b
+      image: ghcr.io/jstz-dev/jstz/build:7f08c1b
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.set-input-values.outputs.ref }}
       - name: Build
         shell: sh
-        run: make build-cli
+        run: RUSTFLAGS='-C target-feature=+crt-static' cargo build --bin jstz --target x86_64-unknown-linux-gnu --release
       - uses: actions/upload-artifact@v5
         with:
           name: jstz_linux_x64
-          path: target/release/jstz
+          path: target/x86_64-unknown-linux-gnu/release/jstz
   test-linux-amd64:
     name: Test basic CLI usability for Linux AMD64
     runs-on: ubuntu-24.04
@@ -96,36 +94,22 @@ jobs:
         with:
           artefact_name: jstz_linux_x64
   linux-arm64:
-    # Need to build in an alpine container to ship statically compiled binaries.
-    # Target: aarch64-unknown-linux-musl
     name: Build CLI for Linux Arm64
     runs-on: ubuntu-24.04-arm
     needs: [set-input-values]
     container:
-      image: ghcr.io/jstz-dev/jstz/build_cli:7f08c1b
-      volumes:
-        - /opt:/opt:rw,rshared
-        - /opt:/__e/node20:ro,rshared
+      image: ghcr.io/jstz-dev/jstz/build:7f08c1b
     steps:
-      # Hack for github actions to work in arm64 alpine linux
-      # https://github.com/actions/runner/issues/801#issuecomment-2976165281
-      - name: Patch native Alpine NodeJS into Runner environment
-        shell: sh
-        run: |
-          sed -i "/^ID=/s/alpine/NotpineForGHA/" /etc/os-release
-          apk add nodejs --update-cache
-          mkdir /opt/bin
-          ln -s /usr/bin/node /opt/bin/node
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.set-input-values.outputs.ref }}
       - name: Build
         shell: sh
-        run: make build-cli
+        run: RUSTFLAGS='-C target-feature=+crt-static' cargo build --bin jstz --target aarch64-unknown-linux-gnu --release
       - uses: actions/upload-artifact@v5
         with:
           name: jstz_linux_arm64
-          path: target/release/jstz
+          path: target/aarch64-unknown-linux-gnu/release/jstz
   test-linux-arm64:
     name: Test basic CLI usability for Linux Arm64
     runs-on: ubuntu-24.04-arm
