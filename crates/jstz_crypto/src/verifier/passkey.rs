@@ -1,6 +1,10 @@
 //! This module implements the verifier for verifying signatures
 //! signed by a passkey device that adheres to [Web Authentication API spec](
 //! https://w3c.github.io/webauthn/#iface-authenticatorattestationresponse).
+use crate::error::Result;
+use crate::public_key;
+use crate::signature;
+use base64::prelude::BASE64_URL_SAFE_NO_PAD;
 use bincode::{Decode, Encode};
 use cryptoxide::hashing::sha2::Sha256;
 use p256::ecdsa::Signature;
@@ -10,10 +14,6 @@ use serde_with::formats::Unpadded;
 use serde_with::serde_as;
 use tezos_crypto_rs::hash::P256Signature;
 use thiserror::Error;
-
-use crate::error::Result;
-use crate::public_key;
-use crate::signature;
 
 use base64::Engine;
 use utoipa::ToSchema;
@@ -64,12 +64,14 @@ use PasskeyError::*;
 #[serde(rename_all = "camelCase")]
 pub struct AuthenticatorAssertionResponseRaw {
     #[serde_as(as = "Base64<UrlSafe, Unpadded>")]
+    #[schema(value_type = String)]
     authenticator_data: Vec<u8>,
-    /// ClientDataJSON contains metadata about the client and the cryptographic
-    /// challenge in JSON encoding. For the purposes of Jstz, the challenge
-    /// is the operation hash.
+    /// clientDataJSON contains metadata about the client and the cryptographic
+    /// challenge in encoded in JSON. For the purposes of Jstz, the challenge
+    /// is the operation hash. This field is base64url encoded
     #[serde_as(as = "Base64<UrlSafe, Unpadded>")]
     #[serde(rename = "clientDataJSON")]
+    #[schema(value_type = String)]
     client_data_json: Vec<u8>,
 }
 
@@ -126,7 +128,7 @@ pub fn verify_passkey(
 
     let challenge = authn_assertion_resp.challenge_base64url()?;
     let raw_challenge = hex::decode(
-        base64::prelude::BASE64_URL_SAFE_NO_PAD
+        BASE64_URL_SAFE_NO_PAD
             .decode(challenge)
             .map_err(Base64DecodeError)?,
     )
@@ -150,7 +152,7 @@ pub fn verify_passkey(
 /// Parses the base64Url + DER encoded signature returned from
 /// the passkey signer
 pub fn parse_passkey_signature(signature: &str) -> Result<signature::P256> {
-    let raw_der_formatted = base64::prelude::BASE64_URL_SAFE_NO_PAD
+    let raw_der_formatted = BASE64_URL_SAFE_NO_PAD
         .decode(signature)
         .map_err(Base64DecodeError)?;
     let signature = p256::ecdsa::Signature::from_der(&raw_der_formatted)

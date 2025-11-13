@@ -552,6 +552,23 @@
         ],
         "description": "Tezos Address"
       },
+      "AuthenticatorAssertionResponseRaw": {
+        "type": "object",
+        "description": "A narrowed view of the raw AuthenticatorAssertionResponse returned by\nthe passkey device. Only the fields necessary for verification are kept.",
+        "required": [
+          "authenticatorData",
+          "clientDataJSON"
+        ],
+        "properties": {
+          "authenticatorData": {
+            "type": "string"
+          },
+          "clientDataJSON": {
+            "type": "string",
+            "description": "clientDataJSON contains metadata about the client and the cryptographic\nchallenge in encoded in JSON. For the purposes of Jstz, the challenge\nis the operation hash. This field is base64url encoded"
+          }
+        }
+      },
       "Blake2b": {
         "type": "array",
         "items": {
@@ -1262,6 +1279,16 @@
           },
           "signature": {
             "$ref": "#/components/schemas/Signature"
+          },
+          "verifier": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Verifier"
+              }
+            ]
           }
         }
       },
@@ -1332,6 +1359,21 @@
             "$ref": "#/components/schemas/Nonce"
           }
         }
+      },
+      "Verifier": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "Passkey"
+            ],
+            "properties": {
+              "Passkey": {
+                "$ref": "#/components/schemas/AuthenticatorAssertionResponseRaw"
+              }
+            }
+          }
+        ]
       },
       "u64": {
         "type": "integer",
