@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use crate::verifier::Verifier;
 use crate::{impl_bincode_for_hash, public_key::PublicKey, Error, Result};
 use bincode::{Decode, Encode};
 use derive_more::{Deref, From};
@@ -16,19 +17,19 @@ use utoipa::ToSchema;
 #[serde(untagged)]
 pub enum Signature {
     #[schema(
-        title = "Ed25519 signature", 
+        title = "Ed25519 signature",
         value_type = String,
         example = json!("edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB")
     )]
     Ed25519(Ed25519),
     #[schema(
-        title = "Secp256k1 signature", 
+        title = "Secp256k1 signature",
         value_type = String,
         example = json!("spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H")
     )]
     Secp256k1(Secp256k1),
     #[schema(
-        title = "P256 signature", 
+        title = "P256 signature",
         value_type = String,
         example = json!("p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH")
     )]
@@ -85,6 +86,17 @@ impl Signature {
             }
             _ => Err(Error::InvalidSignature),
         }
+    }
+
+    /// Verify the signature with a custom Verifier. This flow provides
+    /// flexibility for non-Tezos verification protocols
+    pub fn verify_with_verifier(
+        &self,
+        public_key: &PublicKey,
+        message: &[u8],
+        verifier: &Verifier,
+    ) -> Result<()> {
+        verifier.verify(message, public_key, self)
     }
 }
 
