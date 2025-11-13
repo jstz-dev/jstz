@@ -8,6 +8,10 @@ on:
   # For manually rebuilding the images
   workflow_dispatch:
     inputs:
+      ref:
+        description: The branch, tag, or SHA from which images will be built
+        required: true
+        type: string
       octez-tag:
         description: "tezos/tezos docker tag to be used"
         required: true
@@ -20,6 +24,10 @@ on:
 
   workflow_call:
     inputs:
+      ref:
+        description: The branch, tag, or SHA from which images will be built
+        required: true
+        type: string
       octez-tag:
         description: "tezos/tezos docker tag to be used"
         required: true
@@ -47,6 +55,7 @@ jobs:
     outputs:
       octez-tag: ${{ steps.run.outputs.OCTEZ_TAG }}
       dry_run: ${{ steps.run.outputs.DRY_RUN }}
+      ref: ${{ steps.run.outputs.REF }}
     steps:
       - id: run
         run: |
@@ -58,11 +67,18 @@ jobs:
           # Default to false because workflows triggered by tags are not going to dry-run
           dry_run=${dry_run:-"false"}
           echo "DRY_RUN=${dry_run}" >> ${GITHUB_OUTPUT}
+
+          ref=${{ inputs.ref }}
+          push_ref=${{ github.ref_name }}
+          ref=${ref:-"${push_ref}"}
+          echo "REF=${ref}" >> ${GITHUB_OUTPUT}
   build-kernel:
     name: Build (Kernel)
     runs-on: [x86_64, linux, nix]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.set-input-values.outputs.ref }}
       - run: nix --version
       - name: Format
         run: nix --accept-flake-config fmt -- --fail-on-change
@@ -97,4 +113,5 @@ jobs:
       dockerfile: ${{ matrix.dockerfile }}
       kernel_artifact_name: jstz-kernel
       dry_run: ${{ needs.set-input-values.outputs.dry_run == 'true' || needs.set-input-values.outputs.dry_run == true }}
+      ref: ${{ needs.set-input-values.outputs.ref }}
     secrets: inherit
