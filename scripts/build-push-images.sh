@@ -162,7 +162,22 @@ generate_kernel_artifacts() {
   mkdir -p "${BUILD_SCRIPT_DIR}/resources/bootstrap_account"
   cp "${KERNEL_PATH}" "${BUILD_SCRIPT_DIR}/resources/jstz_rollup/jstz_kernel.wasm"
   cp "${PROJECT_ROOT}/crates/jstzd/resources/jstz_rollup/parameters_ty.json" "${BUILD_SCRIPT_DIR}/resources/jstz_rollup/"
-  cp "${PROJECT_ROOT}/crates/jstzd/resources/bootstrap_account/accounts.json" "${BUILD_SCRIPT_DIR}/resources/bootstrap_account/" 2>/dev/null || true
+
+  # Fetch bootstrap accounts from GCP Secret Manager instead of using local file
+  # This ensures we use the same accounts that testnet uses
+  echo "Fetching bootstrap accounts from GCP Secret Manager..."
+  if ! gcloud secrets versions access latest --secret="riscvnet-bootstrap-accounts" \
+    --project="${GCP_PROJECT}" \
+    >"${BUILD_SCRIPT_DIR}/resources/bootstrap_account/accounts.json" 2>/dev/null; then
+    echo "Warning: Failed to fetch accounts from GCP Secret Manager, falling back to local file"
+    cp "${PROJECT_ROOT}/crates/jstzd/resources/bootstrap_account/accounts.json" \
+      "${BUILD_SCRIPT_DIR}/resources/bootstrap_account/" 2>/dev/null || {
+      echo "Error: No accounts.json found locally and GCP fetch failed"
+      return 1
+    }
+  else
+    echo "Successfully fetched accounts from GCP Secret Manager"
+  fi
 
   # Copy Cargo.lock to ensure exact dependency versions match the workspace
   cp "${PROJECT_ROOT}/Cargo.lock" "${BUILD_SCRIPT_DIR}/Cargo.lock"
