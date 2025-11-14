@@ -10,6 +10,7 @@ This guide will instruct you in writing, deploying, and using your first Jstz _s
 ## Prerequisites
 
 - Install Node.JS version 22 or later, `npm`, and Docker.
+- Install [`pnpm`](https://pnpm.io/) version v10 or later.
 - Install Jstz as described in [Installation](installation.md).
 
   To verify your installation, run this command to check the version of Jstz:
