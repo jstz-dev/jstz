@@ -9,6 +9,9 @@ inputs:
   repo_token:
     description: API token that gives access to manage the target repo
     required: true
+  ref:
+    description: The branch, tag, or SHA from which CLI will be built
+    required: true
 outputs:
   artefact_name:
     description: Name of the uploaded artefact
@@ -17,6 +20,8 @@ runs:
   using: "composite"
   steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref }}
     - run: nix --version
       shell: bash
     - name: Format
