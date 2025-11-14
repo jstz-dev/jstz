@@ -15,9 +15,9 @@ const BIN_DIR = path.join(__dirname, "bin");
 const DEST_PATH = path.join(BIN_DIR, BINARY_NAME);
 
 const PLATFORM_TO_BINARY_NAME = new Map([
-  ["darwin_arm64", "jstz_darwin_arm64"],
-  ["linux_x64", "jstz_linux_x64"],
-  ["linux_arm64", "jstz_linux_arm64"],
+  ["darwin_arm64", "cli_darwin_arm64"],
+  ["linux_x64", "cli_linux_x64"],
+  ["linux_arm64", "cli_linux_arm64"],
 ]);
 
 const PLATFORM_TO_PACKAGE = new Map([
