@@ -40,7 +40,7 @@ jobs:
           OUTPUT_PATH=./output.json cargo test --test api_coverage
       - uses: actions/upload-artifact@v5
         with:
-          name: report
+          name: api_coverage_report
           path: crates/jstz_runtime/output.json
           retention-days: 1
 
@@ -63,7 +63,7 @@ jobs:
       - name: Download report
         uses: actions/download-artifact@v6
         with:
-          name: report
+          name: api_coverage_report
           path: report
       - uses: actions/checkout@v4
         with:
