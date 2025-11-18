@@ -49,6 +49,18 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: Build
         uses: jstz-dev/jstz/.github/actions/build-docker-image@main
         with:
@@ -57,8 +69,6 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           octez-tag: ${{ inputs.octez-tag }}
           docker_registry: ${{ inputs.docker_registry }}
-          docker_registry_username: ${{ github.actor }}
-          docker_registry_password: ${{ secrets.GITHUB_TOKEN }}
           docker_image_base: ${{ inputs.docker_image_base }}
           image: ${{ inputs.image }}
           dockerfile: ${{ inputs.dockerfile }}
@@ -72,6 +82,18 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: Build
         uses: jstz-dev/jstz/.github/actions/build-docker-image@main
         with:
@@ -80,8 +102,6 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           octez-tag: ${{ inputs.octez-tag }}
           docker_registry: ${{ inputs.docker_registry }}
-          docker_registry_username: ${{ github.actor }}
-          docker_registry_password: ${{ secrets.GITHUB_TOKEN }}
           docker_image_base: ${{ inputs.docker_image_base }}
           image: ${{ inputs.image }}
           dockerfile: ${{ inputs.dockerfile }}
@@ -117,6 +137,12 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKER_HUB_USER }}
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
       - name: Extract metadata
