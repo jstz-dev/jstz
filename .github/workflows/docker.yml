@@ -100,8 +100,6 @@ jobs:
         include:
           - image: jstzd
             dockerfile: ./crates/jstzd/Dockerfile
-          - image: jstz-cli
-            dockerfile: ./crates/jstz_cli/Dockerfile
           - image: jstz-node
             dockerfile: ./crates/jstz_node/Dockerfile
     uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
