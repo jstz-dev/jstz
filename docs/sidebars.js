@@ -47,7 +47,6 @@ const sidebars = {
         "api/index",
         "api/console",
         "api/kv",
-        "api/smart_function",
         "api/ledger",
         "api/headers",
         "api/request",
