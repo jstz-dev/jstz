@@ -24,7 +24,7 @@ members = [
 
 [workspace.package]
 edition = "2021"
-version = "0.1.1-alpha.4"
+version = "0.1.1-alpha.5"
 authors = ["TriliTech <contact@trili.tech>"]
 repository = "https://github.com/jstz-dev/jstz"
 homepage = "https://github.com/jstz-dev/jstz"
