@@ -7,16 +7,12 @@ on:
         description: "tezos/tezos docker tag to be used"
         required: true
         type: string
-      docker_registry:
-        description: Docker registry
+      image_names:
+        description: List of image base names for tags, e.g. ghcr.io/jstz-dev/jstz/jstzd, docker.io/jstzdev/jstzd. More than one name can be accepted. This input value should be a newline-delimited string
         required: true
         type: string
-      docker_image_base:
-        description: Docker image base
-        required: true
-        type: string
-      image:
-        description: Image
+      image_id:
+        description: Local identifier for an image build. This is not reflected in the actual built images
         required: true
         type: string
       dockerfile:
@@ -66,11 +62,9 @@ jobs:
         with:
           platform: linux
           arch: arm64
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
           octez-tag: ${{ inputs.octez-tag }}
-          docker_registry: ${{ inputs.docker_registry }}
-          docker_image_base: ${{ inputs.docker_image_base }}
-          image: ${{ inputs.image }}
+          image_names: ${{ inputs.image_names }}
+          image_id: ${{ inputs.image_id }}
           dockerfile: ${{ inputs.dockerfile }}
           kernel_artefact_name: ${{ inputs.kernel_artifact_name }}
           dry_run: ${{ inputs.dry_run }}
@@ -99,11 +93,9 @@ jobs:
         with:
           platform: linux
           arch: amd64
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
           octez-tag: ${{ inputs.octez-tag }}
-          docker_registry: ${{ inputs.docker_registry }}
-          docker_image_base: ${{ inputs.docker_image_base }}
-          image: ${{ inputs.image }}
+          image_names: ${{ inputs.image_names }}
+          image_id: ${{ inputs.image_id }}
           dockerfile: ${{ inputs.dockerfile }}
           kernel_artefact_name: ${{ inputs.kernel_artifact_name }}
           dry_run: ${{ inputs.dry_run }}
@@ -128,8 +120,8 @@ jobs:
       - name: Download digests
         uses: actions/download-artifact@v6
         with:
-          path: ${{ runner.temp }}/digests/${{ inputs.image }}
-          pattern: digests-${{ inputs.image }}-*
+          path: ${{ runner.temp }}/digests/${{ inputs.image_id }}
+          pattern: digests-${{ inputs.image_id }}-*
           merge-multiple: true
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -149,7 +141,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v3
         with:
-          images: ${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}
+          images: ${{ inputs.image_names }}
           tags: |
             type=ref,event=tag
             type=raw,value=${{ inputs.ref }}
@@ -162,12 +154,24 @@ jobs:
             org.opencontainers.image.version=${{ steps.extract_sha.outputs.sha }}
       - name: Create manifest list and push
         if: ${{ !inputs.dry_run }}
-        working-directory: ${{ runner.temp }}/digests/${{ inputs.image }}
+        working-directory: ${{ runner.temp }}/digests/${{ inputs.image_id }}
+        shell: bash
         run: |
-          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}') \
-            $(printf '${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}@sha256:%s ' *)
+          source=""
+          while read -r name; do
+            if [ -n "$name" ]; then source+=$(printf "$name@sha256:%s " *); fi
+          done < <(echo '${{ inputs.image_names }}')
+
+          tags=$(jq -cr '.tags | map("-t " + .) | join(" ")' <<< '${{ steps.meta.outputs.json }}')
+
+          docker buildx imagetools create $tags $source
       - name: Inspect image
         if: ${{ !inputs.dry_run }}
         id: inspect-image
+        shell: bash
         run: |
-          docker buildx imagetools inspect "${{ fromJson(steps.meta.outputs.json).tags[0] }}"
+          for tag in ${{ join(fromJSON(steps.meta.outputs.json).tags, ' ') }}; do
+            echo "Checking image '$tag'"
+            docker buildx imagetools inspect "$tag"
+            echo ""
+          done
