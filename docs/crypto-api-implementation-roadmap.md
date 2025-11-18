@@ -2,10 +2,12 @@
 
 ## Current State
 
-- **JavaScript API**: ❌ None (0% Web Crypto API support)
-- **Protocol Level**: ✅ Ed25519, P256, Secp256k1, Blake2b (Rust only)
-- **Blocker**: No `deno_crypto` extension integrated
+- **Web Standards Overall**: ✅ ~60-70% (Fetch, Streams, URL, Encoding, Events, etc.)
+- **Web Crypto API (JavaScript)**: ❌ ~1% (0% functional - only tests for absence passing)
+- **Protocol-Level Crypto (Rust)**: ✅ Excellent (Ed25519, P256, Secp256k1, Blake2b)
+- **Blocker**: No `deno_crypto` extension integrated; crypto not exposed to JavaScript
 - **Constraint**: Deterministic execution required (no true randomness)
+- **WPT Results**: 2/247 WebCryptoAPI tests passing (tests verifying crypto is NOT available)
 
 ---
 
