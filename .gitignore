@@ -44,6 +44,7 @@ node_modules/
 
 # Required by jstzd
 crates/jstzd/resources/jstz_rollup/jstz_kernel.wasm
+crates/jstzd/resources/jstz_rollup/lightweight-kernel-executable
 
 # Heaptrack raw data
 *.zst
