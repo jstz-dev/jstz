@@ -56,6 +56,13 @@ tezos_crypto_rs.workspace = true
 tokio.workspace = true
 url.workspace = true
 
+# Required for testing framework
+deno_core = { workspace = true, optional = true }
+deno_terminal = { workspace = true, optional = true }
+indexmap = { workspace = true, optional = true }
+jstz_runtime = { path = "../jstz_runtime", optional = true }
+jstz_node = { path = "../jstz_node", optional = true }
+
 [dev-dependencies]
 assert_cmd.workspace = true
 jstzd = { path = "../jstzd" }
@@ -65,7 +72,16 @@ rexpect.workspace = true
 
 [features]
 skip-rollup-tests = []
-v2_runtime = ["jstz_proto/v2_runtime"]
+v2_runtime = [
+  "jstz_proto/v2_runtime",
+  "jstzd/v2_runtime",
+  "jstz_node/v2_runtime",
+  "dep:jstz_node",
+  "dep:jstz_runtime",
+  "dep:deno_terminal",
+  "dep:indexmap",
+  "dep:deno_core"
+]
 
 [[bin]]
 name = "jstz"

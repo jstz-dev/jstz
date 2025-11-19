@@ -18,6 +18,8 @@ mod repl;
 mod run;
 mod sandbox;
 pub mod term;
+#[cfg(feature = "v2_runtime")]
+mod test;
 mod utils;
 
 use config::{Config, NetworkName};
@@ -155,6 +157,10 @@ pub enum Command {
         #[arg(long, short)]
         shell: Shell,
     },
+
+    /// 🧪 Run tests using Jstz's built-in test runner
+    #[cfg(feature = "v2_runtime")]
+    Test(test::TestArgs),
 }
 
 pub async fn exec(command: Command) -> Result<()> {
@@ -212,5 +218,7 @@ pub async fn exec(command: Command) -> Result<()> {
         Command::WhoAmI {} => account::whoami().await,
         Command::Kv(kv_command) => kv::exec(kv_command).await,
         Command::Network(command) => network::exec(command).await,
+        #[cfg(feature = "v2_runtime")]
+        Command::Test(test_args) => test::exec(test_args).await,
     }
 }
