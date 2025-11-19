@@ -90,7 +90,7 @@ mod test {
             }
             let id = runtime.execute_main_module(&s).await.unwrap();
             let error = runtime.call_default_handler(id, &[]).await.unwrap_err();
-            assert_eq!(error.to_string(), "NotSupported: 'setTimeout()' is not supported\n    at ext:jstz_main/98_global_scope.js:198:11\n    at handler (file://jstz/accounts/root:1:21)");
+            assert_eq!(error.to_string(), "NotSupported: 'setTimeout()' is not supported\n    at ext:jstz_main/98_global_scope.js:209:11\n    at handler (file://jstz/accounts/root:1:21)");
         });
     }
 
@@ -108,7 +108,7 @@ mod test {
         let error = runtime.call_default_handler(id, &[]).await.unwrap_err();
         // FIXME: Do not show line number stacktrace to users
         // https://linear.app/tezos/issue/JSTZ-665
-        assert_eq!(error.to_string(), "NotSupported: 'setInterval()' is not supported\n    at ext:jstz_main/98_global_scope.js:194:11\n    at handler (file://jstz/accounts/root:1:21)");
+        assert_eq!(error.to_string(), "NotSupported: 'setInterval()' is not supported\n    at ext:jstz_main/98_global_scope.js:205:11\n    at handler (file://jstz/accounts/root:1:21)");
       });
     }
 
@@ -124,7 +124,7 @@ mod test {
             }
             let id = runtime.execute_main_module(&s).await.unwrap();
             let error = runtime.call_default_handler(id, &[]).await.unwrap_err();
-            assert_eq!(error.to_string(), "NotSupported: 'clearTimeout()' is not supported\n    at ext:jstz_main/98_global_scope.js:185:11\n    at handler (file://jstz/accounts/root:1:21)");
+            assert_eq!(error.to_string(), "NotSupported: 'clearTimeout()' is not supported\n    at ext:jstz_main/98_global_scope.js:196:11\n    at handler (file://jstz/accounts/root:1:21)");
         });
     }
 
@@ -140,7 +140,25 @@ mod test {
             }
             let id = runtime.execute_main_module(&s).await.unwrap();
             let error = runtime.call_default_handler(id, &[]).await.unwrap_err();
-            assert_eq!(error.to_string(), "NotSupported: 'clearInterval()' is not supported\n    at ext:jstz_main/98_global_scope.js:181:11\n    at handler (file://jstz/accounts/root:1:21)");
+            assert_eq!(error.to_string(), "NotSupported: 'clearInterval()' is not supported\n    at ext:jstz_main/98_global_scope.js:192:11\n    at handler (file://jstz/accounts/root:1:21)");
+        });
+    }
+
+    #[test]
+    pub fn runtime_error_is_supported() {
+        TOKIO_MULTI_THREAD.block_on(async {
+            let code = r#"let handler = () => {throw new RuntimeError("boom")};
+                    export default handler;"#;
+            init_test_setup! {
+                  runtime = runtime;
+                  specifier = (s, code);
+            }
+            let id = runtime.execute_main_module(&s).await.unwrap();
+            let error = runtime.call_default_handler(id, &[]).await.unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                "RuntimeError: boom\n    at handler (file://jstz/accounts/root:1:28)"
+            );
         });
     }
 }

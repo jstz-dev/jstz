@@ -154,17 +154,13 @@ nav.navbar {
   transition: color 0.3s;
 }
 
-/* Fixes because the carets aren't showing up for some reason */
-.menu__list > .theme-doc-sidebar-item-category {
-  padding-bottom: 25px;
-}
+/* Adjust styling of sidebar to bold headings */
 .menu__list
   > .theme-doc-sidebar-item-category
   .menu__list-item-collapsible
   .menu__link {
   font-weight: bold;
 }
-/* End fixes */
 
 .menu__link:hover,
 .menu__link:focus {
@@ -239,4 +235,13 @@ ol li ol li ol {
 article a[target="_blank"]:after {
   content: url("/img/external_link.svg");
   padding-left: 5px;
+}
+
+/* Override color for <VARIABLES> in bash codeblocks */
+/* See src/theme/languages/prism-bash.js */
+.language-bash .token.variable,
+.language-sh .token.variable,
+.language-shell .token.variable {
+  color: var(--ifm-color-primary) !important;
+  font-style: inherit !important;
 }

@@ -28,6 +28,17 @@ pub struct Response {
     pub body: Body,
 }
 
+impl Response {
+    pub fn ok(body: Body, headers: Vec<(ByteString, ByteString)>) -> Response {
+        Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers,
+            body,
+        }
+    }
+}
+
 impl PartialEq for Response {
     fn eq(&self, other: &Self) -> bool {
         self.status == other.status
@@ -378,6 +389,7 @@ mod test {
     use std::str::FromStr as _;
 
     use bytes::Bytes;
+    use deno_core::ByteString;
     use deno_fetch_base::BytesStream;
     use futures::StreamExt;
     use http::{HeaderMap, HeaderName, HeaderValue};
@@ -624,5 +636,19 @@ mod test {
             decode_from_slice(&wire, standard()).unwrap();
 
         assert_eq!(roundtrip, Body::Vector(payload));
+    }
+
+    #[test]
+    fn response_ok() {
+        let header = (ByteString::from("key1"), ByteString::from("value1"));
+        let body = Body::Vector(b"12345".into()).clone();
+        let resp = Response::ok(body.clone(), vec![header.clone()]);
+        let expected = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: vec![header],
+            body,
+        };
+        assert_eq!(expected, resp)
     }
 }

@@ -52,7 +52,7 @@ async fn execute_operation_inner(
                 &reveal.root_hash,
             )?;
             signed_op.verify()?;
-            signed_op.verify_nonce(hrt, tx)?;
+            signed_op.verify_and_increment_nonce(hrt)?;
             let revealed_op: Operation = signed_op.into();
             if reveal.reveal_type == revealed_op.content().try_into()? {
                 return execute_operation_inner(
@@ -116,7 +116,7 @@ pub async fn execute_operation(
 ) -> Receipt {
     let validity = signed_operation
         .verify()
-        .and_then(|_| signed_operation.verify_nonce(hrt, tx));
+        .and_then(|_| signed_operation.verify_and_increment_nonce(hrt));
     let op = signed_operation.into();
     let op_hash = resolve_operation_hash(&op);
     let result = match validity {
@@ -143,7 +143,7 @@ fn resolve_operation_hash(op: &Operation) -> Blake2b {
 #[cfg(test)]
 mod tests {
     use http::{HeaderMap, Method, Uri};
-    use jstz_core::{reveal_data::PreimageHash, BinEncodable};
+    use jstz_core::{kv::transaction::Guarded, reveal_data::PreimageHash, BinEncodable};
     use jstz_crypto::{
         hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
         secret_key::SecretKey,
@@ -152,6 +152,7 @@ mod tests {
     use jstz_utils::{test_util::alice_keys, KeyPair};
     use operation::RevealType;
     use tezos_crypto_rs::hash::HashTrait;
+    use tezos_smart_rollup::storage::path::OwnedPath;
     use tezos_smart_rollup_mock::MockHost;
 
     use super::*;
@@ -161,9 +162,9 @@ mod tests {
         context::account::Nonce,
         operation::{Content, DeployFunction, RevealLargePayload, RunFunction},
         receipt::{ReceiptContent, ReceiptResult},
+        HttpBody,
     };
 
-    use crate::runtime::ParsedCode;
     #[cfg(feature = "v2_runtime")]
     mod response_test_utils {
         use super::*;
@@ -255,7 +256,7 @@ mod tests {
     }
 
     fn run_function_content() -> Content {
-        let body = vec![0];
+        let body = HttpBody::from_bytes(vec![0]);
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
                 "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
@@ -263,7 +264,7 @@ mod tests {
             .unwrap(),
             method: Method::POST,
             headers: HeaderMap::new(),
-            body: Some(body),
+            body,
             gas_limit: 10000,
         })
     }
@@ -271,7 +272,7 @@ mod tests {
     fn deploy_function_content() -> Content {
         let raw_code =
             r#"export default () => new Response("hello world!");"#.to_string();
-        let function_code = ParsedCode::try_from(raw_code).unwrap();
+        let function_code = raw_code.to_string();
         let account_credit = 0;
         Content::DeployFunction(DeployFunction {
             function_code,
@@ -362,13 +363,41 @@ mod tests {
         tx.begin();
         let (_, pk, sk) = bootstrap1();
         let deploy_op = make_signed_op(deploy_function_content(), pk.clone(), sk.clone());
+        let op_hash = deploy_op.hash();
+        let receipt_path = format!("/jstz_receipt/{op_hash}");
+
         let ticketer = ContractKt1Hash::try_from_bytes(&[0; 20]).unwrap();
         let receipt =
             execute_operation(&mut host, &mut tx, deploy_op.clone(), &ticketer, &pk)
                 .await;
         assert!(matches!(receipt.result, ReceiptResult::Success(_)));
+        receipt.write(&host, &mut tx).unwrap();
+
         let receipt =
             execute_operation(&mut host, &mut tx, deploy_op, &ticketer, &pk).await;
+        assert!(
+            matches!(receipt.result.clone(), ReceiptResult::Failed(e) if e.contains("NoncePassed"))
+        );
+        receipt.write(&host, &mut tx).unwrap();
+
+        {
+            let stored_receipt: Guarded<Receipt> = tx
+                .get(&host, OwnedPath::try_from(receipt_path).unwrap())
+                .unwrap()
+                .unwrap();
+
+            assert!(matches!(stored_receipt.result, ReceiptResult::Success(_)));
+        }
+
+        let deploy_op = Operation {
+            public_key: pk.clone(),
+            nonce: Nonce(2),
+            content: deploy_function_content(),
+        };
+        let sig = sk.sign(deploy_op.hash()).unwrap();
+        let op = SignedOperation::new(sig, deploy_op);
+        let receipt =
+            execute_operation(&mut host, &mut tx, op.clone(), &ticketer, &pk).await;
         assert!(
             matches!(receipt.result, ReceiptResult::Failed(e) if e.contains("InvalidNonce"))
         );
@@ -407,7 +436,7 @@ mod tests {
                 .unwrap(),
                 method: Method::GET,
                 headers: HeaderMap::new(),
-                body: None,
+                body: HttpBody::empty(),
                 gas_limit: 10000,
             }),
             pk1.clone(),
@@ -551,7 +580,7 @@ mod tests {
                 result: ReceiptResult::Failed(s),
                 ..
             }
-            if s == "Ed25519 error: signature error".to_string()
+            if s.contains("Ed25519 error: signature error")
         ));
     }
 }

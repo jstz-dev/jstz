@@ -171,13 +171,13 @@ mod test {
 
     use std::io::empty;
 
-    use crate::runtime::ParsedCode;
     use crate::{
         context::{account::Address, ticket_table::TicketTable},
         executor::{
             fa_deposit::{FaDeposit, FaDepositReceipt},
             smart_function,
         },
+        operation::internal::InboxId,
         receipt::{Receipt, ReceiptContent, ReceiptResult},
     };
     use jstz_core::kv::Transaction;
@@ -186,11 +186,15 @@ mod test {
 
     fn mock_fa_deposit(proxy: Option<SmartFunctionHash>) -> FaDeposit {
         FaDeposit {
-            inbox_id: 34,
+            inbox_id: InboxId {
+                l1_level: 1,
+                l1_message_id: 34,
+            },
             amount: 42,
             receiver: Address::User(jstz_mock::account2()),
             proxy_smart_function: proxy.map(Address::SmartFunction),
             ticket_hash: jstz_mock::ticket_hash1(),
+            source: jstz_mock::account2(),
         }
     }
 
@@ -284,7 +288,7 @@ mod test {
             return Response.error();
         }
         "#;
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let proxy =
             smart_function::deploy(&mut host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -332,7 +336,7 @@ mod test {
             return Response.error();
         }
         "#;
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         tx.begin();
         let proxy =
             smart_function::deploy(&mut host, &mut tx, &source, parsed_code, 0).unwrap();
@@ -382,7 +386,7 @@ mod test {
             return Response.error();
         }
         "#;
-        let parsed_code = ParsedCode::try_from(code.to_string()).unwrap();
+        let parsed_code = code.to_string();
         let proxy =
             smart_function::deploy(&mut host, &mut tx, &source, parsed_code, 0).unwrap();
 

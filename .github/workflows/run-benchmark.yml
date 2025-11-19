@@ -1,0 +1,23 @@
+name: Run benchmark
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build_riscv_kernel:
+    name: Build RISCV kernel
+    runs-on: [linux, nix]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-riscv-kernel
+
+  benchmark:
+    name: Benchmark RISCV kernel
+    needs: [build_riscv_kernel]
+    runs-on: benchmark
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/run-benchmark-job
+        with:
+          run-natively: false
+          job-name: "Benchmark RISCV kernel"

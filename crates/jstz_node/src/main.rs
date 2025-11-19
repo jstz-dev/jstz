@@ -1,10 +1,15 @@
 use std::path::PathBuf;
 
 use anyhow::Context;
+use clap::ArgAction;
 use clap::Parser;
 use env_logger::Env;
-use jstz_node::{RunMode, RunOptions};
-use jstz_utils::KeyPair;
+use jstz_node::{
+    config::{RunModeBuilder, RunModeType},
+    RunOptions,
+};
+use jstz_utils::key_pair::parse_key_file;
+use tezos_crypto_rs::hash::SmartRollupHash;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
@@ -50,7 +55,7 @@ struct Args {
     preimages_dir: PathBuf,
 
     #[arg(long, default_value = DEFAULT_RUN_MODE)]
-    mode: String,
+    mode: RunModeType,
 
     #[arg(long, default_value_t = DEFAULT_QUEUE_CAPACITY)]
     capacity: usize,
@@ -58,14 +63,23 @@ struct Args {
     #[arg(long)]
     debug_log_path: Option<PathBuf>,
 
-    /// Path to file containing injector key pair (format: "public_key:secret_key")
+    /// Path to file containing injector key pair (format: {"public_key": ..., "secret_key": ...})
     #[arg(long)]
     injector_key_file: PathBuf,
+
+    #[arg(long)]
+    rollup_address: Option<String>,
+
+    #[arg(long)]
+    riscv_kernel_path: Option<PathBuf>,
+
+    #[arg(long, action = ArgAction::SetTrue)]
+    storage_sync: bool,
 }
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    env_logger::init_from_env(Env::default().default_filter_or("info"));
+    env_logger::init_from_env(Env::default().default_filter_or("jstz_node=info"));
     match Command::parse() {
         Command::Run(args) => {
             let rollup_endpoint = args.rollup_endpoint.unwrap_or(format!(
@@ -73,6 +87,18 @@ async fn main() -> anyhow::Result<()> {
                 args.rollup_node_rpc_addr, args.rollup_node_rpc_port
             ));
 
+            let mut run_mode_builder =
+                RunModeBuilder::new(args.mode).with_capacity(args.capacity)?;
+            if let Some(path) = args.debug_log_path {
+                run_mode_builder = run_mode_builder.with_debug_log_path(path)?;
+            }
+            if let Some(path) = args.riscv_kernel_path {
+                run_mode_builder = run_mode_builder.with_riscv_kernel_path(path)?;
+            }
+            if let Some(v) = args.rollup_address {
+                run_mode_builder = run_mode_builder
+                    .with_rollup_address(SmartRollupHash::from_base58_check(&v)?)?;
+            }
             jstz_node::run(RunOptions {
                 addr: args.addr,
                 port: args.port,
@@ -81,11 +107,8 @@ async fn main() -> anyhow::Result<()> {
                 kernel_log_path: args.kernel_log_path,
                 injector: parse_key_file(args.injector_key_file)
                     .context("failed to parse injector key file")?,
-                mode: RunMode::new(
-                    Some(&args.mode),
-                    Some(args.capacity),
-                    args.debug_log_path,
-                )?,
+                mode: run_mode_builder.build()?,
+                storage_sync: args.storage_sync,
             })
             .await
         }
@@ -97,94 +120,5 @@ async fn main() -> anyhow::Result<()> {
             }
             Ok(())
         }
-    }
-}
-
-fn parse_key_file(path: PathBuf) -> anyhow::Result<KeyPair> {
-    let key_pair = std::fs::read_to_string(path).context("Failed to read key file")?;
-    let parts: Vec<&str> = key_pair.trim().split(':').collect();
-    if parts.len() != 2 {
-        anyhow::bail!("Key pair must be in format 'public_key:secret_key'");
-    }
-    let public_key = jstz_crypto::public_key::PublicKey::from_base58(parts[0])
-        .context("Invalid public key")?;
-    let secret_key = jstz_crypto::secret_key::SecretKey::from_base58(parts[1])
-        .context("Invalid secret key")?;
-    Ok(KeyPair(public_key, secret_key))
-}
-
-#[cfg(test)]
-mod tests {
-    use std::{
-        io::{Seek, Write},
-        path::PathBuf,
-        str::FromStr,
-    };
-
-    use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
-    use jstz_utils::KeyPair;
-    use tempfile::NamedTempFile;
-
-    #[test]
-    fn parse_key_file() {
-        assert_eq!(
-            super::parse_key_file(PathBuf::from_str("/foo/bar").unwrap())
-                .unwrap_err()
-                .to_string(),
-            "Failed to read key file"
-        );
-
-        let mut tmp_file = NamedTempFile::new().unwrap();
-        tmp_file.write_all(b"a:b:c").unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf())
-                .unwrap_err()
-                .to_string(),
-            "Key pair must be in format 'public_key:secret_key'"
-        );
-
-        tmp_file.rewind().unwrap();
-        tmp_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ3:edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2")
-            .unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf())
-                .unwrap_err()
-                .to_string(),
-            "Invalid public key"
-        );
-
-        tmp_file.rewind().unwrap();
-        tmp_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:a")
-            .unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf())
-                .unwrap_err()
-                .to_string(),
-            "Invalid secret key"
-        );
-
-        tmp_file.rewind().unwrap();
-        tmp_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6\n")
-            .unwrap();
-        tmp_file.flush().unwrap();
-        assert_eq!(
-            super::parse_key_file(tmp_file.path().to_path_buf()).unwrap(),
-            KeyPair(
-                PublicKey::from_base58(
-                    "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2"
-                )
-                .unwrap(),
-                SecretKey::from_base58(
-                    "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
-                )
-                .unwrap()
-            )
-        );
     }
 }

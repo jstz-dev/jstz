@@ -1,6 +1,5 @@
 #[cfg(feature = "v2_runtime")]
 use crate::runtime::v2::fetch::http::Response;
-use crate::runtime::ParsedCode;
 use crate::{
     context::account::{Account, Address, Amount, Nonce},
     Error, HttpBody, Result,
@@ -12,7 +11,8 @@ use http::{HeaderMap, Method, Uri};
 #[cfg(feature = "v2_runtime")]
 use crate::runtime::v2::oracle::request::RequestId;
 
-use jstz_core::{host::HostRuntime, kv::Transaction, reveal_data::PreimageHash};
+use jstz_core::{host::HostRuntime, reveal_data::PreimageHash};
+use jstz_crypto::verifier::Verifier;
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
     signature::Signature,
@@ -52,17 +52,14 @@ impl Operation {
     }
 
     /// Verify the nonce of the operation
-    /// Returns the operation's
-    pub fn verify_nonce(
-        &self,
-        rt: &impl HostRuntime,
-        tx: &mut Transaction,
-    ) -> Result<()> {
-        let mut next_nonce = Account::nonce(rt, tx, &self.source())?;
-
-        if self.nonce == *next_nonce {
-            next_nonce.increment();
+    /// If valid, increment the nonce and leak as storage update event.
+    pub fn verify_and_increment_nonce(&self, rt: &mut impl HostRuntime) -> Result<()> {
+        let expected_nonce = Account::storage_get_nonce(rt, &self.source())?;
+        if self.nonce == expected_nonce {
+            Account::storage_set_nonce(rt, &self.source(), expected_nonce.next())?;
             Ok(())
+        } else if self.nonce.0 < expected_nonce.0 {
+            Err(Error::NoncePassed)
         } else {
             Err(Error::InvalidNonce)
         }
@@ -115,7 +112,7 @@ impl Operation {
 #[serde(rename_all = "camelCase")]
 pub struct DeployFunction {
     /// Smart function code
-    pub function_code: ParsedCode,
+    pub function_code: String,
     /// Amount of tez to credit to the smart function account, debited from the sender
     pub account_credit: Amount,
 }
@@ -145,7 +142,6 @@ pub struct RunFunction {
     #[serde(with = "http_serde::header_map")]
     #[schema(schema_with = openapi::request_headers)]
     pub headers: HeaderMap,
-    #[schema(schema_with = openapi::http_body_schema)]
     pub body: HttpBody,
     /// Maximum amount of gas that is allowed for the execution of this operation
     pub gas_limit: usize,
@@ -232,11 +228,17 @@ pub struct SignedOperation {
     signature: Signature,
     #[deref]
     inner: Operation,
+    #[serde(default)]
+    verifier: Option<Verifier>,
 }
 
 impl SignedOperation {
     pub fn new(signature: Signature, inner: Operation) -> Self {
-        Self { signature, inner }
+        Self {
+            signature,
+            inner,
+            verifier: None,
+        }
     }
 
     pub fn hash(&self) -> Blake2b {
@@ -245,16 +247,21 @@ impl SignedOperation {
 
     pub fn verify(&self) -> Result<()> {
         let hash = self.inner.hash();
-        Ok(self
-            .signature
-            .verify(&self.inner.public_key, hash.as_ref())?)
+        match &self.verifier {
+            Some(verifier) => self.signature.verify_with_verifier(
+                &self.inner.public_key,
+                hash.as_ref(),
+                verifier,
+            )?,
+            None => self
+                .signature
+                .verify(&self.inner.public_key, hash.as_ref())?,
+        }
+        Ok(())
     }
 
     pub fn verify_ref(&self) -> Result<&Operation> {
-        let hash = self.inner.hash();
-        self.signature
-            .verify(&self.inner.public_key, hash.as_ref())?;
-
+        self.verify()?;
         Ok(&self.inner)
     }
 }
@@ -270,22 +277,50 @@ pub mod internal {
 
     use super::*;
 
+    #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone, Copy)]
+    pub struct InboxId {
+        // L1 inbox message level
+        pub l1_level: u32,
+        // Unique id of inbox message (per level)
+        pub l1_message_id: u32,
+    }
+
+    impl InboxId {
+        pub fn to_bytes(&self) -> [u8; 8] {
+            let mut buf = [0u8; 8];
+            buf[..4].copy_from_slice(&self.l1_level.to_be_bytes());
+            buf[4..].copy_from_slice(&self.l1_message_id.to_be_bytes());
+            buf
+        }
+
+        pub fn hash(&self) -> OperationHash {
+            let seed = self.to_bytes();
+            Blake2b::from(seed.as_slice())
+        }
+    }
+
     #[derive(Debug, Serialize, Deserialize, PartialEq, Eq, Clone)]
     pub struct Deposit {
-        // Inbox message id is unique to each message and
-        // suitable as a nonce
-        pub inbox_id: u32,
+        // Inbox message id
+        pub inbox_id: InboxId,
         // Amount to deposit
         pub amount: Amount,
         // Receiver address
         pub receiver: Address,
+        /// Source of the deposit message. Must be a user address
+        pub source: PublicKeyHash,
+    }
+
+    impl Deposit {
+        pub fn hash(&self) -> OperationHash {
+            self.inbox_id.hash()
+        }
     }
 
     #[derive(Debug, PartialEq, Eq, Clone)]
     pub struct FaDeposit {
-        // Inbox message id is unique to each message and
-        // suitable as a nonce
-        pub inbox_id: u32,
+        // Inbox message id
+        pub inbox_id: InboxId,
         // Amount to deposit
         pub amount: Amount,
         // Final deposit receiver address
@@ -294,6 +329,8 @@ pub mod internal {
         pub proxy_smart_function: Option<Address>,
         // Ticket hash
         pub ticket_hash: TicketHash,
+        /// Source of the deposit message. Must be a user address
+        pub source: PublicKeyHash,
     }
 
     impl FaDeposit {
@@ -302,17 +339,16 @@ pub mod internal {
                 "receiver": self.receiver,
                 "amount": self.amount,
                 "ticketHash": self.ticket_hash.to_string(),
+                "source": self.source,
             })
         }
 
         pub fn to_http_body(&self) -> HttpBody {
-            let body = self.json();
-            Some(String::as_bytes(&body.to_string()).to_vec())
+            self.json().into()
         }
 
         pub fn hash(&self) -> OperationHash {
-            let seed = self.inbox_id.to_be_bytes();
-            Blake2b::from(seed.as_slice())
+            self.inbox_id.hash()
         }
     }
 }
@@ -325,17 +361,11 @@ pub enum InternalOperation {
 
 pub mod openapi {
     use utoipa::{
-        openapi::{
-            schema::AdditionalProperties, Array, Object, ObjectBuilder, RefOr, Schema,
-        },
+        openapi::{schema::AdditionalProperties, Object, ObjectBuilder, RefOr, Schema},
         schema,
     };
 
     use crate::executor::smart_function::{X_JSTZ_AMOUNT, X_JSTZ_TRANSFER};
-
-    pub fn http_body_schema() -> Array {
-        schema!(Option<Vec<u8>>).build()
-    }
 
     fn http_headers(
         properties: Vec<(impl Into<String>, impl Into<RefOr<Schema>>)>,
@@ -374,20 +404,27 @@ pub mod openapi {
 mod test {
     use super::{Content, DeployFunction, RevealLargePayload, RevealType, RunFunction};
     use super::{Operation, SignedOperation};
-    use crate::context::account::{Account, Nonce};
+    use crate::context::account::{Account, Address, Nonce};
+    use crate::operation::internal::{FaDeposit, InboxId};
     use crate::operation::OperationHash;
-    use crate::runtime::ParsedCode;
+    use crate::tests::DebugLogSink;
+    use crate::Error::*;
+    use crate::HttpBody;
     use http::{HeaderMap, Method, Uri};
+    use jstz_core::event::decode_line;
+    use jstz_core::kv::storage_update::BatchStorageUpdate;
     use jstz_core::reveal_data::PreimageHash;
-    use jstz_core::{kv::Transaction, BinEncodable};
+    use jstz_core::BinEncodable;
+    use jstz_crypto::hash::Hash;
     use jstz_crypto::{public_key::PublicKey, public_key_hash::PublicKeyHash};
     use jstz_mock::host::JstzMockHost;
     #[cfg(feature = "v2_runtime")]
     use jstz_utils::{test_util::alice_keys, KeyPair};
     use serde_json::json;
+    use tezos_smart_rollup::michelson::ticket::TicketHash;
 
     fn run_function_content() -> Content {
-        let body = r#""value":1""#.to_string().into_bytes();
+        let body = HttpBody::from_string(r#"{"value":1"}"#.to_string());
         Content::RunFunction(RunFunction {
             uri: Uri::try_from(
                 "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold",
@@ -395,7 +432,7 @@ mod test {
             .unwrap(),
             method: Method::POST,
             headers: HeaderMap::new(),
-            body: Some(body),
+            body,
             gas_limit: 10000,
         })
     }
@@ -403,7 +440,7 @@ mod test {
     fn deploy_function_content() -> Content {
         let raw_code =
             r#"export default () => new Response("hello world!");"#.to_string();
-        let function_code = ParsedCode::try_from(raw_code).unwrap();
+        let function_code = raw_code;
         let account_credit = 100000;
         Content::DeployFunction(DeployFunction {
             function_code,
@@ -424,7 +461,7 @@ mod test {
             json,
             json!({
                 "_type":"RunFunction",
-                "body":[34,118,97,108,117,101,34,58,49,34],
+                "body":"eyJ2YWx1ZSI6MSJ9",
                 "gasLimit":10000,
                 "headers":{},
                 "method":"POST",
@@ -467,19 +504,16 @@ mod test {
         assert_eq!(deploy_function, bin_decoded);
     }
 
-    fn mock_hrt_tx_with_nonces<'a>(
+    fn mock_hrt_with_nonces<'a>(
         nonces: impl IntoIterator<Item = &'a (PublicKeyHash, Nonce)>,
-    ) -> (JstzMockHost, Transaction) {
+    ) -> JstzMockHost {
         let mut hrt = JstzMockHost::default();
-        let mut tx = Transaction::default();
-        tx.begin();
 
         for (address, nonce) in nonces {
-            let mut stored_nonce = Account::nonce(hrt.rt(), &mut tx, address).unwrap();
-            *stored_nonce = *nonce;
+            Account::storage_set_nonce(hrt.rt(), address, *nonce).unwrap();
         }
 
-        (hrt, tx)
+        hrt
     }
 
     fn dummy_operation(public_key: PublicKey, nonce: Nonce) -> Operation {
@@ -493,35 +527,44 @@ mod test {
     #[test]
     fn test_verify_nonce_checks_and_increments_nonce() {
         let nonce = Nonce(42);
-        let (mut hrt, mut tx) = mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), nonce)]);
-
+        let sink = DebugLogSink::new();
+        let buf = sink.content();
+        let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), nonce)]);
+        hrt.set_debug_handler(sink);
         let operation = dummy_operation(jstz_mock::pk1(), nonce);
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_ok());
-
+        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_ok());
         let updated_nonce =
-            Account::nonce(hrt.rt(), &mut tx, &jstz_mock::pkh1()).unwrap();
-        assert_eq!(*updated_nonce, nonce.next());
+            Account::storage_get_nonce(hrt.rt(), &jstz_mock::pkh1()).unwrap();
+        let line = String::from_utf8(buf.lock().unwrap().to_vec()).unwrap();
+        assert_eq!(updated_nonce, nonce.next());
+        assert!(decode_line::<BatchStorageUpdate>(&line).is_ok());
+        assert!(line.contains(&jstz_mock::pkh1().to_base58()));
     }
 
     #[test]
     fn test_verify_nonce_incorrect() {
-        let (mut hrt, mut tx) =
-            mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), Nonce(1337))]);
+        let sink = DebugLogSink::new();
+        let buf = sink.content();
+        let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), Nonce(1337))]);
+        hrt.set_debug_handler(sink);
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(42));
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_err());
+        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_err());
+        assert!(String::from_utf8(buf.lock().unwrap().to_vec())
+            .unwrap()
+            .is_empty());
     }
 
     #[test]
     fn test_verify_nonce_prevents_replay() {
-        let (mut hrt, mut tx) = mock_hrt_tx_with_nonces(&[(jstz_mock::pkh1(), Nonce(7))]);
+        let mut hrt = mock_hrt_with_nonces(&[(jstz_mock::pkh1(), Nonce(7))]);
 
         let operation = dummy_operation(jstz_mock::pk1(), Nonce(7));
 
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_ok());
+        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_ok());
 
         // Replaying the operation fails
-        assert!(operation.verify_nonce(hrt.rt(), &mut tx).is_err());
+        assert!(operation.verify_and_increment_nonce(hrt.rt()).is_err());
     }
 
     #[test]
@@ -635,10 +678,115 @@ mod test {
         let signed_op = SignedOperation {
             signature,
             inner: op,
+            verifier: None,
         };
         let json = serde_json::to_vec(&signed_op).unwrap();
         let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
 
         assert_eq!(signed_op, decoded)
+    }
+
+    #[test]
+    fn fa_deposit_json() {
+        let d = FaDeposit {
+            inbox_id: InboxId {
+                l1_message_id: 0,
+                l1_level: 0,
+            },
+            amount: 10,
+            source: PublicKeyHash::from_base58("tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h")
+                .unwrap(),
+            receiver: Address::from_base58("tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg")
+                .unwrap(),
+            proxy_smart_function: None,
+            ticket_hash: TicketHash::try_from(
+                "0000000000000000000000000000000000000000000000000000000000000000"
+                    .to_string(),
+            )
+            .unwrap(),
+        };
+
+        assert_eq!(
+            serde_json::from_slice::<serde_json::Value>(&d.to_http_body().unwrap())
+                .unwrap(),
+            serde_json::json!({
+                "receiver": "tz1W8rEphWEjMcD1HsxEhsBFocfMeGsW7Qxg",
+                "amount": 10,
+                "ticketHash": "0000000000000000000000000000000000000000000000000000000000000000",
+                "source": "tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h",
+            })
+        );
+    }
+
+    #[test]
+    fn verify_signed_op_with_passkey_verifier() {
+        let operation = json!({
+          "_type": "DeployFunction",
+          "functionCode": "export default async () => {\n    console.log(\"function\");\n};\n",
+          "accountCredit": 0
+        });
+        let verifier = json!({
+          "Passkey": {
+            "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MZAAAAAA",
+            "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiTURobFlqTmhOREZqTURKaU5qazVNVFJtWXpCaE1XSTFZekppTkdJNU0yVmxaR0V4T0dWa1pqa3daV1ZrTm1WaE5HVmtaVGM0T0dZd056RmtabVUxWXciLCJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8vYmZibG5qamtiZ2hjb2xrbWNvZ2JhZ2RwbGNkY25lZGYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9"
+          }
+        });
+        let signed_operation: SignedOperation= serde_json::from_value(json!({
+          "inner": {
+            "content": operation,
+            "nonce": 0,
+            "publicKey": "p2pk65zcsQ7scM7FykZPEhNnYnjfnRVqUHo4fKxri6yGoVu5pmdw2pm"
+          },
+          "signature": "p2signYWKFXY5zHBEXub4RMVPZ5VoB1QgqyYrDyMT5kx6CZjPJZBpF836TcZDSqttWpqxTDQz3bdsRnjUqnEtqcaZ8wjWkuEPe",
+          "verifier": verifier
+        })).unwrap();
+
+        signed_operation
+            .verify()
+            .expect("Should be ok with verifier");
+
+        // Fails verification without verifier
+        let signed_op_no_verifier: SignedOperation= serde_json::from_value(json!({
+          "inner": {
+            "content": operation,
+            "nonce": 0,
+            "publicKey": "p2pk65zcsQ7scM7FykZPEhNnYnjfnRVqUHo4fKxri6yGoVu5pmdw2pm"
+          },
+          "signature": "p2signYWKFXY5zHBEXub4RMVPZ5VoB1QgqyYrDyMT5kx6CZjPJZBpF836TcZDSqttWpqxTDQz3bdsRnjUqnEtqcaZ8wjWkuEPe",
+        })).unwrap();
+
+        let err = signed_op_no_verifier
+            .verify()
+            .expect_err("Should fail verification without verifier");
+        assert!(matches!(
+            err,
+            CryptoError {
+                source: jstz_crypto::Error::InvalidSignature
+            }
+        ));
+
+        // Fails verificaiton with invalid sig/pk
+        let signed_op_no_verifier: SignedOperation= serde_json::from_value(json!({
+          "inner": {
+            "content": operation,
+            "nonce": 0,
+            "publicKey": "p2pk65zcsQ7scM7FykZPEhNnYnjfnRVqUHo4fKxri6yGoVu5pmdw2pm"
+          },
+          "signature": "p2sigNftfnsd8AnfrH8E3tJ9mPKdu8ncck3zLbVvmGmudTzvwBisuRGpKTCmnmWo1w6Px9gnxEPDXrepUEkDS9YxYX1Rv45xa1",
+          "verifier": verifier
+        })).unwrap();
+
+        let err = signed_op_no_verifier
+            .verify()
+            .expect_err("Should fail verifier with invalid sig/pk");
+        assert!(matches!(
+            err,
+            CryptoError {
+                source: jstz_crypto::Error::PasskeyError {
+                    source:
+                        jstz_crypto::verifier::passkey::PasskeyError::VerificationFailed
+                }
+            }
+        ));
     }
 }

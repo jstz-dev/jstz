@@ -1,5 +1,4 @@
-use std::error::Error;
-
-pub mod generate;
+pub mod fa2_bench_generator;
+pub mod generate_other;
 pub mod results;
-pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
+pub use jstz_utils::inbox_builder::Result;

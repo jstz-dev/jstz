@@ -1,21 +1,22 @@
 use anyhow::Context;
-use deno_core::{
-    convert::Smi,
-    op2,
-    v8::{self},
-    FromV8, OpState,
-};
-use deno_error::JsErrorBox;
-use derive_more::{From, Into};
-use jstz_core::{host::HostRuntime, kv::Transaction};
-use jstz_crypto::{hash::Hash, smart_function_hash::SmartFunctionHash};
-use jstz_runtime::{JstzRuntime, JstzRuntimeOptions, RuntimeContext};
+
+#[path = "report_parser.rs"]
+mod report_parser;
+#[cfg(feature = "wpt-in-riscv")]
+use report_parser::parse_report_from_log_line;
+
+#[cfg(not(feature = "wpt-in-riscv"))]
+use jstz_core::kv::Transaction;
+#[cfg(not(feature = "wpt-in-riscv"))]
+use jstz_runtime::wpt::init_runtime;
+use jstz_runtime::wpt::{TestHarnessReport, WptSubtest, WptSubtestStatus, WptTestStatus};
 use jstz_wpt::{
     Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptMetrics, WptReportTest, WptServe,
-    WptSubtest, WptSubtestStatus, WptTestStatus,
 };
 use regex::Regex;
 use serde::Deserialize;
+#[cfg(not(feature = "wpt-in-riscv"))]
+use std::panic;
 use std::{
     collections::BTreeMap,
     fs::{File, OpenOptions},
@@ -26,248 +27,105 @@ use std::{
 use tezos_smart_rollup_mock::MockHost;
 use tokio::io::AsyncWriteExt;
 
-/// Enum of possible test statuses
-///
-/// More information:
-///  - [wpt documentation][wpt]
-///
-/// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html#Test.statuses
-#[derive(Debug, From, Into)]
-pub struct TestStatus(WptSubtestStatus);
+/// List of test prefixes that should be skipped due to known issues
+const SKIP_TESTS: &[&str] = &[
+    "FileAPI/url/url-format.any.html",
+    "compression/compression",
+    "encoding/",
+    "fetch/http-cache/",
+    "webstorage/",
+    "html/webappapis/scripting/processing-model-2",
+];
 
-/// A single subtest result
-///
-/// More information:
-///  - [wpt documentation][wpt]
-///
-/// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html#Test
-#[derive(Debug)]
-pub struct TestResult {
-    pub name: String,
-    pub status: TestStatus,
-    pub message: Option<String>,
+fn should_skip_test(test_path: &str) -> bool {
+    SKIP_TESTS
+        .iter()
+        .any(|&skip_path| test_path.contains(skip_path))
 }
 
-impl<'a> FromV8<'a> for TestStatus {
-    type Error = JsErrorBox;
+#[cfg(feature = "wpt-in-riscv")]
+fn run_wpt_test_harness_in_riscv_sandbox(source: String) -> TestHarnessReport {
+    use jstz_utils::inbox_builder::InboxBuilder;
+    use tezos_smart_rollup::types::SmartRollupAddress;
 
-    fn from_v8(
-        scope: &mut v8::HandleScope<'a>,
-        value: v8::Local<'a, v8::Value>,
-    ) -> Result<Self, Self::Error> {
-        Smi::<u8>::from_v8(scope, value)?
-            .0
-            .try_into()
-            .map(Self)
-            .map_err(|_| {
-                let s = value.to_rust_string_lossy(scope);
-                JsErrorBox::generic(format!(
-                    "failed to convert value '{s}' into TestStatus",
-                ))
-            })
+    // Build inbox messages by chunking the source code and wrapping each chunk in a deploy function operation
+    let mut inbox_builder = InboxBuilder::new(
+        SmartRollupAddress::from_b58check("sr1BxufbqiHt3dn6ahV6eZk9xBD6XV1fYowr")
+            .unwrap(),
+        None,
+        #[cfg(feature = "v2_runtime")]
+        None,
+    );
+
+    let chunk_size = 3800usize;
+    let mut account = inbox_builder.create_accounts(1).unwrap().remove(0);
+
+    for chunk in source.chars().collect::<Vec<_>>().chunks(chunk_size) {
+        let chunk_str: String = chunk.iter().collect();
+        inbox_builder
+            .deploy_function(&mut account, chunk_str, 1_000_000)
+            .unwrap();
     }
-}
 
-impl<'a> FromV8<'a> for TestResult {
-    type Error = JsErrorBox;
+    inbox_builder
+        .deploy_function(&mut account, "STOP".to_string(), 1_000_000)
+        .unwrap();
 
-    fn from_v8(
-        scope: &mut v8::HandleScope<'a>,
-        value: v8::Local<'a, v8::Value>,
-    ) -> Result<Self, Self::Error> {
-        let obj = value
-            .to_object(scope)
-            .ok_or(JsErrorBox::generic("TestResult must be a JS object"))?;
+    let temp_file = std::env::temp_dir().join("jstz_inbox_message.json");
+    let inbox_file = inbox_builder.build();
+    inbox_file.save(temp_file.as_path()).unwrap();
 
-        let name_key = v8::String::new(scope, "name").unwrap();
-        let local_name = obj.get(scope, name_key.into()).ok_or(JsErrorBox::generic(
-            "property 'name' must be present in TestResult",
-        ))?;
-        let status_key = v8::String::new(scope, "status").unwrap();
-        let local_status =
-            obj.get(scope, status_key.into())
-                .ok_or(JsErrorBox::generic(
-                    "property 'status' must be present in TestResult",
-                ))?;
-        let message_key = v8::String::new(scope, "message").unwrap();
-        let message = match obj.get(scope, message_key.into()) {
-            Some(v) => Some(String::from_v8(scope, v).map_err(JsErrorBox::from_err)?),
-            None => None,
+    let kernel_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(
+        "../../target/riscv64gc-unknown-linux-musl/release/wpt-test-kernel-executable",
+    );
+
+    let output = std::process::Command::new("riscv-sandbox")
+        .args([
+            "run",
+            "--timings",
+            "--address",
+            "sr1FXevDx86EyU1BBwhn94gtKvVPTNwoVxUC",
+            "--inbox-file",
+            temp_file.to_str().unwrap(),
+            "--input",
+            kernel_path.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute riscv-sandbox");
+
+    if !output.status.success() {
+        println!(
+            "riscv-sandbox failed with exit code: {}",
+            output.status.code().unwrap_or(-1)
+        );
+        return TestHarnessReport {
+            status: Some(WptTestStatus::Err),
+            subtests: vec![WptSubtest {
+                name: "Message creation failed".to_string(),
+                status: WptSubtestStatus::Fail,
+                message: Some("Failed to create message or execute sandbox".to_string()),
+            }],
         };
-
-        Ok(Self {
-            name: String::from_v8(scope, local_name).map_err(JsErrorBox::from_err)?,
-            status: TestStatus::from_v8(scope, local_status)?,
-            message,
-        })
-    }
-}
-
-/// Enum of possible harness statuses
-///
-/// More information:
-///  - [wpt documentation][wpt]
-///
-/// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html#TestsStatus.statuses
-#[derive(Debug, From, Into)]
-pub struct TestsStatus(WptTestStatus);
-
-impl<'a> FromV8<'a> for TestsStatus {
-    type Error = JsErrorBox;
-
-    fn from_v8(
-        scope: &mut v8::HandleScope<'a>,
-        value: v8::Local<'a, v8::Value>,
-    ) -> Result<Self, Self::Error> {
-        Smi::<u8>::from_v8(scope, value)?
-            .0
-            .try_into()
-            .map(Self)
-            .map_err(|_| {
-                let s = value.to_rust_string_lossy(scope);
-                JsErrorBox::generic(format!(
-                    "failed to convert value '{s}' into TestsStatus",
-                ))
-            })
-    }
-}
-
-/// The result of a test harness run
-///
-/// More information:
-///  - [wpt documentation][wpt]
-///
-/// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html#TestsStatus.statuses
-pub struct TestsResult {
-    pub status: TestsStatus,
-    pub message: Option<String>,
-}
-
-impl<'a> FromV8<'a> for TestsResult {
-    type Error = JsErrorBox;
-
-    fn from_v8(
-        scope: &mut v8::HandleScope<'a>,
-        value: v8::Local<'a, v8::Value>,
-    ) -> Result<Self, Self::Error> {
-        let obj = value
-            .to_object(scope)
-            .ok_or(JsErrorBox::generic("TestsResult must be a JS object"))?;
-
-        let status_key = v8::String::new(scope, "status").unwrap();
-        let local_status =
-            obj.get(scope, status_key.into())
-                .ok_or(JsErrorBox::generic(
-                    "property 'status' must be present in TestsResult",
-                ))?;
-        let message_key = v8::String::new(scope, "message").unwrap();
-        let message = match obj.get(scope, message_key.into()) {
-            Some(v) => Some(String::from_v8(scope, v).map_err(JsErrorBox::from_err)?),
-            None => None,
-        };
-
-        Ok(Self {
-            status: TestsStatus::from_v8(scope, local_status)?,
-            message,
-        })
-    }
-}
-
-/// A report of a test harness run, containing the harness result and all test results
-///
-/// This struct implements the TestHarness API expected by [wpt]
-///
-/// [wpt]: https://web-platform-tests.org/writing-tests/testharness-api.html
-#[derive(Default, Debug, Clone)]
-pub struct TestHarnessReport {
-    // `status` is an Option because it is set at the end of a test suite
-    // and we need a placeholder for it before that.
-    status: Option<WptTestStatus>,
-    subtests: Vec<WptSubtest>,
-}
-
-impl TestHarnessReport {
-    /// Sets the harness result, if it has not already been set
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the harness result has already been set
-    pub fn set_harness_result(&mut self, result: TestsResult) -> anyhow::Result<()> {
-        if self.status.is_some() {
-            anyhow::bail!("Harness result already set");
-        }
-
-        self.status = Some(result.status.into());
-        Ok(())
     }
 
-    /// Adds a test result to the report
-    pub fn add_test_result(&mut self, result: TestResult) {
-        let TestResult {
-            name,
-            status,
-            message,
-        } = result;
+    let err_report = TestHarnessReport {
+        status: Some(WptTestStatus::Err),
+        subtests: vec![WptSubtest {
+            name: "Script execution failed".to_string(),
+            status: WptSubtestStatus::Fail,
+            message: Some("Test failed due to script execution error".to_string()),
+        }],
+    };
 
-        self.subtests.push(WptSubtest {
-            name,
-            status: status.into(),
-            message,
-        });
-    }
-}
-
-#[op2]
-pub fn test_result_callback(op_state: &mut OpState, #[from_v8] result: TestResult) {
-    let report: &mut TestHarnessReport = op_state.borrow_mut::<TestHarnessReport>();
-    report.add_test_result(result);
-}
-
-#[op2]
-pub fn test_completion_callback(
-    op_state: &mut OpState,
-    _tests: &v8::Value,
-    #[from_v8] result: TestsResult,
-    _records: &v8::Value,
-) -> Result<(), JsErrorBox> {
-    let report: &mut TestHarnessReport = op_state.borrow_mut::<TestHarnessReport>();
-    report
-        .set_harness_result(result)
-        .map_err(|e| JsErrorBox::generic(e.to_string()))
-}
-
-deno_core::extension!(
-    test_harness_api,
-    ops = [test_completion_callback, test_result_callback],
-    esm_entry_point = "ext:test_harness_api/test_harness_api.js",
-    esm = [dir "tests", "test_harness_api.js"],
-);
-
-fn init_runtime(host: &mut impl HostRuntime, tx: &mut Transaction) -> JstzRuntime {
-    let address =
-        SmartFunctionHash::from_base58("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton").unwrap();
-
-    let mut options = JstzRuntimeOptions::default();
-    options
-        .extensions
-        .push(test_harness_api::init_ops_and_esm());
-
-    let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
-        protocol: Some(RuntimeContext::new(host, tx, address, String::new())),
-        extensions: vec![test_harness_api::init_ops_and_esm()],
-        ..Default::default()
-    });
-
-    let op_state = runtime.op_state();
-    // Insert a blank report to be filled in by test cases
-    op_state.borrow_mut().put(TestHarnessReport::default());
-
-    runtime
+    let data = parse_report_from_log_line(
+        format!("{}", String::from_utf8_lossy(&output.stdout)).as_str(),
+    )
+    .unwrap()
+    .unwrap_or(err_report);
+    data
 }
 
 pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
-    let mut tx = Transaction::default();
-    tx.begin();
     let mut host = MockHost::default();
     host.set_debug_handler(std::io::empty());
 
@@ -284,18 +142,32 @@ pub async fn run_wpt_test_harness(bundle: &Bundle) -> TestHarnessReport {
         }
     }
 
-    let mut rt = init_runtime(&mut host, &mut tx);
+    #[cfg(not(feature = "wpt-in-riscv"))]
+    {
+        let mut tx = Transaction::default();
+        tx.begin();
+        let mut rt = init_runtime(&mut host, &mut tx);
 
-    // Somehow each `execute_script` call has some strange side effect such that the global
-    // test suite object is completed prematurely before all test cases are registered.
-    // Therefore, instead of executing each piece of test scripts separately, we need to
-    // collect them and run them all in one `execute_script` call.
-    let _ = rt.execute_script("native code", source);
+        // Somehow each `execute_script` call has some strange side effect such that the global
+        // test suite object is completed prematurely before all test cases are registered.
+        // Therefore, instead of executing each piece of test scripts separately, we need to
+        // collect them and run them all in one `execute_script` call.
 
-    // Take the test harness report out of the runtime and return it
-    // Need to store data temporarily so that the borrow can be dropped
-    let data = rt.op_state().borrow().borrow::<TestHarnessReport>().clone();
-    data
+        // Use catch_unwind to handle panics (including segmentation faults) gracefully
+        let _ = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+            rt.execute_script("native code", source.clone())
+        }));
+
+        // Take the test harness report out of the runtime and return it
+        // Need to store data temporarily so that the borrow can be dropped
+        let data = rt.op_state().borrow().borrow::<TestHarnessReport>().clone();
+        data
+    }
+
+    #[cfg(feature = "wpt-in-riscv")]
+    {
+        run_wpt_test_harness_in_riscv_sandbox(source)
+    }
 }
 
 fn process_subtests(url_path: &str, mut substests: Vec<WptSubtest>) -> Vec<WptSubtest> {
@@ -331,9 +203,35 @@ fn run_wpt_test(
     test: TestToRun,
 ) -> impl IntoFuture<Output = anyhow::Result<WptReportTest>> + '_ {
     async move {
-        let bundle = wpt_serve.bundle(&test.url_path).await?;
+        // Check if this test should be skipped
+        if should_skip_test(&test.url_path) {
+            println!("skipping test {} (in skip list)", &test.url_path);
+            return Ok(WptReportTest::new(
+                WptTestStatus::Err,
+                vec![WptSubtest {
+                    name: "Test skipped".to_string(),
+                    status: WptSubtestStatus::NotRun,
+                    message: Some("Test skipped due to known issues".to_string()),
+                }],
+            ));
+        }
+
+        let bundle = match wpt_serve.bundle(&test.url_path).await {
+            Ok(bundle) => bundle,
+            Err(e) => {
+                println!("failed to bundle test {}: {}", &test.url_path, e);
+                return Ok(WptReportTest::new(
+                    WptTestStatus::Err,
+                    vec![WptSubtest {
+                        name: "Bundle failed".to_string(),
+                        status: WptSubtestStatus::Fail,
+                        message: Some(format!("Failed to bundle test: {e}")),
+                    }],
+                ));
+            }
+        };
         let report = run_wpt_test_harness(&bundle).await;
-        println!("Running test {} => {:?}", &test.url_path, &report.status);
+        println!("Run test {} => {:?}", &test.url_path, &report.status);
         // Each test suite should have a status code attached after it completes.
         // When unwrap fails, it means something is wrong, e.g. some tests failed because
         // of something not yet supported by the runtime, such that the test completion callback

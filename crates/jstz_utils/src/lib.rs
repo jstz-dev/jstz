@@ -1,8 +1,11 @@
-use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
-use serde::Serialize;
 pub mod event_stream;
 pub mod filtered_log_stream;
+#[cfg(feature = "inbox_builder")]
+pub mod inbox_builder;
+pub mod key_pair;
+pub mod retry;
 pub mod tailed_file;
+pub use key_pair::KeyPair;
 
 pub async fn poll<'a, F, T>(
     max_attempts: u16,
@@ -22,19 +25,15 @@ where
     None
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(into = "PublicKey")]
-pub struct KeyPair(pub PublicKey, pub SecretKey);
-
-impl From<KeyPair> for PublicKey {
-    fn from(value: KeyPair) -> Self {
-        value.0
-    }
-}
-
 // WARNING: Should only be used in tests!
+#[cfg(any(test, feature = "test_utils"))]
 pub mod test_util {
-    use super::*;
+    use crate::key_pair::KeyPair;
+    use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+    use std::{path::PathBuf, time::Duration};
+    use tokio::fs::OpenOptions;
+    use tokio::io::AsyncWriteExt;
+
     // Global tokio instance to prevent races among v2 runtime tests
     pub static TOKIO: std::sync::LazyLock<tokio::runtime::Runtime> =
         std::sync::LazyLock::new(|| {
@@ -70,6 +69,56 @@ pub mod test_util {
         )
         .unwrap();
         KeyPair(bob_pk, bob_sk)
+    }
+
+    pub async fn append_async(
+        path: PathBuf,
+        line: String,
+        delay_ms: u64,
+    ) -> anyhow::Result<()> {
+        tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+        let mut file = OpenOptions::new().append(true).open(&path).await?;
+        file.write_all(line.as_bytes()).await?;
+        file.write_all(b"\n").await?;
+        file.sync_all().await?;
+        Ok(())
+    }
+
+    use std::sync::{Arc, Mutex};
+    use tezos_smart_rollup_mock::DebugSink;
+
+    #[derive(Clone, Default)]
+    pub struct DebugLogSink {
+        pub inner: Arc<Mutex<Vec<u8>>>,
+    }
+
+    impl DebugSink for DebugLogSink {
+        fn write_all(&mut self, buffer: &[u8]) -> std::io::Result<()> {
+            self.inner.lock().unwrap().extend_from_slice(buffer);
+            Ok(())
+        }
+    }
+
+    impl DebugLogSink {
+        pub fn new() -> Self {
+            Self {
+                inner: Arc::new(Mutex::new(vec![])),
+            }
+        }
+
+        pub fn content(&self) -> Arc<Mutex<Vec<u8>>> {
+            self.inner.clone()
+        }
+
+        pub fn str_content(&self) -> String {
+            let buf = self.inner.lock().unwrap();
+            String::from_utf8(buf.to_vec()).unwrap()
+        }
+
+        pub fn lines(&self) -> Vec<String> {
+            let str_content = self.str_content();
+            str_content.split("\n").map(|s| s.to_string()).collect()
+        }
     }
 }
 

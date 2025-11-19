@@ -9,7 +9,7 @@
     "build": "tsc --outDir dist"
   },
   "dependencies": {
-    "@zcabter/jstz-client": "0.1.0-alpha",
-    "jstz_sdk": "0.1.0-alpha.0"
+    "@jstz-dev/jstz-client": "0.1.1-alpha.4",
+    "jstz_sdk": "0.1.1-alpha.4.1"
   }
 }

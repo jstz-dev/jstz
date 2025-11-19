@@ -15,9 +15,9 @@ const BIN_DIR = path.join(__dirname, "bin");
 const DEST_PATH = path.join(BIN_DIR, BINARY_NAME);
 
 const PLATFORM_TO_BINARY_NAME = new Map([
-  ["darwin_arm64", "jstz_darwin_arm64"],
-  ["linux_x64", "jstz_linux_x64"],
-  ["linux_arm64", "jstz_linux_arm64"],
+  ["darwin_arm64", "cli_darwin_arm64"],
+  ["linux_x64", "cli_linux_x64"],
+  ["linux_arm64", "cli_linux_arm64"],
 ]);
 
 const PLATFORM_TO_PACKAGE = new Map([
@@ -40,11 +40,12 @@ try {
 
   if (packageName != null) {
     try {
-      import.meta.resolveSync(`${packageName}/package.json`);
-      console.log(
-        `Found optional dependency: ${packageName}. Skipping download.`,
-      );
-      process.exit(0);
+      // FIXME(https://linear.app/tezos/issue/JSTZ-924/release-platform-specific-cli-binaries-to-npm)
+      // import.meta.resolveSync(`${packageName}/package.json`);
+      // console.log(
+      //   `Found optional dependency: ${packageName}. Skipping download.`,
+      // );
+      // process.exit(0);
     } catch (e) {}
   }
 
@@ -54,11 +55,17 @@ try {
 
   await fsPromises.mkdir(BIN_DIR, { recursive: true });
 
-  if (!packageJson.version) {
+  let version = packageJson.version;
+  if (!version) {
     throw new Error("The 'version' field was not found in package.json");
   }
 
-  const url = `https://github.com/jstz-dev/jstz/releases/download/${packageJson.version}/${binaryName}`;
+  // Map 0.1.1-alpha.4.1 to 0.1.1-alpha.4
+  if (version == "0.1.1-alpha.4.1") {
+    version = "0.1.1-alpha.4";
+  }
+
+  const url = `https://github.com/jstz-dev/jstz/releases/download/${version}/${binaryName}`;
 
   console.log(`Downloading ${binaryName} from ${url}`);
 

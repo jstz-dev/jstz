@@ -1,5 +1,6 @@
 use std::fmt::Display;
 
+use crate::verifier::Verifier;
 use crate::{impl_bincode_for_hash, public_key::PublicKey, Error, Result};
 use bincode::{Decode, Encode};
 use derive_more::{Deref, From};
@@ -16,19 +17,19 @@ use utoipa::ToSchema;
 #[serde(untagged)]
 pub enum Signature {
     #[schema(
-        title = "Ed25519 signature", 
+        title = "Ed25519 signature",
         value_type = String,
         example = json!("edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB")
     )]
     Ed25519(Ed25519),
     #[schema(
-        title = "Secp256k1 signature", 
+        title = "Secp256k1 signature",
         value_type = String,
         example = json!("spsig1NajZUT4nSiWU7UiV98fmmsjApFFYwPHtiDiJfGMgGL6oP3U9SPEccTfhAPdnAcvJ6AUSQ8EBPxYNX4UeNNDLBxVg9qv5H")
     )]
     Secp256k1(Secp256k1),
     #[schema(
-        title = "P256 signature", 
+        title = "P256 signature",
         value_type = String,
         example = json!("p2signEdtYeHXyWfCaGej9AFv7QraDsunRimyK47YGBQRNDEPXPQctwjPxbyFbTUtVLsACzG8QTrLAxddjjTRikF3nThwKL8nH")
     )]
@@ -86,6 +87,17 @@ impl Signature {
             _ => Err(Error::InvalidSignature),
         }
     }
+
+    /// Verify the signature with a custom Verifier. This flow provides
+    /// flexibility for non-Tezos verification protocols
+    pub fn verify_with_verifier(
+        &self,
+        public_key: &PublicKey,
+        message: &[u8],
+        verifier: &Verifier,
+    ) -> Result<()> {
+        verifier.verify(message, public_key, self)
+    }
 }
 
 impl Display for Signature {
@@ -112,6 +124,47 @@ mod test {
         let signature = sk.sign(message).unwrap();
 
         assert!(signature.verify(&pk, message).is_ok());
+    }
+
+    #[test]
+    fn verify_secp256k1() {
+        let sk = SecretKey::from_base58(
+            "spsk3C5t8pmj3etbMhXFFo2wVgiM9CQn5oPW7XuT3ZHM2Edv2wg171",
+        )
+        .unwrap();
+        let pk = PublicKey::from_base58(
+            "sppk7afHH74dFkEzF3ZbGZJRJEf2MKfVvHw3pg3vBdohVbyG8kKfaXz",
+        )
+        .unwrap();
+        let message = b"Hello, world!";
+        let signature = sk.sign(message).unwrap();
+
+        assert!(signature.verify(&pk, message).is_ok());
+    }
+
+    #[test]
+    fn verify_p256() {
+        let sk = SecretKey::from_base58(
+            "p2sk2REWfVA5GbHf6cdGK74krBzHzEaS9ifLg3b1syZ821DQ5Btd3T",
+        )
+        .unwrap();
+        let pk = PublicKey::from_base58(
+            "p2pk677rSbvNHKG7B1UZ8JGkgVBCsqVNUKYzeek6frCFVTFfrguZg7i",
+        )
+        .unwrap();
+        let message = b"Hello, world!";
+        let signature = sk.sign(message).unwrap();
+
+        signature.verify(&pk, message).unwrap();
+
+        let bad_sk = SecretKey::from_base58(
+            "p2sk3MM3DtXHr1aRtoQXMUFHaU6S9WeMHwTVx7hoBoPFshUmGFeiFK",
+        )
+        .unwrap();
+        let signature = bad_sk.sign(message).unwrap();
+        signature
+            .verify(&pk, message)
+            .expect_err("Should fail verification");
     }
 
     #[test]

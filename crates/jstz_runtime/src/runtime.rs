@@ -1,6 +1,10 @@
 use crate::error::Result;
 use crate::ext::jstz_fetch::FetchAPI;
 use crate::ext::jstz_fetch::NotSupportedFetch;
+use deno_core::error::CoreError;
+use deno_core::snapshot::create_snapshot;
+use deno_core::snapshot::CreateSnapshotOptions;
+use deno_core::snapshot::CreateSnapshotOutput;
 use deno_core::v8::new_single_threaded_default_platform;
 use deno_core::*;
 use derive_more::{Deref, DerefMut};
@@ -10,8 +14,13 @@ use jstz_core::kv::Transaction;
 use jstz_crypto::hash::Hash;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use pin_project::pin_project;
+use serde::Deserialize;
 use std::marker::PhantomData;
 use std::mem::ManuallyDrop;
+use std::result::Result as StdResult;
+use std::sync::atomic::AtomicU8;
+use std::sync::atomic::Ordering;
+use std::sync::Arc;
 use std::{
     future::Future,
     ops::{Deref, DerefMut},
@@ -20,13 +29,15 @@ use std::{
     task::{Context, Poll},
 };
 
-use serde::Deserialize;
-
 use crate::ext::{jstz_console, jstz_kv, jstz_kv::kv::Kv, jstz_main};
 use deno_console;
 use deno_url;
 use deno_web::TimersPermission;
 use deno_webidl;
+
+// This is just a placeholder to reduce the risk of stack overflows
+// TODO: Track the memory usage of the smart function and explore a reasonable limit.
+pub const MAX_SMART_FUNCTION_CALL_COUNT: u8 = 5;
 
 /// Returns the default object of the specified JavaScript namespace (Object).
 ///
@@ -89,6 +100,9 @@ pub struct JstzRuntimeOptions<F: FetchAPI> {
     pub module_loader: Rc<dyn ModuleLoader>,
     /// Fetch extension
     pub fetch: F,
+    /// Pre-generated runtime snapshot. Using a snapshot will reduce
+    /// startup latency
+    pub snapshot: Option<&'static [u8]>,
 }
 
 impl Default for JstzRuntimeOptions<NotSupportedFetch> {
@@ -98,6 +112,7 @@ impl Default for JstzRuntimeOptions<NotSupportedFetch> {
             extensions: Default::default(),
             module_loader: Rc::new(NoopModuleLoader),
             fetch: NotSupportedFetch,
+            snapshot: None,
         }
     }
 }
@@ -106,26 +121,41 @@ impl JstzRuntime {
     pub fn new<F: FetchAPI>(options: JstzRuntimeOptions<F>) -> Self {
         // Register extensions
         let mut extensions = vec![];
-        extensions.extend(init_base_extensions_ops_and_esm::<F>());
-        extensions.extend(options.extensions);
-        Self::new_inner(extensions, options.module_loader, options.protocol, None)
-    }
+        if options.snapshot.is_none() {
+            extensions.extend(init_base_extensions_ops_and_esm::<F>());
+        } else {
+            // Initializing from a snapshot only requires initializing
+            // the rust ops
+            // TODO(https://linear.app/tezos/issue/JSTZ-923/explore-caching-rust-ops-initialisation)
+            // Attempt to cache the base extensions rust ops
+            extensions.extend(init_base_extensions_ops::<F>());
+        }
 
-    /// Creates a new [`JstzRuntime`] with [`JstzRuntimeOptions`] from a previously
-    /// snapshotted [`JsRuntime`]. Using a snapshot will reduce startup latency
-    pub fn new_from_snapshot<F: FetchAPI>(
-        options: JstzRuntimeOptions<F>,
-        snapshot: &'static [u8],
-    ) -> Self {
-        let mut extensions = vec![];
-        extensions.extend(init_base_extensions_ops::<F>());
         extensions.extend(options.extensions);
         Self::new_inner(
             extensions,
             options.module_loader,
             options.protocol,
-            Some(snapshot),
+            options.snapshot,
         )
+    }
+
+    /// Generates a runtime snapshot
+    ///
+    /// The snapshot should be generated on kernel startup and re-used thereafter
+    pub fn generate_snapshot<F: FetchAPI>(
+    ) -> std::result::Result<CreateSnapshotOutput, CoreError> {
+        let extensions = init_base_extensions_ops_and_esm::<F>();
+        let options = CreateSnapshotOptions {
+            cargo_manifest_dir: env!("CARGO_MANIFEST_DIR"),
+            startup_snapshot: None,
+            skip_op_registration: false,
+            extensions,
+            extension_transpiler: None,
+            with_runtime_cb: None,
+        };
+
+        create_snapshot(options, None)
     }
 
     /// Unlike `new`, this function will not add default extensions
@@ -254,8 +284,6 @@ impl JstzRuntime {
         };
         // Note: [`call_with_args`] wraps the scope with TryCatch for us and converts
         // any exception into an error
-        // FIXME(ryan): If user code throws an uncaught exception, the original
-        // exception is lost and replaced with Uncaught undefined
         let fut = self.call_with_args(&default_fn, args);
         let result = self.with_event_loop_future(fut, Default::default()).await;
         Ok(result?)
@@ -362,6 +390,8 @@ pub struct RuntimeContext {
     pub kv: Kv,
     pub address: SmartFunctionHash,
     pub request_id: String,
+    /// The slot acquired from the limiter to limit the number of smart function calls.
+    pub slot: Slot,
 }
 
 impl RuntimeContext {
@@ -370,6 +400,7 @@ impl RuntimeContext {
         tx: &mut Transaction,
         address: SmartFunctionHash,
         request_id: String,
+        slot: Slot,
     ) -> Self {
         let host = JsHostRuntime::new(hrt);
         RuntimeContext {
@@ -378,11 +409,75 @@ impl RuntimeContext {
             kv: Kv::new(address.to_base58()),
             address,
             request_id,
+            slot,
         }
     }
 }
 
-struct JstzPermissions;
+#[derive(Debug)]
+pub enum LimiterError {
+    /// The limiter has reached its configured limit.
+    LimitExceeded,
+}
+
+/// A handle that represents one acquired slot from the limiter.
+/// Release the slot by dropping it.
+#[derive(Debug)]
+pub struct Slot {
+    slots: Arc<AtomicU8>,
+}
+
+impl Slot {
+    pub fn limiter(&self) -> Limiter {
+        Limiter {
+            slots_in_use: Arc::clone(&self.slots),
+        }
+    }
+}
+
+impl Drop for Slot {
+    fn drop(&mut self) {
+        self.slots.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+/// A shareable limiter that allows at most `LIMIT` concurrent counts.
+///
+/// Each successful call to [`Limiter::try_acquire`] returns a [`Slot`].
+/// The slot frees up once it is dropped.
+#[derive(Debug, Clone, Default)]
+pub struct Limiter<const LIMIT: u8 = MAX_SMART_FUNCTION_CALL_COUNT> {
+    slots_in_use: Arc<AtomicU8>,
+}
+
+impl<const LIMIT: u8> Limiter<LIMIT> {
+    /// Attempts to acquire a slot.
+    ///
+    /// Returns:
+    /// - `Ok(Slot)` if the current usage is below `LIMIT`. The Slot frees up once it is dropped.
+    /// - `Err(LimiterError::LimitExceeded)` if the limit has been reached.
+    pub fn try_acquire(&self) -> StdResult<Slot, LimiterError> {
+        self.slots_in_use
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |val| {
+                if val < LIMIT {
+                    Some(val + 1)
+                } else {
+                    None
+                }
+            })
+            .map_err(|_| LimiterError::LimitExceeded)?;
+        Ok(Slot {
+            slots: Arc::clone(&self.slots_in_use),
+        })
+    }
+
+    /// Returns the current number of occupied slots.
+    pub fn in_use(&self) -> u8 {
+        self.slots_in_use.load(Ordering::Relaxed)
+    }
+}
+
+pub struct JstzPermissions;
 
 impl TimersPermission for JstzPermissions {
     fn allow_hrtime(&mut self) -> bool {
@@ -422,11 +517,8 @@ fn init_base_extensions_ops<F: FetchAPI>() -> Vec<Extension> {
 
 #[cfg(test)]
 mod test {
-
     use super::*;
-
     use crate::{error::RuntimeError, init_test_setup};
-
     use jstz_utils::test_util::TOKIO;
     use tezos_smart_rollup_mock::MockHost;
 
@@ -591,18 +683,7 @@ export default handler;
 
     #[test]
     fn test_snapshot() {
-        use deno_core::snapshot::create_snapshot;
-        use deno_core::snapshot::CreateSnapshotOptions;
-        let extensions = init_base_extensions_ops_and_esm::<NotSupportedFetch>();
-        let options = CreateSnapshotOptions {
-            cargo_manifest_dir: env!("CARGO_MANIFEST_DIR"),
-            startup_snapshot: None,
-            skip_op_registration: false,
-            extensions,
-            extension_transpiler: None,
-            with_runtime_cb: None,
-        };
-        let snapshot = create_snapshot(options, None).unwrap();
+        let snapshot = JstzRuntime::generate_snapshot::<NotSupportedFetch>().unwrap();
         let static_snapshot = Box::leak(snapshot.output);
 
         TOKIO.block_on(async {
@@ -622,17 +703,22 @@ export default handler;
             let specifier =
                 resolve_import("file://jstz/accounts/root", "//sf/main.js").unwrap();
             let module_loader = StaticModuleLoader::with(specifier.clone(), code);
-            let protocol =
-                RuntimeContext::new(&mut host, &mut tx, init_addr.clone(), String::new());
-            let mut runtime = JstzRuntime::new_from_snapshot(
-                JstzRuntimeOptions {
-                    protocol: Some(protocol),
-                    extensions: vec![],
-                    module_loader: Rc::new(module_loader),
-                    fetch: NotSupportedFetch,
-                },
-                static_snapshot,
+            let protocol = RuntimeContext::new(
+                &mut host,
+                &mut tx,
+                init_addr.clone(),
+                String::new(),
+                Limiter::<MAX_SMART_FUNCTION_CALL_COUNT>::default()
+                    .try_acquire()
+                    .unwrap(),
             );
+            let mut runtime = JstzRuntime::new(JstzRuntimeOptions {
+                protocol: Some(protocol),
+                extensions: vec![],
+                module_loader: Rc::new(module_loader),
+                fetch: NotSupportedFetch,
+                snapshot: Some(static_snapshot),
+            });
 
             let id = runtime.execute_main_module(&specifier).await.unwrap();
             let result = runtime.call_default_handler(id, &[]).await;
@@ -640,5 +726,50 @@ export default handler;
             let result_i64 = result.unwrap().open(scope).integer_value(scope).unwrap();
             assert_eq!(result_i64, 64);
         })
+    }
+
+    #[tokio::test]
+    async fn test_limiter() {
+        let limiter = Limiter::<2>::default();
+        assert_eq!(limiter.in_use(), 0);
+        // Acquiring a slot should succeed
+        {
+            let l = limiter.clone();
+            let _slot = l.try_acquire().unwrap();
+            // The slot gets dropped, freeing up a slot
+        }
+
+        assert_eq!(limiter.in_use(), 0);
+
+        // Two concurrent aquires should succeed, third should fail
+        let l1 = limiter.clone();
+        let l2 = limiter.clone();
+
+        let (tx1, rx1) = tokio::sync::oneshot::channel();
+        let (tx2, rx2) = tokio::sync::oneshot::channel();
+
+        let t1 = tokio::task::spawn(async move {
+            let _p = l1.try_acquire().unwrap();
+            rx1.await.unwrap();
+        });
+        let t2 = tokio::task::spawn(async move {
+            let _p = l2.try_acquire().unwrap();
+            rx2.await.unwrap();
+        });
+
+        tokio::task::yield_now().await;
+
+        assert_eq!(limiter.in_use(), 2);
+
+        // Third acquire should fail
+        let res = limiter.try_acquire();
+        assert!(matches!(res, Err(LimiterError::LimitExceeded)));
+
+        // Release t1 and t2
+        let _ = tx1.send(());
+        let _ = tx2.send(());
+        assert!(t1.await.is_ok());
+        assert!(t2.await.is_ok());
+        assert_eq!(limiter.in_use(), 0);
     }
 }

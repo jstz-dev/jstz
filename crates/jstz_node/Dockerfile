@@ -1,11 +1,13 @@
-FROM rust:1.73.0 AS builder
+FROM ghcr.io/jstz-dev/jstz/build:7f08c1b AS builder
+
 WORKDIR /jstz_build
 COPY . .
-RUN cargo build --package jstz_node --release
+RUN cargo build --bin jstz-node --release --features oracle,v2_runtime
 
-FROM debian:bookworm-slim AS node
-RUN apt-get update && apt-get install -y openssl sqlite3
+FROM ghcr.io/jstz-dev/jstz/serve:7f08c1b AS jstz_node
+COPY --from=builder /jstz_build/target/release/jstz-node /usr/bin/jstz-node
+
 ENV RUST_BACKTRACE=1
 ENV RUST_LOG=debug
-COPY --from=builder /jstz_build/target/release/jstz-node /usr/bin/jstz-node
-ENTRYPOINT [ "/usr/bin/jstz-node" ]
+
+ENTRYPOINT ["/usr/bin/jstz-node"]

@@ -20,19 +20,21 @@ use std::{
     time::SystemTime,
 };
 use tempfile::NamedTempFile;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, task::JoinSet};
 use tower_http::cors::{Any, CorsLayer};
 
 mod api_doc;
 mod services;
+pub mod storage_sync;
 use services::Service;
-use tokio_util::sync::CancellationToken;
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_scalar::{Scalar, Servable};
 pub mod config;
 pub mod sequencer;
 pub use config::RunMode;
+
+use crate::config::RuntimeEnv;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -45,6 +47,8 @@ pub struct AppState {
     pub queue: Arc<RwLock<OperationQueue>>,
     pub runtime_db: sequencer::db::Db,
     worker_heartbeat: Arc<AtomicU64>,
+    storage_sync: bool,
+    storage_sync_db: sequencer::db::Db,
 }
 
 impl AppState {
@@ -70,6 +74,7 @@ pub struct RunOptions {
     pub kernel_log_path: PathBuf,
     pub injector: KeyPair,
     pub mode: RunMode,
+    pub storage_sync: bool,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -84,6 +89,7 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         kernel_log_path: config.kernel_log_file.to_path_buf(),
         injector: config.injector,
         mode: config.mode,
+        storage_sync: config.storage_sync,
     })
     .await
 }
@@ -97,6 +103,7 @@ pub async fn run(
         kernel_log_path,
         injector,
         mode,
+        storage_sync,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
@@ -106,15 +113,13 @@ pub async fn run(
     })));
 
     // will make db_path configurable later
-    let db_file = NamedTempFile::new()?;
-    let db_path = db_file.path().to_str().ok_or(anyhow::anyhow!(
-        "failed to convert temp db file path to str"
-    ))?;
-    let runtime_db = sequencer::db::Db::init(Some(db_path))?;
+    let (runtime_db, _runtime_db_file) = temp_db()?;
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer {
-            ref debug_log_path, ..
+            ref debug_log_path,
+            ref runtime_env,
+            ..
         } => Some(
             worker::spawn(
                 queue.clone(),
@@ -122,12 +127,15 @@ pub async fn run(
                 &injector,
                 rollup_preimages_dir.clone(),
                 Some(debug_log_path),
+                runtime_env,
             )
             .context("failed to launch worker")?,
         ),
         #[cfg(test)]
         RunMode::Sequencer {
-            ref debug_log_path, ..
+            ref debug_log_path,
+            ref runtime_env,
+            ..
         } => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
             Some(
@@ -137,6 +145,7 @@ pub async fn run(
                     &injector,
                     rollup_preimages_dir.clone(),
                     Some(debug_log_path),
+                    runtime_env,
                     move || {
                         std::fs::File::create(p).unwrap();
                     },
@@ -147,27 +156,55 @@ pub async fn run(
         RunMode::Default => None,
     };
 
+    // TODO: make checkpoint path configurable
+    // https://linear.app/tezos/issue/JSTZ-912/make-inbox-checkpoint-file-configurable
+    let _checkpoint = NamedTempFile::new()?;
     let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer { .. } => {
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone()).await?)
+            let path = _checkpoint.path().to_path_buf();
+            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone(), path).await?)
         }
         #[cfg(test)]
         RunMode::Sequencer { .. } => None,
         RunMode::Default => None,
     };
 
-    let cancellation_token = CancellationToken::new();
     // LogsService expects the log file to exist at instantiation, so this needs to be called after
     // debug log file is created.
     let log_file_path = match mode {
-        RunMode::Default => kernel_log_path,
+        RunMode::Default => kernel_log_path.clone(),
         RunMode::Sequencer {
             ref debug_log_path, ..
         } => debug_log_path.clone(),
     };
-    let (broadcaster, db, tail_file_handle) =
-        LogsService::init(&log_file_path, &cancellation_token).await?;
+
+    let (broadcaster, db, log_service_handle) = LogsService::init(&log_file_path).await?;
+
+    let (storage_sync_db, _storage_sync_db_file) = temp_db()?;
+    let mut storage_sync_handles = JoinSet::new();
+    if storage_sync {
+        storage_sync_handles.spawn(storage_sync::spawn(
+            storage_sync_db.clone(),
+            kernel_log_path.clone(),
+            #[cfg(test)]
+            || {},
+        )?);
+    };
+
+    if let RunMode::Sequencer {
+        debug_log_path,
+        runtime_env: RuntimeEnv::Riscv { .. },
+        ..
+    } = &mode
+    {
+        storage_sync_handles.spawn(storage_sync::spawn(
+            runtime_db.clone(),
+            debug_log_path.to_owned(),
+            #[cfg(test)]
+            || {},
+        )?);
+    };
 
     let state = AppState {
         rollup_client,
@@ -179,6 +216,8 @@ pub async fn run(
         queue,
         runtime_db,
         worker_heartbeat: worker.as_ref().map(|w| w.heartbeat()).unwrap_or_default(),
+        storage_sync,
+        storage_sync_db,
     };
 
     let cors = CorsLayer::new()
@@ -191,11 +230,37 @@ pub async fn run(
     let router = router.merge(Scalar::with_url("/scalar", openapi));
 
     let listener = TcpListener::bind(format!("{addr}:{port}")).await?;
-    axum::serve(listener, router).await?;
 
-    cancellation_token.cancel();
-    tail_file_handle.await.unwrap()?;
+    match storage_sync_handles.is_empty() {
+        false => {
+            let (tx, rx) = tokio::sync::oneshot::channel();
+            axum::serve(listener, router)
+                .with_graceful_shutdown(async move {
+                    let sig = match storage_sync_handles.join_next().await {
+                        Some(Ok(v)) => v,
+                        Some(Err(e)) => Err(e.into()),
+                        None => Ok(()), // should not reach here actually as storage_sync_handles is confirmed non-empty
+                    };
+                    let _ = tx.send(sig);
+                    // kill other storage sync instances
+                    drop(storage_sync_handles);
+                })
+                .await?;
+            rx.await??;
+        }
+        true => axum::serve(listener, router).await?,
+    };
+
+    log_service_handle.shutdown().await?;
     Ok(())
+}
+
+fn temp_db() -> Result<(sequencer::db::Db, NamedTempFile)> {
+    let db_file = NamedTempFile::new()?;
+    let db_path = db_file.path().to_str().ok_or(anyhow::anyhow!(
+        "failed to convert temp db file path to str"
+    ))?;
+    Ok((sequencer::db::Db::init(Some(db_path))?, db_file))
 }
 
 fn router() -> OpenApiRouter<AppState> {
@@ -223,14 +288,28 @@ mod test {
         time::SystemTime,
     };
 
-    use jstz_crypto::{public_key::PublicKey, secret_key::SecretKey};
+    use jstz_core::{event::StringEncodable, kv::storage_update::BatchStorageUpdate};
+    use jstz_crypto::{
+        hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
+        secret_key::SecretKey,
+    };
+    use jstz_proto::context::account::{Account, Nonce, UserAccount};
+    use jstz_utils::test_util::append_async;
     use octez::unused_port;
     use pretty_assertions::assert_eq;
     use tempfile::{NamedTempFile, TempDir};
-    use tokio::time::{sleep, Duration};
+    use tezos_smart_rollup::storage::path::OwnedPath;
+    use tokio::{
+        task::yield_now,
+        time::{sleep, timeout, Duration},
+    };
 
     use crate::{
-        run, services::utils::tests::mock_app_state, KeyPair, RunMode, RunOptions,
+        config::RuntimeEnv,
+        run,
+        services::utils::tests::mock_app_state,
+        storage_sync::tests::{make_line, KILL_KEY},
+        KeyPair, RunMode, RunOptions,
     };
 
     pub fn default_injector() -> KeyPair {
@@ -282,6 +361,7 @@ mod test {
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: default_injector(),
                 mode: mode.clone(),
+                storage_sync: false,
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -309,6 +389,7 @@ mod test {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
             "\"sequencer\"",
         )
@@ -334,6 +415,7 @@ mod test {
                 kernel_log_path: kernel_log_file.path().to_path_buf(),
                 injector: default_injector(),
                 mode,
+                storage_sync: false,
             }));
 
             sleep(Duration::from_secs(1)).await;
@@ -350,6 +432,7 @@ mod test {
             RunMode::Sequencer {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                runtime_env: RuntimeEnv::Native,
             },
             false,
         )
@@ -387,5 +470,137 @@ mod test {
         state.worker_heartbeat = Arc::new(AtomicU64::new(now - 5));
         // heartbeat is recent enough
         assert!(state.is_worker_healthy());
+    }
+
+    // Make a storage update that sets the balance of the `addr` to `amount`
+    fn sets_balance(addr: PublicKeyHash, amount: u64) -> BatchStorageUpdate {
+        let mut updates = BatchStorageUpdate::new(1);
+        let key =
+            OwnedPath::try_from(format!("/jstz_account/{}", addr.to_base58())).unwrap();
+        let val = Account::User(UserAccount {
+            amount,
+            nonce: Nonce(0),
+        });
+        updates.push_insert(&key, &val).unwrap();
+        updates
+    }
+
+    // Make a storage update that kills the storage sync for testing
+    fn kills_storage_sync() -> BatchStorageUpdate {
+        let mut updates = BatchStorageUpdate::new(1);
+        let key = OwnedPath::try_from(KILL_KEY.to_string()).unwrap();
+        updates.push_remove(&key);
+        updates
+    }
+
+    fn start_server_with_storage_sync(
+        port: u16,
+        kernel_log_file: &NamedTempFile,
+        mode: RunMode,
+    ) -> tokio::task::JoinHandle<Result<(), anyhow::Error>> {
+        tokio::spawn(run(RunOptions {
+            addr: "0.0.0.0".to_string(),
+            port,
+            rollup_endpoint: "".to_string(),
+            rollup_preimages_dir: TempDir::new().unwrap().into_path(),
+            kernel_log_path: kernel_log_file.path().to_path_buf(),
+            injector: default_injector(),
+            mode,
+            storage_sync: true,
+        }))
+    }
+
+    #[tokio::test]
+    async fn storage_sync_spawn() -> anyhow::Result<()> {
+        let port = unused_port();
+        let kernel_log_file = NamedTempFile::new().unwrap();
+        let addr =
+            PublicKeyHash::from_base58("tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9").unwrap();
+        let amount = 10_000_000;
+
+        let _server: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
+            start_server_with_storage_sync(port, &kernel_log_file, RunMode::Default);
+
+        // wait for the server to start
+        sleep(Duration::from_secs(3)).await;
+
+        let storage_updates = sets_balance(addr.clone(), amount);
+        // write a storage update that deposits the `amount` to the `addr`
+        let writer = tokio::spawn(append_async(
+            kernel_log_file.path().to_path_buf(),
+            make_line(&storage_updates),
+            25,
+        ));
+
+        // Check that the storage update is applied to the database
+        timeout(Duration::from_secs(3), async {
+            loop {
+                let b = reqwest::get(format!(
+                    "http://0.0.0.0:{port}/accounts/{addr}/balance"
+                ))
+                .await
+                .ok();
+                if let Some(b) = b {
+                    if b.status().is_success() {
+                        let balance = b.text().await.unwrap();
+                        assert_eq!(u64::from_str(&balance).unwrap(), amount);
+                        break;
+                    }
+                }
+                yield_now().await;
+            }
+        })
+        .await
+        .expect("should update balance");
+        writer.await??;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn server_dies_when_storage_sync_dies() -> anyhow::Result<()> {
+        let port = unused_port();
+        let kernel_log_file = NamedTempFile::new().unwrap();
+        PublicKeyHash::from_base58("tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9").unwrap();
+
+        let server: tokio::task::JoinHandle<Result<(), anyhow::Error>> =
+            start_server_with_storage_sync(port, &kernel_log_file, RunMode::Default);
+
+        // wait for the server to start
+        sleep(Duration::from_secs(2)).await;
+
+        // check health
+        let health_endpoint = format!("http://0.0.0.0:{port}/health");
+        let res = reqwest::get(health_endpoint.clone()).await?;
+        let status = res.status();
+        assert!(status.is_success());
+
+        // write a storage update that kills the storage sync
+        let writer = tokio::spawn(append_async(
+            kernel_log_file.path().to_path_buf(),
+            make_line(&kills_storage_sync()),
+            25,
+        ));
+
+        // Wait for the server to shutdown.
+        sleep(Duration::from_secs(2)).await;
+
+        // server dies after storage sync dies - should get a connection error
+        timeout(Duration::from_secs(2), async {
+            loop {
+                if let Err(e) = &reqwest::get(health_endpoint.clone()).await {
+                    assert!(e.is_connect(), "Expected connection error, got: {e:?}");
+                    break;
+                }
+                yield_now().await;
+            }
+        })
+        .await?;
+        writer.await??;
+
+        // server propagates the error from storage sync
+        assert!(server
+            .await?
+            .is_err_and(|e| e.to_string().contains("received test kill signal")));
+        Ok(())
     }
 }

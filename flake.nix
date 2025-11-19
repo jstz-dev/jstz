@@ -1,8 +1,8 @@
 {
-  nixConfig = {
-    extra-trusted-public-keys = "trilitech-jstz.cachix.org-1:+ShRijHoxI9xAIZRP6Mov3aFui5FvgMHJ2M360OEYTo=";
-    extra-substituters = "https://trilitech-jstz.cachix.org";
-  };
+  # nixConfig = {
+  #   extra-trusted-public-keys = "trilitech-jstz.cachix.org-1:+ShRijHoxI9xAIZRP6Mov3aFui5FvgMHJ2M360OEYTo=";
+  #   extra-substituters = "https://trilitech-jstz.cachix.org";
+  # };
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";
@@ -38,7 +38,7 @@
 
     octezPackages = {
       inputs.nixpkgs.follows = "nixpkgs";
-      url = "gitlab:tezos/tezos/octez-v22.0-rc1";
+      url = "git+https://gitlab.com/tezos/tezos.git?ref=51117ed39f82ab60edd6fe4f6d63094605bb22c7&submodules=1";
       inputs.flake-utils.follows = "flake-utils";
       inputs.rust-overlay.follows = "rust-overlay";
       inputs.opam-nix-integration.follows = "opam-nix-integration";
@@ -58,66 +58,15 @@
             ];
           };
 
-          # Build octez release for this system
-          #
           # TODO(https://linear.app/tezos/issue/JSTZ-152):
           # This patch here should be upstreamed to tezos/tezos
-          octez = octezPackages.packages.${system}.default.overrideAttrs (old: let
-            rustToolchain = pkgs.rust-bin.fromRustupToolchainFile "${old.src}/rust-toolchain";
-            rustPlatform = pkgs.makeRustPlatform {
-              rustc = rustToolchain;
-              cargo = rustToolchain;
-            };
-          in {
+          octez = octezPackages.packages.${system}.default.overrideAttrs (old: {
             patches =
               (old.patches or [])
               ++ [
                 ./nix/patches/octez/0001-fix-octez-rust-deps-for-nix.patch
                 ./nix/patches/octez/0002-allow-floats-in-wasm-rollup.patch
               ];
-
-            # Network access for fetching cargo dependencies is disabled in sandboxed
-            # builds. Instead we need to explicitly fetch the dependencies. Nixpkgs
-            # provides two ways to do this:
-            #
-            #  - `fetchCargoTarball` fetches the dependencies using `cargo vendor`
-            #     It requires an explicit `hash`.
-            #
-            #  - `importCargoLock` parses the `Cargo.lock` file and fetches each
-            #     dependency using `fetchurl`. It doesn't require an explicit `hash`.
-            #
-            # The latter is slower but doesn't require an explicit `hash` and is therefore
-            # more maintainable (since this derivation isn't built in CI).
-            preBuild = let
-              # Configure cargo to get dependencies from vendored dir
-              vendorDeps = {
-                dir,
-                gitDepHashes ? {},
-              }: let
-                vendoredDir = rustPlatform.importCargoLock {
-                  lockFile = "${old.src}/${dir}/Cargo.lock";
-                  outputHashes = gitDepHashes;
-                };
-              in ''
-                mkdir -p ${dir}/.cargo
-                cat >> ${dir}/.cargo/config.toml << EOF
-                [net]
-                offline = true
-
-                [source.crates-io]
-                replace-with = "vendored-sources"
-
-                [source.vendored-sources]
-                directory = "${vendoredDir}"
-                EOF
-              '';
-            in
-              # HACK: For some spooky reason, vendoring dependencies does not work on MacOS
-              # but does for Linux.
-              pkgs.lib.optionalString (!pkgs.stdenv.isDarwin) ''
-                ${vendorDeps {dir = "src/rust_deps";}}
-                ${vendorDeps {dir = "src/rustzcash_deps";}}
-              '';
 
             # The `buildPhase` for `octez` compiles *all* released and experimental executables for Octez.
             # However, many of these executables are unnecessary, leading to longer build times. Additionally, some
@@ -130,9 +79,8 @@
               octez-client
               octez-node
               octez-smart-rollup-node
-              octez-smart-rollup-wasm-debugger
-              octez-baker-PsQuebec
               octez-baker-PsRiotum
+              octez-baker-PtSeouLo
               octez-baker-alpha
             '';
 
@@ -146,13 +94,7 @@
             '';
 
             nativeBuildInputs =
-              (old.nativeBuildInputs or [])
-              ++ [
-                # See https://nixos.org/manual/nixpkgs/stable/#compiling-non-rust-packages-that-include-rust-code
-                # for more information.
-                #
-                rustToolchain
-              ];
+              old.nativeBuildInputs or [];
           });
 
           clangNoArch =
@@ -206,8 +148,8 @@
           # preserve the hash compatability among case (in/)sensitive file systems
           riscvV8 = with pkgs; let
             tarball = fetchurl {
-              url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/9730f78b1d3fb8320441e3e91926fa09c67b1332/librusty_v8.tar.gz";
-              sha256 = "sha256-+XDNEhBzsCdxyZ/NIvOPX/4Lyi9tacB203Dxga/msSw=";
+              url = "https://raw.githubusercontent.com/jstz-dev/rusty_v8/63dcedfc7ba101a4bbf4ce9fd94bba8ff71f8824/librusty_v8.tar.gz";
+              sha256 = "sha256-Wi4guXiewq9zmAme5Oos31Gq4YJ5Oh2/yOxdm+NUPhM=";
             };
           in
             runCommand "fetch-riscv-v8" {} ''

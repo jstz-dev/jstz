@@ -12,7 +12,11 @@ use crate::{
 use bincode::{Decode, Encode};
 use boa_gc::{empty_trace, Finalize, Trace};
 use derive_more::From;
-use jstz_core::kv::transaction::{Guarded, GuardedMut};
+use jstz_core::kv::{
+    storage_update::BatchStorageUpdate,
+    transaction::{Guarded, GuardedMut},
+    Storage,
+};
 use jstz_core::{
     host::HostRuntime,
     kv::{Entry, Transaction},
@@ -231,6 +235,50 @@ impl Account {
                 Self::SmartFunction(SmartFunctionAccount::default())
             }
         }
+    }
+
+    fn storage_get(hrt: &impl HostRuntime, addr: &impl Addressable) -> Result<Self> {
+        let account_entry = Storage::get(hrt, &Self::path(addr)?)?;
+        Ok(account_entry.unwrap_or(Self::default_account(addr)))
+    }
+
+    fn storage_insert(
+        &self,
+        hrt: &mut impl HostRuntime,
+        addr: &impl Addressable,
+    ) -> Result<()> {
+        Ok(Storage::insert(hrt, &Self::path(addr)?, self)?)
+    }
+
+    pub fn storage_get_nonce(
+        hrt: &impl HostRuntime,
+        addr: &impl Addressable,
+    ) -> Result<Nonce> {
+        match Self::storage_get(hrt, addr)? {
+            Account::User(user) => Ok(user.nonce),
+            Account::SmartFunction(sf) => Ok(sf.nonce),
+        }
+    }
+
+    /// Sets the nonce of an account and publishes the storage update event.
+    /// The storage needs to be leaked because the nonce isn't updated via the transaction.
+    pub fn storage_set_nonce(
+        hrt: &mut impl HostRuntime,
+        addr: &impl Addressable,
+        nonce: Nonce,
+    ) -> Result<()> {
+        let mut account = Self::storage_get(hrt, addr)?;
+        match &mut account {
+            Account::User(user) => user.nonce = nonce,
+            Account::SmartFunction(sf) => sf.nonce = nonce,
+        }
+        // TODO: Ensure atomicity
+        // https://github.com/jstz-dev/jstz/pull/1319#discussion_r2339917375
+        account.storage_insert(hrt, addr)?;
+        BatchStorageUpdate::single_insert(&Self::path(addr)?, &account)?
+            .publish_event(hrt)
+            .map_err(jstz_core::error::Error::from)?;
+        Ok(())
     }
 
     fn get_mut<'a>(

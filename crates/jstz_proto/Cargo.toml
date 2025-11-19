@@ -29,6 +29,7 @@ jstz_crypto = { path = "../jstz_crypto" }
 serde.workspace = true
 serde_json.workspace = true
 serde_bytes.workspace = true
+serde_with.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
@@ -46,7 +47,7 @@ url.workspace = true
 [dev-dependencies]
 bincode.workspace = true
 jstz_mock = { path = "../jstz_mock" }
-jstz_utils = { path = "../jstz_utils" }
+jstz_utils = { path = "../jstz_utils", features = ["test_utils"] }
 tezos-smart-rollup-mock.workspace = true
 tokio.workspace = true
 

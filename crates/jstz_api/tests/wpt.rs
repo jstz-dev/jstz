@@ -1,3 +1,4 @@
+#![cfg(feature = "wpt")]
 use std::future::IntoFuture;
 
 use anyhow::Result;
@@ -9,10 +10,8 @@ use boa_engine::{
 use boa_gc::{Finalize, Trace};
 use derive_more::{From, Into};
 use jstz_core::{host_defined, Api, Runtime};
-use jstz_wpt::{
-    Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptReportTest, WptServe, WptSubtest,
-    WptSubtestStatus, WptTestStatus,
-};
+use jstz_runtime::wpt::{WptSubtest, WptSubtestStatus, WptTestStatus};
+use jstz_wpt::{Bundle, BundleItem, TestFilter, TestToRun, Wpt, WptReportTest, WptServe};
 
 const TEST_SUBSET_SIZE: u8 = 5;
 
@@ -356,7 +355,6 @@ fn run_wpt_test(
     }
 }
 
-#[cfg_attr(feature = "skip-wpt", ignore)]
 #[tokio::test]
 async fn test_wpt() -> Result<()> {
     let filter = TestFilter::try_from(

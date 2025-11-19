@@ -71,22 +71,10 @@ impl Drop for Relay {
 mod tests {
     use super::*;
     use anyhow::Result;
+    use jstz_utils::test_util::append_async;
     use std::{io::Write, time::Duration};
     use tempfile::NamedTempFile;
-    use tokio::{
-        fs::OpenOptions,
-        io::AsyncWriteExt,
-        time::{sleep, timeout},
-    };
-
-    async fn append_async(path: PathBuf, line: String, delay_ms: u64) -> Result<()> {
-        sleep(Duration::from_millis(delay_ms)).await;
-        let mut file = OpenOptions::new().append(true).open(&path).await?;
-        file.write_all(line.as_bytes()).await?;
-        file.write_all(b"\n").await?;
-        file.sync_all().await?;
-        Ok(())
-    }
+    use tokio::time::timeout;
 
     async fn next_event(
         rx: &mut broadcast::Receiver<OracleRequest>,

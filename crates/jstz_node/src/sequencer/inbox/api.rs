@@ -1,6 +1,6 @@
-#![allow(dead_code)]
 use anyhow::Result;
 use futures_util::{Stream, StreamExt, TryStreamExt};
+use jstz_proto::BlockLevel;
 use serde::{Deserialize, Serialize};
 use std::io;
 use std::time::Duration;
@@ -17,7 +17,7 @@ pub struct BlockResponse {
 /// Fetches block data from the rollup node for a specific block level.
 pub async fn fetch_block(
     rollup_endpoint: &str,
-    block_level: u32,
+    block_level: BlockLevel,
 ) -> Result<BlockResponse> {
     let url = format!("{rollup_endpoint}/global/block/{block_level}");
     let response = reqwest::get(url).await?;
@@ -28,7 +28,7 @@ pub async fn fetch_block(
 /// Response structure for block monitoring, containing the block level information.
 #[derive(Debug, Deserialize)]
 pub struct MonitorBlocksResponse {
-    pub level: u32,
+    pub level: BlockLevel,
 }
 
 /// Establishes a streaming connection to monitor new blocks from the rollup node.
@@ -40,7 +40,7 @@ pub struct MonitorBlocksResponse {
 /// attempt to reconnect if the connection is lost.
 pub async fn monitor_blocks(
     rollup_endpoint: &str,
-) -> Result<impl Stream<Item = Result<MonitorBlocksResponse, anyhow::Error>> + Unpin> {
+) -> Result<impl Stream<Item = Result<MonitorBlocksResponse>> + Unpin> {
     let url = format!("{rollup_endpoint}/global/monitor_blocks");
     let client = reqwest::Client::builder()
         .tcp_keepalive(Some(Duration::from_secs(10)))
@@ -61,6 +61,7 @@ mod tests {
     use crate::sequencer::inbox::{
         api::{fetch_block, monitor_blocks},
         test_utils::{make_mock_global_block_filter, make_mock_monitor_blocks_filter},
+        tests::{hex_external_message, mock_deploy_op},
     };
     use tokio::task;
     use tokio_stream::StreamExt;
@@ -92,6 +93,8 @@ mod tests {
 
         // Test block endpoint
         let block_response = fetch_block(&endpoint, 123).await.unwrap();
-        assert_eq!(block_response.messages, vec!["message for block 123"]);
+        assert!(block_response
+            .messages
+            .contains(&hex_external_message(mock_deploy_op(123))));
     }
 }

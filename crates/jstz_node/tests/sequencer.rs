@@ -1,42 +1,39 @@
 use axum::http::{HeaderMap, Method, StatusCode, Uri};
 use bytes::Bytes;
 use jstz_crypto::{
-    public_key::PublicKey,
     public_key_hash::PublicKeyHash,
-    signature::Signature,
     smart_function_hash::{Kt1Hash, SmartFunctionHash},
 };
-use jstz_node::sequencer::{
-    inbox::{api::BlockResponse, parsing::RollupType},
-    runtime::JSTZ_ROLLUP_ADDRESS,
-};
+use jstz_kernel::inbox::RollupType;
+use jstz_node::sequencer::{inbox::api::BlockResponse, runtime::JSTZ_ROLLUP_ADDRESS};
 use jstz_proto::{
     context::account::{Address, Nonce},
     executor::fa_deposit::FaDepositReceipt,
-    operation::{Content, DeployFunction, Operation, RunFunction, SignedOperation},
+    operation::{
+        internal::InboxId, Content, DeployFunction, Operation, RunFunction,
+        SignedOperation,
+    },
     receipt::{
         DeployFunctionReceipt, DepositReceipt, Receipt, ReceiptContent, ReceiptResult,
         RunFunctionReceipt,
     },
-    runtime::ParsedCode,
+    HttpBody,
 };
 use jstz_utils::{test_util::alice_keys, KeyPair};
 use octez::unused_port;
 use reqwest::Client;
 use std::{
     io::Write,
+    path::Path,
     process::{Child, Command},
 };
 use tempfile::{NamedTempFile, TempDir};
-use tezos_crypto_rs::hash::{Ed25519Signature, PublicKeyEd25519};
 use tokio_stream::StreamExt;
 
 use futures_util::stream;
 use inbox_utils::*;
-use jstz_core::BinEncodable;
 use std::convert::Infallible;
-use tezos_data_encoding::enc::BinWriter;
-use tezos_smart_rollup::inbox::{ExternalMessageFrame, InboxMessage};
+use tezos_smart_rollup::inbox::InboxMessage;
 use tezos_smart_rollup::types::SmartRollupAddress;
 use tokio::{
     task::{self, JoinHandle},
@@ -57,13 +54,18 @@ impl Drop for ChildWrapper {
 const DEFAULT_ROLLUP_NODE_RPC: &str = "127.0.0.1:8932";
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
-async fn run_sequencer() {
+async fn run_native_sequencer() {
     let tmp_dir = TempDir::new().unwrap();
     let log_file = NamedTempFile::new().unwrap();
     let mut injector_file = NamedTempFile::new().unwrap();
     injector_file
-            .write_all(b"edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2:edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6\n")
-            .unwrap();
+        .write_all(
+            br#"{
+            "public_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
+            "secret_key": "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
+}"#,
+        )
+        .unwrap();
     injector_file.flush().unwrap();
     let port = unused_port();
     let base_uri = format!("http://127.0.0.1:{port}");
@@ -99,8 +101,72 @@ async fn run_sequencer() {
     check_worker_health(&client, &base_uri).await;
 }
 
+#[cfg_attr(
+    not(feature = "riscv_test"),
+    ignore = "RISCV tests are not enabled by default due to memory usage"
+)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn run_riscv_sequencer() {
+    let riscv_kernel_path =
+        Path::new(std::env!("CARGO_MANIFEST_DIR")).join("tests/riscv_kernel");
+    let tmp_dir = TempDir::new().unwrap();
+    let log_file = NamedTempFile::new().unwrap();
+    let mut injector_file = NamedTempFile::new().unwrap();
+    injector_file
+        // using the kernel's default injector public key in build.rs
+        .write_all(
+            br#"{
+            "public_key": "edpkuBknW28nW72KG6RoHtYW7p12T6GKc7nAbwYX5m8Wd9sDVC9yav",
+            "secret_key": "edsk3gUfUPyBSfrS9CCgmCiQsTCHGkviBDusMxDJstFtojtc1zcpsh"
+}"#,
+        )
+        .unwrap();
+    injector_file.flush().unwrap();
+    let port = unused_port();
+    let rollup_rpc_port = unused_port();
+    let base_uri = format!("http://127.0.0.1:{port}");
+    let _rollup_rpc = make_mock_rollup_rpc_server(format!("127.0.0.1:{rollup_rpc_port}"));
+
+    let bin_path = assert_cmd::cargo::cargo_bin("jstz-node");
+    let _c = ChildWrapper(
+        Command::new(bin_path)
+            .args([
+                "run",
+                "--port",
+                &port.to_string(),
+                "--rollup-node-rpc-addr",
+                "127.0.0.1",
+                "--rollup-node-rpc-port",
+                &rollup_rpc_port.to_string(),
+                "--preimages-dir",
+                tmp_dir.path().to_str().unwrap(),
+                "--debug-log-path",
+                log_file.path().to_str().unwrap(),
+                "--mode",
+                "sequencer",
+                "--injector-key-file",
+                injector_file.path().to_str().unwrap(),
+                "--riscv-kernel-path",
+                riscv_kernel_path.to_str().unwrap(),
+                "--rollup-address",
+                "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK",
+            ])
+            .spawn()
+            .unwrap(),
+    );
+
+    let client = Client::new();
+
+    check_mode(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
+    deploy_function(&client, &base_uri).await;
+    call_function_and_stream_logs(&base_uri).await;
+    check_inbox_op(&client, &base_uri).await;
+    check_worker_health(&client, &base_uri).await;
+}
+
 async fn check_mode(client: &Client, base_uri: &str) {
-    let res = jstz_utils::poll(15, 500, || async {
+    let res = jstz_utils::poll(60, 500, || async {
         client.get(format!("{base_uri}/mode")).send().await.ok()
     })
     .await
@@ -114,21 +180,15 @@ async fn check_mode(client: &Client, base_uri: &str) {
 
 fn raw_operation(nonce: u64, content: Content) -> Operation {
     Operation {
-        public_key: PublicKey::Ed25519(
-            PublicKeyEd25519::from_base58_check(
-                "edpkuXD2CqRpWoTT8p4exrMPQYR2NqsYH3jTMeJMijHdgQqkMkzvnz",
-            )
-            .unwrap()
-            .into(),
-        ),
+        public_key: jstz_mock::pk1(),
         nonce: Nonce(nonce),
         content,
     }
 }
 
-fn signed_operation(sig_str: &str, raw_operation: Operation) -> SignedOperation {
+fn signed_operation(raw_operation: Operation) -> SignedOperation {
     SignedOperation::new(
-        Signature::Ed25519(Ed25519Signature::from_base58_check(sig_str).unwrap().into()),
+        jstz_mock::sk1().sign(raw_operation.hash()).unwrap(),
         raw_operation,
     )
 }
@@ -138,7 +198,6 @@ async fn submit_operation(
     base_uri: &str,
     operation: Operation,
     expected_hash: &str,
-    sig_str: &str,
 ) -> Receipt {
     let hash = client
         .post(format!("{base_uri}/operations/hash"))
@@ -153,7 +212,7 @@ async fn submit_operation(
 
     assert_eq!(&hash, expected_hash);
 
-    let signed_deploy_op = signed_operation(sig_str, operation);
+    let signed_deploy_op = signed_operation(operation);
     assert_eq!(
         client
             .post(format!("{base_uri}/operations"))
@@ -171,7 +230,7 @@ async fn submit_operation(
 
 async fn poll_receipt(client: &Client, base_uri: &str, hash: &str) -> Receipt {
     let uri = format!("{base_uri}/operations/{hash}/receipt");
-    jstz_utils::poll(10, 500, || async {
+    jstz_utils::poll(60, 500, || async {
         match client.get(&uri).send().await.ok() {
             Some(r) if r.status() != 404 => Some(r),
             _ => None,
@@ -185,15 +244,21 @@ async fn poll_receipt(client: &Client, base_uri: &str, hash: &str) -> Receipt {
 }
 
 async fn deploy_function(client: &Client, base_uri: &str) {
-    let deploy_op = raw_operation(0, Content::DeployFunction(DeployFunction {function_code: ParsedCode::try_from(format!("const handler = async () => {{ const s = \"{}\"; console.log(\"debug message here\"); return new Response(\"this is a big function\"); }}; export default handler;\n", "a".repeat(8000))).unwrap(), account_credit: 0}));
+    let deploy_op = raw_operation(0, Content::DeployFunction(DeployFunction {function_code: format!("const handler = async () => {{ const s = \"{}\"; console.log(\"debug message here\"); return new Response(\"this is a big function\"); }}; export default handler;\n", "a".repeat(8000)), account_credit: 0}));
 
-    let receipt = submit_operation(client, base_uri, deploy_op, "1d67b9aec56ec1ee843feaf87486d11f9c80404c707862f053b91d842972faa4", "edsigu2E4TvDw4dDCF2hzjjEvDF5tMpP1hM3UPof2DfPCoESvXRkNcDKNYrymcoKVG9gqxbobFnoJhf7JWqmzfYe4Upa1wHRff1").await;
+    let receipt = submit_operation(
+        client,
+        base_uri,
+        deploy_op,
+        "931008aa770c77c72df2e7417832773030d65e113faa8836637b953932736fd3",
+    )
+    .await;
 
     assert!(matches!(
         receipt.result,
         ReceiptResult::Success(ReceiptContent::DeployFunction(
             DeployFunctionReceipt { address: SmartFunctionHash(Kt1Hash(addr)) }
-        )) if addr.to_base58_check() == "KT1CTTMXwcpLV3FtPupxfwZ6bTSLAPaoB6sd"
+        )) if addr.to_base58_check() == "KT1Lk9dy6cfWTQdB89rFK6P3tPDmfGdRmHee"
     ));
 }
 
@@ -201,15 +266,21 @@ async fn call_function(client: &Client, base_uri: &str) {
     let call_op = raw_operation(
         1,
         Content::RunFunction(RunFunction {
-            uri: Uri::from_static("jstz://KT1CTTMXwcpLV3FtPupxfwZ6bTSLAPaoB6sd/"),
+            uri: Uri::from_static("jstz://KT1Lk9dy6cfWTQdB89rFK6P3tPDmfGdRmHee/"),
             method: Method::GET,
             headers: HeaderMap::new(),
-            body: None,
+            body: HttpBody::empty(),
             gas_limit: 550000,
         }),
     );
 
-    let receipt = submit_operation(client, base_uri, call_op, "2b0ac1f923e4e83226611e3befe81f664729475f2b6e546f1c7d6e2a69b6cd12", "edsigtx7PoXqmF2vuxfXkEwTwEm7xCYT516pXqRjZZSfmvZyjNtpGfVu6Jwq41k9ZZarv9JcFK5y2tugpm8rKo17VAgB49GnTRQ").await;
+    let receipt = submit_operation(
+        client,
+        base_uri,
+        call_op,
+        "6c2858adb620f889949fa34bb2e13ba81f610e6707abb84b0242f6898470bccc",
+    )
+    .await;
 
     assert!(matches!(
         receipt.result,
@@ -323,7 +394,7 @@ fn mock_deploy_op() -> SignedOperation {
         "#;
 
     let deploy_fn = DeployFunction {
-        function_code: ParsedCode::try_from(code.to_string()).unwrap(),
+        function_code: code.to_string(),
         account_credit: 0,
     };
     let op = Operation {
@@ -337,23 +408,48 @@ fn mock_deploy_op() -> SignedOperation {
 /// mock deposit op to transfer 30000 mutez to tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9
 fn mock_deposit_op() -> (&'static str, &'static str) {
     let op = "0000050507070a000000160000c4ecf33f52c7b89168cfef8f350818fee1ad08e807070a000000160146d83d8ef8bce4d8c60a96170739c0269384075a00070707070000030600b0d40354267463f8cf2844e4d8b20a76f0471bcb2137fd0002298c03ed7d454a101eb7022bc95f7e5f41ac78c3ea4c18195bcfac262dcb29e3d803ae74681739";
-    let op_hash = "d236fca2b92ca42da90327820d7fe73c8ad22ea13cd8d761adc6e98822195c77";
+    let op_hash = "09952d767f9ebf76b0edd3f837596b71f3b8193f13be4cbfb09e5eec691bbde3";
     (op_hash, op)
+}
+
+#[test]
+fn mock_deposit_op_hash_matches_actual_hash() {
+    let (op_hash, _) = mock_deposit_op();
+    let inbox_id = InboxId {
+        l1_level: 123,
+        l1_message_id: 3,
+    };
+    assert_eq!(inbox_id.hash().to_string(), op_hash);
 }
 
 /// mock fa deposit op to transfer 1000 FA token to `tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN`
 fn mock_deposit_fa_op() -> (&'static str, &'static str) {
     let op = "0000050807070a000000160000e7670f32038107a59a2b9cfefae36ea21f5aa63c070705090a0000001601238f371da359b757db57238e9f27f3c48234defa0007070a0000001601207905b1a5abdace0a6b5bff0d71a467d5b85cf500070707070001030600a80f9424c685d3f69801ff6e3f2cfb74b250f00988e100e7670f32038107a59a2b9cfefae36ea21f5aa63cc3ea4c18195bcfac262dcb29e3d803ae74681739";
-    let op_hash = "34461635d31fd734cee1f20839218ffef78785d536b348b04204510012a8cbd2";
+    let op_hash = "89873bc722b5a0744657ed0bd6251f30989bea2059a52d080308c1d21923b053";
     (op_hash, op)
 }
 
+#[test]
+fn mock_fa_deposit_op_hash_matches_actual_hash() {
+    let (op_hash, _) = mock_deposit_fa_op();
+    let inbox_id = InboxId {
+        l1_level: 123,
+        l1_message_id: 4,
+    };
+    assert_eq!(inbox_id.hash().to_string(), op_hash);
+}
+
 async fn check_worker_health(client: &Client, base_uri: &str) {
-    let res = client
-        .get(format!("{base_uri}/worker/health"))
-        .send()
-        .await
-        .unwrap();
+    let res = jstz_utils::poll(60, 500, || async {
+        client
+            .get(format!("{base_uri}/worker/health"))
+            .send()
+            .await
+            .ok()
+    })
+    .await
+    .expect("should get response");
+
     assert!(res.status().is_success());
 }
 
@@ -366,7 +462,7 @@ async fn call_function_and_stream_logs(base_uri: &str) {
     });
 
     let res = reqwest::get(format!(
-        "{base_uri}/logs/KT1CTTMXwcpLV3FtPupxfwZ6bTSLAPaoB6sd/stream"
+        "{base_uri}/logs/KT1Lk9dy6cfWTQdB89rFK6P3tPDmfGdRmHee/stream"
     ))
     .await
     .unwrap();
@@ -377,7 +473,7 @@ async fn call_function_and_stream_logs(base_uri: &str) {
         if let Some(Ok(b)) = body.next().await {
             let s = String::from_utf8(b.to_vec()).unwrap().replace("data: ", "");
             if let Ok(serde_json::Value::Object(m)) = serde_json::from_str(&s) {
-                if m["text"].as_str().is_some_and(|v| v.contains("debug message here")) && m["requestId"] == serde_json::json!("2b0ac1f923e4e83226611e3befe81f664729475f2b6e546f1c7d6e2a69b6cd12") {
+                if m["text"].as_str().is_some_and(|v| v.contains("debug message here")) && m["requestId"] == serde_json::json!("6c2858adb620f889949fa34bb2e13ba81f610e6707abb84b0242f6898470bccc") {
                     found_message = true;
                     break;
                 }
@@ -394,6 +490,7 @@ async fn call_function_and_stream_logs(base_uri: &str) {
 #[cfg(test)]
 pub mod inbox_utils {
     use super::*;
+    use jstz_kernel::inbox::encode_signed_operation;
     use tezos_crypto_rs::hash::{BlockHash, HashTrait};
     use tezos_smart_rollup::{
         inbox::{InfoPerLevel, InternalInboxMessage},
@@ -425,17 +522,12 @@ pub mod inbox_utils {
 
     // Returns the hex-encoded serialized external message for a given SignedOperation.
     pub fn hex_external_message(op: SignedOperation) -> String {
-        let message = op.encode().unwrap();
-        let external_message = ExternalMessageFrame::Targetted {
-            address: SmartRollupAddress::from_b58check(JSTZ_ROLLUP_ADDRESS).unwrap(),
-            contents: message,
-        };
-        let mut payload = Vec::new();
-        external_message
-            .bin_write(&mut payload)
-            .expect("serialization of external payload failed");
-        let external_message = InboxMessage::External::<RollupType>(&payload);
-        inbox_message_to_hex(external_message)
+        let bytes = encode_signed_operation(
+            &op,
+            &SmartRollupAddress::from_b58check(JSTZ_ROLLUP_ADDRESS).unwrap(),
+        )
+        .unwrap();
+        hex::encode(bytes)
     }
 
     fn info_per_level() -> InfoPerLevel {

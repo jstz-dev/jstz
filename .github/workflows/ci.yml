@@ -27,10 +27,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: nix --version
+      - name: Show effective Nix sandbox config
+        run: nix show-config | grep -E '^(sandbox|sandbox-)' || true
       - name: Format
         run: nix --accept-flake-config fmt -- --fail-on-change
       - name: Prevent blst
-        run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
+        run: nix -L --accept-flake-config develop --no-sandbox -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
       - name: Build
         run: nix --accept-flake-config --log-format raw -L build -j auto .#all
       - name: Flake check
@@ -53,7 +55,7 @@ jobs:
     needs: [commitlint]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 18
           cache: npm
@@ -74,3 +76,10 @@ jobs:
 
       - name: Build
         run: npm run docs:build
+
+  build-riscv-kernel:
+    name: Build RISCV kernel
+    runs-on: [linux, nix]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/build-riscv-kernel

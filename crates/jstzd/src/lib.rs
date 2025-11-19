@@ -1,6 +1,7 @@
 mod config;
 pub mod docker;
 pub mod task;
+mod user_config;
 
 use crate::task::jstzd::{JstzdConfig, JstzdServer};
 pub use config::BOOTSTRAP_CONTRACT_NAMES;
