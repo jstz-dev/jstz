@@ -236,35 +236,35 @@ The Jstz dev wallet supports only the Chrome web browser.
 
 OR 
 
-2. Download the source code for the dev wallet:
+1. Download the source code for the dev wallet:
 
    ```bash
    git clone https://github.com/jstz-dev/dev-wallet.git
    ```
 
-3. Go into the repository and install the dependencies:
+1. Go into the repository and install the dependencies:
 
    ```bash
    cd dev-wallet && git submodule update --init
    ```
 
-4. Go to the wallet folder, install its dependencies, and build it:
+1. Go to the wallet folder, install its dependencies, and build it:
 
    ```bash
    cd apps/signer && pnpm i && pnpm build
    ```
 
-5. In Chrome, open the extensions page at `chrome://extensions`.
+1. In Chrome, open the extensions page at `chrome://extensions`.
 
-6. At the top right of the page, use the radio button to enable **Developer mode**.
+1. At the top right of the page, use the radio button to enable **Developer mode**.
 
-7. Click **Load unpacked**, unpack the signer.zip and select the unpacked content folder or, if built maunally, select the  `apps/signer/dist/` folder of the `dev-wallet` repository, and then click **Select** to install the extension from the built files.
+1. Click **Load unpacked**, unpack the signer.zip and select the unpacked content folder or, if built maunally, select the  `apps/signer/dist/` folder of the `dev-wallet` repository, and then click **Select** to install the extension from the built files.
 
    The Jstz dev wallet appears in the list of extensions in the browser.
 
-8. Create an account in the dev wallet by clicking the extension icon and then clicking **Generate account**.
+1. Create an account in the dev wallet by clicking the extension icon and then clicking **Generate account**.
 
-9. In the **Network** drop-down list, select `http://localhost:8933`, which is the address of the local sandbox.
+1. In the **Network** drop-down list, select `http://localhost:8933`, which is the address of the local sandbox.
 
 Now when you click the extension, it shows your account.
 This account is managed by the extension and is not linked to the account that you used to call the smart function on the command line.
@@ -284,7 +284,7 @@ Follow these steps to run a sample web application that uses your smart function
    git clone https://github.com/jstz-dev/dev-wallet.git
    ```
 
-2. Build and run the `web-call-to-jstz` sample application from the `dev-wallet` repository:
+1. Build and run the `web-call-to-jstz` sample application from the `dev-wallet` repository:
 
    ```sh
    cd apps/examples/web-call-to-jstz
@@ -294,15 +294,15 @@ Follow these steps to run a sample web application that uses your smart function
 
    The response includes the URL that the application is running at, such as `http://localhost:3201`.
 
-3. Open the application in the Chrome web browser.
+1. Open the application in the Chrome web browser.
 
-4. Paste the address of your smart function into the web application.
+1. Paste the address of your smart function into the web application.
 
-5. Click one of the buttons under the address field.
+1. Click one of the buttons under the address field.
 
    The wallet extension opens and prompts you to sign the Jstz transaction with your account.
 
-6. In the extension, click **Sign** to sign the transaction.
+1. In the extension, click **Sign** to sign the transaction.
 
    The web application sends the signed transaction to Jstz and updates its status message to say that it is waiting for a response.
    When the web application receives the response from Jstz, it updates the message, as in this screenshot:
