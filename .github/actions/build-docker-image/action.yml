@@ -6,21 +6,17 @@ inputs:
   arch:
     description: Architecture of CPU that the binary can run on, e.g. arm64, amd64
     required: true
-  repo_token:
-    description: API token that gives access to manage the target repo
-    required: true
   octez-tag:
     description: "tezos/tezos docker tag to be used"
     required: true
-  docker_registry:
-    description: Docker registry
+  image_names:
+    description: List of image base names for tags, e.g. ghcr.io/jstz-dev/jstz/jstzd, docker.io/jstzdev/jstzd. More than one name can be accepted. This input value should be a newline-delimited string
     required: true
-  docker_image_base:
-    description: Docker image base
+    type: string
+  image_id:
+    description: Local identifier for an image build. This is not reflected in the actual built images
     required: true
-  image:
-    description: Image
-    required: true
+    type: string
   dockerfile:
     description: Dockerfile
     required: true
@@ -67,7 +63,7 @@ runs:
       id: meta
       uses: docker/metadata-action@v3
       with:
-        images: ${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}
+        images: ${{ inputs.image_names }}
         tags: |
           type=ref,event=tag
           type=raw,value=${{ inputs.ref }}
@@ -92,17 +88,18 @@ runs:
         cache-to: type=gha,mode=max
         labels: ${{ steps.meta.outputs.labels }}
         platforms: ${{ inputs.platform }}
-        outputs: type=image,"name=${{ inputs.docker_registry }}/${{ inputs.docker_image_base }}/${{ inputs.image }}",push-by-digest=true,name-canonical=true,"push=${{ steps.set-values.outputs.push }}"
+        tags: ${{ inputs.image_names }}
+        outputs: type=image,push-by-digest=true,name-canonical=true,"push=${{ steps.set-values.outputs.push }}"
     - name: Export digest
       shell: bash
       run: |
-        mkdir -p ${{ runner.temp }}/digests/${{ inputs.image }}
+        mkdir -p ${{ runner.temp }}/digests/${{ inputs.image_id }}
         digest="${{ steps.build-image.outputs.digest }}"
-        touch "${{ runner.temp }}/digests/${{ inputs.image }}/${digest#sha256:}"
+        touch "${{ runner.temp }}/digests/${{ inputs.image_id }}/${digest#sha256:}"
     - name: Upload digest
       uses: actions/upload-artifact@v4
       with:
-        name: digests-${{ inputs.image }}-${{ inputs.platform }}-${{ inputs.arch }}
-        path: ${{ runner.temp }}/digests/${{ inputs.image }}/*
+        name: digests-${{ inputs.image_id }}-${{ inputs.platform }}-${{ inputs.arch }}
+        path: ${{ runner.temp }}/digests/${{ inputs.image_id }}/*
         if-no-files-found: error
         retention-days: 1
