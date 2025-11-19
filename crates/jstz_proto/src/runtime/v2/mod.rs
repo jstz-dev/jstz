@@ -21,7 +21,7 @@ pub use jstz_core::log_record::{LogRecord, LOG_PREFIX};
 pub use jstz_runtime::{Kv, KvValue};
 mod parsed_code;
 pub use parsed_code::ParsedCode;
-mod ledger;
+pub mod ledger;
 pub mod oracle;
 pub mod protocol_context;
 
