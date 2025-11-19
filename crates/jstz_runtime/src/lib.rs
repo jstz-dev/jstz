@@ -85,6 +85,7 @@ mod test_utils {
             $(address = $addr:ident;)?
             $(fetch = $fetch_ext:expr;)?
             $(request_id = $request_id:tt;)?
+            $(extensions = $extensions:expr;)?
         ) => {
             #[allow(unused)]
             let mut init_host = tezos_smart_rollup_mock::MockHost::default();
@@ -110,6 +111,9 @@ mod test_utils {
                 module_loader: std::rc::Rc::new(module_loader),
                 $(
                     fetch: $fetch_ext,
+                )?
+                $(
+                    extensions: $extensions,
                 )?
                 ..Default::default()
 
