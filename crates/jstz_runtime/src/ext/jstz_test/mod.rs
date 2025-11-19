@@ -11,6 +11,8 @@ use indexmap::{IndexMap, IndexSet};
 use serde::Deserialize;
 use tokio::sync::mpsc::{error::SendError, UnboundedReceiver, UnboundedSender};
 
+pub mod executor;
+
 #[derive(Debug, Clone, PartialEq, Deserialize, Eq, Hash)]
 #[serde(rename_all = "camelCase")]
 pub struct TestLocation {
