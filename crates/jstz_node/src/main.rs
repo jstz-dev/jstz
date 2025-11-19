@@ -75,6 +75,9 @@ struct Args {
 
     #[arg(long, action = ArgAction::SetTrue)]
     storage_sync: bool,
+
+    #[arg(long)]
+    runtime_db_path: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -109,6 +112,7 @@ async fn main() -> anyhow::Result<()> {
                     .context("failed to parse injector key file")?,
                 mode: run_mode_builder.build()?,
                 storage_sync: args.storage_sync,
+                runtime_db_path: args.runtime_db_path,
             })
             .await
         }
