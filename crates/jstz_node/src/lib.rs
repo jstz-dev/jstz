@@ -75,6 +75,7 @@ pub struct RunOptions {
     pub injector: KeyPair,
     pub mode: RunMode,
     pub storage_sync: bool,
+    pub runtime_db_path: Option<PathBuf>,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -90,6 +91,7 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         injector: config.injector,
         mode: config.mode,
         storage_sync: config.storage_sync,
+        runtime_db_path: config.runtime_db_path,
     })
     .await
 }
@@ -104,6 +106,7 @@ pub async fn run(
         injector,
         mode,
         storage_sync,
+        runtime_db_path,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
@@ -112,8 +115,21 @@ pub async fn run(
         _ => 0,
     })));
 
-    // will make db_path configurable later
-    let (runtime_db, _runtime_db_file) = temp_db()?;
+    // When runtime_db_path is not provided, the db is created with a temp file rather than
+    // with the in-memory setup to keep the behaviour consistent and avoid consuming
+    // too much memory unexpectedly. If somehow path-to-str conversion fails, the in-memory
+    // setup will be used as the fallback option.
+    // `_tmp_file` simply holds the temporary file so that it gets cleaned up when the node
+    // is shut down.
+    let (db_path, _tmp_file) = match runtime_db_path {
+        Some(p) => (p, None),
+        None => {
+            let f = NamedTempFile::new()?;
+            (f.path().to_path_buf(), Some(f))
+        }
+    };
+    let runtime_db = sequencer::db::Db::init(db_path.as_path().to_str())?;
+
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer {
@@ -362,6 +378,7 @@ mod test {
                 injector: default_injector(),
                 mode: mode.clone(),
                 storage_sync: false,
+                runtime_db_path: None,
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -416,6 +433,7 @@ mod test {
                 injector: default_injector(),
                 mode,
                 storage_sync: false,
+                runtime_db_path: None,
             }));
 
             sleep(Duration::from_secs(1)).await;
@@ -507,6 +525,7 @@ mod test {
             injector: default_injector(),
             mode,
             storage_sync: true,
+            runtime_db_path: None,
         }))
     }
 

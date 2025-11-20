@@ -162,6 +162,9 @@ pub struct JstzNodeConfig {
     pub mode: RunMode,
     /// When enabled, the node will sync storage updates to the database from the kernel_log_file.
     pub storage_sync: bool,
+    /// Path to the sqlite db file that keeps the runtime state.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub runtime_db_path: Option<PathBuf>,
 }
 
 impl JstzNodeConfig {
@@ -187,6 +190,7 @@ impl JstzNodeConfig {
             injector,
             mode,
             storage_sync,
+            runtime_db_path: None,
         }
     }
 }
@@ -232,6 +236,7 @@ mod tests {
         assert_eq!(json["debug_log_path"], serde_json::Value::Null);
         assert_eq!(json["runtime_env"], serde_json::Value::Null);
         assert_eq!(json["storage_sync"], true);
+        assert_eq!(json["runtime_db_path"], serde_json::Value::Null);
 
         config.mode = RunMode::Sequencer {
             capacity: 123,
@@ -260,6 +265,12 @@ mod tests {
             json["runtime_env"],
             serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel", "rollup_address": "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao"})
         );
+
+        config
+            .runtime_db_path
+            .replace(PathBuf::from_str("/runtime_db").unwrap());
+        let json = serde_json::to_value(&config).unwrap();
+        assert_eq!(json["runtime_db_path"], "/runtime_db");
     }
 
     #[test]

@@ -101,6 +101,96 @@ async fn run_native_sequencer() {
     check_worker_health(&client, &base_uri).await;
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn restart_native_sequencer() {
+    let tmp_dir = TempDir::new().unwrap();
+    let log_file = NamedTempFile::new().unwrap();
+    let mut injector_file = NamedTempFile::new().unwrap();
+    injector_file
+        .write_all(
+            br#"{
+            "public_key": "edpkuSLWfVU1Vq7Jg9FucPyKmma6otcMHac9zG4oU1KMHSTBpJuGQ2",
+            "secret_key": "edsk31vznjHSSpGExDMHYASz45VZqXN4DPxvsa4hAyY8dHM28cZzp6"
+}"#,
+        )
+        .unwrap();
+    injector_file.flush().unwrap();
+    let runtime_db_file = NamedTempFile::new().unwrap();
+    let jstz_node_port = unused_port();
+    let base_uri = format!("http://127.0.0.1:{jstz_node_port}");
+    let rollup_rpc_port = unused_port();
+    let _rollup_rpc = make_mock_rollup_rpc_server(format!("127.0.0.1:{rollup_rpc_port}"));
+    let bin_path = assert_cmd::cargo::cargo_bin("jstz-node");
+
+    let launch_jstz_node = || {
+        ChildWrapper(
+            Command::new(&bin_path)
+                .args([
+                    "run",
+                    "--port",
+                    &jstz_node_port.to_string(),
+                    "--rollup-endpoint",
+                    &format!("http://127.0.0.1:{rollup_rpc_port}"),
+                    "--preimages-dir",
+                    tmp_dir.path().to_str().unwrap(),
+                    "--kernel-log-path",
+                    log_file.path().to_str().unwrap(),
+                    "--mode",
+                    "sequencer",
+                    "--injector-key-file",
+                    injector_file.path().to_str().unwrap(),
+                    "--runtime-db-path",
+                    runtime_db_file.path().to_str().unwrap(),
+                ])
+                .spawn()
+                .unwrap(),
+        )
+    };
+
+    let c = launch_jstz_node();
+    let client = Client::new();
+
+    let smart_function_exists = async || -> bool {
+        let res = fetch_account_balance(
+            &client,
+            &base_uri,
+            "KT1Lk9dy6cfWTQdB89rFK6P3tPDmfGdRmHee",
+        )
+        .await;
+        match res {
+            Ok(v) => {
+                assert_eq!(v, 0);
+                true
+            }
+            Err(e) => {
+                assert_eq!(e.status().unwrap(), 404);
+                false
+            }
+        }
+    };
+
+    check_worker_health(&client, &base_uri).await;
+    assert!(!smart_function_exists().await);
+    deploy_function(&client, &base_uri).await;
+    assert!(smart_function_exists().await);
+
+    // Kill jstz node
+    drop(c);
+    // Wait until jstz node is shut down
+    jstz_utils::poll(60, 500, || async {
+        client.get(format!("{base_uri}/health")).send().await.err()
+    })
+    .await
+    .expect("should get connection error");
+
+    // Restart jstz node
+    let _c = launch_jstz_node();
+    check_worker_health(&client, &base_uri).await;
+    // Smart function should still exist because the sequencer should read runtime db
+    // from the designated db file
+    assert!(smart_function_exists().await);
+}
+
 #[cfg_attr(
     not(feature = "riscv_test"),
     ignore = "RISCV tests are not enabled by default due to memory usage"
@@ -316,7 +406,8 @@ async fn check_inbox_op(client: &Client, base_uri: &str) {
     ));
     let balance =
         fetch_account_balance(client, base_uri, "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9")
-            .await;
+            .await
+            .unwrap();
     assert_eq!(balance, 30000);
 
     let (deposit_fa_op_hash, _) = mock_deposit_fa_op();
@@ -331,15 +422,18 @@ async fn check_inbox_op(client: &Client, base_uri: &str) {
     ));
 }
 
-async fn fetch_account_balance(client: &Client, base_uri: &str, address: &str) -> u64 {
+async fn fetch_account_balance(
+    client: &Client,
+    base_uri: &str,
+    address: &str,
+) -> reqwest::Result<u64> {
     client
         .get(format!("{base_uri}/accounts/{address}/balance"))
         .send()
-        .await
-        .unwrap()
+        .await?
+        .error_for_status()?
         .json::<u64>()
         .await
-        .unwrap()
 }
 
 // Mocking the rollup node rpc
