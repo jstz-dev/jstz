@@ -174,19 +174,19 @@ async fn restart_native_sequencer() {
     deploy_function(&client, &base_uri).await;
     assert!(smart_function_exists().await);
 
-    // kill jstz node
+    // Kill jstz node
     drop(c);
-    // wait until jstz node is shut down
+    // Wait until jstz node is shut down
     jstz_utils::poll(60, 500, || async {
         client.get(format!("{base_uri}/health")).send().await.err()
     })
     .await
     .expect("should get connection error");
 
-    // restart jstz node
+    // Restart jstz node
     let _c = launch_jstz_node();
     check_worker_health(&client, &base_uri).await;
-    // smart function should still exist because the sequencer should read runtime db
+    // Smart function should still exist because the sequencer should read runtime db
     // from the designated db file
     assert!(smart_function_exists().await);
 }
