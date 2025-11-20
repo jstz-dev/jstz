@@ -407,6 +407,7 @@ mod test {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
             },
             "\"sequencer\"",
         )
@@ -451,6 +452,7 @@ mod test {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
             },
             false,
         )

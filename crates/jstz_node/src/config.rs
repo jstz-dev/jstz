@@ -29,6 +29,7 @@ pub enum RunMode {
         capacity: usize,
         debug_log_path: PathBuf,
         runtime_env: RuntimeEnv,
+        inbox_checkpoint_path: PathBuf,
     },
     #[serde(alias = "default")]
     Default,
@@ -64,6 +65,7 @@ pub struct RunModeBuilder {
     debug_log_path: Option<PathBuf>,
     riscv_kernel_path: Option<PathBuf>,
     rollup_address: Option<SmartRollupHash>,
+    inbox_checkpoint_path: Option<PathBuf>,
 }
 
 impl RunModeBuilder {
@@ -108,6 +110,16 @@ impl RunModeBuilder {
         );
     }
 
+    pub fn with_inbox_checkpoint_path(mut self, path: PathBuf) -> anyhow::Result<Self> {
+        if let RunModeType::Sequencer = self.mode {
+            self.inbox_checkpoint_path.replace(path);
+            return Ok(self);
+        }
+        anyhow::bail!(
+            "inbox checkpoint path can only be set when run mode is 'sequencer'"
+        );
+    }
+
     pub fn build(self) -> anyhow::Result<RunMode> {
         Ok(match self.mode {
             RunModeType::Default => RunMode::Default,
@@ -138,6 +150,16 @@ impl RunModeBuilder {
                             .to_path_buf(),
                     ),
                     runtime_env,
+                    inbox_checkpoint_path: self.inbox_checkpoint_path.unwrap_or(
+                        NamedTempFile::new()
+                            .context("failed to create temporary inbox checkpoint file")?
+                            .into_temp_path()
+                            .keep()
+                            .context(
+                                "failed to convert temporary inbox checkpoint file to path",
+                            )?
+                            .to_path_buf(),
+                    ),
                 }
             }
         })
@@ -242,12 +264,14 @@ mod tests {
             capacity: 123,
             debug_log_path: PathBuf::from_str("/debug/log").unwrap(),
             runtime_env: RuntimeEnv::Native,
+            inbox_checkpoint_path: PathBuf::from_str("/inbox/checkpoint").unwrap(),
         };
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(json["mode"], "sequencer");
         assert_eq!(json["capacity"], 123);
         assert_eq!(json["debug_log_path"], "/debug/log");
         assert_eq!(json["runtime_env"], serde_json::json!({"type": "native"}));
+        assert_eq!(json["inbox_checkpoint_path"], "/inbox/checkpoint");
 
         config.mode = RunMode::Sequencer {
             capacity: 123,
@@ -259,6 +283,7 @@ mod tests {
                 )
                 .unwrap(),
             },
+            inbox_checkpoint_path: PathBuf::from_str("/inbox/checkpoint").unwrap(),
         };
         let json = serde_json::to_value(&config).unwrap();
         assert_eq!(
@@ -286,6 +311,7 @@ mod tests {
                 capacity: 1,
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: PathBuf::new(),
             }
             .to_string(),
             "sequencer"
@@ -329,6 +355,13 @@ mod tests {
                 .to_string(),
             "riscv kernel path can only be set when run mode is 'sequencer'"
         );
+        assert_eq!(
+            RunModeBuilder::new(RunModeType::Default)
+                .with_inbox_checkpoint_path(PathBuf::new())
+                .unwrap_err()
+                .to_string(),
+            "inbox checkpoint path can only be set when run mode is 'sequencer'"
+        );
 
         let mode = RunModeBuilder::new(RunModeType::Sequencer).build().unwrap();
         matches!(
@@ -336,7 +369,8 @@ mod tests {
             RunMode::Sequencer {
                 capacity: 1,
                 debug_log_path: _,
-                runtime_env: RuntimeEnv::Native
+                runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: _
             }
         );
 
@@ -346,12 +380,17 @@ mod tests {
                 .unwrap()
                 .with_debug_log_path(PathBuf::from_str("/foo/bar").unwrap())
                 .unwrap()
+                .with_inbox_checkpoint_path(
+                    PathBuf::from_str("/inbox/checkpoint").unwrap()
+                )
+                .unwrap()
                 .build()
                 .unwrap(),
             RunMode::Sequencer {
                 capacity: 123,
                 debug_log_path: PathBuf::from_str("/foo/bar").unwrap(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: PathBuf::from_str("/inbox/checkpoint").unwrap()
             }
         );
 
@@ -385,7 +424,8 @@ mod tests {
             RunMode::Sequencer {
                 capacity: _,
                 debug_log_path: _,
-                runtime_env: RuntimeEnv::Riscv { kernel_path, rollup_address }
+                runtime_env: RuntimeEnv::Riscv { kernel_path, rollup_address },
+                inbox_checkpoint_path: _
             } if kernel_path == PathBuf::from_str("/riscv/kernel").unwrap() && rollup_address == rollup_address
         );
     }
