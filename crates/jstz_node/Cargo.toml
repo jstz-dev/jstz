@@ -66,7 +66,7 @@ pretty_assertions.workspace = true
 warp.workspace = true
 http.workspace = true
 jstz_mock = { path = "../jstz_mock" }
-jstz_utils = { path = "../jstz_utils", features = ["test_utils"] }
+jstz_utils = { path = "../jstz_utils", features = ["test_utils", "inbox_builder"] }
 
 [[bin]]
 name = "jstz-node"
