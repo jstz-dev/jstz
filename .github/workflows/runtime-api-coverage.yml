@@ -28,7 +28,7 @@ jobs:
     steps:
       - name: Setup
         run: apt update && apt install -y git curl pkg-config libssl-dev
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.build_ref }}
       - name: Run
@@ -65,7 +65,7 @@ jobs:
         with:
           name: api_coverage_report
           path: report
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
           repository: ${{ inputs.dest_repo }}
