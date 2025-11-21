@@ -1492,7 +1492,7 @@ dependencies = [
 [[package]]
 name = "deno_fetch_base"
 version = "0.202.0"
-source = "git+https://github.com/jstz-dev/deno?branch=leo%2Fextend-fetch-base#26c62e089fe3f1ba624d017821d9c836106bf729"
+source = "git+https://github.com/jstz-dev/deno?branch=leo%2Frequest-response-transfer#a37e14e0fbfb2c51d13c5ac657c263e88a2891a1"
 dependencies = [
  "bytes",
  "deno_core",
