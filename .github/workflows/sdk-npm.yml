@@ -31,7 +31,7 @@ jobs:
     name: Build SDK
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
       - uses: dtolnay/rust-toolchain@1.88.0
