@@ -78,6 +78,9 @@ struct Args {
 
     #[arg(long)]
     runtime_db_path: Option<PathBuf>,
+
+    #[arg(long)]
+    inbox_checkpoint_path: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -101,6 +104,9 @@ async fn main() -> anyhow::Result<()> {
             if let Some(v) = args.rollup_address {
                 run_mode_builder = run_mode_builder
                     .with_rollup_address(SmartRollupHash::from_base58_check(&v)?)?;
+            }
+            if let Some(path) = args.inbox_checkpoint_path {
+                run_mode_builder = run_mode_builder.with_inbox_checkpoint_path(path)?;
             }
             jstz_node::run(RunOptions {
                 addr: args.addr,
