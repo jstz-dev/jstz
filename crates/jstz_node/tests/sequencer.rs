@@ -483,7 +483,7 @@ fn make_mock_rollup_rpc_server(
     url: String,
     messages: HashMap<u32, Vec<String>>,
 ) -> JoinHandle<()> {
-    let levels = messages.keys().map(|v| v.clone()).collect();
+    let levels = messages.keys().copied().collect();
     let filter = make_mock_monitor_blocks_filter(levels)
         .or(make_mock_global_block_filter(messages));
     let addr = url.parse::<std::net::SocketAddr>().unwrap();
