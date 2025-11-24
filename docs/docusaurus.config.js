@@ -29,7 +29,7 @@ font-src https://cdn.jsdelivr.net https://fonts.gstatic.com 'self';
 img-src 'self' https://*.googletagmanager.com https://*.google-analytics.com data: 'unsafe-eval';
 media-src 'self';
 form-action 'self';
-connect-src 'self' https://*.algolia.net https://*.algolianet.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com wss://app.biel.ai https://app.biel.ai;`;
+connect-src 'self' https://cdn.jsdelivr.net https://*.algolia.net https://*.algolianet.com https://*.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com wss://app.biel.ai https://app.biel.ai;`;
 
 /** @type {import('@docusaurus/types').Config} */
 module.exports = async function createConfigAsync() {
