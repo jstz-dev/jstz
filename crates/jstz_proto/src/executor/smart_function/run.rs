@@ -69,7 +69,8 @@ mod test {
             if (transferred_amount !== "{transfer_amount}") {{
                 return Response.error("Invalid transferred amount");
             }}
-            return Response.withTransfer("transferred!", {refund_amount});
+            const headers = {{"X-JSTZ-TRANSFER": "{refund_amount}"}};
+            return new Response(null, {{headers}});
         }};
         export default handler;
         "#
@@ -109,8 +110,6 @@ mod test {
         .await
         .expect("run function expected");
 
-        let body = String::from_utf8(response.body.unwrap()).unwrap();
-        assert_eq!(&body, "transferred!");
         assert!(response.headers.get(X_JSTZ_TRANSFER).is_none());
         assert!(response.headers.get(X_JSTZ_AMOUNT).is_some_and(|amt| amt
             .to_str()
@@ -612,7 +611,11 @@ mod test {
         let code2 = format!(
             r#"
             const handler = async () => {{
-                await fetch(Request.withTransfer("jstz://{smart_function1}/", {transfer_amount}));
+                const myHeaders = new Headers();
+                myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
+                await fetch(new Request("jstz://{smart_function1}/", {{
+                    headers: myHeaders
+                }}));
                 return new Response();
             }};
             export default handler;
@@ -726,8 +729,11 @@ mod test {
         let code = format!(
             r#"
             const handler = async () => {{
-                const request = Request.withTransfer("jstz://{source}", {transfer_amount});
-                await fetch(request);
+                const myHeaders = new Headers();
+                myHeaders.append("X-JSTZ-TRANSFER", "{transfer_amount}");
+                await fetch(new Request("jstz://{source}", {{
+                    headers: myHeaders
+                }}));
                 return new Response();
             }};
             export default handler;
@@ -1221,7 +1227,9 @@ mod test {
         let refund_code = format!(
             r#"
             const handler = async () => {{
-                return Response.withTransfer(null, {refund_amount});
+                return new Response(null, {{
+                    headers: {{ "X-JSTZ-TRANSFER": "{refund_amount}" }},
+                }});
             }};
             export default handler;
             "#
@@ -1568,5 +1576,91 @@ mod test {
             response.status_code,
             http::StatusCode::INTERNAL_SERVER_ERROR
         );
+    }
+
+    #[tokio::test]
+    async fn test_request_response_with_transfer_header() {
+        let source = Address::User(jstz_mock::account1());
+        // 1. Deploy the smart function
+        let mut jstz_mock_host = JstzMockHost::default();
+        let host = jstz_mock_host.rt();
+        let mut tx = Transaction::default();
+        tx.begin();
+
+        // 1. Deploy the smart function that transfers the balance to the source
+        let code = r#"
+        const sameRequests = async (a, b) => {
+            // Compare method
+            if (a.method !== b.method) return false;
+
+            // Compare URL
+            if (a.url !== b.url) return false;
+
+            // Compare headers
+            const ah = [...a.headers.entries()];
+            const bh = [...b.headers.entries()];
+            if (JSON.stringify(ah) !== JSON.stringify(bh)) return false;
+
+            // Compare body
+            const ab = await a.clone().text();
+            const bb = await b.clone().text();
+            if (ab !== bb) return false;
+
+            return true;
+        };
+
+        const sameResponses = async (a, b) => {
+            if (a.status !== b.status) return false;
+
+            // Compare headers
+            const ah = [...a.headers.entries()];
+            const bh = [...b.headers.entries()];
+            if (JSON.stringify(ah) !== JSON.stringify(bh)) return false;
+
+            // Compare body
+            const ab = await a.clone().text();
+            const bb = await b.clone().text();
+            return ab === bb;
+        };
+
+
+        const handler = async (request) => {
+
+            const req1 = new Request("jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/", { body: "hello", method: "POST", headers: { "X-JSTZ-TRANSFER": 100 } });
+            const req2 = Request.withTransfer("jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/", 100, { body: "hello", method: "POST" });
+            const reqEqual = await sameRequests(req1, req2);
+
+            const res1 = new Response("hello", { headers: { "X-JSTZ-TRANSFER": 100 } });
+            const res2 = Response.withTransfer("hello", 100);
+            const resEqual = await sameResponses(res1, res2);
+            return new Response(resEqual && reqEqual);
+        };
+
+        export default handler;
+        "#;
+        let parsed_code = code.to_string();
+        let smart_function =
+            smart_function::deploy(host, &mut tx, &source, parsed_code, 0).unwrap();
+
+        let run_function = RunFunction {
+            uri: format!("jstz://{}/", &smart_function).try_into().unwrap(),
+            method: Method::GET,
+            headers: HeaderMap::new(),
+            body: HttpBody::empty(),
+            gas_limit: 1000,
+        };
+        let fake_op_hash = Blake2b::from(b"fake_op_hash".as_ref());
+        let response = execute(
+            host,
+            &mut tx,
+            &source,
+            run_function.clone(),
+            fake_op_hash.clone(),
+        )
+        .await
+        .expect("run function expected");
+
+        let body = String::from_utf8(response.body.unwrap()).unwrap();
+        assert_eq!(&body, "true");
     }
 }
