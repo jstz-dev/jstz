@@ -23,6 +23,7 @@ use jstz_utils::{test_util::alice_keys, KeyPair};
 use octez::unused_port;
 use reqwest::Client;
 use std::{
+    collections::HashMap,
     io::Write,
     path::Path,
     process::{Child, Command},
@@ -69,7 +70,23 @@ async fn run_native_sequencer() {
     injector_file.flush().unwrap();
     let port = unused_port();
     let base_uri = format!("http://127.0.0.1:{port}");
-    let _rollup_rpc = make_mock_rollup_rpc_server(DEFAULT_ROLLUP_NODE_RPC.to_string());
+
+    let deploy_op = mock_deploy_op();
+    let (_, deposit_op) = mock_deposit_op();
+    let (_, deposit_fa_op) = mock_deposit_fa_op();
+    let inbox_messages = HashMap::from_iter([(
+        123,
+        vec![
+            hex_start_of_level_message(),
+            hex_info_per_level_message(),
+            hex_external_message(deploy_op),
+            deposit_op.to_string(),
+            deposit_fa_op.to_string(),
+            hex_end_of_level_message(),
+        ],
+    )]);
+    let _rollup_rpc =
+        make_mock_rollup_rpc_server(DEFAULT_ROLLUP_NODE_RPC.to_string(), inbox_messages);
 
     let bin_path = assert_cmd::cargo::cargo_bin("jstz-node");
     let _c = ChildWrapper(
@@ -119,7 +136,14 @@ async fn restart_native_sequencer() {
     let jstz_node_port = unused_port();
     let base_uri = format!("http://127.0.0.1:{jstz_node_port}");
     let rollup_rpc_port = unused_port();
-    let _rollup_rpc = make_mock_rollup_rpc_server(format!("127.0.0.1:{rollup_rpc_port}"));
+    let inbox_messages = HashMap::from_iter([(
+        123,
+        vec![hex_start_of_level_message(), hex_end_of_level_message()],
+    )]);
+    let _rollup_rpc = make_mock_rollup_rpc_server(
+        format!("127.0.0.1:{rollup_rpc_port}"),
+        inbox_messages,
+    );
     let bin_path = assert_cmd::cargo::cargo_bin("jstz-node");
 
     let launch_jstz_node = || {
@@ -215,7 +239,24 @@ async fn run_riscv_sequencer() {
     let port = unused_port();
     let rollup_rpc_port = unused_port();
     let base_uri = format!("http://127.0.0.1:{port}");
-    let _rollup_rpc = make_mock_rollup_rpc_server(format!("127.0.0.1:{rollup_rpc_port}"));
+    let deploy_op = mock_deploy_op();
+    let (_, deposit_op) = mock_deposit_op();
+    let (_, deposit_fa_op) = mock_deposit_fa_op();
+    let inbox_messages = HashMap::from_iter([(
+        123,
+        vec![
+            hex_start_of_level_message(),
+            hex_info_per_level_message(),
+            hex_external_message(deploy_op),
+            deposit_op.to_string(),
+            deposit_fa_op.to_string(),
+            hex_end_of_level_message(),
+        ],
+    )]);
+    let _rollup_rpc = make_mock_rollup_rpc_server(
+        format!("127.0.0.1:{rollup_rpc_port}"),
+        inbox_messages.clone(),
+    );
 
     let bin_path = assert_cmd::cargo::cargo_bin("jstz-node");
     let _c = ChildWrapper(
@@ -438,43 +479,43 @@ async fn fetch_account_balance(
 
 // Mocking the rollup node rpc
 
-fn make_mock_rollup_rpc_server(url: String) -> JoinHandle<()> {
-    let filter = make_mock_monitor_blocks_filter().or(make_mock_global_block_filter());
+fn make_mock_rollup_rpc_server(
+    url: String,
+    messages: HashMap<u32, Vec<String>>,
+) -> JoinHandle<()> {
+    let levels = messages.keys().copied().collect();
+    let filter = make_mock_monitor_blocks_filter(levels)
+        .or(make_mock_global_block_filter(messages));
     let addr = url.parse::<std::net::SocketAddr>().unwrap();
     let server = warp::serve(filter).bind(addr);
     task::spawn(server)
 }
 
 pub(crate) fn make_mock_monitor_blocks_filter(
+    levels: Vec<u32>,
 ) -> impl warp::Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("global" / "monitor_blocks").map(|| {
-        let data_stream = stream::iter(vec![Ok::<Bytes, Infallible>(Bytes::from(
-            "{\"level\": 123}\n",
-        ))]);
+    warp::path!("global" / "monitor_blocks").map(move || {
+        let mut content = String::new();
+        for v in levels.clone() {
+            content.push_str(&format!("{{\"level\": {v}}}\n"));
+        }
+        let data_stream =
+            stream::iter(vec![Ok::<Bytes, Infallible>(Bytes::from(content))]);
         warp::reply::Response::new(Body::wrap_stream(data_stream))
     })
 }
 
 pub(crate) fn make_mock_global_block_filter(
+    message_map: HashMap<u32, Vec<String>>,
 ) -> impl warp::Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-    warp::path!("global" / "block" / u32).map(|_| {
-        let deploy_op = mock_deploy_op();
-        let (_, deposit_op) = mock_deposit_op();
-        let (_, deposit_fa_op) = mock_deposit_fa_op();
-        let response = BlockResponse {
-            messages: vec![
-                &hex_start_of_level_message(),
-                &hex_info_per_level_message(),
-                &hex_external_message(deploy_op),
-                deposit_op,
-                deposit_fa_op,
-                &hex_end_of_level_message(),
-            ]
-            .into_iter()
-            .map(String::from)
-            .collect(),
+    let message_map = std::sync::Arc::new(message_map);
+    warp::path!("global" / "block" / u32).map(move |level: u32| {
+        let messages = match message_map.clone().get(&level) {
+            Some(messages) => messages.to_owned(),
+            // Default to nothing when messages for the level are not provided
+            None => vec![hex_start_of_level_message(), hex_end_of_level_message()],
         };
-        warp::reply::json(&response)
+        warp::reply::json(&BlockResponse { messages })
     })
 }
 
