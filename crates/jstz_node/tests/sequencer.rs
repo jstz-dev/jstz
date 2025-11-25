@@ -716,7 +716,7 @@ fn mock_deposit_op(dst: &str, amount_mutez: u64, inbox_id: InboxId) -> (String, 
         inbox_id,
         &inbox_msg,
         &ticketer,
-        &rollup_addr.hash(),
+        rollup_addr.hash(),
     )
     .unwrap()
     .content;
