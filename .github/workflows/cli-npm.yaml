@@ -77,7 +77,7 @@ jobs:
     container:
       image: ghcr.io/jstz-dev/jstz/build_cli:7f08c1b
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.set-input-values.outputs.ref }}
       - name: Build
@@ -116,7 +116,7 @@ jobs:
           apk add nodejs --update-cache
           mkdir /opt/bin
           ln -s /usr/bin/node /opt/bin/node
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.set-input-values.outputs.ref }}
       - name: Build
@@ -170,7 +170,7 @@ jobs:
     needs:
       [test-macos-arm64, test-linux-arm64, test-linux-amd64, set-input-values]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.set-input-values.outputs.ref }}
       - uses: jstz-dev/jstz/.github/actions/publish-npm-package@main

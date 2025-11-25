@@ -26,10 +26,13 @@ Jstz has several components that provide functionality to different elements of 
 
 The [Jstz CLI](/cli), available as the package [`@jstz-dev/cli`](https://www.npmjs.com/package/@jstz-dev/cli) provides commands that you can use to deploy and interact with smart functions and the sandbox locally.
 
-### Smart function SDK
+### Jstz SDK
 
-Smart functions must be built with the Jstz smart function SDK, [`jstz_sdk`](https://www.npmjs.com/package/jstz_sdk), to be deployed on Jstz.
-The SDK allows them to receive requests, return responses, and access the Jstz [API](/api/).
+The Jstz SDK, [`@jstz-dev/jstz_sdk`](https://www.npmjs.com/package/@jstz-dev/jstz_sdk), is a WebAssembly package that provides helper functions for use in applications outside of Jstz to
+
+- Sign operations
+- Hash operations
+- Convert passkey signatures to Jstz signatures
 
 ### Client SDK
 
