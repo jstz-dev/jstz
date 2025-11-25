@@ -234,7 +234,7 @@ The Jstz dev wallet supports only the Chrome web browser.
 
 1. Download the [latest release](https://github.com/jstz-dev/dev-wallet/releases/latest) of the wallet and unpack it.
 
-OR 
+OR
 
 1. Download the source code for the dev wallet:
 
@@ -258,11 +258,11 @@ OR
 
 1. At the top right of the page, use the radio button to enable **Developer mode**.
 
-1. Click **Load unpacked**, unpack the signer.zip and select the unpacked content folder or, if built maunally, select the  `apps/signer/dist/` folder of the `dev-wallet` repository, and then click **Select** to install the extension from the built files.
+1. Click **Load unpacked**, unpack the signer.zip and select the unpacked content folder or, if built manually, select the `apps/signer/dist/` folder of the `dev-wallet` repository, and then click **Select** to install the extension from the built files.
 
    The Jstz dev wallet appears in the list of extensions in the browser.
 
-1. Create an account in the dev wallet by clicking the extension icon and then clicking **Generate account**.
+1. Create an account in the dev wallet by clicking the extension icon and then clicking **Create Wallet**.
 
 1. In the **Network** drop-down list, select `http://localhost:8933`, which is the address of the local sandbox.
 
@@ -272,6 +272,29 @@ This account is managed by the extension and is not linked to the account that y
 <div style={{maxWidth:400}}>
 <Image img={require('./static/img/quick_start_wallet.png')} alt="The development wallet showing a new account"/>
 </div>
+
+### Passkey accounts
+
+Currently we're supporting two kinds of accounts:
+
+- Normal - where we store the cryptographic key pairs in the extensions storage
+- Passkey based account
+
+The only difference is where private key is being stored and who's doing the signing. In case of the _normal_ extension is responsible for storing and signing. Where passkeys accounts store their private key on a device specified by user during the creation of the passkey. We're using `Web Authentication API` which is handled by the browser so you can store passkeys on whichever device you want eq.: your phone, hardware key, you password manager.
+
+To create a passkey account you just select "Create Passkey Wallet" on the initial/add wallet page.
+
+<div style={{maxWidth:400}}>
+<Image img={require('./static/img/quick_start_wallet_passkeys.png')} alt="The development wallet showing a new passkey account"/>
+</div>
+
+<br/>
+
+:::warning
+
+Currently importing passkeys is not supported so if you delete them from the extension they're **gone**.
+
+:::
 
 ## 5. Interacting with the smart function in a web application
 
