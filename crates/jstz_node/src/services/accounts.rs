@@ -377,6 +377,7 @@ mod tests {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: PathBuf::new(),
             },
         )
         .await;
@@ -512,6 +513,7 @@ mod tests {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: PathBuf::new(),
             },
         )
         .await;
@@ -567,6 +569,7 @@ mod tests {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: PathBuf::new(),
             },
         )
         .await;
@@ -644,6 +647,7 @@ mod tests {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: PathBuf::new(),
             },
         )
         .await;
@@ -710,6 +714,7 @@ mod tests {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: PathBuf::new(),
             },
         )
         .await;
@@ -823,6 +828,7 @@ mod tests {
                 capacity: 0,
                 debug_log_path: PathBuf::new(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: PathBuf::new(),
             },
         )
         .await;
