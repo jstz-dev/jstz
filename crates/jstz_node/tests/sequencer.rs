@@ -4,14 +4,16 @@ use jstz_crypto::{
     public_key_hash::PublicKeyHash,
     smart_function_hash::{Kt1Hash, SmartFunctionHash},
 };
-use jstz_kernel::inbox::RollupType;
+use jstz_kernel::inbox::{
+    parse_inbox_message_hex, Message, ParsedInboxMessage, RollupType,
+};
 use jstz_node::sequencer::{inbox::api::BlockResponse, runtime::JSTZ_ROLLUP_ADDRESS};
 use jstz_proto::{
     context::account::{Address, Nonce},
     executor::fa_deposit::FaDepositReceipt,
     operation::{
-        internal::InboxId, Content, DeployFunction, Operation, RunFunction,
-        SignedOperation,
+        internal::InboxId, Content, DeployFunction, InternalOperation, Operation,
+        RunFunction, SignedOperation,
     },
     receipt::{
         DeployFunctionReceipt, DepositReceipt, Receipt, ReceiptContent, ReceiptResult,
@@ -19,7 +21,7 @@ use jstz_proto::{
     },
     HttpBody,
 };
-use jstz_utils::{test_util::alice_keys, KeyPair};
+use jstz_utils::{inbox_builder::InboxBuilder, test_util::alice_keys, KeyPair};
 use octez::unused_port;
 use reqwest::Client;
 use std::{
@@ -72,7 +74,16 @@ async fn run_native_sequencer() {
     let base_uri = format!("http://127.0.0.1:{port}");
 
     let deploy_op = mock_deploy_op();
-    let (_, deposit_op) = mock_deposit_op();
+    let (deposit_op_hash, deposit_op) = mock_deposit_op(
+        "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9",
+        30000,
+        InboxId {
+            l1_level: 123,
+            // message_id is 3 because it is the 3rd message (0-based index) in the message
+            // vector below.
+            l1_message_id: 3,
+        },
+    );
     let (_, deposit_fa_op) = mock_deposit_fa_op();
     let inbox_messages = HashMap::from_iter([(
         123,
@@ -114,7 +125,18 @@ async fn run_native_sequencer() {
     check_worker_health(&client, &base_uri).await;
     deploy_function(&client, &base_uri).await;
     call_function_and_stream_logs(&base_uri).await;
+
+    // check if inbox messages are processed
     check_inbox_op(&client, &base_uri).await;
+    check_deposit(
+        &client,
+        &base_uri,
+        &deposit_op_hash,
+        "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9",
+        30000,
+    )
+    .await;
+
     check_worker_health(&client, &base_uri).await;
 }
 
@@ -240,7 +262,16 @@ async fn run_riscv_sequencer() {
     let rollup_rpc_port = unused_port();
     let base_uri = format!("http://127.0.0.1:{port}");
     let deploy_op = mock_deploy_op();
-    let (_, deposit_op) = mock_deposit_op();
+    let (deposit_op_hash, deposit_op) = mock_deposit_op(
+        "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9",
+        30000,
+        InboxId {
+            l1_level: 123,
+            // message_id is 3 because it is the 3rd message (0-based index) in the message
+            // vector below.
+            l1_message_id: 3,
+        },
+    );
     let (_, deposit_fa_op) = mock_deposit_fa_op();
     let inbox_messages = HashMap::from_iter([(
         123,
@@ -292,7 +323,18 @@ async fn run_riscv_sequencer() {
     check_worker_health(&client, &base_uri).await;
     deploy_function(&client, &base_uri).await;
     call_function_and_stream_logs(&base_uri).await;
+
+    // check if inbox messages are processed
     check_inbox_op(&client, &base_uri).await;
+    check_deposit(
+        &client,
+        &base_uri,
+        &deposit_op_hash,
+        "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9",
+        30000,
+    )
+    .await;
+
     check_worker_health(&client, &base_uri).await;
 }
 
@@ -423,7 +465,34 @@ async fn call_function(client: &Client, base_uri: &str) {
     ));
 }
 
-// Check if the `DeployFunction`, `Deposit`, `FaDeposit` operations inside the inbox returned by the mock server
+// Check if a `Deposit` operation from the inbox is executed correctly.
+async fn check_deposit(
+    client: &Client,
+    base_uri: &str,
+    op_hash: &str,
+    recipient: &str,
+    expected_balance_mutez: u64,
+) {
+    let receipt = poll_receipt(client, base_uri, op_hash).await;
+    assert!(
+        matches!(
+            &receipt.result,
+            ReceiptResult::Success(ReceiptContent::Deposit(DepositReceipt {
+                account: Address::User(PublicKeyHash::Tz1(addr)),
+                updated_balance,
+            })) if addr.to_base58_check() == recipient && updated_balance == &expected_balance_mutez
+        ),
+        "unexpected result: {:?}",
+        receipt.result
+    );
+
+    let balance = fetch_account_balance(client, base_uri, recipient)
+        .await
+        .unwrap();
+    assert_eq!(balance, expected_balance_mutez);
+}
+
+// Check if the `DeployFunction` and `FaDeposit` operations inside the inbox returned by the mock server
 // is processed by the runtime.
 async fn check_inbox_op(client: &Client, base_uri: &str) {
     let op = mock_deploy_op();
@@ -435,21 +504,6 @@ async fn check_inbox_op(client: &Client, base_uri: &str) {
             DeployFunctionReceipt { address: SmartFunctionHash(Kt1Hash(addr)) }
         )) if addr.to_base58_check() == "KT1F2P4aqUVSrNEnk7F1RBd8fCeCpFQFubz7"
     ));
-
-    let (deposit_op_hash, _) = mock_deposit_op();
-    let receipt = poll_receipt(client, base_uri, deposit_op_hash).await;
-    assert!(matches!(
-        receipt.result,
-        ReceiptResult::Success(ReceiptContent::Deposit(DepositReceipt {
-            account: Address::User(PublicKeyHash::Tz1(addr)),
-            updated_balance,
-        })) if addr.to_base58_check() == "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9" && updated_balance == 30000
-    ));
-    let balance =
-        fetch_account_balance(client, base_uri, "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9")
-            .await
-            .unwrap();
-    assert_eq!(balance, 30000);
 
     let (deposit_fa_op_hash, _) = mock_deposit_fa_op();
     let receipt = poll_receipt(client, base_uri, deposit_fa_op_hash).await;
@@ -540,21 +594,68 @@ fn mock_deploy_op() -> SignedOperation {
     SignedOperation::new(alice_sk.sign(op.hash()).unwrap(), op.clone())
 }
 
-/// mock deposit op to transfer 30000 mutez to tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9
-fn mock_deposit_op() -> (&'static str, &'static str) {
-    let op = "0000050507070a000000160000c4ecf33f52c7b89168cfef8f350818fee1ad08e807070a000000160146d83d8ef8bce4d8c60a96170739c0269384075a00070707070000030600b0d40354267463f8cf2844e4d8b20a76f0471bcb2137fd0002298c03ed7d454a101eb7022bc95f7e5f41ac78c3ea4c18195bcfac262dcb29e3d803ae74681739";
-    let op_hash = "09952d767f9ebf76b0edd3f837596b71f3b8193f13be4cbfb09e5eec691bbde3";
-    (op_hash, op)
-}
+// Note that `inbox_id` must match the level and the index of the actual level and index of
+// the message when it gets inserted into the mock rollup rpc server.
+fn mock_deposit_op(dst: &str, amount_mutez: u64, inbox_id: InboxId) -> (String, String) {
+    struct DummyLogger;
+    impl jstz_core::host::WriteDebug for DummyLogger {
+        fn write_debug(&self, _msg: &str) {}
+    }
 
-#[test]
-fn mock_deposit_op_hash_matches_actual_hash() {
-    let (op_hash, _) = mock_deposit_op();
-    let inbox_id = InboxId {
-        l1_level: 123,
-        l1_message_id: 3,
+    // Default rollup address (will be made configurable later)
+    let rollup_addr =
+        SmartRollupAddress::from_b58check("sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK")
+            .unwrap();
+    // Default ticketer address (will be made configurable later)
+    let ticketer = tezos_crypto_rs::hash::ContractKt1Hash::from_base58_check(
+        "KT1F3MuqvT9Yz57TgCS3EkDcKNZe9HpiavUJ",
+    )
+    .unwrap();
+
+    let mut builder = InboxBuilder::new(
+        rollup_addr.clone(),
+        Some(ticketer.clone()),
+        #[cfg(feature = "v2_runtime")]
+        None,
+    );
+    builder
+        .deposit_from_l1(
+            &jstz_utils::inbox_builder::Account {
+                nonce: Nonce(0),
+                // sk and pk do not matter here as they are not referenced by this deposit method
+                sk: jstz_mock::sk1(),
+                pk: jstz_mock::pk1(),
+                address: Address::from_base58(dst).unwrap(),
+            },
+            amount_mutez,
+        )
+        .unwrap();
+    let inbox = builder.build();
+    let serde_json::Value::String(inbox_msg) =
+        serde_json::to_value(inbox.0.first().unwrap().first().unwrap()).unwrap()
+    else {
+        // Unreachable because the inbox message is supposed to be serialised to a hex string.
+        unreachable!()
     };
-    assert_eq!(inbox_id.hash().to_string(), op_hash);
+
+    // Parse the raw message to derive operation hash
+    let parsed_op = parse_inbox_message_hex(
+        &DummyLogger,
+        inbox_id,
+        &inbox_msg,
+        &ticketer,
+        rollup_addr.hash(),
+    )
+    .unwrap()
+    .content;
+    let ParsedInboxMessage::JstzMessage(Message::Internal(InternalOperation::Deposit(d))) =
+        parsed_op
+    else {
+        // Unreachable because the inbox message built above is supposed to be a deposit message
+        unreachable!()
+    };
+
+    (d.hash().to_string(), inbox_msg)
 }
 
 /// mock fa deposit op to transfer 1000 FA token to `tz1gjaF81ZRRvdzjobyfVNsAeSC6PScjfQwN`
