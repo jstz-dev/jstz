@@ -19,7 +19,7 @@ futures-util.workspace = true
 http.workspace = true
 indicatif.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
-jstz_node = {path = "../jstz_node"}
+jstz_node = { path = "../jstz_node" }
 jstz_oracle_node = { path = "../jstz_oracle_node", features = ["v2_runtime"], optional = true}
 jstz_utils = { path = "../jstz_utils" }
 octez = { path = "../octez" }
@@ -58,6 +58,7 @@ build-image = ["octez/disable-alpha"]
 v2_runtime = ["jstz_node/v2_runtime"]
 blueprint = ["jstz_node/blueprint"]
 oracle = ["v2_runtime", "jstz_node/oracle", "dep:jstz_oracle_node"]
+timeout = ["jstz_node/timeout"]
 
 [[bin]]
 name = "jstzd"

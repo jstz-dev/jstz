@@ -66,6 +66,7 @@ pub async fn process_message(rt: &mut impl Runtime, op: Message) -> anyhow::Resu
         }
         Message::Internal(op) => execute_internal_operation(rt, &mut tx, op).await,
     };
+    println!("{}", receipt.hash());
     receipt
         .write(rt, &mut tx)
         .map_err(|e| anyhow!("failed to write receipt: {e}"))?;
