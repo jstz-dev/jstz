@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::{sync::OnceLock, time::Duration};
 
 use crate::{
     context::account::Addressable,
@@ -25,7 +25,20 @@ mod ledger;
 pub mod oracle;
 pub mod protocol_context;
 
+#[cfg(all(
+    not(any(target_arch = "riscv64", target_arch = "wasm32")),
+    feature = "timeout"
+))]
+pub mod execution_tracker;
+#[cfg(all(
+    not(any(target_arch = "riscv64", target_arch = "wasm32")),
+    feature = "timeout"
+))]
+pub use execution_tracker::*;
+
 pub static SNAPSHOT: OnceLock<&'static [u8]> = OnceLock::new();
+
+pub const TIMEOUT: u64 = 3;
 
 pub async fn run_toplevel_fetch(
     hrt: &mut impl HostRuntime,
@@ -34,7 +47,7 @@ pub async fn run_toplevel_fetch(
     run_operation: RunFunction,
     operation_hash: OperationHash,
 ) -> Result<RunFunctionReceipt, crate::Error> {
-    Ok(run(hrt, tx, source_address, run_operation, operation_hash).await?)
+    return Ok(run(hrt, tx, source_address, run_operation, operation_hash).await?);
 }
 
 async fn run(
@@ -54,26 +67,96 @@ async fn run(
 
     let url = Url::parse(uri.to_string().as_str()).map_err(FetchError::from)?;
     let body = body.0.map(Body::Vector);
-    let response: http::Response<Option<Vec<u8>>> = process_and_dispatch_request(
-        JsHostRuntime::new(hrt),
-        tx.clone(),
-        true,
-        Some(operation_hash),
-        source_address.clone().into(),
-        source_address.clone().into(),
-        method.to_string().into(),
-        url,
-        convert_header_map(headers),
-        body,
-        Limiter::default(),
-    )
-    .await
-    .into();
-    Ok(RunFunctionReceipt {
-        body: response.body().clone().into(),
-        status_code: response.status().clone(),
-        headers: response.headers().clone(),
-    })
+    let hrt = JsHostRuntime::new(hrt);
+    let source_address = source_address.clone().into();
+
+    #[cfg(not(feature = "timeout"))]
+    {
+        let execution = async {
+            let response: http::Response<Option<Vec<u8>>> = process_and_dispatch_request(
+                hrt,
+                tx.clone(),
+                true,
+                Some(operation_hash),
+                source_address.clone(),
+                source_address,
+                method.to_string().into(),
+                url,
+                convert_header_map(headers),
+                body,
+                Limiter::default(),
+            )
+            .await
+            .into();
+            Ok(RunFunctionReceipt {
+                body: response.body().clone().into(),
+                status_code: response.status().clone(),
+                headers: response.headers().clone(),
+            })
+        };
+
+        return execution.await;
+    }
+
+    #[cfg(all(
+        not(any(target_arch = "riscv64", target_arch = "wasm32")),
+        feature = "timeout"
+    ))]
+    {
+        use std::sync::Arc;
+
+        let inner_tx = tx.inner();
+        let exec_tracker = Arc::new(ExecutionTracker::default());
+        let exec_tracker_clone = exec_tracker.clone();
+        let execution_handle = tokio::task::spawn_blocking(move || {
+            let execution = async {
+                let response: http::Response<Option<Vec<u8>>> =
+                    process_and_dispatch_request(
+                        hrt,
+                        inner_tx.into(),
+                        true,
+                        Some(operation_hash),
+                        source_address.clone(),
+                        source_address,
+                        method.to_string().into(),
+                        url,
+                        convert_header_map(headers),
+                        body,
+                        Limiter::default(),
+                        exec_tracker_clone,
+                    )
+                    .await
+                    .into();
+                Ok(RunFunctionReceipt {
+                    body: response.body().clone().into(),
+                    status_code: response.status().clone(),
+                    headers: response.headers().clone(),
+                })
+            };
+            let tokio_rt = tokio::runtime::Builder::new_current_thread().build();
+            match tokio_rt {
+                Ok(rt) => rt.block_on(execution),
+                Err(err) => Err(TokioError::SpawnError(err)),
+            }
+        });
+
+        match tokio::time::timeout(Duration::from_secs(TIMEOUT), execution_handle).await {
+            Err(timeout_error) => {
+                let mut executions = exec_tracker.executions.lock();
+                while let Some((_, isolate_handle)) = executions.pop_last() {
+                    while let false = isolate_handle.terminate_execution() {
+                        tokio::time::sleep(Duration::from_millis(200)).await
+                    }
+                }
+                let _ = tx.rollback();
+                Err(TokioError::TimeoutError(timeout_error))?
+            }
+            Ok(spawn_result) => match spawn_result {
+                Err(join_err) => Err(TokioError::JoinError(join_err))?,
+                Ok(result) => Ok(result?),
+            },
+        }
+    }
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -84,6 +167,29 @@ pub enum Error {
     ParsedCodeError(#[from] parsed_code::ParseError),
     #[error(transparent)]
     OracleError(#[from] oracle::OracleError),
+
+    #[cfg(all(
+        not(any(target_arch = "riscv64", target_arch = "wasm32")),
+        feature = "timeout"
+    ))]
+    #[error(transparent)]
+    TokioError(#[from] TokioError),
+}
+
+#[cfg(all(
+    not(any(target_arch = "riscv64", target_arch = "wasm32")),
+    feature = "timeout"
+))]
+#[derive(Debug, thiserror::Error)]
+pub enum TokioError {
+    #[error("Join error: {0}")]
+    JoinError(tokio::task::JoinError),
+    #[error("Spawn error: {0}")]
+    SpawnError(std::io::Error),
+    #[error(
+        "Smart function run timed out: Execution must complete within {TIMEOUT} seconds"
+    )]
+    TimeoutError(tokio::time::error::Elapsed),
 }
 
 #[cfg(test)]

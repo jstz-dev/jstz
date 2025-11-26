@@ -16,7 +16,7 @@ use std::fmt::Debug;
 /// - Cloned into new boxed values
 ///
 /// The trait is object-safe and can be used with trait objects.
-pub trait Value: Any + Debug + BinEncodable {
+pub trait Value: Any + Debug + BinEncodable + Send + Sync {
     fn as_any(&self) -> &dyn Any;
     fn as_any_mut(&mut self) -> &mut dyn Any;
     fn clone_box(&self) -> Box<dyn Value>;
@@ -24,7 +24,7 @@ pub trait Value: Any + Debug + BinEncodable {
 
 impl<T> Value for T
 where
-    T: Any + Debug + Clone + BinEncodable,
+    T: Any + Debug + Clone + BinEncodable + Send + Sync,
 {
     fn as_any(&self) -> &dyn Any {
         self

@@ -407,6 +407,10 @@ impl Transaction {
         Ok(rc)
     }
 
+    pub fn inner(&self) -> Arc<Mutex<InnerTransaction>> {
+        self.inner.clone()
+    }
+
     /// Begin a transaction.
     pub fn begin(&self) {
         let rc = self.acquire_guard().expect("mutex poisoned");
@@ -543,6 +547,15 @@ impl Transaction {
         let rc = self.acquire_guard().unwrap();
         let mut inner = rc.borrow_mut();
         inner.dirty = value
+    }
+}
+
+impl From<Arc<Mutex<InnerTransaction>>> for Transaction {
+    fn from(inner: Arc<Mutex<InnerTransaction>>) -> Self {
+        Self {
+            inner,
+            guard: RefCell::new(Weak::new()),
+        }
     }
 }
 

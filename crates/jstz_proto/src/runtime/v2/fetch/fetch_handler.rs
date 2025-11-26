@@ -7,6 +7,11 @@ use crate::runtime::v2::fetch::error::{FetchError, Result};
 use crate::runtime::v2::fetch::http::Request;
 use crate::runtime::v2::ledger;
 use crate::runtime::v2::protocol_context::PROTOCOL_CONTEXT;
+#[cfg(all(
+    not(any(target_arch = "riscv64", target_arch = "wasm32")),
+    feature = "timeout"
+))]
+use crate::runtime::v2::ExecutionTracker;
 use crate::runtime::SNAPSHOT;
 
 use deno_core::error::CoreError;
@@ -19,6 +24,7 @@ use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_runtime::runtime::{AsyncEntered, Limiter, MAX_SMART_FUNCTION_CALL_COUNT};
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::{cell::RefCell, rc::Rc};
 
 use jstz_core::host::JsHostRuntime;
@@ -144,6 +150,11 @@ fn fetch(
         )
     };
     let SourceAddress(source) = state.borrow::<SourceAddress>();
+    #[cfg(all(
+        not(any(target_arch = "riscv64", target_arch = "wasm32")),
+        feature = "timeout"
+    ))]
+    let live_execution_tracker = state.borrow::<Arc<ExecutionTracker>>().clone();
     let fut = process_and_dispatch_request(
         host,
         tx,
@@ -156,6 +167,11 @@ fn fetch(
         headers,
         body,
         limiter,
+        #[cfg(all(
+            not(any(target_arch = "riscv64", target_arch = "wasm32")),
+            feature = "timeout"
+        ))]
+        live_execution_tracker,
     );
     let fetch_request_resource = FetchRequestResource {
         future: Box::pin(fut),
@@ -196,6 +212,11 @@ pub async fn process_and_dispatch_request(
     data: Option<Body>,
     // Limits the number of smart function calls per `RunFunction` operation.
     limiter: Limiter,
+    #[cfg(all(
+        not(any(target_arch = "riscv64", target_arch = "wasm32")),
+        feature = "timeout"
+    ))]
+    live_execution_tracker: Arc<ExecutionTracker>,
 ) -> Response {
     let scheme = SupportedScheme::try_from(&url);
     let source = match SourceAddress::try_from(source) {
@@ -219,6 +240,11 @@ pub async fn process_and_dispatch_request(
                 data,
                 &mut is_successful,
                 limiter,
+                #[cfg(all(
+                    not(any(target_arch = "riscv64", target_arch = "wasm32")),
+                    feature = "timeout"
+                ))]
+                live_execution_tracker,
             )
             .await;
             let _ =
@@ -350,6 +376,11 @@ async fn dispatch_run(
     data: Option<Body>,
     is_successful: &mut bool,
     limiter: Limiter,
+    #[cfg(all(
+        not(any(target_arch = "riscv64", target_arch = "wasm32")),
+        feature = "timeout"
+    ))]
+    live_execution_tracker: Arc<ExecutionTracker>,
 ) -> Result<Response> {
     let to = url.try_into();
     match to {
@@ -368,6 +399,11 @@ async fn dispatch_run(
                 is_successful,
                 from,
                 limiter,
+                #[cfg(all(
+                    not(any(target_arch = "riscv64", target_arch = "wasm32")),
+                    feature = "timeout"
+                ))]
+                live_execution_tracker,
             )
             .await;
             log_event(host, operation_hash, LogEvent::RequestEnd(&to));
@@ -409,6 +445,11 @@ async fn handle_address(
     is_successful: &mut bool,
     from: Address,
     limiter: Limiter,
+    #[cfg(all(
+        not(any(target_arch = "riscv64", target_arch = "wasm32")),
+        feature = "timeout"
+    ))]
+    live_execution_tracker: Arc<ExecutionTracker>,
 ) -> Result<Response> {
     let mut headers = process_headers_and_transfer(tx, host, headers, &from, &to)?;
     headers.push((REFERER_HEADER_KEY.clone(), from.to_base58().into()));
@@ -440,6 +481,11 @@ async fn handle_address(
                 headers,
                 data,
                 limiter,
+                #[cfg(all(
+                    not(any(target_arch = "riscv64", target_arch = "wasm32")),
+                    feature = "timeout"
+                ))]
+                live_execution_tracker,
             )
             .await;
 
@@ -489,6 +535,11 @@ async fn load_and_run(
     headers: Vec<(ByteString, ByteString)>,
     body: Option<Body>,
     limiter: Limiter,
+    #[cfg(all(
+        not(any(target_arch = "riscv64", target_arch = "wasm32")),
+        feature = "timeout"
+    ))]
+    live_execution_tracker: Arc<ExecutionTracker>,
 ) -> Result<Response> {
     let slot = limiter.try_acquire().map_err(|_| {
         // Protocol guard: this is not a true JS/native stack overflow.
@@ -533,6 +584,17 @@ async fn load_and_run(
         snapshot: SNAPSHOT.get().map(|v| *v),
     });
     runtime.set_state(source);
+
+    #[cfg(all(
+        not(any(target_arch = "riscv64", target_arch = "wasm32")),
+        feature = "timeout"
+    ))]
+    {
+        let execution_token =
+            live_execution_tracker.add(runtime.v8_isolate().thread_safe_handle());
+        runtime.set_state(live_execution_tracker);
+        runtime.set_state(execution_token);
+    }
 
     // 3. Prepare request
     let request = {

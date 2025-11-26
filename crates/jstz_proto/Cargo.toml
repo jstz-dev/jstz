@@ -44,6 +44,10 @@ parking_lot.workspace = true
 thiserror.workspace = true
 url.workspace = true
 
+[target.'cfg(not(any(target_arch="riscv64", target_arch="wasm32")))'.dependencies]
+tokio = { workspace = true, optional = true }
+
+
 [dev-dependencies]
 bincode.workspace = true
 jstz_mock = { path = "../jstz_mock" }
@@ -55,4 +59,4 @@ tokio.workspace = true
 default = ["dep:jstz_api"]
 v2_runtime = ["dep:jstz_runtime", "dep:deno_core", "dep:deno_fetch_base", "dep:deno_error"]
 kernel = ["jstz_runtime?/kernel"]
-
+timeout = ["dep:tokio", "jstz_core/unsafe_async_host"]
