@@ -40,6 +40,7 @@ show_usage() {
   echo "  all              Build and push all components"
   echo "  jstz-node        Build and push JSTZ node"
   echo "  oracle-node      Build and push Oracle node"
+  echo "  bridge-contracts Build and push bridge contracts (exchanger, native bridge)"
   echo "  kernel-wasm      Build and publish WASM kernel (requires Nix)"
   echo "  kernel-riscv     Build and publish RISC-V kernel (requires Nix)"
   echo "  kernel-lightweight Build and publish lightweight RISC-V kernel (requires Nix)"
@@ -327,6 +328,63 @@ build_oracle_node() {
     "${TAG}"
 }
 
+build_bridge_contracts() {
+  echo "Publishing bridge contracts to Artifact Registry..."
+
+  local CONTRACTS_DIR="${PROJECT_ROOT}/contracts"
+  local CONTRACTS_REPO="riscvnet-contracts"
+  local CONTRACTS_VERSION="v1.0.0"
+
+  # Verify contracts exist
+  if [ ! -f "${CONTRACTS_DIR}/exchanger.tz" ] || [ ! -f "${CONTRACTS_DIR}/jstz_native_bridge.tz" ]; then
+    echo "Error: Bridge contract files not found in ${CONTRACTS_DIR}"
+    return 1
+  fi
+
+  # Create generic artifacts repository if it doesn't exist
+  echo "Ensuring generic artifacts repository exists..."
+  if ! gcloud artifacts repositories describe ${CONTRACTS_REPO} \
+    --project=${GCP_PROJECT} \
+    --location=${GCP_REGION} &>/dev/null; then
+    echo "Creating generic artifacts repository: ${CONTRACTS_REPO}"
+    gcloud artifacts repositories create ${CONTRACTS_REPO} \
+      --repository-format=generic \
+      --location=${GCP_REGION} \
+      --project=${GCP_PROJECT} \
+      --description="JSTZ bridge contracts (Michelson .tz files)"
+  else
+    echo "Repository ${CONTRACTS_REPO} already exists"
+  fi
+
+  # Upload contracts with static version
+  echo "Uploading exchanger.tz..."
+  gcloud artifacts generic upload \
+    --project=${GCP_PROJECT} \
+    --location=${GCP_REGION} \
+    --repository=${CONTRACTS_REPO} \
+    --package=exchanger \
+    --version=${CONTRACTS_VERSION} \
+    --source=${CONTRACTS_DIR}/exchanger.tz
+
+  echo "Uploading jstz_native_bridge.tz..."
+  gcloud artifacts generic upload \
+    --project=${GCP_PROJECT} \
+    --location=${GCP_REGION} \
+    --repository=${CONTRACTS_REPO} \
+    --package=jstz_native_bridge \
+    --version=${CONTRACTS_VERSION} \
+    --source=${CONTRACTS_DIR}/jstz_native_bridge.tz
+
+  echo ""
+  echo "✓ Bridge contracts published to Artifact Registry:"
+  echo "  Repository: ${GCP_REGION}-generic.pkg.dev/${GCP_PROJECT}/${CONTRACTS_REPO}"
+  echo "  Exchanger: exchanger/${CONTRACTS_VERSION}"
+  echo "  Native Bridge: jstz_native_bridge/${CONTRACTS_VERSION}"
+  echo ""
+  echo "To download:"
+  echo "  gcloud artifacts generic download --location=${GCP_REGION} --project=${GCP_PROJECT} --repository=${CONTRACTS_REPO} --package=exchanger --version=${CONTRACTS_VERSION} --destination=."
+}
+
 build_kernel_wasm() {
   echo "Building WASM kernel with Nix..."
   cd "${PROJECT_ROOT}"
@@ -431,6 +489,9 @@ main() {
     ;;
   oracle-node)
     build_oracle_node
+    ;;
+  bridge-contracts)
+    build_bridge_contracts
     ;;
   kernel-wasm)
     build_kernel_wasm
