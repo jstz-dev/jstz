@@ -58,7 +58,7 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: Build
-        uses: jstz-dev/jstz/.github/actions/build-docker-image@main
+        uses: jstz-dev/jstz/.github/actions/build-docker-image@huan/push-to-docker-hub
         with:
           platform: linux
           arch: arm64
@@ -89,7 +89,7 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: Build
-        uses: jstz-dev/jstz/.github/actions/build-docker-image@main
+        uses: jstz-dev/jstz/.github/actions/build-docker-image@huan/push-to-docker-hub
         with:
           platform: linux
           arch: amd64

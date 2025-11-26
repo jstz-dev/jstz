@@ -102,11 +102,10 @@ jobs:
             dockerfile: ./crates/jstzd/Dockerfile
           - image: jstz-node
             dockerfile: ./crates/jstz_node/Dockerfile
-    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
+    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@huan/push-to-docker-hub
     with:
       octez-tag: ${{ needs.set-input-values.outputs.octez-tag }}
       image_names: |
-        ghcr.io/jstz-dev/jstz/${{ matrix.image }}
         docker.io/jstzdev/${{ matrix.image }}
       image_id: ${{ matrix.image }}
       dockerfile: ${{ matrix.dockerfile }}
