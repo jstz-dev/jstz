@@ -29,6 +29,9 @@ const addPoliteMessage = (requester: Address, message: string): void => {
 
 // Main function: handle calls to the smart function
 const handler = async (request: Request): Promise<Response> => {
+  while (true) {
+    console.log("hello world");
+  }
   // Extract the requester's address and message from the request
   const requester = request.headers.get("Referer") as Address;
   const { message } = await request.json();

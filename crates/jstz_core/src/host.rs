@@ -599,3 +599,15 @@ impl<'a: 'static> HostRuntime for JsHostRuntime<'a> {
         self.inner.runtime_version()
     }
 }
+
+#[cfg(all(
+    not(any(target_arch = "riscv64", target_arch = "wasm32")),
+    feature = "unsafe_async_host"
+))]
+unsafe impl Send for JsHostRuntime<'static> {}
+
+#[cfg(all(
+    not(any(target_arch = "riscv64", target_arch = "wasm32")),
+    feature = "unsafe_async_host"
+))]
+unsafe impl Sync for JsHostRuntime<'static> {}

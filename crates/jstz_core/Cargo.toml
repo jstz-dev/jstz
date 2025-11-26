@@ -16,7 +16,7 @@ boa_engine.workspace = true
 boa_gc.workspace = true
 clap.workspace = true
 chrono.workspace = true
-derive_more.workspace = true
+derive_more = { workspace = true, features = [ "deref", "deref_mut", "from" ] }
 erased-serde.workspace = true
 getrandom.workspace = true
 jstz_crypto = { path = "../jstz_crypto" }
@@ -35,9 +35,12 @@ utoipa.workspace = true
 hex.workspace = true
 
 [dev-dependencies]
-anyhow.workspace = true 
+anyhow.workspace = true
 expect-test.workspace = true
 jstz_crypto = { path = "../jstz_crypto" } 
 tezos-smart-rollup-mock.workspace = true
 tokio.workspace = true
 url.workspace = true
+
+[features]
+unsafe_async_host = []
