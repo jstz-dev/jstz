@@ -155,16 +155,33 @@ async fn restart_native_sequencer() {
         .unwrap();
     injector_file.flush().unwrap();
     let runtime_db_file = NamedTempFile::new().unwrap();
+    let inbox_checkpoint_file = NamedTempFile::new().unwrap();
     let jstz_node_port = unused_port();
     let base_uri = format!("http://127.0.0.1:{jstz_node_port}");
     let rollup_rpc_port = unused_port();
-    let inbox_messages = HashMap::from_iter([(
+
+    let deposit_recipient = "tz1dbGzJfjYFSjX8umiRZ2fmsAQsk8XMH1E9";
+    let (deposit_op_hash, deposit_op) = mock_deposit_op(
+        deposit_recipient,
+        1000,
+        InboxId {
+            l1_level: 123,
+            // message_id is 1 because it is the 1st message (0-based index) in the message
+            // vector below.
+            l1_message_id: 1,
+        },
+    );
+    let mut inbox_messages = HashMap::from_iter([(
         123,
-        vec![hex_start_of_level_message(), hex_end_of_level_message()],
+        vec![
+            hex_start_of_level_message(),
+            deposit_op,
+            hex_end_of_level_message(),
+        ],
     )]);
-    let _rollup_rpc = make_mock_rollup_rpc_server(
+    let rollup_rpc = make_mock_rollup_rpc_server(
         format!("127.0.0.1:{rollup_rpc_port}"),
-        inbox_messages,
+        inbox_messages.clone(),
     );
     let bin_path = assert_cmd::cargo::cargo_bin("jstz-node");
 
@@ -187,6 +204,8 @@ async fn restart_native_sequencer() {
                     injector_file.path().to_str().unwrap(),
                     "--runtime-db-path",
                     runtime_db_file.path().to_str().unwrap(),
+                    "--inbox-checkpoint-path",
+                    inbox_checkpoint_file.path().to_str().unwrap(),
                 ])
                 .spawn()
                 .unwrap(),
@@ -219,22 +238,75 @@ async fn restart_native_sequencer() {
     assert!(!smart_function_exists().await);
     deploy_function(&client, &base_uri).await;
     assert!(smart_function_exists().await);
+    check_deposit(
+        &client,
+        &base_uri,
+        &deposit_op_hash,
+        deposit_recipient,
+        1000,
+    )
+    .await;
 
-    // Kill jstz node
+    // Kill jstz node and rpc server
     drop(c);
+    rollup_rpc.abort();
     // Wait until jstz node is shut down
     jstz_utils::poll(60, 500, || async {
         client.get(format!("{base_uri}/health")).send().await.err()
     })
     .await
     .expect("should get connection error");
+    // wait until rpc server is shut down
+    jstz_utils::poll(60, 500, || async {
+        client
+            .get(format!(
+                "http://127.0.0.1:{rollup_rpc_port}/global/monitor_blocks"
+            ))
+            .send()
+            .await
+            .err()
+    })
+    .await
+    .expect("should get connection error");
 
+    // Restart mock rollup server with one new block
+    let (deposit_op_hash, deposit_op) = mock_deposit_op(
+        deposit_recipient,
+        1,
+        InboxId {
+            l1_level: 124,
+            l1_message_id: 1,
+        },
+    );
+    inbox_messages.insert(
+        124,
+        vec![
+            hex_start_of_level_message(),
+            deposit_op,
+            hex_end_of_level_message(),
+        ],
+    );
+    let _rollup_rpc = make_mock_rollup_rpc_server(
+        format!("127.0.0.1:{rollup_rpc_port}"),
+        inbox_messages,
+    );
     // Restart jstz node
     let _c = launch_jstz_node();
     check_worker_health(&client, &base_uri).await;
     // Smart function should still exist because the sequencer should read runtime db
     // from the designated db file
     assert!(smart_function_exists().await);
+    // Account balance should be 1000 (deposit in level 123) + 1 (deposit in level 124).
+    // Deposit in level 123 should not be replayed even if the monitor_blocks endpoint
+    // returns level 123 first
+    check_deposit(
+        &client,
+        &base_uri,
+        &deposit_op_hash,
+        deposit_recipient,
+        1001,
+    )
+    .await;
 }
 
 #[cfg_attr(
