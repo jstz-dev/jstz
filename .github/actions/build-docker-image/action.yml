@@ -66,8 +66,8 @@ runs:
         images: ${{ inputs.image_names }}
         tags: |
           type=ref,event=tag
-          type=raw,value=${{ inputs.ref }}
-          type=raw,value=${{ steps.set-values.outputs.short_sha }}
+          type=raw,value=${{ inputs.ref }},enable=${{ !startsWith(steps.set-values.outputs.sha, inputs.ref) }}
+          type=raw,value=${{ steps.set-values.outputs.short_sha }},enable=${{ startsWith(steps.set-values.outputs.sha, inputs.ref) }}
           # {{sha}} is not the right value here because that refers to the commit that triggered
           # the run, which is not the same as inputs.ref in most cases
         labels: |
