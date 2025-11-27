@@ -12,6 +12,7 @@ use http::{HeaderMap, Method, Uri};
 use crate::runtime::v2::oracle::request::RequestId;
 
 use jstz_core::{host::HostRuntime, reveal_data::PreimageHash};
+use jstz_crypto::verifier::Verifier;
 use jstz_crypto::{
     hash::{Blake2b, Hash},
     public_key::PublicKey,
@@ -229,11 +230,17 @@ pub struct SignedOperation {
     signature: Signature,
     #[deref]
     inner: Operation,
+    #[serde(default)]
+    verifier: Option<Verifier>,
 }
 
 impl SignedOperation {
     pub fn new(signature: Signature, inner: Operation) -> Self {
-        Self { signature, inner }
+        Self {
+            signature,
+            inner,
+            verifier: None,
+        }
     }
 
     pub fn hash(&self) -> Blake2b {
@@ -242,16 +249,21 @@ impl SignedOperation {
 
     pub fn verify(&self) -> Result<()> {
         let hash = self.inner.hash();
-        Ok(self
-            .signature
-            .verify(&self.inner.public_key, hash.as_ref())?)
+        match &self.verifier {
+            Some(verifier) => self.signature.verify_with_verifier(
+                &self.inner.public_key,
+                hash.as_ref(),
+                verifier,
+            )?,
+            None => self
+                .signature
+                .verify(&self.inner.public_key, hash.as_ref())?,
+        }
+        Ok(())
     }
 
     pub fn verify_ref(&self) -> Result<&Operation> {
-        let hash = self.inner.hash();
-        self.signature
-            .verify(&self.inner.public_key, hash.as_ref())?;
-
+        self.verify()?;
         Ok(&self.inner)
     }
 }
@@ -517,6 +529,7 @@ mod test {
     use crate::operation::internal::{FaDeposit, InboxId};
     use crate::operation::OperationHash;
     use crate::tests::DebugLogSink;
+    use crate::Error::*;
     use crate::HttpBody;
     use http::{HeaderMap, Method, Uri};
     use jstz_core::event::decode_line;
@@ -786,6 +799,7 @@ mod test {
         let signed_op = SignedOperation {
             signature,
             inner: op,
+            verifier: None,
         };
         let json = serde_json::to_vec(&signed_op).unwrap();
         let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
@@ -823,5 +837,77 @@ mod test {
                 "source": "tz1ia78UBMgdmVf8b2vu5y8Rd148p9e2yn2h",
             })
         );
+    }
+
+    #[test]
+    fn verify_signed_op_with_passkey_verifier() {
+        let operation = json!({
+          "_type": "DeployFunction",
+          "functionCode": "export default async () => {\n    console.log(\"function\");\n};\n",
+          "accountCredit": 0
+        });
+        let verifier = json!({
+          "Passkey": {
+            "authenticatorData": "SZYN5YgOjGh0NBcPZHZgW4_krrmihjLHmVzzuoMdl2MZAAAAAA",
+            "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uZ2V0IiwiY2hhbGxlbmdlIjoiTURobFlqTmhOREZqTURKaU5qazVNVFJtWXpCaE1XSTFZekppTkdJNU0yVmxaR0V4T0dWa1pqa3daV1ZrTm1WaE5HVmtaVGM0T0dZd056RmtabVUxWXciLCJvcmlnaW4iOiJjaHJvbWUtZXh0ZW5zaW9uOi8vYmZibG5qamtiZ2hjb2xrbWNvZ2JhZ2RwbGNkY25lZGYiLCJjcm9zc09yaWdpbiI6ZmFsc2V9"
+          }
+        });
+        let signed_operation: SignedOperation= serde_json::from_value(json!({
+          "inner": {
+            "content": operation,
+            "nonce": 0,
+            "publicKey": "p2pk65zcsQ7scM7FykZPEhNnYnjfnRVqUHo4fKxri6yGoVu5pmdw2pm"
+          },
+          "signature": "p2signYWKFXY5zHBEXub4RMVPZ5VoB1QgqyYrDyMT5kx6CZjPJZBpF836TcZDSqttWpqxTDQz3bdsRnjUqnEtqcaZ8wjWkuEPe",
+          "verifier": verifier
+        })).unwrap();
+
+        signed_operation
+            .verify()
+            .expect("Should be ok with verifier");
+
+        // Fails verification without verifier
+        let signed_op_no_verifier: SignedOperation= serde_json::from_value(json!({
+          "inner": {
+            "content": operation,
+            "nonce": 0,
+            "publicKey": "p2pk65zcsQ7scM7FykZPEhNnYnjfnRVqUHo4fKxri6yGoVu5pmdw2pm"
+          },
+          "signature": "p2signYWKFXY5zHBEXub4RMVPZ5VoB1QgqyYrDyMT5kx6CZjPJZBpF836TcZDSqttWpqxTDQz3bdsRnjUqnEtqcaZ8wjWkuEPe",
+        })).unwrap();
+
+        let err = signed_op_no_verifier
+            .verify()
+            .expect_err("Should fail verification without verifier");
+        assert!(matches!(
+            err,
+            CryptoError {
+                source: jstz_crypto::Error::InvalidSignature
+            }
+        ));
+
+        // Fails verificaiton with invalid sig/pk
+        let signed_op_no_verifier: SignedOperation= serde_json::from_value(json!({
+          "inner": {
+            "content": operation,
+            "nonce": 0,
+            "publicKey": "p2pk65zcsQ7scM7FykZPEhNnYnjfnRVqUHo4fKxri6yGoVu5pmdw2pm"
+          },
+          "signature": "p2sigNftfnsd8AnfrH8E3tJ9mPKdu8ncck3zLbVvmGmudTzvwBisuRGpKTCmnmWo1w6Px9gnxEPDXrepUEkDS9YxYX1Rv45xa1",
+          "verifier": verifier
+        })).unwrap();
+
+        let err = signed_op_no_verifier
+            .verify()
+            .expect_err("Should fail verifier with invalid sig/pk");
+        assert!(matches!(
+            err,
+            CryptoError {
+                source: jstz_crypto::Error::PasskeyError {
+                    source:
+                        jstz_crypto::verifier::passkey::PasskeyError::VerificationFailed
+                }
+            }
+        ));
     }
 }

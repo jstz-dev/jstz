@@ -429,7 +429,6 @@ mod tests {
 
     use super::{jstz_rollup_path, Config, JSTZ_ROLLUP_ADDRESS};
     use http::Uri;
-    use jstz_node::{config::RuntimeEnv, RunMode};
     use octez::r#async::{
         baker::{BakerBinaryPath, OctezBakerConfigBuilder},
         client::OctezClientConfigBuilder,
@@ -866,13 +865,13 @@ mod tests {
             jstz_node_config.rollup_endpoint,
             config.octez_rollup_config().rpc_endpoint
         );
+        // checking serialised values here to skip internal config values not exposed to users
+        let run_mode = serde_json::to_value(&jstz_node_config.mode).unwrap();
+        assert_eq!(run_mode["capacity"], 42);
+        assert_eq!(run_mode["debug_log_path"], "/debug/file");
         assert_eq!(
-            jstz_node_config.mode,
-            RunMode::Sequencer {
-                capacity: 42,
-                debug_log_path: PathBuf::from_str("/debug/file").unwrap(),
-                runtime_env: RuntimeEnv::Native,
-            }
+            run_mode["runtime_env"],
+            serde_json::json!({"type": "native"})
         );
     }
 
@@ -915,16 +914,13 @@ mod tests {
         let jstz_node_config =
             super::build_jstz_node_config(config, &Endpoint::default(), &PathBuf::new())
                 .unwrap();
+        // checking serialised values here to skip internal config values not exposed to users
+        let run_mode = serde_json::to_value(jstz_node_config.mode).unwrap();
+        assert_eq!(run_mode["capacity"], 42);
+        assert_eq!(run_mode["debug_log_path"], "/tmp/log");
         assert_eq!(
-            jstz_node_config.mode,
-            RunMode::Sequencer {
-                capacity: 42,
-                debug_log_path: PathBuf::from_str("/tmp/log").unwrap(),
-                runtime_env: RuntimeEnv::Riscv {
-                    kernel_path: PathBuf::from_str("/riscv/kernel").unwrap(),
-                    rollup_address,
-                },
-            }
+            run_mode["runtime_env"],
+            serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel", "rollup_address": "sr1PuFMgaRUN12rKQ3J2ae5psNtwCxPNmGNK"})
         );
 
         let bad_config = UserJstzNodeConfig {

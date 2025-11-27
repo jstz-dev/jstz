@@ -31,7 +31,7 @@ jobs:
     name: Build SDK
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
       - uses: dtolnay/rust-toolchain@1.88.0
@@ -67,7 +67,7 @@ jobs:
           fi
       - uses: actions/upload-artifact@v5
         with:
-          name: jstz_sdk
+          name: sdk_npm_pacakge
           path: crates/jstz_sdk/pkg
           if-no-files-found: error
           retention-days: 1
@@ -82,16 +82,17 @@ jobs:
     steps:
       - uses: actions/download-artifact@v6
         with:
-          path: jstz_sdk
+          name: sdk_npm_pacakge
+          path: sdk_npm_pacakge
       - name: Package
         shell: sh
         # zip the entire folder such that files are organised when the downloaded file is unzipped
-        run: zip jstz_sdk.zip -r jstz_sdk
+        run: zip sdk_npm_pacakge.zip -r sdk_npm_pacakge
       - name: Upload release to GitHub
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: jstz_sdk.zip
+          files: sdk_npm_pacakge.zip
           tag_name: ${{ inputs.ref }}
 
   publish-to-npm:
@@ -103,8 +104,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v6
         with:
-          path: jstz_sdk
+          name: sdk_npm_pacakge
+          path: sdk_npm_pacakge
       - uses: jstz-dev/jstz/.github/actions/publish-npm-package@main
         with:
-          package_dir: jstz_sdk
+          package_dir: sdk_npm_pacakge
           dry_run: ${{ inputs.dry_run }}

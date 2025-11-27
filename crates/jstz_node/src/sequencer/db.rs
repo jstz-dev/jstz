@@ -249,7 +249,7 @@ impl BlueprintDb {
     fn create_table(pool: Pool<SqliteConnectionManager>) -> Result<()> {
         let conn = pool.get()?;
         conn.execute(
-            r#"CREATE TABLE jstz_operation (
+            r#"CREATE TABLE IF NOT EXISTS jstz_operation (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     data TEXT
 );"#,

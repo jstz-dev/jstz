@@ -9,6 +9,9 @@ inputs:
   repo_token:
     description: API token that gives access to manage the target repo
     required: true
+  ref:
+    description: The branch, tag, or SHA from which CLI will be built
+    required: true
 outputs:
   artefact_name:
     description: Name of the uploaded artefact
@@ -17,6 +20,8 @@ runs:
   using: "composite"
   steps:
     - uses: actions/checkout@v4
+      with:
+        ref: ${{ inputs.ref }}
     - run: nix --version
       shell: bash
     - name: Format
@@ -30,11 +35,11 @@ runs:
       run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_cli
     - uses: actions/upload-artifact@v4
       with:
-        name: jstz_${{ inputs.platform }}_${{ inputs.arch }}
+        name: cli_${{ inputs.platform }}_${{ inputs.arch }}
         path: result/bin/jstz
         if-no-files-found: error
         retention-days: 1
     - name: Output
       id: output
       shell: bash
-      run: echo "artefact_name=jstz_${{ inputs.platform }}_${{ inputs.arch }}" >> $GITHUB_OUTPUT
+      run: echo "artefact_name=cli_${{ inputs.platform }}_${{ inputs.arch }}" >> $GITHUB_OUTPUT

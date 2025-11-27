@@ -41,13 +41,22 @@ const sidebars = {
 
     {
       type: "category",
+      collapsed: false,
+      label: "Client SDK",
+      link: {
+        id: "client/overview",
+      },
+      items: [],
+    },
+
+    {
+      type: "category",
       collapsed: true,
       label: "API Reference",
       items: [
         "api/index",
         "api/console",
         "api/kv",
-        "api/smart_function",
         "api/ledger",
         "api/headers",
         "api/request",

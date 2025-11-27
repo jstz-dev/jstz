@@ -11,7 +11,7 @@
       "name": "MIT",
       "url": "https://github.com/jstz-dev/jstz/blob/main/LICENSE"
     },
-    "version": "0.1.1-alpha.4"
+    "version": "0.1.1-alpha.5"
   },
   "paths": {
     "/accounts/{address}": {
@@ -518,6 +518,20 @@
         ],
         "description": "Tezos Address"
       },
+      "AuthenticatorAssertionResponseRaw": {
+        "type": "object",
+        "description": "A narrowed view of the raw AuthenticatorAssertionResponse returned by\nthe passkey device. Only the fields necessary for verification are kept.",
+        "required": ["authenticatorData", "clientDataJSON"],
+        "properties": {
+          "authenticatorData": {
+            "type": "string"
+          },
+          "clientDataJSON": {
+            "type": "string",
+            "description": "clientDataJSON contains metadata about the client and the cryptographic\nchallenge in encoded in JSON. For the purposes of Jstz, the challenge\nis the operation hash. This field is base64url encoded"
+          }
+        }
+      },
       "Blake2b": {
         "type": "array",
         "items": {
@@ -596,7 +610,7 @@
             "description": "Amount of tez to credit to the smart function account, debited from the sender"
           },
           "functionCode": {
-            "$ref": "#/components/schemas/ParsedCode",
+            "type": "string",
             "description": "Smart function code"
           }
         }
@@ -1050,6 +1064,16 @@
           },
           "signature": {
             "$ref": "#/components/schemas/Signature"
+          },
+          "verifier": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Verifier"
+              }
+            ]
           }
         }
       },
@@ -1107,6 +1131,19 @@
             "$ref": "#/components/schemas/Nonce"
           }
         }
+      },
+      "Verifier": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["Passkey"],
+            "properties": {
+              "Passkey": {
+                "$ref": "#/components/schemas/AuthenticatorAssertionResponseRaw"
+              }
+            }
+          }
+        ]
       },
       "u64": {
         "type": "integer",

@@ -1,0 +1,14 @@
+{
+  "name": "jstz-sdk-test",
+  "description": "Testing for Jstz sdk",
+  "scripts": {
+    "all": "npm install && npm run build && npm test",
+    "test": "vitest run",
+    "build": "cd ../../.. && make build-sdk-wasm-pkg"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "vite-plugin-wasm": "^3.5.0",
+    "vitest": "^4.0.8"
+  }
+}
