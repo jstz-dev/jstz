@@ -33,6 +33,10 @@ inputs:
   kernel_artefact_name:
     description: Kernel artefact name
     required: true
+  lightweight_kernel_artefact_name:
+    description: Lightweight kernel artefact name
+    required: false
+    default: "lightweight-kernel-executable"
   dry_run:
     description: Dry-run image build without pushing to the registry
     required: false
@@ -71,9 +75,14 @@ runs:
         username: ${{ inputs.docker_registry_username }}
         password: ${{ inputs.docker_registry_password }}
     - name: Download jstz-kernel artifact
-      uses: actions/download-artifact@v4
+      uses: actions/download-artifact@v5
       with:
         name: ${{ inputs.kernel_artefact_name }}
+        path: jstz_kernel
+    - name: Download lightweight kernel artifact
+      uses: actions/download-artifact@v5
+      with:
+        name: ${{ inputs.lightweight_kernel_artefact_name }}
         path: jstz_kernel
     - name: Extract metadata
       id: meta
@@ -100,6 +109,7 @@ runs:
         build-args: |
           OCTEZ_TAG=${{ inputs.octez-tag }}
           KERNEL_PATH=./jstz_kernel/jstz_kernel.wasm
+          LIGHTWEIGHT_KERNEL_PATH=./jstz_kernel/lightweight-kernel-executable
         cache-from: type=gha
         cache-to: type=gha,mode=max
         labels: ${{ steps.meta.outputs.labels }}
