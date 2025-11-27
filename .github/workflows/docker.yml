@@ -74,6 +74,7 @@ jobs:
           echo "REF=${ref}" >> ${GITHUB_OUTPUT}
   build-kernel:
     name: Build (Kernel)
+    needs: [set-input-values]
     runs-on: [x86_64, linux, nix]
     steps:
       - uses: actions/checkout@v6
@@ -85,13 +86,21 @@ jobs:
       - name: Prevent blst
         run: nix --accept-flake-config develop -j auto --command sh -c '[ -z "$(cargo tree | grep blst)" ]'
       - name: Build
-        run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_kernel
+        run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_kernel -o result-kernel
+      - name: Build lightweight kernel
+        run: nix --accept-flake-config --log-format raw -L build -j auto .#jstz_lightweight_kernel -o result-lightweight
       - name: Upload kernel
         id: upload-kernel
         uses: actions/upload-artifact@v5
         with:
           name: jstz-kernel
-          path: result/lib/jstz_kernel.wasm
+          path: result-kernel/lib/jstz_kernel.wasm
+      - name: Upload lightweight kernel
+        id: upload-lightweight-kernel
+        uses: actions/upload-artifact@v5
+        with:
+          name: lightweight-kernel-executable
+          path: result-lightweight/bin/lightweight-kernel-executable
   build-image:
     name: Build image
     needs: [build-kernel, set-input-values]
@@ -102,7 +111,7 @@ jobs:
             dockerfile: ./crates/jstzd/Dockerfile
           - image: jstz-node
             dockerfile: ./crates/jstz_node/Dockerfile
-    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
+    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@alan/lw-kernel-docker-changes
     with:
       octez-tag: ${{ needs.set-input-values.outputs.octez-tag }}
       docker_registry: ghcr.io
