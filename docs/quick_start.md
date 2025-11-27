@@ -135,55 +135,55 @@ This smart function consists of these elements:
 
 Follow these instructions to deploy the sample smart function to a local sandbox:
 
-1.  Start the Jstz local sandbox in a Docker container:
+1. Start the Jstz local sandbox in a Docker container:
 
-    ```sh
-    jstz sandbox --container start
-    ```
+   ```sh
+   jstz sandbox --container start
+   ```
 
-    If you see an error that says that the configuration file is improperly configured, delete the `~/.config/jstz/` folder and try to start the sandbox again.
+   If you see an error that says that the configuration file is improperly configured, delete the `~/.config/jstz/` folder and try to start the sandbox again.
 
-    :::tip
+   :::tip
 
-    The `--detach` (`-d`) flag starts the sandbox in the background, allowing you to continue working in the same terminal.
-    You can stop or reset the sandbox with the commands `jstz sandbox --container stop` or `jstz sandbox --container restart`, but the state of the sandbox is not persistent.
+   The `--detach` (`-d`) flag starts the sandbox in the background, allowing you to continue working in the same terminal.
+   You can stop or reset the sandbox with the commands `jstz sandbox --container stop` or `jstz sandbox --container restart`, but the state of the sandbox is not persistent.
 
-    :::
+   :::
 
-    When the sandbox starts, it shows the bootstrap accounts and their balances on Tezos layer 1, which you can use to fund smart functions and user accounts in Jstz via the [Bridge](/architecture/bridge).
+   When the sandbox starts, it shows the bootstrap accounts and their balances on Tezos layer 1, which you can use to fund smart functions and user accounts in Jstz via the [Bridge](/architecture/bridge).
 
-1.  Open a new terminal window, clone the Jstz repository and navigate to the `counter` example:
+1. Open a new terminal window, clone the Jstz repository and navigate to the `counter` example:
 
-    ```sh
-    git clone https://github.com/jstz-dev/jstz.git && cd jstz/examples/counter
-    ```
+   ```sh
+   git clone https://github.com/jstz-dev/jstz.git && cd jstz/examples/counter
+   ```
 
-    You may see an error that says `.envrc is blocked.`
-    You can ignore this error because it refers to setting up a development environment to build Jstz locally.
+   You may see an error that says `.envrc is blocked.`
+   You can ignore this error because it refers to setting up a development environment to build Jstz locally.
 
-1.  Install the dependencies for the counter smart function:
+1. Install the dependencies for the counter smart function:
 
-    ```sh
-    npm install
-    ```
+   ```sh
+   npm install
+   ```
 
-1.  Run this command to compile and deploy the smart function to the sandbox:
+1. Run this command to compile and deploy the smart function to the sandbox:
 
-    ```sh
-    npm run build
-    jstz deploy dist/index.js -n dev
-    ```
+   ```sh
+   npm run build
+   jstz deploy dist/index.js -n dev
+   ```
 
-    If this is your first time deploying a smart function, the `deploy` command prompts you to create a Jstz account.
-    You can use any local name and passphrase for the account.
-    Later, you can create accounts with the `jstz account create` and switch accounts with the `jstz login` and `jstz account` commands.
-    As described in [Accounts](/architecture/accounts), command-line accounts are stored in the local file `~/.config/jstz/config.json`.
+   If this is your first time deploying a smart function, the `deploy` command prompts you to create a Jstz account.
+   You can use any local name and passphrase for the account.
+   Later, you can create accounts with the `jstz account create` and switch accounts with the `jstz login` and `jstz account` commands.
+   As described in [Accounts](/architecture/accounts), command-line accounts are stored in the local file `~/.config/jstz/config.json`.
 
-    Upon successful deployment, Jstz assigns the smart function a unique `KT1` address.
-    This address is its identifier, similar to an IP address or a smart contract address.
-    Now the smart function is accessible through a URL of the format `jstz://<ADDRESS>/`, where `<ADDRESS>` is the address of the smart function.
+   Upon successful deployment, Jstz assigns the smart function a unique `KT1` address.
+   This address is its identifier, similar to an IP address or a smart contract address.
+   Now the smart function is accessible through a URL of the format `jstz://<ADDRESS>/`, where `<ADDRESS>` is the address of the smart function.
 
-    After you deploy the smart function, you cannot delete it or change it.
+   After you deploy the smart function, you cannot delete it or change it.
 
 ## 3. Calling the smart function from the command line
 
@@ -232,15 +232,17 @@ The Jstz dev wallet supports only the Chrome web browser.
 
 :::
 
-1. Download the [latest release](https://github.com/jstz-dev/dev-wallet/releases/latest) of the wallet and unpack it.
+### Get the latest release
 
-OR
+Download the [latest release](https://github.com/jstz-dev/dev-wallet/releases/latest) of the wallet and unpack it.
 
-1. Download the source code for the dev wallet:
+### Install from source
 
-   ```bash
-   git clone https://github.com/jstz-dev/dev-wallet.git
-   ```
+Download the source code for the dev wallet:
+
+```bash
+git clone https://github.com/jstz-dev/dev-wallet.git
+```
 
 1. Go into the repository and install the dependencies:
 
@@ -254,11 +256,13 @@ OR
    cd apps/signer && pnpm i && pnpm build
    ```
 
+### Load the extension
+
 1. In Chrome, open the extensions page at `chrome://extensions`.
 
 1. At the top right of the page, use the radio button to enable **Developer mode**.
 
-1. Click **Load unpacked**, unpack the signer.zip and select the unpacked content folder or, if built manually, select the `apps/signer/dist/` folder of the `dev-wallet` repository, and then click **Select** to install the extension from the built files.
+1. Click **Load unpacked**, unpack the `signer.zip` and select the unpacked content folder or, if built manually, select the `apps/signer/dist/` folder of the `dev-wallet` repository, and then click **Select** to install the extension from the built files.
 
    The Jstz dev wallet appears in the list of extensions in the browser.
 
@@ -277,12 +281,15 @@ This account is managed by the extension and is not linked to the account that y
 
 Currently we're supporting two kinds of accounts:
 
-- Normal - where we store the cryptographic key pairs in the extensions storage
-- Passkey based account
+- Local Storage - The wallet stores the cryptographic key pairs in the extension's local storage
 
-The only difference is where private key is being stored and who's doing the signing. In case of the _normal_ extension is responsible for storing and signing. Where passkeys accounts store their private key on a device specified by user during the creation of the passkey. We're using `Web Authentication API` which is handled by the browser so you can store passkeys on whichever device you want eq.: your phone, hardware key, you password manager.
+- Passkeys: You store the keys on a separate device such as a mobile device, hardware key, or password manager and allow the wallet to access them to sign transactions
 
-To create a passkey account you just select "Create Passkey Wallet" on the initial/add wallet page.
+Local storage is appropriate for development work, but if you uninstall or lose the wallet, the keys are gone.
+Passkeys are better for long-term use of a key because the key persists on the separate device.
+The Jstz wallet uses the `Web Authentication API` which is handled by the browser so you can store passkeys on any device that supports this API.
+
+To create a passkey account, select "Create Passkey Wallet" on the initial/add wallet page.
 
 <div style={{maxWidth:400}}>
 <Image img={require('./static/img/quick_start_wallet_passkeys.png')} alt="The development wallet showing a new passkey account"/>
