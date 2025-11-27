@@ -10,6 +10,7 @@ This guide will instruct you in writing, deploying, and using your first Jstz _s
 ## Prerequisites
 
 - Install Node.JS version 22 or later, `npm`, and Docker.
+- Install [`pnpm`](https://pnpm.io/) version v10 or later.
 - Install Jstz as described in [Installation](installation.md).
 
   To verify your installation, run this command to check the version of Jstz:
@@ -237,17 +238,23 @@ The Jstz dev wallet supports only the Chrome web browser.
    git clone https://github.com/jstz-dev/dev-wallet.git
    ```
 
-1. Go into the repository, install the dependencies, and build the wallet:
+1. Go into the repository and install the dependencies:
 
    ```bash
-   cd dev-wallet && git submodule update --init && pnpm i && pnpm build
+   cd dev-wallet && git submodule update --init
+   ```
+
+1. Go to the wallet folder, install its dependencies, and build it:
+
+   ```bash
+   cd apps/signer && pnpm i && pnpm build
    ```
 
 1. In Chrome, open the extensions page at `chrome://extensions`.
 
 1. At the top right of the page, use the radio button to enable **Developer mode**.
 
-1. Click **Load unpacked**, select the `dist` folder of the `dev-wallet` repository, and then click **Select** to install the extension from the built files.
+1. Click **Load unpacked**, select the `apps/signer/dist/` folder of the `dev-wallet` repository, and then click **Select** to install the extension from the built files.
 
    The Jstz dev wallet appears in the list of extensions in the browser.
 

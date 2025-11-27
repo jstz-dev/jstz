@@ -1,8 +1,8 @@
 {
-  nixConfig = {
-    extra-trusted-public-keys = "trilitech-jstz.cachix.org-1:+ShRijHoxI9xAIZRP6Mov3aFui5FvgMHJ2M360OEYTo=";
-    extra-substituters = "https://trilitech-jstz.cachix.org";
-  };
+  # nixConfig = {
+  #   extra-trusted-public-keys = "trilitech-jstz.cachix.org-1:+ShRijHoxI9xAIZRP6Mov3aFui5FvgMHJ2M360OEYTo=";
+  #   extra-substituters = "https://trilitech-jstz.cachix.org";
+  # };
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs";

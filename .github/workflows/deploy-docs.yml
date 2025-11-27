@@ -11,6 +11,22 @@ on:
       ref:
         description: "ref (branch, tag, or SHA) that will be used to build docs"
         type: string
+      dry_run:
+        description: Dry-run SDK build without publishing the built artefact
+        type: boolean
+        required: false
+        default: true
+
+  workflow_call:
+    inputs:
+      ref:
+        description: "ref (branch, tag, or SHA) that will be used to build docs"
+        type: string
+      dry_run:
+        description: Dry-run SDK build without publishing the built artefact
+        type: boolean
+        required: false
+        default: true
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
@@ -43,7 +59,7 @@ jobs:
     needs: [set-ref]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ needs.set-ref.outputs.target_ref }}
           fetch-depth: 0 # Not needed if lastUpdated is not enabled
@@ -65,6 +81,8 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_S3_PRODUCTION_SECRET }}
           aws-region: eu-west-1
       - name: Upload to AWS
+        if: ${{ !inputs.dry_run }}
         run: aws s3 sync ./docs/build ${{ secrets.AWS_S3_PRODUCTION_PATH }} --delete
       - name: Invalidate AWS cache
+        if: ${{ !inputs.dry_run }}
         run: aws cloudfront create-invalidation --distribution-id ${{ secrets.AWS_DISTRIBUTION_PRODUCTION }} --paths '/*'

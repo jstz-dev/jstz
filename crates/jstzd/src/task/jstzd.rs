@@ -901,6 +901,7 @@ mod tests {
                     capacity: 1,
                     debug_log_path: PathBuf::from("/log"),
                     runtime_env: RuntimeEnv::Native,
+                    inbox_checkpoint_path: PathBuf::from("/inbox/checkpoint"),
                 },
                 false,
                 #[cfg(feature = "blueprint")]
