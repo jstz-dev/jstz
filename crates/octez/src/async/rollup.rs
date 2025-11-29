@@ -137,6 +137,11 @@ impl OctezRollupConfigBuilder {
         self
     }
 
+    pub fn set_pvm_kind(mut self, pvm_kind: SmartRollupPvmKind) -> Self {
+        self.pvm_kind = Some(pvm_kind);
+        self
+    }
+
     pub fn set_boot_sector_file(mut self, file: PathBuf) -> Self {
         self.boot_sector_file = Some(file);
         self

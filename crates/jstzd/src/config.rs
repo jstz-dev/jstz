@@ -30,7 +30,7 @@ use octez::r#async::{
     file::FileWrapper,
     node_config::{OctezNodeConfig, OctezNodeConfigBuilder},
     protocol::{BootstrapAccount, ProtocolParameterBuilder},
-    rollup::{OctezRollupConfigBuilder, RollupDataDir},
+    rollup::OctezRollupConfigBuilder,
 };
 use serde::Deserialize;
 use tezos_crypto_rs::hash::SmartRollupHash;
@@ -163,14 +163,12 @@ pub async fn build_config(mut config: Config) -> Result<(u16, JstzdConfig)> {
             rollup_builder.set_operator(ROLLUP_OPERATOR_ACCOUNT_ALIAS.to_string());
     }
     if !rollup_builder.has_boot_sector_file() {
-        rollup_builder = rollup_builder
-            .set_boot_sector_file(jstz_rollup_path::kernel_installer_path());
+        rollup_builder =
+            rollup_builder.set_boot_sector_file(jstz_rollup_path::riscv_kernel_path());
     }
 
     let octez_rollup_config = rollup_builder
-        .set_data_dir(RollupDataDir::TempWithPreImages {
-            preimages_dir: jstz_rollup_path::preimages_path(),
-        })
+        .set_pvm_kind(SmartRollupPvmKind::Riscv)
         .set_kernel_debug_file(kernel_debug_file)
         .build()
         .unwrap();
@@ -396,11 +394,13 @@ async fn build_protocol_params(
         accounts.push(account);
     }
 
+    let kernel = jstz_rollup_path::riscv_kernel_descriptor();
+
     builder
         .set_bootstrap_smart_rollups([BootstrapSmartRollup::new(
             JSTZ_ROLLUP_ADDRESS,
-            SmartRollupPvmKind::Wasm,
-            &tokio::fs::read_to_string(jstz_rollup_path::kernel_installer_path()).await?,
+            SmartRollupPvmKind::Riscv,
+            &hex::encode(&kernel),
             serde_json::from_slice(
                 &BootstrapRollupFile::get("parameters_ty.json")
                     .ok_or(anyhow::anyhow!("file not found"))?
@@ -841,15 +841,10 @@ mod tests {
             config.octez_rollup_config().address.to_base58_check(),
             JSTZ_ROLLUP_ADDRESS
         );
-        assert_eq!(
-            config.octez_rollup_config().data_dir,
-            RollupDataDir::TempWithPreImages {
-                preimages_dir: jstz_rollup_path::preimages_path(),
-            }
-        );
+        assert_eq!(config.octez_rollup_config().data_dir, RollupDataDir::Temp);
         assert_eq!(
             config.octez_rollup_config().boot_sector_file,
-            jstz_rollup_path::kernel_installer_path()
+            jstz_rollup_path::riscv_kernel_path()
         );
 
         let jstz_node_config = config.jstz_node_config().unwrap();
