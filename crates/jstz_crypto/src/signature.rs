@@ -59,6 +59,24 @@ impl Signature {
             Signature::P256(sig) => sig.to_base58_check(),
         }
     }
+
+    pub fn from_base58(data: &str) -> Result<Self> {
+        match &data[..2] {
+            "ed" => {
+                let sig = Ed25519Signature::from_base58_check(data)?;
+                Ok(Signature::Ed25519(Ed25519(sig)))
+            }
+            "sp" => {
+                let sig = Secp256k1Signature::from_base58_check(data)?;
+                Ok(Signature::Secp256k1(Secp256k1(sig)))
+            }
+            "p2" => {
+                let sig = P256Signature::from_base58_check(data)?;
+                Ok(Signature::P256(P256(sig)))
+            }
+            _ => Err(Error::UnrecognizedSignature),
+        }
+    }
 }
 
 impl Signature {
@@ -205,5 +223,40 @@ mod test {
             bincode::decode_from_slice(bin.as_slice(), bincode::config::legacy())
                 .unwrap();
         assert_eq!(signature, decoded);
+    }
+
+    #[test]
+    fn from_base58() {
+        let ed25519_sig = "edsigtpe2oRBMFdrrwf99ETNjmBaRzNDexDjhancfQdz5phrwyPPhRi9L7kzJD4cAW1fFcsyTJcTDPP8W4H168QPQdGPKe7jrZB";
+        let p256_sig = "p2sigbgcUvtFhWaH7crZuyULzen2V7KUaWnBCZ5gtm6F8yoxdbm4hs4JMkAbZNdktCHWz5t5ybNRX7vFDM2eETf3jmNPmsVLUk";
+        let secp256k1_sig = "spsig1MuGWhKvtxfRN1c4rtyDeEXy6AxUpKryxFzSXnBY5epyojLFjHPyWrSsSME1DPoDFonhszs8o8p32yny3heeehhT5oztYd";
+        assert!(matches!(
+            Signature::from_base58(ed25519_sig),
+            Ok(Signature::Ed25519(_))
+        ));
+        assert!(matches!(
+            Signature::from_base58(p256_sig),
+            Ok(Signature::P256(_))
+        ));
+        assert!(matches!(
+            Signature::from_base58(secp256k1_sig),
+            Ok(Signature::Secp256k1(_))
+        ));
+        assert!(matches!(
+            Signature::from_base58("ed123"),
+            Err(crate::Error::TezosFromBase58Error { source: _ })
+        ));
+        assert!(matches!(
+            Signature::from_base58("p2123"),
+            Err(crate::Error::TezosFromBase58Error { source: _ })
+        ));
+        assert!(matches!(
+            Signature::from_base58("sp123"),
+            Err(crate::Error::TezosFromBase58Error { source: _ })
+        ));
+        assert!(matches!(
+            Signature::from_base58("abc123"),
+            Err(crate::Error::UnrecognizedSignature)
+        ))
     }
 }
