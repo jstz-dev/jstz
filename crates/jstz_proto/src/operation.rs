@@ -12,6 +12,9 @@ use http::{HeaderMap, Method, Uri};
 use crate::runtime::v2::oracle::request::RequestId;
 
 use jstz_core::{host::HostRuntime, reveal_data::PreimageHash};
+
+#[cfg(feature = "simulation")]
+use jstz_core::simulation::SimulationRequest;
 use jstz_crypto::verifier::Verifier;
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
@@ -230,6 +233,9 @@ pub struct SignedOperation {
     inner: Operation,
     #[serde(default)]
     verifier: Option<Verifier>,
+    #[cfg(feature = "simulation")]
+    #[serde(default)]
+    simulation_request: Option<SimulationRequest>,
 }
 
 impl SignedOperation {
@@ -238,6 +244,8 @@ impl SignedOperation {
             signature,
             inner,
             verifier: None,
+            #[cfg(feature = "simulation")]
+            simulation_request: None,
         }
     }
 
@@ -263,6 +271,11 @@ impl SignedOperation {
     pub fn verify_ref(&self) -> Result<&Operation> {
         self.verify()?;
         Ok(&self.inner)
+    }
+
+    #[cfg(feature = "simulation")]
+    pub fn is_simulation(&self) -> bool {
+        self.simulation_request.is_some()
     }
 }
 
@@ -675,11 +688,7 @@ mod test {
             }),
         };
         let signature = alice_sk.sign(op.hash()).unwrap();
-        let signed_op = SignedOperation {
-            signature,
-            inner: op,
-            verifier: None,
-        };
+        let signed_op = SignedOperation::new(signature, op);
         let json = serde_json::to_vec(&signed_op).unwrap();
         let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
 

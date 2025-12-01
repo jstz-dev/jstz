@@ -114,6 +114,11 @@ pub async fn execute_operation(
     ticketer: &ContractKt1Hash,
     injector: &PublicKey,
 ) -> Receipt {
+    #[cfg(feature = "simulation")]
+    if signed_operation.is_simulation() {
+        tx.set_simulation();
+    }
+
     let validity = signed_operation
         .verify()
         .and_then(|_| signed_operation.verify_and_increment_nonce(hrt));
