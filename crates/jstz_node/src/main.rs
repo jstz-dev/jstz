@@ -75,6 +75,12 @@ struct Args {
 
     #[arg(long, action = ArgAction::SetTrue)]
     storage_sync: bool,
+
+    #[arg(long)]
+    runtime_db_path: Option<PathBuf>,
+
+    #[arg(long)]
+    inbox_checkpoint_path: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -99,6 +105,9 @@ async fn main() -> anyhow::Result<()> {
                 run_mode_builder = run_mode_builder
                     .with_rollup_address(SmartRollupHash::from_base58_check(&v)?)?;
             }
+            if let Some(path) = args.inbox_checkpoint_path {
+                run_mode_builder = run_mode_builder.with_inbox_checkpoint_path(path)?;
+            }
             jstz_node::run(RunOptions {
                 addr: args.addr,
                 port: args.port,
@@ -109,6 +118,7 @@ async fn main() -> anyhow::Result<()> {
                     .context("failed to parse injector key file")?,
                 mode: run_mode_builder.build()?,
                 storage_sync: args.storage_sync,
+                runtime_db_path: args.runtime_db_path,
             })
             .await
         }

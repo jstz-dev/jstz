@@ -108,7 +108,7 @@ jobs:
     outputs:
       tag: ${{ fromJson(steps.meta.outputs.json).tags[0] }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
       - name: Extract short SHA
