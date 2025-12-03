@@ -108,7 +108,7 @@ jobs:
     outputs:
       tag: ${{ fromJson(steps.meta.outputs.json).tags[0] }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ inputs.ref }}
       - name: Extract short SHA
@@ -144,8 +144,8 @@ jobs:
           images: ${{ inputs.image_names }}
           tags: |
             type=ref,event=tag
-            type=raw,value=${{ inputs.ref }}
-            type=raw,value=${{ steps.extract_sha.outputs.short_sha }}
+            type=raw,value=${{ inputs.ref }},enable=${{ !startsWith(steps.extract_sha.outputs.sha, inputs.ref) }}
+            type=raw,value=${{ steps.extract_sha.outputs.short_sha }},enable=${{ startsWith(steps.extract_sha.outputs.sha, inputs.ref) }}
             # {{sha}} is not the right value here because that refers to the commit that triggered
             # the run, which is not the same as inputs.ref in most cases
           labels: |

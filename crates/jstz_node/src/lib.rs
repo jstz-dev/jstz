@@ -75,6 +75,7 @@ pub struct RunOptions {
     pub injector: KeyPair,
     pub mode: RunMode,
     pub storage_sync: bool,
+    pub runtime_db_path: Option<PathBuf>,
 }
 
 pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
@@ -90,6 +91,7 @@ pub async fn run_with_config(config: JstzNodeConfig) -> Result<()> {
         injector: config.injector,
         mode: config.mode,
         storage_sync: config.storage_sync,
+        runtime_db_path: config.runtime_db_path,
     })
     .await
 }
@@ -104,6 +106,7 @@ pub async fn run(
         injector,
         mode,
         storage_sync,
+        runtime_db_path,
     }: RunOptions,
 ) -> Result<()> {
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
@@ -112,8 +115,21 @@ pub async fn run(
         _ => 0,
     })));
 
-    // will make db_path configurable later
-    let (runtime_db, _runtime_db_file) = temp_db()?;
+    // When runtime_db_path is not provided, the db is created with a temp file rather than
+    // with the in-memory setup to keep the behaviour consistent and avoid consuming
+    // too much memory unexpectedly. If somehow path-to-str conversion fails, the in-memory
+    // setup will be used as the fallback option.
+    // `_tmp_file` simply holds the temporary file so that it gets cleaned up when the node
+    // is shut down.
+    let (db_path, _tmp_file) = match runtime_db_path {
+        Some(p) => (p, None),
+        None => {
+            let f = NamedTempFile::new()?;
+            (f.path().to_path_buf(), Some(f))
+        }
+    };
+    let runtime_db = sequencer::db::Db::init(db_path.as_path().to_str())?;
+
     let worker = match mode {
         #[cfg(not(test))]
         RunMode::Sequencer {
@@ -156,15 +172,19 @@ pub async fn run(
         RunMode::Default => None,
     };
 
-    // TODO: make checkpoint path configurable
-    // https://linear.app/tezos/issue/JSTZ-912/make-inbox-checkpoint-file-configurable
-    let _checkpoint = NamedTempFile::new()?;
     let _monitor: Option<Monitor> = match mode {
         #[cfg(not(test))]
-        RunMode::Sequencer { .. } => {
-            let path = _checkpoint.path().to_path_buf();
-            Some(inbox::spawn_monitor(rollup_endpoint, queue.clone(), path).await?)
-        }
+        RunMode::Sequencer {
+            ref inbox_checkpoint_path,
+            ..
+        } => Some(
+            inbox::spawn_monitor(
+                rollup_endpoint,
+                queue.clone(),
+                inbox_checkpoint_path.clone(),
+            )
+            .await?,
+        ),
         #[cfg(test)]
         RunMode::Sequencer { .. } => None,
         RunMode::Default => None,
@@ -362,6 +382,7 @@ mod test {
                 injector: default_injector(),
                 mode: mode.clone(),
                 storage_sync: false,
+                runtime_db_path: None,
             }));
 
             let res = jstz_utils::poll(10, 500, || async {
@@ -390,6 +411,7 @@ mod test {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
             },
             "\"sequencer\"",
         )
@@ -416,6 +438,7 @@ mod test {
                 injector: default_injector(),
                 mode,
                 storage_sync: false,
+                runtime_db_path: None,
             }));
 
             sleep(Duration::from_secs(1)).await;
@@ -433,6 +456,7 @@ mod test {
                 capacity: 0,
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 runtime_env: RuntimeEnv::Native,
+                inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
             },
             false,
         )
@@ -507,6 +531,7 @@ mod test {
             injector: default_injector(),
             mode,
             storage_sync: true,
+            runtime_db_path: None,
         }))
     }
 

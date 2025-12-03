@@ -76,7 +76,7 @@ jobs:
     name: Build (Kernel)
     runs-on: [x86_64, linux, nix]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ needs.set-input-values.outputs.ref }}
       - run: nix --version
