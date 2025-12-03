@@ -105,9 +105,8 @@ jobs:
     uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
     with:
       octez-tag: ${{ needs.set-input-values.outputs.octez-tag }}
-      docker_registry: ghcr.io
-      docker_image_base: jstz-dev/jstz
-      image: ${{ matrix.image }}
+      image_names: ghcr.io/jstz-dev/jstz/${{ matrix.image }}
+      image_id: ${{ matrix.image }}
       dockerfile: ${{ matrix.dockerfile }}
       kernel_artifact_name: jstz-kernel
       dry_run: ${{ needs.set-input-values.outputs.dry_run == 'true' || needs.set-input-values.outputs.dry_run == true }}
