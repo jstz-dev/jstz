@@ -67,7 +67,7 @@ jobs:
           fi
       - uses: actions/upload-artifact@v5
         with:
-          name: sdk_npm_pacakge
+          name: sdk_npm_package
           path: crates/jstz_sdk/pkg
           if-no-files-found: error
           retention-days: 1
@@ -82,17 +82,17 @@ jobs:
     steps:
       - uses: actions/download-artifact@v6
         with:
-          name: sdk_npm_pacakge
-          path: sdk_npm_pacakge
+          name: sdk_npm_package
+          path: sdk_npm_package
       - name: Package
         shell: sh
         # zip the entire folder such that files are organised when the downloaded file is unzipped
-        run: zip sdk_npm_pacakge.zip -r sdk_npm_pacakge
+        run: zip sdk_npm_package.zip -r sdk_npm_package
       - name: Upload release to GitHub
         uses: softprops/action-gh-release@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          files: sdk_npm_pacakge.zip
+          files: sdk_npm_package.zip
           tag_name: ${{ inputs.ref }}
 
   publish-to-npm:
@@ -104,9 +104,9 @@ jobs:
     steps:
       - uses: actions/download-artifact@v6
         with:
-          name: sdk_npm_pacakge
-          path: sdk_npm_pacakge
+          name: sdk_npm_package
+          path: sdk_npm_package
       - uses: jstz-dev/jstz/.github/actions/publish-npm-package@main
         with:
-          package_dir: sdk_npm_pacakge
+          package_dir: sdk_npm_package
           dry_run: ${{ inputs.dry_run }}
