@@ -90,7 +90,7 @@ jobs:
     with:
       ref: ${{ inputs.ref }}
       dry_run: ${{ inputs.dry_run }}
-      octez-tag: ${{ inputs.octez_version }}
+      octez_version: ${{ inputs.octez_version }}
     secrets: inherit
 
   cli:
