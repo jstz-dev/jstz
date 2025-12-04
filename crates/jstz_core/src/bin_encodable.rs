@@ -2,6 +2,7 @@ use bincode::{
     config::{Configuration, Fixint, Limit, LittleEndian},
     Decode, Encode,
 };
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     error::{Error, Result},
@@ -44,9 +45,26 @@ impl<T: Encode + Decode> BinEncodable for T {
     }
 }
 
+pub fn serde_encode<T: Serialize>(value: &T) -> Result<Vec<u8>> {
+    bincode::serde::encode_to_vec(value, BINCODE_CONFIGURATION).map_err(|err| {
+        Error::SerializationError {
+            description: format!("failed to serde encode: {err}"),
+        }
+    })
+}
+
+pub fn serde_decode<T: DeserializeOwned>(bytes: &[u8]) -> Result<T> {
+    let (value, _) = bincode::serde::decode_from_slice(bytes, BINCODE_CONFIGURATION)
+        .map_err(|err| Error::SerializationError {
+            description: format!("failed to serde decode: {err}"),
+        })?;
+    Ok(value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde::Deserialize;
 
     #[derive(Debug, Clone, PartialEq, Encode, Decode)]
     struct TestData {
@@ -95,5 +113,43 @@ mod tests {
         // Without a decode limit, this call may hang indefinitely or crash the process.
         let result = <TestData as BinEncodable>::decode(&malicious);
         assert!(result.is_err_and(|e| e.to_string().contains("LimitExceeded")));
+    }
+
+    #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+    struct SerdeTestData {
+        field1: String,
+        field2: i32,
+        field3: Vec<u8>,
+    }
+
+    #[test]
+    fn test_serde_encode_decode_roundtrip() {
+        let original = SerdeTestData {
+            field1: "test".to_string(),
+            field2: 42,
+            field3: vec![1, 2, 3, 4, 5],
+        };
+
+        // Test encode
+        let encoded = serde_encode(&original).unwrap();
+        assert!(!encoded.is_empty());
+
+        // Test decode
+        let decoded: SerdeTestData = serde_decode(&encoded).unwrap();
+        assert_eq!(original, decoded);
+    }
+
+    #[test]
+    fn test_serde_encode_decode_invalid_data() {
+        // Try to decode invalid bytes
+        let invalid_bytes = vec![1, 2, 3];
+        let result: std::result::Result<SerdeTestData, _> = serde_decode(&invalid_bytes);
+        assert!(result.is_err());
+
+        // Verify error type
+        match result {
+            Err(Error::SerializationError { description: _ }) => (),
+            _ => panic!("Expected SerializationError"),
+        }
     }
 }
