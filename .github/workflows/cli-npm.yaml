@@ -53,7 +53,7 @@ jobs:
     outputs:
       artefact_name: ${{ steps.build.outputs.artefact_name }}
     steps:
-      - uses: jstz-dev/jstz/.github/actions/build-cli@main
+      - uses: jstz-dev/jstz/.github/actions/build-cli@huanchengchang/jstz-941-3-test
         id: build
         with:
           platform: darwin # To match the platform name in Node.js. This will be referenced by the npm package
@@ -174,7 +174,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           ref: ${{ needs.set-input-values.outputs.ref }}
-      - uses: jstz-dev/jstz/.github/actions/publish-npm-package@main
+      - uses: jstz-dev/jstz/.github/actions/publish-npm-package@huanchengchang/jstz-941-3-test
         with:
           package_dir: packages/cli/main
           dry_run: ${{ needs.set-input-values.outputs.dry_run }}

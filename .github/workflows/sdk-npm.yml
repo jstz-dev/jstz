@@ -106,7 +106,7 @@ jobs:
         with:
           name: sdk_npm_pacakge
           path: sdk_npm_pacakge
-      - uses: jstz-dev/jstz/.github/actions/publish-npm-package@main
+      - uses: jstz-dev/jstz/.github/actions/publish-npm-package@huanchengchang/jstz-941-3-test
         with:
           package_dir: sdk_npm_pacakge
           dry_run: ${{ inputs.dry_run }}

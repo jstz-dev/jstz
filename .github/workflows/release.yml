@@ -86,7 +86,7 @@ jobs:
   images:
     name: Build images
     if: ${{ inputs.build_images }}
-    uses: jstz-dev/jstz/.github/workflows/docker.yml@main
+    uses: jstz-dev/jstz/.github/workflows/docker.yml@huanchengchang/jstz-941-3-test
     with:
       ref: ${{ inputs.ref }}
       dry_run: ${{ inputs.dry_run }}
@@ -96,7 +96,7 @@ jobs:
   cli:
     name: Build CLI
     if: ${{ inputs.build_cli }}
-    uses: jstz-dev/jstz/.github/workflows/cli-npm.yaml@main
+    uses: jstz-dev/jstz/.github/workflows/cli-npm.yaml@huanchengchang/jstz-941-3-test
     with:
       ref: ${{ inputs.ref }}
       dry_run: ${{ inputs.dry_run }}
@@ -105,7 +105,7 @@ jobs:
   sdk:
     name: Build SDK
     if: ${{ inputs.build_sdk }}
-    uses: jstz-dev/jstz/.github/workflows/sdk-npm.yml@main
+    uses: jstz-dev/jstz/.github/workflows/sdk-npm.yml@huanchengchang/jstz-941-3-test
     with:
       ref: ${{ inputs.ref }}
       dry_run: ${{ inputs.dry_run }}
@@ -114,7 +114,7 @@ jobs:
   runtime_api_coverage:
     name: Publish runtime API coverage
     if: ${{ inputs.publish_runtime_api_coverage }}
-    uses: jstz-dev/jstz/.github/workflows/runtime-api-coverage.yml@main
+    uses: jstz-dev/jstz/.github/workflows/runtime-api-coverage.yml@huanchengchang/jstz-941-3-test
     secrets:
       repo_token: ${{ secrets.RUNTIME_API_REPORT_REPO }}
     with:
@@ -126,7 +126,7 @@ jobs:
   deploy_docs:
     name: Deploy docs
     if: ${{ inputs.deploy_docs }}
-    uses: jstz-dev/jstz/.github/workflows/deploy-docs.yml@main
+    uses: jstz-dev/jstz/.github/workflows/deploy-docs.yml@huanchengchang/jstz-941-3-test
     with:
       ref: ${{ inputs.ref }}
       dry_run: ${{ inputs.dry_run }}

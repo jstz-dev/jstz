@@ -102,7 +102,7 @@ jobs:
             dockerfile: ./crates/jstzd/Dockerfile
           - image: jstz-node
             dockerfile: ./crates/jstz_node/Dockerfile
-    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
+    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@huanchengchang/jstz-941-3-test
     with:
       octez_version: ${{ needs.set-input-values.outputs.octez_version }}
       image_names: |
