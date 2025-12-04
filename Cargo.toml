@@ -144,8 +144,9 @@ features = ["sandbox"]
 default-features = false
 
 [workspace.dependencies.tezos-smart-rollup]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/sdk/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 default-features = false
 features = [
   "std",
@@ -158,56 +159,73 @@ features = [
 ]
 
 [workspace.dependencies.tezos-smart-rollup-host]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/host/"
 features = ["proto-alpha"]
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-core]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/core/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-mock]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/mock/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos_data_encoding]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/sdk/rust/encoding/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-debug]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/debug/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-encoding]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/encoding/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 default-features = false
 features = ["alloc", "tezos-encoding", "crypto"]
 
 [workspace.dependencies.tezos-smart-rollup-entrypoint]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/entrypoint/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 
 [workspace.dependencies.tezos-smart-rollup-panic-hook]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/panic-hook/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-storage]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/storage/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-installer-config]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/installer-config/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+
+[workspace.dependencies.tezos-smart-rollup-constants]
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/constants/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos-smart-rollup-installer]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/src/kernel_sdk/installer-client/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
 [workspace.dependencies.tezos_crypto_rs]
-git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+path = "/Users/leo/tezos/tezos/sdk/rust/crypto/"
+# git = "https://github.com/jstz-dev/tezos"
+# rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 default-features = false
 
 [workspace.dependencies.deno_console]

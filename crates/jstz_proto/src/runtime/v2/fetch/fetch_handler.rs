@@ -15,11 +15,13 @@ use deno_core::{
 };
 use deno_fetch_base::{FetchHandler, FetchResponse, FetchReturn};
 use futures::FutureExt;
+use jstz_core::BinEncodable;
 use jstz_crypto::public_key_hash::PublicKeyHash;
 use jstz_runtime::runtime::{AsyncEntered, Limiter, MAX_SMART_FUNCTION_CALL_COUNT};
 use std::future::Future;
 use std::pin::Pin;
 use std::{cell::RefCell, rc::Rc};
+use tezos_smart_rollup_constants::riscv::REVEAL_REQUEST_MAX_SIZE;
 
 use jstz_core::host::JsHostRuntime;
 use jstz_core::{host::HostRuntime, kv::Transaction};
@@ -226,34 +228,55 @@ pub async fn process_and_dispatch_request(
             result.into()
         }
         Ok(SupportedScheme::Http) | Ok(SupportedScheme::Https) => {
-            match dispatch_oracle(
-                &mut host,
-                &mut tx,
-                is_run_function,
-                source,
+            let mut payload = Vec::from([100, 0]);
+            let b = Request {
                 method,
-                &url,
+                url: url.clone(),
                 headers,
-                data,
-            ) {
-                Ok(resp) => {
-                    let response = resp.await;
-                    // Check if transaction has any pending changes when resuming from oracle response
-                    // TODO: Once async is supported, this check can be removed
-                    if tx.get_dirty() {
-                        return Response {
-                                    status: 400,
-                                    status_text: "Bad Request".into(),
-                                    headers: Vec::with_capacity(0),
-                                    body: "Oracle requests are not allowed when transaction has pending changes".into(),
-
-                                };
-                    } else {
-                        response
-                    }
-                }
-                Err(e) => Err(e).into(),
+                body: data,
             }
+            .encode()
+            .unwrap();
+            payload.extend_from_slice(&b);
+
+            let mut destination = [0; REVEAL_REQUEST_MAX_SIZE];
+            let response = unsafe {
+                host.reveal(&payload.as_slice(), &mut destination).unwrap();
+                Response::decode(&destination).unwrap()
+            };
+
+            host.write_debug(&format!("Reveal response: {response:?}"));
+
+            return response;
+
+            // match dispatch_oracle(
+            //     &mut host,
+            //     &mut tx,
+            //     is_run_function,
+            //     source,
+            //     method,
+            //     &url,
+            //     headers,
+            //     data,
+            // ) {
+            //     Ok(resp) => {
+            //         let response = resp.await;
+            //         // Check if transaction has any pending changes when resuming from oracle response
+            //         // TODO: Once async is supported, this check can be removed
+            //         if tx.get_dirty() {
+            //             return Response {
+            //                         status: 400,
+            //                         status_text: "Bad Request".into(),
+            //                         headers: Vec::with_capacity(0),
+            //                         body: "Oracle requests are not allowed when transaction has pending changes".into(),
+
+            //                     };
+            //         } else {
+            //             response
+            //         }
+            //     }
+            //     Err(e) => Err(e).into(),
+            // }
         }
         Err(err) => err.into(),
     };

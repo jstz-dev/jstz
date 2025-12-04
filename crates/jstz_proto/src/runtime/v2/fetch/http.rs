@@ -675,7 +675,11 @@ mod test {
     }
 
     #[test]
+<<<<<<< HEAD
     fn request_serde_roundtrip() {
+=======
+    fn request_bincode_roundtrip() {
+>>>>>>> 80dc651e (tmp)
         let request = Request {
             method: "POST".into(),
             url: Url::from_str("http://example.com/foo").unwrap(),
@@ -688,7 +692,11 @@ mod test {
     }
 
     #[test]
+<<<<<<< HEAD
     fn response_serde_roundtrip() {
+=======
+    fn response_reveal_roundtrip() {
+>>>>>>> 80dc651e (tmp)
         let response = Response {
             status: 200,
             status_text: "OK".into(),

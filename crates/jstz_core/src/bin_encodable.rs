@@ -13,10 +13,13 @@ use crate::{
 // more strict and less ambiguous compared to VarintEncoding.
 // The decode limit (MAX_REVEAL_SIZE) is critical for safety — it prevents unbounded memory
 // allocation on malformed input, mitigating potential denial-of-service (DoS) risks.
-const BINCODE_CONFIGURATION: Configuration<LittleEndian, Fixint, Limit<MAX_REVEAL_SIZE>> =
-    bincode::config::standard()
-        .with_fixed_int_encoding()
-        .with_limit();
+pub const BINCODE_CONFIGURATION: Configuration<
+    LittleEndian,
+    Fixint,
+    Limit<MAX_REVEAL_SIZE>,
+> = bincode::config::standard()
+    .with_fixed_int_encoding()
+    .with_limit();
 
 /// Trait for types that can be encoded to and decoded from binary format
 pub trait BinEncodable {

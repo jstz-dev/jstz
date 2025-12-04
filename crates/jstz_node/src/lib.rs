@@ -2,6 +2,7 @@ use anyhow::{Context, Result};
 use api_doc::{modify, ApiDoc};
 use axum::{extract::DefaultBodyLimit, http, routing::get};
 use config::JstzNodeConfig;
+use env_logger::Env;
 use jstz_core::reveal_data::MAX_REVEAL_SIZE;
 use jstz_utils::KeyPair;
 use octez::OctezRollupClient;
@@ -109,6 +110,7 @@ pub async fn run(
         runtime_db_path,
     }: RunOptions,
 ) -> Result<()> {
+    env_logger::init_from_env(Env::default().default_filter_or("jstz_node=error"));
     let rollup_client = OctezRollupClient::new(rollup_endpoint.to_string());
     let queue = Arc::new(RwLock::new(OperationQueue::new(match mode {
         RunMode::Sequencer { capacity, .. } => capacity,

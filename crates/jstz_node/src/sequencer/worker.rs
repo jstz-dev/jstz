@@ -259,71 +259,80 @@ fn spawn_riscv_worker(
     .context("failed to launch RISCV PVM")?;
 
     let rollup_addr = SmartRollupAddress::new(rollup_address.clone());
+    let tokio_rt = tokio::runtime::Builder::new_current_thread()
+        .enable_time()
+        .enable_io()
+        .build()
+        .context("failed to build tokio runtime")?;
+
     Ok(Worker {
         thread_kill_sig,
         heartbeat: heartbeat.clone(),
         inner: Some(spawn_thread(move || {
-            info!("RISCV PVM launched");
+            tokio_rt.block_on(async {
+                info!("RISCV PVM launched");
 
-            'worker: loop {
-                let operation = {
-                    match queue.write() {
-                        Ok(mut q) => q.pop(),
-                        Err(e) => {
-                            warn!("worker failed to read from queue: {e:?}");
-                            None
-                        }
-                    }
-                };
-                match operation {
-                    Some(op) => {
-                        let (inbox_id, encoded_message) = match op {
-                            WrappedOperation::FromInbox {
-                                original_inbox_message,
-                                message,..
-                            } => {
-                                match hex::decode(original_inbox_message) {
-                                    Err(e) => {
-                                    // Inbox messages cannot be skipped since eventually rollup will
-                                    // execute the messages and sequencer will deviate from rollup.
-                                    // Terminating the worker will at least surface the error through
-                                    // outdated heartbeats.
-                                    error!("worker failed to decode original inbox message: {e}");
-                                    break 'worker;
-                                },
-                                Ok(m) => (message.inbox_id, Ok(m))
-                            }
-                            },
-                            WrappedOperation::FromNode(signed_op) => {
-                                (
-                                    InboxId{l1_level: 0, l1_message_id: 0},
-                                    encode_signed_operation(&signed_op, &rollup_addr).map_err(|e| anyhow::anyhow!("worker failed to encode signed operation into inbox message: {e:?}"))
-                                )
-                            }
-                        };
-                        match encoded_message {
-                            Ok(message) => {
-                                pvm.execute_operation(
-                                    inbox_id,
-                                    message,
-                                    std::ops::Bound::Unbounded,
-                                );
-                            }
+                'worker: loop {
+                    let operation = {
+                        match queue.write() {
+                            Ok(mut q) => q.pop(),
                             Err(e) => {
-                                warn!("{e:?}");
+                                warn!("worker failed to read from queue: {e:?}");
+                                None
                             }
-                        };
-                    }
-                    _ => std::thread::sleep(Duration::from_millis(100)),
-                };
+                        }
+                    };
+                    match operation {
+                        Some(op) => {
+                            let (inbox_id, encoded_message) = match op {
+                                WrappedOperation::FromInbox {
+                                    original_inbox_message,
+                                    message,..
+                                } => {
+                                    match hex::decode(original_inbox_message) {
+                                        Err(e) => {
+                                        // Inbox messages cannot be skipped since eventually rollup will
+                                        // execute the messages and sequencer will deviate from rollup.
+                                        // Terminating the worker will at least surface the error through
+                                        // outdated heartbeats.
+                                        error!("worker failed to decode original inbox message: {e}");
+                                        break 'worker;
+                                    },
+                                    Ok(m) => (message.inbox_id, Ok(m))
+                                }
+                                },
+                                WrappedOperation::FromNode(signed_op) => {
+                                    (
+                                        InboxId{l1_level: 0, l1_message_id: 0},
+                                        encode_signed_operation(&signed_op, &rollup_addr).map_err(|e| anyhow::anyhow!("worker failed to encode signed operation into inbox message: {e:?}"))
+                                    )
+                                }
+                            };
+                            match encoded_message {
+                                Ok(message) => {
+                                    pvm.execute_operation(
+                                        inbox_id,
+                                        message,
+                                        std::ops::Bound::Unbounded,
+                                    )
+                                    .await;
+                                }
+                                Err(e) => {
+                                    warn!("{e:?}");
+                                }
+                            };
+                        }
+                        _ => tokio::time::sleep(Duration::from_millis(100)).await,
+                    };
 
-                match rx.try_recv() {
-                    Ok(_) | Err(TryRecvError::Disconnected) => {
-                        break;
+                    match rx.try_recv() {
+                        Ok(_) | Err(TryRecvError::Disconnected) => {
+                            break;
+                        }
+                        Err(TryRecvError::Empty) => {}
                     }
-                    Err(TryRecvError::Empty) => {}
                 }
-            }
+            })
         })),
     })
 }
