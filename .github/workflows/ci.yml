@@ -15,7 +15,7 @@ jobs:
     name: Build
     uses: jstz-dev/jstz/.github/workflows/release.yml@huanchengchang/jstz-941-3-test
     with:
-      octez_version: 23.2
+      octez_version: 23.3
       dry_run: true
       ref: huanchengchang/jstz-941-3-test
     secrets: inherit
