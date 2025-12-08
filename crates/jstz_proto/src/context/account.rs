@@ -349,6 +349,26 @@ impl Account {
         result
     }
 
+    #[cfg(feature = "simulation")]
+    /// Sets nonce of account through the Transaction cache
+    /// This function should only be used in simulation mode
+    pub fn set_nonce<'a>(
+        hrt: &impl HostRuntime,
+        tx: &'a mut Transaction,
+        addr: &impl Addressable,
+        next_nonce: Nonce,
+    ) -> Result<()> {
+        let is_dirty = tx.get_dirty();
+        let mut account = Self::get_mut(hrt, tx, addr)?;
+        let nonce = match account.deref_mut() {
+            Self::User(UserAccount { nonce, .. }) => nonce,
+            Self::SmartFunction(SmartFunctionAccount { nonce, .. }) => nonce,
+        };
+        *nonce = next_nonce;
+        tx.set_dirty(is_dirty);
+        Ok(())
+    }
+
     pub fn create_smart_function(
         hrt: &impl HostRuntime,
         tx: &mut Transaction,

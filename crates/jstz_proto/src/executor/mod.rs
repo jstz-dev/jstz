@@ -52,7 +52,11 @@ async fn execute_operation_inner(
                 &reveal.root_hash,
             )?;
             signed_op.verify()?;
-            signed_op.verify_and_increment_nonce(hrt)?;
+            signed_op.verify_and_increment_nonce(
+                hrt,
+                #[cfg(feature = "simulation")]
+                tx,
+            )?;
             let revealed_op: Operation = signed_op.into();
             if reveal.reveal_type == revealed_op.content().try_into()? {
                 return execute_operation_inner(
@@ -119,9 +123,13 @@ pub async fn execute_operation(
         tx.set_simulation();
     }
 
-    let validity = signed_operation
-        .verify()
-        .and_then(|_| signed_operation.verify_and_increment_nonce(hrt));
+    let validity = signed_operation.verify().and_then(|_| {
+        signed_operation.verify_and_increment_nonce(
+            hrt,
+            #[cfg(feature = "simulation")]
+            tx,
+        )
+    });
     let op = signed_operation.into();
     let op_hash = resolve_operation_hash(&op);
     let result = match validity {
