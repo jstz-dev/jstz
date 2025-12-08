@@ -33,6 +33,7 @@ serde_with.workspace = true
 tezos_crypto_rs.workspace = true
 tezos_data_encoding.workspace = true
 tezos-smart-rollup.workspace = true
+tezos-smart-rollup-constants.workspace = true
 utoipa.workspace = true
 
 # Required by v2 runtime

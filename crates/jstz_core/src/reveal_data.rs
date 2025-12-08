@@ -74,6 +74,7 @@ pub enum Error {
 
 // TODO: optimize the api and performance
 // https://linear.app/tezos/issue/JSTZ-359/optimize-reveal-data
+/// Handles revealing data via [Runtime::reveal_preimage].
 pub struct RevealData;
 
 impl RevealData {

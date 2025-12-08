@@ -1,4 +1,8 @@
-use jstz_proto::operation::internal::InboxId;
+use jstz_core::{jstz_reveal::JSTZ_REVEAL_TAG, BinEncodable};
+use jstz_proto::{
+    operation::internal::InboxId,
+    runtime::v2::fetch::http::{convert_header_map, Body, Request, Response},
+};
 use octez_riscv::{
     machine_state::block_cache::{block, DefaultCacheConfig},
     program::Program,
@@ -6,6 +10,7 @@ use octez_riscv::{
     state_backend::owned_backend::Owned,
     stepper::{pvm::reveals::RevealRequestResponseMap, StepperStatus},
 };
+use reqwest::{Client, Method};
 use tezos_crypto_rs::hash::SmartRollupHash;
 
 use std::{
@@ -25,6 +30,24 @@ pub struct JstzRiscvPvm {
     hooks: DebugLogHook,
     reveal_request_response_map: RevealRequestResponseMap,
     heartbeat: Arc<AtomicU64>,
+}
+pub trait RevealHandler {
+    /// Provide reveal data in response to a reveal request.
+    /// Returns `false` if the machine is not expecting a reveal.
+    fn provide_reveal_response(&mut self, reveal_data: &[u8]) -> bool;
+
+    /// Get the reveal request in the machine state.
+    fn reveal_request(&self) -> Vec<u8>;
+}
+
+impl RevealHandler for JstzRiscvPvm {
+    fn provide_reveal_response(&mut self, reveal_data: &[u8]) -> bool {
+        self.pvm.provide_reveal_response(reveal_data)
+    }
+
+    fn reveal_request(&self) -> Vec<u8> {
+        self.pvm.reveal_request()
+    }
 }
 
 struct DebugLogHook {
@@ -77,7 +100,7 @@ impl JstzRiscvPvm {
         })
     }
 
-    fn step_max_once(&mut self, steps: Bound<usize>) -> StepperStatus {
+    async fn step_max_once(&mut self, steps: Bound<usize>) -> StepperStatus {
         match self.pvm.status() {
             PvmStatus::Evaluating => {
                 let steps = self.pvm.eval_max(&mut self.hooks, steps);
@@ -92,6 +115,30 @@ impl JstzRiscvPvm {
 
             PvmStatus::WaitingForReveal => {
                 let reveal_request = self.pvm.reveal_request();
+                if reveal_request.first() == Some(&JSTZ_REVEAL_TAG) {
+                    let request = Request::decode(&reveal_request[1..]).unwrap();
+                    let _response = fetch(request).await.unwrap();
+                    let response = Response {
+                        status: 200,
+                        status_text: "OK".to_owned(),
+                        headers: Vec::new(),
+                        body: Body::Vector(
+                            serde_json::to_vec(
+                                &serde_json::json!({"uuid": "1234567890"}),
+                            )
+                            .unwrap(),
+                        ),
+                    };
+                    println!("Response: {response:?}");
+                    let b = response.encode().unwrap();
+
+                    if self.pvm.provide_reveal_response(b.as_slice()) {
+                        println!("Provided reveal response");
+                        return StepperStatus::Running { steps: 1 };
+                    } else {
+                        panic!("Failed to provide reveal response");
+                    }
+                }
 
                 let Some(reveal_response) = self
                     .reveal_request_response_map
@@ -119,7 +166,7 @@ impl JstzRiscvPvm {
         }
     }
 
-    pub fn execute_operation(
+    pub async fn execute_operation(
         &mut self,
         inbox_id: InboxId,
         encoded_operation: Vec<u8>,
@@ -138,7 +185,7 @@ impl JstzRiscvPvm {
         // processing the message and we can wrap up this execution.
         loop {
             write_heartbeat(&self.heartbeat);
-            match self.step_max_once(step_bounds) {
+            match self.step_max_once(step_bounds).await {
                 StepperStatus::Running { steps } => {
                     total_steps = total_steps.saturating_add(steps);
                     step_bounds = bound_saturating_sub(step_bounds, steps);
@@ -191,6 +238,36 @@ impl JstzRiscvPvm {
     }
 }
 
+async fn fetch(request: Request) -> anyhow::Result<Response> {
+    let client = Client::builder().build()?;
+    let method = Method::from_bytes(&request.method)?;
+    let resp = client.request(method, request.url.clone()).send().await?;
+    let status = resp.status().as_u16();
+    let status_text = resp
+        .status()
+        .canonical_reason()
+        .unwrap_or("Unknown")
+        .to_string();
+
+    // TODO: Update reqwest and simplify this
+    let headers = convert_header_map(http::HeaderMap::from_iter(
+        resp.headers().iter().map(|(name, value)| {
+            (
+                http::HeaderName::from_bytes(name.as_str().as_bytes()).unwrap(),
+                http::HeaderValue::from_bytes(value.as_bytes()).unwrap(),
+            )
+        }),
+    ));
+
+    let body = Body::Vector(resp.bytes().await?.to_vec());
+    Ok(Response {
+        status,
+        status_text,
+        headers,
+        body,
+    })
+}
+
 fn bound_saturating_sub(bound: Bound<usize>, shift: usize) -> Bound<usize> {
     match bound {
         Bound::Included(x) => Bound::Included(x.saturating_sub(shift)),
@@ -212,12 +289,12 @@ mod tests {
 
     use crate::sequencer::tests::dummy_signed_op;
 
-    #[test]
+    #[tokio::test]
     #[cfg_attr(
         not(feature = "riscv_test"),
         ignore = "PVM consumes too much memory and therefore this cannot be part of CI"
     )]
-    fn create_pvm() {
+    async fn create_pvm() {
         let rollup_address =
             SmartRollupHash::from_base58_check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao")
                 .unwrap();
@@ -240,14 +317,16 @@ mod tests {
             &SmartRollupAddress::new(rollup_address),
         )
         .unwrap();
-        let output = pvm.execute_operation(
-            InboxId {
-                l1_level: 123,
-                l1_message_id: 456,
-            },
-            message,
-            std::ops::Bound::Unbounded,
-        );
+        let output = pvm
+            .execute_operation(
+                InboxId {
+                    l1_level: 123,
+                    l1_message_id: 456,
+                },
+                message,
+                std::ops::Bound::Unbounded,
+            )
+            .await;
         println!("output: {output:?}");
         assert!(matches!(
             output,

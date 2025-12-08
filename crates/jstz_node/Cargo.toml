@@ -42,6 +42,7 @@ pin-project.workspace = true
 r2d2.workspace = true
 r2d2_sqlite.workspace = true
 reqwest.workspace = true
+http.workspace = true
 rusqlite.workspace = true
 serde.workspace = true
 serde_json.workspace = true

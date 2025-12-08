@@ -5,6 +5,7 @@ use deno_core::{ByteString, JsBuffer};
 use deno_fetch_base::BytesStream;
 use futures::stream;
 use http::{HeaderMap, HeaderName, HeaderValue};
+use jstz_core::{serde_decode, serde_encode};
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use url::Url;
 
@@ -39,12 +40,33 @@ impl Response {
     }
 }
 
+impl jstz_core::BinEncodable for Response {
+    fn encode(&self) -> jstz_core::Result<Vec<u8>> {
+        serde_encode(self)
+    }
+
+    fn decode(bytes: &[u8]) -> jstz_core::Result<Self> {
+        serde_decode(bytes)
+    }
+}
+
 impl PartialEq for Response {
     fn eq(&self, other: &Self) -> bool {
         self.status == other.status
             && self.status_text == other.status_text
             && self.headers == other.headers
             && self.body.as_slice() == other.body.as_slice()
+    }
+}
+
+impl From<jstz_core::Error> for Response {
+    fn from(value: jstz_core::Error) -> Self {
+        Response {
+            status: 500,
+            status_text: "Internal Server Error".into(),
+            headers: Vec::new(),
+            body: Body::Vector(value.to_string().into_bytes()),
+        }
     }
 }
 
@@ -88,6 +110,16 @@ pub struct Request {
     #[serde(with = "serde_vec_tuple_bytestring")]
     pub headers: Vec<(ByteString, ByteString)>,
     pub body: Option<Body>,
+}
+
+impl jstz_core::BinEncodable for Request {
+    fn encode(&self) -> jstz_core::Result<Vec<u8>> {
+        serde_encode(self)
+    }
+
+    fn decode(bytes: &[u8]) -> jstz_core::Result<Self> {
+        serde_decode(bytes)
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -393,6 +425,7 @@ mod test {
     use deno_fetch_base::BytesStream;
     use futures::StreamExt;
     use http::{HeaderMap, HeaderName, HeaderValue};
+    use jstz_core::BinEncodable;
     use serde_json::json;
     use url::Url;
 
@@ -650,5 +683,31 @@ mod test {
             body,
         };
         assert_eq!(expected, resp)
+    }
+
+    #[test]
+    fn request_serde_roundtrip() {
+        let request = Request {
+            method: "POST".into(),
+            url: Url::from_str("http://example.com/foo").unwrap(),
+            headers: vec![("k1".into(), "v1".into())],
+            body: Some(Body::Vector(b"12345".into())),
+        };
+        let wire = BinEncodable::encode(&request).unwrap();
+        let roundtrip: Request = BinEncodable::decode(&wire).unwrap();
+        assert_eq!(request, roundtrip);
+    }
+
+    #[test]
+    fn response_serde_roundtrip() {
+        let response = Response {
+            status: 200,
+            status_text: "OK".into(),
+            headers: vec![("k1".into(), "v1".into())],
+            body: Body::Vector(b"12345".into()),
+        };
+        let wire = response.encode().unwrap();
+        let roundtrip: Response = Response::decode(&wire).unwrap();
+        assert_eq!(response, roundtrip);
     }
 }
