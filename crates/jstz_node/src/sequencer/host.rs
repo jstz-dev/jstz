@@ -349,6 +349,15 @@ impl Runtime for Host {
         // This function is never used
         unimplemented!()
     }
+
+    unsafe fn reveal(
+        &self,
+        _request: &[u8],
+        _response: &mut [u8],
+    ) -> Result<usize, RuntimeError> {
+        // This function is never used
+        unimplemented!()
+    }
 }
 
 #[cfg(test)]

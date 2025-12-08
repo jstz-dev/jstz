@@ -116,6 +116,11 @@ mod erased_runtime {
         fn erased_restart_forced(&self) -> Result<bool, HostError>;
         fn erased_reboot_left(&self) -> Result<u32, HostError>;
         fn erased_runtime_version(&self) -> Result<String, HostError>;
+        unsafe fn erased_reveal(
+            &self,
+            request: &[u8],
+            response: &mut [u8],
+        ) -> Result<usize, HostError>;
     }
 
     mod erase {
@@ -293,6 +298,14 @@ mod erased_runtime {
         fn erased_runtime_version(&self) -> Result<String, HostError> {
             self.runtime_version()
         }
+
+        unsafe fn erased_reveal(
+            &self,
+            request: &[u8],
+            response: &mut [u8],
+        ) -> Result<usize, HostError> {
+            self.reveal(request, response)
+        }
     }
 
     impl HostRuntime for dyn Runtime {
@@ -436,6 +449,14 @@ mod erased_runtime {
 
         fn runtime_version(&self) -> Result<String, HostError> {
             self.erased_runtime_version()
+        }
+
+        unsafe fn reveal(
+            &self,
+            request: &[u8],
+            response: &mut [u8],
+        ) -> Result<usize, HostError> {
+            self.erased_reveal(request, response)
         }
     }
 }
@@ -597,5 +618,13 @@ impl<'a: 'static> HostRuntime for JsHostRuntime<'a> {
 
     fn runtime_version(&self) -> Result<String, HostError> {
         self.inner.runtime_version()
+    }
+
+    unsafe fn reveal(
+        &self,
+        request: &[u8],
+        response: &mut [u8],
+    ) -> Result<usize, HostError> {
+        self.inner.reveal(request, response)
     }
 }

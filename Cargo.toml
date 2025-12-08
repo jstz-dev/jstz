@@ -145,7 +145,7 @@ default-features = false
 
 [workspace.dependencies.tezos-smart-rollup]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 default-features = false
 features = [
   "std",
@@ -159,55 +159,55 @@ features = [
 
 [workspace.dependencies.tezos-smart-rollup-host]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 features = ["proto-alpha"]
 
 [workspace.dependencies.tezos-smart-rollup-core]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 
 [workspace.dependencies.tezos-smart-rollup-mock]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 
 [workspace.dependencies.tezos_data_encoding]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 
 [workspace.dependencies.tezos-smart-rollup-debug]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 
 [workspace.dependencies.tezos-smart-rollup-encoding]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 default-features = false
 features = ["alloc", "tezos-encoding", "crypto"]
 
 [workspace.dependencies.tezos-smart-rollup-entrypoint]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 
 
 [workspace.dependencies.tezos-smart-rollup-panic-hook]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 
 [workspace.dependencies.tezos-smart-rollup-storage]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 
 [workspace.dependencies.tezos-smart-rollup-installer-config]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 
 [workspace.dependencies.tezos-smart-rollup-installer]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 
 [workspace.dependencies.tezos_crypto_rs]
 git = "https://github.com/jstz-dev/tezos"
-rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+rev = "2450324d5ffd1f38ab424f4db8114ba163e1898c"
 default-features = false
 
 [workspace.dependencies.deno_console]
