@@ -8,11 +8,12 @@ use crate::{
 };
 use bincode::{Decode, Encode};
 use http::{HeaderMap, StatusCode};
+use jstz_core::event::Event;
 use jstz_crypto::smart_function_hash::SmartFunctionHash;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-#[derive(Debug, Clone, ToSchema, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Clone, ToSchema, Serialize, Deserialize, Encode, Decode, PartialEq)]
 #[serde(tag = "_type", content = "inner")]
 pub enum ReceiptResult {
     #[schema(title = "Success")]
@@ -30,7 +31,7 @@ impl From<Result<ReceiptContent>> for ReceiptResult {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode, PartialEq)]
 pub struct Receipt {
     #[bincode(with_serde)]
     hash: OperationHash,
@@ -50,12 +51,12 @@ impl Receipt {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode, PartialEq)]
 pub struct DeployFunctionReceipt {
     pub address: SmartFunctionHash,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Default, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct RunFunctionReceipt {
     pub body: HttpBody,
@@ -69,7 +70,7 @@ pub struct RunFunctionReceipt {
     pub headers: HeaderMap,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct DepositReceipt {
     pub account: Address,
@@ -77,13 +78,13 @@ pub struct DepositReceipt {
 }
 
 #[cfg(feature = "v2_runtime")]
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct OracleResponseReceipt {
     pub request_id: RequestId,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema, Encode, Decode, PartialEq)]
 #[serde(tag = "_type")]
 pub enum ReceiptContent {
     #[schema(title = "DeployFunction")]
@@ -99,4 +100,16 @@ pub enum ReceiptContent {
     #[cfg(feature = "v2_runtime")]
     #[schema(title = "OracleResponse")]
     OracleResponse(OracleResponseReceipt),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct SimulationReceipt {
+    pub request_id: u32,
+    pub receipt: Receipt,
+}
+
+impl Event for SimulationReceipt {
+    fn tag() -> &'static str {
+        "SIMULATION_RECEIPT"
+    }
 }

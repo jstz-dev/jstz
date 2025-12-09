@@ -277,6 +277,11 @@ impl SignedOperation {
     pub fn is_simulation(&self) -> bool {
         self.simulation_request.is_some()
     }
+
+    #[cfg(feature = "simulation")]
+    pub fn simulation_request(&self) -> &Option<SimulationRequest> {
+        &self.simulation_request
+    }
 }
 
 impl From<SignedOperation> for Operation {
