@@ -5,7 +5,7 @@ use utoipa::ToSchema;
     Debug, Serialize, Deserialize, PartialEq, Eq, Encode, ToSchema, Decode, Clone,
 )]
 pub struct SimulationRequest {
-    request_id: u32,
+    pub request_id: u32,
 }
 
 impl SimulationRequest {
