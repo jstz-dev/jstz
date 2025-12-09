@@ -58,3 +58,4 @@ native_kernel = [
     "tezos-smart-rollup/extra",
     "tezos-smart-rollup/native-kernel",
 ]
+simulation = ["jstz_core/simulation", "jstz_proto/simulation"]
