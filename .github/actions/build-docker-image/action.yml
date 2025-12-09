@@ -6,8 +6,8 @@ inputs:
   arch:
     description: Architecture of CPU that the binary can run on, e.g. arm64, amd64
     required: true
-  octez-tag:
-    description: "tezos/tezos docker tag to be used"
+  octez_version:
+    description: Version of the octez package to be used for the image
     required: true
   image_names:
     description: List of image base names for tags, e.g. ghcr.io/jstz-dev/jstz/jstzd, docker.io/jstzdev/jstzd. More than one name can be accepted. This input value should be a newline-delimited string
@@ -82,7 +82,7 @@ runs:
         context: .
         file: ${{ inputs.dockerfile }}
         build-args: |
-          OCTEZ_TAG=${{ inputs.octez-tag }}
+          OCTEZ_VERSION=${{ inputs.octez_version }}
           KERNEL_PATH=./jstz_kernel/jstz_kernel.wasm
         cache-from: type=gha
         cache-to: type=gha,mode=max
