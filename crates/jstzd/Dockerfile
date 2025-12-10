@@ -1,4 +1,4 @@
-ARG OCTEZ_VERSION=23.2
+ARG OCTEZ_VERSION=23.3
 ARG FEATURES="build-image,oracle"
 FROM ghcr.io/jstz-dev/jstz/build:7f08c1b AS builder
 
