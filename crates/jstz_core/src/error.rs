@@ -6,6 +6,9 @@ use crate::host;
 use crate::kv;
 use crate::reveal_data;
 
+#[cfg(feature = "simulation")]
+use crate::simulation;
+
 #[derive(Display, Debug, Error, From)]
 pub enum KvError {
     DowncastFailed,
@@ -40,6 +43,10 @@ pub enum Error {
     EventError {
         source: event::EventError,
     },
+    #[cfg(feature = "simulation")]
+    JstzRevealError {
+        source: simulation::JstzRevealError,
+    },
 }
 
 impl From<Error> for JsError {
@@ -69,6 +76,10 @@ impl From<Error> for JsError {
                 .into(),
             Error::EventError { source } => JsNativeError::eval()
                 .with_message(format!("EventError: {source}"))
+                .into(),
+            #[cfg(feature = "simulation")]
+            Error::JstzRevealError { source } => JsNativeError::eval()
+                .with_message(format!("JstzRevealError: {source}"))
                 .into(),
         }
     }
