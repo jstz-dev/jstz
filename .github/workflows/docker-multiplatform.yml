@@ -58,7 +58,7 @@ jobs:
           username: ${{ secrets.DOCKER_HUB_USER }}
           password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
       - name: Build
-        uses: jstz-dev/jstz/.github/actions/build-docker-image@alan/lw-kernel-docker-changes
+        uses: jstz-dev/jstz/.github/actions/build-docker-image@main
         with:
           platform: linux
           arch: arm64

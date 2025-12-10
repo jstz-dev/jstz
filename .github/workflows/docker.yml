@@ -111,7 +111,7 @@ jobs:
             dockerfile: ./crates/jstzd/Dockerfile
           - image: jstz-node
             dockerfile: ./crates/jstz_node/Dockerfile
-    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@alan/lw-kernel-docker-changes
+    uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
     with:
       octez-tag: ${{ needs.set-input-values.outputs.octez-tag }}
       image_names: |
