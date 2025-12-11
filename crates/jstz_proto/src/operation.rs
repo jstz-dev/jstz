@@ -12,6 +12,9 @@ use http::{HeaderMap, Method, Uri};
 use crate::runtime::v2::oracle::request::RequestId;
 
 use jstz_core::{host::HostRuntime, reveal_data::PreimageHash};
+
+#[cfg(feature = "simulation")]
+use jstz_core::simulation::SimulationRequest;
 use jstz_crypto::verifier::Verifier;
 use jstz_crypto::{
     hash::Blake2b, public_key::PublicKey, public_key_hash::PublicKeyHash,
@@ -225,11 +228,14 @@ impl Content {
     Debug, Deref, Serialize, Deserialize, PartialEq, Eq, ToSchema, Encode, Decode, Clone,
 )]
 pub struct SignedOperation {
-    signature: Signature,
+    pub(crate) signature: Signature,
     #[deref]
-    inner: Operation,
+    pub(crate) inner: Operation,
     #[serde(default)]
-    verifier: Option<Verifier>,
+    pub(crate) verifier: Option<Verifier>,
+    #[cfg(feature = "simulation")]
+    #[serde(default)]
+    pub(crate) simulation_request: Option<SimulationRequest>,
 }
 
 impl SignedOperation {
@@ -238,6 +244,8 @@ impl SignedOperation {
             signature,
             inner,
             verifier: None,
+            #[cfg(feature = "simulation")]
+            simulation_request: None,
         }
     }
 
@@ -263,6 +271,11 @@ impl SignedOperation {
     pub fn verify_ref(&self) -> Result<&Operation> {
         self.verify()?;
         Ok(&self.inner)
+    }
+
+    #[cfg(feature = "simulation")]
+    pub fn is_simulation(&self) -> bool {
+        self.simulation_request.is_some()
     }
 }
 
@@ -675,11 +688,7 @@ mod test {
             }),
         };
         let signature = alice_sk.sign(op.hash()).unwrap();
-        let signed_op = SignedOperation {
-            signature,
-            inner: op,
-            verifier: None,
-        };
+        let signed_op = SignedOperation::new(signature, op);
         let json = serde_json::to_vec(&signed_op).unwrap();
         let decoded: SignedOperation = serde_json::from_slice(json.as_slice()).unwrap();
 
@@ -788,5 +797,43 @@ mod test {
                 }
             }
         ));
+    }
+}
+
+#[cfg(all(test, feature = "simulation"))]
+mod simulation_tests {
+    use http::{HeaderMap, Method};
+    use jstz_core::{
+        event::StringEncodable, simulation::SimulationRequest, BinEncodable,
+    };
+    use jstz_crypto::{public_key::PublicKey, signature::Signature};
+
+    use crate::{
+        operation::{Operation, SignedOperation},
+        HttpBody,
+    };
+
+    #[test]
+    fn test_signed_operation_bincode_roundtrip() {
+        let signed_operation = SignedOperation {
+            signature: Signature::from_base58("edsigtw2cT2ZqcPoBXUHb6TgrAJbDgzwRwDNQfV9uzgDxFvanhm6tQpkiTyR6sMKsbGjK5QCv4qj9kWAs9e7yEmbuiKq7jMMaxa").unwrap(),
+            inner: Operation {
+                public_key: PublicKey::from_base58("edpkuifh2JiPVYfEM4LuGBcPjhHR1GS88bc4ciNUqg15UcWM5zjFmn").unwrap(),
+                nonce: 0.into(),
+                content: crate::operation::RunFunction {
+                    uri: "jstz://tz1cD5CuvAALcxgypqBXcBQEA8dkLJivoFjU/nfts?status=sold".parse().unwrap(),
+                    method: Method::GET,
+                    headers: HeaderMap::new(),
+                    body: HttpBody(None),
+                    gas_limit: 1000,
+                }.into()
+            },
+            verifier: None,
+            simulation_request: Some(SimulationRequest::new(10))
+        };
+
+        let encoded = signed_operation.encode().unwrap();
+        let decoded = SignedOperation::decode(&encoded).unwrap();
+        assert_eq!(signed_operation, decoded);
     }
 }
