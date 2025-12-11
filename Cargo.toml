@@ -202,6 +202,10 @@ rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 git = "https://github.com/jstz-dev/tezos"
 rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
 
+[workspace.dependencies.tezos-smart-rollup-constants]
+git = "https://github.com/jstz-dev/tezos"
+rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"
+
 [workspace.dependencies.tezos-smart-rollup-installer]
 git = "https://github.com/jstz-dev/tezos"
 rev = "0e21f47f1be4564f95c61a6cf32d02a03e87180c"

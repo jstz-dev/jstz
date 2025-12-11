@@ -1,6 +1,10 @@
 use bincode::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+mod jstz_reveal;
+pub use jstz_reveal::*;
+
 #[derive(
     Debug, Serialize, Deserialize, PartialEq, Eq, Encode, ToSchema, Decode, Clone,
 )]
