@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::BinEncodable;
+use crate::{BinEncodable, Revealer};
 use tezos_smart_rollup::host::RuntimeError;
 use tezos_smart_rollup_constants::riscv::REVEAL_REQUEST_MAX_SIZE;
 
@@ -10,13 +10,6 @@ pub const JSTZ_REVEAL_TAG: u8 = 0xFF;
 pub enum JstzRevealError {
     #[error("Jstz reveal data size exceeds the maximum limit.")]
     RevealSizeExceedsMaximumLimit,
-}
-
-pub trait Revealer {
-    unsafe fn reveal(
-        request: &[u8],
-        response: &mut [u8],
-    ) -> std::result::Result<usize, RuntimeError>;
 }
 
 /// The host revealer that loads the result of a raw reveal request to memory.
@@ -117,15 +110,6 @@ mod tests {
         type Target = [u8];
         fn deref(&self) -> &Self::Target {
             &self.0
-        }
-    }
-
-    impl Revealer for () {
-        unsafe fn reveal(
-            _: &[u8],
-            _: &mut [u8],
-        ) -> std::result::Result<usize, RuntimeError> {
-            unimplemented!()
         }
     }
 
