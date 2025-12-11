@@ -10,6 +10,7 @@ pub mod log_record;
 pub mod native;
 pub mod realm;
 pub mod reveal_data;
+mod revealer;
 pub mod runtime;
 #[cfg(feature = "simulation")]
 pub mod simulation;
@@ -25,4 +26,5 @@ pub trait Api {
 }
 
 pub use realm::{Module, Realm};
+pub use revealer::Revealer;
 pub use runtime::Runtime;
