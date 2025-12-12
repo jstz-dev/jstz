@@ -296,7 +296,7 @@ async fn get_kv_subkeys(
     let key = construct_storage_key(&address, &key);
     let value = match mode {
         RunMode::Default => rollup_client.get_subkeys(&key).await?,
-        RunMode::Sequencer { .. } => {
+        RunMode::Sequencer { .. } | RunMode::Simulation { .. } => {
             tokio::task::spawn_blocking(move || runtime_db.get_subkeys(&key))
                 .await
                 .context("failed to wait for db read task")?

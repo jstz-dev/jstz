@@ -9,6 +9,7 @@ use octez::r#async::endpoint::Endpoint;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use tezos_crypto_rs::hash::SmartRollupHash;
+use url::Url;
 
 #[derive(Debug, Deserialize, Serialize, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
@@ -31,6 +32,10 @@ pub enum RunMode {
         runtime_env: RuntimeEnv,
         inbox_checkpoint_path: PathBuf,
     },
+    Simulation {
+        debug_log_path: PathBuf,
+        sequencer_endpoint: Url,
+    },
     #[serde(alias = "default")]
     Default,
 }
@@ -46,6 +51,7 @@ impl Display for RunMode {
         match self {
             RunMode::Default => write!(f, "default"),
             RunMode::Sequencer { .. } => write!(f, "sequencer"),
+            RunMode::Simulation { .. } => write!(f, "simulation"),
         }
     }
 }
