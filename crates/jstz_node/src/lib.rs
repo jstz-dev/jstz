@@ -169,6 +169,7 @@ pub async fn run(
                 .context("failed to launch worker")?,
             )
         }
+        RunMode::Simulation { .. } => None,
         RunMode::Default => None,
     };
 
@@ -187,6 +188,7 @@ pub async fn run(
         ),
         #[cfg(test)]
         RunMode::Sequencer { .. } => None,
+        RunMode::Simulation { .. } => None,
         RunMode::Default => None,
     };
 
@@ -195,6 +197,9 @@ pub async fn run(
     let log_file_path = match mode {
         RunMode::Default => kernel_log_path.clone(),
         RunMode::Sequencer {
+            ref debug_log_path, ..
+        } => debug_log_path.clone(),
+        RunMode::Simulation {
             ref debug_log_path, ..
         } => debug_log_path.clone(),
     };

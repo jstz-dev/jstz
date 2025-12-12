@@ -37,6 +37,7 @@ impl StoreWrapper {
             (RunMode::Default, false) => Self::Rollup(rollup_client),
             (RunMode::Default, true) => Self::Db(Arc::new(storage_sync_db)),
             (RunMode::Sequencer { .. }, _) => Self::Db(Arc::new(runtime_db)),
+            (RunMode::Simulation { .. }, _) => Self::Db(Arc::new(runtime_db)),
         }
     }
 

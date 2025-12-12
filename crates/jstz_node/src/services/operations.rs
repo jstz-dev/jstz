@@ -170,6 +170,10 @@ async fn inject(
         RunMode::Sequencer { .. } => {
             insert_operation_queue(&queue, WrappedOperation::FromNode(operation)).await?;
         }
+        RunMode::Simulation { .. } => {
+            //TODO: Injects into sequencer
+            todo!()
+        }
     }
     Ok(())
 }
