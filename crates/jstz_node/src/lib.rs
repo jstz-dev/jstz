@@ -318,6 +318,7 @@ mod test {
     use octez::unused_port;
     use pretty_assertions::assert_eq;
     use tempfile::{NamedTempFile, TempDir};
+    use tezos_crypto_rs::hash::ContractKt1Hash;
     use tezos_smart_rollup::storage::path::OwnedPath;
     use tokio::{
         task::yield_now,
@@ -412,6 +413,10 @@ mod test {
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                ticketer_address: ContractKt1Hash::from_base58_check(
+                    "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                )
+                .unwrap(),
             },
             "\"sequencer\"",
         )
@@ -457,6 +462,10 @@ mod test {
                 debug_log_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
+                ticketer_address: ContractKt1Hash::from_base58_check(
+                    "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                )
+                .unwrap(),
             },
             false,
         )

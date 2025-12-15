@@ -19,7 +19,7 @@ use crate::{
 };
 use anyhow::{Context, Result};
 use http::Uri;
-use jstz_node::config::{JstzNodeConfig, RunModeBuilder};
+use jstz_node::config::{JstzNodeConfig, RunModeBuilder, RunModeType};
 use octez::r#async::endpoint::Endpoint;
 use octez::r#async::protocol::{
     BootstrapContract, BootstrapSmartRollup, ProtocolParameter, SmartRollupPvmKind,
@@ -33,7 +33,7 @@ use octez::r#async::{
     rollup::OctezRollupConfigBuilder,
 };
 use serde::Deserialize;
-use tezos_crypto_rs::hash::SmartRollupHash;
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tokio::io::AsyncReadExt;
 
 const DEFAULT_JSTZD_SERVER_PORT: u16 = 54321;
@@ -218,7 +218,13 @@ fn build_jstz_node_config(
         Endpoint::try_from(Uri::from_static(DEFAULT_JSTZ_NODE_ENDPOINT)).unwrap();
     let injector = find_injector_account(builtin_bootstrap_accounts()?)
         .context("failed to retrieve injector account")?;
-    let mut run_mode_builder = RunModeBuilder::new(config.mode.unwrap_or_default());
+    let mode = config.mode.unwrap_or_default();
+    let mut run_mode_builder = RunModeBuilder::new(mode.clone());
+    if let RunModeType::Sequencer = mode {
+        run_mode_builder = run_mode_builder.with_ticketer_address(
+            ContractKt1Hash::from_base58_check(JSTZ_NATIVE_BRIDGE_ADDRESS)?,
+        )?;
+    }
     if let Some(v) = config.capacity {
         run_mode_builder = run_mode_builder.with_capacity(v)?;
     }
@@ -809,7 +815,8 @@ mod tests {
                 "mode": "sequencer",
                 "capacity": 42,
                 "debug_log_file": "/debug/file",
-                "storage_sync": false
+                "storage_sync": false,
+                "ticketer_address": "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
             }
         }))
         .unwrap();
