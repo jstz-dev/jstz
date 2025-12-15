@@ -20,6 +20,7 @@ pub enum Error {
         source: Blake2bError,
     },
     InvalidSignature,
+    UnrecognizedSignature,
     InvalidPublicKeyHash,
     InvalidPublicKey,
     InvalidSecretKey,

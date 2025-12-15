@@ -1492,7 +1492,7 @@ dependencies = [
 [[package]]
 name = "deno_fetch_base"
 version = "0.202.0"
-source = "git+https://github.com/jstz-dev/deno?branch=leo%2Fextend-fetch-base#26c62e089fe3f1ba624d017821d9c836106bf729"
+source = "git+https://github.com/jstz-dev/deno?branch=leo%2Frequest-response-transfer#a37e14e0fbfb2c51d13c5ac657c263e88a2891a1"
 dependencies = [
  "bytes",
  "deno_core",
@@ -3127,6 +3127,7 @@ dependencies = [
  "serde_json",
  "serde_with",
  "tezos-smart-rollup",
+ "tezos-smart-rollup-constants 0.2.2 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tezos-smart-rollup-host 0.2.2 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tezos-smart-rollup-mock 0.2.2 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
  "tezos_crypto_rs 0.6.0 (git+https://github.com/jstz-dev/tezos?rev=0e21f47f1be4564f95c61a6cf32d02a03e87180c)",
@@ -3513,6 +3514,7 @@ dependencies = [
  "rust-embed",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "tempfile",
  "tezos-smart-rollup",
  "tezos-smart-rollup-installer",
