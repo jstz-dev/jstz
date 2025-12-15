@@ -10,6 +10,7 @@ use jstz_node::{
 };
 use jstz_utils::key_pair::parse_key_file;
 use tezos_crypto_rs::hash::SmartRollupHash;
+use url::Url;
 
 const DEFAULT_ROLLUP_NODE_RPC_ADDR: &str = "127.0.0.1";
 const DEFAULT_ROLLUP_RPC_PORT: u16 = 8932;
@@ -81,6 +82,18 @@ struct Args {
 
     #[arg(long)]
     inbox_checkpoint_path: Option<PathBuf>,
+
+    // Enables simulation of operations
+    #[arg(long, action = ArgAction::SetFalse, requires_all = ["sequencer_endpoint", "simulation_kernel_path"])]
+    enable_simulation: bool,
+
+    // Sequencer endpoint to listen for included operations. Required when simulation is enabled
+    #[arg(long)]
+    sequencer_endpoint: Option<Url>,
+
+    // Path to RISC-V simulation kernel. Required when simulation is enabled
+    #[arg(long)]
+    simulation_kernel_path: Option<PathBuf>,
 }
 
 #[tokio::main]
@@ -119,6 +132,7 @@ async fn main() -> anyhow::Result<()> {
                 mode: run_mode_builder.build()?,
                 storage_sync: args.storage_sync,
                 runtime_db_path: args.runtime_db_path,
+                simulation: None,
             })
             .await
         }
