@@ -12,8 +12,8 @@ on:
         description: The branch, tag, or SHA from which images will be built
         required: true
         type: string
-      octez-tag:
-        description: "tezos/tezos docker tag to be used"
+      octez_version:
+        description: Version of the octez package to be used for the images
         required: true
         type: string
       dry_run:
@@ -28,8 +28,8 @@ on:
         description: The branch, tag, or SHA from which images will be built
         required: true
         type: string
-      octez-tag:
-        description: "tezos/tezos docker tag to be used"
+      octez_version:
+        description: Version of the octez package to be used for the images
         required: true
         type: string
       dry_run:
@@ -53,15 +53,15 @@ jobs:
     name: Set input values for workflows triggered by tags
     runs-on: ubuntu-latest
     outputs:
-      octez-tag: ${{ steps.run.outputs.OCTEZ_TAG }}
+      octez_version: ${{ steps.run.outputs.OCTEZ_VERSION }}
       dry_run: ${{ steps.run.outputs.DRY_RUN }}
       ref: ${{ steps.run.outputs.REF }}
     steps:
       - id: run
         run: |
-          input_tag=${{ inputs.octez-tag }}
-          octez_tag=${input_tag:-"23.3"}
-          echo "OCTEZ_TAG=${octez_tag}" >> ${GITHUB_OUTPUT}
+          input_octez_version=${{ inputs.octez_version }}
+          octez_version=${input_octez_version:-"23.3"}
+          echo "OCTEZ_VERSION=${octez_version}" >> ${GITHUB_OUTPUT}
 
           dry_run=${{ inputs.dry_run }}
           # Default to false because workflows triggered by tags are not going to dry-run
@@ -113,7 +113,7 @@ jobs:
             dockerfile: ./crates/jstz_node/Dockerfile
     uses: jstz-dev/jstz/.github/workflows/docker-multiplatform.yml@main
     with:
-      octez-tag: ${{ needs.set-input-values.outputs.octez-tag }}
+      octez_version: ${{ needs.set-input-values.outputs.octez_version }}
       image_names: |
         ghcr.io/jstz-dev/jstz/${{ matrix.image }}
         docker.io/jstzdev/${{ matrix.image }}
