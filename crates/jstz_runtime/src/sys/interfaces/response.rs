@@ -40,6 +40,16 @@ impl<'s> Response<'s> {
       fn new_error() -> Self
     }
 
+    js_static_method! {
+      #[js_name(withTransfer)]
+      fn new_transfer_with_body(body: v8::Local<'s, v8::Value>, amount: u64) -> Self
+    }
+
+    js_static_method! {
+      #[js_name(withTransfer)]
+      fn new_transfer_with_bod_and_init(body: v8::Local<'s, v8::Value>, amount: u64, init: ResponseInit<'s>) -> Self
+    }
+
     js_getter! { fn status() -> u16 }
 
     js_getter! {
@@ -198,6 +208,41 @@ mod test {
         assert_eq!(
             headers.get(scope, "Location".into()).unwrap().unwrap(),
             "https://example.com/"
+        );
+    }
+
+    #[test]
+    fn test_transfer() {
+        init_test_setup! { runtime = runtime; };
+        let scope = &mut runtime.handle_scope();
+        let body = v8::String::new(scope, "Hello World").unwrap();
+        let response = Response::new_transfer_with_body(scope, body.into(), 12).unwrap();
+        assert!(response.body(scope).unwrap().is_some());
+        let headers = response.headers(scope).unwrap();
+        assert_eq!(
+            headers
+                .get(scope, "X-JSTZ-TRANSFER".into())
+                .unwrap()
+                .unwrap(),
+            "12"
+        );
+
+        let init = ResponseInit::new(scope);
+        init.set_status(scope, 200).unwrap();
+        init.set_status_text(scope, "transferred!".into()).unwrap();
+        let response =
+            Response::new_transfer_with_bod_and_init(scope, body.into(), 12, init)
+                .unwrap();
+        assert_eq!(response.status(scope).unwrap(), 200);
+        assert_eq!(response.status_text(scope).unwrap(), "transferred!");
+        assert!(response.body(scope).unwrap().is_some());
+        let headers = response.headers(scope).unwrap();
+        assert_eq!(
+            headers
+                .get(scope, "X-JSTZ-TRANSFER".into())
+                .unwrap()
+                .unwrap(),
+            "12"
         );
     }
 

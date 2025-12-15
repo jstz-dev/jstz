@@ -3,8 +3,8 @@ name: Build multiplatform docker image
 on:
   workflow_call:
     inputs:
-      octez-tag:
-        description: "tezos/tezos docker tag to be used"
+      octez_version:
+        description: Version of the octez package to be used for the image
         required: true
         type: string
       image_names:
@@ -62,7 +62,7 @@ jobs:
         with:
           platform: linux
           arch: arm64
-          octez-tag: ${{ inputs.octez-tag }}
+          octez_version: ${{ inputs.octez_version }}
           image_names: ${{ inputs.image_names }}
           image_id: ${{ inputs.image_id }}
           dockerfile: ${{ inputs.dockerfile }}
@@ -93,7 +93,7 @@ jobs:
         with:
           platform: linux
           arch: amd64
-          octez-tag: ${{ inputs.octez-tag }}
+          octez_version: ${{ inputs.octez_version }}
           image_names: ${{ inputs.image_names }}
           image_id: ${{ inputs.image_id }}
           dockerfile: ${{ inputs.dockerfile }}

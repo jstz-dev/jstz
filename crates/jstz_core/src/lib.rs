@@ -11,8 +11,9 @@ pub mod native;
 pub mod realm;
 pub mod reveal_data;
 pub mod runtime;
+#[cfg(feature = "simulation")]
+pub mod simulation;
 pub mod value;
-
 pub use bin_encodable::*;
 use boa_engine::Context;
 pub use error::{Error, Result};
