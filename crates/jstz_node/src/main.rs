@@ -71,7 +71,7 @@ struct Args {
     #[arg(long)]
     rollup_address: Option<String>,
 
-    #[arg(long)]
+    #[arg(long, required_if_eq("mode", "sequencer"))]
     ticketer_address: Option<String>,
 
     #[arg(long)]
