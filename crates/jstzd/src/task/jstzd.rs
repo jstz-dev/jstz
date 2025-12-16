@@ -904,6 +904,7 @@ mod tests {
                     inbox_checkpoint_path: PathBuf::from("/inbox/checkpoint"),
                 },
                 false,
+                None,
             )),
             ProtocolParameterBuilder::new()
                 .set_bootstrap_accounts([BootstrapAccount::new(

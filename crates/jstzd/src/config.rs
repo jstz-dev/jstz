@@ -239,6 +239,7 @@ fn build_jstz_node_config(
         injector.clone(),
         run_mode_builder.build()?,
         config.storage_sync,
+        None,
     ))
 }
 
