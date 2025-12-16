@@ -410,7 +410,7 @@ mod tests {
         secret_key::SecretKey,
         smart_function_hash::{Kt1Hash, SmartFunctionHash},
     };
-    use jstz_mock::kt1_account1;
+    use jstz_mock::{kt1_account1, sr1_address};
     use jstz_proto::operation::{RevealLargePayload, RevealType};
     use jstz_proto::receipt::{ReceiptContent, ReceiptResult};
     use jstz_proto::HttpBody;
@@ -647,6 +647,7 @@ mod tests {
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 ticketer_address: kt1_account1(),
+                rollup_address: sr1_address(),
             },
         )
         .await;
@@ -693,6 +694,7 @@ mod tests {
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 ticketer_address: kt1_account1(),
+                rollup_address: sr1_address(),
             },
         )
         .await;
@@ -745,6 +747,7 @@ mod tests {
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 ticketer_address: kt1_account1(),
+                rollup_address: sr1_address(),
             },
         )
         .await;

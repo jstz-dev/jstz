@@ -68,7 +68,7 @@ struct Args {
     #[arg(long)]
     injector_key_file: PathBuf,
 
-    #[arg(long)]
+    #[arg(long, required_if_eq("mode", "sequencer"))]
     rollup_address: Option<String>,
 
     #[arg(long, required_if_eq("mode", "sequencer"))]

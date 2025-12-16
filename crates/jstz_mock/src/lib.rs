@@ -2,7 +2,7 @@ use jstz_crypto::{
     hash::Hash, public_key::PublicKey, public_key_hash::PublicKeyHash,
     secret_key::SecretKey, smart_function_hash::SmartFunctionHash,
 };
-use tezos_crypto_rs::hash::ContractKt1Hash;
+use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
 use tezos_smart_rollup::{
     michelson::{
         ticket::{FA2_1Ticket, Ticket, TicketHash, UnitTicket},
@@ -86,4 +86,8 @@ pub fn ticket_hash1() -> TicketHash {
     )
     .unwrap();
     ticket.hash().unwrap()
+}
+
+pub fn sr1_address() -> SmartRollupHash {
+    SmartRollupHash::from_base58_check("sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao").unwrap()
 }

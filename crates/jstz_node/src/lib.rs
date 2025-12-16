@@ -135,11 +135,13 @@ pub async fn run(
         RunMode::Sequencer {
             ref debug_log_path,
             ref runtime_env,
+            ref rollup_address,
             ..
         } => Some(
             worker::spawn(
                 queue.clone(),
                 runtime_db.clone(),
+                rollup_address,
                 &injector,
                 rollup_preimages_dir.clone(),
                 Some(debug_log_path),
@@ -151,6 +153,7 @@ pub async fn run(
         RunMode::Sequencer {
             ref debug_log_path,
             ref runtime_env,
+            ref rollup_address,
             ..
         } => {
             let p = rollup_preimages_dir.join(format!("{rollup_endpoint}.txt"));
@@ -158,6 +161,7 @@ pub async fn run(
                 worker::spawn(
                     queue.clone(),
                     runtime_db.clone(),
+                    rollup_address,
                     &injector,
                     rollup_preimages_dir.clone(),
                     Some(debug_log_path),
@@ -318,7 +322,7 @@ mod test {
     use octez::unused_port;
     use pretty_assertions::assert_eq;
     use tempfile::{NamedTempFile, TempDir};
-    use tezos_crypto_rs::hash::ContractKt1Hash;
+    use tezos_crypto_rs::hash::{ContractKt1Hash, SmartRollupHash};
     use tezos_smart_rollup::storage::path::OwnedPath;
     use tokio::{
         task::yield_now,
@@ -417,6 +421,10 @@ mod test {
                     "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
                 )
                 .unwrap(),
+                rollup_address: SmartRollupHash::from_base58_check(
+                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
+                )
+                .unwrap(),
             },
             "\"sequencer\"",
         )
@@ -464,6 +472,10 @@ mod test {
                 inbox_checkpoint_path: NamedTempFile::new().unwrap().path().to_path_buf(),
                 ticketer_address: ContractKt1Hash::from_base58_check(
                     "KT1ChNsEFxwyCbJyWGSL3KdjeXE28AY1Kaog",
+                )
+                .unwrap(),
+                rollup_address: SmartRollupHash::from_base58_check(
+                    "sr1Uuiucg1wk5aovEY2dj1ZBsqjwxndrSaao",
                 )
                 .unwrap(),
             },

@@ -330,7 +330,7 @@ mod tests {
 
     use axum::{body::Body, extract::Request, response::Response, Router};
     use jstz_core::BinEncodable;
-    use jstz_mock::kt1_account1;
+    use jstz_mock::{kt1_account1, sr1_address};
     use jstz_proto::{
         context::account::{Account, Nonce, SmartFunctionAccount, UserAccount},
         runtime::{KvValue, ParsedCode},
@@ -380,6 +380,7 @@ mod tests {
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
                 ticketer_address: kt1_account1(),
+                rollup_address: sr1_address(),
             },
         )
         .await;
@@ -517,6 +518,7 @@ mod tests {
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
                 ticketer_address: kt1_account1(),
+                rollup_address: sr1_address(),
             },
         )
         .await;
@@ -574,6 +576,7 @@ mod tests {
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
                 ticketer_address: kt1_account1(),
+                rollup_address: sr1_address(),
             },
         )
         .await;
@@ -653,6 +656,7 @@ mod tests {
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
                 ticketer_address: kt1_account1(),
+                rollup_address: sr1_address(),
             },
         )
         .await;
@@ -721,6 +725,7 @@ mod tests {
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
                 ticketer_address: kt1_account1(),
+                rollup_address: sr1_address(),
             },
         )
         .await;
@@ -836,6 +841,7 @@ mod tests {
                 runtime_env: RuntimeEnv::Native,
                 inbox_checkpoint_path: PathBuf::new(),
                 ticketer_address: kt1_account1(),
+                rollup_address: sr1_address(),
             },
         )
         .await;
