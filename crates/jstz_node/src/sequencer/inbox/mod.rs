@@ -3,7 +3,6 @@ use crate::sequencer::inbox::stream::{
     Error, PendingBlock, SequentialBlockStream, StreamFactory,
 };
 use crate::sequencer::queue::{OperationQueue, WrappedOperation};
-use crate::sequencer::runtime::{JSTZ_ROLLUP_ADDRESS, TICKETER};
 use anyhow::Result;
 use api::BlockResponse;
 use async_dropper_simple::AsyncDrop;
@@ -62,6 +61,8 @@ impl WriteDebug for Logger {
 /// precondition: the rollup node is healthy.
 pub async fn spawn_monitor(
     rollup_endpoint: String,
+    rollup_address: SmartRollupHash,
+    ticketer_address: ContractKt1Hash,
     queue: Arc<RwLock<OperationQueue>>,
     // TODO: make it take a file-like object instead of a path (e.g, AsyncRead + AsyncWrite)
     // https://linear.app/tezos/issue/JSTZ-917/use-asyncread-asyncwrite-instead-of-file-path
@@ -74,8 +75,6 @@ pub async fn spawn_monitor(
         SequentialBlockStream::new(store, stream_factory(rollup_endpoint.clone()))
             .boxed();
     let handle: JoinHandle<()> = tokio::spawn(async move {
-        let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
-        let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
         loop {
             select! {
                 _ = kill_sig_clone.cancelled() => {
@@ -85,7 +84,7 @@ pub async fn spawn_monitor(
                     match result {
                         Some(Ok(mut block)) => {
                             let block_content = retry_fetch_block(&rollup_endpoint, block.level()).await;
-                            process_inbox_messages(&mut block, block_content, queue.clone(), &ticketer, &jstz).await;
+                            process_inbox_messages(&mut block, block_content, queue.clone(), &ticketer_address, &rollup_address).await;
                         }
                         Some(Err(Error::CheckpointIo(e))) => {
                             error!("checkpoint io error: {e:?}");
@@ -240,6 +239,9 @@ mod tests {
     use tokio_retry2::RetryError;
     use warp::Filter;
 
+    const TICKETER_ADDRESS: &str = "KT1BRd2ka5q2cPRdXALtXD1QZ38CPam2j1ye";
+    const ROLLUP_ADDRESS: &str = "sr1RYurGZtN8KNSpkMcCt9CgWeUaNkzsAfXf";
+
     pub fn mock_deploy_op(nonce: u64) -> SignedOperation {
         let KeyPair(alice_pk, alice_sk) = alice_keys();
         let code = r#"
@@ -265,7 +267,7 @@ mod tests {
     pub fn hex_external_message(op: SignedOperation) -> String {
         let bytes = encode_signed_operation(
             &op,
-            &SmartRollupAddress::from_b58check(JSTZ_ROLLUP_ADDRESS).unwrap(),
+            &SmartRollupAddress::from_b58check(ROLLUP_ADDRESS).unwrap(),
         )
         .unwrap();
         hex::encode(bytes)
@@ -280,13 +282,22 @@ mod tests {
 
     #[tokio::test]
     async fn test_spawn_monitor() {
+        let ticketer_address =
+            ContractKt1Hash::from_base58_check(TICKETER_ADDRESS).unwrap();
+        let rollup_address = SmartRollupHash::from_base58_check(ROLLUP_ADDRESS).unwrap();
         let (endpoint, _server) = spawn_mock_server();
         let q = Arc::new(RwLock::new(OperationQueue::new(10)));
         let file = NamedTempFile::new().unwrap();
         let store = FileCheckpointStore::new(file.path().to_path_buf());
-        let _monitor = spawn_monitor(endpoint, q, file.path().to_path_buf())
-            .await
-            .unwrap();
+        let _monitor = spawn_monitor(
+            endpoint,
+            rollup_address,
+            ticketer_address,
+            q,
+            file.path().to_path_buf(),
+        )
+        .await
+        .unwrap();
         let mut set = std::collections::HashSet::new();
         let timer = Instant::now();
         while let Ok(chk) = store.load().await {
@@ -318,15 +329,23 @@ mod tests {
 
     #[tokio::test]
     async fn test_spawn_monitor_shuts_down_and_resumes() {
+        let ticketer_address =
+            ContractKt1Hash::from_base58_check(TICKETER_ADDRESS).unwrap();
+        let rollup_address = SmartRollupHash::from_base58_check(ROLLUP_ADDRESS).unwrap();
         let (endpoint, server) = spawn_mock_server();
         let q = Arc::new(RwLock::new(OperationQueue::new(10)));
         let file = NamedTempFile::new().unwrap();
         let store: FileCheckpointStore =
             FileCheckpointStore::new(file.path().to_path_buf());
-        let mut monitor =
-            spawn_monitor(endpoint.clone(), q.clone(), file.path().to_path_buf())
-                .await
-                .unwrap();
+        let mut monitor = spawn_monitor(
+            endpoint.clone(),
+            rollup_address.clone(),
+            ticketer_address.clone(),
+            q.clone(),
+            file.path().to_path_buf(),
+        )
+        .await
+        .unwrap();
 
         let mut set = std::collections::HashSet::new();
         // Shutdown the monitor after the first block is processed
@@ -342,10 +361,15 @@ mod tests {
         // Resumes the monitor after the shutdown, the source stream returns block 126
         // but the monitor should handle the missing blocks in between.
         let (endpoint, _server) = spawn_mock_server2();
-        let _monitor =
-            spawn_monitor(endpoint.clone(), q.clone(), file.path().to_path_buf())
-                .await
-                .unwrap();
+        let _monitor = spawn_monitor(
+            endpoint.clone(),
+            rollup_address,
+            ticketer_address,
+            q.clone(),
+            file.path().to_path_buf(),
+        )
+        .await
+        .unwrap();
 
         while let Ok(chk) = store.load().await {
             if let Some(chk) = chk {
@@ -377,8 +401,8 @@ mod tests {
     #[tokio::test]
     async fn test_parse_inbox_messages() {
         let op = mock_deploy_op(0);
-        let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
-        let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+        let ticketer = ContractKt1Hash::from_base58_check(TICKETER_ADDRESS).unwrap();
+        let jstz = SmartRollupHash::from_base58_check(ROLLUP_ADDRESS).unwrap();
         let raw_messages = vec![String::from("0001"), hex_external_message(op.clone())];
         let block_content = BlockResponse {
             messages: raw_messages.clone(),
@@ -434,8 +458,8 @@ mod tests {
         let op1 = mock_deploy_op(0);
         let op2 = mock_deploy_op(1);
         let q = Arc::new(RwLock::new(OperationQueue::new(2)));
-        let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
-        let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+        let ticketer = ContractKt1Hash::from_base58_check(TICKETER_ADDRESS).unwrap();
+        let jstz = SmartRollupHash::from_base58_check(ROLLUP_ADDRESS).unwrap();
         let block_content = BlockResponse {
             messages: vec![
                 String::from("0001"), // Start of block
@@ -497,8 +521,8 @@ mod tests {
             .map(|op| hex_external_message(op.clone()))
             .collect();
         let q = Arc::new(RwLock::new(OperationQueue::new(3)));
-        let ticketer = ContractKt1Hash::from_base58_check(TICKETER).unwrap();
-        let jstz = SmartRollupHash::from_base58_check(JSTZ_ROLLUP_ADDRESS).unwrap();
+        let ticketer = ContractKt1Hash::from_base58_check(TICKETER_ADDRESS).unwrap();
+        let jstz = SmartRollupHash::from_base58_check(ROLLUP_ADDRESS).unwrap();
         let block_content = BlockResponse { messages };
         let mut store = stream::tests::MockStore::new();
         for i in 1..block_level {

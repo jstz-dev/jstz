@@ -180,10 +180,14 @@ pub async fn run(
         #[cfg(not(test))]
         RunMode::Sequencer {
             ref inbox_checkpoint_path,
+            ref ticketer_address,
+            ref rollup_address,
             ..
         } => Some(
             inbox::spawn_monitor(
                 rollup_endpoint,
+                rollup_address.clone(),
+                ticketer_address.clone(),
                 queue.clone(),
                 inbox_checkpoint_path.clone(),
             )
