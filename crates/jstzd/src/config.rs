@@ -818,7 +818,7 @@ mod tests {
                 "mode": "sequencer",
                 "capacity": 42,
                 "debug_log_file": "/debug/file",
-                "storage_sync": false,
+                "storage_sync": false
             }
         }))
         .unwrap();
@@ -868,6 +868,10 @@ mod tests {
         assert_eq!(
             run_mode["runtime_env"],
             serde_json::json!({"type": "native"})
+        );
+        assert_eq!(
+            run_mode["ticketer_address"],
+            super::JSTZ_NATIVE_BRIDGE_ADDRESS
         );
     }
 
