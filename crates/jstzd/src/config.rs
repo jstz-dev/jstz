@@ -815,7 +815,7 @@ mod tests {
                 "mode": "sequencer",
                 "capacity": 42,
                 "debug_log_file": "/debug/file",
-                "storage_sync": false,
+                "storage_sync": false
             }
         }))
         .unwrap();
