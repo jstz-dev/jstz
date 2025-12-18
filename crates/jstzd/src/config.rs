@@ -869,6 +869,10 @@ mod tests {
             run_mode["runtime_env"],
             serde_json::json!({"type": "native"})
         );
+        assert_eq!(
+            run_mode["ticketer_address"],
+            super::JSTZ_NATIVE_BRIDGE_ADDRESS
+        );
     }
 
     #[tokio::test]
