@@ -38,7 +38,7 @@ pub use execution_tracker::*;
 
 pub static SNAPSHOT: OnceLock<&'static [u8]> = OnceLock::new();
 
-pub const TIMEOUT: u64 = 3;
+pub const TIMEOUT: u64 = 30;
 
 pub async fn run_toplevel_fetch(
     hrt: &mut impl HostRuntime,
