@@ -920,6 +920,10 @@ mod tests {
             run_mode["runtime_env"],
             serde_json::json!({"type": "riscv", "kernel_path": "/riscv/kernel"})
         );
+        assert_eq!(
+            run_mode["ticketer_address"],
+            super::JSTZ_NATIVE_BRIDGE_ADDRESS
+        );
 
         let bad_config = UserJstzNodeConfig {
             riscv_kernel_path: Some(PathBuf::new()),
