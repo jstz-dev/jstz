@@ -873,6 +873,7 @@ mod tests {
             run_mode["ticketer_address"],
             super::JSTZ_NATIVE_BRIDGE_ADDRESS
         );
+        assert_eq!(run_mode["rollup_address"], super::JSTZ_ROLLUP_ADDRESS);
     }
 
     #[tokio::test]
@@ -924,6 +925,7 @@ mod tests {
             run_mode["ticketer_address"],
             super::JSTZ_NATIVE_BRIDGE_ADDRESS
         );
+        assert_eq!(run_mode["rollup_address"], super::JSTZ_ROLLUP_ADDRESS);
 
         let bad_config = UserJstzNodeConfig {
             riscv_kernel_path: Some(PathBuf::new()),
